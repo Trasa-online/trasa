@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bookmark, Heart, MessageCircle } from "lucide-react";
-import StarRating from "./StarRating";
+import { Bookmark, Heart, MessageCircle, Star } from "lucide-react";
 import { format } from "date-fns";
 
 interface RouteCardProps {
@@ -21,7 +20,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
       onClick={() => navigate(`/route/${route.id}`)}
       className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow"
     >
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Avatar className="h-10 w-10">
             <AvatarImage src={route.profiles?.avatar_url} />
@@ -30,7 +29,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
             </AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-medium">{route.profiles?.username}</p>
+            <p className="font-medium text-sm">{route.profiles?.username}</p>
             <p className="text-xs text-muted-foreground">
               {format(new Date(route.created_at), "MMM dd, yyyy")}
             </p>
@@ -41,10 +40,13 @@ const RouteCard = ({ route }: RouteCardProps) => {
         </button>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 pb-4 border-b border-border">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">{route.title}</h3>
-          <StarRating rating={Math.round(averageRating * 10) / 10} />
+          <div className="flex items-center gap-1">
+            <Star className="h-4 w-4 fill-star text-star" />
+            <span className="font-semibold text-sm">{Math.round(averageRating * 10) / 10}</span>
+          </div>
         </div>
         <p className="text-sm text-muted-foreground line-clamp-2">
           {route.description}
@@ -68,7 +70,12 @@ const RouteCard = ({ route }: RouteCardProps) => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-1">
                   <h4 className="font-semibold text-sm">{pin.place_name}</h4>
-                  {pin.rating && <StarRating rating={pin.rating} />}
+                  {pin.rating && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Star className="h-3.5 w-3.5 fill-star text-star" />
+                      <span className="font-semibold text-xs">{pin.rating.toFixed(1)}</span>
+                    </div>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
                 <p className="text-sm text-muted-foreground line-clamp-2">{pin.description}</p>
