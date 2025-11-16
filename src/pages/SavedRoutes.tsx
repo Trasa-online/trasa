@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
 import RouteCard from "@/components/route/RouteCard";
+import PageTransition from "@/components/PageTransition";
 
 const SavedRoutes = () => {
   const { user, loading } = useAuth();
@@ -42,22 +43,24 @@ const SavedRoutes = () => {
   if (loading || !user) return null;
 
   return (
-    <AppLayout>
-      <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4">{savedRoutes?.length || 0} zapisane trasy</h1>
+    <PageTransition>
+      <AppLayout>
+        <div className="p-4">
+          <h1 className="text-2xl font-bold mb-4">{savedRoutes?.length || 0} zapisane trasy</h1>
 
-        <div className="space-y-4">
-          {savedRoutes?.map((route: any) => (
-            <RouteCard key={route.id} route={route} />
-          ))}
-          {savedRoutes?.length === 0 && (
-            <p className="text-center text-muted-foreground py-8">
-              Nie masz jeszcze zapisanych tras
-            </p>
-          )}
+          <div className="space-y-4">
+            {savedRoutes?.map((route: any) => (
+              <RouteCard key={route.id} route={route} />
+            ))}
+            {savedRoutes?.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">
+                Nie masz jeszcze zapisanych tras
+              </p>
+            )}
+          </div>
         </div>
-      </div>
-    </AppLayout>
+      </AppLayout>
+    </PageTransition>
   );
 };
 
