@@ -20,7 +20,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
       onClick={() => navigate(`/route/${route.id}`)}
       className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow"
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 pb-4 border-b border-border">
         <div className="flex items-center gap-2">
           <Avatar className="h-10 w-10">
             <AvatarImage src={route.profiles?.avatar_url} />
@@ -40,7 +40,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
         </button>
       </div>
 
-      <div className="space-y-2 pb-4 border-b border-border">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">{route.title}</h3>
           <div className="flex items-center gap-1">
