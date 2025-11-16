@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bookmark } from "lucide-react";
+import { Bookmark, Heart, MessageCircle } from "lucide-react";
 import StarRating from "./StarRating";
 import { format } from "date-fns";
 
@@ -52,36 +52,42 @@ const RouteCard = ({ route }: RouteCardProps) => {
       </div>
 
       {route.pins?.length > 0 && (
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-3">
           {route.pins.slice(0, 3).map((pin: any, index: number) => (
             <div key={pin.id} className="flex gap-3">
-              <div className="flex-shrink-0">
-                {pin.image_url ? (
-                  <img
-                    src={pin.image_url}
-                    alt={pin.place_name}
-                    className="w-20 h-20 object-cover rounded-lg"
-                  />
-                ) : (
-                  <div className="w-20 h-20 bg-muted rounded-lg flex items-center justify-center">
-                    <span className="text-2xl font-bold text-muted-foreground">
-                      {index + 1}
-                    </span>
-                  </div>
-                )}
+              <div className="flex-shrink-0 relative">
+                <img
+                  src={pin.image_url || '/placeholder.svg'}
+                  alt={pin.place_name}
+                  className="w-20 h-20 object-cover rounded-lg"
+                />
+                <div className="absolute top-2 left-2 bg-background/90 rounded-full w-6 h-6 flex items-center justify-center">
+                  <span className="text-xs font-semibold">{index + 1}</span>
+                </div>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="font-medium truncate">{pin.place_name}</h4>
-                  <StarRating rating={pin.rating || 0} />
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <h4 className="font-semibold text-sm">{pin.place_name}</h4>
+                  {pin.rating && <StarRating rating={pin.rating} />}
                 </div>
                 <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
-                <p className="text-sm line-clamp-2">{pin.description}</p>
+                <p className="text-sm text-muted-foreground line-clamp-2">{pin.description}</p>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <div className="mt-4 pt-4 border-t border-border flex items-center gap-4">
+        <button className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+          <Heart className="h-5 w-5" />
+          <span className="text-sm">24</span>
+        </button>
+        <button className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+          <MessageCircle className="h-5 w-5" />
+          <span className="text-sm">1</span>
+        </button>
+      </div>
     </div>
   );
 };
