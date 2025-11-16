@@ -19,6 +19,9 @@ const Search = () => {
     queryFn: async () => {
       if (!searchQuery.trim()) return null;
 
+      const results: any = {};
+
+      // Wyszukiwanie tras
       if (activeTab === "routes" || activeTab === "all") {
         const { data: routes, error } = await supabase
           .from("routes")
@@ -35,10 +38,41 @@ const Search = () => {
           .limit(20);
 
         if (error) throw error;
-        return { routes };
+        results.routes = routes;
       }
 
-      return null;
+      // Wyszukiwanie użytkowników
+      if (activeTab === "users" || activeTab === "all") {
+        const { data: users, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .ilike("username", `%${searchQuery}%`)
+          .limit(20);
+
+        if (error) throw error;
+        results.users = users;
+      }
+
+      // Wyszukiwanie miejsc
+      if (activeTab === "places" || activeTab === "all") {
+        const { data: places, error } = await supabase
+          .from("pins")
+          .select(`
+            *,
+            routes!inner (
+              *,
+              profiles:user_id (username, avatar_url)
+            )
+          `)
+          .eq("routes.status", "published")
+          .or(`place_name.ilike.%${searchQuery}%,address.ilike.%${searchQuery}%`)
+          .limit(20);
+
+        if (error) throw error;
+        results.places = places;
+      }
+
+      return results;
     },
     enabled: searchQuery.length > 0,
   });
@@ -174,11 +208,12 @@ const Search = () => {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {isLoading && (
                 <p className="text-center text-muted-foreground py-8">Wyszukiwanie...</p>
               )}
 
+              {/* Wyniki tras */}
               {searchResults?.routes && searchResults.routes.length > 0 && (
                 <div>
                   <h3 className="font-semibold mb-3">Trasy</h3>
@@ -190,7 +225,69 @@ const Search = () => {
                 </div>
               )}
 
-              {!isLoading && searchResults?.routes?.length === 0 && (
+              {/* Wyniki użytkowników */}
+              {searchResults?.users && searchResults.users.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-3">Użytkownicy</h3>
+                  <div className="space-y-3">
+                    {searchResults.users.map((user: any) => (
+                      <div
+                        key={user.id}
+                        onClick={() => navigate(`/profile/${user.id}`)}
+                        className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl hover:bg-accent cursor-pointer transition-colors"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                          {user.avatar_url ? (
+                            <img src={user.avatar_url} alt={user.username} className="w-full h-full rounded-full object-cover" />
+                          ) : (
+                            <span className="text-lg font-semibold">{user.username?.[0]?.toUpperCase()}</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold">{user.username}</p>
+                          {user.bio && (
+                            <p className="text-sm text-muted-foreground line-clamp-1">{user.bio}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Wyniki miejsc */}
+              {searchResults?.places && searchResults.places.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-3">Miejsca</h3>
+                  <div className="space-y-3">
+                    {searchResults.places.map((pin: any) => (
+                      <div
+                        key={pin.id}
+                        onClick={() => navigate(`/route/${pin.routes.id}`)}
+                        className="flex gap-3 p-4 bg-card border border-border rounded-xl hover:bg-accent cursor-pointer transition-colors"
+                      >
+                        <img
+                          src={pin.image_url || '/placeholder.svg'}
+                          alt={pin.place_name}
+                          className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold mb-1">{pin.place_name}</h4>
+                          <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Z trasy: {pin.routes.title}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!isLoading && 
+               !searchResults?.routes?.length && 
+               !searchResults?.users?.length && 
+               !searchResults?.places?.length && (
                 <p className="text-center text-muted-foreground py-8">
                   Nie znaleziono wyników
                 </p>
