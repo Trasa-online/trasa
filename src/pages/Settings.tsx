@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import PageTransition from "@/components/PageTransition";
 
 const Settings = () => {
   const { user, loading, signOut } = useAuth();
@@ -90,71 +91,73 @@ const Settings = () => {
   if (loading || !user) return null;
 
   return (
-    <AppLayout>
-      <div className="p-4 space-y-6">
-        <h1 className="text-2xl font-bold">Ustawienia profilu</h1>
+    <PageTransition>
+      <AppLayout>
+        <div className="p-4 space-y-6">
+          <h1 className="text-2xl font-bold">Ustawienia profilu</h1>
 
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={avatarUrl} />
-              <AvatarFallback>{username?.[0]?.toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <label className="absolute bottom-0 right-0 bg-foreground text-background p-2 rounded-full cursor-pointer">
-              <Camera className="h-4 w-4" />
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleAvatarUpload(file);
-                }}
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={avatarUrl} />
+                <AvatarFallback>{username?.[0]?.toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <label className="absolute bottom-0 right-0 bg-foreground text-background p-2 rounded-full cursor-pointer">
+                <Camera className="h-4 w-4" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAvatarUpload(file);
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="username">Nazwa użytkownika</Label>
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
-            </label>
-          </div>
-        </div>
+            </div>
 
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="username">Nazwa użytkownika</Label>
-            <Input
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
+            <div>
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea
+                id="bio"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Opowiedz coś o sobie..."
+                rows={3}
+              />
+            </div>
 
-          <div>
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea
-              id="bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Opowiedz coś o sobie..."
-              rows={3}
-            />
+            <Button
+              className="w-full"
+              onClick={() => updateProfileMutation.mutate()}
+              disabled={updateProfileMutation.isPending}
+            >
+              Zapisz zmiany
+            </Button>
           </div>
 
-          <Button
-            className="w-full"
-            onClick={() => updateProfileMutation.mutate()}
-            disabled={updateProfileMutation.isPending}
-          >
-            Zapisz zmiany
-          </Button>
+          <div className="space-y-2 pt-4 border-t border-border">
+            <Button variant="outline" className="w-full">
+              Zmień hasło
+            </Button>
+            <Button variant="destructive" className="w-full" onClick={signOut}>
+              Wyloguj się
+            </Button>
+          </div>
         </div>
-
-        <div className="space-y-2 pt-4 border-t border-border">
-          <Button variant="outline" className="w-full">
-            Zmień hasło
-          </Button>
-          <Button variant="destructive" className="w-full" onClick={signOut}>
-            Wyloguj się
-          </Button>
-        </div>
-      </div>
-    </AppLayout>
+      </AppLayout>
+    </PageTransition>
   );
 };
 

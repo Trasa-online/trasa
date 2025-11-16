@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StarRating from "@/components/route/StarRating";
 import { MapPin, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import PageTransition from "@/components/PageTransition";
 
 const MyRoutes = () => {
   const { user, loading } = useAuth();
@@ -139,44 +140,46 @@ const MyRoutes = () => {
   if (loading || !user) return null;
 
   return (
-    <AppLayout>
-      <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4">TRASA</h1>
+    <PageTransition>
+      <AppLayout>
+        <div className="p-4">
+          <h1 className="text-2xl font-bold mb-4">TRASA</h1>
 
-        <Tabs defaultValue="published" className="w-full">
-          <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="published">
-              Opublikowane trasy ({publishedRoutes?.length || 0})
-            </TabsTrigger>
-            <TabsTrigger value="draft">
-              Robocze trasy ({draftRoutes?.length || 0})
-            </TabsTrigger>
-          </TabsList>
+          <Tabs defaultValue="published" className="w-full">
+            <TabsList className="w-full grid grid-cols-2">
+              <TabsTrigger value="published">
+                Opublikowane trasy ({publishedRoutes?.length || 0})
+              </TabsTrigger>
+              <TabsTrigger value="draft">
+                Robocze trasy ({draftRoutes?.length || 0})
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="published" className="space-y-4 mt-4">
-            {publishedRoutes?.map((route) => (
-              <RouteItem key={route.id} route={route} />
-            ))}
-            {publishedRoutes?.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
-                Nie masz jeszcze opublikowanych tras
-              </p>
-            )}
-          </TabsContent>
+            <TabsContent value="published" className="space-y-4 mt-4">
+              {publishedRoutes?.map((route) => (
+                <RouteItem key={route.id} route={route} />
+              ))}
+              {publishedRoutes?.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">
+                  Nie masz jeszcze opublikowanych tras
+                </p>
+              )}
+            </TabsContent>
 
-          <TabsContent value="draft" className="space-y-4 mt-4">
-            {draftRoutes?.map((route) => (
-              <RouteItem key={route.id} route={route} />
-            ))}
-            {draftRoutes?.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
-                Nie masz roboczych tras
-              </p>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
-    </AppLayout>
+            <TabsContent value="draft" className="space-y-4 mt-4">
+              {draftRoutes?.map((route) => (
+                <RouteItem key={route.id} route={route} />
+              ))}
+              {draftRoutes?.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">
+                  Nie masz roboczych tras
+                </p>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+      </AppLayout>
+    </PageTransition>
   );
 };
 
