@@ -33,6 +33,7 @@ const CreateRoute = () => {
   ]);
   const [currentPinIndex, setCurrentPinIndex] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [step, setStep] = useState(1);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -171,187 +172,209 @@ const CreateRoute = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center gap-4 z-10">
-        <button onClick={() => navigate(-1)}>
+        <button onClick={() => step === 2 ? setStep(1) : navigate(-1)}>
           <ArrowLeft className="h-6 w-6" />
         </button>
         <h1 className="text-xl font-semibold flex-1">
-          {id ? title || "Edytuj trasę" : "Utwórz nową trasę"}
+          {step === 1 ? "Utwórz nową trasę" : title || "Edytuj trasę"}
         </h1>
       </div>
 
       <div className="max-w-lg mx-auto p-4 space-y-6">
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="title">Nazwa trasy *</Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="np. Ukryte skarby Tokio"
-            />
-          </div>
-
-          <div className="bg-muted rounded-lg p-4 text-sm space-y-2">
-            <p className="font-medium">Co dalej?</p>
-            <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-              <li>Dodaj nieograniczoną liczbę pinezek do trasy</li>
-              <li>Każda pinezka wymaga nazwy, adresu i oceny</li>
-              <li>Opcjonalnie dodaj zdjęcia, opisy i wzmianki</li>
-              <li>Przeglądaj i publikuj, gdy będzie gotowa</li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">
-              Pinezka {currentPinIndex + 1}/{pins.length}
-            </h2>
-            <div className="flex gap-2">
-              {currentPinIndex > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPinIndex(currentPinIndex - 1)}
-                >
-                  ←
-                </Button>
-              )}
-              {currentPinIndex < pins.length - 1 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPinIndex(currentPinIndex + 1)}
-                >
-                  →
-                </Button>
-              )}
-              {pins.length > 1 && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => removePin(currentPinIndex)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-              <Button variant="default" size="icon" onClick={addPin}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <Label>Nazwa pinezki *</Label>
-              <Input
-                value={pins[currentPinIndex]?.place_name || ""}
-                onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
-                placeholder="np. Kiyomizu-dera"
-              />
-            </div>
-
-            <div>
-              <Label>Adres *</Label>
-              <Input
-                value={pins[currentPinIndex]?.address || ""}
-                onChange={(e) => updatePin(currentPinIndex, "address", e.target.value)}
-                placeholder="np. Chrome-294 Kiyomizu"
-              />
-            </div>
-
-            <div>
-              <Label>Opis (Opcjonalne)</Label>
-              <Textarea
-                value={pins[currentPinIndex]?.description || ""}
-                onChange={(e) => updatePin(currentPinIndex, "description", e.target.value)}
-                placeholder="Opisz swoje wrażenia z tego miejsca..."
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <Label>Wspomnij znajomych (Opcjonalne)</Label>
-              <Input
-                placeholder="@nazwa_użytkownika"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Oznacz znajomych, którzy byli z tobą
-              </p>
-            </div>
-
-            <div>
-              <Label>Ocena *</Label>
-              <div className="mt-2">
-                <StarRating
-                  rating={pins[currentPinIndex]?.rating || 0}
-                  interactive
-                  size="lg"
-                  onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
+        {step === 1 ? (
+          <>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="title">Nazwa trasy *</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="np. Ukryte skarby Tokio"
                 />
               </div>
-            </div>
 
-            <div>
-              <Label>Zdjęcia (Opcjonalne)</Label>
-              <div className="mt-2">
-                {pins[currentPinIndex]?.image_url ? (
-                  <div className="relative">
-                    <img
-                      src={pins[currentPinIndex].image_url}
-                      alt="Preview"
-                      className="w-full h-48 object-cover rounded-lg"
-                    />
-                    <button
-                      onClick={() => updatePin(currentPinIndex, "image_url", "")}
-                      className="absolute top-2 right-2 bg-background p-2 rounded-full"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent">
-                    <Camera className="h-12 w-12 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Dotknij, aby dodać zdjęcia
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Możesz wybrać wiele zdjęć
-                    </p>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleImageUpload(file, currentPinIndex);
-                      }}
-                    />
-                  </label>
-                )}
+              <div className="bg-muted rounded-lg p-4 text-sm space-y-2">
+                <p className="font-medium">Co dalej?</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li>Dodaj nieograniczoną liczbę pinezek do trasy</li>
+                  <li>Każda pinezka wymaga nazwy, adresu i oceny</li>
+                  <li>Opcjonalnie dodaj zdjęcia, opisy i wzmianki</li>
+                  <li>Przeglądaj i publikuj, gdy będzie gotowa</li>
+                </ul>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 space-y-2">
-          <Button
-            variant="default"
-            className="w-full"
-            onClick={() => saveRoute("published")}
-            disabled={saving}
-          >
-            Opublikuj
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => saveRoute("draft")}
-            disabled={saving}
-          >
-            Zapisz jako wersję roboczą
-          </Button>
-        </div>
+            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4">
+              <Button
+                variant="default"
+                className="w-full"
+                onClick={() => {
+                  if (!title.trim()) {
+                    toast({ variant: "destructive", title: "Nazwa trasy jest wymagana" });
+                    return;
+                  }
+                  setStep(2);
+                }}
+              >
+                Kontynuj
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">
+                  Pinezka {currentPinIndex + 1}/{pins.length}
+                </h2>
+                <div className="flex gap-2">
+                  {currentPinIndex > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPinIndex(currentPinIndex - 1)}
+                    >
+                      ←
+                    </Button>
+                  )}
+                  {currentPinIndex < pins.length - 1 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPinIndex(currentPinIndex + 1)}
+                    >
+                      →
+                    </Button>
+                  )}
+                  {pins.length > 1 && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => removePin(currentPinIndex)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button variant="default" size="icon" onClick={addPin}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Label>Nazwa pinezki *</Label>
+                  <Input
+                    value={pins[currentPinIndex]?.place_name || ""}
+                    onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
+                    placeholder="np. Kiyomizu-dera"
+                  />
+                </div>
+
+                <div>
+                  <Label>Adres *</Label>
+                  <Input
+                    value={pins[currentPinIndex]?.address || ""}
+                    onChange={(e) => updatePin(currentPinIndex, "address", e.target.value)}
+                    placeholder="np. Chrome-294 Kiyomizu"
+                  />
+                </div>
+
+                <div>
+                  <Label>Opis (Opcjonalne)</Label>
+                  <Textarea
+                    value={pins[currentPinIndex]?.description || ""}
+                    onChange={(e) => updatePin(currentPinIndex, "description", e.target.value)}
+                    placeholder="Opisz swoje wrażenia z tego miejsca..."
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label>Wspomnij znajomych (Opcjonalne)</Label>
+                  <Input
+                    placeholder="@nazwa_użytkownika"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Oznacz znajomych, którzy byli z tobą
+                  </p>
+                </div>
+
+                <div>
+                  <Label>Ocena *</Label>
+                  <div className="mt-2">
+                    <StarRating
+                      rating={pins[currentPinIndex]?.rating || 0}
+                      interactive
+                      size="lg"
+                      onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Zdjęcia (Opcjonalne)</Label>
+                  <div className="mt-2">
+                    {pins[currentPinIndex]?.image_url ? (
+                      <div className="relative">
+                        <img
+                          src={pins[currentPinIndex].image_url}
+                          alt="Preview"
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => updatePin(currentPinIndex, "image_url", "")}
+                          className="absolute top-2 right-2 bg-background p-2 rounded-full"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent">
+                        <Camera className="h-12 w-12 text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          Dotknij, aby dodać zdjęcia
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Możesz wybrać wiele zdjęć
+                        </p>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleImageUpload(file, currentPinIndex);
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 space-y-2">
+              <Button
+                variant="default"
+                className="w-full"
+                onClick={() => saveRoute("published")}
+                disabled={saving}
+              >
+                Opublikuj
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => saveRoute("draft")}
+                disabled={saving}
+              >
+                Zapisz jako wersję roboczą
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
