@@ -1,0 +1,360 @@
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Plus, X, Camera } from "lucide-react";
+import StarRating from "@/components/route/StarRating";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+
+interface Pin {
+  id?: string;
+  place_name: string;
+  address: string;
+  description: string;
+  image_url: string;
+  rating: number;
+  pin_order: number;
+}
+
+const CreateRoute = () => {
+  const { id } = useParams();
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [pins, setPins] = useState<Pin[]>([
+    { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: 0 },
+  ]);
+  const [currentPinIndex, setCurrentPinIndex] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/auth");
+    }
+  }, [user, loading, navigate]);
+
+  const { data: existingRoute } = useQuery({
+    queryKey: ["route", id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data, error } = await supabase
+        .from("routes")
+        .select("*, pins (*)")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id && !!user,
+  });
+
+  useEffect(() => {
+    if (existingRoute) {
+      setTitle(existingRoute.title);
+      setDescription(existingRoute.description || "");
+      if (existingRoute.pins?.length > 0) {
+        setPins(existingRoute.pins.sort((a: any, b: any) => a.pin_order - b.pin_order));
+      }
+    }
+  }, [existingRoute]);
+
+  const addPin = () => {
+    setPins([...pins, { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: pins.length }]);
+    setCurrentPinIndex(pins.length);
+  };
+
+  const removePin = (index: number) => {
+    const newPins = pins.filter((_, i) => i !== index).map((pin, i) => ({ ...pin, pin_order: i }));
+    setPins(newPins);
+    if (currentPinIndex >= newPins.length) {
+      setCurrentPinIndex(Math.max(0, newPins.length - 1));
+    }
+  };
+
+  const updatePin = (index: number, field: keyof Pin, value: any) => {
+    const newPins = [...pins];
+    newPins[index] = { ...newPins[index], [field]: value };
+    setPins(newPins);
+  };
+
+  const handleImageUpload = async (file: File, pinIndex: number) => {
+    if (!user) return;
+
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError, data } = await supabase.storage
+      .from("route-images")
+      .upload(fileName, file);
+
+    if (uploadError) {
+      toast({ variant: "destructive", title: "Błąd podczas przesyłania zdjęcia" });
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("route-images")
+      .getPublicUrl(fileName);
+
+    updatePin(pinIndex, "image_url", publicUrl);
+  };
+
+  const saveRoute = async (status: "draft" | "published") => {
+    if (!user || !title.trim()) {
+      toast({ variant: "destructive", title: "Nazwa trasy jest wymagana" });
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      if (id) {
+        const { error: routeError } = await supabase
+          .from("routes")
+          .update({ title, description, status })
+          .eq("id", id);
+
+        if (routeError) throw routeError;
+
+        await supabase.from("pins").delete().eq("route_id", id);
+
+        for (const pin of pins) {
+          if (pin.place_name && pin.address) {
+            const { error: pinError } = await supabase.from("pins").insert({
+              route_id: id,
+              ...pin,
+            });
+            if (pinError) throw pinError;
+          }
+        }
+      } else {
+        const { data: route, error: routeError } = await supabase
+          .from("routes")
+          .insert({ user_id: user.id, title, description, status })
+          .select()
+          .single();
+
+        if (routeError) throw routeError;
+
+        for (const pin of pins) {
+          if (pin.place_name && pin.address) {
+            const { error: pinError } = await supabase.from("pins").insert({
+              route_id: route.id,
+              ...pin,
+            });
+            if (pinError) throw pinError;
+          }
+        }
+      }
+
+      toast({
+        title: status === "published" ? "Trasa opublikowana!" : "Trasa zapisana jako wersja robocza",
+      });
+      navigate("/my-routes");
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Błąd", description: error.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading || !user) return null;
+
+  return (
+    <div className="min-h-screen bg-background pb-20">
+      <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center gap-4 z-10">
+        <button onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-6 w-6" />
+        </button>
+        <h1 className="text-xl font-semibold flex-1">
+          {id ? title || "Edytuj trasę" : "Utwórz nową trasę"}
+        </h1>
+      </div>
+
+      <div className="max-w-lg mx-auto p-4 space-y-6">
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="title">Nazwa trasy *</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="np. Ukryte skarby Tokio"
+            />
+          </div>
+
+          <div className="bg-muted rounded-lg p-4 text-sm space-y-2">
+            <p className="font-medium">Co dalej?</p>
+            <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+              <li>Dodaj nieograniczoną liczbę pinezek do trasy</li>
+              <li>Każda pinezka wymaga nazwy, adresu i oceny</li>
+              <li>Opcjonalnie dodaj zdjęcia, opisy i wzmianki</li>
+              <li>Przeglądaj i publikuj, gdy będzie gotowa</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">
+              Pinezka {currentPinIndex + 1}/{pins.length}
+            </h2>
+            <div className="flex gap-2">
+              {currentPinIndex > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPinIndex(currentPinIndex - 1)}
+                >
+                  ←
+                </Button>
+              )}
+              {currentPinIndex < pins.length - 1 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPinIndex(currentPinIndex + 1)}
+                >
+                  →
+                </Button>
+              )}
+              {pins.length > 1 && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => removePin(currentPinIndex)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+              <Button variant="default" size="icon" onClick={addPin}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Nazwa pinezki *</Label>
+              <Input
+                value={pins[currentPinIndex]?.place_name || ""}
+                onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
+                placeholder="np. Kiyomizu-dera"
+              />
+            </div>
+
+            <div>
+              <Label>Adres *</Label>
+              <Input
+                value={pins[currentPinIndex]?.address || ""}
+                onChange={(e) => updatePin(currentPinIndex, "address", e.target.value)}
+                placeholder="np. Chrome-294 Kiyomizu"
+              />
+            </div>
+
+            <div>
+              <Label>Opis (Opcjonalne)</Label>
+              <Textarea
+                value={pins[currentPinIndex]?.description || ""}
+                onChange={(e) => updatePin(currentPinIndex, "description", e.target.value)}
+                placeholder="Opisz swoje wrażenia z tego miejsca..."
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label>Wspomnij znajomych (Opcjonalne)</Label>
+              <Input
+                placeholder="@nazwa_użytkownika"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Oznacz znajomych, którzy byli z tobą
+              </p>
+            </div>
+
+            <div>
+              <Label>Ocena *</Label>
+              <div className="mt-2">
+                <StarRating
+                  rating={pins[currentPinIndex]?.rating || 0}
+                  interactive
+                  size="lg"
+                  onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>Zdjęcia (Opcjonalne)</Label>
+              <div className="mt-2">
+                {pins[currentPinIndex]?.image_url ? (
+                  <div className="relative">
+                    <img
+                      src={pins[currentPinIndex].image_url}
+                      alt="Preview"
+                      className="w-full h-48 object-cover rounded-lg"
+                    />
+                    <button
+                      onClick={() => updatePin(currentPinIndex, "image_url", "")}
+                      className="absolute top-2 right-2 bg-background p-2 rounded-full"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent">
+                    <Camera className="h-12 w-12 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      Dotknij, aby dodać zdjęcia
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Możesz wybrać wiele zdjęć
+                    </p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageUpload(file, currentPinIndex);
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 space-y-2">
+          <Button
+            variant="default"
+            className="w-full"
+            onClick={() => saveRoute("published")}
+            disabled={saving}
+          >
+            Opublikuj
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => saveRoute("draft")}
+            disabled={saving}
+          >
+            Zapisz jako wersję roboczą
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CreateRoute;
