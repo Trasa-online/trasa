@@ -6,7 +6,6 @@ import AppLayout from "@/components/layout/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import RouteCard from "@/components/route/RouteCard";
-import PageTransition from "@/components/PageTransition";
 
 type TabType = "all" | "routes" | "users" | "places";
 
@@ -81,9 +80,8 @@ const Search = () => {
   const showEmptyState = !searchQuery;
 
   return (
-    <PageTransition>
-      <AppLayout>
-        <div className="min-h-screen">
+    <AppLayout>
+      <div className="min-h-screen">
         {/* Header */}
         <div className="sticky top-0 bg-background z-10 border-b border-border">
           <div className="p-4">
@@ -299,7 +297,6 @@ const Search = () => {
         </div>
       </div>
     </AppLayout>
-    </PageTransition>
   );
 };
 
