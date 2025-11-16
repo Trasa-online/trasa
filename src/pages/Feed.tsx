@@ -25,7 +25,9 @@ const Feed = () => {
         .select(`
           *,
           profiles:user_id (username, avatar_url),
-          pins (*)
+          pins (*),
+          likes (user_id),
+          comments (id)
         `)
         .eq("status", "published")
         .order("created_at", { ascending: false });

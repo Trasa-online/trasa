@@ -27,7 +27,12 @@ const MyRoutes = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("routes")
-        .select("*, pins (*)")
+        .select(`
+          *,
+          pins (*),
+          likes (user_id),
+          comments (id)
+        `)
         .eq("user_id", user?.id)
         .eq("status", "published")
         .order("created_at", { ascending: false });
@@ -43,7 +48,12 @@ const MyRoutes = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("routes")
-        .select("*, pins (*)")
+        .select(`
+          *,
+          pins (*),
+          likes (user_id),
+          comments (id)
+        `)
         .eq("user_id", user?.id)
         .eq("status", "draft")
         .order("created_at", { ascending: false});

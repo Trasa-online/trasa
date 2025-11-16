@@ -88,11 +88,11 @@ const RouteCard = ({ route }: RouteCardProps) => {
       <div className="mt-4 pt-4 border-t border-border flex items-center gap-4">
         <button className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
           <Heart className="h-5 w-5" />
-          <span className="text-sm">24</span>
+          <span className="text-sm">{route.likes?.length || 0}</span>
         </button>
         <button className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
           <MessageCircle className="h-5 w-5" />
-          <span className="text-sm">1</span>
+          <span className="text-sm">{route.comments?.length || 0}</span>
         </button>
       </div>
     </div>

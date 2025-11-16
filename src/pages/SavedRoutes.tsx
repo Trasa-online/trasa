@@ -26,7 +26,9 @@ const SavedRoutes = () => {
           routes (
             *,
             profiles:user_id (username, avatar_url),
-            pins (*)
+            pins (*),
+            likes (user_id),
+            comments (id)
           )
         `)
         .eq("user_id", user?.id);
