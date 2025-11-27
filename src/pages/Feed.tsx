@@ -96,7 +96,10 @@ const Feed = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">TRASA</h1>
           <div className="flex items-center gap-2">
-            <button className="p-2 hover:bg-accent rounded-lg">
+            <button
+              onClick={() => navigate("/notifications")}
+              className="p-2 hover:bg-accent rounded-lg"
+            >
               <Bell className="h-5 w-5" />
             </button>
             <button
