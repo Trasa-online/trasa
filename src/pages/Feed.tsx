@@ -82,6 +82,22 @@ const Feed = () => {
     enabled: !!user,
   });
 
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["unread-notifications", user?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user!.id)
+        .eq("read", false);
+
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!user,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -98,9 +114,14 @@ const Feed = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate("/notifications")}
-              className="p-2 hover:bg-accent rounded-lg"
+              className="p-2 hover:bg-accent rounded-lg relative"
             >
               <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </button>
             <button
               onClick={() => navigate("/search")}
