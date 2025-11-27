@@ -1,7 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Star, MapPin, Eye } from "lucide-react";
+import { Heart, MessageCircle, Star, MapPin, Eye, Bookmark } from "lucide-react";
 import { format } from "date-fns";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface RouteCardProps {
   route: any;
@@ -9,11 +13,78 @@ interface RouteCardProps {
 
 const RouteCard = ({ route }: RouteCardProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
   const averageRating =
     route.pins?.length > 0
       ? route.pins.reduce((acc: number, pin: any) => acc + (pin.rating || 0), 0) /
         route.pins.length
       : 0;
+
+  // Check if route is saved by current user
+  const { data: isSaved = false } = useQuery({
+    queryKey: ["is-saved", route.id, user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      
+      const { data, error } = await supabase
+        .from("saved_routes")
+        .select("*")
+        .eq("route_id", route.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return !!data;
+    },
+    enabled: !!user,
+  });
+
+  // Save/unsave route mutation
+  const saveRouteMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Must be logged in");
+
+      if (isSaved) {
+        // Unsave
+        const { error } = await supabase
+          .from("saved_routes")
+          .delete()
+          .eq("route_id", route.id)
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+      } else {
+        // Save
+        const { error } = await supabase
+          .from("saved_routes")
+          .insert({
+            route_id: route.id,
+            user_id: user.id,
+          });
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["is-saved", route.id] });
+      queryClient.invalidateQueries({ queryKey: ["saved-routes"] });
+      toast.success(isSaved ? "Usunięto z zapisanych" : "Zapisano trasę");
+    },
+    onError: () => {
+      toast.error("Nie udało się zapisać trasy");
+    },
+  });
+
+  const handleSave = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      toast.error("Musisz być zalogowany");
+      return;
+    }
+    saveRouteMutation.mutate();
+  };
 
   return (
     <div className="bg-card border border-border rounded-xl p-4">
@@ -97,20 +168,30 @@ const RouteCard = ({ route }: RouteCardProps) => {
         </div>
       )}
 
-      <div className="mt-3 pt-3 border-t border-border flex items-center gap-4">
-        <button 
-          onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+      <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Heart className="h-4 w-4" />
+            <span className="text-sm">{route.likes?.length || 0}</span>
+          </button>
+          <button 
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span className="text-sm">{route.comments?.length || 0}</span>
+          </button>
+        </div>
+        
+        <button
+          onClick={handleSave}
+          disabled={saveRouteMutation.isPending}
+          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
         >
-          <Heart className="h-4 w-4" />
-          <span className="text-sm">{route.likes?.length || 0}</span>
-        </button>
-        <button 
-          onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <MessageCircle className="h-4 w-4" />
-          <span className="text-sm">{route.comments?.length || 0}</span>
+          <Bookmark className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
         </button>
       </div>
     </div>
