@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AppLayout } from "@/components/layout/AppLayout";
+import AppLayout from "@/components/layout/AppLayout";
 import { Heart, MessageCircle, UserPlus, MapPin, ArrowLeft } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -46,8 +46,8 @@ const Notifications = () => {
         .from("notifications")
         .select(`
           *,
-          actor:profiles!notifications_actor_id_fkey(username, avatar_url),
-          route:routes(title)
+          actor:actor_id(username, avatar_url),
+          route:route_id(title)
         `)
         .eq("user_id", user?.id)
         .order("created_at", { ascending: false });
