@@ -34,6 +34,7 @@ const CreateRoute = () => {
   const [currentPinIndex, setCurrentPinIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(1);
+  const [routeDescription, setRouteDescription] = useState("");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -172,56 +173,56 @@ const CreateRoute = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center gap-4 z-10">
-        <button onClick={() => step === 2 ? setStep(1) : navigate(-1)}>
+        <button onClick={() => {
+          if (step === 3) setStep(2);
+          else if (step === 2) setStep(1);
+          else navigate(-1);
+        }}>
           <ArrowLeft className="h-6 w-6" />
         </button>
         <h1 className="text-xl font-semibold flex-1">
-          {step === 1 ? "Utwórz nową trasę" : title || "Edytuj trasę"}
+          {step === 1 ? "Utwórz nową trasę" : step === 2 ? title || "Edytuj trasę" : "Podsumowanie trasy"}
         </h1>
       </div>
 
       <div className="max-w-lg mx-auto p-4 space-y-6">
         {step === 1 ? (
-          <>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">Nazwa trasy *</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="np. Ukryte skarby Tokio"
-                />
-              </div>
-
-              <div className="bg-muted rounded-lg p-4 text-sm space-y-2">
-                <p className="font-medium">Co dalej?</p>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                  <li>Dodaj nieograniczoną liczbę pinezek do trasy</li>
-                  <li>Każda pinezka wymaga nazwy, adresu i oceny</li>
-                  <li>Opcjonalnie dodaj zdjęcia, opisy i wzmianki</li>
-                  <li>Przeglądaj i publikuj, gdy będzie gotowa</li>
-                </ul>
-              </div>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="title">Nazwa trasy *</Label>
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="np. Ukryte skarby Tokio"
+              />
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4">
-              <Button
-                variant="default"
-                className="w-full"
-                onClick={() => {
-                  if (!title.trim()) {
-                    toast({ variant: "destructive", title: "Nazwa trasy jest wymagana" });
-                    return;
-                  }
-                  setStep(2);
-                }}
-              >
-                Kontynuj
-              </Button>
+            <div className="bg-muted rounded-lg p-4 text-sm space-y-2">
+              <p className="font-medium">Co dalej?</p>
+              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                <li>Dodaj nieograniczoną liczbę pinezek do trasy</li>
+                <li>Każda pinezka wymaga nazwy, adresu i oceny</li>
+                <li>Opcjonalnie dodaj zdjęcia, opisy i wzmianki</li>
+                <li>Przeglądaj i publikuj, gdy będzie gotowa</li>
+              </ul>
             </div>
-          </>
-        ) : (
+
+            <Button
+              variant="default"
+              className="w-full"
+              onClick={() => {
+                if (!title.trim()) {
+                  toast({ variant: "destructive", title: "Nazwa trasy jest wymagana" });
+                  return;
+                }
+                setStep(2);
+              }}
+            >
+              Kontynuj
+            </Button>
+          </div>
+        ) : step === 2 ? (
           <>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -355,14 +356,113 @@ const CreateRoute = () => {
               </div>
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 space-y-2">
+            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4">
               <Button
                 variant="default"
                 className="w-full"
+                onClick={() => setStep(3)}
+              >
+                Przejdź do podsumowania
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="space-y-6 pb-80">
+              <div className="text-center space-y-1">
+                <h2 className="text-lg font-medium">
+                  Podsumowanie trasy • {pins.filter(p => p.place_name && p.address).length} {pins.filter(p => p.place_name && p.address).length === 1 ? 'pinezka' : 'pinezki'}
+                </h2>
+                <p className="text-xl font-semibold">{title}</p>
+              </div>
+
+              {/* Map placeholder */}
+              <div className="relative h-48 bg-muted rounded-lg overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-primary rounded-full" />
+                  </div>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-white px-4 py-2 flex items-center justify-between text-sm">
+                  <span>{pins.filter(p => p.place_name && p.address).length} lokalizacja</span>
+                  <span>Podgląd mapy</span>
+                </div>
+              </div>
+
+              {/* Pins list */}
+              {pins.filter(p => p.place_name && p.address).map((pin, index) => (
+                <div key={index} className="space-y-3">
+                  {pin.image_url && (
+                    <div className="relative h-48 bg-muted rounded-lg overflow-hidden">
+                      <img src={pin.image_url} alt={pin.place_name} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-16 h-16 bg-muted/90 rounded-full flex items-center justify-center">
+                          <span className="text-3xl">📍</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Pinezka</p>
+                        <p className="font-medium">{pin.place_name}</p>
+                      </div>
+                      <StarRating rating={pin.rating} size="md" />
+                    </div>
+                    
+                    <div>
+                      <p className="text-xs text-muted-foreground">Adres</p>
+                      <p className="text-sm">{pin.address}</p>
+                    </div>
+                    
+                    {pin.description && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Opis:</p>
+                        <p className="text-sm whitespace-pre-wrap">{pin.description}</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {index < pins.filter(p => p.place_name && p.address).length - 1 && (
+                    <div className="h-px bg-border my-4" />
+                  )}
+                </div>
+              ))}
+
+              {/* Optional route description */}
+              <div className="space-y-2">
+                <Label htmlFor="route-description">Opis trasy (Opcjonalne)</Label>
+                <Textarea
+                  id="route-description"
+                  value={routeDescription}
+                  onChange={(e) => setRouteDescription(e.target.value)}
+                  placeholder="Podziel się ogólnymi wrażeniami i najważniejszymi..."
+                  rows={4}
+                  className="resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Opowiedz obserwującym, co sprawiło, że ta trasa była wyjątkowa
+                </p>
+              </div>
+            </div>
+
+            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 space-y-2">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setStep(2)}
+              >
+                + Dodaj kolejną pinezkę
+              </Button>
+              <Button
+                variant="default"
+                className="w-full bg-black text-white hover:bg-black/90"
                 onClick={() => saveRoute("published")}
                 disabled={saving}
               >
-                Opublikuj
+                Opublikuj trasę
               </Button>
               <Button
                 variant="outline"
@@ -370,8 +470,14 @@ const CreateRoute = () => {
                 onClick={() => saveRoute("draft")}
                 disabled={saving}
               >
-                Zapisz jako wersję roboczą
+                Zapisz jako szkic
               </Button>
+              <button
+                onClick={() => navigate(-1)}
+                className="w-full text-sm text-muted-foreground py-2"
+              >
+                Anuluj
+              </button>
             </div>
           </>
         )}
