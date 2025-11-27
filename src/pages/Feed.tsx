@@ -109,26 +109,26 @@ const Feed = () => {
         </div>
 
         {profile && (
-          <div className="flex flex-col items-center py-6 space-y-4">
-            <Avatar className="h-24 w-24">
+          <div className="flex flex-col items-center py-4 space-y-3">
+            <Avatar className="h-16 w-16">
               <AvatarImage src={profile.avatar_url || ""} alt={profile.username} />
               <AvatarFallback>{profile.username[0].toUpperCase()}</AvatarFallback>
             </Avatar>
             
-            <h2 className="text-xl font-bold uppercase">{profile.username}</h2>
+            <h2 className="text-lg font-semibold uppercase">{profile.username}</h2>
             
             {profile.bio && (
-              <p className="text-center text-muted-foreground">{profile.bio}</p>
+              <p className="text-center text-sm text-muted-foreground">{profile.bio}</p>
             )}
             
-            <div className="flex gap-8 pt-2">
+            <div className="flex gap-6 pt-1">
               <div className="text-center">
-                <div className="text-2xl font-bold">{friendsCount}</div>
-                <div className="text-sm text-muted-foreground">Friends</div>
+                <div className="text-lg font-semibold">{friendsCount}</div>
+                <div className="text-xs text-muted-foreground">Friends</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold">{routesCount}</div>
-                <div className="text-sm text-muted-foreground">Routes</div>
+                <div className="text-lg font-semibold">{routesCount}</div>
+                <div className="text-xs text-muted-foreground">Routes</div>
               </div>
             </div>
           </div>
