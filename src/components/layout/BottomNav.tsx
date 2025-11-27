@@ -1,5 +1,5 @@
 import { NavLink } from "@/components/NavLink";
-import { Users, MapPin, Plus, Bookmark, Settings } from "lucide-react";
+import { Rss, MapPin, Plus, Bookmark, Settings } from "lucide-react";
 
 const BottomNav = () => {
   return (
@@ -12,8 +12,8 @@ const BottomNav = () => {
         >
           {({ isActive }) => (
             <>
-              <Users className="h-5 w-5" />
-              <span className="text-xs">Znajomi</span>
+              <Rss className="h-5 w-5" />
+              <span className="text-xs">Feed</span>
               {isActive && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-background rounded-full" />}
             </>
           )}
