@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera } from "lucide-react";
+import { Camera, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -38,6 +38,21 @@ const Settings = () => {
 
       if (error) throw error;
       return data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: isAdmin } = useQuery({
+    queryKey: ["is-admin", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user?.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      return !!data;
     },
     enabled: !!user,
   });
@@ -146,6 +161,16 @@ const Settings = () => {
         </div>
 
         <div className="space-y-2 pt-4 border-t border-border">
+          {isAdmin && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate("/admin")}
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              Panel Administracyjny
+            </Button>
+          )}
           <Button variant="outline" className="w-full">
             Zmień hasło
           </Button>

@@ -11,6 +11,7 @@ import SavedRoutes from "./pages/SavedRoutes";
 import Settings from "./pages/Settings";
 import RouteDetails from "./pages/RouteDetails";
 import Search from "./pages/Search";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/settings" element={<Settings />} />
           <Route path="/route/:id" element={<RouteDetails />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
