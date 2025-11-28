@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Plus, X, Camera, Car, Train, Bus, Ship, Bike, Tag, Plane, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
@@ -84,7 +83,6 @@ const CreateRoute = () => {
     if (existingRoute) {
       setTitle(existingRoute.title);
       setDescription(existingRoute.description || "");
-      setRouteRating(existingRoute.rating || 0);
       if (existingRoute.pins?.length > 0) {
         setPins(
           existingRoute.pins
@@ -92,6 +90,9 @@ const CreateRoute = () => {
             .map((pin: any) => ({
               ...pin,
               mentioned_users: pin.mentioned_users || [],
+              // Explicit type conversions from nullable database types
+              is_transport: !!pin.is_transport,
+              rating: typeof pin.rating === 'number' ? pin.rating : 0,
               // Infer pin type for existing routes based on is_transport flag
               pin_type: pin.is_transport ? "transport" : "tag",
             }))
@@ -168,6 +169,19 @@ const CreateRoute = () => {
     if (validPins.length === 0) {
       toast({ variant: "destructive", title: "Dodaj przynajmniej jedną pinezkę" });
       return;
+    }
+
+    // Validate that attraction pins have ratings when publishing
+    if (status === "published") {
+      const attractionsWithoutRating = validPins.filter(p => !p.is_transport && p.rating <= 0);
+      if (attractionsWithoutRating.length > 0) {
+        toast({ 
+          variant: "destructive", 
+          title: "Wszystkie atrakcje muszą mieć ocenę", 
+          description: "Dodaj ocenę do wszystkich pinezek atrakcji przed publikacją"
+        });
+        return;
+      }
     }
 
     setSaving(true);
@@ -797,19 +811,17 @@ const CreateRoute = () => {
                             {(pins[currentPinIndex]?.rating || 0).toFixed(1)}
                           </span>
                         </div>
-                        <Slider
-                          value={[pins[currentPinIndex]?.rating || 0]}
-                          onValueChange={(value) => updatePin(currentPinIndex, "rating", value[0])}
-                          min={0}
-                          max={5}
-                          step={0.5}
-                          className="w-full"
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>0</span>
-                          <span>2.5</span>
-                          <span>5</span>
+                        <div className="flex items-center justify-center py-4">
+                          <StarRating
+                            rating={pins[currentPinIndex]?.rating || 0}
+                            size="lg"
+                            interactive
+                            onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
+                          />
                         </div>
+                        <p className="text-xs text-center text-muted-foreground">
+                          Kliknij gwiazdki aby wybrać ocenę
+                        </p>
                       </div>
                     )}
 
@@ -981,8 +993,22 @@ const CreateRoute = () => {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Ocena jest obliczana automatycznie na podstawie ocen pinezek atrakcji
+                  Ocena jest obliczana automatycznie na podstawie średniej z {pins.filter(p => !p.is_transport && p.rating > 0).length} {pins.filter(p => !p.is_transport && p.rating > 0).length === 1 ? 'ocenionej atrakcji' : 'ocenionych atrakcji'}
                 </p>
+                {pins.filter(p => !p.is_transport && p.rating > 0).length > 0 && (
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p className="font-medium">Uwzględnione oceny:</p>
+                    <ul className="space-y-0.5 pl-4">
+                      {pins.filter(p => !p.is_transport && p.rating > 0).map((pin, idx) => (
+                        <li key={idx} className="flex items-center gap-2">
+                          <span className="text-yellow-500">★</span>
+                          <span>{pin.rating.toFixed(1)}</span>
+                          <span>- {pin.place_name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               {/* Optional route description */}
