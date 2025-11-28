@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Plus, X, Camera, Car, Train, Bus, Ship, Bike, Tag, Plane, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
@@ -45,8 +47,15 @@ const CreateRoute = () => {
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(1);
   const [routeDescription, setRouteDescription] = useState("");
+  const [routeRating, setRouteRating] = useState(0);
   const [showCustomTransportInput, setShowCustomTransportInput] = useState(false);
   const [showCustomTagInput, setShowCustomTagInput] = useState(false);
+  const [noAddressRemembered, setNoAddressRemembered] = useState(false);
+
+  useEffect(() => {
+    // Reset "no address" checkbox when changing pins
+    setNoAddressRemembered(pins[currentPinIndex]?.address === "Brak adresu");
+  }, [currentPinIndex, pins]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -522,13 +531,32 @@ const CreateRoute = () => {
                           />
                         </div>
 
-                        <div>
+                        <div className="space-y-2">
                           <Label>Adres *</Label>
                           <Input
                             value={pins[currentPinIndex]?.address || ""}
                             onChange={(e) => updatePin(currentPinIndex, "address", e.target.value)}
                             placeholder="np. Chrome-294 Kiyomizu"
+                            disabled={noAddressRemembered}
                           />
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id="no-address"
+                              checked={noAddressRemembered}
+                              onCheckedChange={(checked) => {
+                                setNoAddressRemembered(!!checked);
+                                if (checked) {
+                                  updatePin(currentPinIndex, "address", "Brak adresu");
+                                }
+                              }}
+                            />
+                            <label
+                              htmlFor="no-address"
+                              className="text-sm text-muted-foreground cursor-pointer"
+                            >
+                              Nie pamiętam adresu
+                            </label>
+                          </div>
                         </div>
                       </>
                     )}
@@ -559,15 +587,26 @@ const CreateRoute = () => {
                     </div>
 
                     {pins[currentPinIndex]?.pin_type === "tag" && (
-                      <div>
-                        <Label>Ocena *</Label>
-                        <div className="mt-2">
-                          <StarRating
-                            rating={pins[currentPinIndex]?.rating || 0}
-                            interactive
-                            size="lg"
-                            onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
-                          />
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label>Ocena *</Label>
+                          <span className="text-sm font-medium flex items-center gap-1">
+                            <span className="text-yellow-500">★</span>
+                            {(pins[currentPinIndex]?.rating || 0).toFixed(1)}
+                          </span>
+                        </div>
+                        <Slider
+                          value={[pins[currentPinIndex]?.rating || 0]}
+                          onValueChange={(value) => updatePin(currentPinIndex, "rating", value[0])}
+                          min={0}
+                          max={5}
+                          step={0.5}
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>0</span>
+                          <span>2.5</span>
+                          <span>5</span>
                         </div>
                       </div>
                     )}
@@ -634,18 +673,13 @@ const CreateRoute = () => {
                 <h2 className="text-lg font-semibold">{title}</h2>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span>{pins.filter(p => p.pin_type !== null && (p.place_name || p.transport_type)).length} {pins.filter(p => p.pin_type !== null).length === 1 ? 'punkt' : 'punktów'}</span>
-                  {(() => {
-                    const attractionPins = pins.filter(p => p.pin_type === "tag" && p.rating > 0);
-                    const avgRating = attractionPins.length > 0 
-                      ? (attractionPins.reduce((sum, p) => sum + p.rating, 0) / attractionPins.length).toFixed(1)
-                      : null;
-                    return avgRating ? (
-                      <div className="flex items-center gap-1">
-                        <span className="text-yellow-500">★</span>
-                        <span>{avgRating}</span>
-                      </div>
-                    ) : null;
-                  })()}
+                  {routeRating > 0 && (
+                    <div className="flex items-center gap-1 text-foreground">
+                      <span className="text-yellow-500">★</span>
+                      <span className="font-medium">{routeRating.toFixed(1)}</span>
+                      <span className="text-muted-foreground text-xs">Ogólna ocena</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -690,7 +724,7 @@ const CreateRoute = () => {
                             {pin.rating > 0 && (
                               <div className="flex items-center gap-1 text-xs">
                                 <span className="text-yellow-500">★</span>
-                                <span>{pin.rating}</span>
+                                <span>{pin.rating.toFixed(1)}</span>
                               </div>
                             )}
                           </div>
@@ -722,8 +756,32 @@ const CreateRoute = () => {
                 </div>
               ))}
 
+              {/* Overall route rating */}
+              <div className="space-y-3 border-t border-border pt-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Ogólna ocena trasy *</Label>
+                  <span className="text-sm font-medium flex items-center gap-1">
+                    <span className="text-yellow-500">★</span>
+                    {routeRating.toFixed(1)}
+                  </span>
+                </div>
+                <Slider
+                  value={[routeRating]}
+                  onValueChange={(value) => setRouteRating(value[0])}
+                  min={0}
+                  max={5}
+                  step={0.5}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>0</span>
+                  <span>2.5</span>
+                  <span>5</span>
+                </div>
+              </div>
+
               {/* Optional route description */}
-              <div className="space-y-2 border-t border-border pt-4">
+              <div className="space-y-2">
                 <Label htmlFor="route-description" className="text-sm">Opis trasy (Opcjonalne)</Label>
                 <Textarea
                   id="route-description"
