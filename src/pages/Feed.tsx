@@ -152,33 +152,35 @@ const Feed = () => {
         </div>
 
         {profile && (
-          <div className="flex flex-col items-center py-4 space-y-3">
-            <Avatar className="h-16 w-16">
+          <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4 border border-border/50">
+            <Avatar className="h-14 w-14 flex-shrink-0">
               <AvatarImage src={profile.avatar_url || ""} alt={profile.username} />
               <AvatarFallback>{profile.username[0].toUpperCase()}</AvatarFallback>
             </Avatar>
             
-            <h2 className="text-lg font-semibold uppercase">{profile.username}</h2>
-            
-            {profile.bio && (
-              <p className="text-center text-sm text-muted-foreground">{profile.bio}</p>
-            )}
-            
-            <div className="flex gap-6 pt-1">
-              <button 
-                onClick={() => setShowFriends(true)}
-                className="text-center hover:opacity-70 transition-opacity"
-              >
-                <div className="text-lg font-semibold">{friendsCount}</div>
-                <div className="text-xs text-muted-foreground">Friends</div>
-              </button>
-              <Link 
-                to="/my-routes"
-                className="text-center hover:opacity-70 transition-opacity"
-              >
-                <div className="text-lg font-semibold">{routesCount}</div>
-                <div className="text-xs text-muted-foreground">Routes</div>
-              </Link>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base font-semibold uppercase">{profile.username}</h2>
+              
+              {profile.bio && (
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{profile.bio}</p>
+              )}
+              
+              <div className="flex gap-4 mt-2">
+                <button 
+                  onClick={() => setShowFriends(true)}
+                  className="hover:opacity-70 transition-opacity"
+                >
+                  <span className="text-sm font-semibold">{friendsCount}</span>
+                  <span className="text-xs text-muted-foreground ml-1">Friends</span>
+                </button>
+                <Link 
+                  to="/my-routes"
+                  className="hover:opacity-70 transition-opacity"
+                >
+                  <span className="text-sm font-semibold">{routesCount}</span>
+                  <span className="text-xs text-muted-foreground ml-1">Routes</span>
+                </Link>
+              </div>
             </div>
           </div>
         )}
