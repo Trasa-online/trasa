@@ -15,6 +15,7 @@ import Admin from "./pages/Admin";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
+import Friends from "./pages/Friends";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
           <Route path="/admin" element={<Admin />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/profile/:userId" element={<Profile />} />
+          <Route path="/friends/:userId" element={<Friends />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
