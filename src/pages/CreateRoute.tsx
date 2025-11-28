@@ -86,10 +86,16 @@ const CreateRoute = () => {
       setDescription(existingRoute.description || "");
       setRouteRating(existingRoute.rating || 0);
       if (existingRoute.pins?.length > 0) {
-        setPins(existingRoute.pins.sort((a: any, b: any) => a.pin_order - b.pin_order).map((pin: any) => ({
-          ...pin,
-          mentioned_users: pin.mentioned_users || []
-        })));
+        setPins(
+          existingRoute.pins
+            .sort((a: any, b: any) => a.pin_order - b.pin_order)
+            .map((pin: any) => ({
+              ...pin,
+              mentioned_users: pin.mentioned_users || [],
+              // Infer pin type for existing routes based on is_transport flag
+              pin_type: pin.is_transport ? "transport" : "tag",
+            }))
+        );
         // Show pins list when editing existing route with pins
         setShowPinsList(true);
       }
