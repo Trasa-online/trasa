@@ -182,11 +182,8 @@ const RouteDetails = () => {
 
   if (loading || !user || !route) return null;
 
-  const avgRating =
-    route.pins?.length > 0
-      ? route.pins.reduce((acc: number, pin: any) => acc + (pin.rating || 0), 0) /
-        route.pins.length
-      : 0;
+  // Use the rating stored in the database (calculated from attraction pins only)
+  const avgRating = route.rating || 0;
 
   return (
     <div className="min-h-screen bg-background pb-16">

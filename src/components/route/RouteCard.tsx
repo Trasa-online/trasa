@@ -16,11 +16,8 @@ const RouteCard = ({ route }: RouteCardProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
-  const averageRating =
-    route.pins?.length > 0
-      ? route.pins.reduce((acc: number, pin: any) => acc + (pin.rating || 0), 0) /
-        route.pins.length
-      : 0;
+  // Use the rating stored in the database (calculated from attraction pins only)
+  const averageRating = route.rating || 0;
 
   // Check if route is saved by current user
   const { data: isSaved = false } = useQuery({
