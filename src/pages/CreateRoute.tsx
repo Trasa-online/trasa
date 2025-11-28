@@ -453,6 +453,7 @@ const CreateRoute = () => {
                                 >
                                   <Icon className="h-3 w-3" />
                                   {name}
+                                  {isSelected && <X className="h-3 w-3 ml-1" />}
                                 </Badge>
                               );
                             })}
