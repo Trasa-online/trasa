@@ -452,6 +452,40 @@ const CreateRoute = () => {
                     </div>
                   </div>
 
+                  {/* Change pin type button */}
+                  <div className="flex items-center gap-2 pb-2 border-b border-border">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        const newPins = [...pins];
+                        newPins[currentPinIndex] = {
+                          ...newPins[currentPinIndex],
+                          pin_type: newPins[currentPinIndex].pin_type === "transport" ? "tag" : "transport",
+                          is_transport: newPins[currentPinIndex].pin_type !== "transport",
+                          // Reset relevant fields when switching
+                          ...(newPins[currentPinIndex].pin_type === "transport" 
+                            ? { transport_type: "", transport_end: "", rating: 0 } 
+                            : { tags: [] })
+                        };
+                        setPins(newPins);
+                      }}
+                    >
+                      {pins[currentPinIndex]?.pin_type === "transport" ? (
+                        <>
+                          <Tag className="h-4 w-4 mr-2" />
+                          Zmień na Atrakcję
+                        </>
+                      ) : (
+                        <>
+                          <Car className="h-4 w-4 mr-2" />
+                          Zmień na Transport
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
                   <div className="space-y-4">
                     {pins[currentPinIndex]?.pin_type === "transport" ? (
                       <>
@@ -770,9 +804,20 @@ const CreateRoute = () => {
                   </div>
                 </div>
 
-                <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4">
+                <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 space-y-2 max-w-lg mx-auto">
                   <Button
                     variant="default"
+                    className="w-full"
+                    onClick={() => {
+                      setShowPinsList(false);
+                      addPin();
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Dodaj kolejną pinezkę
+                  </Button>
+                  <Button
+                    variant="outline"
                     className="w-full"
                     onClick={() => {
                       setShowPinsList(true);
