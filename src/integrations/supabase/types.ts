@@ -234,10 +234,14 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          is_transport: boolean | null
           pin_order: number
           place_name: string
           rating: number | null
           route_id: string
+          tags: string[] | null
+          transport_end: string | null
+          transport_type: string | null
         }
         Insert: {
           address: string
@@ -245,10 +249,14 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_transport?: boolean | null
           pin_order: number
           place_name: string
           rating?: number | null
           route_id: string
+          tags?: string[] | null
+          transport_end?: string | null
+          transport_type?: string | null
         }
         Update: {
           address?: string
@@ -256,10 +264,14 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_transport?: boolean | null
           pin_order?: number
           place_name?: string
           rating?: number | null
           route_id?: string
+          tags?: string[] | null
+          transport_end?: string | null
+          transport_type?: string | null
         }
         Relationships: [
           {
