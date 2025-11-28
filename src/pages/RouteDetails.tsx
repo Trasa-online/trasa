@@ -264,7 +264,7 @@ const RouteDetails = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <h4 className="font-semibold">{pin.place_name}</h4>
-                        <StarRating rating={pin.rating || 0} />
+                        {!pin.is_transport && <StarRating rating={pin.rating || 0} />}
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">
                         {pin.address}

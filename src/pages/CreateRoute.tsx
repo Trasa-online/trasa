@@ -104,6 +104,17 @@ const CreateRoute = () => {
     }
   }, [existingRoute]);
 
+  // Auto-calculate route rating based on pins (only non-transport pins with ratings)
+  useEffect(() => {
+    const validPins = pins.filter(p => !p.is_transport && p.rating > 0);
+    if (validPins.length > 0) {
+      const avgRating = validPins.reduce((sum, pin) => sum + pin.rating, 0) / validPins.length;
+      setRouteRating(Math.round(avgRating * 10) / 10);
+    } else {
+      setRouteRating(0);
+    }
+  }, [pins]);
+
   const addPin = () => {
     setPins([...pins, { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: pins.length, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null, mentioned_users: [] }]);
     setCurrentPinIndex(pins.length);
@@ -960,28 +971,18 @@ const CreateRoute = () => {
                 </div>
               ))}
 
-              {/* Overall route rating */}
+              {/* Overall route rating - auto-calculated */}
               <div className="space-y-3 border-t border-border pt-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm">Ogólna ocena trasy *</Label>
+                  <Label className="text-sm">Ogólna ocena trasy</Label>
                   <span className="text-sm font-medium flex items-center gap-1">
                     <span className="text-yellow-500">★</span>
                     {routeRating.toFixed(1)}
                   </span>
                 </div>
-                <Slider
-                  value={[routeRating]}
-                  onValueChange={(value) => setRouteRating(value[0])}
-                  min={0}
-                  max={5}
-                  step={0.5}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>0</span>
-                  <span>2.5</span>
-                  <span>5</span>
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ocena jest obliczana automatycznie na podstawie ocen pinezek atrakcji
+                </p>
               </div>
 
               {/* Optional route description */}
