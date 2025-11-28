@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, X, Camera } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Coffee, Utensils, Hotel, Mountain, Waves, Leaf, Car, Train, Bus, Ship, Bike } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -41,6 +41,8 @@ const CreateRoute = () => {
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(1);
   const [routeDescription, setRouteDescription] = useState("");
+  const [showCustomTagInput, setShowCustomTagInput] = useState(false);
+  const [showCustomTransportInput, setShowCustomTransportInput] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -274,53 +276,85 @@ const CreateRoute = () => {
                 <div>
                   <Label>Tagi</Label>
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {["Wege", "Nie Wege", "Kawiarnia", "Restauracja", "Hotel", "Jedzenie", "Kawa", "Herbata", "Góry", "Morze"].map((tag) => (
+                    {[
+                      { name: "Wege", icon: Leaf },
+                      { name: "Nie Wege", icon: Utensils },
+                      { name: "Kawiarnia", icon: Coffee },
+                      { name: "Restauracja", icon: Utensils },
+                      { name: "Hotel", icon: Hotel },
+                      { name: "Jedzenie", icon: Utensils },
+                      { name: "Kawa", icon: Coffee },
+                      { name: "Herbata", icon: Coffee },
+                      { name: "Góry", icon: Mountain },
+                      { name: "Morze", icon: Waves }
+                    ].map(({ name, icon: Icon }) => (
                       <Badge
-                        key={tag}
-                        variant={pins[currentPinIndex]?.tags?.includes(tag) ? "default" : "outline"}
-                        className="cursor-pointer"
+                        key={name}
+                        variant={pins[currentPinIndex]?.tags?.includes(name) ? "default" : "outline"}
+                        className="cursor-pointer flex items-center gap-1"
                         onClick={() => {
                           const currentTags = pins[currentPinIndex]?.tags || [];
-                          if (currentTags.includes(tag)) {
-                            updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== tag));
+                          if (currentTags.includes(name)) {
+                            updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== name));
                           } else {
-                            updatePin(currentPinIndex, "tags", [...currentTags, tag]);
+                            updatePin(currentPinIndex, "tags", [...currentTags, name]);
                           }
                         }}
                       >
-                        {tag}
+                        <Icon className="h-3 w-3" />
+                        {name}
                       </Badge>
                     ))}
-                  </div>
-                  <div className="mt-2">
-                    <Input
-                      placeholder="Inne (wpisz ręcznie)"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                    
+                    {/* Custom tags */}
+                    {pins[currentPinIndex]?.tags?.filter(t => !["Wege", "Nie Wege", "Kawiarnia", "Restauracja", "Hotel", "Jedzenie", "Kawa", "Herbata", "Góry", "Morze"].includes(t)).map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="default"
+                        className="cursor-pointer"
+                        onClick={() => {
                           const currentTags = pins[currentPinIndex]?.tags || [];
-                          const newTag = e.currentTarget.value.trim();
-                          if (!currentTags.includes(newTag)) {
-                            updatePin(currentPinIndex, "tags", [...currentTags, newTag]);
-                          }
-                          e.currentTarget.value = '';
-                        }
-                      }}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Naciśnij Enter, aby dodać</p>
+                          updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== tag));
+                        }}
+                      >
+                        {tag} <X className="h-3 w-3 ml-1" />
+                      </Badge>
+                    ))}
+                    
+                    {/* "Inne" badge or input */}
+                    {!showCustomTagInput ? (
+                      <Badge
+                        variant="outline"
+                        className="cursor-pointer"
+                        onClick={() => setShowCustomTagInput(true)}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Inne
+                      </Badge>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          autoFocus
+                          placeholder="Wpisz tag"
+                          className="h-7 w-32"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                              const currentTags = pins[currentPinIndex]?.tags || [];
+                              const newTag = e.currentTarget.value.trim();
+                              if (!currentTags.includes(newTag)) {
+                                updatePin(currentPinIndex, "tags", [...currentTags, newTag]);
+                              }
+                              e.currentTarget.value = '';
+                              setShowCustomTagInput(false);
+                            } else if (e.key === 'Escape') {
+                              setShowCustomTagInput(false);
+                            }
+                          }}
+                          onBlur={() => setShowCustomTagInput(false)}
+                        />
+                      </div>
+                    )}
                   </div>
-                  {pins[currentPinIndex]?.tags?.filter(t => !["Wege", "Nie Wege", "Kawiarnia", "Restauracja", "Hotel", "Jedzenie", "Kawa", "Herbata", "Góry", "Morze"].includes(t)).map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="default"
-                      className="cursor-pointer mr-2 mt-2"
-                      onClick={() => {
-                        const currentTags = pins[currentPinIndex]?.tags || [];
-                        updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== tag));
-                      }}
-                    >
-                      {tag} <X className="h-3 w-3 ml-1" />
-                    </Badge>
-                  ))}
                 </div>
 
                 {/* Transport option */}
@@ -348,23 +382,68 @@ const CreateRoute = () => {
                     <div>
                       <Label>Rodzaj transportu *</Label>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {["Samochód", "Tramwaj", "Pociąg", "Prom", "Autobus", "Hulajnoga", "Rower"].map((type) => (
+                        {[
+                          { name: "Samochód", icon: Car },
+                          { name: "Tramwaj", icon: Train },
+                          { name: "Pociąg", icon: Train },
+                          { name: "Prom", icon: Ship },
+                          { name: "Autobus", icon: Bus },
+                          { name: "Hulajnoga", icon: Bike },
+                          { name: "Rower", icon: Bike }
+                        ].map(({ name, icon: Icon }) => (
                           <Badge
-                            key={type}
-                            variant={pins[currentPinIndex]?.transport_type === type ? "default" : "outline"}
-                            className="cursor-pointer"
-                            onClick={() => updatePin(currentPinIndex, "transport_type", type)}
+                            key={name}
+                            variant={pins[currentPinIndex]?.transport_type === name ? "default" : "outline"}
+                            className="cursor-pointer flex items-center gap-1"
+                            onClick={() => updatePin(currentPinIndex, "transport_type", name)}
                           >
-                            {type}
+                            <Icon className="h-3 w-3" />
+                            {name}
                           </Badge>
                         ))}
-                      </div>
-                      <div className="mt-2">
-                        <Input
-                          placeholder="Inne (wpisz ręcznie)"
-                          value={pins[currentPinIndex]?.transport_type && !["Samochód", "Tramwaj", "Pociąg", "Prom", "Autobus", "Hulajnoga", "Rower"].includes(pins[currentPinIndex].transport_type) ? pins[currentPinIndex].transport_type : ""}
-                          onChange={(e) => updatePin(currentPinIndex, "transport_type", e.currentTarget.value)}
-                        />
+                        
+                        {/* Custom transport type or input */}
+                        {pins[currentPinIndex]?.transport_type && 
+                         !["Samochód", "Tramwaj", "Pociąg", "Prom", "Autobus", "Hulajnoga", "Rower"].includes(pins[currentPinIndex].transport_type) ? (
+                          <Badge
+                            variant="default"
+                            className="cursor-pointer"
+                            onClick={() => {
+                              updatePin(currentPinIndex, "transport_type", "");
+                              setShowCustomTransportInput(false);
+                            }}
+                          >
+                            {pins[currentPinIndex].transport_type} <X className="h-3 w-3 ml-1" />
+                          </Badge>
+                        ) : null}
+                        
+                        {!showCustomTransportInput && (!pins[currentPinIndex]?.transport_type || ["Samochód", "Tramwaj", "Pociąg", "Prom", "Autobus", "Hulajnoga", "Rower"].includes(pins[currentPinIndex].transport_type)) ? (
+                          <Badge
+                            variant="outline"
+                            className="cursor-pointer"
+                            onClick={() => setShowCustomTransportInput(true)}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Inne
+                          </Badge>
+                        ) : showCustomTransportInput ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              autoFocus
+                              placeholder="Wpisz transport"
+                              className="h-7 w-32"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                  updatePin(currentPinIndex, "transport_type", e.currentTarget.value.trim());
+                                  setShowCustomTransportInput(false);
+                                } else if (e.key === 'Escape') {
+                                  setShowCustomTransportInput(false);
+                                }
+                              }}
+                              onBlur={() => setShowCustomTransportInput(false)}
+                            />
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 
