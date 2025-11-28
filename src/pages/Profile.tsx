@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,13 +8,11 @@ import { ArrowLeft, Bell, Search } from "lucide-react";
 import RouteCard from "@/components/route/RouteCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const Profile = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { userId } = useParams<{ userId: string }>();
-  const [showFriends, setShowFriends] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -102,23 +100,6 @@ const Profile = () => {
       return !!data;
     },
     enabled: !!user && !!userId && user.id !== userId,
-  });
-
-  const { data: friends } = useQuery({
-    queryKey: ["friends-list", userId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("followers")
-        .select(`
-          following_id,
-          profiles:following_id (username, avatar_url, id)
-        `)
-        .eq("follower_id", userId!);
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!userId && showFriends,
   });
 
   const { data: unreadCount = 0 } = useQuery({
@@ -217,7 +198,7 @@ const Profile = () => {
               
               <div className="flex gap-4 mt-2">
                 <button 
-                  onClick={() => setShowFriends(true)}
+                  onClick={() => navigate(`/friends/${userId}`)}
                   className="hover:opacity-70 transition-opacity"
                 >
                   <span className="text-sm font-semibold">{friendsCount}</span>
@@ -254,39 +235,6 @@ const Profile = () => {
           )}
         </div>
       </div>
-
-      <Dialog open={showFriends} onOpenChange={setShowFriends}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Friends</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {friends?.map((friend: any) => (
-              <div 
-                key={friend.profiles.id}
-                className="flex items-center gap-3 p-2 hover:bg-accent rounded-lg cursor-pointer"
-                onClick={() => {
-                  setShowFriends(false);
-                  navigate(`/profile/${friend.profiles.id}`);
-                }}
-              >
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={friend.profiles.avatar_url || ""} />
-                  <AvatarFallback>
-                    {friend.profiles.username[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <p className="font-medium">{friend.profiles.username}</p>
-              </div>
-            ))}
-            {!friends?.length && (
-              <p className="text-center text-muted-foreground py-4">
-                No friends yet
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </AppLayout>
   );
 };
