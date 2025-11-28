@@ -129,9 +129,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
         {route.pins?.length > 0 && (
           <div className="flex items-center gap-1 text-muted-foreground">
             <MapPin className="h-3.5 w-3.5" />
-            <MapPin className="h-3.5 w-3.5" />
-            <MapPin className="h-3.5 w-3.5" />
-            <span className="text-xs ml-1">{route.pins.length} stops</span>
+            <span className="text-xs ml-1">{route.pins.length} {route.pins.length === 1 ? 'stop' : 'stops'}</span>
           </div>
         )}
       </div>
