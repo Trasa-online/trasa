@@ -122,7 +122,7 @@ const Friends = () => {
                   onClick={() => unfollowMutation.mutate(friend.profiles.id)}
                   disabled={unfollowMutation.isPending}
                 >
-                  Odobserwuj
+                  Unfollow
                 </Button>
               )}
             </div>
