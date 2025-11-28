@@ -73,6 +73,19 @@ const RouteDetails = () => {
     enabled: !!id && !!user,
   });
 
+  const { data: commentLikes } = useQuery({
+    queryKey: ["comment-likes", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("comment_likes")
+        .select("*");
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id && !!user,
+  });
+
   const { data: isSaved } = useQuery({
     queryKey: ["is-saved", id, user?.id],
     queryFn: async () => {
@@ -141,6 +154,29 @@ const RouteDetails = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["route-comments"] });
       setComment("");
+    },
+  });
+
+  const commentLikeMutation = useMutation({
+    mutationFn: async (commentId: string) => {
+      const isLiked = commentLikes?.some(
+        (like) => like.comment_id === commentId && like.user_id === user?.id
+      );
+
+      if (isLiked) {
+        await supabase
+          .from("comment_likes")
+          .delete()
+          .eq("comment_id", commentId)
+          .eq("user_id", user?.id);
+      } else {
+        await supabase
+          .from("comment_likes")
+          .insert({ comment_id: commentId, user_id: user?.id });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["comment-likes"] });
     },
   });
 
@@ -261,27 +297,47 @@ const RouteDetails = () => {
 
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Comments</h3>
-          {comments?.map((comment: any) => (
-            <div key={comment.id} className="flex gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={comment.profiles?.avatar_url} />
-                <AvatarFallback>
-                  {comment.profiles?.username?.[0]?.toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm">
-                    {comment.profiles?.username}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(comment.created_at), "HH:mm")}
-                  </p>
+          {comments?.map((comment: any) => {
+            const commentLikesCount = commentLikes?.filter(
+              (like) => like.comment_id === comment.id
+            ).length || 0;
+            const isCommentLiked = commentLikes?.some(
+              (like) => like.comment_id === comment.id && like.user_id === user?.id
+            );
+
+            return (
+              <div key={comment.id} className="flex gap-3">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={comment.profiles?.avatar_url} />
+                  <AvatarFallback>
+                    {comment.profiles?.username?.[0]?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm">
+                      {comment.profiles?.username}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(comment.created_at), "HH:mm")}
+                    </p>
+                  </div>
+                  <p className="text-sm mb-1">{comment.content}</p>
+                  <button
+                    onClick={() => commentLikeMutation.mutate(comment.id)}
+                    className="flex items-center gap-1 text-xs hover:text-red-500"
+                  >
+                    <Heart
+                      className={`h-3 w-3 ${
+                        isCommentLiked ? "fill-red-500 text-red-500" : ""
+                      }`}
+                    />
+                    {commentLikesCount > 0 && <span>{commentLikesCount}</span>}
+                  </button>
                 </div>
-                <p className="text-sm">{comment.content}</p>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           <div className="flex gap-2">
             <Input
