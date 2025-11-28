@@ -358,22 +358,28 @@ const CreateRoute = () => {
                 </div>
 
                 {/* Transport option */}
-                <div className="flex items-center space-x-2 border border-border rounded-lg p-4">
-                  <Checkbox
-                    id="is-transport"
-                    checked={pins[currentPinIndex]?.is_transport || false}
-                    onCheckedChange={(checked) => {
-                      const isChecked = checked === true;
-                      updatePin(currentPinIndex, "is_transport", isChecked);
-                      if (!isChecked) {
-                        updatePin(currentPinIndex, "transport_type", "");
-                        updatePin(currentPinIndex, "transport_end", "");
-                      }
-                    }}
-                  />
-                  <Label htmlFor="is-transport" className="cursor-pointer">
-                    Ten punkt jest środkiem transportu
-                  </Label>
+                <div className="border border-border rounded-lg p-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="is-transport"
+                      checked={pins[currentPinIndex]?.is_transport || false}
+                      onCheckedChange={(checked) => {
+                        const isChecked = checked === true;
+                        updatePin(currentPinIndex, "is_transport", isChecked);
+                        if (!isChecked) {
+                          updatePin(currentPinIndex, "transport_type", "");
+                          updatePin(currentPinIndex, "transport_end", "");
+                          setShowCustomTransportInput(false);
+                        }
+                      }}
+                    />
+                    <Label htmlFor="is-transport" className="cursor-pointer font-normal">
+                      Ten punkt jest środkiem transportu
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2 ml-6">
+                    Zaznacz, jeśli chcesz dodać transport zamiast miejsca
+                  </p>
                 </div>
 
                 {pins[currentPinIndex]?.is_transport ? (
