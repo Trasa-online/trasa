@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, X, Camera, Car, Train, Bus, Ship, Bike, Tag } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Car, Train, Bus, Ship, Bike, Tag, Plane, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -44,6 +44,7 @@ const CreateRoute = () => {
   const [step, setStep] = useState(1);
   const [routeDescription, setRouteDescription] = useState("");
   const [showCustomTransportInput, setShowCustomTransportInput] = useState(false);
+  const [showCustomTagInput, setShowCustomTagInput] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -275,7 +276,7 @@ const CreateRoute = () => {
                     }}
                   >
                     <Tag className="h-8 w-8" />
-                    <span className="font-medium">Grupy tagów</span>
+                    <span className="font-medium">Atrakcja</span>
                   </Button>
                 </div>
               </div>
@@ -330,10 +331,9 @@ const CreateRoute = () => {
                             {[
                               { name: "Samochód", icon: Car },
                               { name: "Tramwaj", icon: Train },
-                              { name: "Pociąg", icon: Train },
-                              { name: "Prom", icon: Ship },
                               { name: "Autobus", icon: Bus },
-                              { name: "Hulajnoga", icon: Bike },
+                              { name: "Samolot", icon: Plane },
+                              { name: "Prom", icon: Ship },
                               { name: "Rower", icon: Bike }
                             ].map(({ name, icon: Icon }) => (
                               <Badge
@@ -349,10 +349,10 @@ const CreateRoute = () => {
                             
                             {/* Custom transport type */}
                             {pins[currentPinIndex]?.transport_type && 
-                             !["Samochód", "Tramwaj", "Pociąg", "Prom", "Autobus", "Hulajnoga", "Rower"].includes(pins[currentPinIndex].transport_type) && (
+                             !["Samochód", "Tramwaj", "Autobus", "Samolot", "Prom", "Rower"].includes(pins[currentPinIndex].transport_type) && (
                               <Badge
                                 variant="default"
-                                className="cursor-pointer"
+                                className="cursor-pointer flex items-center gap-1"
                                 onClick={() => {
                                   updatePin(currentPinIndex, "transport_type", "");
                                   setShowCustomTransportInput(false);
@@ -362,7 +362,7 @@ const CreateRoute = () => {
                               </Badge>
                             )}
                             
-                            {!showCustomTransportInput && (!pins[currentPinIndex]?.transport_type || ["Samochód", "Tramwaj", "Pociąg", "Prom", "Autobus", "Hulajnoga", "Rower"].includes(pins[currentPinIndex].transport_type)) ? (
+                            {!showCustomTransportInput && (!pins[currentPinIndex]?.transport_type || ["Samochód", "Tramwaj", "Autobus", "Samolot", "Prom", "Rower"].includes(pins[currentPinIndex].transport_type)) ? (
                               <Badge
                                 variant="outline"
                                 className="cursor-pointer"
@@ -372,11 +372,11 @@ const CreateRoute = () => {
                                 Inne
                               </Badge>
                             ) : showCustomTransportInput && (
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 w-full">
                                 <Input
                                   autoFocus
                                   placeholder="Wpisz transport"
-                                  className="h-7 w-32"
+                                  className="h-7"
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter' && e.currentTarget.value.trim()) {
                                       updatePin(currentPinIndex, "transport_type", e.currentTarget.value.trim());
@@ -385,7 +385,12 @@ const CreateRoute = () => {
                                       setShowCustomTransportInput(false);
                                     }
                                   }}
-                                  onBlur={() => setShowCustomTransportInput(false)}
+                                  onBlur={(e) => {
+                                    if (e.currentTarget.value.trim()) {
+                                      updatePin(currentPinIndex, "transport_type", e.currentTarget.value.trim());
+                                    }
+                                    setShowCustomTransportInput(false);
+                                  }}
                                 />
                               </div>
                             )}
@@ -413,6 +418,94 @@ const CreateRoute = () => {
                       </>
                     ) : (
                       <>
+                        {/* Tag selection for attraction */}
+                        <div>
+                          <Label>Kategoria *</Label>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {[
+                              { name: "Restauracja", icon: UtensilsCrossed },
+                              { name: "Kawiarnia", icon: Coffee },
+                              { name: "Jedzenie", icon: UtensilsCrossed },
+                              { name: "Zakupy", icon: ShoppingBag },
+                              { name: "Pamiątki", icon: Gift },
+                              { name: "Herbata", icon: Coffee },
+                              { name: "Góry", icon: Mountain },
+                              { name: "Morze", icon: Waves }
+                            ].map(({ name, icon: Icon }) => {
+                              const isSelected = pins[currentPinIndex]?.tags?.includes(name);
+                              return (
+                                <Badge
+                                  key={name}
+                                  variant={isSelected ? "default" : "outline"}
+                                  className="cursor-pointer flex items-center gap-1"
+                                  onClick={() => {
+                                    const currentTags = pins[currentPinIndex]?.tags || [];
+                                    const newTags = isSelected 
+                                      ? currentTags.filter(t => t !== name)
+                                      : [...currentTags, name];
+                                    updatePin(currentPinIndex, "tags", newTags);
+                                  }}
+                                >
+                                  <Icon className="h-3 w-3" />
+                                  {name}
+                                </Badge>
+                              );
+                            })}
+                            
+                            {/* Custom tags */}
+                            {pins[currentPinIndex]?.tags?.filter(
+                              tag => !["Restauracja", "Kawiarnia", "Jedzenie", "Zakupy", "Pamiątki", "Herbata", "Góry", "Morze"].includes(tag)
+                            ).map(tag => (
+                              <Badge
+                                key={tag}
+                                variant="default"
+                                className="cursor-pointer flex items-center gap-1"
+                                onClick={() => {
+                                  const currentTags = pins[currentPinIndex]?.tags || [];
+                                  updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== tag));
+                                }}
+                              >
+                                {tag} <X className="h-3 w-3 ml-1" />
+                              </Badge>
+                            ))}
+                            
+                            {!showCustomTagInput ? (
+                              <Badge
+                                variant="outline"
+                                className="cursor-pointer"
+                                onClick={() => setShowCustomTagInput(true)}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Inne
+                              </Badge>
+                            ) : (
+                              <div className="flex items-center gap-2 w-full">
+                                <Input
+                                  autoFocus
+                                  placeholder="Wpisz kategorię"
+                                  className="h-7"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                      const currentTags = pins[currentPinIndex]?.tags || [];
+                                      updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
+                                      setShowCustomTagInput(false);
+                                    } else if (e.key === 'Escape') {
+                                      setShowCustomTagInput(false);
+                                    }
+                                  }}
+                                  onBlur={(e) => {
+                                    if (e.currentTarget.value.trim()) {
+                                      const currentTags = pins[currentPinIndex]?.tags || [];
+                                      updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
+                                    }
+                                    setShowCustomTagInput(false);
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
                         {/* Regular pin fields */}
                         <div>
                           <Label>Nazwa pinezki *</Label>
