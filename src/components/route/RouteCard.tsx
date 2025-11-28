@@ -144,15 +144,6 @@ const RouteCard = ({ route }: RouteCardProps) => {
                 <span>{route.pins.length} {route.pins.length === 1 ? 'przystanek' : 'przystanki'}</span>
               </div>
             )}
-            {route.views > 0 && (
-              <>
-                <span className="text-border">•</span>
-                <div className="flex items-center gap-1.5">
-                  <Eye className="h-3.5 w-3.5" />
-                  <span>{route.views} {route.views === 1 ? 'wyświetlenie' : 'wyświetleń'}</span>
-                </div>
-              </>
-            )}
           </div>
         </div>
       </div>
@@ -226,6 +217,10 @@ const RouteCard = ({ route }: RouteCardProps) => {
               <MessageCircle className="h-4 w-4 group-hover/btn:scale-110 transition-transform" />
               <span className="text-sm font-medium">{route.comments?.length || 0}</span>
             </button>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Eye className="h-4 w-4" />
+              <span className="text-sm font-medium">{route.views}</span>
+            </div>
           </div>
           
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
