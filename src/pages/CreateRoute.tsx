@@ -362,13 +362,20 @@ const CreateRoute = () => {
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="is-transport"
-                      checked={pins[currentPinIndex]?.is_transport || false}
+                      checked={!!pins[currentPinIndex]?.is_transport}
                       onCheckedChange={(checked) => {
-                        const isChecked = checked === true;
-                        updatePin(currentPinIndex, "is_transport", isChecked);
-                        if (!isChecked) {
-                          updatePin(currentPinIndex, "transport_type", "");
-                          updatePin(currentPinIndex, "transport_end", "");
+                        const newValue = checked === true;
+                        const newPins = [...pins];
+                        newPins[currentPinIndex] = { 
+                          ...newPins[currentPinIndex], 
+                          is_transport: newValue,
+                          ...(newValue ? {} : { 
+                            transport_type: "", 
+                            transport_end: "" 
+                          })
+                        };
+                        setPins(newPins);
+                        if (!newValue) {
                           setShowCustomTransportInput(false);
                         }
                       }}
