@@ -145,6 +145,14 @@ const CreateRoute = () => {
       return;
     }
 
+    // Filter valid pins (with type set and either place_name or transport_type)
+    const validPins = pins.filter(p => p.pin_type !== null && (p.place_name || p.transport_type));
+    
+    if (validPins.length === 0) {
+      toast({ variant: "destructive", title: "Dodaj przynajmniej jedną pinezkę" });
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -158,14 +166,22 @@ const CreateRoute = () => {
 
         await supabase.from("pins").delete().eq("route_id", id);
 
-        for (const pin of pins) {
-          if (pin.place_name && pin.address) {
-            const { error: pinError } = await supabase.from("pins").insert({
-              route_id: id,
-              ...pin,
-            });
-            if (pinError) throw pinError;
-          }
+        for (const pin of validPins) {
+          const { error: pinError } = await supabase.from("pins").insert({
+            route_id: id,
+            place_name: pin.place_name || pin.transport_type || "",
+            address: pin.address || "Brak adresu",
+            description: pin.description,
+            image_url: pin.image_url,
+            rating: pin.rating,
+            pin_order: pin.pin_order,
+            tags: pin.tags,
+            is_transport: pin.is_transport,
+            transport_type: pin.transport_type,
+            transport_end: pin.transport_end,
+            mentioned_users: pin.mentioned_users,
+          });
+          if (pinError) throw pinError;
         }
       } else {
         const { data: route, error: routeError } = await supabase
@@ -176,14 +192,22 @@ const CreateRoute = () => {
 
         if (routeError) throw routeError;
 
-        for (const pin of pins) {
-          if (pin.place_name && pin.address) {
-            const { error: pinError } = await supabase.from("pins").insert({
-              route_id: route.id,
-              ...pin,
-            });
-            if (pinError) throw pinError;
-          }
+        for (const pin of validPins) {
+          const { error: pinError } = await supabase.from("pins").insert({
+            route_id: route.id,
+            place_name: pin.place_name || pin.transport_type || "",
+            address: pin.address || "Brak adresu",
+            description: pin.description,
+            image_url: pin.image_url,
+            rating: pin.rating,
+            pin_order: pin.pin_order,
+            tags: pin.tags,
+            is_transport: pin.is_transport,
+            transport_type: pin.transport_type,
+            transport_end: pin.transport_end,
+            mentioned_users: pin.mentioned_users,
+          });
+          if (pinError) throw pinError;
         }
       }
 
