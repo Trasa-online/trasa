@@ -320,6 +320,7 @@ export type Database = {
           title: string
           updated_at: string | null
           user_id: string
+          views: number
         }
         Insert: {
           created_at?: string | null
@@ -330,6 +331,7 @@ export type Database = {
           title: string
           updated_at?: string | null
           user_id: string
+          views?: number
         }
         Update: {
           created_at?: string | null
@@ -340,6 +342,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id?: string
+          views?: number
         }
         Relationships: [
           {
@@ -442,6 +445,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_route_views: { Args: { route_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "user"
