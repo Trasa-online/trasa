@@ -10,6 +10,8 @@ import { ArrowLeft, Plus, X, Camera } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 
 interface Pin {
   id?: string;
@@ -19,6 +21,10 @@ interface Pin {
   image_url: string;
   rating: number;
   pin_order: number;
+  tags: string[];
+  is_transport: boolean;
+  transport_type: string;
+  transport_end: string;
 }
 
 const CreateRoute = () => {
@@ -29,7 +35,7 @@ const CreateRoute = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [pins, setPins] = useState<Pin[]>([
-    { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: 0 },
+    { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: 0, tags: [], is_transport: false, transport_type: "", transport_end: "" },
   ]);
   const [currentPinIndex, setCurrentPinIndex] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -69,7 +75,7 @@ const CreateRoute = () => {
   }, [existingRoute]);
 
   const addPin = () => {
-    setPins([...pins, { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: pins.length }]);
+    setPins([...pins, { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: pins.length, tags: [], is_transport: false, transport_type: "", transport_end: "" }]);
     setCurrentPinIndex(pins.length);
   };
 
@@ -264,23 +270,153 @@ const CreateRoute = () => {
               </div>
 
               <div className="space-y-4">
+                {/* Tags */}
                 <div>
-                  <Label>Nazwa pinezki *</Label>
-                  <Input
-                    value={pins[currentPinIndex]?.place_name || ""}
-                    onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
-                    placeholder="np. Kiyomizu-dera"
-                  />
+                  <Label>Tagi</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {["Wege", "Nie Wege", "Kawiarnia", "Restauracja", "Hotel", "Jedzenie", "Kawa", "Herbata", "Góry", "Morze"].map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant={pins[currentPinIndex]?.tags?.includes(tag) ? "default" : "outline"}
+                        className="cursor-pointer"
+                        onClick={() => {
+                          const currentTags = pins[currentPinIndex]?.tags || [];
+                          if (currentTags.includes(tag)) {
+                            updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== tag));
+                          } else {
+                            updatePin(currentPinIndex, "tags", [...currentTags, tag]);
+                          }
+                        }}
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="mt-2">
+                    <Input
+                      placeholder="Inne (wpisz ręcznie)"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                          const currentTags = pins[currentPinIndex]?.tags || [];
+                          const newTag = e.currentTarget.value.trim();
+                          if (!currentTags.includes(newTag)) {
+                            updatePin(currentPinIndex, "tags", [...currentTags, newTag]);
+                          }
+                          e.currentTarget.value = '';
+                        }
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Naciśnij Enter, aby dodać</p>
+                  </div>
+                  {pins[currentPinIndex]?.tags?.filter(t => !["Wege", "Nie Wege", "Kawiarnia", "Restauracja", "Hotel", "Jedzenie", "Kawa", "Herbata", "Góry", "Morze"].includes(t)).map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="default"
+                      className="cursor-pointer mr-2 mt-2"
+                      onClick={() => {
+                        const currentTags = pins[currentPinIndex]?.tags || [];
+                        updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== tag));
+                      }}
+                    >
+                      {tag} <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
                 </div>
 
-                <div>
-                  <Label>Adres *</Label>
-                  <Input
-                    value={pins[currentPinIndex]?.address || ""}
-                    onChange={(e) => updatePin(currentPinIndex, "address", e.target.value)}
-                    placeholder="np. Chrome-294 Kiyomizu"
+                {/* Transport option */}
+                <div className="flex items-center space-x-2 border border-border rounded-lg p-4">
+                  <Checkbox
+                    id="is-transport"
+                    checked={pins[currentPinIndex]?.is_transport || false}
+                    onCheckedChange={(checked) => {
+                      updatePin(currentPinIndex, "is_transport", checked);
+                      if (!checked) {
+                        updatePin(currentPinIndex, "transport_type", "");
+                        updatePin(currentPinIndex, "transport_end", "");
+                      }
+                    }}
                   />
+                  <label htmlFor="is-transport" className="text-sm font-medium cursor-pointer">
+                    Ten punkt jest środkiem transportu
+                  </label>
                 </div>
+
+                {pins[currentPinIndex]?.is_transport ? (
+                  <>
+                    {/* Transport type selection */}
+                    <div>
+                      <Label>Rodzaj transportu *</Label>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {["Samochód", "Tramwaj", "Pociąg", "Prom", "Autobus", "Hulajnoga", "Rower"].map((type) => (
+                          <Badge
+                            key={type}
+                            variant={pins[currentPinIndex]?.transport_type === type ? "default" : "outline"}
+                            className="cursor-pointer"
+                            onClick={() => updatePin(currentPinIndex, "transport_type", type)}
+                          >
+                            {type}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="mt-2">
+                        <Input
+                          placeholder="Inne (wpisz ręcznie)"
+                          value={pins[currentPinIndex]?.transport_type && !["Samochód", "Tramwaj", "Pociąg", "Prom", "Autobus", "Hulajnoga", "Rower"].includes(pins[currentPinIndex].transport_type) ? pins[currentPinIndex].transport_type : ""}
+                          onChange={(e) => updatePin(currentPinIndex, "transport_type", e.currentTarget.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Start and end points for transport */}
+                    <div>
+                      <Label>Punkt startowy *</Label>
+                      <Input
+                        value={pins[currentPinIndex]?.place_name || ""}
+                        onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
+                        placeholder="np. Dworzec Główny"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Punkt końcowy *</Label>
+                      <Input
+                        value={pins[currentPinIndex]?.transport_end || ""}
+                        onChange={(e) => updatePin(currentPinIndex, "transport_end", e.target.value)}
+                        placeholder="np. Lotnisko"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Adres/Szczegóły</Label>
+                      <Input
+                        value={pins[currentPinIndex]?.address || ""}
+                        onChange={(e) => updatePin(currentPinIndex, "address", e.target.value)}
+                        placeholder="Dodatkowe informacje"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Regular pin fields */}
+                    <div>
+                      <Label>Nazwa pinezki *</Label>
+                      <Input
+                        value={pins[currentPinIndex]?.place_name || ""}
+                        onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
+                        placeholder="np. Kiyomizu-dera"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Adres *</Label>
+                      <Input
+                        value={pins[currentPinIndex]?.address || ""}
+                        onChange={(e) => updatePin(currentPinIndex, "address", e.target.value)}
+                        placeholder="np. Chrome-294 Kiyomizu"
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div>
                   <Label>Opis (Opcjonalne)</Label>
@@ -302,17 +438,19 @@ const CreateRoute = () => {
                   </p>
                 </div>
 
-                <div>
-                  <Label>Ocena *</Label>
-                  <div className="mt-2">
-                    <StarRating
-                      rating={pins[currentPinIndex]?.rating || 0}
-                      interactive
-                      size="lg"
-                      onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
-                    />
+                {!pins[currentPinIndex]?.is_transport && (
+                  <div>
+                    <Label>Ocena *</Label>
+                    <div className="mt-2">
+                      <StarRating
+                        rating={pins[currentPinIndex]?.rating || 0}
+                        interactive
+                        size="lg"
+                        onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div>
                   <Label>Zdjęcia (Opcjonalne)</Label>
@@ -404,13 +542,32 @@ const CreateRoute = () => {
                   )}
                   
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Pinezka</p>
-                        <p className="font-medium">{pin.place_name}</p>
+                    {pin.is_transport ? (
+                      <>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Transport: {pin.transport_type}</p>
+                          <p className="font-medium">{pin.place_name} → {pin.transport_end}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Pinezka</p>
+                            <p className="font-medium">{pin.place_name}</p>
+                          </div>
+                          <StarRating rating={pin.rating} size="md" />
+                        </div>
+                      </>
+                    )}
+                    
+                    {pin.tags && pin.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {pin.tags.map((tag, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs">{tag}</Badge>
+                        ))}
                       </div>
-                      <StarRating rating={pin.rating} size="md" />
-                    </div>
+                    )}
                     
                     <div>
                       <p className="text-xs text-muted-foreground">Adres</p>
