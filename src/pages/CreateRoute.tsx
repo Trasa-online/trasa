@@ -83,6 +83,7 @@ const CreateRoute = () => {
     if (existingRoute) {
       setTitle(existingRoute.title);
       setDescription(existingRoute.description || "");
+      setRouteRating(existingRoute.rating || 0);
       if (existingRoute.pins?.length > 0) {
         setPins(existingRoute.pins.sort((a: any, b: any) => a.pin_order - b.pin_order).map((pin: any) => ({
           ...pin,
@@ -145,7 +146,7 @@ const CreateRoute = () => {
       if (id) {
         const { error: routeError } = await supabase
           .from("routes")
-          .update({ title, description, status })
+          .update({ title, description, status, rating: routeRating })
           .eq("id", id);
 
         if (routeError) throw routeError;
@@ -164,7 +165,7 @@ const CreateRoute = () => {
       } else {
         const { data: route, error: routeError } = await supabase
           .from("routes")
-          .insert({ user_id: user.id, title, description, status })
+          .insert({ user_id: user.id, title, description, status, rating: routeRating })
           .select()
           .single();
 
