@@ -77,10 +77,11 @@ const MyRoutes = () => {
   });
 
   const RouteItem = ({ route }: { route: any }) => {
+    // Calculate average rating only from attraction pins (not transport pins)
+    const attractionPins = route.pins?.filter((pin: any) => !pin.is_transport && pin.rating !== null) || [];
     const avgRating =
-      route.pins?.length > 0
-        ? route.pins.reduce((acc: number, pin: any) => acc + (pin.rating || 0), 0) /
-          route.pins.length
+      attractionPins.length > 0
+        ? attractionPins.reduce((acc: number, pin: any) => acc + pin.rating, 0) / attractionPins.length
         : 0;
 
     return (
