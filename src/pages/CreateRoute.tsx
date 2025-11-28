@@ -412,6 +412,7 @@ const CreateRoute = () => {
                 </div>
               </div>
             ) : (
+              <>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold">
@@ -780,6 +781,7 @@ const CreateRoute = () => {
                     Powrót do listy pinezek
                   </Button>
                 </div>
+              </>
             )}
           </>
         ) : step === 3 ? (
