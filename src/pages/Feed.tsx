@@ -202,7 +202,7 @@ const Feed = () => {
                 className="flex items-center gap-3 p-2 hover:bg-accent rounded-lg cursor-pointer"
                 onClick={() => {
                   setShowFriends(false);
-                  // Could navigate to user profile when that feature exists
+                  navigate(`/profile/${friend.profiles.id}`);
                 }}
               >
                 <Avatar className="h-10 w-10">
