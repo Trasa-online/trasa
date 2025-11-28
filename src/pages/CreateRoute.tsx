@@ -217,9 +217,19 @@ const CreateRoute = () => {
         }
       }
 
-      toast({
-        title: status === "published" ? "Trasa opublikowana!" : "Trasa zapisana jako wersja robocza",
-      });
+      const isUpdating = !!id;
+      const wasPublished = existingRoute?.status === "published";
+      
+      let toastMessage = "";
+      if (isUpdating && wasPublished && status === "published") {
+        toastMessage = "Trasa zaktualizowana!";
+      } else if (status === "published") {
+        toastMessage = "Trasa opublikowana!";
+      } else {
+        toastMessage = "Trasa zapisana jako wersja robocza";
+      }
+      
+      toast({ title: toastMessage });
       navigate("/my-routes");
     } catch (error: any) {
       toast({ variant: "destructive", title: "Błąd", description: error.message });
@@ -1000,22 +1010,45 @@ const CreateRoute = () => {
                 + Dodaj kolejną pinezkę
               </Button>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1 text-sm"
-                  onClick={() => saveRoute("draft")}
-                  disabled={saving}
-                >
-                  Zapisz roboczą
-                </Button>
-                <Button
-                  variant="default"
-                  className="flex-1 text-sm"
-                  onClick={() => saveRoute("published")}
-                  disabled={saving}
-                >
-                  Opublikuj trasę
-                </Button>
+                {existingRoute?.status === "published" ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="flex-1 text-sm"
+                      onClick={() => saveRoute("draft")}
+                      disabled={saving}
+                    >
+                      Zapisz jako roboczą
+                    </Button>
+                    <Button
+                      variant="default"
+                      className="flex-1 text-sm"
+                      onClick={() => saveRoute("published")}
+                      disabled={saving}
+                    >
+                      Aktualizuj trasę
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="flex-1 text-sm"
+                      onClick={() => saveRoute("draft")}
+                      disabled={saving}
+                    >
+                      Zapisz roboczą
+                    </Button>
+                    <Button
+                      variant="default"
+                      className="flex-1 text-sm"
+                      onClick={() => saveRoute("published")}
+                      disabled={saving}
+                    >
+                      Opublikuj trasę
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </>
