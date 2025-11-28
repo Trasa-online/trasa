@@ -685,9 +685,25 @@ const CreateRoute = () => {
                     
                     {pin.tags && pin.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">
-                        {pin.tags.map((tag, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">{tag}</Badge>
-                        ))}
+                        {pin.tags.map((tag, i) => {
+                          const pinIndex = pins.findIndex(p => p.pin_order === pin.pin_order);
+                          return (
+                            <Badge
+                              key={i}
+                              variant="secondary"
+                              className="text-xs cursor-pointer flex items-center gap-1"
+                              onClick={() => {
+                                if (pinIndex === -1) return;
+                                const currentTags = pins[pinIndex]?.tags || [];
+                                const newTags = currentTags.filter(t => t !== tag);
+                                updatePin(pinIndex, "tags", newTags);
+                              }}
+                            >
+                              {tag}
+                              <X className="h-3 w-3 ml-1" />
+                            </Badge>
+                          );
+                        })}
                       </div>
                     )}
                     
