@@ -102,6 +102,17 @@ const RouteDetails = () => {
     enabled: !!id && !!user,
   });
 
+  // Increment view count when route is loaded
+  useEffect(() => {
+    const incrementViews = async () => {
+      if (route?.id) {
+        await supabase.rpc('increment_route_views', { route_id: route.id });
+      }
+    };
+    
+    incrementViews();
+  }, [route?.id]);
+
   const isLiked = likes?.some((like) => like.user_id === user?.id);
 
   const likeMutation = useMutation({

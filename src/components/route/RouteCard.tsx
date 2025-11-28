@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Star, MapPin, Eye, Bookmark } from "lucide-react";
+import { Heart, MessageCircle, Star, MapPin, Eye, Bookmark, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -83,120 +83,156 @@ const RouteCard = ({ route }: RouteCardProps) => {
     saveRouteMutation.mutate();
   };
 
+  const handleCardClick = () => {
+    navigate(`/route/${route.id}`);
+  };
+
   return (
-    <div className="bg-card border border-border rounded-xl p-4">
-      <div className="flex items-center justify-between mb-3 pb-3 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={route.profiles?.avatar_url} />
-            <AvatarFallback>
-              {route.profiles?.username?.[0]?.toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-medium text-sm">{route.profiles?.username}</p>
-            <p className="text-xs text-muted-foreground">
-              {format(new Date(route.created_at), "MMM dd, yyyy")}
+    <div 
+      onClick={handleCardClick}
+      className="bg-card border border-border rounded-xl overflow-hidden hover:border-foreground/20 transition-all duration-300 cursor-pointer group hover:shadow-lg"
+    >
+      {/* Header Section */}
+      <div className="p-4 border-b border-border/50">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10 ring-2 ring-border">
+              <AvatarImage src={route.profiles?.avatar_url} />
+              <AvatarFallback className="text-xs">
+                {route.profiles?.username?.[0]?.toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-semibold text-sm">{route.profiles?.username}</p>
+              <p className="text-xs text-muted-foreground">
+                {format(new Date(route.created_at), "dd MMM yyyy")}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={saveRouteMutation.isPending}
+            className="p-2 hover:bg-accent rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Bookmark className={`h-5 w-5 transition-all ${isSaved ? "fill-foreground" : ""}`} />
+          </button>
+        </div>
+
+        {/* Title and Rating */}
+        <div className="space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-lg font-bold leading-tight flex-1 group-hover:text-foreground/90 transition-colors">
+              {route.title}
+            </h3>
+            <div className="flex items-center gap-1.5 bg-muted px-2.5 py-1 rounded-lg flex-shrink-0">
+              <Star className="h-4 w-4 fill-star text-star" />
+              <span className="font-bold text-sm">{Math.round(averageRating * 10) / 10}</span>
+            </div>
+          </div>
+          
+          {route.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+              {route.description}
             </p>
-          </div>
-        </div>
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/route/${route.id}`);
-          }}
-          className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg hover:bg-accent transition-colors"
-        >
-          <Eye className="h-4 w-4" />
-          <span className="text-sm">View</span>
-        </button>
-      </div>
+          )}
 
-      <div className="space-y-2 mb-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold">{route.title}</h3>
-          <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 fill-star text-star" />
-            <span className="font-medium text-sm">{Math.round(averageRating * 10) / 10}</span>
-          </div>
-        </div>
-        <p className="text-sm text-muted-foreground line-clamp-2">
-          {route.description}
-        </p>
-        {route.pins?.length > 0 && (
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5" />
-            <span className="text-xs ml-1">{route.pins.length} {route.pins.length === 1 ? 'stop' : 'stops'}</span>
-          </div>
-        )}
-      </div>
-
-      {route.pins?.length > 0 && (
-        <div className="space-y-2.5">
-          {route.pins.slice(0, 3).map((pin: any, index: number) => (
-            <div key={pin.id} className="flex gap-3 bg-muted/30 rounded-lg p-2.5">
-              {pin.image_url && (
-                <div className="flex-shrink-0 relative">
-                  <img
-                    src={pin.image_url}
-                    alt={pin.place_name}
-                    className="w-16 h-16 object-cover rounded-lg"
-                  />
-                  <div className="absolute top-1.5 left-1.5 bg-background/90 rounded-full w-5 h-5 flex items-center justify-center">
-                    <span className="text-xs font-normal">{index + 1}</span>
-                  </div>
+          {/* Metadata */}
+          <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
+            {route.pins?.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" />
+                <span>{route.pins.length} {route.pins.length === 1 ? 'przystanek' : 'przystanki'}</span>
+              </div>
+            )}
+            {route.views > 0 && (
+              <>
+                <span className="text-border">•</span>
+                <div className="flex items-center gap-1.5">
+                  <Eye className="h-3.5 w-3.5" />
+                  <span>{route.views} {route.views === 1 ? 'wyświetlenie' : 'wyświetleń'}</span>
                 </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2 mb-0.5">
-                  <div className="flex items-center gap-2">
-                    {!pin.image_url && (
-                      <div className="bg-background rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-normal">{index + 1}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Pins Section */}
+      {route.pins?.length > 0 && (
+        <div className="divide-y divide-border/50">
+          {route.pins.slice(0, 3).map((pin: any, index: number) => (
+            <div 
+              key={pin.id} 
+              className="p-3 hover:bg-muted/30 transition-colors"
+            >
+              <div className="flex gap-3">
+                {pin.image_url && (
+                  <div className="flex-shrink-0 relative group/img">
+                    <img
+                      src={pin.image_url}
+                      alt={pin.place_name}
+                      className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
+                    />
+                    <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
+                      <span className="text-xs font-bold">{index + 1}</span>
+                    </div>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {!pin.image_url && (
+                        <div className="bg-muted rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 ring-1 ring-border">
+                          <span className="text-xs font-bold">{index + 1}</span>
+                        </div>
+                      )}
+                      <h4 className="font-semibold text-sm leading-tight">{pin.place_name}</h4>
+                    </div>
+                    {pin.rating && (
+                      <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded flex-shrink-0">
+                        <Star className="h-3 w-3 fill-star text-star" />
+                        <span className="font-semibold text-xs">{pin.rating.toFixed(1)}</span>
                       </div>
                     )}
-                    <h4 className="font-semibold text-sm leading-tight">{pin.place_name}</h4>
                   </div>
-                  {pin.rating && (
-                    <div className="flex items-center gap-0.5 flex-shrink-0">
-                      <Star className="h-3.5 w-3.5 fill-star text-star" />
-                      <span className="font-medium text-xs">{pin.rating.toFixed(1)}</span>
-                    </div>
+                  <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
+                  {pin.description && (
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                      {pin.description}
+                    </p>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
-                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{pin.description}</p>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Heart className="h-4 w-4" />
-            <span className="text-sm">{route.likes?.length || 0}</span>
-          </button>
-          <button 
-            onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <MessageCircle className="h-4 w-4" />
-            <span className="text-sm">{route.comments?.length || 0}</span>
-          </button>
+      {/* Footer Section */}
+      <div className="p-3 bg-muted/20 border-t border-border/50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-5">
+            <button 
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group/btn"
+            >
+              <Heart className="h-4 w-4 group-hover/btn:scale-110 transition-transform" />
+              <span className="text-sm font-medium">{route.likes?.length || 0}</span>
+            </button>
+            <button 
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group/btn"
+            >
+              <MessageCircle className="h-4 w-4 group-hover/btn:scale-110 transition-transform" />
+              <span className="text-sm font-medium">{route.comments?.length || 0}</span>
+            </button>
+          </div>
+          
+          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+            <span>Zobacz trasę</span>
+            <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+          </div>
         </div>
-        
-        <button
-          onClick={handleSave}
-          disabled={saveRouteMutation.isPending}
-          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-        >
-          <Bookmark className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
-        </button>
       </div>
     </div>
   );
