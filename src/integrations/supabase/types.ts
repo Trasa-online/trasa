@@ -235,6 +235,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_transport: boolean | null
+          mentioned_users: string[] | null
           pin_order: number
           place_name: string
           rating: number | null
@@ -250,6 +251,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_transport?: boolean | null
+          mentioned_users?: string[] | null
           pin_order: number
           place_name: string
           rating?: number | null
@@ -265,6 +267,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_transport?: boolean | null
+          mentioned_users?: string[] | null
           pin_order?: number
           place_name?: string
           rating?: number | null
