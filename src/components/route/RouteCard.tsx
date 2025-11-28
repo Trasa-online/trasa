@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Star, MapPin, Eye, Bookmark, ArrowRight } from "lucide-react";
+import { Heart, MessageCircle, Star, MapPin, Eye, Bookmark, ArrowRight, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -131,13 +132,44 @@ const RouteCard = ({ route }: RouteCardProps) => {
           </div>
           
           {route.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+            <p className="text-sm text-muted-foreground line-clamp-4 leading-relaxed">
               {route.description}
             </p>
           )}
 
+          {/* Tags Section */}
+          {(() => {
+            const allTags = route.pins?.flatMap((pin: any) => pin.tags || []) || [];
+            const uniqueTags = Array.from(new Set(allTags));
+            
+            const getTagIcon = (tag: string) => {
+              const tagLower = tag.toLowerCase();
+              if (tagLower === 'restauracja' || tagLower === 'jedzenie') return UtensilsCrossed;
+              if (tagLower === 'kawiarnia' || tagLower === 'kawa' || tagLower === 'herbata') return Coffee;
+              if (tagLower === 'zakupy') return ShoppingBag;
+              if (tagLower === 'pamiątki') return Gift;
+              if (tagLower === 'góry') return Mountain;
+              if (tagLower === 'morze') return Waves;
+              return null;
+            };
+
+            return uniqueTags.length > 0 ? (
+              <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-border/30">
+                {uniqueTags.map((tag: string, idx: number) => {
+                  const TagIcon = getTagIcon(tag);
+                  return (
+                    <Badge key={idx} variant="secondary" className="flex items-center gap-1.5 px-2.5 py-1 text-xs">
+                      {TagIcon && <TagIcon className="h-3.5 w-3.5" />}
+                      <span>{tag}</span>
+                    </Badge>
+                  );
+                })}
+              </div>
+            ) : null;
+          })()}
+
           {/* Metadata */}
-          <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2">
             {route.pins?.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5" />
