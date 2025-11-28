@@ -6,8 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import StarRating from "@/components/route/StarRating";
-import { MapPin, Trash2 } from "lucide-react";
+import { MapPin, Trash2, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const MyRoutes = () => {
@@ -85,53 +84,96 @@ const MyRoutes = () => {
         : 0;
 
     return (
-      <div className="bg-card border border-border rounded-xl p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-lg font-semibold">{route.title}</h3>
-              <StarRating rating={Math.round(avgRating * 10) / 10} />
+      <div className="bg-card border border-border rounded-xl overflow-hidden hover:border-foreground/20 transition-all duration-300">
+        {/* Header Section */}
+        <div className="p-4 border-b border-border/50">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h3 className="text-base font-bold leading-tight flex-1">
+              {route.title}
+            </h3>
+            <div className="flex items-center gap-1.5 bg-muted px-2.5 py-1 rounded-lg flex-shrink-0">
+              <Star className="h-4 w-4 fill-star text-star" />
+              <span className="font-bold text-sm">{Math.round(avgRating * 10) / 10}</span>
             </div>
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
-              <MapPin className="h-4 w-4" />
-              {route.pins?.length || 0} pinezka
+          </div>
+
+          {route.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-2">
+              {route.description}
             </p>
+          )}
+
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            {route.pins?.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" />
+                <span>{route.pins.length} {route.pins.length === 1 ? 'przystanek' : 'przystanki'}</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {route.pins?.slice(0, 1).map((pin: any) => (
-          <div key={pin.id} className="flex gap-3 mb-3">
-            {pin.image_url ? (
-              <img
-                src={pin.image_url}
-                alt={pin.place_name}
-                className="w-24 h-24 object-cover rounded-lg"
-              />
-            ) : (
-              <div className="w-24 h-24 bg-muted rounded-lg" />
-            )}
-            <div className="flex-1 min-w-0">
-              <h4 className="font-medium">{pin.place_name}</h4>
-              <p className="text-xs text-muted-foreground">{pin.address}</p>
-            </div>
+        {/* Pins Section */}
+        {route.pins?.length > 0 && (
+          <div className="divide-y divide-border/50">
+            {route.pins.slice(0, 3).map((pin: any, index: number) => (
+              <div key={pin.id} className="p-3">
+                <div className="flex gap-3">
+                  {pin.image_url && (
+                    <div className="flex-shrink-0 relative">
+                      <img
+                        src={pin.image_url}
+                        alt={pin.place_name}
+                        className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
+                      />
+                      <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
+                        <span className="text-xs font-bold">{index + 1}</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {!pin.image_url && (
+                          <div className="bg-muted rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 ring-1 ring-border">
+                            <span className="text-xs font-bold">{index + 1}</span>
+                          </div>
+                        )}
+                        <h4 className="font-semibold text-sm leading-tight">{pin.place_name}</h4>
+                      </div>
+                      {pin.rating && (
+                        <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded flex-shrink-0">
+                          <Star className="h-3 w-3 fill-star text-star" />
+                          <span className="font-semibold text-xs">{pin.rating.toFixed(1)}</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{pin.address}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
 
-        <div className="flex gap-2">
-          <Button
-            variant="default"
-            className="flex-1"
-            onClick={() => navigate(`/edit/${route.id}`)}
-          >
-            Edytuj trasę
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => deleteMutation.mutate(route.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+        {/* Footer Section with Actions */}
+        <div className="p-3 bg-muted/20 border-t border-border/50">
+          <div className="flex gap-2">
+            <Button
+              variant="default"
+              className="flex-1"
+              onClick={() => navigate(`/edit/${route.id}`)}
+            >
+              Edytuj trasę
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => deleteMutation.mutate(route.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
     );
