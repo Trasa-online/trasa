@@ -329,16 +329,17 @@ const CreateRoute = () => {
                     id="is-transport"
                     checked={pins[currentPinIndex]?.is_transport || false}
                     onCheckedChange={(checked) => {
-                      updatePin(currentPinIndex, "is_transport", checked);
-                      if (!checked) {
+                      const isChecked = checked === true;
+                      updatePin(currentPinIndex, "is_transport", isChecked);
+                      if (!isChecked) {
                         updatePin(currentPinIndex, "transport_type", "");
                         updatePin(currentPinIndex, "transport_end", "");
                       }
                     }}
                   />
-                  <label htmlFor="is-transport" className="text-sm font-medium cursor-pointer">
+                  <Label htmlFor="is-transport" className="cursor-pointer">
                     Ten punkt jest środkiem transportu
-                  </label>
+                  </Label>
                 </div>
 
                 {pins[currentPinIndex]?.is_transport ? (
