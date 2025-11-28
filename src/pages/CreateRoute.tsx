@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, X, Camera, Coffee, Utensils, Hotel, Mountain, Waves, Leaf, Car, Train, Bus, Ship, Bike } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Car, Train, Bus, Ship, Bike, Tag } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+
+type PinType = "transport" | "tag" | null;
 
 interface Pin {
   id?: string;
@@ -25,6 +26,7 @@ interface Pin {
   is_transport: boolean;
   transport_type: string;
   transport_end: string;
+  pin_type?: PinType;
 }
 
 const CreateRoute = () => {
@@ -35,13 +37,12 @@ const CreateRoute = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [pins, setPins] = useState<Pin[]>([
-    { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: 0, tags: [], is_transport: false, transport_type: "", transport_end: "" },
+    { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: 0, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null },
   ]);
   const [currentPinIndex, setCurrentPinIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(1);
   const [routeDescription, setRouteDescription] = useState("");
-  const [showCustomTagInput, setShowCustomTagInput] = useState(false);
   const [showCustomTransportInput, setShowCustomTransportInput] = useState(false);
 
   useEffect(() => {
@@ -77,7 +78,7 @@ const CreateRoute = () => {
   }, [existingRoute]);
 
   const addPin = () => {
-    setPins([...pins, { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: pins.length, tags: [], is_transport: false, transport_type: "", transport_end: "" }]);
+    setPins([...pins, { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: pins.length, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null }]);
     setCurrentPinIndex(pins.length);
   };
 
@@ -232,370 +233,294 @@ const CreateRoute = () => {
           </div>
         ) : step === 2 ? (
           <>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">
-                  Pinezka {currentPinIndex + 1}/{pins.length}
-                </h2>
-                <div className="flex gap-2">
-                  {currentPinIndex > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPinIndex(currentPinIndex - 1)}
-                    >
-                      ←
-                    </Button>
-                  )}
-                  {currentPinIndex < pins.length - 1 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPinIndex(currentPinIndex + 1)}
-                    >
-                      →
-                    </Button>
-                  )}
-                  {pins.length > 1 && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removePin(currentPinIndex)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                  <Button variant="default" size="icon" onClick={addPin}>
-                    <Plus className="h-4 w-4" />
+            {/* Pin type selection or pin form */}
+            {pins[currentPinIndex]?.pin_type === null ? (
+              <div className="space-y-6">
+                <div className="text-center space-y-2">
+                  <h2 className="text-2xl font-semibold">Co się wydarzyło?</h2>
+                  <p className="text-muted-foreground">
+                    Wybierz typ punktu, który chcesz dodać
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <Button
+                    variant="outline"
+                    className="w-full h-24 flex-col gap-2 hover:border-primary"
+                    onClick={() => {
+                      const newPins = [...pins];
+                      newPins[currentPinIndex] = { 
+                        ...newPins[currentPinIndex], 
+                        pin_type: "transport",
+                        is_transport: true 
+                      };
+                      setPins(newPins);
+                    }}
+                  >
+                    <Car className="h-8 w-8" />
+                    <span className="font-medium">Transport</span>
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="w-full h-24 flex-col gap-2 hover:border-primary"
+                    onClick={() => {
+                      const newPins = [...pins];
+                      newPins[currentPinIndex] = { 
+                        ...newPins[currentPinIndex], 
+                        pin_type: "tag",
+                        is_transport: false 
+                      };
+                      setPins(newPins);
+                    }}
+                  >
+                    <Tag className="h-8 w-8" />
+                    <span className="font-medium">Grupy tagów</span>
                   </Button>
                 </div>
               </div>
-
-              <div className="space-y-4">
-                {/* Tags */}
-                <div>
-                  <Label>Tagi</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {[
-                      { name: "Wege", icon: Leaf },
-                      { name: "Nie Wege", icon: Utensils },
-                      { name: "Kawiarnia", icon: Coffee },
-                      { name: "Restauracja", icon: Utensils },
-                      { name: "Hotel", icon: Hotel },
-                      { name: "Jedzenie", icon: Utensils },
-                      { name: "Kawa", icon: Coffee },
-                      { name: "Herbata", icon: Coffee },
-                      { name: "Góry", icon: Mountain },
-                      { name: "Morze", icon: Waves }
-                    ].map(({ name, icon: Icon }) => (
-                      <Badge
-                        key={name}
-                        variant={pins[currentPinIndex]?.tags?.includes(name) ? "default" : "outline"}
-                        className="cursor-pointer flex items-center gap-1"
-                        onClick={() => {
-                          const currentTags = pins[currentPinIndex]?.tags || [];
-                          if (currentTags.includes(name)) {
-                            updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== name));
-                          } else {
-                            updatePin(currentPinIndex, "tags", [...currentTags, name]);
-                          }
-                        }}
-                      >
-                        <Icon className="h-3 w-3" />
-                        {name}
-                      </Badge>
-                    ))}
-                    
-                    {/* Custom tags */}
-                    {pins[currentPinIndex]?.tags?.filter(t => !["Wege", "Nie Wege", "Kawiarnia", "Restauracja", "Hotel", "Jedzenie", "Kawa", "Herbata", "Góry", "Morze"].includes(t)).map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="default"
-                        className="cursor-pointer"
-                        onClick={() => {
-                          const currentTags = pins[currentPinIndex]?.tags || [];
-                          updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== tag));
-                        }}
-                      >
-                        {tag} <X className="h-3 w-3 ml-1" />
-                      </Badge>
-                    ))}
-                    
-                    {/* "Inne" badge or input */}
-                    {!showCustomTagInput ? (
-                      <Badge
-                        variant="outline"
-                        className="cursor-pointer"
-                        onClick={() => setShowCustomTagInput(true)}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Inne
-                      </Badge>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          autoFocus
-                          placeholder="Wpisz tag"
-                          className="h-7 w-32"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                              const currentTags = pins[currentPinIndex]?.tags || [];
-                              const newTag = e.currentTarget.value.trim();
-                              if (!currentTags.includes(newTag)) {
-                                updatePin(currentPinIndex, "tags", [...currentTags, newTag]);
-                              }
-                              e.currentTarget.value = '';
-                              setShowCustomTagInput(false);
-                            } else if (e.key === 'Escape') {
-                              setShowCustomTagInput(false);
-                            }
-                          }}
-                          onBlur={() => setShowCustomTagInput(false)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Transport option */}
-                <div className="border border-border rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="is-transport"
-                      checked={!!pins[currentPinIndex]?.is_transport}
-                      onCheckedChange={(checked) => {
-                        const newValue = checked === true;
-                        const newPins = [...pins];
-                        newPins[currentPinIndex] = { 
-                          ...newPins[currentPinIndex], 
-                          is_transport: newValue,
-                          ...(newValue ? {} : { 
-                            transport_type: "", 
-                            transport_end: "" 
-                          })
-                        };
-                        setPins(newPins);
-                        if (!newValue) {
-                          setShowCustomTransportInput(false);
-                        }
-                      }}
-                    />
-                    <Label htmlFor="is-transport" className="cursor-pointer font-normal">
-                      Ten punkt jest środkiem transportu
-                    </Label>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2 ml-6">
-                    Zaznacz, jeśli chcesz dodać transport zamiast miejsca
-                  </p>
-                </div>
-
-                {pins[currentPinIndex]?.is_transport ? (
-                  <>
-                    {/* Transport type selection */}
-                    <div>
-                      <Label>Rodzaj transportu *</Label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {[
-                          { name: "Samochód", icon: Car },
-                          { name: "Tramwaj", icon: Train },
-                          { name: "Pociąg", icon: Train },
-                          { name: "Prom", icon: Ship },
-                          { name: "Autobus", icon: Bus },
-                          { name: "Hulajnoga", icon: Bike },
-                          { name: "Rower", icon: Bike }
-                        ].map(({ name, icon: Icon }) => (
-                          <Badge
-                            key={name}
-                            variant={pins[currentPinIndex]?.transport_type === name ? "default" : "outline"}
-                            className="cursor-pointer flex items-center gap-1"
-                            onClick={() => updatePin(currentPinIndex, "transport_type", name)}
-                          >
-                            <Icon className="h-3 w-3" />
-                            {name}
-                          </Badge>
-                        ))}
-                        
-                        {/* Custom transport type or input */}
-                        {pins[currentPinIndex]?.transport_type && 
-                         !["Samochód", "Tramwaj", "Pociąg", "Prom", "Autobus", "Hulajnoga", "Rower"].includes(pins[currentPinIndex].transport_type) ? (
-                          <Badge
-                            variant="default"
-                            className="cursor-pointer"
-                            onClick={() => {
-                              updatePin(currentPinIndex, "transport_type", "");
-                              setShowCustomTransportInput(false);
-                            }}
-                          >
-                            {pins[currentPinIndex].transport_type} <X className="h-3 w-3 ml-1" />
-                          </Badge>
-                        ) : null}
-                        
-                        {!showCustomTransportInput && (!pins[currentPinIndex]?.transport_type || ["Samochód", "Tramwaj", "Pociąg", "Prom", "Autobus", "Hulajnoga", "Rower"].includes(pins[currentPinIndex].transport_type)) ? (
-                          <Badge
-                            variant="outline"
-                            className="cursor-pointer"
-                            onClick={() => setShowCustomTransportInput(true)}
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Inne
-                          </Badge>
-                        ) : showCustomTransportInput ? (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              autoFocus
-                              placeholder="Wpisz transport"
-                              className="h-7 w-32"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                                  updatePin(currentPinIndex, "transport_type", e.currentTarget.value.trim());
-                                  setShowCustomTransportInput(false);
-                                } else if (e.key === 'Escape') {
-                                  setShowCustomTransportInput(false);
-                                }
-                              }}
-                              onBlur={() => setShowCustomTransportInput(false)}
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    {/* Start and end points for transport */}
-                    <div>
-                      <Label>Punkt startowy *</Label>
-                      <Input
-                        value={pins[currentPinIndex]?.place_name || ""}
-                        onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
-                        placeholder="np. Dworzec Główny"
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Punkt końcowy *</Label>
-                      <Input
-                        value={pins[currentPinIndex]?.transport_end || ""}
-                        onChange={(e) => updatePin(currentPinIndex, "transport_end", e.target.value)}
-                        placeholder="np. Lotnisko"
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Adres/Szczegóły</Label>
-                      <Input
-                        value={pins[currentPinIndex]?.address || ""}
-                        onChange={(e) => updatePin(currentPinIndex, "address", e.target.value)}
-                        placeholder="Dodatkowe informacje"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {/* Regular pin fields */}
-                    <div>
-                      <Label>Nazwa pinezki *</Label>
-                      <Input
-                        value={pins[currentPinIndex]?.place_name || ""}
-                        onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
-                        placeholder="np. Kiyomizu-dera"
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Adres *</Label>
-                      <Input
-                        value={pins[currentPinIndex]?.address || ""}
-                        onChange={(e) => updatePin(currentPinIndex, "address", e.target.value)}
-                        placeholder="np. Chrome-294 Kiyomizu"
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div>
-                  <Label>Opis (Opcjonalne)</Label>
-                  <Textarea
-                    value={pins[currentPinIndex]?.description || ""}
-                    onChange={(e) => updatePin(currentPinIndex, "description", e.target.value)}
-                    placeholder="Opisz swoje wrażenia z tego miejsca..."
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <Label>Wspomnij znajomych (Opcjonalne)</Label>
-                  <Input
-                    placeholder="@nazwa_użytkownika"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Oznacz znajomych, którzy byli z tobą
-                  </p>
-                </div>
-
-                {!pins[currentPinIndex]?.is_transport && (
-                  <div>
-                    <Label>Ocena *</Label>
-                    <div className="mt-2">
-                      <StarRating
-                        rating={pins[currentPinIndex]?.rating || 0}
-                        interactive
-                        size="lg"
-                        onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <Label>Zdjęcia (Opcjonalne)</Label>
-                  <div className="mt-2">
-                    {pins[currentPinIndex]?.image_url ? (
-                      <div className="relative">
-                        <img
-                          src={pins[currentPinIndex].image_url}
-                          alt="Preview"
-                          className="w-full h-48 object-cover rounded-lg"
-                        />
-                        <button
-                          onClick={() => updatePin(currentPinIndex, "image_url", "")}
-                          className="absolute top-2 right-2 bg-background p-2 rounded-full"
+            ) : (
+              <>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">
+                      Pinezka {currentPinIndex + 1}/{pins.length}
+                    </h2>
+                    <div className="flex gap-2">
+                      {currentPinIndex > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPinIndex(currentPinIndex - 1)}
+                        >
+                          ←
+                        </Button>
+                      )}
+                      {currentPinIndex < pins.length - 1 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPinIndex(currentPinIndex + 1)}
+                        >
+                          →
+                        </Button>
+                      )}
+                      {pins.length > 1 && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => removePin(currentPinIndex)}
                         >
                           <X className="h-4 w-4" />
-                        </button>
-                      </div>
+                        </Button>
+                      )}
+                      <Button variant="default" size="icon" onClick={addPin}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {pins[currentPinIndex]?.pin_type === "transport" ? (
+                      <>
+                        {/* Transport type selection */}
+                        <div>
+                          <Label>Rodzaj transportu *</Label>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {[
+                              { name: "Samochód", icon: Car },
+                              { name: "Tramwaj", icon: Train },
+                              { name: "Pociąg", icon: Train },
+                              { name: "Prom", icon: Ship },
+                              { name: "Autobus", icon: Bus },
+                              { name: "Hulajnoga", icon: Bike },
+                              { name: "Rower", icon: Bike }
+                            ].map(({ name, icon: Icon }) => (
+                              <Badge
+                                key={name}
+                                variant={pins[currentPinIndex]?.transport_type === name ? "default" : "outline"}
+                                className="cursor-pointer flex items-center gap-1"
+                                onClick={() => updatePin(currentPinIndex, "transport_type", name)}
+                              >
+                                <Icon className="h-3 w-3" />
+                                {name}
+                              </Badge>
+                            ))}
+                            
+                            {/* Custom transport type */}
+                            {pins[currentPinIndex]?.transport_type && 
+                             !["Samochód", "Tramwaj", "Pociąg", "Prom", "Autobus", "Hulajnoga", "Rower"].includes(pins[currentPinIndex].transport_type) && (
+                              <Badge
+                                variant="default"
+                                className="cursor-pointer"
+                                onClick={() => {
+                                  updatePin(currentPinIndex, "transport_type", "");
+                                  setShowCustomTransportInput(false);
+                                }}
+                              >
+                                {pins[currentPinIndex].transport_type} <X className="h-3 w-3 ml-1" />
+                              </Badge>
+                            )}
+                            
+                            {!showCustomTransportInput && (!pins[currentPinIndex]?.transport_type || ["Samochód", "Tramwaj", "Pociąg", "Prom", "Autobus", "Hulajnoga", "Rower"].includes(pins[currentPinIndex].transport_type)) ? (
+                              <Badge
+                                variant="outline"
+                                className="cursor-pointer"
+                                onClick={() => setShowCustomTransportInput(true)}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Inne
+                              </Badge>
+                            ) : showCustomTransportInput && (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  autoFocus
+                                  placeholder="Wpisz transport"
+                                  className="h-7 w-32"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                      updatePin(currentPinIndex, "transport_type", e.currentTarget.value.trim());
+                                      setShowCustomTransportInput(false);
+                                    } else if (e.key === 'Escape') {
+                                      setShowCustomTransportInput(false);
+                                    }
+                                  }}
+                                  onBlur={() => setShowCustomTransportInput(false)}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Start and end points for transport */}
+                        <div>
+                          <Label>Punkt startowy *</Label>
+                          <Input
+                            value={pins[currentPinIndex]?.place_name || ""}
+                            onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
+                            placeholder="np. Dworzec Główny"
+                          />
+                        </div>
+
+                        <div>
+                          <Label>Punkt końcowy *</Label>
+                          <Input
+                            value={pins[currentPinIndex]?.transport_end || ""}
+                            onChange={(e) => updatePin(currentPinIndex, "transport_end", e.target.value)}
+                            placeholder="np. Lotnisko"
+                          />
+                        </div>
+                      </>
                     ) : (
-                      <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent">
-                        <Camera className="h-12 w-12 text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Dotknij, aby dodać zdjęcia
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Możesz wybrać wiele zdjęć
-                        </p>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleImageUpload(file, currentPinIndex);
-                          }}
-                        />
-                      </label>
+                      <>
+                        {/* Regular pin fields */}
+                        <div>
+                          <Label>Nazwa pinezki *</Label>
+                          <Input
+                            value={pins[currentPinIndex]?.place_name || ""}
+                            onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
+                            placeholder="np. Kiyomizu-dera"
+                          />
+                        </div>
+
+                        <div>
+                          <Label>Adres *</Label>
+                          <Input
+                            value={pins[currentPinIndex]?.address || ""}
+                            onChange={(e) => updatePin(currentPinIndex, "address", e.target.value)}
+                            placeholder="np. Chrome-294 Kiyomizu"
+                          />
+                        </div>
+                      </>
                     )}
+
+                    <div>
+                      <Label>Opis (Opcjonalne)</Label>
+                      <Textarea
+                        value={pins[currentPinIndex]?.description || ""}
+                        onChange={(e) => updatePin(currentPinIndex, "description", e.target.value)}
+                        placeholder="Opisz swoje wrażenia z tego miejsca..."
+                        rows={3}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Wspomnij znajomych (Opcjonalne)</Label>
+                      <Input
+                        placeholder="@nazwa_użytkownika"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Oznacz znajomych, którzy byli z tobą
+                      </p>
+                    </div>
+
+                    {pins[currentPinIndex]?.pin_type === "tag" && (
+                      <div>
+                        <Label>Ocena *</Label>
+                        <div className="mt-2">
+                          <StarRating
+                            rating={pins[currentPinIndex]?.rating || 0}
+                            interactive
+                            size="lg"
+                            onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <Label>Zdjęcia (Opcjonalne)</Label>
+                      <div className="mt-2">
+                        {pins[currentPinIndex]?.image_url ? (
+                          <div className="relative">
+                            <img
+                              src={pins[currentPinIndex].image_url}
+                              alt="Preview"
+                              className="w-full h-48 object-cover rounded-lg"
+                            />
+                            <button
+                              onClick={() => updatePin(currentPinIndex, "image_url", "")}
+                              className="absolute top-2 right-2 bg-background p-2 rounded-full"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent">
+                            <Camera className="h-12 w-12 text-muted-foreground mb-2" />
+                            <p className="text-sm text-muted-foreground">
+                              Dotknij, aby dodać zdjęcia
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Możesz wybrać wiele zdjęć
+                            </p>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleImageUpload(file, currentPinIndex);
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4">
-              <Button
-                variant="default"
-                className="w-full"
-                onClick={() => setStep(3)}
-              >
-                Przejdź do podsumowania
-              </Button>
-            </div>
+                <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4">
+                  <Button
+                    variant="default"
+                    className="w-full"
+                    onClick={() => setStep(3)}
+                  >
+                    Przejdź do podsumowania
+                  </Button>
+                </div>
+              </>
+            )}
           </>
         ) : (
           <>
