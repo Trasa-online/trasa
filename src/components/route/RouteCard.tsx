@@ -135,19 +135,28 @@ const RouteCard = ({ route }: RouteCardProps) => {
         <div className="space-y-2.5">
           {route.pins.slice(0, 3).map((pin: any, index: number) => (
             <div key={pin.id} className="flex gap-3 bg-muted/30 rounded-lg p-2.5">
-              <div className="flex-shrink-0 relative">
-                <img
-                  src={pin.image_url || '/placeholder.svg'}
-                  alt={pin.place_name}
-                  className="w-16 h-16 object-cover rounded-lg"
-                />
-                <div className="absolute top-1.5 left-1.5 bg-background/90 rounded-full w-5 h-5 flex items-center justify-center">
-                  <span className="text-xs font-normal">{index + 1}</span>
+              {pin.image_url && (
+                <div className="flex-shrink-0 relative">
+                  <img
+                    src={pin.image_url}
+                    alt={pin.place_name}
+                    className="w-16 h-16 object-cover rounded-lg"
+                  />
+                  <div className="absolute top-1.5 left-1.5 bg-background/90 rounded-full w-5 h-5 flex items-center justify-center">
+                    <span className="text-xs font-normal">{index + 1}</span>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-0.5">
-                  <h4 className="font-semibold text-sm leading-tight">{pin.place_name}</h4>
+                  <div className="flex items-center gap-2">
+                    {!pin.image_url && (
+                      <div className="bg-background rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-normal">{index + 1}</span>
+                      </div>
+                    )}
+                    <h4 className="font-semibold text-sm leading-tight">{pin.place_name}</h4>
+                  </div>
                   {pin.rating && (
                     <div className="flex items-center gap-0.5 flex-shrink-0">
                       <Star className="h-3.5 w-3.5 fill-star text-star" />
