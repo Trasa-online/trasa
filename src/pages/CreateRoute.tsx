@@ -11,6 +11,7 @@ import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import UserMentionInput from "@/components/route/UserMentionInput";
 
 type PinType = "transport" | "tag" | null;
 
@@ -27,6 +28,7 @@ interface Pin {
   transport_type: string;
   transport_end: string;
   pin_type?: PinType;
+  mentioned_users: string[];
 }
 
 const CreateRoute = () => {
@@ -37,7 +39,7 @@ const CreateRoute = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [pins, setPins] = useState<Pin[]>([
-    { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: 0, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null },
+    { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: 0, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null, mentioned_users: [] },
   ]);
   const [currentPinIndex, setCurrentPinIndex] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -73,13 +75,16 @@ const CreateRoute = () => {
       setTitle(existingRoute.title);
       setDescription(existingRoute.description || "");
       if (existingRoute.pins?.length > 0) {
-        setPins(existingRoute.pins.sort((a: any, b: any) => a.pin_order - b.pin_order));
+        setPins(existingRoute.pins.sort((a: any, b: any) => a.pin_order - b.pin_order).map((pin: any) => ({
+          ...pin,
+          mentioned_users: pin.mentioned_users || []
+        })));
       }
     }
   }, [existingRoute]);
 
   const addPin = () => {
-    setPins([...pins, { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: pins.length, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null }]);
+    setPins([...pins, { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: pins.length, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null, mentioned_users: [] }]);
     setCurrentPinIndex(pins.length);
   };
 
@@ -539,12 +544,17 @@ const CreateRoute = () => {
 
                     <div>
                       <Label>Wspomnij znajomych (Opcjonalne)</Label>
-                      <Input
-                        placeholder="@nazwa_użytkownika"
+                      <UserMentionInput
+                        selectedUserIds={pins[currentPinIndex]?.mentioned_users || []}
+                        onUserSelect={(userId) => {
+                          const currentUsers = pins[currentPinIndex]?.mentioned_users || [];
+                          updatePin(currentPinIndex, "mentioned_users", [...currentUsers, userId]);
+                        }}
+                        onUserRemove={(userId) => {
+                          const currentUsers = pins[currentPinIndex]?.mentioned_users || [];
+                          updatePin(currentPinIndex, "mentioned_users", currentUsers.filter(id => id !== userId));
+                        }}
                       />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Oznacz znajomych, którzy byli z tobą
-                      </p>
                     </div>
 
                     {pins[currentPinIndex]?.pin_type === "tag" && (
