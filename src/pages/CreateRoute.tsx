@@ -51,6 +51,7 @@ const CreateRoute = () => {
   const [showCustomTransportInput, setShowCustomTransportInput] = useState(false);
   const [showCustomTagInput, setShowCustomTagInput] = useState(false);
   const [noAddressRemembered, setNoAddressRemembered] = useState(false);
+  const [showPinsList, setShowPinsList] = useState(false);
 
   useEffect(() => {
     // Reset "no address" checkbox when changing pins
@@ -89,7 +90,11 @@ const CreateRoute = () => {
           ...pin,
           mentioned_users: pin.mentioned_users || []
         })));
+        // Show pins list when editing existing route with pins
+        setShowPinsList(true);
       }
+      // When editing existing route, skip to step 2 to show pins list
+      setStep(2);
     }
   }, [existingRoute]);
 
@@ -199,14 +204,23 @@ const CreateRoute = () => {
     <div className="min-h-screen bg-background pb-20">
       <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center gap-4 z-10">
         <button onClick={() => {
-          if (step === 3) setStep(2);
-          else if (step === 2) setStep(1);
-          else navigate(-1);
+          if (step === 3) {
+            setStep(2);
+            setShowPinsList(true);
+          } else if (step === 2) {
+            if (showPinsList) {
+              setStep(1);
+            } else {
+              setShowPinsList(true);
+            }
+          } else {
+            navigate(-1);
+          }
         }}>
           <ArrowLeft className="h-6 w-6" />
         </button>
         <h1 className="text-xl font-semibold flex-1">
-          {step === 1 ? "Utwórz nową trasę" : step === 2 ? title || "Edytuj trasę" : "Podsumowanie trasy"}
+          {step === 1 ? "Utwórz nową trasę" : step === 2 ? (showPinsList ? "Lista pinezek" : title || "Edytuj pinezkę") : "Podsumowanie trasy"}
         </h1>
       </div>
 
@@ -249,8 +263,110 @@ const CreateRoute = () => {
           </div>
         ) : step === 2 ? (
           <>
-            {/* Pin type selection or pin form */}
-            {pins[currentPinIndex]?.pin_type === null ? (
+            {/* Show pins list when editing or after adding pins */}
+            {showPinsList && pins.filter(p => p.pin_type !== null).length > 0 ? (
+              <div className="space-y-4 pb-24">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">Pinezki w trasie</h2>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      setShowPinsList(false);
+                      addPin();
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Dodaj
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {pins.filter(p => p.pin_type !== null).map((pin, index) => {
+                    const actualIndex = pins.findIndex(p => p.pin_order === pin.pin_order);
+                    return (
+                      <div
+                        key={index}
+                        className="border border-border rounded-lg p-3 bg-card cursor-pointer hover:border-primary transition-colors"
+                        onClick={() => {
+                          setCurrentPinIndex(actualIndex);
+                          setShowPinsList(false);
+                        }}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+                            {index + 1}
+                          </div>
+                          
+                          <div className="flex-1 space-y-1">
+                            {pin.is_transport ? (
+                              <>
+                                <div className="flex items-center gap-2">
+                                  <Car className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-xs text-muted-foreground">{pin.transport_type || "Transport"}</span>
+                                </div>
+                                <p className="text-sm font-medium">{pin.place_name} → {pin.transport_end}</p>
+                              </>
+                            ) : (
+                              <>
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm font-medium">{pin.place_name}</p>
+                                  {pin.rating > 0 && (
+                                    <div className="flex items-center gap-1 text-xs">
+                                      <span className="text-yellow-500">★</span>
+                                      <span>{pin.rating.toFixed(1)}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">{pin.address}</p>
+                              </>
+                            )}
+                            
+                            {pin.tags && pin.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {pin.tags.slice(0, 3).map((tag, i) => (
+                                  <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                                {pin.tags.length > 3 && (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                    +{pin.tags.length - 3}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="flex-shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removePin(actualIndex);
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
+                  <Button
+                    variant="default"
+                    className="w-full"
+                    onClick={() => setStep(3)}
+                    disabled={pins.filter(p => p.pin_type !== null && (p.place_name || p.transport_type)).length === 0}
+                  >
+                    Przejdź do podsumowania
+                  </Button>
+                </div>
+              </div>
+            ) : pins[currentPinIndex]?.pin_type === null ? (
               <div className="space-y-6">
                 <div className="text-center space-y-2">
                   <h2 className="text-2xl font-semibold">Co się wydarzyło?</h2>
@@ -296,7 +412,6 @@ const CreateRoute = () => {
                 </div>
               </div>
             ) : (
-              <>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold">
@@ -658,15 +773,16 @@ const CreateRoute = () => {
                   <Button
                     variant="default"
                     className="w-full"
-                    onClick={() => setStep(3)}
+                    onClick={() => {
+                      setShowPinsList(true);
+                    }}
                   >
-                    Przejdź do podsumowania
+                    Powrót do listy pinezek
                   </Button>
                 </div>
-              </>
             )}
           </>
-        ) : (
+        ) : step === 3 ? (
           <>
             <div className="space-y-4 pb-80">
               {/* Header */}
@@ -826,7 +942,7 @@ const CreateRoute = () => {
               </div>
             </div>
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );
