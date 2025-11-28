@@ -628,114 +628,110 @@ const CreateRoute = () => {
           </>
         ) : (
           <>
-            <div className="space-y-6 pb-80">
-              <div className="text-center space-y-1">
-                <h2 className="text-lg font-medium">
-                  Podsumowanie trasy • {pins.filter(p => p.place_name && p.address).length} {pins.filter(p => p.place_name && p.address).length === 1 ? 'pinezka' : 'pinezki'}
-                </h2>
-                <p className="text-xl font-semibold">{title}</p>
+            <div className="space-y-4 pb-80">
+              {/* Header */}
+              <div className="space-y-2">
+                <h2 className="text-lg font-semibold">{title}</h2>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <span>{pins.filter(p => p.pin_type !== null && (p.place_name || p.transport_type)).length} {pins.filter(p => p.pin_type !== null).length === 1 ? 'punkt' : 'punktów'}</span>
+                  {(() => {
+                    const attractionPins = pins.filter(p => p.pin_type === "tag" && p.rating > 0);
+                    const avgRating = attractionPins.length > 0 
+                      ? (attractionPins.reduce((sum, p) => sum + p.rating, 0) / attractionPins.length).toFixed(1)
+                      : null;
+                    return avgRating ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-yellow-500">★</span>
+                        <span>{avgRating}</span>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
               </div>
 
               {/* Map placeholder */}
-              <div className="relative h-48 bg-muted rounded-lg overflow-hidden">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
-                    <div className="w-8 h-8 bg-primary rounded-full" />
-                  </div>
+              <div className="relative h-40 bg-muted rounded-lg overflow-hidden border border-border">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950">
+                  {/* Fake map pins */}
+                  <div className="absolute top-1/4 left-1/3 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-lg" />
+                  <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-lg" />
+                  <div className="absolute bottom-1/3 right-1/3 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-lg" />
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-white px-4 py-2 flex items-center justify-between text-sm">
-                  <span>{pins.filter(p => p.place_name && p.address).length} lokalizacja</span>
-                  <span>Podgląd mapy</span>
+                <div className="absolute bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Podgląd lokalizacji na mapie</p>
                 </div>
               </div>
 
               {/* Pins list */}
-              {pins.filter(p => p.place_name && p.address).map((pin, index) => (
-                <div key={index} className="space-y-3">
-                  {pin.image_url && (
-                    <div className="relative h-48 bg-muted rounded-lg overflow-hidden">
-                      <img src={pin.image_url} alt={pin.place_name} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-16 h-16 bg-muted/90 rounded-full flex items-center justify-center">
-                          <span className="text-3xl">📍</span>
-                        </div>
-                      </div>
+              {pins.filter(p => p.pin_type !== null && (p.place_name || p.transport_type)).map((pin, index) => (
+                <div key={index} className="border border-border rounded-lg p-3 space-y-2 bg-card">
+                  <div className="flex items-start gap-3">
+                    {/* Pin number */}
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">
+                      {index + 1}
                     </div>
-                  )}
-                  
-                  <div className="space-y-2">
-                    {pin.is_transport ? (
-                      <>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Transport: {pin.transport_type}</p>
-                          <p className="font-medium">{pin.place_name} → {pin.transport_end}</p>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Pinezka</p>
-                            <p className="font-medium">{pin.place_name}</p>
+                    
+                    <div className="flex-1 space-y-2">
+                      {pin.is_transport ? (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <Car className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">{pin.transport_type}</span>
                           </div>
-                          <StarRating rating={pin.rating} size="md" />
-                        </div>
-                      </>
-                    )}
-                    
-                    {pin.tags && pin.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {pin.tags.map((tag, i) => {
-                          const pinIndex = pins.findIndex(p => p.pin_order === pin.pin_order);
-                          return (
-                            <Badge
-                              key={i}
-                              variant="secondary"
-                              className="text-xs cursor-pointer flex items-center gap-1"
-                              onClick={() => {
-                                if (pinIndex === -1) return;
-                                const currentTags = pins[pinIndex]?.tags || [];
-                                const newTags = currentTags.filter(t => t !== tag);
-                                updatePin(pinIndex, "tags", newTags);
-                              }}
-                            >
+                          <p className="text-sm font-medium">{pin.place_name} → {pin.transport_end}</p>
+                          {pin.address && (
+                            <p className="text-xs text-muted-foreground">{pin.address}</p>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium">{pin.place_name}</p>
+                            {pin.rating > 0 && (
+                              <div className="flex items-center gap-1 text-xs">
+                                <span className="text-yellow-500">★</span>
+                                <span>{pin.rating}</span>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">{pin.address}</p>
+                        </>
+                      )}
+                      
+                      {pin.tags && pin.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {pin.tags.map((tag, i) => (
+                            <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0">
                               {tag}
-                              <X className="h-3 w-3 ml-1" />
                             </Badge>
-                          );
-                        })}
-                      </div>
-                    )}
-                    
-                    <div>
-                      <p className="text-xs text-muted-foreground">Adres</p>
-                      <p className="text-sm">{pin.address}</p>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {pin.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">{pin.description}</p>
+                      )}
+                      
+                      {pin.image_url && (
+                        <div className="relative h-32 bg-muted rounded overflow-hidden mt-2">
+                          <img src={pin.image_url} alt={pin.place_name} className="w-full h-full object-cover" />
+                        </div>
+                      )}
                     </div>
-                    
-                    {pin.description && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Opis:</p>
-                        <p className="text-sm whitespace-pre-wrap">{pin.description}</p>
-                      </div>
-                    )}
                   </div>
-                  
-                  {index < pins.filter(p => p.place_name && p.address).length - 1 && (
-                    <div className="h-px bg-border my-4" />
-                  )}
                 </div>
               ))}
 
               {/* Optional route description */}
-              <div className="space-y-2">
-                <Label htmlFor="route-description">Opis trasy (Opcjonalne)</Label>
+              <div className="space-y-2 border-t border-border pt-4">
+                <Label htmlFor="route-description" className="text-sm">Opis trasy (Opcjonalne)</Label>
                 <Textarea
                   id="route-description"
                   value={routeDescription}
                   onChange={(e) => setRouteDescription(e.target.value)}
-                  placeholder="Podziel się ogólnymi wrażeniami i najważniejszymi..."
-                  rows={4}
-                  className="resize-none"
+                  placeholder="Podziel się ogólnymi wrażeniami i najważniejszymi szczegółami..."
+                  rows={3}
+                  className="resize-none text-sm"
                 />
                 <p className="text-xs text-muted-foreground">
                   Opowiedz obserwującym, co sprawiło, że ta trasa była wyjątkowa
@@ -743,36 +739,32 @@ const CreateRoute = () => {
               </div>
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 space-y-2">
+            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 space-y-2 max-w-lg mx-auto">
               <Button
                 variant="outline"
-                className="w-full"
+                className="w-full text-sm"
                 onClick={() => setStep(2)}
               >
                 + Dodaj kolejną pinezkę
               </Button>
-              <Button
-                variant="default"
-                className="w-full bg-black text-white hover:bg-black/90"
-                onClick={() => saveRoute("published")}
-                disabled={saving}
-              >
-                Opublikuj trasę
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => saveRoute("draft")}
-                disabled={saving}
-              >
-                Zapisz jako szkic
-              </Button>
-              <button
-                onClick={() => navigate(-1)}
-                className="w-full text-sm text-muted-foreground py-2"
-              >
-                Anuluj
-              </button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 text-sm"
+                  onClick={() => saveRoute("draft")}
+                  disabled={saving}
+                >
+                  Zapisz roboczą
+                </Button>
+                <Button
+                  variant="default"
+                  className="flex-1 text-sm"
+                  onClick={() => saveRoute("published")}
+                  disabled={saving}
+                >
+                  Opublikuj trasę
+                </Button>
+              </div>
             </div>
           </>
         )}
