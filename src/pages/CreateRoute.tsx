@@ -22,6 +22,7 @@ interface Pin {
   address: string;
   description: string;
   image_url: string;
+  images: string[];
   rating: number;
   pin_order: number;
   tags: string[];
@@ -40,7 +41,7 @@ const CreateRoute = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [pins, setPins] = useState<Pin[]>([
-    { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: 0, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null, mentioned_users: [] },
+    { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: 0, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null, mentioned_users: [] },
   ]);
   const [currentPinIndex, setCurrentPinIndex] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -90,6 +91,7 @@ const CreateRoute = () => {
             .map((pin: any) => ({
               ...pin,
               mentioned_users: pin.mentioned_users || [],
+              images: pin.images || [],
               // Explicit type conversions from nullable database types
               is_transport: !!pin.is_transport,
               rating: typeof pin.rating === 'number' ? pin.rating : 0,
@@ -117,7 +119,7 @@ const CreateRoute = () => {
   }, [pins]);
 
   const addPin = () => {
-    setPins([...pins, { place_name: "", address: "", description: "", image_url: "", rating: 0, pin_order: pins.length, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null, mentioned_users: [] }]);
+    setPins([...pins, { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: pins.length, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null, mentioned_users: [] }]);
     setCurrentPinIndex(pins.length);
   };
 
@@ -135,26 +137,39 @@ const CreateRoute = () => {
     setPins(newPins);
   };
 
-  const handleImageUpload = async (file: File, pinIndex: number) => {
+  const handleImageUpload = async (files: FileList, pinIndex: number) => {
     if (!user) return;
 
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+    const uploadedUrls: string[] = [];
 
-    const { error: uploadError, data } = await supabase.storage
-      .from("route-images")
-      .upload(fileName, file);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.id}/${Date.now()}-${i}.${fileExt}`;
 
-    if (uploadError) {
-      toast({ variant: "destructive", title: "Błąd podczas przesyłania zdjęcia" });
-      return;
+      const { error: uploadError } = await supabase.storage
+        .from("route-images")
+        .upload(fileName, file);
+
+      if (uploadError) {
+        toast({ variant: "destructive", title: "Błąd podczas przesyłania zdjęcia" });
+        continue;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("route-images")
+        .getPublicUrl(fileName);
+
+      uploadedUrls.push(publicUrl);
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from("route-images")
-      .getPublicUrl(fileName);
-
-    updatePin(pinIndex, "image_url", publicUrl);
+    const currentImages = pins[pinIndex]?.images || [];
+    updatePin(pinIndex, "images", [...currentImages, ...uploadedUrls]);
+    
+    // Also set the first image as the main image_url for backward compatibility
+    if (uploadedUrls.length > 0 && !pins[pinIndex]?.image_url) {
+      updatePin(pinIndex, "image_url", uploadedUrls[0]);
+    }
   };
 
   const saveRoute = async (status: "draft" | "published") => {
@@ -204,6 +219,7 @@ const CreateRoute = () => {
             address: pin.address || "Brak adresu",
             description: pin.description,
             image_url: pin.image_url,
+            images: pin.images || [],
             rating: pin.is_transport ? null : pin.rating,
             pin_order: pin.pin_order,
             tags: pin.tags,
@@ -230,6 +246,7 @@ const CreateRoute = () => {
             address: pin.address || "Brak adresu",
             description: pin.description,
             image_url: pin.image_url,
+            images: pin.images || [],
             rating: pin.is_transport ? null : pin.rating,
             pin_order: pin.pin_order,
             tags: pin.tags,
@@ -811,37 +828,73 @@ const CreateRoute = () => {
                             {(pins[currentPinIndex]?.rating || 0).toFixed(1)}
                           </span>
                         </div>
-                        <div className="flex items-center justify-center py-4">
+                        <div className="flex flex-col items-center justify-center py-4 gap-1">
                           <StarRating
                             rating={pins[currentPinIndex]?.rating || 0}
                             size="lg"
                             interactive
                             onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
                           />
+                          <p className="text-xs text-center text-muted-foreground">
+                            Kliknij gwiazdki aby wybrać ocenę
+                          </p>
                         </div>
-                        <p className="text-xs text-center text-muted-foreground">
-                          Kliknij gwiazdki aby wybrać ocenę
-                        </p>
                       </div>
                     )}
 
                     <div>
                       <Label>Zdjęcia (Opcjonalne)</Label>
-                      <div className="mt-2">
-                        {pins[currentPinIndex]?.image_url ? (
-                          <div className="relative">
-                            <img
-                              src={pins[currentPinIndex].image_url}
-                              alt="Preview"
-                              className="w-full h-48 object-cover rounded-lg"
-                            />
-                            <button
-                              onClick={() => updatePin(currentPinIndex, "image_url", "")}
-                              className="absolute top-2 right-2 bg-background p-2 rounded-full"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
+                      <div className="mt-2 space-y-3">
+                        {pins[currentPinIndex]?.images?.length > 0 ? (
+                          <>
+                            <div className="grid grid-cols-3 gap-2">
+                              {pins[currentPinIndex].images.map((imgUrl, idx) => (
+                                <div key={idx} className="relative aspect-square">
+                                  <img
+                                    src={imgUrl}
+                                    alt={`Preview ${idx + 1}`}
+                                    className="w-full h-full object-cover rounded-lg"
+                                  />
+                                  <button
+                                    onClick={() => {
+                                      const newImages = pins[currentPinIndex].images.filter((_, i) => i !== idx);
+                                      updatePin(currentPinIndex, "images", newImages);
+                                      if (idx === 0 && newImages.length > 0) {
+                                        updatePin(currentPinIndex, "image_url", newImages[0]);
+                                      } else if (newImages.length === 0) {
+                                        updatePin(currentPinIndex, "image_url", "");
+                                      }
+                                    }}
+                                    className="absolute top-1 right-1 bg-background/80 p-1 rounded-full hover:bg-background"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex items-center justify-between px-2">
+                              <p className="text-sm text-muted-foreground">
+                                Dodano {pins[currentPinIndex].images.length} {pins[currentPinIndex].images.length === 1 ? 'zdjęcie' : 'zdjęć'}
+                              </p>
+                              <label className="cursor-pointer">
+                                <div className="flex items-center gap-2 px-3 py-1.5 bg-accent rounded-md hover:bg-accent/80">
+                                  <Plus className="h-4 w-4" />
+                                  <span className="text-sm">Dodaj więcej</span>
+                                </div>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    if (e.target.files && e.target.files.length > 0) {
+                                      handleImageUpload(e.target.files, currentPinIndex);
+                                    }
+                                  }}
+                                />
+                              </label>
+                            </div>
+                          </>
                         ) : (
                           <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent">
                             <Camera className="h-12 w-12 text-muted-foreground mb-2" />
@@ -857,8 +910,9 @@ const CreateRoute = () => {
                               multiple
                               className="hidden"
                               onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleImageUpload(file, currentPinIndex);
+                                if (e.target.files && e.target.files.length > 0) {
+                                  handleImageUpload(e.target.files, currentPinIndex);
+                                }
                               }}
                             />
                           </label>
