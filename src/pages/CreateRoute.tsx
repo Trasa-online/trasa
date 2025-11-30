@@ -140,36 +140,25 @@ const CreateRoute = () => {
   const handleImageUpload = async (files: FileList, pinIndex: number) => {
     if (!user) return;
 
-    const uploadedUrls: string[] = [];
+    const file = files[0]; // Only take first file
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}/${Date.now()}-${i}.${fileExt}`;
+    const { error: uploadError } = await supabase.storage
+      .from("route-images")
+      .upload(fileName, file);
 
-      const { error: uploadError } = await supabase.storage
-        .from("route-images")
-        .upload(fileName, file);
-
-      if (uploadError) {
-        toast({ variant: "destructive", title: "Błąd podczas przesyłania zdjęcia" });
-        continue;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("route-images")
-        .getPublicUrl(fileName);
-
-      uploadedUrls.push(publicUrl);
+    if (uploadError) {
+      toast({ variant: "destructive", title: "Błąd podczas przesyłania zdjęcia" });
+      return;
     }
 
-    const currentImages = pins[pinIndex]?.images || [];
-    updatePin(pinIndex, "images", [...currentImages, ...uploadedUrls]);
-    
-    // Also set the first image as the main image_url for backward compatibility
-    if (uploadedUrls.length > 0 && !pins[pinIndex]?.image_url) {
-      updatePin(pinIndex, "image_url", uploadedUrls[0]);
-    }
+    const { data: { publicUrl } } = supabase.storage
+      .from("route-images")
+      .getPublicUrl(fileName);
+
+    updatePin(pinIndex, "image_url", publicUrl);
+    updatePin(pinIndex, "images", [publicUrl]);
   };
 
   const saveRoute = async (status: "draft" | "published") => {
@@ -843,77 +832,40 @@ const CreateRoute = () => {
                     )}
 
                     <div>
-                      <Label>Zdjęcia (Opcjonalne)</Label>
-                      <div className="mt-2 space-y-3">
-                        {pins[currentPinIndex]?.images && pins[currentPinIndex].images.length > 0 ? (
-                          <>
-                            <div className="grid grid-cols-3 gap-2">
-                              {pins[currentPinIndex].images.map((imgUrl, idx) => (
-                                <div key={idx} className="relative aspect-square">
-                                  <img
-                                    src={imgUrl}
-                                    alt={`Zdjęcie ${idx + 1}`}
-                                    className="w-full h-full object-cover rounded-lg"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const newImages = pins[currentPinIndex].images.filter((_, i) => i !== idx);
-                                      updatePin(currentPinIndex, "images", newImages);
-                                      if (idx === 0 && newImages.length > 0) {
-                                        updatePin(currentPinIndex, "image_url", newImages[0]);
-                                      } else if (newImages.length === 0) {
-                                        updatePin(currentPinIndex, "image_url", "");
-                                      }
-                                    }}
-                                    className="absolute top-1 right-1 bg-background/80 p-1 rounded-full hover:bg-background"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                            <div className="flex items-center justify-between px-2">
-                              <p className="text-sm text-muted-foreground">
-                                Dodano {pins[currentPinIndex].images.length} {pins[currentPinIndex].images.length === 1 ? 'zdjęcie' : 'zdjęć'}
-                              </p>
-                              <label className="cursor-pointer">
-                                <div className="flex items-center gap-2 px-3 py-1.5 bg-accent rounded-md hover:bg-accent/80">
-                                  <Plus className="h-4 w-4" />
-                                  <span className="text-sm">Dodaj więcej</span>
-                                </div>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  multiple
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    if (e.target.files && e.target.files.length > 0) {
-                                      handleImageUpload(e.target.files, currentPinIndex);
-                                      e.target.value = '';
-                                    }
-                                  }}
-                                />
-                              </label>
-                            </div>
-                          </>
+                      <Label>Zdjęcie (Opcjonalne)</Label>
+                      <div className="mt-2">
+                        {pins[currentPinIndex]?.image_url ? (
+                          <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
+                            <img
+                              src={pins[currentPinIndex].image_url}
+                              alt="Podgląd zdjęcia"
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updatePin(currentPinIndex, "image_url", "");
+                                updatePin(currentPinIndex, "images", []);
+                              }}
+                              className="absolute top-2 right-2 bg-background/80 hover:bg-background p-2 rounded-full transition-colors"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
                         ) : (
-                          <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent">
+                          <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent transition-colors">
                             <Camera className="h-12 w-12 text-muted-foreground mb-2" />
                             <p className="text-sm text-muted-foreground">
-                              Dotknij, aby dodać zdjęcia
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Możesz wybrać wiele zdjęć
+                              Dotknij, aby dodać zdjęcie
                             </p>
                             <input
                               type="file"
                               accept="image/*"
-                              multiple
                               className="hidden"
                               onChange={(e) => {
                                 if (e.target.files && e.target.files.length > 0) {
                                   handleImageUpload(e.target.files, currentPinIndex);
+                                  e.target.value = '';
                                 }
                               }}
                             />
