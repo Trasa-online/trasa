@@ -447,7 +447,7 @@ const CreateRoute = () => {
             ) : pins[currentPinIndex]?.pin_type === null ? (
               <div className="space-y-6">
                 <div className="text-center space-y-3">
-                  <h2 className="text-2xl font-bold">Co się wydarzyło?</h2>
+                  <h2 className="text-xl font-bold">Co się wydarzyło?</h2>
                   <p className="text-muted-foreground text-base">
                     Wybierz typ punktu, który chcesz dodać
                   </p>
