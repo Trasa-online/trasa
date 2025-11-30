@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search as SearchIcon, Map, Users, MapPin, X, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Filter } from "lucide-react";
+import { Search as SearchIcon, Map, Users, MapPin, X, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import AppLayout from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import RouteCard from "@/components/route/RouteCard";
@@ -145,154 +146,145 @@ const Search = () => {
 
   return (
     <AppLayout>
-      <div className="min-h-screen">
-        {/* Header */}
-        <div className="sticky top-0 bg-background z-10 border-b border-border">
-          <div className="p-4">
-            <div className="flex items-center gap-3 mb-4">
-              <button
-                onClick={() => navigate(-1)}
-                className="p-2 hover:bg-accent rounded-lg"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-              <h1 className="text-xl font-semibold">Szukaj</h1>
-            </div>
-
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Szukaj..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9"
-                />
-              </div>
-              
-              <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 h-9">
-                    <Filter className="h-4 w-4" />
-                    Filtruj po tagach
-                    {selectedTags.length > 0 && (
-                      <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-5 text-xs">
-                        {selectedTags.length}
-                      </Badge>
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent>
-                  <SheetHeader>
-                    <SheetTitle>Filtruj po tagach</SheetTitle>
-                    <SheetDescription>
-                      Wybierz tagi aby znaleźć trasy które Cię interesują
-                    </SheetDescription>
-                  </SheetHeader>
-                  
-                  <div className="mt-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Wybrane tagi ({selectedTags.length})</span>
-                      {selectedTags.length > 0 && (
-                        <Button variant="ghost" size="sm" onClick={clearAllTags}>
-                          Wyczyść wszystkie
-                        </Button>
-                      )}
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2">
-                      {PREDEFINED_TAGS.map((tag) => {
-                        const isSelected = selectedTags.includes(tag.name);
-                        const Icon = tag.icon;
-                        return (
-                          <button
-                            key={tag.name}
-                            onClick={() => toggleTag(tag.name)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                              isSelected
-                                ? "bg-foreground text-background border-foreground"
-                                : "bg-background text-foreground border-border hover:bg-accent"
-                            }`}
-                          >
-                            <Icon className="h-4 w-4" />
-                            {tag.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {selectedTags.length > 0 && (
-                      <div className="pt-4 border-t">
-                        <p className="text-sm text-muted-foreground mb-2">Aktywne filtry:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedTags.map((tag) => (
-                            <Badge key={tag} variant="secondary" className="flex items-center gap-1.5">
-                              {tag}
-                              <button
-                                onClick={() => toggleTag(tag)}
-                                className="hover:bg-background/50 rounded-full p-0.5 transition-colors"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={() => setActiveTab("all")}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  activeTab === "all"
-                    ? "bg-foreground text-background"
-                    : "bg-secondary text-foreground hover:bg-secondary/80"
-                }`}
-              >
-                Wszystko
-              </button>
-              <button
-                onClick={() => setActiveTab("routes")}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  activeTab === "routes"
-                    ? "bg-foreground text-background"
-                    : "bg-secondary text-foreground hover:bg-secondary/80"
-                }`}
-              >
-                Trasy
-              </button>
-              <button
-                onClick={() => setActiveTab("users")}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  activeTab === "users"
-                    ? "bg-foreground text-background"
-                    : "bg-secondary text-foreground hover:bg-secondary/80"
-                }`}
-              >
-                Użytkownicy
-              </button>
-              <button
-                onClick={() => setActiveTab("places")}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  activeTab === "places"
-                    ? "bg-foreground text-background"
-                    : "bg-secondary text-foreground hover:bg-secondary/80"
-                }`}
-              >
-                Miejsca
-              </button>
-            </div>
+      <PageHeader 
+        title="Szukaj" 
+        showBack
+      />
+      
+      <div className="sticky top-0 bg-background z-10 border-b border-border pt-2 pb-4 px-4">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Szukaj..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9"
+            />
           </div>
+          
+          <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 h-9">
+                <Filter className="h-4 w-4" />
+                Filtruj po tagach
+                {selectedTags.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-5 text-xs">
+                    {selectedTags.length}
+                  </Badge>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Filtruj po tagach</SheetTitle>
+                <SheetDescription>
+                  Wybierz tagi aby znaleźć trasy które Cię interesują
+                </SheetDescription>
+              </SheetHeader>
+              
+              <div className="mt-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Wybrane tagi ({selectedTags.length})</span>
+                  {selectedTags.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={clearAllTags}>
+                      Wyczyść wszystkie
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  {PREDEFINED_TAGS.map((tag) => {
+                    const isSelected = selectedTags.includes(tag.name);
+                    const Icon = tag.icon;
+                    return (
+                      <button
+                        key={tag.name}
+                        onClick={() => toggleTag(tag.name)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                          isSelected
+                            ? "bg-foreground text-background border-foreground"
+                            : "bg-background text-foreground border-border hover:bg-accent"
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {tag.name}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedTags.length > 0 && (
+                  <div className="pt-4 border-t">
+                    <p className="text-sm text-muted-foreground mb-2">Aktywne filtry:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTags.map((tag) => (
+                        <Badge key={tag} variant="secondary" className="flex items-center gap-1.5">
+                          {tag}
+                          <button
+                            onClick={() => toggleTag(tag)}
+                            className="hover:bg-background/50 rounded-full p-0.5 transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
 
-        {/* Content */}
-        <div className="p-4">
+        {/* Tabs */}
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={() => setActiveTab("all")}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              activeTab === "all"
+                ? "bg-foreground text-background"
+                : "bg-secondary text-foreground hover:bg-secondary/80"
+            }`}
+          >
+            Wszystko
+          </button>
+          <button
+            onClick={() => setActiveTab("routes")}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              activeTab === "routes"
+                ? "bg-foreground text-background"
+                : "bg-secondary text-foreground hover:bg-secondary/80"
+            }`}
+          >
+            Trasy
+          </button>
+          <button
+            onClick={() => setActiveTab("users")}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              activeTab === "users"
+                ? "bg-foreground text-background"
+                : "bg-secondary text-foreground hover:bg-secondary/80"
+            }`}
+          >
+            Użytkownicy
+          </button>
+          <button
+            onClick={() => setActiveTab("places")}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              activeTab === "places"
+                ? "bg-foreground text-background"
+                : "bg-secondary text-foreground hover:bg-secondary/80"
+            }`}
+          >
+            Miejsca
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
           {!searchQuery && selectedTags.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -520,13 +512,12 @@ const Search = () => {
             {!isLoading && 
              !searchResults?.routes?.length && 
              !searchResults?.users?.length && 
-             !searchResults?.places?.length &&
-             (searchQuery || selectedTags.length > 0) && (
-              <p className="text-center text-muted-foreground py-8">
-                Nie znaleziono wyników
-              </p>
-            )}
-          </div>
+            !searchResults?.places?.length &&
+            (searchQuery || selectedTags.length > 0) && (
+            <p className="text-center text-muted-foreground py-8">
+              Nie znaleziono wyników
+            </p>
+          )}
         </div>
       </div>
     </AppLayout>

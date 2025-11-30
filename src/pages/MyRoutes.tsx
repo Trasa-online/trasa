@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Trash2, Star } from "lucide-react";
@@ -183,9 +184,9 @@ const MyRoutes = () => {
 
   return (
     <AppLayout>
+      <PageHeader title="TRASA" />
+      
       <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4">TRASA</h1>
-
         <Tabs defaultValue="published" className="w-full">
           <TabsList className="w-full grid grid-cols-2">
             <TabsTrigger value="published">

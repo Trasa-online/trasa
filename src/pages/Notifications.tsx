@@ -4,7 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
-import { Heart, MessageCircle, UserPlus, MapPin, ArrowLeft } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Heart, MessageCircle, UserPlus, MapPin } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -213,38 +214,29 @@ const Notifications = () => {
 
   return (
     <AppLayout>
-      <div className="min-h-screen pb-20">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-background border-b border-border">
-          <div className="flex items-center justify-between p-4">
+      <PageHeader 
+        title="Powiadomienia" 
+        showBack
+        onBackClick={() => navigate("/")}
+        rightAction={
+          unreadCount > 0 ? (
             <Button
               variant="ghost"
-              size="icon"
-              onClick={() => navigate("/")}
-              className="h-9 w-9"
+              size="sm"
+              onClick={() => markAllAsReadMutation.mutate()}
+              disabled={markAllAsReadMutation.isPending}
+              className="text-xs"
             >
-              <ArrowLeft className="h-5 w-5" />
+              Oznacz jako przeczytane
             </Button>
-            <h1 className="text-lg font-semibold">Powiadomienia</h1>
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => markAllAsReadMutation.mutate()}
-                disabled={markAllAsReadMutation.isPending}
-                className="text-xs"
-              >
-                Oznacz jako przeczytane
-              </Button>
-            )}
-            {unreadCount === 0 && <div className="w-9" />}
-          </div>
-        </div>
+          ) : undefined
+        }
+      />
 
-        {/* Notifications List */}
-        <div className="divide-y divide-border">
-          {!notifications || notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      {/* Notifications List */}
+      <div className="divide-y divide-border">
+        {!notifications || notifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
               <div className="text-4xl mb-4">🔔</div>
               <h3 className="text-lg font-semibold mb-2">Brak powiadomień</h3>
               <p className="text-sm text-muted-foreground">
@@ -287,9 +279,8 @@ const Notifications = () => {
                   </div>
                 )}
               </div>
-            ))
-          )}
-        </div>
+          ))
+        )}
       </div>
     </AppLayout>
   );

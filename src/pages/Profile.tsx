@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
-import { ArrowLeft, Bell, Search } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import RouteCard from "@/components/route/RouteCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -150,40 +150,18 @@ const Profile = () => {
 
   return (
     <AppLayout>
-      <div className="p-4 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 hover:bg-accent rounded-lg"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <h1 className="text-2xl font-bold">Profil</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate("/notifications")}
-              className="p-2 hover:bg-accent rounded-lg relative"
-            >
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => navigate("/search")}
-              className="p-2 hover:bg-accent rounded-lg"
-            >
-              <Search className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
+      <PageHeader 
+        title="Profil" 
+        showBack 
+        showBell 
+        showSearch 
+        unreadCount={unreadCount}
+      />
+      
+      <div className="p-4 space-y-4">
 
-        {profile && (
-          <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4 border border-border/50">
+      {profile && (
+        <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4 border border-border/50">
             <Avatar className="h-14 w-14 flex-shrink-0">
               <AvatarImage src={profile.avatar_url || ""} alt={profile.username} />
               <AvatarFallback>{profile.username[0].toUpperCase()}</AvatarFallback>
@@ -220,20 +198,20 @@ const Profile = () => {
                   {isFollowing ? "Unfollow" : "Follow"}
                 </Button>
               )}
-            </div>
           </div>
-        )}
-
-        <div className="space-y-4">
-          {routes?.map((route) => (
-            <RouteCard key={route.id} route={route} />
-          ))}
-          {!routes?.length && (
-            <p className="text-center text-muted-foreground py-8">
-              Brak opublikowanych tras
-            </p>
-          )}
         </div>
+      )}
+
+      <div className="space-y-4">
+        {routes?.map((route) => (
+          <RouteCard key={route.id} route={route} />
+        ))}
+        {!routes?.length && (
+          <p className="text-center text-muted-foreground py-8">
+            Brak opublikowanych tras
+          </p>
+        )}
+      </div>
       </div>
     </AppLayout>
   );

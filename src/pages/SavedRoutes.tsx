@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
 import RouteCard from "@/components/route/RouteCard";
 import { Bookmark } from "lucide-react";
 
@@ -44,32 +45,27 @@ const SavedRoutes = () => {
 
   return (
     <AppLayout>
-      <div className="min-h-screen pb-20">
-        {/* Header */}
-        <div className="p-4 border-b border-border">
-          <h1 className="text-2xl font-bold">TRASA</h1>
+      <PageHeader title="TRASA" />
+      
+      {savedRoutes && savedRoutes.length > 0 ? (
+        <div className="p-4 space-y-4">
+          {savedRoutes.map((route: any) => (
+            <RouteCard key={route.id} route={route} />
+          ))}
         </div>
-
-        {savedRoutes && savedRoutes.length > 0 ? (
-          <div className="p-4 space-y-4">
-            {savedRoutes.map((route: any) => (
-              <RouteCard key={route.id} route={route} />
-            ))}
+      ) : (
+        <div className="flex flex-col items-center justify-center px-4 py-16">
+          <div className="flex items-center justify-center w-24 h-24 mb-4">
+            <Bookmark className="w-16 h-16 text-muted-foreground/40" strokeWidth={1.5} />
           </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center px-4 pt-32">
-            <div className="flex items-center justify-center w-32 h-32 mb-6">
-              <Bookmark className="w-20 h-20 text-muted-foreground/40" strokeWidth={1.5} />
-            </div>
-            <h2 className="text-xl font-semibold mb-2 text-center">
-              Brak zapisanych tras
-            </h2>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Zapisane trasy znajomych pojawią się tutaj
-            </p>
-          </div>
-        )}
-      </div>
+          <h2 className="text-lg font-semibold mb-2 text-center">
+            Brak zapisanych tras
+          </h2>
+          <p className="text-sm text-muted-foreground text-center max-w-sm">
+            Zapisane trasy znajomych pojawią się tutaj
+          </p>
+        </div>
+      )}
     </AppLayout>
   );
 };
