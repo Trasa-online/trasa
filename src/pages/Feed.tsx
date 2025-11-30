@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
-import { Search, Bell } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import RouteCard from "@/components/route/RouteCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -108,29 +108,14 @@ const Feed = () => {
 
   return (
     <AppLayout>
-      <div className="p-4 space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">TRASA</h1>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate("/notifications")}
-              className="p-2 hover:bg-accent rounded-lg relative"
-            >
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => navigate("/search")}
-              className="p-2 hover:bg-accent rounded-lg"
-            >
-              <Search className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
+      <PageHeader 
+        title="TRASA" 
+        showBell 
+        showSearch 
+        unreadCount={unreadCount}
+      />
+      
+      <div className="p-4 space-y-4">
 
         {profile && (
           <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4 border border-border/50">
