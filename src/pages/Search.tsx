@@ -1,8 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search as SearchIcon, Map, Users, MapPin, X } from "lucide-react";
+import { ArrowLeft, Search as SearchIcon, Map, Users, MapPin, X, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import AppLayout from "@/components/layout/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -10,25 +19,53 @@ import RouteCard from "@/components/route/RouteCard";
 
 type TabType = "all" | "routes" | "users" | "places";
 
+// Predefined tags with icons
+const PREDEFINED_TAGS = [
+  { name: "Restauracja", icon: UtensilsCrossed },
+  { name: "Kawiarnia", icon: Coffee },
+  { name: "Jedzenie", icon: UtensilsCrossed },
+  { name: "Kawa", icon: Coffee },
+  { name: "Herbata", icon: Coffee },
+  { name: "Zakupy", icon: ShoppingBag },
+  { name: "Pamiątki", icon: Gift },
+  { name: "Góry", icon: Mountain },
+  { name: "Morze", icon: Waves },
+];
+
 const Search = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabType>("all");
-  const tagFilter = searchParams.get("tag");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const urlTagFilter = searchParams.get("tag");
 
-  // Set initial search query from URL if tag is present
+  // Initialize selected tags from URL
   useEffect(() => {
-    if (tagFilter && !searchQuery) {
+    if (urlTagFilter) {
+      setSelectedTags([urlTagFilter]);
       setActiveTab("routes");
+      // Clear URL param after loading
+      setSearchParams({});
     }
-  }, [tagFilter]);
+  }, [urlTagFilter]);
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  const clearAllTags = () => {
+    setSelectedTags([]);
+  };
 
   const { data: searchResults, isLoading } = useQuery({
-    queryKey: ["search", searchQuery, activeTab, tagFilter],
+    queryKey: ["search", searchQuery, activeTab, selectedTags],
     queryFn: async () => {
-      if (!searchQuery.trim() && !tagFilter) return null;
-
       const results: any = {};
 
       // Wyszukiwanie tras
@@ -55,12 +92,15 @@ const Search = () => {
 
         if (error) throw error;
 
-        // Filter by tag if tag filter is active
+        // Filter by selected tags if any
         let filteredRoutes = routes;
-        if (tagFilter && routes) {
+        if (selectedTags.length > 0 && routes) {
           filteredRoutes = routes.filter((route: any) => {
             const routeTags = route.pins?.flatMap((pin: any) => pin.tags || []) || [];
-            return routeTags.some((tag: string) => tag.toLowerCase() === tagFilter.toLowerCase());
+            // Route must have ALL selected tags
+            return selectedTags.every(selectedTag => 
+              routeTags.some((tag: string) => tag.toLowerCase() === selectedTag.toLowerCase())
+            );
           });
         }
 
@@ -100,14 +140,8 @@ const Search = () => {
 
       return results;
     },
-    enabled: searchQuery.length > 0 || !!tagFilter,
+    enabled: true, // Always enabled to show results on load
   });
-
-  const clearTagFilter = () => {
-    setSearchParams({});
-  };
-
-  const showEmptyState = !searchQuery;
 
   return (
     <AppLayout>
@@ -125,32 +159,91 @@ const Search = () => {
               <h1 className="text-xl font-semibold">Szukaj</h1>
             </div>
 
-            <div className="relative">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Szukaj tras, użytkowników, miejsc..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Active tag filter */}
-            {tagFilter && (
-              <div className="mt-3 flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Filtrowanie po tagu:</span>
-                <Badge variant="secondary" className="flex items-center gap-2">
-                  {tagFilter}
-                  <button
-                    onClick={clearTagFilter}
-                    className="hover:bg-background/50 rounded-full p-0.5 transition-colors"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Szukaj..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9"
+                />
               </div>
-            )}
+              
+              <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 h-9">
+                    <Filter className="h-4 w-4" />
+                    Filtruj po tagach
+                    {selectedTags.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-5 text-xs">
+                        {selectedTags.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent>
+                  <SheetHeader>
+                    <SheetTitle>Filtruj po tagach</SheetTitle>
+                    <SheetDescription>
+                      Wybierz tagi aby znaleźć trasy które Cię interesują
+                    </SheetDescription>
+                  </SheetHeader>
+                  
+                  <div className="mt-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Wybrane tagi ({selectedTags.length})</span>
+                      {selectedTags.length > 0 && (
+                        <Button variant="ghost" size="sm" onClick={clearAllTags}>
+                          Wyczyść wszystkie
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2">
+                      {PREDEFINED_TAGS.map((tag) => {
+                        const isSelected = selectedTags.includes(tag.name);
+                        const Icon = tag.icon;
+                        return (
+                          <button
+                            key={tag.name}
+                            onClick={() => toggleTag(tag.name)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                              isSelected
+                                ? "bg-foreground text-background border-foreground"
+                                : "bg-background text-foreground border-border hover:bg-accent"
+                            }`}
+                          >
+                            <Icon className="h-4 w-4" />
+                            {tag.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {selectedTags.length > 0 && (
+                      <div className="pt-4 border-t">
+                        <p className="text-sm text-muted-foreground mb-2">Aktywne filtry:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedTags.map((tag) => (
+                            <Badge key={tag} variant="secondary" className="flex items-center gap-1.5">
+                              {tag}
+                              <button
+                                onClick={() => toggleTag(tag)}
+                                className="hover:bg-background/50 rounded-full p-0.5 transition-colors"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
 
             {/* Tabs */}
             <div className="flex gap-2 mt-4">
@@ -200,60 +293,15 @@ const Search = () => {
 
         {/* Content */}
         <div className="p-4">
-          {showEmptyState ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center mb-6">
-                <MapPin className="h-12 w-12 text-muted-foreground" />
-              </div>
-              
-              <h2 className="text-xl font-semibold mb-2">Szukaj czegokolwiek</h2>
-              <p className="text-muted-foreground mb-12 max-w-sm">
-                Odkrywaj trasy, użytkowników i miejsca w aplikacji TRASA
+          {!searchQuery && selectedTags.length === 0 && (
+            <div className="mb-6 text-center py-4">
+              <p className="text-sm text-muted-foreground">
+                Szukaj tras, użytkowników i miejsc lub filtruj po tagach
               </p>
-
-              {/* Quick actions */}
-              <div className="w-full max-w-md space-y-4">
-                <button
-                  onClick={() => setActiveTab("routes")}
-                  className="w-full flex items-start gap-4 p-4 rounded-xl hover:bg-accent transition-colors text-left"
-                >
-                  <Map className="h-6 w-6 text-foreground flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold mb-1">Trasy</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Odkrywaj trasy stworzone przez innych użytkowników
-                    </p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab("users")}
-                  className="w-full flex items-start gap-4 p-4 rounded-xl hover:bg-accent transition-colors text-left"
-                >
-                  <Users className="h-6 w-6 text-foreground flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold mb-1">Użytkownicy</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Znajdź i obserwuj innych podróżników
-                    </p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab("places")}
-                  className="w-full flex items-start gap-4 p-4 rounded-xl hover:bg-accent transition-colors text-left"
-                >
-                  <MapPin className="h-6 w-6 text-foreground flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold mb-1">Miejsca</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Eksploruj konkretne miejsca i atrakcje
-                    </p>
-                  </div>
-                </button>
-              </div>
             </div>
-          ) : (
+          )}
+
+          {(searchQuery || selectedTags.length > 0) && (
             <div className="space-y-6">
               {isLoading && (
                 <p className="text-center text-muted-foreground py-8">Wyszukiwanie...</p>
@@ -340,6 +388,94 @@ const Search = () => {
               )}
             </div>
           )}
+
+          {/* Always show sections with latest data */}
+          <div className="space-y-6">
+            {isLoading && (
+              <p className="text-center text-muted-foreground py-8">Wyszukiwanie...</p>
+            )}
+
+            {/* Wyniki tras */}
+            {searchResults?.routes && searchResults.routes.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-3">Trasy</h3>
+                <div className="space-y-4">
+                  {searchResults.routes.map((route: any) => (
+                    <RouteCard key={route.id} route={route} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Wyniki użytkowników */}
+            {searchResults?.users && searchResults.users.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-3">Użytkownicy</h3>
+                <div className="space-y-3">
+                  {searchResults.users.map((user: any) => (
+                    <div
+                      key={user.id}
+                      onClick={() => navigate(`/profile/${user.id}`)}
+                      className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl hover:bg-accent cursor-pointer transition-colors"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                        {user.avatar_url ? (
+                          <img src={user.avatar_url} alt={user.username} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          <span className="text-lg font-semibold">{user.username?.[0]?.toUpperCase()}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold">{user.username}</p>
+                        {user.bio && (
+                          <p className="text-sm text-muted-foreground line-clamp-1">{user.bio}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Wyniki miejsc */}
+            {searchResults?.places && searchResults.places.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-3">Miejsca</h3>
+                <div className="space-y-3">
+                  {searchResults.places.map((pin: any) => (
+                    <div
+                      key={pin.id}
+                      onClick={() => navigate(`/route/${pin.routes.id}`)}
+                      className="flex gap-3 p-4 bg-card border border-border rounded-xl hover:bg-accent cursor-pointer transition-colors"
+                    >
+                      <img
+                        src={pin.image_url || '/placeholder.svg'}
+                        alt={pin.place_name}
+                        className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold mb-1">{pin.place_name}</h4>
+                        <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Z trasy: {pin.routes.title}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!isLoading && 
+             !searchResults?.routes?.length && 
+             !searchResults?.users?.length && 
+             !searchResults?.places?.length &&
+             (searchQuery || selectedTags.length > 0) && (
+              <p className="text-center text-muted-foreground py-8">
+                Nie znaleziono wyników
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </AppLayout>
