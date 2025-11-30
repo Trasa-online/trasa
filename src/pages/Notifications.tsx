@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-type NotificationType = "like" | "comment" | "follower" | "new_route";
+type NotificationType = "like" | "comment" | "follower" | "new_route" | "mention";
 
 interface Notification {
   id: string;
@@ -151,6 +151,8 @@ const Notifications = () => {
         return <UserPlus className="h-5 w-5 text-green-500" />;
       case "new_route":
         return <MapPin className="h-5 w-5 text-purple-500" />;
+      case "mention":
+        return <UserPlus className="h-5 w-5 text-orange-500" />;
     }
   };
 
@@ -180,6 +182,13 @@ const Notifications = () => {
         return (
           <>
             <span className="font-semibold">{notification.actor.username}</span> dodał nową trasę:{" "}
+            <span className="font-semibold">{notification.route?.title}</span>
+          </>
+        );
+      case "mention":
+        return (
+          <>
+            <span className="font-semibold">{notification.actor.username}</span> oznaczył Cię w trasie{" "}
             <span className="font-semibold">{notification.route?.title}</span>
           </>
         );
