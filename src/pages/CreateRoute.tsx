@@ -446,17 +446,17 @@ const CreateRoute = () => {
               </div>
             ) : pins[currentPinIndex]?.pin_type === null ? (
               <div className="space-y-6">
-                <div className="text-center space-y-2">
-                  <h2 className="text-2xl font-semibold">Co się wydarzyło?</h2>
-                  <p className="text-muted-foreground">
+                <div className="text-center space-y-3">
+                  <h2 className="text-3xl font-bold">Co się wydarzyło?</h2>
+                  <p className="text-muted-foreground text-lg">
                     Wybierz typ punktu, który chcesz dodać
                   </p>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <Button
                     variant="outline"
-                    className="w-full h-24 flex-col gap-2 hover:border-primary"
+                    className="w-full h-32 flex-col gap-3 hover:border-primary"
                     onClick={() => {
                       const newPins = [...pins];
                       newPins[currentPinIndex] = { 
@@ -467,13 +467,13 @@ const CreateRoute = () => {
                       setPins(newPins);
                     }}
                   >
-                    <Car className="h-8 w-8" />
-                    <span className="font-medium">Transport</span>
+                    <Car className="h-10 w-10" />
+                    <span className="font-semibold text-lg">Transport</span>
                   </Button>
 
                   <Button
                     variant="outline"
-                    className="w-full h-24 flex-col gap-2 hover:border-primary"
+                    className="w-full h-32 flex-col gap-3 hover:border-primary"
                     onClick={() => {
                       const newPins = [...pins];
                       newPins[currentPinIndex] = { 
@@ -484,8 +484,8 @@ const CreateRoute = () => {
                       setPins(newPins);
                     }}
                   >
-                    <Tag className="h-8 w-8" />
-                    <span className="font-medium">Atrakcja</span>
+                    <Tag className="h-10 w-10" />
+                    <span className="font-semibold text-lg">Miejsca</span>
                   </Button>
                 </div>
               </div>
