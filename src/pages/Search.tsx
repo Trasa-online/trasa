@@ -286,61 +286,46 @@ const Search = () => {
       {/* Content */}
       <div className="p-4">
           {!searchQuery && selectedTags.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
-                <MapPin className="h-10 w-10 text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-2">
+                <MapPin className="h-6 w-6 text-muted-foreground" />
               </div>
               
-              <h2 className="text-lg font-semibold mb-2">Odkrywaj TRASA</h2>
-              <p className="text-sm text-muted-foreground mb-8 max-w-sm">
-                Wyszukuj trasy, użytkowników i miejsca lub filtruj po tagach
+              <h2 className="text-base font-semibold mb-1">Odkrywaj TRASA</h2>
+              <p className="text-xs text-muted-foreground mb-4 max-w-xs">
+                Szukaj tras, użytkowników i miejsc
               </p>
 
               {/* Quick actions */}
-              <div className="w-full max-w-md space-y-3">
+              <div className="w-full max-w-md space-y-2">
                 <button
                   onClick={() => setActiveTab("routes")}
-                  className="w-full flex items-start gap-4 p-4 rounded-xl bg-card border border-border hover:bg-accent transition-colors text-left"
+                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover:bg-accent transition-colors text-left"
                 >
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <Map className="h-5 w-5 text-foreground" />
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                    <Map className="h-4 w-4 text-foreground" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">Trasy</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Odkrywaj trasy stworzone przez innych użytkowników
-                    </p>
-                  </div>
+                  <span className="text-sm font-medium">Trasy</span>
                 </button>
 
                 <button
                   onClick={() => setActiveTab("users")}
-                  className="w-full flex items-start gap-4 p-4 rounded-xl bg-card border border-border hover:bg-accent transition-colors text-left"
+                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover:bg-accent transition-colors text-left"
                 >
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <Users className="h-5 w-5 text-foreground" />
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                    <Users className="h-4 w-4 text-foreground" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">Użytkownicy</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Znajdź i obserwuj innych podróżników
-                    </p>
-                  </div>
+                  <span className="text-sm font-medium">Użytkownicy</span>
                 </button>
 
                 <button
                   onClick={() => setActiveTab("places")}
-                  className="w-full flex items-start gap-4 p-4 rounded-xl bg-card border border-border hover:bg-accent transition-colors text-left"
+                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover:bg-accent transition-colors text-left"
                 >
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <MapPin className="h-5 w-5 text-foreground" />
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                    <MapPin className="h-4 w-4 text-foreground" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">Miejsca</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Eksploruj konkretne miejsca i atrakcje
-                    </p>
-                  </div>
+                  <span className="text-sm font-medium">Miejsca</span>
                 </button>
               </div>
             </div>
