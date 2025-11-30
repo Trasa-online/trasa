@@ -158,10 +158,17 @@ const RouteCard = ({ route }: RouteCardProps) => {
                 {uniqueTags.map((tag: string, idx: number) => {
                   const TagIcon = getTagIcon(tag);
                   return (
-                    <Badge key={idx} variant="secondary" className="flex items-center gap-1.5 px-2.5 py-1 text-xs">
+                    <button
+                      key={idx}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/search?tag=${encodeURIComponent(tag)}`);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
+                    >
                       {TagIcon && <TagIcon className="h-3.5 w-3.5" />}
                       <span>{tag}</span>
-                    </Badge>
+                    </button>
                   );
                 })}
               </div>
