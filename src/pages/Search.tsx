@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search as SearchIcon, Map, Users, MapPin } from "lucide-react";
+import { ArrowLeft, Search as SearchIcon, Map, Users, MapPin, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import AppLayout from "@/components/layout/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -11,19 +12,28 @@ type TabType = "all" | "routes" | "users" | "places";
 
 const Search = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabType>("all");
+  const tagFilter = searchParams.get("tag");
+
+  // Set initial search query from URL if tag is present
+  useEffect(() => {
+    if (tagFilter && !searchQuery) {
+      setActiveTab("routes");
+    }
+  }, [tagFilter]);
 
   const { data: searchResults, isLoading } = useQuery({
-    queryKey: ["search", searchQuery, activeTab],
+    queryKey: ["search", searchQuery, activeTab, tagFilter],
     queryFn: async () => {
-      if (!searchQuery.trim()) return null;
+      if (!searchQuery.trim() && !tagFilter) return null;
 
       const results: any = {};
 
       // Wyszukiwanie tras
       if (activeTab === "routes" || activeTab === "all") {
-        const { data: routes, error } = await supabase
+        let query = supabase
           .from("routes")
           .select(`
             *,
@@ -32,13 +42,29 @@ const Search = () => {
             likes (user_id),
             comments (id)
           `)
-          .eq("status", "published")
-          .or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+          .eq("status", "published");
+
+        // Add text search if query exists
+        if (searchQuery.trim()) {
+          query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+        }
+
+        const { data: routes, error } = await query
           .order("created_at", { ascending: false })
-          .limit(20);
+          .limit(100);
 
         if (error) throw error;
-        results.routes = routes;
+
+        // Filter by tag if tag filter is active
+        let filteredRoutes = routes;
+        if (tagFilter && routes) {
+          filteredRoutes = routes.filter((route: any) => {
+            const routeTags = route.pins?.flatMap((pin: any) => pin.tags || []) || [];
+            return routeTags.some((tag: string) => tag.toLowerCase() === tagFilter.toLowerCase());
+          });
+        }
+
+        results.routes = filteredRoutes?.slice(0, 20);
       }
 
       // Wyszukiwanie użytkowników
@@ -74,8 +100,12 @@ const Search = () => {
 
       return results;
     },
-    enabled: searchQuery.length > 0,
+    enabled: searchQuery.length > 0 || !!tagFilter,
   });
+
+  const clearTagFilter = () => {
+    setSearchParams({});
+  };
 
   const showEmptyState = !searchQuery;
 
@@ -105,6 +135,22 @@ const Search = () => {
                 className="pl-10"
               />
             </div>
+
+            {/* Active tag filter */}
+            {tagFilter && (
+              <div className="mt-3 flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Filtrowanie po tagu:</span>
+                <Badge variant="secondary" className="flex items-center gap-2">
+                  {tagFilter}
+                  <button
+                    onClick={clearTagFilter}
+                    className="hover:bg-background/50 rounded-full p-0.5 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              </div>
+            )}
 
             {/* Tabs */}
             <div className="flex gap-2 mt-4">
