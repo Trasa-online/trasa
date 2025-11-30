@@ -157,8 +157,15 @@ const CreateRoute = () => {
       .from("route-images")
       .getPublicUrl(fileName);
 
-    updatePin(pinIndex, "image_url", publicUrl);
-    updatePin(pinIndex, "images", [publicUrl]);
+    setPins(prevPins => {
+      const newPins = [...prevPins];
+      newPins[pinIndex] = {
+        ...newPins[pinIndex],
+        image_url: publicUrl,
+        images: [publicUrl]
+      };
+      return newPins;
+    });
   };
 
   const saveRoute = async (status: "draft" | "published") => {
