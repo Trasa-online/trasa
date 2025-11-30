@@ -622,7 +622,7 @@ const CreateRoute = () => {
                               <div className="flex items-center gap-2 w-full">
                                 <Input
                                   autoFocus
-                                  placeholder="Wpisz transport"
+                                  placeholder="Wpisz własny rodzaj transportu"
                                   className="h-7"
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter' && e.currentTarget.value.trim()) {
@@ -650,7 +650,7 @@ const CreateRoute = () => {
                           <Input
                             value={pins[currentPinIndex]?.place_name || ""}
                             onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
-                            placeholder="np. Dworzec Główny"
+                            placeholder="Wpisz miejsce początkowe transportu"
                           />
                         </div>
 
@@ -659,7 +659,7 @@ const CreateRoute = () => {
                           <Input
                             value={pins[currentPinIndex]?.transport_end || ""}
                             onChange={(e) => updatePin(currentPinIndex, "transport_end", e.target.value)}
-                            placeholder="np. Lotnisko"
+                            placeholder="Wpisz miejsce docelowe transportu"
                           />
                         </div>
                       </>
@@ -730,7 +730,7 @@ const CreateRoute = () => {
                               <div className="flex items-center gap-2 w-full">
                                 <Input
                                   autoFocus
-                                  placeholder="Wpisz kategorię"
+                                  placeholder="Wpisz własną kategorię"
                                   className="h-9"
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter' && e.currentTarget.value.trim()) {
@@ -760,7 +760,7 @@ const CreateRoute = () => {
                           <Input
                             value={pins[currentPinIndex]?.place_name || ""}
                             onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
-                            placeholder="np. Kiyomizu-dera"
+                            placeholder="Wpisz nazwę miejsca lub atrakcji"
                           />
                         </div>
 
@@ -769,7 +769,7 @@ const CreateRoute = () => {
                           <Input
                             value={pins[currentPinIndex]?.address || ""}
                             onChange={(e) => updatePin(currentPinIndex, "address", e.target.value)}
-                            placeholder="np. Chrome-294 Kiyomizu"
+                            placeholder="Wpisz adres lub lokalizację miejsca"
                             disabled={noAddressRemembered}
                           />
                           <div className="flex items-center gap-2">
@@ -799,7 +799,7 @@ const CreateRoute = () => {
                       <Textarea
                         value={pins[currentPinIndex]?.description || ""}
                         onChange={(e) => updatePin(currentPinIndex, "description", e.target.value)}
-                        placeholder="Opisz swoje wrażenia z tego miejsca..."
+                        placeholder="Opisz miejsce, swoje wrażenia lub wspomnienia"
                         rows={3}
                       />
                     </div>
@@ -845,17 +845,18 @@ const CreateRoute = () => {
                     <div>
                       <Label>Zdjęcia (Opcjonalne)</Label>
                       <div className="mt-2 space-y-3">
-                        {pins[currentPinIndex]?.images?.length > 0 ? (
+                        {pins[currentPinIndex]?.images && pins[currentPinIndex].images.length > 0 ? (
                           <>
                             <div className="grid grid-cols-3 gap-2">
                               {pins[currentPinIndex].images.map((imgUrl, idx) => (
                                 <div key={idx} className="relative aspect-square">
                                   <img
                                     src={imgUrl}
-                                    alt={`Preview ${idx + 1}`}
+                                    alt={`Zdjęcie ${idx + 1}`}
                                     className="w-full h-full object-cover rounded-lg"
                                   />
                                   <button
+                                    type="button"
                                     onClick={() => {
                                       const newImages = pins[currentPinIndex].images.filter((_, i) => i !== idx);
                                       updatePin(currentPinIndex, "images", newImages);
@@ -889,6 +890,7 @@ const CreateRoute = () => {
                                   onChange={(e) => {
                                     if (e.target.files && e.target.files.length > 0) {
                                       handleImageUpload(e.target.files, currentPinIndex);
+                                      e.target.value = '';
                                     }
                                   }}
                                 />
