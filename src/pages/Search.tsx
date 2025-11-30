@@ -292,42 +292,9 @@ const Search = () => {
               </div>
               
               <h2 className="text-base font-semibold mb-1">Odkrywaj TRASA</h2>
-              <p className="text-xs text-muted-foreground mb-4 max-w-xs">
+              <p className="text-xs text-muted-foreground max-w-xs">
                 Szukaj tras, użytkowników i miejsc
               </p>
-
-              {/* Quick actions */}
-              <div className="w-full max-w-md space-y-2">
-                <button
-                  onClick={() => setActiveTab("routes")}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover:bg-accent transition-colors text-left"
-                >
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <Map className="h-4 w-4 text-foreground" />
-                  </div>
-                  <span className="text-sm font-medium">Trasy</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab("users")}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover:bg-accent transition-colors text-left"
-                >
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <Users className="h-4 w-4 text-foreground" />
-                  </div>
-                  <span className="text-sm font-medium">Użytkownicy</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab("places")}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover:bg-accent transition-colors text-left"
-                >
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <MapPin className="h-4 w-4 text-foreground" />
-                  </div>
-                  <span className="text-sm font-medium">Miejsca</span>
-                </button>
-              </div>
             </div>
           ) : (
             <div className="space-y-6">
