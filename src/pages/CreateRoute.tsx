@@ -518,7 +518,7 @@ const CreateRoute = () => {
                   </div>
 
                   {/* Change pin type button */}
-                  <div className="flex items-center gap-2 pb-2 border-b border-border">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -667,7 +667,7 @@ const CreateRoute = () => {
                                 <Badge
                                   key={name}
                                   variant={isSelected ? "default" : "outline"}
-                                  className="cursor-pointer flex items-center gap-1"
+                                  className="cursor-pointer flex items-center gap-1.5 px-3.5 py-2 text-sm"
                                   onClick={() => {
                                     const currentTags = pins[currentPinIndex]?.tags || [];
                                     const newTags = isSelected 
@@ -676,9 +676,9 @@ const CreateRoute = () => {
                                     updatePin(currentPinIndex, "tags", newTags);
                                   }}
                                 >
-                                  <Icon className="h-3 w-3" />
+                                  <Icon className="h-4 w-4" />
                                   {name}
-                                  {isSelected && <X className="h-3 w-3 ml-1" />}
+                                  {isSelected && <X className="h-3.5 w-3.5 ml-1" />}
                                 </Badge>
                               );
                             })}
@@ -690,23 +690,23 @@ const CreateRoute = () => {
                               <Badge
                                 key={tag}
                                 variant="default"
-                                className="cursor-pointer flex items-center gap-1"
+                                className="cursor-pointer flex items-center gap-1.5 px-3.5 py-2 text-sm"
                                 onClick={() => {
                                   const currentTags = pins[currentPinIndex]?.tags || [];
                                   updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== tag));
                                 }}
                               >
-                                {tag} <X className="h-3 w-3 ml-1" />
+                                {tag} <X className="h-3.5 w-3.5 ml-1" />
                               </Badge>
                             ))}
                             
                             {!showCustomTagInput ? (
                               <Badge
                                 variant="outline"
-                                className="cursor-pointer"
+                                className="cursor-pointer px-3.5 py-2 text-sm"
                                 onClick={() => setShowCustomTagInput(true)}
                               >
-                                <Plus className="h-3 w-3 mr-1" />
+                                <Plus className="h-4 w-4 mr-1.5" />
                                 Inne
                               </Badge>
                             ) : (
@@ -714,7 +714,7 @@ const CreateRoute = () => {
                                 <Input
                                   autoFocus
                                   placeholder="Wpisz kategorię"
-                                  className="h-7"
+                                  className="h-9"
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter' && e.currentTarget.value.trim()) {
                                       const currentTags = pins[currentPinIndex]?.tags || [];
@@ -854,6 +854,7 @@ const CreateRoute = () => {
                             <input
                               type="file"
                               accept="image/*"
+                              multiple
                               className="hidden"
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
