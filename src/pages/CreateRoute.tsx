@@ -148,7 +148,7 @@ const CreateRoute = () => {
       const fileName = `${user.id}/${Date.now()}-${i}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("route-images")
+        .from("route_images")
         .upload(fileName, file);
 
       if (uploadError) {
@@ -157,7 +157,7 @@ const CreateRoute = () => {
       }
 
       const { data: { publicUrl } } = supabase.storage
-        .from("route-images")
+        .from("route_images")
         .getPublicUrl(fileName);
 
       uploadedUrls.push(publicUrl);
