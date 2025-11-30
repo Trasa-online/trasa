@@ -447,8 +447,8 @@ const CreateRoute = () => {
             ) : pins[currentPinIndex]?.pin_type === null ? (
               <div className="space-y-6">
                 <div className="text-center space-y-3">
-                  <h2 className="text-3xl font-bold">Co się wydarzyło?</h2>
-                  <p className="text-muted-foreground text-lg">
+                  <h2 className="text-2xl font-bold">Co się wydarzyło?</h2>
+                  <p className="text-muted-foreground text-base">
                     Wybierz typ punktu, który chcesz dodać
                   </p>
                 </div>
@@ -456,7 +456,7 @@ const CreateRoute = () => {
                 <div className="space-y-4">
                   <Button
                     variant="outline"
-                    className="w-full h-32 flex-col gap-3 hover:border-primary"
+                    className="w-full h-auto py-6 flex-col gap-2 hover:border-primary"
                     onClick={() => {
                       const newPins = [...pins];
                       newPins[currentPinIndex] = { 
@@ -468,12 +468,15 @@ const CreateRoute = () => {
                     }}
                   >
                     <Car className="h-10 w-10" />
-                    <span className="font-semibold text-lg">Transport</span>
+                    <div className="text-center space-y-1">
+                      <p className="font-semibold text-lg">Transport</p>
+                      <p className="text-xs text-muted-foreground font-normal">Przejazd między miejscami - pociąg, samochód, rower</p>
+                    </div>
                   </Button>
 
                   <Button
                     variant="outline"
-                    className="w-full h-32 flex-col gap-3 hover:border-primary"
+                    className="w-full h-auto py-6 flex-col gap-2 hover:border-primary"
                     onClick={() => {
                       const newPins = [...pins];
                       newPins[currentPinIndex] = { 
@@ -485,7 +488,10 @@ const CreateRoute = () => {
                     }}
                   >
                     <Tag className="h-10 w-10" />
-                    <span className="font-semibold text-lg">Miejsca</span>
+                    <div className="text-center space-y-1">
+                      <p className="font-semibold text-lg">Miejsca</p>
+                      <p className="text-xs text-muted-foreground font-normal">Konkretne lokacje - restauracje, kawiarnie, hotele</p>
+                    </div>
                   </Button>
                 </div>
               </div>
