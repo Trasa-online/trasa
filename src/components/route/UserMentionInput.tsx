@@ -58,7 +58,7 @@ export default function UserMentionInput({ selectedUserIds, onUserSelect, onUser
             Wybierz użytkownika
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 bg-background border-border z-50" align="start">
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-background border-border z-50" align="start">
           <Command>
             <CommandInput 
               placeholder="Wyszukaj użytkownika..." 
