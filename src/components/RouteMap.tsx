@@ -45,7 +45,7 @@ const RouteMap = ({ pins, className = "" }: RouteMapProps) => {
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
       center: center,
-      zoom: validPins.length > 0 ? 10 : 3,
+      zoom: validPins.length === 1 ? 15 : validPins.length > 1 ? 12 : 3,
     });
 
     map.current.addControl(
