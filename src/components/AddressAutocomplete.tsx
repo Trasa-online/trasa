@@ -66,7 +66,7 @@ const AddressAutocomplete = ({
     setLoading(true);
     try {
       const response = await fetch(
-        `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(searchQuery)}&access_token=${MAPBOX_ACCESS_TOKEN}&language=pl&limit=8&types=address,place,locality,neighborhood,street`
+        `https://api.mapbox.com/search/searchbox/v1/forward?q=${encodeURIComponent(searchQuery)}&access_token=${MAPBOX_ACCESS_TOKEN}&language=pl&limit=8`
       );
       const data = await response.json();
       
@@ -75,7 +75,7 @@ const AddressAutocomplete = ({
           name: feature.properties.name || feature.properties.full_address,
           full_address: feature.properties.full_address,
           place_formatted: feature.properties.place_formatted,
-          mapbox_id: feature.id,
+          mapbox_id: feature.properties.mapbox_id,
           coordinates: feature.geometry?.coordinates ? {
             longitude: feature.geometry.coordinates[0],
             latitude: feature.geometry.coordinates[1],
