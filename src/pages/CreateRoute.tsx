@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import UserMentionInput from "@/components/route/UserMentionInput";
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 
 type PinType = "transport" | "tag" | null;
 
@@ -768,9 +769,9 @@ const CreateRoute = () => {
 
                         <div className="space-y-2">
                           <Label>Adres *</Label>
-                          <Input
+                          <AddressAutocomplete
                             value={pins[currentPinIndex]?.address || ""}
-                            onChange={(e) => updatePin(currentPinIndex, "address", e.target.value)}
+                            onChange={(value) => updatePin(currentPinIndex, "address", value)}
                             placeholder="Wpisz adres lub lokalizację miejsca"
                             disabled={noAddressRemembered}
                           />
