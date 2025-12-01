@@ -57,12 +57,18 @@ const AddressAutocomplete = ({
     setLoading(true);
     try {
       const response = await fetch(
-        `https://api.mapbox.com/search/searchbox/v1/suggest?q=${encodeURIComponent(searchQuery)}&access_token=${MAPBOX_ACCESS_TOKEN}&session_token=${crypto.randomUUID()}&language=pl&limit=5`
+        `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(searchQuery)}&access_token=${MAPBOX_ACCESS_TOKEN}&language=pl&limit=5&country=pl`
       );
       const data = await response.json();
       
-      if (data.suggestions) {
-        setSuggestions(data.suggestions);
+      if (data.features) {
+        const mapped = data.features.map((feature: any) => ({
+          name: feature.properties.name || feature.properties.full_address,
+          full_address: feature.properties.full_address,
+          place_formatted: feature.properties.place_formatted,
+          mapbox_id: feature.id,
+        }));
+        setSuggestions(mapped);
         setIsOpen(true);
       }
     } catch (error) {
