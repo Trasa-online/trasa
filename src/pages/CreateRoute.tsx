@@ -779,11 +779,16 @@ const CreateRoute = () => {
                           <AddressAutocomplete
                             value={pins[currentPinIndex]?.address || ""}
                             onChange={(value, coordinates) => {
-                              updatePin(currentPinIndex, "address", value);
-                              if (coordinates) {
-                                updatePin(currentPinIndex, "latitude", coordinates.latitude);
-                                updatePin(currentPinIndex, "longitude", coordinates.longitude);
-                              }
+                              setPins(prevPins => {
+                                const newPins = [...prevPins];
+                                newPins[currentPinIndex] = {
+                                  ...newPins[currentPinIndex],
+                                  address: value,
+                                  latitude: coordinates?.latitude,
+                                  longitude: coordinates?.longitude,
+                                };
+                                return newPins;
+                              });
                             }}
                             placeholder="Wpisz adres lub lokalizację miejsca"
                             disabled={noAddressRemembered}
