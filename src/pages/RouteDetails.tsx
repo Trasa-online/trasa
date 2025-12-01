@@ -10,6 +10,7 @@ import { ArrowLeft, Heart, Bookmark, MessageCircle, Send } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import RouteMap from "@/components/RouteMap";
 
 const RouteDetails = () => {
   const { id } = useParams();
@@ -245,6 +246,15 @@ const RouteDetails = () => {
           <h3 className="text-lg font-semibold mb-3">
             Stops ({route.pins?.length || 0})
           </h3>
+          
+          {/* Route Map */}
+          {route.pins && route.pins.length > 0 && (
+            <RouteMap 
+              pins={route.pins.sort((a: any, b: any) => a.pin_order - b.pin_order)}
+              className="h-48 mb-4"
+            />
+          )}
+          
           <div className="space-y-4">
             {route.pins
               ?.sort((a: any, b: any) => a.pin_order - b.pin_order)
