@@ -236,6 +236,8 @@ export type Database = {
           image_url: string | null
           images: string[] | null
           is_transport: boolean | null
+          latitude: number | null
+          longitude: number | null
           mentioned_users: string[] | null
           pin_order: number
           place_name: string
@@ -253,6 +255,8 @@ export type Database = {
           image_url?: string | null
           images?: string[] | null
           is_transport?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
           mentioned_users?: string[] | null
           pin_order: number
           place_name: string
@@ -270,6 +274,8 @@ export type Database = {
           image_url?: string | null
           images?: string[] | null
           is_transport?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
           mentioned_users?: string[] | null
           pin_order?: number
           place_name?: string
