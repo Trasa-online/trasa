@@ -66,7 +66,7 @@ const AddressAutocomplete = ({
     setLoading(true);
     try {
       const response = await fetch(
-        `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(searchQuery)}&access_token=${MAPBOX_ACCESS_TOKEN}&language=pl&limit=8&types=address,poi,place,locality`
+        `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(searchQuery)}&access_token=${MAPBOX_ACCESS_TOKEN}&language=pl&limit=8&types=address,place,locality,neighborhood,street`
       );
       const data = await response.json();
       
