@@ -28,6 +28,14 @@ interface Suggestion {
   };
 }
 
+const generateSessionToken = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 const AddressAutocomplete = ({
   value,
   onChange,
@@ -41,6 +49,7 @@ const AddressAutocomplete = ({
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<NodeJS.Timeout>();
+  const [sessionToken] = useState(generateSessionToken);
 
   useEffect(() => {
     setQuery(value);
@@ -66,20 +75,16 @@ const AddressAutocomplete = ({
     setLoading(true);
     try {
       const response = await fetch(
-        `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(searchQuery)}&access_token=${MAPBOX_ACCESS_TOKEN}&language=pl&limit=5`
+        `https://api.mapbox.com/search/searchbox/v1/suggest?q=${encodeURIComponent(searchQuery)}&access_token=${MAPBOX_ACCESS_TOKEN}&language=pl&limit=8&session_token=${sessionToken}`
       );
       const data = await response.json();
       
-      if (data.features) {
-        const mapped = data.features.map((feature: any) => ({
-          name: feature.properties.name || feature.properties.full_address,
-          full_address: feature.properties.full_address,
-          place_formatted: feature.properties.place_formatted,
-          mapbox_id: feature.id,
-          coordinates: feature.geometry?.coordinates ? {
-            longitude: feature.geometry.coordinates[0],
-            latitude: feature.geometry.coordinates[1],
-          } : undefined,
+      if (data.suggestions) {
+        const mapped = data.suggestions.map((suggestion: any) => ({
+          name: suggestion.name,
+          full_address: suggestion.full_address,
+          place_formatted: suggestion.place_formatted,
+          mapbox_id: suggestion.mapbox_id,
         }));
         setSuggestions(mapped);
         setIsOpen(true);
@@ -106,12 +111,29 @@ const AddressAutocomplete = ({
     }, 300);
   };
 
-  const handleSuggestionClick = (suggestion: Suggestion) => {
+  const handleSuggestionClick = async (suggestion: Suggestion) => {
     const address = suggestion.full_address || suggestion.place_formatted || suggestion.name;
     setQuery(address);
-    onChange(address, suggestion.coordinates);
     setIsOpen(false);
     setSuggestions([]);
+    
+    // Fetch coordinates using retrieve endpoint
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/search/searchbox/v1/retrieve/${suggestion.mapbox_id}?access_token=${MAPBOX_ACCESS_TOKEN}&session_token=${sessionToken}`
+      );
+      const data = await response.json();
+      
+      if (data.features && data.features[0]?.geometry?.coordinates) {
+        const coords = data.features[0].geometry.coordinates;
+        onChange(address, { longitude: coords[0], latitude: coords[1] });
+      } else {
+        onChange(address);
+      }
+    } catch (error) {
+      console.error("Error retrieving coordinates:", error);
+      onChange(address);
+    }
   };
 
   return (
