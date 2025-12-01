@@ -32,6 +32,8 @@ interface Pin {
   transport_end: string;
   pin_type?: PinType;
   mentioned_users: string[];
+  latitude?: number;
+  longitude?: number;
 }
 
 const CreateRoute = () => {
@@ -42,7 +44,7 @@ const CreateRoute = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [pins, setPins] = useState<Pin[]>([
-    { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: 0, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null, mentioned_users: [] },
+    { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: 0, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null, mentioned_users: [], latitude: undefined, longitude: undefined },
   ]);
   const [currentPinIndex, setCurrentPinIndex] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -120,7 +122,7 @@ const CreateRoute = () => {
   }, [pins]);
 
   const addPin = () => {
-    setPins([...pins, { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: pins.length, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null, mentioned_users: [] }]);
+    setPins([...pins, { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: pins.length, tags: [], is_transport: false, transport_type: "", transport_end: "", pin_type: null, mentioned_users: [], latitude: undefined, longitude: undefined }]);
     setCurrentPinIndex(pins.length);
   };
 
@@ -224,6 +226,8 @@ const CreateRoute = () => {
             transport_type: pin.transport_type,
             transport_end: pin.transport_end,
             mentioned_users: pin.mentioned_users,
+            latitude: pin.latitude,
+            longitude: pin.longitude,
           });
           if (pinError) throw pinError;
         }
@@ -251,6 +255,8 @@ const CreateRoute = () => {
             transport_type: pin.transport_type,
             transport_end: pin.transport_end,
             mentioned_users: pin.mentioned_users,
+            latitude: pin.latitude,
+            longitude: pin.longitude,
           });
           if (pinError) throw pinError;
         }
@@ -771,7 +777,13 @@ const CreateRoute = () => {
                           <Label>Adres *</Label>
                           <AddressAutocomplete
                             value={pins[currentPinIndex]?.address || ""}
-                            onChange={(value) => updatePin(currentPinIndex, "address", value)}
+                            onChange={(value, coordinates) => {
+                              updatePin(currentPinIndex, "address", value);
+                              if (coordinates) {
+                                updatePin(currentPinIndex, "latitude", coordinates.latitude);
+                                updatePin(currentPinIndex, "longitude", coordinates.longitude);
+                              }
+                            }}
                             placeholder="Wpisz adres lub lokalizację miejsca"
                             disabled={noAddressRemembered}
                           />

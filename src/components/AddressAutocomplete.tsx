@@ -4,9 +4,14 @@ import { cn } from "@/lib/utils";
 
 const MAPBOX_ACCESS_TOKEN = "pk.eyJ1IjoibWFjaWFzMzQiLCJhIjoiY21pbmgxeWUzMjI0czNqc2Y0ZGl4Nnp6diJ9.iYtSuDlTEsCGTfuyNJzpmg";
 
+interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
+
 interface AddressAutocompleteProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string, coordinates?: Coordinates) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -17,6 +22,10 @@ interface Suggestion {
   full_address?: string;
   place_formatted?: string;
   mapbox_id: string;
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 const AddressAutocomplete = ({
@@ -67,6 +76,10 @@ const AddressAutocomplete = ({
           full_address: feature.properties.full_address,
           place_formatted: feature.properties.place_formatted,
           mapbox_id: feature.id,
+          coordinates: feature.geometry?.coordinates ? {
+            longitude: feature.geometry.coordinates[0],
+            latitude: feature.geometry.coordinates[1],
+          } : undefined,
         }));
         setSuggestions(mapped);
         setIsOpen(true);
@@ -96,7 +109,7 @@ const AddressAutocomplete = ({
   const handleSuggestionClick = (suggestion: Suggestion) => {
     const address = suggestion.full_address || suggestion.place_formatted || suggestion.name;
     setQuery(address);
-    onChange(address);
+    onChange(address, suggestion.coordinates);
     setIsOpen(false);
     setSuggestions([]);
   };
