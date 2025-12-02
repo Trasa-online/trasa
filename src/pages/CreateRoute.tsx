@@ -42,6 +42,7 @@ const CreateRoute = () => {
   const [pins, setPins] = useState<Pin[]>([
     { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: 0, tags: [], mentioned_users: [], latitude: undefined, longitude: undefined },
   ]);
+  const [routeNotes, setRouteNotes] = useState<{ afterPinIndex: number; text: string; imageUrl?: string }[]>([]);
   const [currentPinIndex, setCurrentPinIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(1);
@@ -122,11 +123,16 @@ const CreateRoute = () => {
     if (currentPinIndex >= newPins.length) {
       setCurrentPinIndex(Math.max(0, newPins.length - 1));
     }
+    // Also update route notes indexes
+    setRouteNotes(prev => prev
+      .filter(n => n.afterPinIndex !== index - 1)
+      .map(n => n.afterPinIndex > index ? { ...n, afterPinIndex: n.afterPinIndex - 1 } : n)
+    );
   };
 
-  const insertPinAfter = async (afterIndex: number, note: string, imageUrl?: string) => {
-    // Upload image if it's a base64 string
-    let uploadedImageUrl = "";
+  const addRouteNote = async (afterIndex: number, note: string, imageUrl?: string) => {
+    let uploadedImageUrl: string | undefined;
+    
     if (imageUrl && imageUrl.startsWith("data:") && user) {
       const response = await fetch(imageUrl);
       const blob = await response.blob();
@@ -145,27 +151,16 @@ const CreateRoute = () => {
       }
     }
 
-    const insertPosition = afterIndex + 1;
-    const newPin: Pin = {
-      place_name: "",
-      address: "Ciekawe na trasie",
-      description: note,
-      image_url: uploadedImageUrl,
-      images: uploadedImageUrl ? [uploadedImageUrl] : [],
-      rating: 0,
-      pin_order: insertPosition,
-      tags: ["Ciekawostka"],
-      mentioned_users: [],
-      latitude: undefined,
-      longitude: undefined,
-    };
-
-    const newPins = [...pins];
-    newPins.splice(insertPosition, 0, newPin);
-    const reorderedPins = newPins.map((pin, i) => ({ ...pin, pin_order: i }));
-    setPins(reorderedPins);
+    setRouteNotes(prev => [
+      ...prev.filter(n => n.afterPinIndex !== afterIndex),
+      { afterPinIndex: afterIndex, text: note, imageUrl: uploadedImageUrl }
+    ]);
     
-    toast({ title: "Dodano ciekawostkę na trasie" });
+    toast({ title: "Dodano notatkę" });
+  };
+
+  const removeRouteNote = (afterIndex: number) => {
+    setRouteNotes(prev => prev.filter(n => n.afterPinIndex !== afterIndex));
   };
 
   const updatePin = (index: number, field: keyof Pin, value: any) => {
@@ -416,7 +411,9 @@ const CreateRoute = () => {
                     setShowPinsList(false);
                   }}
                   onPinRemove={removePin}
-                  onInsertPin={insertPinAfter}
+                  routeNotes={routeNotes}
+                  onAddNote={addRouteNote}
+                  onRemoveNote={removeRouteNote}
                   showRemoveButton={true}
                   showInsertButtons={true}
                   compact={true}
