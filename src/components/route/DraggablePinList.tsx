@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { X, GripVertical, Plus, Camera, Check, Sparkles, Pencil } from "lucide-react";
+import { X, GripVertical, Plus, Camera, Check, Sparkles, Pencil, ImageIcon } from "lucide-react";
 
 interface Pin {
   id?: string;
@@ -54,11 +54,24 @@ const DraggablePinList = ({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [expandedInsertIndex, setExpandedInsertIndex] = useState<number | null>(null);
   const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null);
+  const [expandedNoteImages, setExpandedNoteImages] = useState<Set<number>>(new Set());
   const [insertNote, setInsertNote] = useState("");
   const [insertImage, setInsertImage] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
+
+  const toggleNoteImage = (index: number) => {
+    setExpandedNoteImages(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index);
@@ -240,16 +253,33 @@ const DraggablePinList = ({
       );
     }
 
+    const isImageExpanded = expandedNoteImages.has(index);
+
     return (
-      <div className="mx-1 my-1.5 p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+      <div className="mx-1 my-1.5 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
         <div className="flex items-start gap-2">
-          <Sparkles className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+          <Sparkles className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400 mb-0.5">Ciekawe na trasie</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400">Ciekawe na trasie</p>
+              {note.imageUrl && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleNoteImage(index);
+                  }}
+                  className="flex items-center gap-0.5 text-[9px] text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+                >
+                  <ImageIcon className="h-3 w-3" />
+                  <span>{isImageExpanded ? 'ukryj' : 'pokaż'}</span>
+                </button>
+              )}
+            </div>
             {note.text && (
-              <p className="text-xs text-foreground leading-relaxed">{note.text}</p>
+              <p className="text-xs text-foreground leading-relaxed mt-0.5">{note.text}</p>
             )}
-            {note.imageUrl && (
+            {note.imageUrl && isImageExpanded && (
               <div className="mt-2 relative h-20 w-28 rounded-lg overflow-hidden ring-1 ring-border">
                 <img src={note.imageUrl} alt="Notatka" className="w-full h-full object-cover" />
               </div>
