@@ -124,6 +124,50 @@ const CreateRoute = () => {
     }
   };
 
+  const insertPinAfter = async (afterIndex: number, note: string, imageUrl?: string) => {
+    // Upload image if it's a base64 string
+    let uploadedImageUrl = "";
+    if (imageUrl && imageUrl.startsWith("data:") && user) {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const fileExt = "jpg";
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("route-images")
+        .upload(fileName, blob);
+
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage
+          .from("route-images")
+          .getPublicUrl(fileName);
+        uploadedImageUrl = publicUrl;
+      }
+    }
+
+    const insertPosition = afterIndex + 1;
+    const newPin: Pin = {
+      place_name: "",
+      address: "Ciekawe na trasie",
+      description: note,
+      image_url: uploadedImageUrl,
+      images: uploadedImageUrl ? [uploadedImageUrl] : [],
+      rating: 0,
+      pin_order: insertPosition,
+      tags: ["Ciekawostka"],
+      mentioned_users: [],
+      latitude: undefined,
+      longitude: undefined,
+    };
+
+    const newPins = [...pins];
+    newPins.splice(insertPosition, 0, newPin);
+    const reorderedPins = newPins.map((pin, i) => ({ ...pin, pin_order: i }));
+    setPins(reorderedPins);
+    
+    toast({ title: "Dodano ciekawostkę na trasie" });
+  };
+
   const updatePin = (index: number, field: keyof Pin, value: any) => {
     const newPins = [...pins];
     newPins[index] = { ...newPins[index], [field]: value };
@@ -372,7 +416,9 @@ const CreateRoute = () => {
                     setShowPinsList(false);
                   }}
                   onPinRemove={removePin}
+                  onInsertPin={insertPinAfter}
                   showRemoveButton={true}
+                  showInsertButtons={true}
                   compact={true}
                 />
 
