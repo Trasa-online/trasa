@@ -655,8 +655,7 @@ const CreateRoute = () => {
                         { name: "Pamiątki", icon: Gift },
                         { name: "Herbata", icon: Coffee },
                         { name: "Góry", icon: Mountain },
-                        { name: "Morze", icon: Waves },
-                        { name: "Inne", icon: Plus }
+                        { name: "Morze", icon: Waves }
                       ].map(({ name, icon: Icon }) => {
                         const isSelected = pins[currentPinIndex]?.tags?.includes(name);
                         return (
@@ -678,9 +677,45 @@ const CreateRoute = () => {
                           </Badge>
                         );
                       })}
+                      {/* "Inne" tag - opens custom input */}
+                      <Badge
+                        variant={showCustomTagInput ? "default" : "outline"}
+                        className="cursor-pointer flex items-center gap-1.5 px-3 py-2 text-sm"
+                        onClick={() => setShowCustomTagInput(true)}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Inne
+                      </Badge>
                     </div>
                     
-                    {/* Custom tags */}
+                    {/* Custom tag input */}
+                    {showCustomTagInput && (
+                      <div className="mt-2">
+                        <Input
+                          autoFocus
+                          placeholder="Wpisz własną kategorię i naciśnij Enter"
+                          className="h-9"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                              const currentTags = pins[currentPinIndex]?.tags || [];
+                              updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
+                              e.currentTarget.value = '';
+                            } else if (e.key === 'Escape') {
+                              setShowCustomTagInput(false);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            if (e.currentTarget.value.trim()) {
+                              const currentTags = pins[currentPinIndex]?.tags || [];
+                              updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
+                            }
+                            setShowCustomTagInput(false);
+                          }}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Custom tags display */}
                     {pins[currentPinIndex]?.tags?.filter(
                       tag => !["Restauracja", "Kawiarnia", "Jedzenie", "Zakupy", "Pamiątki", "Herbata", "Góry", "Morze"].includes(tag)
                     ).length > 0 && (
@@ -702,41 +737,6 @@ const CreateRoute = () => {
                         ))}
                       </div>
                     )}
-                    
-                    <div className="mt-2">
-                      {!showCustomTagInput ? (
-                        <Badge
-                          variant="outline"
-                          className="cursor-pointer px-3 py-2 text-sm"
-                          onClick={() => setShowCustomTagInput(true)}
-                        >
-                          <Plus className="h-4 w-4 mr-1.5" />
-                          Dodaj własną kategorię
-                        </Badge>
-                      ) : (
-                        <Input
-                          autoFocus
-                          placeholder="Wpisz własną kategorię i naciśnij Enter"
-                          className="h-9"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                              const currentTags = pins[currentPinIndex]?.tags || [];
-                              updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
-                              setShowCustomTagInput(false);
-                            } else if (e.key === 'Escape') {
-                              setShowCustomTagInput(false);
-                            }
-                          }}
-                          onBlur={(e) => {
-                            if (e.currentTarget.value.trim()) {
-                              const currentTags = pins[currentPinIndex]?.tags || [];
-                              updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
-                            }
-                            setShowCustomTagInput(false);
-                          }}
-                        />
-                      )}
-                    </div>
                   </div>
                 </div>
 
