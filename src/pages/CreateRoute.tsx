@@ -644,7 +644,7 @@ const CreateRoute = () => {
                   </div>
 
                   {/* Tag selection - all visible */}
-                  <div>
+                  <div className="pb-32">
                     <Label>Kategoria (Opcjonalne)</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {[
