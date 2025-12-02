@@ -162,7 +162,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
             };
 
             return uniqueTags.length > 0 ? (
-              <div className={`flex flex-wrap gap-2 pt-3 mt-3 border-t border-border/30 transition-all duration-300 ${!tagsExpanded ? 'max-h-[84px] overflow-hidden' : ''}`}>
+              <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-border/30 transition-all duration-300">
                 {displayTags.map((tag: string, idx: number) => {
                   const TagIcon = getTagIcon(tag);
                   return (
