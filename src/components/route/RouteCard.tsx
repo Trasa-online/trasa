@@ -246,7 +246,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
                           <span className="text-xs font-bold">{index + 1}</span>
                         </div>
                       )}
-                      <h4 className="font-semibold text-sm leading-tight">{pin.place_name}</h4>
+                      <h4 className="font-semibold text-sm leading-tight">{pin.place_name || pin.address}</h4>
                     </div>
                     {pin.rating && (
                       <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded flex-shrink-0">
@@ -255,7 +255,9 @@ const RouteCard = ({ route }: RouteCardProps) => {
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
+                  {pin.place_name && pin.address && pin.address !== pin.place_name && (
+                    <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
+                  )}
                   {pin.description && (
                     <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                       {pin.description}

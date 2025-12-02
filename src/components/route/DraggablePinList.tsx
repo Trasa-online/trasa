@@ -129,7 +129,7 @@ const DraggablePinList = ({
                     </div>
                   )}
                 </div>
-                {pin.address !== pin.place_name && (
+                {pin.place_name && pin.address && pin.address !== pin.place_name && (
                   <p className="text-[11px] text-muted-foreground truncate">{pin.address}</p>
                 )}
                 
