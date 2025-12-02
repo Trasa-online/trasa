@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, GripVertical } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { X, GripVertical, Plus, Camera, Check } from "lucide-react";
 
 interface Pin {
   id?: string;
@@ -23,7 +24,9 @@ interface DraggablePinListProps {
   onReorder: (pins: Pin[]) => void;
   onPinClick?: (index: number) => void;
   onPinRemove?: (index: number) => void;
+  onInsertPin?: (afterIndex: number, note: string, imageUrl?: string) => void;
   showRemoveButton?: boolean;
+  showInsertButtons?: boolean;
   compact?: boolean;
 }
 
@@ -32,11 +35,18 @@ const DraggablePinList = ({
   onReorder,
   onPinClick,
   onPinRemove,
+  onInsertPin,
   showRemoveButton = true,
+  showInsertButtons = false,
   compact = false,
 }: DraggablePinListProps) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [expandedInsertIndex, setExpandedInsertIndex] = useState<number | null>(null);
+  const [insertNote, setInsertNote] = useState("");
+  const [insertImage, setInsertImage] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index);
@@ -82,97 +92,232 @@ const DraggablePinList = ({
     setDragOverIndex(null);
   };
 
+  const handleInsertClick = (index: number) => {
+    if (expandedInsertIndex === index) {
+      setExpandedInsertIndex(null);
+      setInsertNote("");
+      setInsertImage(null);
+    } else {
+      setExpandedInsertIndex(index);
+      setInsertNote("");
+      setInsertImage(null);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    
+    // Convert to base64 for preview (actual upload handled by parent)
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setInsertImage(event.target?.result as string);
+      setUploadingImage(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleConfirmInsert = () => {
+    if (expandedInsertIndex !== null && onInsertPin && (insertNote.trim() || insertImage)) {
+      onInsertPin(expandedInsertIndex, insertNote.trim(), insertImage || undefined);
+      setExpandedInsertIndex(null);
+      setInsertNote("");
+      setInsertImage(null);
+    }
+  };
+
   const filteredPins = pins.filter(p => p.address);
 
+  const InsertButton = ({ afterIndex }: { afterIndex: number }) => {
+    const isExpanded = expandedInsertIndex === afterIndex;
+    
+    return (
+      <div className="relative">
+        {!isExpanded ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleInsertClick(afterIndex);
+            }}
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[10px] text-muted-foreground hover:text-primary hover:bg-muted/50 rounded transition-colors group"
+          >
+            <Plus className="h-3 w-3" />
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity">ciekawe na trasie</span>
+          </button>
+        ) : (
+          <div 
+            className="border border-primary/50 rounded-lg p-2 bg-muted/30 space-y-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex gap-2 items-start">
+              <Textarea
+                value={insertNote}
+                onChange={(e) => setInsertNote(e.target.value)}
+                placeholder="Co ciekawego na trasie..."
+                className="min-h-[40px] h-10 text-xs resize-none flex-1"
+                rows={1}
+              />
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 flex-shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingImage}
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {insertImage && (
+              <div className="relative h-16 w-24 rounded overflow-hidden">
+                <img src={insertImage} alt="Preview" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setInsertImage(null)}
+                  className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+            
+            <div className="flex gap-1.5 justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setExpandedInsertIndex(null);
+                  setInsertNote("");
+                  setInsertImage(null);
+                }}
+              >
+                Anuluj
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleConfirmInsert}
+                disabled={!insertNote.trim() && !insertImage}
+              >
+                <Check className="h-3 w-3 mr-1" />
+                Dodaj
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {filteredPins.map((pin, index) => {
         const actualIndex = pins.findIndex(p => p.pin_order === pin.pin_order);
         const isDragging = draggedIndex === index;
         const isDragOver = dragOverIndex === index;
 
         return (
-          <div
-            key={pin.pin_order}
-            draggable
-            onDragStart={(e) => handleDragStart(e, index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, index)}
-            onDragEnd={handleDragEnd}
-            className={`border border-border rounded-lg p-2.5 bg-card transition-all ${
-              isDragging ? 'opacity-50 scale-[0.98]' : ''
-            } ${isDragOver ? 'border-primary border-2' : ''} ${
-              onPinClick ? 'cursor-pointer hover:border-primary' : ''
-            }`}
-            onClick={() => onPinClick?.(actualIndex)}
-          >
-            <div className="flex items-start gap-2">
-              <div 
-                className="flex-shrink-0 cursor-grab active:cursor-grabbing touch-none mt-0.5"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <GripVertical className="h-4 w-4 text-muted-foreground/60" />
-              </div>
+          <div key={pin.pin_order}>
+            <div
+              draggable
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              className={`border border-border rounded-lg p-2.5 bg-card transition-all ${
+                isDragging ? 'opacity-50 scale-[0.98]' : ''
+              } ${isDragOver ? 'border-primary border-2' : ''} ${
+                onPinClick ? 'cursor-pointer hover:border-primary' : ''
+              }`}
+              onClick={() => onPinClick?.(actualIndex)}
+            >
+              <div className="flex items-start gap-2">
+                <div 
+                  className="flex-shrink-0 cursor-grab active:cursor-grabbing touch-none mt-0.5"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <GripVertical className="h-4 w-4 text-muted-foreground/60" />
+                </div>
 
-              <div className={`flex-shrink-0 ${compact ? 'w-5 h-5 text-[10px]' : 'w-6 h-6 text-xs'} rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium`}>
-                {index + 1}
-              </div>
-              
-              <div className="flex-1 min-w-0 space-y-0.5">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium truncate">{pin.place_name || pin.address}</p>
-                  {pin.rating > 0 && (
-                    <div className="flex items-center gap-0.5 text-xs flex-shrink-0">
-                      <span className="text-yellow-500">★</span>
-                      <span>{pin.rating.toFixed(1)}</span>
+                <div className={`flex-shrink-0 ${compact ? 'w-5 h-5 text-[10px]' : 'w-6 h-6 text-xs'} rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium`}>
+                  {index + 1}
+                </div>
+                
+                <div className="flex-1 min-w-0 space-y-0.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium truncate">{pin.place_name || pin.address}</p>
+                    {pin.rating > 0 && (
+                      <div className="flex items-center gap-0.5 text-xs flex-shrink-0">
+                        <span className="text-yellow-500">★</span>
+                        <span>{pin.rating.toFixed(1)}</span>
+                      </div>
+                    )}
+                  </div>
+                  {pin.place_name && pin.address && pin.address !== pin.place_name && (
+                    <p className="text-[11px] text-muted-foreground truncate">{pin.address}</p>
+                  )}
+                  
+                  {pin.tags && pin.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {pin.tags.slice(0, compact ? 3 : 4).map((tag, i) => (
+                        <Badge key={i} variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                          {tag}
+                        </Badge>
+                      ))}
+                      {pin.tags.length > (compact ? 3 : 4) && (
+                        <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                          +{pin.tags.length - (compact ? 3 : 4)}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+
+                  {!compact && pin.description && (
+                    <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1">{pin.description}</p>
+                  )}
+
+                  {!compact && pin.image_url && (
+                    <div className="relative h-24 bg-muted rounded overflow-hidden mt-1.5">
+                      <img src={pin.image_url} alt={pin.place_name} className="w-full h-full object-cover" />
                     </div>
                   )}
                 </div>
-                {pin.place_name && pin.address && pin.address !== pin.place_name && (
-                  <p className="text-[11px] text-muted-foreground truncate">{pin.address}</p>
-                )}
-                
-                {pin.tags && pin.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {pin.tags.slice(0, compact ? 3 : 4).map((tag, i) => (
-                      <Badge key={i} variant="secondary" className="text-[9px] px-1 py-0 h-4">
-                        {tag}
-                      </Badge>
-                    ))}
-                    {pin.tags.length > (compact ? 3 : 4) && (
-                      <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
-                        +{pin.tags.length - (compact ? 3 : 4)}
-                      </Badge>
-                    )}
-                  </div>
-                )}
 
-                {!compact && pin.description && (
-                  <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1">{pin.description}</p>
-                )}
-
-                {!compact && pin.image_url && (
-                  <div className="relative h-24 bg-muted rounded overflow-hidden mt-1.5">
-                    <img src={pin.image_url} alt={pin.place_name} className="w-full h-full object-cover" />
-                  </div>
+                {showRemoveButton && onPinRemove && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="flex-shrink-0 h-6 w-6"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPinRemove(actualIndex);
+                    }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
                 )}
               </div>
-
-              {showRemoveButton && onPinRemove && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="flex-shrink-0 h-6 w-6"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPinRemove(actualIndex);
-                  }}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              )}
             </div>
+            
+            {/* Insert button between pins */}
+            {showInsertButtons && onInsertPin && index < filteredPins.length - 1 && (
+              <InsertButton afterIndex={index} />
+            )}
           </div>
         );
       })}
