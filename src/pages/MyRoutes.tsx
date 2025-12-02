@@ -77,8 +77,11 @@ const MyRoutes = () => {
   });
 
   const RouteItem = ({ route }: { route: any }) => {
+    // Sort pins by pin_order for consistent display
+    const sortedPins = route.pins?.slice().sort((a: any, b: any) => a.pin_order - b.pin_order) || [];
+    
     // Calculate average rating only from attraction pins (not transport pins)
-    const attractionPins = route.pins?.filter((pin: any) => !pin.is_transport && pin.rating !== null) || [];
+    const attractionPins = sortedPins.filter((pin: any) => !pin.is_transport && pin.rating !== null);
     const avgRating =
       attractionPins.length > 0
         ? attractionPins.reduce((acc: number, pin: any) => acc + pin.rating, 0) / attractionPins.length
@@ -105,19 +108,19 @@ const MyRoutes = () => {
           )}
 
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            {route.pins?.length > 0 && (
+            {sortedPins.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5" />
-                <span>{route.pins.length} {route.pins.length === 1 ? 'przystanek' : 'przystanki'}</span>
+                <span>{sortedPins.length} {sortedPins.length === 1 ? 'przystanek' : 'przystanki'}</span>
               </div>
             )}
           </div>
         </div>
 
         {/* Pins Section */}
-        {route.pins?.length > 0 && (
+        {sortedPins.length > 0 && (
           <div className="divide-y divide-border/50">
-            {route.pins.slice(0, 3).map((pin: any, index: number) => (
+            {sortedPins.slice(0, 3).map((pin: any, index: number) => (
               <div key={pin.id} className="p-3">
                 <div className="flex gap-3">
                   {pin.image_url && (
