@@ -319,6 +319,41 @@ export type Database = {
         }
         Relationships: []
       }
+      route_notes: {
+        Row: {
+          after_pin_index: number
+          created_at: string | null
+          id: string
+          image_url: string | null
+          route_id: string
+          text: string | null
+        }
+        Insert: {
+          after_pin_index: number
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          route_id: string
+          text?: string | null
+        }
+        Update: {
+          after_pin_index?: number
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          route_id?: string
+          text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_notes_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       routes: {
         Row: {
           created_at: string | null
