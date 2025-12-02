@@ -482,17 +482,7 @@ const CreateRoute = () => {
                     </div>
                   )}
 
-                  {/* Pin name */}
-                  <div>
-                    <Label>Nazwa pinezki *</Label>
-                    <Input
-                      value={pins[currentPinIndex]?.place_name || ""}
-                      onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
-                      placeholder="Wpisz nazwę miejsca lub atrakcji"
-                    />
-                  </div>
-
-                  {/* Address */}
+                  {/* Address - moved to top */}
                   <div>
                     <Label>Adres *</Label>
                     <AddressAutocomplete
@@ -567,16 +557,26 @@ const CreateRoute = () => {
                     />
                   </div>
 
-                  {/* Rating */}
+                  {/* Rating - centered */}
                   <div>
                     <Label>Ocena *</Label>
-                    <div className="mt-2">
+                    <div className="mt-2 flex justify-center">
                       <StarRating
                         rating={pins[currentPinIndex]?.rating || 0}
                         onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
                         size="lg"
                       />
                     </div>
+                  </div>
+
+                  {/* Pin name - moved below rating */}
+                  <div>
+                    <Label>Alternatywna nazwa pina (Opcjonalne)</Label>
+                    <Input
+                      value={pins[currentPinIndex]?.place_name || ""}
+                      onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
+                      placeholder="Wpisz alternatywną nazwę miejsca"
+                    />
                   </div>
 
                   {/* Image upload */}
@@ -623,10 +623,10 @@ const CreateRoute = () => {
                     </div>
                   </div>
 
-                  {/* Tag selection - moved below image */}
+                  {/* Tag selection - all visible */}
                   <div>
                     <Label>Kategoria (Opcjonalne)</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <div className="grid grid-cols-2 gap-2 mt-2">
                       {[
                         { name: "Restauracja", icon: UtensilsCrossed },
                         { name: "Kawiarnia", icon: Coffee },
@@ -642,7 +642,7 @@ const CreateRoute = () => {
                           <Badge
                             key={name}
                             variant={isSelected ? "default" : "outline"}
-                            className="cursor-pointer flex items-center gap-1.5 px-3.5 py-2 text-sm"
+                            className="cursor-pointer flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm"
                             onClick={() => {
                               const currentTags = pins[currentPinIndex]?.tags || [];
                               const newTags = isSelected 
@@ -657,57 +657,63 @@ const CreateRoute = () => {
                           </Badge>
                         );
                       })}
-                      
-                      {/* Custom tags */}
-                      {pins[currentPinIndex]?.tags?.filter(
-                        tag => !["Restauracja", "Kawiarnia", "Jedzenie", "Zakupy", "Pamiątki", "Herbata", "Góry", "Morze"].includes(tag)
-                      ).map(tag => (
-                        <Badge
-                          key={tag}
-                          variant="default"
-                          className="cursor-pointer flex items-center gap-1.5 px-3.5 py-2 text-sm"
-                          onClick={() => {
-                            const currentTags = pins[currentPinIndex]?.tags || [];
-                            updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== tag));
-                          }}
-                        >
-                          {tag} <X className="h-3.5 w-3.5 ml-1" />
-                        </Badge>
-                      ))}
-                      
+                    </div>
+                    
+                    {/* Custom tags */}
+                    {pins[currentPinIndex]?.tags?.filter(
+                      tag => !["Restauracja", "Kawiarnia", "Jedzenie", "Zakupy", "Pamiątki", "Herbata", "Góry", "Morze"].includes(tag)
+                    ).length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {pins[currentPinIndex]?.tags?.filter(
+                          tag => !["Restauracja", "Kawiarnia", "Jedzenie", "Zakupy", "Pamiątki", "Herbata", "Góry", "Morze"].includes(tag)
+                        ).map(tag => (
+                          <Badge
+                            key={tag}
+                            variant="default"
+                            className="cursor-pointer flex items-center gap-1.5 px-3 py-2 text-sm"
+                            onClick={() => {
+                              const currentTags = pins[currentPinIndex]?.tags || [];
+                              updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== tag));
+                            }}
+                          >
+                            {tag} <X className="h-3.5 w-3.5 ml-1" />
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="mt-2">
                       {!showCustomTagInput ? (
                         <Badge
                           variant="outline"
-                          className="cursor-pointer px-3.5 py-2 text-sm"
+                          className="cursor-pointer px-3 py-2 text-sm"
                           onClick={() => setShowCustomTagInput(true)}
                         >
                           <Plus className="h-4 w-4 mr-1.5" />
-                          Inne
+                          Dodaj własną kategorię
                         </Badge>
                       ) : (
-                        <div className="flex items-center gap-2 w-full">
-                          <Input
-                            autoFocus
-                            placeholder="Wpisz własną kategorię"
-                            className="h-9"
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                                const currentTags = pins[currentPinIndex]?.tags || [];
-                                updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
-                                setShowCustomTagInput(false);
-                              } else if (e.key === 'Escape') {
-                                setShowCustomTagInput(false);
-                              }
-                            }}
-                            onBlur={(e) => {
-                              if (e.currentTarget.value.trim()) {
-                                const currentTags = pins[currentPinIndex]?.tags || [];
-                                updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
-                              }
+                        <Input
+                          autoFocus
+                          placeholder="Wpisz własną kategorię i naciśnij Enter"
+                          className="h-9"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                              const currentTags = pins[currentPinIndex]?.tags || [];
+                              updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
                               setShowCustomTagInput(false);
-                            }}
-                          />
-                        </div>
+                            } else if (e.key === 'Escape') {
+                              setShowCustomTagInput(false);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            if (e.currentTarget.value.trim()) {
+                              const currentTags = pins[currentPinIndex]?.tags || [];
+                              updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
+                            }
+                            setShowCustomTagInput(false);
+                          }}
+                        />
                       )}
                     </div>
                   </div>
