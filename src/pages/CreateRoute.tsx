@@ -586,6 +586,17 @@ const CreateRoute = () => {
                     </Button>
                   </div>
 
+                  {/* Map preview */}
+                  {pins.some(p => p.latitude && p.longitude) && (
+                    <div className="space-y-2">
+                      <Label>Podgląd mapy</Label>
+                      <RouteMap 
+                        pins={pins.filter(p => p.pin_type !== null && (p.place_name || p.transport_type))}
+                        className="h-32 rounded-lg"
+                      />
+                    </div>
+                  )}
+
                   <div className="space-y-4">
                     {pins[currentPinIndex]?.pin_type === "transport" ? (
                       <>
@@ -835,13 +846,21 @@ const CreateRoute = () => {
                     )}
 
                     <div>
-                      <Label>Opis (Opcjonalne)</Label>
+                      <Label>Opis (Opcjonalne, max 150 słów)</Label>
                       <Textarea
                         value={pins[currentPinIndex]?.description || ""}
-                        onChange={(e) => updatePin(currentPinIndex, "description", e.target.value)}
+                        onChange={(e) => {
+                          const words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0);
+                          if (words.length <= 150 || e.target.value.length < (pins[currentPinIndex]?.description || "").length) {
+                            updatePin(currentPinIndex, "description", e.target.value);
+                          }
+                        }}
                         placeholder="Opisz miejsce, swoje wrażenia lub wspomnienia"
                         rows={3}
                       />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {(pins[currentPinIndex]?.description || "").trim() ? (pins[currentPinIndex]?.description || "").trim().split(/\s+/).filter(w => w.length > 0).length : 0}/150 słów
+                      </p>
                     </div>
 
                     <div>
