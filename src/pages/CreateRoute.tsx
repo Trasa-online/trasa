@@ -75,7 +75,14 @@ const CreateRoute = () => {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Fetch route notes separately
+      const { data: notes } = await supabase
+        .from("route_notes")
+        .select("*")
+        .eq("route_id", id);
+
+      return { ...data, route_notes: notes || [] };
     },
     enabled: !!id && !!user,
   });
@@ -97,6 +104,14 @@ const CreateRoute = () => {
             }))
         );
         setShowPinsList(true);
+      }
+      // Load route notes
+      if (existingRoute.route_notes?.length > 0) {
+        setRouteNotes(existingRoute.route_notes.map((n: any) => ({
+          afterPinIndex: n.after_pin_index,
+          text: n.text,
+          imageUrl: n.image_url
+        })));
       }
       setStep(2);
     }
@@ -231,6 +246,8 @@ const CreateRoute = () => {
     setSaving(true);
 
     try {
+      let routeId = id;
+
       if (id) {
         const { error: routeError } = await supabase
           .from("routes")
@@ -269,6 +286,7 @@ const CreateRoute = () => {
           .single();
 
         if (routeError) throw routeError;
+        routeId = route.id;
 
         for (const pin of validPins) {
           const { error: pinError } = await supabase.from("pins").insert({
@@ -289,6 +307,22 @@ const CreateRoute = () => {
             longitude: pin.longitude,
           });
           if (pinError) throw pinError;
+        }
+      }
+
+      // Save route notes
+      if (routeId) {
+        // Delete existing notes first
+        await supabase.from("route_notes").delete().eq("route_id", routeId);
+
+        // Insert new notes
+        for (const note of routeNotes) {
+          await supabase.from("route_notes").insert({
+            route_id: routeId,
+            after_pin_index: note.afterPinIndex,
+            text: note.text,
+            image_url: note.imageUrl
+          });
         }
       }
 

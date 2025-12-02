@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check } from "lucide-react";
+import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +21,126 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useState as useStateLocal } from "react";
+
+// Component to display pins with notes
+const RouteNotesDisplay = ({ pins, routeNotes }: { pins: any[]; routeNotes: any[] }) => {
+  const [expandedNoteImages, setExpandedNoteImages] = useStateLocal<Set<number>>(new Set());
+
+  const toggleNoteImage = (index: number) => {
+    setExpandedNoteImages(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const sortedPins = pins?.slice().sort((a: any, b: any) => a.pin_order - b.pin_order) || [];
+  const notesMap = new Map(routeNotes?.map((n: any) => [n.after_pin_index, n]) || []);
+
+  return (
+    <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="p-4 border-b border-border/50">
+        <h3 className="text-base font-semibold">
+          Przystanki ({pins?.length || 0})
+        </h3>
+      </div>
+      
+      <div className="divide-y divide-border/50">
+        {sortedPins.map((pin: any, index: number) => {
+          const noteAfterThis = notesMap.get(index);
+          const isImageExpanded = expandedNoteImages.has(index);
+
+          return (
+            <div key={pin.id}>
+              <div className="p-4">
+                <div className="flex gap-3">
+                  {pin.image_url ? (
+                    <div className="flex-shrink-0 relative">
+                      <img
+                        src={pin.image_url}
+                        alt={pin.place_name || pin.address}
+                        className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
+                      />
+                      <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
+                        <span className="text-xs font-bold">{index + 1}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex-shrink-0 w-20 h-20 bg-muted rounded-lg flex items-center justify-center ring-1 ring-border">
+                      <span className="text-xl font-bold">{index + 1}</span>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm leading-tight">
+                          {pin.place_name || pin.address}
+                        </h4>
+                      </div>
+                      {!pin.is_transport && pin.rating && (
+                        <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded flex-shrink-0">
+                          <StarRating rating={pin.rating || 0} size="sm" />
+                        </div>
+                      )}
+                    </div>
+                    {pin.place_name && pin.address !== pin.place_name && (
+                      <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
+                    )}
+                    {!pin.place_name && (
+                      <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
+                    )}
+                    {pin.description && (
+                      <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+                        {pin.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Display note after this pin */}
+              {noteAfterThis && (
+                <div className="mx-4 mb-4 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400">Ciekawe na trasie</p>
+                        {noteAfterThis.image_url && (
+                          <button
+                            type="button"
+                            onClick={() => toggleNoteImage(index)}
+                            className="flex items-center gap-0.5 text-[9px] text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+                          >
+                            <ImageIcon className="h-3 w-3" />
+                            <span>{isImageExpanded ? 'ukryj' : 'pokaż'}</span>
+                          </button>
+                        )}
+                      </div>
+                      {noteAfterThis.text && (
+                        <p className="text-xs text-foreground leading-relaxed mt-0.5">{noteAfterThis.text}</p>
+                      )}
+                      {noteAfterThis.image_url && isImageExpanded && (
+                        <div className="mt-2 relative h-20 w-28 rounded-lg overflow-hidden ring-1 ring-border">
+                          <img src={noteAfterThis.image_url} alt="Notatka" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 const RouteDetails = () => {
   const { id } = useParams();
@@ -54,7 +174,14 @@ const RouteDetails = () => {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Fetch route notes separately
+      const { data: notes } = await supabase
+        .from("route_notes")
+        .select("*")
+        .eq("route_id", id);
+
+      return { ...data, route_notes: notes || [] };
     },
     enabled: !!id && !!user,
   });
@@ -365,70 +492,10 @@ const RouteDetails = () => {
         )}
 
         {/* Pins Section */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-border/50">
-            <h3 className="text-base font-semibold">
-              Przystanki ({route.pins?.length || 0})
-            </h3>
-          </div>
-          
-          <div className="divide-y divide-border/50">
-            {route.pins
-              ?.sort((a: any, b: any) => a.pin_order - b.pin_order)
-              .map((pin: any, index: number) => (
-                <div key={pin.id} className="p-4">
-                  <div className="flex gap-3">
-                    {pin.image_url ? (
-                      <div className="flex-shrink-0 relative">
-                        <img
-                          src={pin.image_url}
-                          alt={pin.place_name || pin.address}
-                          className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
-                        />
-                        <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
-                          <span className="text-xs font-bold">{index + 1}</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex-shrink-0 w-20 h-20 bg-muted rounded-lg flex items-center justify-center ring-1 ring-border">
-                        <span className="text-xl font-bold">{index + 1}</span>
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          {pin.image_url && (
-                            <div className="bg-muted rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 ring-1 ring-border hidden">
-                              <span className="text-xs font-bold">{index + 1}</span>
-                            </div>
-                          )}
-                          <h4 className="font-semibold text-sm leading-tight">
-                            {pin.place_name || pin.address}
-                          </h4>
-                        </div>
-                        {!pin.is_transport && pin.rating && (
-                          <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded flex-shrink-0">
-                            <StarRating rating={pin.rating || 0} size="sm" />
-                          </div>
-                        )}
-                      </div>
-                      {pin.place_name && pin.address !== pin.place_name && (
-                        <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
-                      )}
-                      {!pin.place_name && (
-                        <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
-                      )}
-                      {pin.description && (
-                        <p className="text-xs text-muted-foreground leading-relaxed mt-1">
-                          {pin.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
+        <RouteNotesDisplay 
+          pins={route.pins}
+          routeNotes={route.route_notes}
+        />
 
         <div className="flex items-center gap-4 py-4 border-y border-border">
           <button
