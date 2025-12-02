@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { X, GripVertical, Plus, Camera, Check } from "lucide-react";
+import { X, GripVertical, Plus, Camera, Check, MessageSquare } from "lucide-react";
 
 interface Pin {
   id?: string;
@@ -19,12 +19,20 @@ interface Pin {
   longitude?: number;
 }
 
+interface RouteNote {
+  afterPinIndex: number;
+  text: string;
+  imageUrl?: string;
+}
+
 interface DraggablePinListProps {
   pins: Pin[];
   onReorder: (pins: Pin[]) => void;
   onPinClick?: (index: number) => void;
   onPinRemove?: (index: number) => void;
-  onInsertPin?: (afterIndex: number, note: string, imageUrl?: string) => void;
+  routeNotes?: RouteNote[];
+  onAddNote?: (afterIndex: number, note: string, imageUrl?: string) => void;
+  onRemoveNote?: (afterIndex: number) => void;
   showRemoveButton?: boolean;
   showInsertButtons?: boolean;
   compact?: boolean;
@@ -35,7 +43,9 @@ const DraggablePinList = ({
   onReorder,
   onPinClick,
   onPinRemove,
-  onInsertPin,
+  routeNotes = [],
+  onAddNote,
+  onRemoveNote,
   showRemoveButton = true,
   showInsertButtons = false,
   compact = false,
@@ -110,7 +120,6 @@ const DraggablePinList = ({
 
     setUploadingImage(true);
     
-    // Convert to base64 for preview (actual upload handled by parent)
     const reader = new FileReader();
     reader.onload = (event) => {
       setInsertImage(event.target?.result as string);
@@ -120,8 +129,8 @@ const DraggablePinList = ({
   };
 
   const handleConfirmInsert = () => {
-    if (expandedInsertIndex !== null && onInsertPin && (insertNote.trim() || insertImage)) {
-      onInsertPin(expandedInsertIndex, insertNote.trim(), insertImage || undefined);
+    if (expandedInsertIndex !== null && onAddNote && (insertNote.trim() || insertImage)) {
+      onAddNote(expandedInsertIndex, insertNote.trim(), insertImage || undefined);
       setExpandedInsertIndex(null);
       setInsertNote("");
       setInsertImage(null);
@@ -130,11 +139,50 @@ const DraggablePinList = ({
 
   const filteredPins = pins.filter(p => p.address);
 
+  const getNoteForIndex = (index: number) => {
+    return routeNotes.find(n => n.afterPinIndex === index);
+  };
+
+  const NoteDisplay = ({ note, index }: { note: RouteNote; index: number }) => (
+    <div className="mx-2 my-1 p-2 bg-muted/50 border border-dashed border-border rounded-lg">
+      <div className="flex items-start gap-2">
+        <MessageSquare className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          {note.text && (
+            <p className="text-xs text-muted-foreground leading-relaxed">{note.text}</p>
+          )}
+          {note.imageUrl && (
+            <div className="mt-1.5 relative h-16 w-24 rounded overflow-hidden">
+              <img src={note.imageUrl} alt="Notatka" className="w-full h-full object-cover" />
+            </div>
+          )}
+        </div>
+        {onRemoveNote && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemoveNote(index);
+            }}
+            className="text-muted-foreground hover:text-foreground p-0.5"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   const InsertButton = ({ afterIndex }: { afterIndex: number }) => {
     const isExpanded = expandedInsertIndex === afterIndex;
+    const existingNote = getNoteForIndex(afterIndex);
+    
+    if (existingNote) {
+      return <NoteDisplay note={existingNote} index={afterIndex} />;
+    }
     
     return (
-      <div className="relative">
+      <div className="relative my-1">
         {!isExpanded ? (
           <button
             type="button"
@@ -142,10 +190,10 @@ const DraggablePinList = ({
               e.stopPropagation();
               handleInsertClick(afterIndex);
             }}
-            className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[10px] text-muted-foreground hover:text-primary hover:bg-muted/50 rounded transition-colors group"
+            className="w-full flex items-center justify-center gap-1.5 py-1 text-[10px] text-muted-foreground hover:text-primary hover:bg-muted/50 rounded border border-dashed border-transparent hover:border-border transition-colors"
           >
             <Plus className="h-3 w-3" />
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity">ciekawe na trasie</span>
+            <span>ciekawe na trasie</span>
           </button>
         ) : (
           <div 
@@ -314,8 +362,8 @@ const DraggablePinList = ({
               </div>
             </div>
             
-            {/* Insert button between pins */}
-            {showInsertButtons && onInsertPin && index < filteredPins.length - 1 && (
+            {/* Insert button / note between pins */}
+            {showInsertButtons && onAddNote && index < filteredPins.length - 1 && (
               <InsertButton afterIndex={index} />
             )}
           </div>
