@@ -32,6 +32,7 @@ const RouteDetails = () => {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+  const [deletingRoute, setDeletingRoute] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -260,7 +261,22 @@ const RouteDetails = () => {
     setEditingContent("");
   };
 
+  const deleteRouteMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("routes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-routes-published"] });
+      queryClient.invalidateQueries({ queryKey: ["my-routes-draft"] });
+      toast({ title: "Trasa została usunięta" });
+      navigate("/my-routes");
+    },
+  });
+
   if (loading || !user || !route) return null;
+
+  const isOwner = route.user_id === user.id;
 
   // Use the rating stored in the database (calculated from attraction pins only)
   const avgRating = route.rating || 0;
@@ -271,7 +287,27 @@ const RouteDetails = () => {
         <button onClick={() => navigate(-1)}>
           <ArrowLeft className="h-6 w-6" />
         </button>
-        <h1 className="text-xl font-semibold">Route Details</h1>
+        <h1 className="text-xl font-semibold flex-1">Szczegóły trasy</h1>
+        {isOwner && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/edit/${route.id}`)}
+            >
+              <Pencil className="h-4 w-4 mr-1" />
+              Edytuj
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setDeletingRoute(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="max-w-lg mx-auto p-4 space-y-4">
@@ -528,6 +564,26 @@ const RouteDetails = () => {
             <AlertDialogCancel>Anuluj</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Usuń
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deletingRoute} onOpenChange={setDeletingRoute}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Usuń trasę</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz usunąć tę trasę? Wszystkie dane, piny i komentarze zostaną usunięte. Tej akcji nie można cofnąć.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => deleteRouteMutation.mutate()} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Usuń trasę
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
