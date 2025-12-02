@@ -87,8 +87,45 @@ const RouteMap = ({ pins, className = "" }: RouteMapProps) => {
       markersRef.current.push(marker);
     });
 
-    // Fit bounds if multiple pins
+    // Add line connecting pins when map is loaded
     if (validPins.length > 1 && map.current) {
+      const coordinates = validPins.map(pin => [pin.longitude!, pin.latitude!]);
+      
+      map.current.on('load', () => {
+        if (!map.current) return;
+        
+        // Add the route line source
+        map.current.addSource('route-line', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: coordinates
+            }
+          }
+        });
+
+        // Add the route line layer
+        map.current.addLayer({
+          id: 'route-line-layer',
+          type: 'line',
+          source: 'route-line',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#000000',
+            'line-width': 3,
+            'line-opacity': 0.6,
+            'line-dasharray': [2, 1]
+          }
+        });
+      });
+
+      // Fit bounds
       const bounds = new mapboxgl.LngLatBounds();
       validPins.forEach(pin => {
         if (pin.latitude && pin.longitude) {
