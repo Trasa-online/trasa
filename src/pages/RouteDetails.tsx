@@ -235,63 +235,89 @@ const RouteDetails = () => {
           </button>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-2xl font-bold">{route.title}</h2>
-            <StarRating rating={Math.round(avgRating * 10) / 10} size="md" />
+        {/* Route Header with Title and Rating */}
+        <div className="bg-card border border-border rounded-xl p-4">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <h2 className="text-xl font-bold leading-tight flex-1">{route.title}</h2>
+            <div className="flex items-center gap-1.5 bg-muted px-2.5 py-1 rounded-lg flex-shrink-0">
+              <StarRating rating={Math.round(avgRating * 10) / 10} size="sm" />
+            </div>
           </div>
           {route.description && (
-            <p className="text-muted-foreground">{route.description}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {route.description}
+            </p>
           )}
         </div>
 
-        <div>
-          <h3 className="text-lg font-semibold mb-3">
-            Stops ({route.pins?.length || 0})
-          </h3>
-          
-          {/* Route Map */}
-          {route.pins && route.pins.length > 0 && (
+        {/* Route Map */}
+        {route.pins && route.pins.length > 0 && (
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
             <RouteMap 
               pins={route.pins.sort((a: any, b: any) => a.pin_order - b.pin_order)}
-              className="h-48 mb-4"
+              className="h-48"
             />
-          )}
+          </div>
+        )}
+
+        {/* Pins Section */}
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-border/50">
+            <h3 className="text-base font-semibold">
+              Przystanki ({route.pins?.length || 0})
+            </h3>
+          </div>
           
-          <div className="space-y-4">
+          <div className="divide-y divide-border/50">
             {route.pins
               ?.sort((a: any, b: any) => a.pin_order - b.pin_order)
               .map((pin: any, index: number) => (
-                <div
-                  key={pin.id}
-                  className="bg-card border border-border rounded-lg p-4"
-                >
+                <div key={pin.id} className="p-4">
                   <div className="flex gap-3">
-                    <div className="flex-shrink-0">
-                      {pin.image_url ? (
+                    {pin.image_url ? (
+                      <div className="flex-shrink-0 relative">
                         <img
                           src={pin.image_url}
-                          alt={pin.place_name}
-                          className="w-24 h-24 object-cover rounded-lg"
+                          alt={pin.place_name || pin.address}
+                          className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
                         />
-                      ) : (
-                        <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
-                          <span className="text-2xl font-bold">
-                            {index + 1}
-                          </span>
+                        <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
+                          <span className="text-xs font-bold">{index + 1}</span>
                         </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-semibold">{pin.place_name}</h4>
-                        {!pin.is_transport && <StarRating rating={pin.rating || 0} />}
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {pin.address}
-                      </p>
+                    ) : (
+                      <div className="flex-shrink-0 w-20 h-20 bg-muted rounded-lg flex items-center justify-center ring-1 ring-border">
+                        <span className="text-xl font-bold">{index + 1}</span>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {pin.image_url && (
+                            <div className="bg-muted rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 ring-1 ring-border hidden">
+                              <span className="text-xs font-bold">{index + 1}</span>
+                            </div>
+                          )}
+                          <h4 className="font-semibold text-sm leading-tight">
+                            {pin.place_name || pin.address}
+                          </h4>
+                        </div>
+                        {!pin.is_transport && pin.rating && (
+                          <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded flex-shrink-0">
+                            <StarRating rating={pin.rating || 0} size="sm" />
+                          </div>
+                        )}
+                      </div>
+                      {pin.place_name && pin.address !== pin.place_name && (
+                        <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
+                      )}
+                      {!pin.place_name && (
+                        <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
+                      )}
                       {pin.description && (
-                        <p className="text-sm">{pin.description}</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+                          {pin.description}
+                        </p>
                       )}
                     </div>
                   </div>
