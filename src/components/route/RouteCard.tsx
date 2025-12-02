@@ -143,7 +143,10 @@ const RouteCard = ({ route }: RouteCardProps) => {
           {/* Tags Section */}
           {(() => {
             const allTags = sortedPins.flatMap((pin: any) => pin.tags || []);
-            const uniqueTags = Array.from(new Set(allTags));
+            const uniqueTags = Array.from(new Set(allTags)) as string[];
+            const MAX_VISIBLE_TAGS = 6;
+            const visibleTags = uniqueTags.slice(0, MAX_VISIBLE_TAGS);
+            const remainingCount = uniqueTags.length - MAX_VISIBLE_TAGS;
             
             const getTagIcon = (tag: string) => {
               const tagLower = tag.toLowerCase();
@@ -157,8 +160,8 @@ const RouteCard = ({ route }: RouteCardProps) => {
             };
 
             return uniqueTags.length > 0 ? (
-              <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-border/30">
-                {uniqueTags.map((tag: string, idx: number) => {
+              <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-border/30 max-h-[84px] overflow-hidden">
+                {visibleTags.map((tag: string, idx: number) => {
                   const TagIcon = getTagIcon(tag);
                   return (
                     <button
@@ -174,6 +177,11 @@ const RouteCard = ({ route }: RouteCardProps) => {
                     </button>
                   );
                 })}
+                {remainingCount > 0 && (
+                  <span className="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-muted text-muted-foreground">
+                    +{remainingCount}
+                  </span>
+                )}
               </div>
             ) : null;
           })()}
