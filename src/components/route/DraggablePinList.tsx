@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { X, GripVertical, Plus, Camera, Check, MessageSquare } from "lucide-react";
+import { X, GripVertical, Plus, Camera, Check, Sparkles, Pencil } from "lucide-react";
 
 interface Pin {
   id?: string;
@@ -53,10 +53,12 @@ const DraggablePinList = ({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [expandedInsertIndex, setExpandedInsertIndex] = useState<number | null>(null);
+  const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null);
   const [insertNote, setInsertNote] = useState("");
   const [insertImage, setInsertImage] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index);
@@ -137,41 +139,152 @@ const DraggablePinList = ({
     }
   };
 
+  const handleStartEdit = (index: number, note: RouteNote) => {
+    setEditingNoteIndex(index);
+    setInsertNote(note.text);
+    setInsertImage(note.imageUrl || null);
+  };
+
+  const handleConfirmEdit = () => {
+    if (editingNoteIndex !== null && onAddNote && (insertNote.trim() || insertImage)) {
+      onAddNote(editingNoteIndex, insertNote.trim(), insertImage || undefined);
+      setEditingNoteIndex(null);
+      setInsertNote("");
+      setInsertImage(null);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingNoteIndex(null);
+    setInsertNote("");
+    setInsertImage(null);
+  };
+
   const filteredPins = pins.filter(p => p.address);
 
   const getNoteForIndex = (index: number) => {
     return routeNotes.find(n => n.afterPinIndex === index);
   };
 
-  const NoteDisplay = ({ note, index }: { note: RouteNote; index: number }) => (
-    <div className="mx-2 my-1 p-2 bg-muted/50 border border-dashed border-border rounded-lg">
-      <div className="flex items-start gap-2">
-        <MessageSquare className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
-        <div className="flex-1 min-w-0">
-          {note.text && (
-            <p className="text-xs text-muted-foreground leading-relaxed">{note.text}</p>
-          )}
-          {note.imageUrl && (
-            <div className="mt-1.5 relative h-16 w-24 rounded overflow-hidden">
-              <img src={note.imageUrl} alt="Notatka" className="w-full h-full object-cover" />
+  const NoteDisplay = ({ note, index }: { note: RouteNote; index: number }) => {
+    const isEditing = editingNoteIndex === index;
+
+    if (isEditing) {
+      return (
+        <div 
+          className="mx-1 my-1.5 border border-primary rounded-lg p-2.5 bg-card space-y-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex gap-2 items-start">
+            <Textarea
+              value={insertNote}
+              onChange={(e) => setInsertNote(e.target.value)}
+              placeholder="Co ciekawego na trasie..."
+              className="min-h-[40px] h-10 text-xs resize-none flex-1"
+              rows={1}
+            />
+            <input
+              type="file"
+              ref={editFileInputRef}
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 flex-shrink-0"
+              onClick={() => editFileInputRef.current?.click()}
+              disabled={uploadingImage}
+            >
+              <Camera className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {insertImage && (
+            <div className="relative h-16 w-24 rounded overflow-hidden">
+              <img src={insertImage} alt="Preview" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => setInsertImage(null)}
+                className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
             </div>
           )}
+          
+          <div className="flex gap-1.5 justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleCancelEdit}
+            >
+              Anuluj
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleConfirmEdit}
+              disabled={!insertNote.trim() && !insertImage}
+            >
+              <Check className="h-3 w-3 mr-1" />
+              Zapisz
+            </Button>
+          </div>
         </div>
-        {onRemoveNote && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemoveNote(index);
-            }}
-            className="text-muted-foreground hover:text-foreground p-0.5"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        )}
+      );
+    }
+
+    return (
+      <div className="mx-1 my-1.5 p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+        <div className="flex items-start gap-2">
+          <Sparkles className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400 mb-0.5">Ciekawe na trasie</p>
+            {note.text && (
+              <p className="text-xs text-foreground leading-relaxed">{note.text}</p>
+            )}
+            {note.imageUrl && (
+              <div className="mt-2 relative h-20 w-28 rounded-lg overflow-hidden ring-1 ring-border">
+                <img src={note.imageUrl} alt="Notatka" className="w-full h-full object-cover" />
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-0.5">
+            {onAddNote && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStartEdit(index, note);
+                }}
+                className="text-muted-foreground hover:text-foreground p-1 hover:bg-muted rounded"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+            )}
+            {onRemoveNote && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveNote(index);
+                }}
+                className="text-muted-foreground hover:text-destructive p-1 hover:bg-muted rounded"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const InsertButton = ({ afterIndex }: { afterIndex: number }) => {
     const isExpanded = expandedInsertIndex === afterIndex;
@@ -190,14 +303,14 @@ const DraggablePinList = ({
               e.stopPropagation();
               handleInsertClick(afterIndex);
             }}
-            className="w-full flex items-center justify-center gap-1.5 py-1 text-[10px] text-muted-foreground hover:text-primary hover:bg-muted/50 rounded border border-dashed border-transparent hover:border-border transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[10px] text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded border border-dashed border-muted-foreground/30 hover:border-amber-300 dark:hover:border-amber-700 transition-colors"
           >
             <Plus className="h-3 w-3" />
             <span>ciekawe na trasie</span>
           </button>
         ) : (
           <div 
-            className="border border-primary/50 rounded-lg p-2 bg-muted/30 space-y-2"
+            className="border border-primary rounded-lg p-2.5 bg-card space-y-2"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex gap-2 items-start">
