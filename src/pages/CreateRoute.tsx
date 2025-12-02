@@ -49,9 +49,11 @@ const CreateRoute = () => {
   const [showCustomTagInput, setShowCustomTagInput] = useState(false);
   const [noAddressRemembered, setNoAddressRemembered] = useState(false);
   const [showPinsList, setShowPinsList] = useState(false);
+  const [showAltName, setShowAltName] = useState(false);
 
   useEffect(() => {
     setNoAddressRemembered(pins[currentPinIndex]?.address === "Brak adresu");
+    setShowAltName(!!pins[currentPinIndex]?.place_name);
   }, [currentPinIndex, pins]);
 
   useEffect(() => {
@@ -519,7 +521,35 @@ const CreateRoute = () => {
                         Nie pamiętam adresu
                       </label>
                     </div>
+                    
+                    {/* Alternative pin name checkbox and input */}
+                    <div className="flex items-center gap-2 mt-3">
+                      <Checkbox
+                        id="alt-name"
+                        checked={showAltName || !!pins[currentPinIndex]?.place_name}
+                        onCheckedChange={(checked) => {
+                          setShowAltName(!!checked);
+                          if (!checked) {
+                            updatePin(currentPinIndex, "place_name", "");
+                          }
+                        }}
+                      />
+                      <label htmlFor="alt-name" className="text-xs text-muted-foreground cursor-pointer">
+                        Alternatywna nazwa pina
+                      </label>
+                    </div>
                   </div>
+                  
+                  {/* Alternative pin name input - shows when checkbox is checked */}
+                  {(showAltName || pins[currentPinIndex]?.place_name) && (
+                    <div>
+                      <Input
+                        value={pins[currentPinIndex]?.place_name || ""}
+                        onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
+                        placeholder="Wpisz alternatywną nazwę miejsca"
+                      />
+                    </div>
+                  )}
 
                   {/* Description */}
                   <div>
@@ -569,16 +599,6 @@ const CreateRoute = () => {
                     </div>
                   </div>
 
-                  {/* Pin name - moved below rating */}
-                  <div>
-                    <Label>Alternatywna nazwa pina (Opcjonalne)</Label>
-                    <Input
-                      value={pins[currentPinIndex]?.place_name || ""}
-                      onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
-                      placeholder="Wpisz alternatywną nazwę miejsca"
-                    />
-                  </div>
-
                   {/* Image upload */}
                   <div>
                     <Label>Zdjęcie (Opcjonalne)</Label>
@@ -626,7 +646,7 @@ const CreateRoute = () => {
                   {/* Tag selection - all visible */}
                   <div>
                     <Label>Kategoria (Opcjonalne)</Label>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div className="flex flex-wrap gap-2 mt-2">
                       {[
                         { name: "Restauracja", icon: UtensilsCrossed },
                         { name: "Kawiarnia", icon: Coffee },
@@ -635,14 +655,15 @@ const CreateRoute = () => {
                         { name: "Pamiątki", icon: Gift },
                         { name: "Herbata", icon: Coffee },
                         { name: "Góry", icon: Mountain },
-                        { name: "Morze", icon: Waves }
+                        { name: "Morze", icon: Waves },
+                        { name: "Inne", icon: Plus }
                       ].map(({ name, icon: Icon }) => {
                         const isSelected = pins[currentPinIndex]?.tags?.includes(name);
                         return (
                           <Badge
                             key={name}
                             variant={isSelected ? "default" : "outline"}
-                            className="cursor-pointer flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm"
+                            className="cursor-pointer flex items-center gap-1.5 px-3 py-2 text-sm"
                             onClick={() => {
                               const currentTags = pins[currentPinIndex]?.tags || [];
                               const newTags = isSelected 
