@@ -788,11 +788,13 @@ const CreateRoute = () => {
                 className="h-40"
               />
 
-              {/* Pins list */}
+              {/* Pins list with notes */}
               <DraggablePinList
                 pins={pins}
                 onReorder={setPins}
+                routeNotes={routeNotes}
                 showRemoveButton={false}
+                showInsertButtons={true}
                 compact={false}
               />
 
