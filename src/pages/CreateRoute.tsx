@@ -595,6 +595,7 @@ const CreateRoute = () => {
                         rating={pins[currentPinIndex]?.rating || 0}
                         onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
                         size="lg"
+                        interactive={true}
                       />
                     </div>
                   </div>
