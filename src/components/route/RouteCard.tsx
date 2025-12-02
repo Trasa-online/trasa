@@ -17,6 +17,9 @@ const RouteCard = ({ route }: RouteCardProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
+  // Sort pins by pin_order for consistent display
+  const sortedPins = route.pins?.slice().sort((a: any, b: any) => a.pin_order - b.pin_order) || [];
+  
   // Use the rating stored in the database (calculated from attraction pins only)
   const averageRating = route.rating || 0;
 
@@ -139,7 +142,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
 
           {/* Tags Section */}
           {(() => {
-            const allTags = route.pins?.flatMap((pin: any) => pin.tags || []) || [];
+            const allTags = sortedPins.flatMap((pin: any) => pin.tags || []);
             const uniqueTags = Array.from(new Set(allTags));
             
             const getTagIcon = (tag: string) => {
@@ -177,10 +180,10 @@ const RouteCard = ({ route }: RouteCardProps) => {
 
           {/* Metadata */}
           <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2">
-            {route.pins?.length > 0 && (
+            {sortedPins.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5" />
-                <span>{route.pins.length} {route.pins.length === 1 ? 'przystanek' : 'przystanki'}</span>
+                <span>{sortedPins.length} {sortedPins.length === 1 ? 'przystanek' : 'przystanki'}</span>
               </div>
             )}
           </div>
@@ -188,9 +191,9 @@ const RouteCard = ({ route }: RouteCardProps) => {
       </div>
 
       {/* Pins Section */}
-      {route.pins?.length > 0 && (
+      {sortedPins.length > 0 && (
         <div className="divide-y divide-border/50">
-          {route.pins.slice(0, 3).map((pin: any, index: number) => (
+          {sortedPins.slice(0, 3).map((pin: any, index: number) => (
             <div 
               key={pin.id} 
               className="p-3 hover:bg-muted/30 transition-colors"
