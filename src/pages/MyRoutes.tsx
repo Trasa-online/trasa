@@ -7,7 +7,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Trash2, Star } from "lucide-react";
+import { MapPin, Trash2, Star, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const MyRoutes = () => {
@@ -89,8 +89,11 @@ const MyRoutes = () => {
 
     return (
       <div className="bg-card border border-border rounded-xl overflow-hidden hover:border-foreground/20 transition-all duration-300">
-        {/* Header Section */}
-        <div className="p-4 border-b border-border/50">
+        {/* Clickable Header Section */}
+        <div 
+          className="p-4 border-b border-border/50 cursor-pointer hover:bg-muted/30 transition-colors"
+          onClick={() => navigate(`/route/${route.id}`)}
+        >
           <div className="flex items-start justify-between gap-3 mb-2">
             <h3 className="text-base font-bold leading-tight flex-1">
               {route.title}
@@ -102,7 +105,7 @@ const MyRoutes = () => {
           </div>
 
           {route.description && (
-            <p className="text-sm text-muted-foreground line-clamp-4 leading-relaxed mb-2">
+            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-2">
               {route.description}
             </p>
           )}
@@ -117,53 +120,35 @@ const MyRoutes = () => {
           </div>
         </div>
 
-        {/* Pins Section */}
+        {/* Pins Section - Compact */}
         {sortedPins.length > 0 && (
-          <div className="divide-y divide-border/50">
-            {sortedPins.map((pin: any, index: number) => (
-              <div key={pin.id} className="p-3">
-                <div className="flex gap-3">
-                  {pin.image_url && (
-                    <div className="flex-shrink-0 relative">
-                      <img
-                        src={pin.image_url}
-                        alt={pin.place_name}
-                        className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
-                      />
-                      <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
-                        <span className="text-xs font-bold">{index + 1}</span>
-                      </div>
+          <div 
+            className="p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+            onClick={() => navigate(`/route/${route.id}`)}
+          >
+            <div className="flex flex-wrap gap-2">
+              {sortedPins.slice(0, 4).map((pin: any, index: number) => (
+                <div key={pin.id} className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-lg">
+                  <div className="bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                    <span className="text-[10px] font-bold">{index + 1}</span>
+                  </div>
+                  <span className="text-xs font-medium truncate max-w-[120px]">
+                    {pin.place_name || pin.address}
+                  </span>
+                  {pin.rating > 0 && (
+                    <div className="flex items-center gap-0.5">
+                      <Star className="h-3 w-3 fill-star text-star" />
+                      <span className="text-[10px] font-semibold">{pin.rating.toFixed(1)}</span>
                     </div>
                   )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        {!pin.image_url && (
-                          <div className="bg-muted rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 ring-1 ring-border">
-                            <span className="text-xs font-bold">{index + 1}</span>
-                          </div>
-                        )}
-                        <h4 className="font-semibold text-sm leading-tight">{pin.place_name || pin.address}</h4>
-                      </div>
-                      {pin.rating && (
-                        <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded flex-shrink-0">
-                          <Star className="h-3 w-3 fill-star text-star" />
-                          <span className="font-semibold text-xs">{pin.rating.toFixed(1)}</span>
-                        </div>
-                      )}
-                    </div>
-                    {pin.place_name && pin.address && pin.address !== pin.place_name && (
-                      <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
-                    )}
-                    {pin.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                        {pin.description}
-                      </p>
-                    )}
-                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+              {sortedPins.length > 4 && (
+                <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-lg">
+                  <span className="text-xs text-muted-foreground">+{sortedPins.length - 4} więcej</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -171,11 +156,19 @@ const MyRoutes = () => {
         <div className="p-3 bg-muted/20 border-t border-border/50">
           <div className="flex gap-2">
             <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => navigate(`/route/${route.id}`)}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Zobacz
+            </Button>
+            <Button
               variant="default"
               className="flex-1"
               onClick={() => navigate(`/edit/${route.id}`)}
             >
-              Edytuj trasę
+              Edytuj
             </Button>
             <Button
               variant="outline"
