@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import UserMentionInput from "@/components/route/UserMentionInput";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import RouteMap from "@/components/RouteMap";
+import DraggablePinList from "@/components/route/DraggablePinList";
 
 interface Pin {
   id?: string;
@@ -363,67 +364,17 @@ const CreateRoute = () => {
                   </Button>
                 </div>
 
-                <div className="space-y-3">
-                  {pins.filter(p => p.address).map((pin, index) => {
-                    const actualIndex = pins.findIndex(p => p.pin_order === pin.pin_order);
-                    return (
-                      <div
-                        key={index}
-                        className="border border-border rounded-lg p-3 bg-card cursor-pointer hover:border-primary transition-colors"
-                        onClick={() => {
-                          setCurrentPinIndex(actualIndex);
-                          setShowPinsList(false);
-                        }}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
-                            {index + 1}
-                          </div>
-                          
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm font-medium">{pin.place_name || pin.address}</p>
-                              {pin.rating > 0 && (
-                                <div className="flex items-center gap-1 text-xs">
-                                  <span className="text-yellow-500">★</span>
-                                  <span>{pin.rating.toFixed(1)}</span>
-                                </div>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground">{pin.address}</p>
-                            
-                            {pin.tags && pin.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {pin.tags.slice(0, 3).map((tag, i) => (
-                                  <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                                {pin.tags.length > 3 && (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                                    +{pin.tags.length - 3}
-                                  </Badge>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="flex-shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removePin(actualIndex);
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <DraggablePinList
+                  pins={pins}
+                  onReorder={setPins}
+                  onPinClick={(index) => {
+                    setCurrentPinIndex(index);
+                    setShowPinsList(false);
+                  }}
+                  onPinRemove={removePin}
+                  showRemoveButton={true}
+                  compact={true}
+                />
 
                 <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
                   <Button
@@ -795,48 +746,12 @@ const CreateRoute = () => {
               />
 
               {/* Pins list */}
-              {pins.filter(p => p.address).map((pin, index) => (
-                <div key={index} className="border border-border rounded-lg p-3 space-y-2 bg-card">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">
-                      {index + 1}
-                    </div>
-                    
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">{pin.place_name || pin.address}</p>
-                        {pin.rating > 0 && (
-                          <div className="flex items-center gap-1 text-xs">
-                            <span className="text-yellow-500">★</span>
-                            <span>{pin.rating.toFixed(1)}</span>
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">{pin.address}</p>
-                      
-                      {pin.tags && pin.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {pin.tags.map((tag, i) => (
-                            <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                      
-                      {pin.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">{pin.description}</p>
-                      )}
-                      
-                      {pin.image_url && (
-                        <div className="relative h-32 bg-muted rounded overflow-hidden mt-2">
-                          <img src={pin.image_url} alt={pin.place_name} className="w-full h-full object-cover" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+              <DraggablePinList
+                pins={pins}
+                onReorder={setPins}
+                showRemoveButton={false}
+                compact={false}
+              />
 
               {/* Overall route rating */}
               <div className="space-y-3 border-t border-border pt-4">
