@@ -482,7 +482,7 @@ const CreateRoute = () => {
                     <div className="space-y-2">
                       <Label>Podgląd mapy</Label>
                       <RouteMap 
-                        pins={pins.filter(p => p.place_name)}
+                        pins={pins.filter(p => p.latitude && p.longitude)}
                         className="h-32 rounded-lg"
                       />
                     </div>
