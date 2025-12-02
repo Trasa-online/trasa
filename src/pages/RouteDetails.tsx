@@ -11,6 +11,16 @@ import StarRating from "@/components/route/StarRating";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import RouteMap from "@/components/RouteMap";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const RouteDetails = () => {
   const { id } = useParams();
@@ -21,6 +31,7 @@ const RouteDetails = () => {
   const [comment, setComment] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -206,9 +217,20 @@ const RouteDetails = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["route-comments"] });
+      setDeletingCommentId(null);
       toast({ title: "Komentarz usunięty" });
     },
   });
+
+  const handleDeleteClick = (commentId: string) => {
+    setDeletingCommentId(commentId);
+  };
+
+  const confirmDelete = () => {
+    if (deletingCommentId) {
+      deleteCommentMutation.mutate(deletingCommentId);
+    }
+  };
 
   const updateCommentMutation = useMutation({
     mutationFn: async ({ commentId, content }: { commentId: string; content: string }) => {
@@ -425,7 +447,7 @@ const RouteDetails = () => {
                           <Pencil className="h-3 w-3" />
                         </button>
                         <button
-                          onClick={() => deleteCommentMutation.mutate(c.id)}
+                          onClick={() => handleDeleteClick(c.id)}
                           className="p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -493,6 +515,23 @@ const RouteDetails = () => {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={!!deletingCommentId} onOpenChange={(open) => !open && setDeletingCommentId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Usuń komentarz</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz usunąć ten komentarz? Tej akcji nie można cofnąć.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Usuń
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
