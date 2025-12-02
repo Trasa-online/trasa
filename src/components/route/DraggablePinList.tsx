@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +38,104 @@ interface DraggablePinListProps {
   compact?: boolean;
 }
 
+interface NoteFormProps {
+  value: string;
+  onChange: (value: string) => void;
+  imageUrl: string | null;
+  onImageChange: (url: string | null) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+  confirmLabel: string;
+  uploading: boolean;
+  onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+const NoteForm = memo(({ 
+  value, 
+  onChange, 
+  imageUrl, 
+  onImageChange, 
+  onConfirm, 
+  onCancel, 
+  confirmLabel,
+  uploading,
+  onImageUpload
+}: NoteFormProps) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  return (
+    <div 
+      className="border border-primary rounded-lg p-2.5 bg-card space-y-2"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex gap-2 items-start">
+        <Textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Co ciekawego na trasie..."
+          className="min-h-[40px] h-10 text-xs resize-none flex-1"
+          rows={1}
+          autoFocus
+        />
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/*"
+          onChange={onImageUpload}
+          className="hidden"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-10 w-10 flex-shrink-0"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+        >
+          <Camera className="h-4 w-4" />
+        </Button>
+      </div>
+      
+      {imageUrl && (
+        <div className="relative h-16 w-24 rounded overflow-hidden">
+          <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+          <button
+            type="button"
+            onClick={() => onImageChange(null)}
+            className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+      
+      <div className="flex gap-1.5 justify-end">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs"
+          onClick={onCancel}
+        >
+          Anuluj
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          className="h-7 text-xs"
+          onClick={onConfirm}
+          disabled={!value.trim() && !imageUrl}
+        >
+          <Check className="h-3 w-3 mr-1" />
+          {confirmLabel}
+        </Button>
+      </div>
+    </div>
+  );
+});
+
+NoteForm.displayName = "NoteForm";
+
 const DraggablePinList = ({
   pins,
   onReorder,
@@ -58,10 +156,8 @@ const DraggablePinList = ({
   const [insertNote, setInsertNote] = useState("");
   const [insertImage, setInsertImage] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const editFileInputRef = useRef<HTMLInputElement>(null);
 
-  const toggleNoteImage = (index: number) => {
+  const toggleNoteImage = useCallback((index: number) => {
     setExpandedNoteImages(prev => {
       const newSet = new Set(prev);
       if (newSet.has(index)) {
@@ -71,7 +167,7 @@ const DraggablePinList = ({
       }
       return newSet;
     });
-  };
+  }, []);
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index);
@@ -117,19 +213,21 @@ const DraggablePinList = ({
     setDragOverIndex(null);
   };
 
-  const handleInsertClick = (index: number) => {
-    if (expandedInsertIndex === index) {
-      setExpandedInsertIndex(null);
-      setInsertNote("");
-      setInsertImage(null);
-    } else {
-      setExpandedInsertIndex(index);
-      setInsertNote("");
-      setInsertImage(null);
-    }
-  };
+  const handleInsertClick = useCallback((index: number) => {
+    setExpandedInsertIndex(prev => {
+      if (prev === index) {
+        setInsertNote("");
+        setInsertImage(null);
+        return null;
+      } else {
+        setInsertNote("");
+        setInsertImage(null);
+        return index;
+      }
+    });
+  }, []);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -141,114 +239,67 @@ const DraggablePinList = ({
       setUploadingImage(false);
     };
     reader.readAsDataURL(file);
-  };
+  }, []);
 
-  const handleConfirmInsert = () => {
+  const handleConfirmInsert = useCallback(() => {
     if (expandedInsertIndex !== null && onAddNote && (insertNote.trim() || insertImage)) {
       onAddNote(expandedInsertIndex, insertNote.trim(), insertImage || undefined);
       setExpandedInsertIndex(null);
       setInsertNote("");
       setInsertImage(null);
     }
-  };
+  }, [expandedInsertIndex, onAddNote, insertNote, insertImage]);
 
-  const handleStartEdit = (index: number, note: RouteNote) => {
+  const handleStartEdit = useCallback((index: number, note: RouteNote) => {
     setEditingNoteIndex(index);
     setInsertNote(note.text);
     setInsertImage(note.imageUrl || null);
-  };
+  }, []);
 
-  const handleConfirmEdit = () => {
+  const handleConfirmEdit = useCallback(() => {
     if (editingNoteIndex !== null && onAddNote && (insertNote.trim() || insertImage)) {
       onAddNote(editingNoteIndex, insertNote.trim(), insertImage || undefined);
       setEditingNoteIndex(null);
       setInsertNote("");
       setInsertImage(null);
     }
-  };
+  }, [editingNoteIndex, onAddNote, insertNote, insertImage]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingNoteIndex(null);
     setInsertNote("");
     setInsertImage(null);
-  };
+  }, []);
+
+  const handleCancelInsert = useCallback(() => {
+    setExpandedInsertIndex(null);
+    setInsertNote("");
+    setInsertImage(null);
+  }, []);
 
   const filteredPins = pins.filter(p => p.address);
 
-  const getNoteForIndex = (index: number) => {
+  const getNoteForIndex = useCallback((index: number) => {
     return routeNotes.find(n => n.afterPinIndex === index);
-  };
+  }, [routeNotes]);
 
-  const NoteDisplay = ({ note, index }: { note: RouteNote; index: number }) => {
+  const renderNoteDisplay = (note: RouteNote, index: number) => {
     const isEditing = editingNoteIndex === index;
 
     if (isEditing) {
       return (
-        <div 
-          className="mx-1 my-1.5 border border-primary rounded-lg p-2.5 bg-card space-y-2"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex gap-2 items-start">
-            <Textarea
-              value={insertNote}
-              onChange={(e) => setInsertNote(e.target.value)}
-              placeholder="Co ciekawego na trasie..."
-              className="min-h-[40px] h-10 text-xs resize-none flex-1"
-              rows={1}
-            />
-            <input
-              type="file"
-              ref={editFileInputRef}
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 flex-shrink-0"
-              onClick={() => editFileInputRef.current?.click()}
-              disabled={uploadingImage}
-            >
-              <Camera className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          {insertImage && (
-            <div className="relative h-16 w-24 rounded overflow-hidden">
-              <img src={insertImage} alt="Preview" className="w-full h-full object-cover" />
-              <button
-                type="button"
-                onClick={() => setInsertImage(null)}
-                className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )}
-          
-          <div className="flex gap-1.5 justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={handleCancelEdit}
-            >
-              Anuluj
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={handleConfirmEdit}
-              disabled={!insertNote.trim() && !insertImage}
-            >
-              <Check className="h-3 w-3 mr-1" />
-              Zapisz
-            </Button>
-          </div>
+        <div className="mx-1 my-1.5" onClick={(e) => e.stopPropagation()}>
+          <NoteForm
+            value={insertNote}
+            onChange={setInsertNote}
+            imageUrl={insertImage}
+            onImageChange={setInsertImage}
+            onConfirm={handleConfirmEdit}
+            onCancel={handleCancelEdit}
+            confirmLabel="Zapisz"
+            uploading={uploadingImage}
+            onImageUpload={handleImageUpload}
+          />
         </div>
       );
     }
@@ -316,15 +367,14 @@ const DraggablePinList = ({
     );
   };
 
-  const InsertButton = ({ afterIndex }: { afterIndex: number }) => {
+  const renderInsertButton = (afterIndex: number) => {
     const isExpanded = expandedInsertIndex === afterIndex;
     const existingNote = getNoteForIndex(afterIndex);
     
     if (existingNote) {
-      return <NoteDisplay note={existingNote} index={afterIndex} />;
+      return renderNoteDisplay(existingNote, afterIndex);
     }
     
-    // Only show add button if onAddNote is provided
     if (!onAddNote) {
       return null;
     }
@@ -344,76 +394,17 @@ const DraggablePinList = ({
             <span>ciekawe na trasie</span>
           </button>
         ) : (
-          <div 
-            className="border border-primary rounded-lg p-2.5 bg-card space-y-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex gap-2 items-start">
-              <Textarea
-                value={insertNote}
-                onChange={(e) => setInsertNote(e.target.value)}
-                placeholder="Co ciekawego na trasie..."
-                className="min-h-[40px] h-10 text-xs resize-none flex-1"
-                rows={1}
-              />
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 flex-shrink-0"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingImage}
-              >
-                <Camera className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            {insertImage && (
-              <div className="relative h-16 w-24 rounded overflow-hidden">
-                <img src={insertImage} alt="Preview" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => setInsertImage(null)}
-                  className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )}
-            
-            <div className="flex gap-1.5 justify-end">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => {
-                  setExpandedInsertIndex(null);
-                  setInsertNote("");
-                  setInsertImage(null);
-                }}
-              >
-                Anuluj
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={handleConfirmInsert}
-                disabled={!insertNote.trim() && !insertImage}
-              >
-                <Check className="h-3 w-3 mr-1" />
-                Dodaj
-              </Button>
-            </div>
-          </div>
+          <NoteForm
+            value={insertNote}
+            onChange={setInsertNote}
+            imageUrl={insertImage}
+            onImageChange={setInsertImage}
+            onConfirm={handleConfirmInsert}
+            onCancel={handleCancelInsert}
+            confirmLabel="Dodaj"
+            uploading={uploadingImage}
+            onImageUpload={handleImageUpload}
+          />
         )}
       </div>
     );
@@ -427,7 +418,7 @@ const DraggablePinList = ({
         const isDragOver = dragOverIndex === index;
 
         return (
-          <div key={pin.pin_order}>
+          <div key={`pin-${pin.pin_order}`}>
             <div
               draggable
               onDragStart={(e) => handleDragStart(e, index)}
@@ -498,7 +489,7 @@ const DraggablePinList = ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="flex-shrink-0 h-6 w-6"
+                    className="h-6 w-6 flex-shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       onPinRemove(actualIndex);
@@ -509,11 +500,8 @@ const DraggablePinList = ({
                 )}
               </div>
             </div>
-            
-            {/* Insert button / note between pins */}
-            {showInsertButtons && index < filteredPins.length - 1 && (
-              <InsertButton afterIndex={index} />
-            )}
+
+            {showInsertButtons && index < filteredPins.length - 1 && renderInsertButton(index)}
           </div>
         );
       })}
