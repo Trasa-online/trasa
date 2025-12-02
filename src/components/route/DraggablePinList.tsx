@@ -294,6 +294,11 @@ const DraggablePinList = ({
       return <NoteDisplay note={existingNote} index={afterIndex} />;
     }
     
+    // Only show add button if onAddNote is provided
+    if (!onAddNote) {
+      return null;
+    }
+    
     return (
       <div className="relative my-1">
         {!isExpanded ? (
@@ -476,7 +481,7 @@ const DraggablePinList = ({
             </div>
             
             {/* Insert button / note between pins */}
-            {showInsertButtons && onAddNote && index < filteredPins.length - 1 && (
+            {showInsertButtons && index < filteredPins.length - 1 && (
               <InsertButton afterIndex={index} />
             )}
           </div>
