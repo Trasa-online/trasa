@@ -165,7 +165,10 @@ const CreateRoute = () => {
       return;
     }
 
-    const validPins = pins.filter(p => p.place_name);
+    const validPins = pins.filter(p => p.address).map(p => ({
+      ...p,
+      place_name: p.place_name || p.address
+    }));
     
     if (validPins.length === 0) {
       toast({ variant: "destructive", title: "Dodaj przynajmniej jedną pinezkę" });
@@ -342,7 +345,7 @@ const CreateRoute = () => {
           </div>
         ) : step === 2 ? (
           <>
-            {showPinsList && pins.filter(p => p.place_name).length > 0 ? (
+            {showPinsList && pins.filter(p => p.address).length > 0 ? (
               <div className="space-y-4 pb-24">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold">Pinezki w trasie</h2>
@@ -360,7 +363,7 @@ const CreateRoute = () => {
                 </div>
 
                 <div className="space-y-3">
-                  {pins.filter(p => p.place_name).map((pin, index) => {
+                  {pins.filter(p => p.address).map((pin, index) => {
                     const actualIndex = pins.findIndex(p => p.pin_order === pin.pin_order);
                     return (
                       <div
@@ -378,7 +381,7 @@ const CreateRoute = () => {
                           
                           <div className="flex-1 space-y-1">
                             <div className="flex items-center justify-between">
-                              <p className="text-sm font-medium">{pin.place_name}</p>
+                              <p className="text-sm font-medium">{pin.place_name || pin.address}</p>
                               {pin.rating > 0 && (
                                 <div className="flex items-center gap-1 text-xs">
                                   <span className="text-yellow-500">★</span>
@@ -426,7 +429,7 @@ const CreateRoute = () => {
                     variant="default"
                     className="w-full"
                     onClick={() => setStep(3)}
-                    disabled={pins.filter(p => p.place_name).length === 0}
+                    disabled={pins.filter(p => p.address).length === 0}
                   >
                     Przejdź do podsumowania
                   </Button>
@@ -773,7 +776,7 @@ const CreateRoute = () => {
               <div className="space-y-2">
                 <h2 className="text-lg font-semibold">{title}</h2>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span>{pins.filter(p => p.place_name).length} {pins.filter(p => p.place_name).length === 1 ? 'punkt' : 'punktów'}</span>
+                  <span>{pins.filter(p => p.address).length} {pins.filter(p => p.address).length === 1 ? 'punkt' : 'punktów'}</span>
                   {routeRating > 0 && (
                     <div className="flex items-center gap-1 text-foreground">
                       <span className="text-yellow-500">★</span>
@@ -786,12 +789,12 @@ const CreateRoute = () => {
 
               {/* Route map */}
               <RouteMap 
-                pins={pins.filter(p => p.place_name)}
+                pins={pins.filter(p => p.address).map(p => ({ ...p, place_name: p.place_name || p.address }))}
                 className="h-40"
               />
 
               {/* Pins list */}
-              {pins.filter(p => p.place_name).map((pin, index) => (
+              {pins.filter(p => p.address).map((pin, index) => (
                 <div key={index} className="border border-border rounded-lg p-3 space-y-2 bg-card">
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">
@@ -800,7 +803,7 @@ const CreateRoute = () => {
                     
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">{pin.place_name}</p>
+                        <p className="text-sm font-medium">{pin.place_name || pin.address}</p>
                         {pin.rating > 0 && (
                           <div className="flex items-center gap-1 text-xs">
                             <span className="text-yellow-500">★</span>
