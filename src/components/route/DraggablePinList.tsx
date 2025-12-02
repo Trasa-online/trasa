@@ -67,7 +67,6 @@ const DraggablePinList = ({
     const [draggedPin] = newPins.splice(draggedIndex, 1);
     newPins.splice(dropIndex, 0, draggedPin);
     
-    // Update pin_order for all pins
     const reorderedPins = newPins.map((pin, idx) => ({
       ...pin,
       pin_order: idx,
@@ -86,7 +85,7 @@ const DraggablePinList = ({
   const filteredPins = pins.filter(p => p.address);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {filteredPins.map((pin, index) => {
         const actualIndex = pins.findIndex(p => p.pin_order === pin.pin_order);
         const isDragging = draggedIndex === index;
@@ -101,58 +100,60 @@ const DraggablePinList = ({
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, index)}
             onDragEnd={handleDragEnd}
-            className={`border border-border rounded-lg ${compact ? 'p-3' : 'p-3'} bg-card transition-all ${
-              isDragging ? 'opacity-50 scale-95' : ''
+            className={`border border-border rounded-lg p-2.5 bg-card transition-all ${
+              isDragging ? 'opacity-50 scale-[0.98]' : ''
             } ${isDragOver ? 'border-primary border-2' : ''} ${
               onPinClick ? 'cursor-pointer hover:border-primary' : ''
             }`}
             onClick={() => onPinClick?.(actualIndex)}
           >
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-2">
               <div 
-                className="flex-shrink-0 cursor-grab active:cursor-grabbing touch-none"
+                className="flex-shrink-0 cursor-grab active:cursor-grabbing touch-none mt-0.5"
                 onClick={(e) => e.stopPropagation()}
               >
-                <GripVertical className="h-5 w-5 text-muted-foreground" />
+                <GripVertical className="h-4 w-4 text-muted-foreground/60" />
               </div>
 
-              <div className={`flex-shrink-0 ${compact ? 'w-6 h-6 text-xs' : 'w-8 h-8 text-sm'} rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium`}>
+              <div className={`flex-shrink-0 ${compact ? 'w-5 h-5 text-[10px]' : 'w-6 h-6 text-xs'} rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium`}>
                 {index + 1}
               </div>
               
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">{pin.place_name || pin.address}</p>
+              <div className="flex-1 min-w-0 space-y-0.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium truncate">{pin.place_name || pin.address}</p>
                   {pin.rating > 0 && (
-                    <div className="flex items-center gap-1 text-xs">
+                    <div className="flex items-center gap-0.5 text-xs flex-shrink-0">
                       <span className="text-yellow-500">★</span>
                       <span>{pin.rating.toFixed(1)}</span>
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">{pin.address}</p>
+                {pin.address !== pin.place_name && (
+                  <p className="text-[11px] text-muted-foreground truncate">{pin.address}</p>
+                )}
                 
                 {pin.tags && pin.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {pin.tags.slice(0, 3).map((tag, i) => (
-                      <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0">
+                  <div className="flex flex-wrap gap-1">
+                    {pin.tags.slice(0, compact ? 3 : 4).map((tag, i) => (
+                      <Badge key={i} variant="secondary" className="text-[9px] px-1 py-0 h-4">
                         {tag}
                       </Badge>
                     ))}
-                    {pin.tags.length > 3 && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                        +{pin.tags.length - 3}
+                    {pin.tags.length > (compact ? 3 : 4) && (
+                      <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                        +{pin.tags.length - (compact ? 3 : 4)}
                       </Badge>
                     )}
                   </div>
                 )}
 
                 {!compact && pin.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">{pin.description}</p>
+                  <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1">{pin.description}</p>
                 )}
 
                 {!compact && pin.image_url && (
-                  <div className="relative h-32 bg-muted rounded overflow-hidden mt-2">
+                  <div className="relative h-24 bg-muted rounded overflow-hidden mt-1.5">
                     <img src={pin.image_url} alt={pin.place_name} className="w-full h-full object-cover" />
                   </div>
                 )}
@@ -162,13 +163,13 @@ const DraggablePinList = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="flex-shrink-0"
+                  className="flex-shrink-0 h-6 w-6"
                   onClick={(e) => {
                     e.stopPropagation();
                     onPinRemove(actualIndex);
                   }}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3.5 w-3.5" />
                 </Button>
               )}
             </div>
