@@ -102,7 +102,7 @@ const MyRoutes = () => {
           </div>
 
           {route.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-2">
+            <p className="text-sm text-muted-foreground line-clamp-4 leading-relaxed mb-2">
               {route.description}
             </p>
           )}
@@ -152,7 +152,12 @@ const MyRoutes = () => {
                         </div>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{pin.address}</p>
+                    <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
+                    {pin.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                        {pin.description}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
