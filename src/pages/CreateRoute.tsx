@@ -482,235 +482,233 @@ const CreateRoute = () => {
                     </div>
                   )}
 
-                  <div className="space-y-4">
-                    {/* Tag selection */}
-                    <div>
-                      <Label>Kategoria *</Label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {[
-                          { name: "Restauracja", icon: UtensilsCrossed },
-                          { name: "Kawiarnia", icon: Coffee },
-                          { name: "Jedzenie", icon: UtensilsCrossed },
-                          { name: "Zakupy", icon: ShoppingBag },
-                          { name: "Pamiątki", icon: Gift },
-                          { name: "Herbata", icon: Coffee },
-                          { name: "Góry", icon: Mountain },
-                          { name: "Morze", icon: Waves }
-                        ].map(({ name, icon: Icon }) => {
-                          const isSelected = pins[currentPinIndex]?.tags?.includes(name);
-                          return (
-                            <Badge
-                              key={name}
-                              variant={isSelected ? "default" : "outline"}
-                              className="cursor-pointer flex items-center gap-1.5 px-3.5 py-2 text-sm"
-                              onClick={() => {
-                                const currentTags = pins[currentPinIndex]?.tags || [];
-                                const newTags = isSelected 
-                                  ? currentTags.filter(t => t !== name)
-                                  : [...currentTags, name];
-                                updatePin(currentPinIndex, "tags", newTags);
-                              }}
-                            >
-                              <Icon className="h-4 w-4" />
-                              {name}
-                              {isSelected && <X className="h-3.5 w-3.5 ml-1" />}
-                            </Badge>
-                          );
-                        })}
-                        
-                        {/* Custom tags */}
-                        {pins[currentPinIndex]?.tags?.filter(
-                          tag => !["Restauracja", "Kawiarnia", "Jedzenie", "Zakupy", "Pamiątki", "Herbata", "Góry", "Morze"].includes(tag)
-                        ).map(tag => (
+                  {/* Pin name */}
+                  <div>
+                    <Label>Nazwa pinezki *</Label>
+                    <Input
+                      value={pins[currentPinIndex]?.place_name || ""}
+                      onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
+                      placeholder="Wpisz nazwę miejsca lub atrakcji"
+                    />
+                  </div>
+
+                  {/* Address */}
+                  <div>
+                    <Label>Adres *</Label>
+                    <AddressAutocomplete
+                      value={pins[currentPinIndex]?.address || ""}
+                      onChange={(value, coordinates) => {
+                        setPins(prevPins => {
+                          const newPins = [...prevPins];
+                          newPins[currentPinIndex] = {
+                            ...newPins[currentPinIndex],
+                            address: value,
+                            latitude: coordinates?.latitude,
+                            longitude: coordinates?.longitude,
+                          };
+                          return newPins;
+                        });
+                      }}
+                      placeholder="Wpisz adres miejsca"
+                      disabled={noAddressRemembered}
+                    />
+                    <div className="flex items-center gap-2 mt-2">
+                      <Checkbox
+                        id="no-address"
+                        checked={noAddressRemembered}
+                        onCheckedChange={(checked) => {
+                          setNoAddressRemembered(!!checked);
+                          if (checked) {
+                            updatePin(currentPinIndex, "address", "Brak adresu");
+                          } else {
+                            updatePin(currentPinIndex, "address", "");
+                          }
+                        }}
+                      />
+                      <label htmlFor="no-address" className="text-xs text-muted-foreground cursor-pointer">
+                        Nie pamiętam adresu
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <Label>Opis (Opcjonalne)</Label>
+                    <Textarea
+                      value={pins[currentPinIndex]?.description || ""}
+                      onChange={(e) => {
+                        const words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0);
+                        if (words.length <= 150 || e.target.value.length < (pins[currentPinIndex]?.description || "").length) {
+                          updatePin(currentPinIndex, "description", e.target.value);
+                        }
+                      }}
+                      placeholder="Wpisz notatki o tym miejscu..."
+                      rows={3}
+                      className="resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {(pins[currentPinIndex]?.description || "").trim() ? (pins[currentPinIndex]?.description || "").trim().split(/\s+/).filter(w => w.length > 0).length : 0}/150 słów
+                    </p>
+                  </div>
+
+                  {/* Friend mentions */}
+                  <div>
+                    <Label>Oznacz znajomych (Opcjonalne)</Label>
+                    <UserMentionInput
+                      selectedUserIds={pins[currentPinIndex]?.mentioned_users || []}
+                      onUserSelect={(userId) => {
+                        const currentUsers = pins[currentPinIndex]?.mentioned_users || [];
+                        updatePin(currentPinIndex, "mentioned_users", [...currentUsers, userId]);
+                      }}
+                      onUserRemove={(userId) => {
+                        const currentUsers = pins[currentPinIndex]?.mentioned_users || [];
+                        updatePin(currentPinIndex, "mentioned_users", currentUsers.filter(id => id !== userId));
+                      }}
+                    />
+                  </div>
+
+                  {/* Rating */}
+                  <div>
+                    <Label>Ocena *</Label>
+                    <div className="mt-2">
+                      <StarRating
+                        rating={pins[currentPinIndex]?.rating || 0}
+                        onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
+                        size="lg"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Image upload */}
+                  <div>
+                    <Label>Zdjęcie (Opcjonalne)</Label>
+                    <div className="mt-2">
+                      {pins[currentPinIndex]?.image_url ? (
+                        <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
+                          <img
+                            src={pins[currentPinIndex].image_url}
+                            alt="Podgląd zdjęcia"
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updatePin(currentPinIndex, "image_url", "");
+                              updatePin(currentPinIndex, "images", []);
+                            }}
+                            className="absolute top-2 right-2 bg-background/80 hover:bg-background p-2 rounded-full transition-colors"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent transition-colors">
+                          <Camera className="h-12 w-12 text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground">
+                            Dotknij, aby dodać zdjęcie
+                          </p>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files.length > 0) {
+                                handleImageUpload(e.target.files, currentPinIndex);
+                                e.target.value = '';
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Tag selection - moved below image */}
+                  <div>
+                    <Label>Kategoria (Opcjonalne)</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {[
+                        { name: "Restauracja", icon: UtensilsCrossed },
+                        { name: "Kawiarnia", icon: Coffee },
+                        { name: "Jedzenie", icon: UtensilsCrossed },
+                        { name: "Zakupy", icon: ShoppingBag },
+                        { name: "Pamiątki", icon: Gift },
+                        { name: "Herbata", icon: Coffee },
+                        { name: "Góry", icon: Mountain },
+                        { name: "Morze", icon: Waves }
+                      ].map(({ name, icon: Icon }) => {
+                        const isSelected = pins[currentPinIndex]?.tags?.includes(name);
+                        return (
                           <Badge
-                            key={tag}
-                            variant="default"
+                            key={name}
+                            variant={isSelected ? "default" : "outline"}
                             className="cursor-pointer flex items-center gap-1.5 px-3.5 py-2 text-sm"
                             onClick={() => {
                               const currentTags = pins[currentPinIndex]?.tags || [];
-                              updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== tag));
+                              const newTags = isSelected 
+                                ? currentTags.filter(t => t !== name)
+                                : [...currentTags, name];
+                              updatePin(currentPinIndex, "tags", newTags);
                             }}
                           >
-                            {tag} <X className="h-3.5 w-3.5 ml-1" />
+                            <Icon className="h-4 w-4" />
+                            {name}
+                            {isSelected && <X className="h-3.5 w-3.5 ml-1" />}
                           </Badge>
-                        ))}
-                        
-                        {!showCustomTagInput ? (
-                          <Badge
-                            variant="outline"
-                            className="cursor-pointer px-3.5 py-2 text-sm"
-                            onClick={() => setShowCustomTagInput(true)}
-                          >
-                            <Plus className="h-4 w-4 mr-1.5" />
-                            Inne
-                          </Badge>
-                        ) : (
-                          <div className="flex items-center gap-2 w-full">
-                            <Input
-                              autoFocus
-                              placeholder="Wpisz własną kategorię"
-                              className="h-9"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                                  const currentTags = pins[currentPinIndex]?.tags || [];
-                                  updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
-                                  setShowCustomTagInput(false);
-                                } else if (e.key === 'Escape') {
-                                  setShowCustomTagInput(false);
-                                }
-                              }}
-                              onBlur={(e) => {
-                                if (e.currentTarget.value.trim()) {
-                                  const currentTags = pins[currentPinIndex]?.tags || [];
-                                  updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
-                                }
-                                setShowCustomTagInput(false);
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Pin name */}
-                    <div>
-                      <Label>Nazwa pinezki *</Label>
-                      <Input
-                        value={pins[currentPinIndex]?.place_name || ""}
-                        onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
-                        placeholder="Wpisz nazwę miejsca lub atrakcji"
-                      />
-                    </div>
-
-                    {/* Address */}
-                    <div>
-                      <Label>Adres *</Label>
-                      <AddressAutocomplete
-                        value={pins[currentPinIndex]?.address || ""}
-                        onChange={(value, coordinates) => {
-                          setPins(prevPins => {
-                            const newPins = [...prevPins];
-                            newPins[currentPinIndex] = {
-                              ...newPins[currentPinIndex],
-                              address: value,
-                              latitude: coordinates?.latitude,
-                              longitude: coordinates?.longitude,
-                            };
-                            return newPins;
-                          });
-                        }}
-                        placeholder="Wpisz adres miejsca"
-                        disabled={noAddressRemembered}
-                      />
-                      <div className="flex items-center gap-2 mt-2">
-                        <Checkbox
-                          id="no-address"
-                          checked={noAddressRemembered}
-                          onCheckedChange={(checked) => {
-                            setNoAddressRemembered(!!checked);
-                            if (checked) {
-                              updatePin(currentPinIndex, "address", "Brak adresu");
-                            } else {
-                              updatePin(currentPinIndex, "address", "");
-                            }
+                        );
+                      })}
+                      
+                      {/* Custom tags */}
+                      {pins[currentPinIndex]?.tags?.filter(
+                        tag => !["Restauracja", "Kawiarnia", "Jedzenie", "Zakupy", "Pamiątki", "Herbata", "Góry", "Morze"].includes(tag)
+                      ).map(tag => (
+                        <Badge
+                          key={tag}
+                          variant="default"
+                          className="cursor-pointer flex items-center gap-1.5 px-3.5 py-2 text-sm"
+                          onClick={() => {
+                            const currentTags = pins[currentPinIndex]?.tags || [];
+                            updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== tag));
                           }}
-                        />
-                        <label htmlFor="no-address" className="text-xs text-muted-foreground cursor-pointer">
-                          Nie pamiętam adresu
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <div>
-                      <Label>Opis (Opcjonalne)</Label>
-                      <Textarea
-                        value={pins[currentPinIndex]?.description || ""}
-                        onChange={(e) => {
-                          const words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0);
-                          if (words.length <= 150 || e.target.value.length < (pins[currentPinIndex]?.description || "").length) {
-                            updatePin(currentPinIndex, "description", e.target.value);
-                          }
-                        }}
-                        placeholder="Wpisz notatki o tym miejscu..."
-                        rows={3}
-                        className="resize-none"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {(pins[currentPinIndex]?.description || "").trim() ? (pins[currentPinIndex]?.description || "").trim().split(/\s+/).filter(w => w.length > 0).length : 0}/150 słów
-                      </p>
-                    </div>
-
-                    {/* Friend mentions */}
-                    <div>
-                      <Label>Oznacz znajomych (Opcjonalne)</Label>
-                      <UserMentionInput
-                        selectedUserIds={pins[currentPinIndex]?.mentioned_users || []}
-                        onUserSelect={(userId) => {
-                          const currentUsers = pins[currentPinIndex]?.mentioned_users || [];
-                          updatePin(currentPinIndex, "mentioned_users", [...currentUsers, userId]);
-                        }}
-                        onUserRemove={(userId) => {
-                          const currentUsers = pins[currentPinIndex]?.mentioned_users || [];
-                          updatePin(currentPinIndex, "mentioned_users", currentUsers.filter(id => id !== userId));
-                        }}
-                      />
-                    </div>
-
-                    {/* Rating */}
-                    <div>
-                      <Label>Ocena *</Label>
-                      <div className="mt-2">
-                        <StarRating
-                          rating={pins[currentPinIndex]?.rating || 0}
-                          onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
-                          size="lg"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Image upload */}
-                    <div>
-                      <Label>Zdjęcie (Opcjonalne)</Label>
-                      <div className="mt-2">
-                        {pins[currentPinIndex]?.image_url ? (
-                          <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
-                            <img
-                              src={pins[currentPinIndex].image_url}
-                              alt="Podgląd zdjęcia"
-                              className="w-full h-full object-cover"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                updatePin(currentPinIndex, "image_url", "");
-                                updatePin(currentPinIndex, "images", []);
-                              }}
-                              className="absolute top-2 right-2 bg-background/80 hover:bg-background p-2 rounded-full transition-colors"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent transition-colors">
-                            <Camera className="h-12 w-12 text-muted-foreground mb-2" />
-                            <p className="text-sm text-muted-foreground">
-                              Dotknij, aby dodać zdjęcie
-                            </p>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                if (e.target.files && e.target.files.length > 0) {
-                                  handleImageUpload(e.target.files, currentPinIndex);
-                                  e.target.value = '';
-                                }
-                              }}
-                            />
-                          </label>
-                        )}
-                      </div>
+                        >
+                          {tag} <X className="h-3.5 w-3.5 ml-1" />
+                        </Badge>
+                      ))}
+                      
+                      {!showCustomTagInput ? (
+                        <Badge
+                          variant="outline"
+                          className="cursor-pointer px-3.5 py-2 text-sm"
+                          onClick={() => setShowCustomTagInput(true)}
+                        >
+                          <Plus className="h-4 w-4 mr-1.5" />
+                          Inne
+                        </Badge>
+                      ) : (
+                        <div className="flex items-center gap-2 w-full">
+                          <Input
+                            autoFocus
+                            placeholder="Wpisz własną kategorię"
+                            className="h-9"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                const currentTags = pins[currentPinIndex]?.tags || [];
+                                updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
+                                setShowCustomTagInput(false);
+                              } else if (e.key === 'Escape') {
+                                setShowCustomTagInput(false);
+                              }
+                            }}
+                            onBlur={(e) => {
+                              if (e.currentTarget.value.trim()) {
+                                const currentTags = pins[currentPinIndex]?.tags || [];
+                                updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
+                              }
+                              setShowCustomTagInput(false);
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
