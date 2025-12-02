@@ -657,18 +657,29 @@ const CreateRoute = () => {
                         {/* Start and end points for transport */}
                         <div>
                           <Label>Punkt startowy *</Label>
-                          <Input
+                          <AddressAutocomplete
                             value={pins[currentPinIndex]?.place_name || ""}
-                            onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
+                            onChange={(value, coordinates) => {
+                              setPins(prevPins => {
+                                const newPins = [...prevPins];
+                                newPins[currentPinIndex] = {
+                                  ...newPins[currentPinIndex],
+                                  place_name: value,
+                                  latitude: coordinates?.latitude,
+                                  longitude: coordinates?.longitude,
+                                };
+                                return newPins;
+                              });
+                            }}
                             placeholder="Wpisz miejsce początkowe transportu"
                           />
                         </div>
 
                         <div>
                           <Label>Punkt końcowy *</Label>
-                          <Input
+                          <AddressAutocomplete
                             value={pins[currentPinIndex]?.transport_end || ""}
-                            onChange={(e) => updatePin(currentPinIndex, "transport_end", e.target.value)}
+                            onChange={(value) => updatePin(currentPinIndex, "transport_end", value)}
                             placeholder="Wpisz miejsce docelowe transportu"
                           />
                         </div>
