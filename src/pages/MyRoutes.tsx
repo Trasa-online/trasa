@@ -120,7 +120,7 @@ const MyRoutes = () => {
         {/* Pins Section */}
         {sortedPins.length > 0 && (
           <div className="divide-y divide-border/50">
-            {sortedPins.slice(0, 3).map((pin: any, index: number) => (
+            {sortedPins.map((pin: any, index: number) => (
               <div key={pin.id} className="p-3">
                 <div className="flex gap-3">
                   {pin.image_url && (
