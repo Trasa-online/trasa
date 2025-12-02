@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Heart, MessageCircle, Star, MapPin, Eye, Bookmark, ArrowRight, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
@@ -16,6 +17,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [tagsExpanded, setTagsExpanded] = useState(false);
   
   // Sort pins by pin_order for consistent display
   const sortedPins = route.pins?.slice().sort((a: any, b: any) => a.pin_order - b.pin_order) || [];
@@ -145,7 +147,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
             const allTags = sortedPins.flatMap((pin: any) => pin.tags || []);
             const uniqueTags = Array.from(new Set(allTags)) as string[];
             const MAX_VISIBLE_TAGS = 6;
-            const visibleTags = uniqueTags.slice(0, MAX_VISIBLE_TAGS);
+            const displayTags = tagsExpanded ? uniqueTags : uniqueTags.slice(0, MAX_VISIBLE_TAGS);
             const remainingCount = uniqueTags.length - MAX_VISIBLE_TAGS;
             
             const getTagIcon = (tag: string) => {
@@ -160,8 +162,8 @@ const RouteCard = ({ route }: RouteCardProps) => {
             };
 
             return uniqueTags.length > 0 ? (
-              <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-border/30 max-h-[84px] overflow-hidden">
-                {visibleTags.map((tag: string, idx: number) => {
+              <div className={`flex flex-wrap gap-2 pt-3 mt-3 border-t border-border/30 transition-all duration-300 ${!tagsExpanded ? 'max-h-[84px] overflow-hidden' : ''}`}>
+                {displayTags.map((tag: string, idx: number) => {
                   const TagIcon = getTagIcon(tag);
                   return (
                     <button
@@ -177,10 +179,27 @@ const RouteCard = ({ route }: RouteCardProps) => {
                     </button>
                   );
                 })}
-                {remainingCount > 0 && (
-                  <span className="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-muted text-muted-foreground">
+                {remainingCount > 0 && !tagsExpanded && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTagsExpanded(true);
+                    }}
+                    className="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+                  >
                     +{remainingCount}
-                  </span>
+                  </button>
+                )}
+                {tagsExpanded && remainingCount > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTagsExpanded(false);
+                    }}
+                    className="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+                  >
+                    Zwiń
+                  </button>
                 )}
               </div>
             ) : null;
