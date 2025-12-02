@@ -300,7 +300,7 @@ const CreateRoute = () => {
               setShowPinsList(true);
             }
           } else {
-            navigate(-1);
+            navigate("/");
           }
         }}>
           <ArrowLeft className="h-6 w-6" />
