@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Heart, Bookmark, MessageCircle, Send } from "lucide-react";
+import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +19,8 @@ const RouteDetails = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -192,6 +194,50 @@ const RouteDetails = () => {
     },
   });
 
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (commentId: string) => {
+      const { error } = await supabase
+        .from("comments")
+        .delete()
+        .eq("id", commentId)
+        .eq("user_id", user?.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["route-comments"] });
+      toast({ title: "Komentarz usunięty" });
+    },
+  });
+
+  const updateCommentMutation = useMutation({
+    mutationFn: async ({ commentId, content }: { commentId: string; content: string }) => {
+      const { error } = await supabase
+        .from("comments")
+        .update({ content })
+        .eq("id", commentId)
+        .eq("user_id", user?.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["route-comments"] });
+      setEditingCommentId(null);
+      setEditingContent("");
+      toast({ title: "Komentarz zaktualizowany" });
+    },
+  });
+
+  const startEditingComment = (commentId: string, content: string) => {
+    setEditingCommentId(commentId);
+    setEditingContent(content);
+  };
+
+  const cancelEditing = () => {
+    setEditingCommentId(null);
+    setEditingContent("");
+  };
+
   if (loading || !user || !route) return null;
 
   // Use the rating stored in the database (calculated from attraction pins only)
@@ -343,35 +389,80 @@ const RouteDetails = () => {
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Comments</h3>
-          {comments?.map((comment: any) => {
+          <h3 className="text-lg font-semibold">Komentarze</h3>
+          {comments?.map((c: any) => {
             const commentLikesCount = commentLikes?.filter(
-              (like) => like.comment_id === comment.id
+              (like) => like.comment_id === c.id
             ).length || 0;
             const isCommentLiked = commentLikes?.some(
-              (like) => like.comment_id === comment.id && like.user_id === user?.id
+              (like) => like.comment_id === c.id && like.user_id === user?.id
             );
+            const isOwner = c.user_id === user?.id;
+            const isEditing = editingCommentId === c.id;
 
             return (
-              <div key={comment.id} className="flex gap-3">
+              <div key={c.id} className="flex gap-3">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={comment.profiles?.avatar_url} />
+                  <AvatarImage src={c.profiles?.avatar_url} />
                   <AvatarFallback>
-                    {comment.profiles?.username?.[0]?.toUpperCase()}
+                    {c.profiles?.username?.[0]?.toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-sm">
-                      {comment.profiles?.username}
+                      {c.profiles?.username}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(comment.created_at), "HH:mm")}
+                      {format(new Date(c.created_at), "HH:mm")}
                     </p>
+                    {isOwner && !isEditing && (
+                      <div className="flex items-center gap-1 ml-auto">
+                        <button
+                          onClick={() => startEditingComment(c.id, c.content)}
+                          className="p-1 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={() => deleteCommentMutation.mutate(c.id)}
+                          className="p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-sm mb-1">{comment.content}</p>
+                  {isEditing ? (
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        value={editingContent}
+                        onChange={(e) => setEditingContent(e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => updateCommentMutation.mutate({ commentId: c.id, content: editingContent })}
+                        disabled={!editingContent.trim()}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={cancelEditing}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-sm mb-1">{c.content}</p>
+                  )}
                   <button
-                    onClick={() => commentLikeMutation.mutate(comment.id)}
+                    onClick={() => commentLikeMutation.mutate(c.id)}
                     className="flex items-center gap-1 text-xs hover:text-red-500"
                   >
                     <Heart
@@ -390,7 +481,7 @@ const RouteDetails = () => {
             <Input
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Write a comment..."
+              placeholder="Napisz komentarz..."
             />
             <Button
               size="icon"
