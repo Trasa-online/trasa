@@ -208,20 +208,23 @@ const RouteDetails = () => {
 
       <div className="max-w-lg mx-auto p-4 space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <button 
+            onClick={() => navigate(`/profile/${route.user_id}`)}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
             <Avatar className="h-12 w-12">
               <AvatarImage src={route.profiles?.avatar_url} />
               <AvatarFallback>
                 {route.profiles?.username?.[0]?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div>
+            <div className="text-left">
               <p className="font-medium">{route.profiles?.username}</p>
               <p className="text-xs text-muted-foreground">
                 {format(new Date(route.created_at), "MMM dd, yyyy")}
               </p>
             </div>
-          </div>
+          </button>
           <button
             onClick={() => saveMutation.mutate()}
             className="p-2 hover:bg-accent rounded-lg"
