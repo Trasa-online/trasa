@@ -260,6 +260,20 @@ export type Database = {
             referencedRelation: "pins"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pin_visits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pin_visits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       pins: {
