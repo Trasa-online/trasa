@@ -718,8 +718,11 @@ const CreateRoute = () => {
                           className="h-9 w-40"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                              const newTag = e.currentTarget.value.trim();
                               const currentTags = pins[currentPinIndex]?.tags || [];
-                              updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
+                              if (!currentTags.some(t => t.toLowerCase() === newTag.toLowerCase())) {
+                                updatePin(currentPinIndex, "tags", [...currentTags, newTag]);
+                              }
                               e.currentTarget.value = '';
                             } else if (e.key === 'Escape') {
                               setShowCustomTagInput(false);
@@ -727,8 +730,11 @@ const CreateRoute = () => {
                           }}
                           onBlur={(e) => {
                             if (e.currentTarget.value.trim()) {
+                              const newTag = e.currentTarget.value.trim();
                               const currentTags = pins[currentPinIndex]?.tags || [];
-                              updatePin(currentPinIndex, "tags", [...currentTags, e.currentTarget.value.trim()]);
+                              if (!currentTags.some(t => t.toLowerCase() === newTag.toLowerCase())) {
+                                updatePin(currentPinIndex, "tags", [...currentTags, newTag]);
+                              }
                             }
                             setShowCustomTagInput(false);
                           }}
