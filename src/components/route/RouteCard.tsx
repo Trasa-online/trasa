@@ -18,6 +18,8 @@ const RouteCard = ({ route }: RouteCardProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [tagsExpanded, setTagsExpanded] = useState(false);
+  const [pinsExpanded, setPinsExpanded] = useState(false);
+  const MAX_VISIBLE_PINS = 4;
   
   // Sort pins by pin_order for consistent display
   const sortedPins = route.pins?.slice().sort((a: any, b: any) => a.pin_order - b.pin_order) || [];
@@ -220,7 +222,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
       {/* Pins Section */}
       {sortedPins.length > 0 && (
         <div className="divide-y divide-border/50">
-          {sortedPins.map((pin: any, index: number) => (
+          {(pinsExpanded ? sortedPins : sortedPins.slice(0, MAX_VISIBLE_PINS)).map((pin: any, index: number) => (
             <div 
               key={pin.id} 
               className="p-3 hover:bg-muted/30 transition-colors"
@@ -266,6 +268,17 @@ const RouteCard = ({ route }: RouteCardProps) => {
               </div>
             </div>
           ))}
+          {sortedPins.length > MAX_VISIBLE_PINS && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setPinsExpanded(!pinsExpanded);
+              }}
+              className="w-full p-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            >
+              {pinsExpanded ? "Zwiń" : `Pokaż +${sortedPins.length - MAX_VISIBLE_PINS} więcej`}
+            </button>
+          )}
         </div>
       )}
 
