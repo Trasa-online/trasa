@@ -16,6 +16,7 @@ import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Friends from "./pages/Friends";
+import PinDetails from "./pages/PinDetails";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/saved" element={<SavedRoutes />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/route/:id" element={<RouteDetails />} />
+          <Route path="/pin/:pinId" element={<PinDetails />} />
           <Route path="/search" element={<Search />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/notifications" element={<Notifications />} />
