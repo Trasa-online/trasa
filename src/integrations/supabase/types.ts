@@ -319,6 +319,32 @@ export type Database = {
         }
         Relationships: []
       }
+      route_completions: {
+        Row: {
+          created_at: string
+          route_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          route_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          route_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_completions_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       route_notes: {
         Row: {
           after_pin_index: number

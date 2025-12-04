@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Star, MapPin, Eye, Bookmark, ArrowRight, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
+import { Heart, MessageCircle, Star, MapPin, Eye, Bookmark, ArrowRight, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Footprints } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,6 +44,53 @@ const RouteCard = ({ route }: RouteCardProps) => {
       return !!data;
     },
     enabled: !!user,
+  });
+
+  // Get save count for the route
+  const { data: saveCount = 0 } = useQuery({
+    queryKey: ["save-count", route.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("saved_routes")
+        .select("*", { count: "exact", head: true })
+        .eq("route_id", route.id);
+
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
+  // Check if user has completed this route
+  const { data: isCompleted = false } = useQuery({
+    queryKey: ["is-completed", route.id, user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      
+      const { data, error } = await supabase
+        .from("route_completions")
+        .select("*")
+        .eq("route_id", route.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return !!data;
+    },
+    enabled: !!user,
+  });
+
+  // Get completion count for the route
+  const { data: completionCount = 0 } = useQuery({
+    queryKey: ["completion-count", route.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("route_completions")
+        .select("*", { count: "exact", head: true })
+        .eq("route_id", route.id);
+
+      if (error) throw error;
+      return count || 0;
+    },
   });
 
   // Save/unsave route mutation
@@ -89,6 +136,51 @@ const RouteCard = ({ route }: RouteCardProps) => {
       return;
     }
     saveRouteMutation.mutate();
+  };
+
+  // Route completion mutation
+  const completionMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Must be logged in");
+
+      if (isCompleted) {
+        // Unmark completion
+        const { error } = await supabase
+          .from("route_completions")
+          .delete()
+          .eq("route_id", route.id)
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+      } else {
+        // Mark as completed
+        const { error } = await supabase
+          .from("route_completions")
+          .insert({
+            route_id: route.id,
+            user_id: user.id,
+          });
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["is-completed", route.id] });
+      queryClient.invalidateQueries({ queryKey: ["completion-count", route.id] });
+      toast.success(isCompleted ? "Cofnięto oznaczenie" : "Oznaczono jako przejdzoną!");
+    },
+    onError: () => {
+      toast.error("Nie udało się oznaczyć trasy");
+    },
+  });
+
+  const handleCompletion = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      toast.error("Musisz być zalogowany");
+      return;
+    }
+    completionMutation.mutate();
   };
 
   const handleCardClick = () => {
@@ -285,29 +377,41 @@ const RouteCard = ({ route }: RouteCardProps) => {
       {/* Footer Section */}
       <div className="p-3 bg-muted/20 border-t border-border/50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-4">
             <button 
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group/btn"
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors group/btn"
             >
               <Heart className="h-4 w-4 group-hover/btn:scale-110 transition-transform" />
               <span className="text-sm font-medium">{route.likes?.length || 0}</span>
             </button>
             <button 
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group/btn"
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors group/btn"
             >
               <MessageCircle className="h-4 w-4 group-hover/btn:scale-110 transition-transform" />
               <span className="text-sm font-medium">{route.comments?.length || 0}</span>
             </button>
-            <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Bookmark className="h-4 w-4" />
+              <span className="text-sm font-medium">{saveCount}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
               <Eye className="h-4 w-4" />
               <span className="text-sm font-medium">{route.views}</span>
             </div>
+            <button 
+              onClick={handleCompletion}
+              disabled={completionMutation.isPending}
+              className={`flex items-center gap-1.5 transition-colors group/btn ${isCompleted ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Footprints className={`h-4 w-4 group-hover/btn:scale-110 transition-transform ${isCompleted ? "fill-primary" : ""}`} />
+              <span className="text-sm font-medium">{completionCount}</span>
+            </button>
           </div>
           
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-            <span>Zobacz trasę</span>
+            <span>Zobacz</span>
             <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
           </div>
         </div>
