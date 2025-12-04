@@ -125,38 +125,36 @@ const MyRoutes = () => {
           </div>
         </div>
 
-        {/* Pins Section - Compact */}
+        {/* Pins Section - Vertical List */}
         {sortedPins.length > 0 && (
-          <div className="p-3">
-            <div className="flex flex-wrap gap-2">
-              {displayPins.map((pin: any, index: number) => (
-                <div 
-                  key={pin.id} 
-                  className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-lg cursor-pointer hover:bg-muted transition-colors"
-                  onClick={() => navigate(`/route/${route.id}`)}
-                >
-                  <div className="bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[10px] font-bold">{pinsExpanded ? index + 1 : index + 1}</span>
-                  </div>
-                  <span className="text-xs font-medium truncate max-w-[120px]">
-                    {pin.place_name || pin.address}
-                  </span>
-                  {pin.rating > 0 && (
-                    <div className="flex items-center gap-0.5">
-                      <Star className="h-3 w-3 fill-star text-star" />
-                      <span className="text-[10px] font-semibold">{pin.rating.toFixed(1)}</span>
-                    </div>
-                  )}
+          <div className="divide-y divide-border/50">
+            {displayPins.map((pin: any, index: number) => (
+              <div 
+                key={pin.id} 
+                className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                onClick={() => navigate(`/route/${route.id}`)}
+              >
+                <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-bold">{index + 1}</span>
                 </div>
-              ))}
-            </div>
+                <span className="text-sm font-medium flex-1 truncate">
+                  {pin.place_name || pin.address}
+                </span>
+                {pin.rating > 0 && (
+                  <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded">
+                    <Star className="h-3 w-3 fill-star text-star" />
+                    <span className="text-xs font-semibold">{pin.rating.toFixed(1)}</span>
+                  </div>
+                )}
+              </div>
+            ))}
             {sortedPins.length > MAX_VISIBLE_PINS && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setPinsExpanded(!pinsExpanded);
                 }}
-                className="w-full mt-2 p-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+                className="w-full p-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
               >
                 {pinsExpanded ? "Zwiń" : `Pokaż +${sortedPins.length - MAX_VISIBLE_PINS} więcej`}
               </button>
