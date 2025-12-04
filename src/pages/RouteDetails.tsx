@@ -80,8 +80,8 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
           onClick={() => setShowVisitDialog(true)}
           className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-full transition-all hover:scale-105 active:scale-95"
         >
-          <Check className="h-3.5 w-3.5" />
-          <span>Odwiedzone</span>
+          <Star className="h-3.5 w-3.5" />
+          <span>Oceń</span>
         </button>
         <PinVisitDialog
           open={showVisitDialog}
@@ -144,8 +144,8 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
         <div className="ml-auto flex items-center gap-1">
           {!hasVisited && (
             <span className="text-[10px] text-primary font-medium flex items-center gap-1">
-              <Check className="h-3 w-3" />
-              Odwiedzone
+              <Star className="h-3 w-3" />
+              Oceń
             </span>
           )}
           {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -225,7 +225,7 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
                     }}
                     className="text-[10px] text-destructive hover:underline"
                   >
-                    Usuń
+                    Usuń ocenę
                   </button>
                 </div>
               )}
@@ -240,8 +240,8 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
               }}
               className="w-full py-2 text-xs font-medium text-primary bg-primary/5 hover:bg-primary/10 rounded-lg transition-colors flex items-center justify-center gap-1"
             >
-              <Check className="h-3.5 w-3.5" />
-              Odwiedzone
+              <Star className="h-3.5 w-3.5" />
+              Oceń
             </button>
           )}
         </div>
