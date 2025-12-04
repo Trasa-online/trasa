@@ -73,6 +73,12 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
   });
 
   const visitorCount = visitors.length;
+  
+  // Calculate average rating from visitors
+  const visitorsWithRating = visitors.filter((v: any) => v.rating && v.rating > 0);
+  const averageRating = visitorsWithRating.length > 0 
+    ? visitorsWithRating.reduce((sum: number, v: any) => sum + v.rating, 0) / visitorsWithRating.length 
+    : 0;
 
   if (visitorCount === 0) {
     return (
@@ -137,13 +143,27 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
             </div>
           )}
           
+          {averageRating > 0 && (
+            <span className="flex items-center gap-0.5 text-yellow-600">
+              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+              <span className="font-medium">{averageRating.toFixed(1)}</span>
+            </span>
+          )}
           <span className="font-medium">
             {visitorCount} {visitorCount === 1 ? 'osoba' : visitorCount < 5 ? 'osoby' : 'osób'}
           </span>
         </div>
         
         <div className="ml-auto flex items-center gap-1">
-          {!hasVisited && (
+          {hasVisited ? (
+            <span className="text-[10px] text-green-600 font-medium flex items-center gap-1">
+              <Check className="h-3 w-3" />
+              Ocenione
+              {currentUserVisit?.rating && currentUserVisit.rating > 0 && (
+                <span>({currentUserVisit.rating}★)</span>
+              )}
+            </span>
+          ) : (
             <span className="text-[10px] text-primary font-medium flex items-center gap-1">
               <Star className="h-3 w-3" />
               Oceń
