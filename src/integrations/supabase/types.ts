@@ -227,6 +227,32 @@ export type Database = {
           },
         ]
       }
+      pin_visits: {
+        Row: {
+          created_at: string
+          pin_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          pin_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          pin_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pin_visits_pin_id_fkey"
+            columns: ["pin_id"]
+            isOneToOne: false
+            referencedRelation: "pins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pins: {
         Row: {
           address: string

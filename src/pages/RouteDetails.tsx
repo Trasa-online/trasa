@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Footprints, Share2, Image } from "lucide-react";
+import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Footprints, Share2, Image, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { ShareImageDialog } from "@/components/route/ShareImageDialog";
 import StarRating from "@/components/route/StarRating";
 import { format } from "date-fns";
@@ -24,8 +24,111 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState as useStateLocal } from "react";
 
+// Component to display pin visitors
+const PinVisitors = ({ pinId, currentUserId }: { pinId: string; currentUserId: string }) => {
+  const [isExpanded, setIsExpanded] = useStateLocal(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: visitors = [] } = useQuery({
+    queryKey: ["pin-visitors", pinId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pin_visits")
+        .select("user_id, created_at, profiles:user_id (username, avatar_url)")
+        .eq("pin_id", pinId);
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const hasVisited = visitors.some((v: any) => v.user_id === currentUserId);
+
+  const visitMutation = useMutation({
+    mutationFn: async () => {
+      if (hasVisited) {
+        const { error } = await supabase
+          .from("pin_visits")
+          .delete()
+          .eq("pin_id", pinId)
+          .eq("user_id", currentUserId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("pin_visits")
+          .insert({ pin_id: pinId, user_id: currentUserId });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pin-visitors", pinId] });
+      toast({ title: hasVisited ? "Usunięto z odwiedzonych" : "Oznaczono jako odwiedzone" });
+    },
+  });
+
+  const otherVisitors = visitors.filter((v: any) => v.user_id !== currentUserId);
+  const visitorCount = visitors.length;
+
+  if (visitorCount === 0) {
+    return (
+      <button
+        onClick={() => visitMutation.mutate()}
+        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+      >
+        <Users className="h-3 w-3" />
+        <span>Byłem tu</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <Users className="h-3 w-3" />
+        <span>{visitorCount} {visitorCount === 1 ? 'osoba odwiedziła' : visitorCount < 5 ? 'osoby odwiedziły' : 'osób odwiedziło'}</span>
+        {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+      </button>
+      
+      {isExpanded && (
+        <div className="mt-2 p-2 bg-muted/30 rounded-lg space-y-2">
+          <div className="flex flex-wrap gap-1">
+            {visitors.map((visitor: any) => (
+              <div
+                key={visitor.user_id}
+                className="flex items-center gap-1 bg-background px-2 py-1 rounded-full text-[10px]"
+              >
+                <Avatar className="h-4 w-4">
+                  <AvatarImage src={visitor.profiles?.avatar_url || ""} />
+                  <AvatarFallback className="text-[8px]">
+                    {visitor.profiles?.username?.charAt(0).toUpperCase() || "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <span>{visitor.profiles?.username || "Anonim"}</span>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => visitMutation.mutate()}
+            className={`text-[10px] px-2 py-1 rounded-full transition-colors ${
+              hasVisited
+                ? "bg-primary/10 text-primary hover:bg-primary/20"
+                : "bg-muted hover:bg-muted/80"
+            }`}
+          >
+            {hasVisited ? "Też tu byłem ✓" : "Byłem tu"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Component to display pins with notes
-const RouteNotesDisplay = ({ pins, routeNotes }: { pins: any[]; routeNotes: any[] }) => {
+const RouteNotesDisplay = ({ pins, routeNotes, currentUserId }: { pins: any[]; routeNotes: any[]; currentUserId: string }) => {
   const [expandedNoteImages, setExpandedNoteImages] = useStateLocal<Set<number>>(new Set());
 
   const toggleNoteImage = (index: number) => {
@@ -100,6 +203,9 @@ const RouteNotesDisplay = ({ pins, routeNotes }: { pins: any[]; routeNotes: any[
                         {pin.description}
                       </p>
                     )}
+                    
+                    {/* Pin visitors section */}
+                    <PinVisitors pinId={pin.id} currentUserId={currentUserId} />
                   </div>
                 </div>
               </div>
@@ -608,6 +714,7 @@ const RouteDetails = () => {
         <RouteNotesDisplay 
           pins={route.pins}
           routeNotes={route.route_notes}
+          currentUserId={user.id}
         />
 
         <div className="flex items-center gap-5 py-4 border-y border-border">
