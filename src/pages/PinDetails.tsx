@@ -1,24 +1,26 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, MapPin, Star, Image as ImageIcon, MessageSquare
-
- } from "lucide-react";
+import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
+import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 
 const PinDetails = () => {
   const { pinId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [showVisitDialog, setShowVisitDialog] = useState(false);
 
   // Fetch pin data
   const { data: pin, isLoading: pinLoading } = useQuery({
@@ -34,6 +36,22 @@ const PinDetails = () => {
       return data;
     },
     enabled: !!pinId,
+  });
+
+  // Fetch all pins from the same route for navigation
+  const { data: routePins = [] } = useQuery({
+    queryKey: ["route-pins", pin?.routes?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pins")
+        .select("id, pin_order, place_name, address")
+        .eq("route_id", pin?.routes?.id)
+        .order("pin_order", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!pin?.routes?.id,
   });
 
   // Fetch pin visits/ratings
@@ -57,6 +75,15 @@ const PinDetails = () => {
     setLightboxIndex(index);
     setLightboxOpen(true);
   };
+
+  // Find current pin index and prev/next pins
+  const currentPinIndex = routePins.findIndex((p: any) => p.id === pinId);
+  const prevPin = currentPinIndex > 0 ? routePins[currentPinIndex - 1] : null;
+  const nextPin = currentPinIndex < routePins.length - 1 ? routePins[currentPinIndex + 1] : null;
+
+  // Check if current user has already rated
+  const currentUserVisit = visits.find((v: any) => v.user_id === user?.id);
+  const hasVisited = !!currentUserVisit;
 
   if (pinLoading) {
     return (
@@ -100,13 +127,18 @@ const PinDetails = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b">
         <div className="flex items-center gap-3 p-4">
-          <button onClick={() => navigate(-1)} className="p-1">
+          <button onClick={() => navigate(`/route/${pin.routes.id}`)} className="p-1">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="font-semibold truncate">
-              {displayName || pin.address}
-            </h1>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {currentPinIndex + 1}/{routePins.length}
+              </span>
+              <h1 className="font-semibold truncate">
+                {displayName || pin.address}
+              </h1>
+            </div>
             <Link
               to={`/route/${pin.routes.id}`}
               className="text-xs text-muted-foreground hover:text-primary truncate block"
@@ -116,6 +148,37 @@ const PinDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* Pin Navigation */}
+      {routePins.length > 1 && (
+        <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!prevPin}
+            onClick={() => prevPin && navigate(`/pin/${prevPin.id}`)}
+            className="gap-1"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Poprzedni</span>
+          </Button>
+          
+          <span className="text-xs text-muted-foreground">
+            Pin {currentPinIndex + 1} z {routePins.length}
+          </span>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!nextPin}
+            onClick={() => nextPin && navigate(`/pin/${nextPin.id}`)}
+            className="gap-1"
+          >
+            <span className="hidden sm:inline">Następny</span>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
 
       <div className="p-4 space-y-6">
         {/* Pin Image */}
@@ -187,6 +250,33 @@ const PinDetails = () => {
           )}
         </div>
 
+        {/* Rate Button */}
+        {user && (
+          <div className="flex justify-center">
+            <Button
+              onClick={() => setShowVisitDialog(true)}
+              variant={hasVisited ? "outline" : "default"}
+              className={hasVisited ? "border-green-500 text-green-600" : ""}
+            >
+              {hasVisited ? (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Ocenione
+                  {currentUserVisit?.rating && currentUserVisit.rating > 0 && (
+                    <span className="ml-1">({currentUserVisit.rating}★)</span>
+                  )}
+                  <span className="ml-2 text-xs opacity-70">- edytuj</span>
+                </>
+              ) : (
+                <>
+                  <Star className="h-4 w-4 mr-2" />
+                  Oceń to miejsce
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
         <Separator />
 
         {/* User Ratings Section */}
@@ -202,7 +292,7 @@ const PinDetails = () => {
             </p>
           ) : (
             <div className="space-y-4">
-              {visits.map((visit: any, index: number) => (
+              {visits.map((visit: any) => (
                 <div key={visit.user_id} className="bg-muted/30 rounded-lg p-4 space-y-3">
                   {/* User Header */}
                   <div className="flex items-center gap-3">
@@ -278,6 +368,22 @@ const PinDetails = () => {
         open={lightboxOpen}
         onOpenChange={setLightboxOpen}
       />
+
+      {/* Visit Dialog */}
+      {user && (
+        <PinVisitDialog
+          open={showVisitDialog}
+          onOpenChange={setShowVisitDialog}
+          pinId={pinId || ""}
+          pinName={displayName || pin.address}
+          userId={user.id}
+          existingVisit={hasVisited ? {
+            image_url: currentUserVisit.image_url,
+            description: currentUserVisit.description,
+            rating: currentUserVisit.rating,
+          } : null}
+        />
+      )}
     </div>
   );
 };
