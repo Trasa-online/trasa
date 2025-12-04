@@ -1,5 +1,5 @@
 import { useEffect, useState, createContext, useContext } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -367,9 +367,11 @@ const RouteNotesDisplay = ({ pins, routeNotes, currentUserId }: { pins: any[]; r
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <h4 className="font-semibold text-sm leading-tight">
-                          {pin.place_name || pin.address}
-                        </h4>
+                        <Link to={`/pin/${pin.id}`} className="hover:text-primary transition-colors">
+                          <h4 className="font-semibold text-sm leading-tight">
+                            {pin.place_name || pin.address}
+                          </h4>
+                        </Link>
                       </div>
                       {!pin.is_transport && pin.rating && (
                         <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded flex-shrink-0">
