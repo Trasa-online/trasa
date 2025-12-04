@@ -781,6 +781,23 @@ const CreateRoute = () => {
                     variant="default"
                     className="w-full"
                     onClick={() => {
+                      const currentPin = pins[currentPinIndex];
+                      if (!currentPin?.address) {
+                        toast({ 
+                          variant: "destructive", 
+                          title: "Uzupełnij wymagane pola",
+                          description: "Adres jest wymagany przed dodaniem kolejnej pinezki"
+                        });
+                        return;
+                      }
+                      if (currentPin.rating <= 0) {
+                        toast({ 
+                          variant: "destructive", 
+                          title: "Uzupełnij wymagane pola",
+                          description: "Ocena jest wymagana przed dodaniem kolejnej pinezki"
+                        });
+                        return;
+                      }
                       setShowPinsList(false);
                       addPin();
                     }}
@@ -792,6 +809,23 @@ const CreateRoute = () => {
                     variant="outline"
                     className="w-full"
                     onClick={() => {
+                      const currentPin = pins[currentPinIndex];
+                      if (!currentPin?.address) {
+                        toast({ 
+                          variant: "destructive", 
+                          title: "Uzupełnij wymagane pola",
+                          description: "Adres jest wymagany przed powrotem do listy"
+                        });
+                        return;
+                      }
+                      if (currentPin.rating <= 0) {
+                        toast({ 
+                          variant: "destructive", 
+                          title: "Uzupełnij wymagane pola",
+                          description: "Ocena jest wymagana przed powrotem do listy"
+                        });
+                        return;
+                      }
                       setShowPinsList(true);
                     }}
                   >
