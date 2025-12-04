@@ -234,8 +234,10 @@ const RouteCard = ({ route }: RouteCardProps) => {
                       className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-lg bg-muted ring-1 ring-border flex items-center justify-center">
-                      <MapPin className="h-6 w-6 text-muted-foreground/50" />
+                    <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-muted via-muted/80 to-muted/50 ring-1 ring-border/50 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-background/60 backdrop-blur-sm flex items-center justify-center">
+                        <MapPin className="h-5 w-5 text-muted-foreground/70" />
+                      </div>
                     </div>
                   )}
                   <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
