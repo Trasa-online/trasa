@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, createContext, useContext } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +24,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState as useStateLocal } from "react";
+import { ImageLightbox, useLightbox } from "@/components/ui/image-lightbox";
+
+// Context for lightbox
+const LightboxContext = createContext<{
+  openLightbox: (images: string[], initialIndex?: number) => void;
+}>({ openLightbox: () => {} });
 
 // Component to display pin visitors
 const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName: string; currentUserId: string }) => {
@@ -31,6 +37,7 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
   const [showVisitDialog, setShowVisitDialog] = useStateLocal(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const lightbox = useContext(LightboxContext);
 
   const { data: visitors = [] } = useQuery({
     queryKey: ["pin-visitors", pinId],
@@ -174,7 +181,15 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
               </div>
               
               {visitor.image_url && (
-                <div className="mb-2 rounded-lg overflow-hidden">
+                <div 
+                  className="mb-2 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const allImages = visitors.filter((v: any) => v.image_url).map((v: any) => v.image_url);
+                    const idx = allImages.indexOf(visitor.image_url);
+                    lightbox.openLightbox(allImages, idx >= 0 ? idx : 0);
+                  }}
+                >
                   <img
                     src={visitor.image_url}
                     alt="Zdjęcie z odwiedzin"
@@ -247,6 +262,7 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
 // Component to display pins with notes
 const RouteNotesDisplay = ({ pins, routeNotes, currentUserId }: { pins: any[]; routeNotes: any[]; currentUserId: string }) => {
   const [expandedNoteImages, setExpandedNoteImages] = useStateLocal<Set<number>>(new Set());
+  const lightbox = useContext(LightboxContext);
 
   const toggleNoteImage = (index: number) => {
     setExpandedNoteImages(prev => {
@@ -281,7 +297,14 @@ const RouteNotesDisplay = ({ pins, routeNotes, currentUserId }: { pins: any[]; r
               <div className="p-4">
                 <div className="flex gap-3">
                   {pin.image_url ? (
-                    <div className="flex-shrink-0 relative">
+                    <div 
+                      className="flex-shrink-0 relative cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => {
+                        const allImages = sortedPins.filter((p: any) => p.image_url).map((p: any) => p.image_url);
+                        const idx = allImages.indexOf(pin.image_url);
+                        lightbox.openLightbox(allImages, idx >= 0 ? idx : 0);
+                      }}
+                    >
                       <img
                         src={pin.image_url}
                         alt={pin.place_name || pin.address}
@@ -350,7 +373,10 @@ const RouteNotesDisplay = ({ pins, routeNotes, currentUserId }: { pins: any[]; r
                         <p className="text-xs text-foreground leading-relaxed mt-0.5">{noteAfterThis.text}</p>
                       )}
                       {noteAfterThis.image_url && isImageExpanded && (
-                        <div className="mt-2 relative h-20 w-28 rounded-lg overflow-hidden ring-1 ring-border">
+                        <div 
+                          className="mt-2 relative h-20 w-28 rounded-lg overflow-hidden ring-1 ring-border cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => lightbox.openLightbox([noteAfterThis.image_url])}
+                        >
                           <img src={noteAfterThis.image_url} alt="Notatka" className="w-full h-full object-cover" />
                         </div>
                       )}
@@ -378,6 +404,7 @@ const RouteDetails = () => {
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [deletingRoute, setDeletingRoute] = useState(false);
   const [showShareImageDialog, setShowShareImageDialog] = useState(false);
+  const { lightboxState, openLightbox, setLightboxOpen } = useLightbox();
   useEffect(() => {
     if (!loading && !user) {
       navigate("/auth");
@@ -743,7 +770,14 @@ const RouteDetails = () => {
   // Use the rating stored in the database (calculated from attraction pins only)
   const avgRating = route.rating || 0;
 
+  // Collect all images for lightbox
+  const allRouteImages = (route.pins || [])
+    .filter((p: any) => p.image_url)
+    .sort((a: any, b: any) => a.pin_order - b.pin_order)
+    .map((p: any) => p.image_url);
+
   return (
+    <LightboxContext.Provider value={{ openLightbox }}>
     <div className="min-h-screen bg-background pb-16">
       <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center gap-4 z-10">
         <button onClick={() => navigate(-1)}>
@@ -1048,7 +1082,15 @@ const RouteDetails = () => {
           pins: route.pins,
         }}
       />
+
+      <ImageLightbox
+        images={lightboxState.images}
+        initialIndex={lightboxState.initialIndex}
+        open={lightboxState.open}
+        onOpenChange={setLightboxOpen}
+      />
     </div>
+    </LightboxContext.Provider>
   );
 };
 
