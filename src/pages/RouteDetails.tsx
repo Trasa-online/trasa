@@ -70,7 +70,7 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
       <>
         <button
           onClick={() => setShowVisitDialog(true)}
-          className="flex items-center gap-1.5 mt-2 text-xs text-primary font-medium hover:text-primary/80 transition-colors"
+          className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-full transition-all hover:scale-105 active:scale-95"
         >
           <Users className="h-3.5 w-3.5" />
           <span>Byłem tu</span>
