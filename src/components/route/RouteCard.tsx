@@ -226,28 +226,25 @@ const RouteCard = ({ route }: RouteCardProps) => {
               className="p-3 hover:bg-muted/30 transition-colors"
             >
               <div className="flex gap-3">
-                {pin.image_url && (
-                  <div className="flex-shrink-0 relative group/img">
+                <div className="flex-shrink-0 relative group/img">
+                  {pin.image_url ? (
                     <img
                       src={pin.image_url}
                       alt={pin.place_name}
                       className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
                     />
-                    <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
-                      <span className="text-xs font-bold">{index + 1}</span>
+                  ) : (
+                    <div className="w-20 h-20 rounded-lg bg-muted ring-1 ring-border flex items-center justify-center">
+                      <MapPin className="h-6 w-6 text-muted-foreground/50" />
                     </div>
+                  )}
+                  <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
+                    <span className="text-xs font-bold">{index + 1}</span>
                   </div>
-                )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {!pin.image_url && (
-                        <div className="bg-muted rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 ring-1 ring-border">
-                          <span className="text-xs font-bold">{index + 1}</span>
-                        </div>
-                      )}
-                      <h4 className="font-semibold text-sm leading-tight">{pin.place_name || pin.address}</h4>
-                    </div>
+                    <h4 className="font-semibold text-sm leading-tight flex-1 min-w-0">{pin.place_name || pin.address}</h4>
                     {pin.rating && (
                       <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded flex-shrink-0">
                         <Star className="h-3 w-3 fill-star text-star" />
