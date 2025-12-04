@@ -6,8 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Footprints, Share2, Image, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Footprints, Share2, Image, Users, ChevronDown, ChevronUp, Star } from "lucide-react";
 import { ShareImageDialog } from "@/components/route/ShareImageDialog";
+import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 import StarRating from "@/components/route/StarRating";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -25,8 +26,9 @@ import {
 import { useState as useStateLocal } from "react";
 
 // Component to display pin visitors
-const PinVisitors = ({ pinId, currentUserId }: { pinId: string; currentUserId: string }) => {
+const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName: string; currentUserId: string }) => {
   const [isExpanded, setIsExpanded] = useStateLocal(false);
+  const [showVisitDialog, setShowVisitDialog] = useStateLocal(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -35,7 +37,7 @@ const PinVisitors = ({ pinId, currentUserId }: { pinId: string; currentUserId: s
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pin_visits")
-        .select("user_id, created_at, profiles:user_id (username, avatar_url)")
+        .select("user_id, created_at, image_url, description, rating, profiles:user_id (username, avatar_url)")
         .eq("pin_id", pinId);
 
       if (error) throw error;
@@ -43,42 +45,45 @@ const PinVisitors = ({ pinId, currentUserId }: { pinId: string; currentUserId: s
     },
   });
 
-  const hasVisited = visitors.some((v: any) => v.user_id === currentUserId);
+  const currentUserVisit = visitors.find((v: any) => v.user_id === currentUserId);
+  const hasVisited = !!currentUserVisit;
 
-  const visitMutation = useMutation({
+  const removeMutation = useMutation({
     mutationFn: async () => {
-      if (hasVisited) {
-        const { error } = await supabase
-          .from("pin_visits")
-          .delete()
-          .eq("pin_id", pinId)
-          .eq("user_id", currentUserId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("pin_visits")
-          .insert({ pin_id: pinId, user_id: currentUserId });
-        if (error) throw error;
-      }
+      const { error } = await supabase
+        .from("pin_visits")
+        .delete()
+        .eq("pin_id", pinId)
+        .eq("user_id", currentUserId);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pin-visitors", pinId] });
-      toast({ title: hasVisited ? "Usunięto z odwiedzonych" : "Oznaczono jako odwiedzone" });
+      toast({ title: "Usunięto z odwiedzonych" });
     },
   });
 
-  const otherVisitors = visitors.filter((v: any) => v.user_id !== currentUserId);
   const visitorCount = visitors.length;
 
   if (visitorCount === 0) {
     return (
-      <button
-        onClick={() => visitMutation.mutate()}
-        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
-      >
-        <Users className="h-3 w-3" />
-        <span>Byłem tu</span>
-      </button>
+      <>
+        <button
+          onClick={() => setShowVisitDialog(true)}
+          className="flex items-center gap-1.5 mt-2 text-xs text-primary font-medium hover:text-primary/80 transition-colors"
+        >
+          <Users className="h-3.5 w-3.5" />
+          <span>Byłem tu</span>
+        </button>
+        <PinVisitDialog
+          open={showVisitDialog}
+          onOpenChange={setShowVisitDialog}
+          pinId={pinId}
+          pinName={pinName}
+          userId={currentUserId}
+          existingVisit={null}
+        />
+      </>
     );
   }
 
@@ -86,43 +91,102 @@ const PinVisitors = ({ pinId, currentUserId }: { pinId: string; currentUserId: s
     <div className="mt-2">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
-        <Users className="h-3 w-3" />
-        <span>{visitorCount} {visitorCount === 1 ? 'osoba odwiedziła' : visitorCount < 5 ? 'osoby odwiedziły' : 'osób odwiedziło'}</span>
-        {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        <Users className="h-3.5 w-3.5" />
+        <span className="font-medium">{visitorCount} {visitorCount === 1 ? 'osoba odwiedziła' : visitorCount < 5 ? 'osoby odwiedziły' : 'osób odwiedziło'}</span>
+        {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
       </button>
       
       {isExpanded && (
-        <div className="mt-2 p-2 bg-muted/30 rounded-lg space-y-2">
-          <div className="flex flex-wrap gap-1">
-            {visitors.map((visitor: any) => (
-              <div
-                key={visitor.user_id}
-                className="flex items-center gap-1 bg-background px-2 py-1 rounded-full text-[10px]"
-              >
-                <Avatar className="h-4 w-4">
+        <div className="mt-3 space-y-3">
+          {visitors.map((visitor: any) => (
+            <div
+              key={visitor.user_id}
+              className="p-3 bg-muted/40 rounded-xl border border-border/50"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Avatar className="h-6 w-6">
                   <AvatarImage src={visitor.profiles?.avatar_url || ""} />
-                  <AvatarFallback className="text-[8px]">
+                  <AvatarFallback className="text-[10px]">
                     {visitor.profiles?.username?.charAt(0).toUpperCase() || "?"}
                   </AvatarFallback>
                 </Avatar>
-                <span>{visitor.profiles?.username || "Anonim"}</span>
+                <span className="text-sm font-medium">{visitor.profiles?.username || "Anonim"}</span>
+                {visitor.rating && (
+                  <div className="flex items-center gap-0.5 ml-auto">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`h-3 w-3 ${
+                          star <= visitor.rating
+                            ? "fill-yellow-400 text-yellow-400"
+                            : "text-muted-foreground/30"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-          <button
-            onClick={() => visitMutation.mutate()}
-            className={`text-[10px] px-2 py-1 rounded-full transition-colors ${
-              hasVisited
-                ? "bg-primary/10 text-primary hover:bg-primary/20"
-                : "bg-muted hover:bg-muted/80"
-            }`}
-          >
-            {hasVisited ? "Też tu byłem ✓" : "Byłem tu"}
-          </button>
+              
+              {visitor.image_url && (
+                <div className="mb-2 rounded-lg overflow-hidden">
+                  <img
+                    src={visitor.image_url}
+                    alt="Zdjęcie z odwiedzin"
+                    className="w-full h-32 object-cover"
+                  />
+                </div>
+              )}
+              
+              {visitor.description && (
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {visitor.description}
+                </p>
+              )}
+              
+              {visitor.user_id === currentUserId && (
+                <div className="flex gap-2 mt-2 pt-2 border-t border-border/50">
+                  <button
+                    onClick={() => setShowVisitDialog(true)}
+                    className="text-[10px] text-primary hover:underline"
+                  >
+                    Edytuj
+                  </button>
+                  <button
+                    onClick={() => removeMutation.mutate()}
+                    className="text-[10px] text-destructive hover:underline"
+                  >
+                    Usuń
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+          
+          {!hasVisited && (
+            <button
+              onClick={() => setShowVisitDialog(true)}
+              className="w-full py-2 text-xs font-medium text-primary bg-primary/5 hover:bg-primary/10 rounded-lg transition-colors"
+            >
+              + Też tu byłem
+            </button>
+          )}
         </div>
       )}
+      
+      <PinVisitDialog
+        open={showVisitDialog}
+        onOpenChange={setShowVisitDialog}
+        pinId={pinId}
+        pinName={pinName}
+        userId={currentUserId}
+        existingVisit={currentUserVisit ? {
+          image_url: currentUserVisit.image_url,
+          description: currentUserVisit.description,
+          rating: currentUserVisit.rating,
+        } : null}
+      />
     </div>
   );
 };
@@ -205,7 +269,7 @@ const RouteNotesDisplay = ({ pins, routeNotes, currentUserId }: { pins: any[]; r
                     )}
                     
                     {/* Pin visitors section */}
-                    <PinVisitors pinId={pin.id} currentUserId={currentUserId} />
+                    <PinVisitors pinId={pin.id} pinName={pin.place_name || pin.address} currentUserId={currentUserId} />
                   </div>
                 </div>
               </div>
