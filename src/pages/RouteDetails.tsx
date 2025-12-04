@@ -59,6 +59,7 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pin-visitors", pinId] });
+      queryClient.invalidateQueries({ queryKey: ["route-pin-visitors"] });
       toast({ title: "Usunięto z odwiedzonych" });
     },
   });
@@ -428,6 +429,37 @@ const RouteDetails = () => {
     },
     enabled: !!id,
   });
+
+  // Query for unique users who visited any pin on this route
+  const { data: routePinVisitors = [] } = useQuery({
+    queryKey: ["route-pin-visitors", id],
+    queryFn: async () => {
+      if (!route?.pins) return [];
+      
+      const pinIds = route.pins.map((p: any) => p.id);
+      if (pinIds.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from("pin_visits")
+        .select("user_id, profiles:user_id (username, avatar_url)")
+        .in("pin_id", pinIds);
+
+      if (error) throw error;
+      
+      // Get unique users
+      const uniqueUsers = new Map();
+      data?.forEach((visit: any) => {
+        if (!uniqueUsers.has(visit.user_id)) {
+          uniqueUsers.set(visit.user_id, visit);
+        }
+      });
+      
+      return Array.from(uniqueUsers.values());
+    },
+    enabled: !!id && !!route?.pins,
+  });
+
+  const hasUserVisitedAnyPin = routePinVisitors.some((v: any) => v.user_id === user?.id);
 
   const { data: isCompleted = false } = useQuery({
     queryKey: ["is-completed", id, user?.id],
@@ -802,14 +834,13 @@ const RouteDetails = () => {
             <Bookmark className={`h-[18px] w-[18px] transition-transform hover:scale-110 ${isSaved ? "fill-foreground" : ""}`} />
             <span className="text-sm font-semibold tabular-nums">{saveCount}</span>
           </button>
-          <button
-            onClick={() => completionMutation.mutate()}
-            disabled={completionMutation.isPending}
-            className={`flex items-center gap-2 transition-all duration-200 disabled:opacity-50 ${isCompleted ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
+          <div
+            className={`flex items-center gap-2 transition-all duration-200 ${hasUserVisitedAnyPin ? "text-primary" : "text-muted-foreground"}`}
+            title={`${routePinVisitors.length} ${routePinVisitors.length === 1 ? 'osoba odwiedziła' : 'osób odwiedziło'} miejsca na trasie`}
           >
-            <Footprints className={`h-[18px] w-[18px] transition-transform hover:scale-110 ${isCompleted ? "fill-primary" : ""}`} />
-            <span className="text-sm font-semibold tabular-nums">{completionCount}</span>
-          </button>
+            <Footprints className={`h-[18px] w-[18px] ${hasUserVisitedAnyPin ? "fill-primary" : ""}`} />
+            <span className="text-sm font-semibold tabular-nums">{routePinVisitors.length}</span>
+          </div>
         </div>
 
         <div className="space-y-4">
