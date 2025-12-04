@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Star, MapPin, Bookmark, ArrowRight, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Footprints } from "lucide-react";
+import { Heart, MessageCircle, Star, MapPin, Bookmark, ArrowRight, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Footprints, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
@@ -187,6 +187,28 @@ const RouteCard = ({ route }: RouteCardProps) => {
     navigate(`/route/${route.id}`);
   };
 
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/route/${route.id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: route.title,
+          text: route.description || `Sprawdź trasę: ${route.title}`,
+          url: url,
+        });
+      } catch (err) {
+        // User cancelled or share failed, fallback to clipboard
+        await navigator.clipboard.writeText(url);
+        toast.success("Link skopiowany do schowka");
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link skopiowany do schowka");
+    }
+  };
+
   return (
     <div 
       onClick={handleCardClick}
@@ -209,13 +231,21 @@ const RouteCard = ({ route }: RouteCardProps) => {
               </p>
             </div>
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saveRouteMutation.isPending}
-            className="p-2 hover:bg-accent rounded-lg transition-colors disabled:opacity-50"
-          >
-            <Bookmark className={`h-5 w-5 transition-all ${isSaved ? "fill-foreground" : ""}`} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleShare}
+              className="p-2 hover:bg-accent rounded-lg transition-colors"
+            >
+              <Share2 className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saveRouteMutation.isPending}
+              className="p-2 hover:bg-accent rounded-lg transition-colors disabled:opacity-50"
+            >
+              <Bookmark className={`h-5 w-5 transition-all ${isSaved ? "fill-foreground" : ""}`} />
+            </button>
+          </div>
         </div>
 
         {/* Title and Rating */}
