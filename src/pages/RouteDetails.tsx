@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon } from "lucide-react";
+import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Footprints } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -244,6 +244,52 @@ const RouteDetails = () => {
     enabled: !!id && !!user,
   });
 
+  const { data: saveCount = 0 } = useQuery({
+    queryKey: ["save-count", id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("saved_routes")
+        .select("*", { count: "exact", head: true })
+        .eq("route_id", id!);
+
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!id,
+  });
+
+  const { data: isCompleted = false } = useQuery({
+    queryKey: ["is-completed", id, user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      
+      const { data, error } = await supabase
+        .from("route_completions")
+        .select("*")
+        .eq("route_id", id!)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return !!data;
+    },
+    enabled: !!id && !!user,
+  });
+
+  const { data: completionCount = 0 } = useQuery({
+    queryKey: ["completion-count", id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("route_completions")
+        .select("*", { count: "exact", head: true })
+        .eq("route_id", id!);
+
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!id,
+  });
+
   // Increment view count when route is loaded
   useEffect(() => {
     const incrementViews = async () => {
@@ -292,7 +338,41 @@ const RouteDetails = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["is-saved"] });
+      queryClient.invalidateQueries({ queryKey: ["save-count", id] });
       toast({ title: isSaved ? "Usunięto z zapisanych" : "Zapisano trasę" });
+    },
+  });
+
+  const completionMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Must be logged in");
+
+      if (isCompleted) {
+        const { error } = await supabase
+          .from("route_completions")
+          .delete()
+          .eq("route_id", id!)
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("route_completions")
+          .insert({
+            route_id: id!,
+            user_id: user.id,
+          });
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["is-completed", id] });
+      queryClient.invalidateQueries({ queryKey: ["completion-count", id] });
+      toast({ title: isCompleted ? "Cofnięto oznaczenie" : "Oznaczono jako przejdzoną!" });
+    },
+    onError: () => {
+      toast({ title: "Nie udało się oznaczyć trasy", variant: "destructive" });
     },
   });
 
@@ -497,20 +577,35 @@ const RouteDetails = () => {
           routeNotes={route.route_notes}
         />
 
-        <div className="flex items-center gap-4 py-4 border-y border-border">
+        <div className="flex items-center gap-5 py-4 border-y border-border">
           <button
             onClick={() => likeMutation.mutate()}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 text-muted-foreground hover:text-red-500 transition-all duration-200"
           >
             <Heart
-              className={`h-6 w-6 ${isLiked ? "fill-red-500 text-red-500" : ""}`}
+              className={`h-[18px] w-[18px] transition-transform hover:scale-110 ${isLiked ? "fill-red-500 text-red-500" : ""}`}
             />
-            <span>{likes?.length || 0}</span>
+            <span className="text-sm font-semibold tabular-nums">{likes?.length || 0}</span>
           </button>
-          <div className="flex items-center gap-2">
-            <MessageCircle className="h-6 w-6" />
-            <span>{comments?.length || 0}</span>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <MessageCircle className="h-[18px] w-[18px]" />
+            <span className="text-sm font-semibold tabular-nums">{comments?.length || 0}</span>
           </div>
+          <button
+            onClick={() => saveMutation.mutate()}
+            className={`flex items-center gap-2 transition-all duration-200 ${isSaved ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <Bookmark className={`h-[18px] w-[18px] transition-transform hover:scale-110 ${isSaved ? "fill-foreground" : ""}`} />
+            <span className="text-sm font-semibold tabular-nums">{saveCount}</span>
+          </button>
+          <button
+            onClick={() => completionMutation.mutate()}
+            disabled={completionMutation.isPending}
+            className={`flex items-center gap-2 transition-all duration-200 disabled:opacity-50 ${isCompleted ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
+          >
+            <Footprints className={`h-[18px] w-[18px] transition-transform hover:scale-110 ${isCompleted ? "fill-primary" : ""}`} />
+            <span className="text-sm font-semibold tabular-nums">{completionCount}</span>
+          </button>
         </div>
 
         <div className="space-y-4">
