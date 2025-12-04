@@ -230,17 +230,26 @@ export type Database = {
       pin_visits: {
         Row: {
           created_at: string
+          description: string | null
+          image_url: string | null
           pin_id: string
+          rating: number | null
           user_id: string
         }
         Insert: {
           created_at?: string
+          description?: string | null
+          image_url?: string | null
           pin_id: string
+          rating?: number | null
           user_id: string
         }
         Update: {
           created_at?: string
+          description?: string | null
+          image_url?: string | null
           pin_id?: string
+          rating?: number | null
           user_id?: string
         }
         Relationships: [
