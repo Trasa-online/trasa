@@ -35,6 +35,7 @@ const LightboxContext = createContext<{
 const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName: string; currentUserId: string }) => {
   const [isExpanded, setIsExpanded] = useStateLocal(false);
   const [showVisitDialog, setShowVisitDialog] = useStateLocal(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useStateLocal(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const lightbox = useContext(LightboxContext);
@@ -221,7 +222,7 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      removeMutation.mutate();
+                      setShowDeleteConfirm(true);
                     }}
                     className="text-[10px] text-destructive hover:underline"
                   >
@@ -259,6 +260,26 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
           rating: currentUserVisit.rating,
         } : null}
       />
+      
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Usuń ocenę</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz usunąć swoją ocenę? Ta akcja jest nieodwracalna.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => removeMutation.mutate()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Usuń
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
