@@ -377,20 +377,20 @@ const CreateRoute = () => {
         {step === 1 ? (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="title">Nazwa trasy * (max 5 słów)</Label>
+              <Label htmlFor="title">Nazwa trasy * (max 10 słów)</Label>
               <Input
                 id="title"
                 value={title}
                 onChange={(e) => {
                   const words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0);
-                  if (words.length <= 5 || e.target.value.length < title.length) {
+                  if (words.length <= 10 || e.target.value.length < title.length) {
                     setTitle(e.target.value);
                   }
                 }}
                 placeholder="np. Ukryte skarby Tokio"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                {title.trim() ? title.trim().split(/\s+/).filter(w => w.length > 0).length : 0}/5 słów
+                {title.trim() ? title.trim().split(/\s+/).filter(w => w.length > 0).length : 0}/10 słów
               </p>
             </div>
 
