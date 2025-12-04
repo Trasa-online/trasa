@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Footprints, Share2 } from "lucide-react";
+import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Footprints, Share2, Image } from "lucide-react";
+import { ShareImageDialog } from "@/components/route/ShareImageDialog";
 import StarRating from "@/components/route/StarRating";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -153,7 +154,7 @@ const RouteDetails = () => {
   const [editingContent, setEditingContent] = useState("");
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [deletingRoute, setDeletingRoute] = useState(false);
-
+  const [showShareImageDialog, setShowShareImageDialog] = useState(false);
   useEffect(() => {
     if (!loading && !user) {
       navigate("/auth");
@@ -561,6 +562,13 @@ const RouteDetails = () => {
               <Share2 className="h-6 w-6" />
             </button>
             <button
+              onClick={() => setShowShareImageDialog(true)}
+              className="p-2 hover:bg-accent rounded-lg transition-colors"
+              title="Generuj obrazek"
+            >
+              <Image className="h-6 w-6" />
+            </button>
+            <button
               onClick={() => saveMutation.mutate()}
               className="p-2 hover:bg-accent rounded-lg transition-colors"
             >
@@ -775,6 +783,17 @@ const RouteDetails = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ShareImageDialog
+        open={showShareImageDialog}
+        onOpenChange={setShowShareImageDialog}
+        route={{
+          id: route.id,
+          title: route.title,
+          description: route.description,
+          pins: route.pins,
+        }}
+      />
     </div>
   );
 };
