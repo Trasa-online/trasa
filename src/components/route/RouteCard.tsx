@@ -36,25 +36,31 @@ const RouteCard = ({ route }: RouteCardProps) => {
 
       const { data, error } = await supabase
         .from("pin_visits")
-        .select("pin_id, user_id, created_at, profiles:user_id (username, avatar_url)")
+        .select("pin_id, user_id, created_at, image_url, profiles:user_id (username, avatar_url)")
         .in("pin_id", pinIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       
-      // Group by pin_id with visitor details (max 3 per pin)
-      const visitorsMap: Record<string, { count: number; visitors: any[] }> = {};
+      // Group by pin_id with visitor details (max 3 per pin) and images
+      const visitorsMap: Record<string, { count: number; visitors: any[]; images: string[] }> = {};
       const uniqueByPin: Record<string, Map<string, any>> = {};
+      const imagesByPin: Record<string, string[]> = {};
       
       data?.forEach((visit: any) => {
         if (!uniqueByPin[visit.pin_id]) {
           uniqueByPin[visit.pin_id] = new Map();
+          imagesByPin[visit.pin_id] = [];
         }
         if (!uniqueByPin[visit.pin_id].has(visit.user_id)) {
           uniqueByPin[visit.pin_id].set(visit.user_id, {
             user_id: visit.user_id,
             profiles: visit.profiles,
           });
+        }
+        // Collect all images (not just unique per user)
+        if (visit.image_url && !imagesByPin[visit.pin_id].includes(visit.image_url)) {
+          imagesByPin[visit.pin_id].push(visit.image_url);
         }
       });
       
@@ -63,6 +69,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
         visitorsMap[pinId] = {
           count: usersMap.size,
           visitors,
+          images: imagesByPin[pinId] || [],
         };
       });
       
@@ -352,8 +359,8 @@ const RouteCard = ({ route }: RouteCardProps) => {
       {sortedPins.length > 0 && (
         <div className="divide-y divide-border/50">
           {(pinsExpanded ? sortedPins : sortedPins.slice(0, MAX_VISIBLE_PINS)).map((pin: any, index: number) => {
-            const pinVisitorData = pinVisitorsMap[pin.id] || { count: 0, visitors: [] };
-            const { count: visitorCount, visitors } = pinVisitorData;
+            const pinVisitorData = pinVisitorsMap[pin.id] || { count: 0, visitors: [], images: [] };
+            const { count: visitorCount, visitors, images } = pinVisitorData;
             return (
               <div 
                 key={pin.id} 
@@ -399,7 +406,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
                     {visitorCount > 0 && (
                       <div className="flex items-center gap-1.5 mt-2">
                         <div className="flex -space-x-1.5">
-                          {visitors.map((visitor: any, idx: number) => (
+                          {visitors.map((visitor: any) => (
                             <Avatar key={visitor.user_id} className="h-5 w-5 ring-2 ring-background">
                               <AvatarImage src={visitor.profiles?.avatar_url || ""} />
                               <AvatarFallback className="text-[8px] bg-muted">
@@ -408,6 +415,20 @@ const RouteCard = ({ route }: RouteCardProps) => {
                             </Avatar>
                           ))}
                         </div>
+                        {images.length > 0 && (
+                          <div className="relative">
+                            <img
+                              src={images[0]}
+                              alt="Visit photo"
+                              className="h-6 w-6 rounded object-cover ring-1 ring-border"
+                            />
+                            {images.length > 1 && (
+                              <div className="absolute inset-0 bg-black/50 rounded flex items-center justify-center">
+                                <span className="text-[8px] font-bold text-white">+{images.length - 1}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         {visitorCount > 3 && (
                           <span className="text-[10px] text-muted-foreground">+{visitorCount - 3}</span>
                         )}
