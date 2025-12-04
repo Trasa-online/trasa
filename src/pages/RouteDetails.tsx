@@ -88,15 +88,58 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
     );
   }
 
+  const visitorsWithImages = visitors.filter((v: any) => v.image_url);
+  const imageCount = visitorsWithImages.length;
+  const previewVisitors = visitors.slice(0, 3);
+  const firstImage = visitorsWithImages[0]?.image_url;
+
   return (
     <div className="mt-2">
+      {/* Collapsed preview with avatars, image thumbnail and counts */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
       >
-        <Users className="h-3.5 w-3.5" />
-        <span className="font-medium">{visitorCount} {visitorCount === 1 ? 'osoba odwiedziła' : visitorCount < 5 ? 'osoby odwiedziły' : 'osób odwiedziło'}</span>
-        {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        <div className="flex items-center gap-2">
+          {/* Visitor avatars */}
+          <div className="flex -space-x-1.5">
+            {previewVisitors.map((visitor: any) => (
+              <Avatar key={visitor.user_id} className="h-5 w-5 ring-2 ring-background">
+                <AvatarImage src={visitor.profiles?.avatar_url || ""} />
+                <AvatarFallback className="text-[8px] bg-muted">
+                  {visitor.profiles?.username?.charAt(0).toUpperCase() || "?"}
+                </AvatarFallback>
+              </Avatar>
+            ))}
+          </div>
+          
+          {/* Image thumbnail with count */}
+          {firstImage && (
+            <div className="relative">
+              <img
+                src={firstImage}
+                alt="Zdjęcie z odwiedzin"
+                className="h-6 w-6 rounded object-cover"
+              />
+              {imageCount > 1 && (
+                <div className="absolute inset-0 bg-black/50 rounded flex items-center justify-center">
+                  <span className="text-[8px] font-bold text-white">+{imageCount}</span>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <span className="font-medium">
+            {visitorCount} {visitorCount === 1 ? 'osoba' : visitorCount < 5 ? 'osoby' : 'osób'}
+          </span>
+        </div>
+        
+        <div className="ml-auto flex items-center gap-1">
+          {!hasVisited && (
+            <span className="text-[10px] text-primary font-medium">Też tu byłem</span>
+          )}
+          {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </div>
       </button>
       
       {isExpanded && (
@@ -149,13 +192,19 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
               {visitor.user_id === currentUserId && (
                 <div className="flex gap-2 mt-2 pt-2 border-t border-border/50">
                   <button
-                    onClick={() => setShowVisitDialog(true)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowVisitDialog(true);
+                    }}
                     className="text-[10px] text-primary hover:underline"
                   >
                     Edytuj
                   </button>
                   <button
-                    onClick={() => removeMutation.mutate()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeMutation.mutate();
+                    }}
                     className="text-[10px] text-destructive hover:underline"
                   >
                     Usuń
@@ -167,7 +216,10 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
           
           {!hasVisited && (
             <button
-              onClick={() => setShowVisitDialog(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowVisitDialog(true);
+              }}
               className="w-full py-2 text-xs font-medium text-primary bg-primary/5 hover:bg-primary/10 rounded-lg transition-colors"
             >
               + Też tu byłem
