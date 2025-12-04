@@ -77,6 +77,9 @@ const MyRoutes = () => {
   });
 
   const RouteItem = ({ route }: { route: any }) => {
+    const [pinsExpanded, setPinsExpanded] = useState(false);
+    const MAX_VISIBLE_PINS = 4;
+    
     // Sort pins by pin_order for consistent display
     const sortedPins = route.pins?.slice().sort((a: any, b: any) => a.pin_order - b.pin_order) || [];
     
@@ -86,6 +89,8 @@ const MyRoutes = () => {
       attractionPins.length > 0
         ? attractionPins.reduce((acc: number, pin: any) => acc + pin.rating, 0) / attractionPins.length
         : 0;
+    
+    const displayPins = pinsExpanded ? sortedPins : sortedPins.slice(0, MAX_VISIBLE_PINS);
 
     return (
       <div className="bg-card border border-border rounded-xl overflow-hidden hover:border-foreground/20 transition-all duration-300">
@@ -122,15 +127,16 @@ const MyRoutes = () => {
 
         {/* Pins Section - Compact */}
         {sortedPins.length > 0 && (
-          <div 
-            className="p-3 cursor-pointer hover:bg-muted/30 transition-colors"
-            onClick={() => navigate(`/route/${route.id}`)}
-          >
+          <div className="p-3">
             <div className="flex flex-wrap gap-2">
-              {sortedPins.slice(0, 4).map((pin: any, index: number) => (
-                <div key={pin.id} className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-lg">
+              {displayPins.map((pin: any, index: number) => (
+                <div 
+                  key={pin.id} 
+                  className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                  onClick={() => navigate(`/route/${route.id}`)}
+                >
                   <div className="bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[10px] font-bold">{index + 1}</span>
+                    <span className="text-[10px] font-bold">{pinsExpanded ? index + 1 : index + 1}</span>
                   </div>
                   <span className="text-xs font-medium truncate max-w-[120px]">
                     {pin.place_name || pin.address}
@@ -143,12 +149,18 @@ const MyRoutes = () => {
                   )}
                 </div>
               ))}
-              {sortedPins.length > 4 && (
-                <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-lg">
-                  <span className="text-xs text-muted-foreground">+{sortedPins.length - 4} więcej</span>
-                </div>
-              )}
             </div>
+            {sortedPins.length > MAX_VISIBLE_PINS && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPinsExpanded(!pinsExpanded);
+                }}
+                className="w-full mt-2 p-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+              >
+                {pinsExpanded ? "Zwiń" : `Pokaż +${sortedPins.length - MAX_VISIBLE_PINS} więcej`}
+              </button>
+            )}
           </div>
         )}
 
