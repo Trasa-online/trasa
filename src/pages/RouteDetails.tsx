@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Footprints } from "lucide-react";
+import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Footprints, Share2 } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -536,14 +536,39 @@ const RouteDetails = () => {
               </p>
             </div>
           </button>
-          <button
-            onClick={() => saveMutation.mutate()}
-            className="p-2 hover:bg-accent rounded-lg"
-          >
-            <Bookmark
-              className={`h-6 w-6 ${isSaved ? "fill-foreground" : ""}`}
-            />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={async () => {
+                const url = `${window.location.origin}/route/${route.id}`;
+                if (navigator.share) {
+                  try {
+                    await navigator.share({
+                      title: route.title,
+                      text: route.description || `Sprawdź trasę: ${route.title}`,
+                      url: url,
+                    });
+                  } catch (err) {
+                    await navigator.clipboard.writeText(url);
+                    toast({ title: "Link skopiowany do schowka" });
+                  }
+                } else {
+                  await navigator.clipboard.writeText(url);
+                  toast({ title: "Link skopiowany do schowka" });
+                }
+              }}
+              className="p-2 hover:bg-accent rounded-lg transition-colors"
+            >
+              <Share2 className="h-6 w-6" />
+            </button>
+            <button
+              onClick={() => saveMutation.mutate()}
+              className="p-2 hover:bg-accent rounded-lg transition-colors"
+            >
+              <Bookmark
+                className={`h-6 w-6 ${isSaved ? "fill-foreground" : ""}`}
+              />
+            </button>
+          </div>
         </div>
 
         {/* Route Header with Title and Rating */}
