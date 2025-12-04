@@ -710,24 +710,12 @@ const CreateRoute = () => {
                           </Badge>
                         );
                       })}
-                      {/* "Inne" tag - opens custom input */}
-                      <Badge
-                        variant={showCustomTagInput ? "default" : "outline"}
-                        className="cursor-pointer flex items-center gap-1.5 px-3 py-2 text-sm"
-                        onClick={() => setShowCustomTagInput(true)}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Inne
-                      </Badge>
-                    </div>
-                    
-                    {/* Custom tag input */}
-                    {showCustomTagInput && (
-                      <div className="mt-2">
+                      {/* "Inne" tag - opens custom input inline */}
+                      {showCustomTagInput ? (
                         <Input
                           autoFocus
-                          placeholder="Wpisz własną kategorię i naciśnij Enter"
-                          className="h-9"
+                          placeholder="Wpisz i naciśnij Enter"
+                          className="h-9 w-40"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && e.currentTarget.value.trim()) {
                               const currentTags = pins[currentPinIndex]?.tags || [];
@@ -745,8 +733,17 @@ const CreateRoute = () => {
                             setShowCustomTagInput(false);
                           }}
                         />
-                      </div>
-                    )}
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="cursor-pointer flex items-center gap-1.5 px-3 py-2 text-sm"
+                          onClick={() => setShowCustomTagInput(true)}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Inne
+                        </Badge>
+                      )}
+                    </div>
                     
                     {/* Custom tags display */}
                     {pins[currentPinIndex]?.tags?.filter(
