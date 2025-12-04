@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Star, MapPin, Bookmark, ArrowRight, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Footprints, Share2 } from "lucide-react";
+import { Heart, MessageCircle, Star, MapPin, Bookmark, ArrowRight, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Footprints, Share2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,6 +26,81 @@ const RouteCard = ({ route }: RouteCardProps) => {
   
   // Use the rating stored in the database (calculated from attraction pins only)
   const averageRating = route.rating || 0;
+
+  // Get pin visitors for all pins on this route
+  const { data: pinVisitorsMap = {} } = useQuery({
+    queryKey: ["route-card-pin-visitors", route.id],
+    queryFn: async () => {
+      const pinIds = sortedPins.map((p: any) => p.id);
+      if (pinIds.length === 0) return {};
+
+      const { data, error } = await supabase
+        .from("pin_visits")
+        .select("pin_id, user_id")
+        .in("pin_id", pinIds);
+
+      if (error) throw error;
+      
+      // Group by pin_id and count unique users
+      const visitorsMap: Record<string, number> = {};
+      const uniqueByPin: Record<string, Set<string>> = {};
+      
+      data?.forEach((visit: any) => {
+        if (!uniqueByPin[visit.pin_id]) {
+          uniqueByPin[visit.pin_id] = new Set();
+        }
+        uniqueByPin[visit.pin_id].add(visit.user_id);
+      });
+      
+      Object.entries(uniqueByPin).forEach(([pinId, users]) => {
+        visitorsMap[pinId] = users.size;
+      });
+      
+      return visitorsMap;
+    },
+    enabled: sortedPins.length > 0,
+  });
+
+  // Calculate total unique visitors across all pins
+  const { data: totalUniqueVisitors = 0 } = useQuery({
+    queryKey: ["route-card-total-visitors", route.id],
+    queryFn: async () => {
+      const pinIds = sortedPins.map((p: any) => p.id);
+      if (pinIds.length === 0) return 0;
+
+      const { data, error } = await supabase
+        .from("pin_visits")
+        .select("user_id")
+        .in("pin_id", pinIds);
+
+      if (error) throw error;
+      
+      const uniqueUsers = new Set(data?.map((v: any) => v.user_id));
+      return uniqueUsers.size;
+    },
+    enabled: sortedPins.length > 0,
+  });
+
+  // Check if current user visited any pin
+  const hasUserVisitedAnyPin = useQuery({
+    queryKey: ["route-card-user-visited", route.id, user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const pinIds = sortedPins.map((p: any) => p.id);
+      if (pinIds.length === 0) return false;
+
+      const { data, error } = await supabase
+        .from("pin_visits")
+        .select("pin_id")
+        .in("pin_id", pinIds)
+        .eq("user_id", user.id)
+        .limit(1);
+
+      if (error) throw error;
+      return (data?.length || 0) > 0;
+    },
+    enabled: sortedPins.length > 0 && !!user,
+  });
 
   // Check if route is saved by current user
   const { data: isSaved = false } = useQuery({
@@ -52,39 +127,6 @@ const RouteCard = ({ route }: RouteCardProps) => {
     queryFn: async () => {
       const { count, error } = await supabase
         .from("saved_routes")
-        .select("*", { count: "exact", head: true })
-        .eq("route_id", route.id);
-
-      if (error) throw error;
-      return count || 0;
-    },
-  });
-
-  // Check if user has completed this route
-  const { data: isCompleted = false } = useQuery({
-    queryKey: ["is-completed", route.id, user?.id],
-    queryFn: async () => {
-      if (!user) return false;
-      
-      const { data, error } = await supabase
-        .from("route_completions")
-        .select("*")
-        .eq("route_id", route.id)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-      return !!data;
-    },
-    enabled: !!user,
-  });
-
-  // Get completion count for the route
-  const { data: completionCount = 0 } = useQuery({
-    queryKey: ["completion-count", route.id],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("route_completions")
         .select("*", { count: "exact", head: true })
         .eq("route_id", route.id);
 
@@ -136,51 +178,6 @@ const RouteCard = ({ route }: RouteCardProps) => {
       return;
     }
     saveRouteMutation.mutate();
-  };
-
-  // Route completion mutation
-  const completionMutation = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error("Must be logged in");
-
-      if (isCompleted) {
-        // Unmark completion
-        const { error } = await supabase
-          .from("route_completions")
-          .delete()
-          .eq("route_id", route.id)
-          .eq("user_id", user.id);
-
-        if (error) throw error;
-      } else {
-        // Mark as completed
-        const { error } = await supabase
-          .from("route_completions")
-          .insert({
-            route_id: route.id,
-            user_id: user.id,
-          });
-
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["is-completed", route.id] });
-      queryClient.invalidateQueries({ queryKey: ["completion-count", route.id] });
-      toast.success(isCompleted ? "Cofnięto oznaczenie" : "Oznaczono jako przejdzoną!");
-    },
-    onError: () => {
-      toast.error("Nie udało się oznaczyć trasy");
-    },
-  });
-
-  const handleCompletion = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!user) {
-      toast.error("Musisz być zalogowany");
-      return;
-    }
-    completionMutation.mutate();
   };
 
   const handleCardClick = () => {
@@ -344,52 +341,61 @@ const RouteCard = ({ route }: RouteCardProps) => {
       {/* Pins Section */}
       {sortedPins.length > 0 && (
         <div className="divide-y divide-border/50">
-          {(pinsExpanded ? sortedPins : sortedPins.slice(0, MAX_VISIBLE_PINS)).map((pin: any, index: number) => (
-            <div 
-              key={pin.id} 
-              className="p-3 hover:bg-muted/30 transition-colors"
-            >
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 relative group/img">
-                  {pin.image_url ? (
-                    <img
-                      src={pin.image_url}
-                      alt={pin.place_name}
-                      className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-muted via-muted/80 to-muted/50 ring-1 ring-border/50 flex items-center justify-center">
-                      <div className="w-10 h-10 rounded-full bg-background/60 backdrop-blur-sm flex items-center justify-center">
-                        <MapPin className="h-5 w-5 text-muted-foreground/70" />
+          {(pinsExpanded ? sortedPins : sortedPins.slice(0, MAX_VISIBLE_PINS)).map((pin: any, index: number) => {
+            const visitorCount = pinVisitorsMap[pin.id] || 0;
+            return (
+              <div 
+                key={pin.id} 
+                className="p-3 hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 relative group/img">
+                    {pin.image_url ? (
+                      <img
+                        src={pin.image_url}
+                        alt={pin.place_name}
+                        className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-muted via-muted/80 to-muted/50 ring-1 ring-border/50 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-background/60 backdrop-blur-sm flex items-center justify-center">
+                          <MapPin className="h-5 w-5 text-muted-foreground/70" />
+                        </div>
                       </div>
+                    )}
+                    <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
+                      <span className="text-xs font-bold">{index + 1}</span>
                     </div>
-                  )}
-                  <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
-                    <span className="text-xs font-bold">{index + 1}</span>
                   </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <h4 className="font-semibold text-sm leading-tight flex-1 min-w-0">{pin.place_name || pin.address}</h4>
-                    {pin.rating && (
-                      <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded flex-shrink-0">
-                        <Star className="h-3 w-3 fill-star text-star" />
-                        <span className="font-semibold text-xs">{pin.rating.toFixed(1)}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h4 className="font-semibold text-sm leading-tight flex-1 min-w-0">{pin.place_name || pin.address}</h4>
+                      {pin.rating && (
+                        <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded flex-shrink-0">
+                          <Star className="h-3 w-3 fill-star text-star" />
+                          <span className="font-semibold text-xs">{pin.rating.toFixed(1)}</span>
+                        </div>
+                      )}
+                    </div>
+                    {pin.place_name && pin.address && pin.address !== pin.place_name && (
+                      <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
+                    )}
+                    {pin.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                        {pin.description}
+                      </p>
+                    )}
+                    {visitorCount > 0 && (
+                      <div className="flex items-center gap-1 mt-1.5 text-[10px] text-muted-foreground">
+                        <Users className="h-3 w-3" />
+                        <span>{visitorCount} {visitorCount === 1 ? 'osoba tu była' : visitorCount < 5 ? 'osoby tu były' : 'osób tu było'}</span>
                       </div>
                     )}
                   </div>
-                  {pin.place_name && pin.address && pin.address !== pin.place_name && (
-                    <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
-                  )}
-                  {pin.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                      {pin.description}
-                    </p>
-                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {sortedPins.length > MAX_VISIBLE_PINS && (
             <button
               onClick={(e) => {
@@ -426,14 +432,13 @@ const RouteCard = ({ route }: RouteCardProps) => {
               <Bookmark className="h-[18px] w-[18px]" />
               <span className="text-sm font-semibold tabular-nums">{saveCount}</span>
             </div>
-            <button 
-              onClick={handleCompletion}
-              disabled={completionMutation.isPending}
-              className={`flex items-center gap-2 transition-all duration-200 group/btn disabled:opacity-50 ${isCompleted ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
+            <div 
+              className={`flex items-center gap-2 ${hasUserVisitedAnyPin.data ? "text-primary" : "text-muted-foreground"}`}
+              title={`${totalUniqueVisitors} ${totalUniqueVisitors === 1 ? 'osoba odwiedziła' : 'osób odwiedziło'} miejsca na trasie`}
             >
-              <Footprints className={`h-[18px] w-[18px] group-hover/btn:scale-110 transition-transform ${isCompleted ? "fill-primary" : ""}`} />
-              <span className="text-sm font-semibold tabular-nums">{completionCount}</span>
-            </button>
+              <Footprints className={`h-[18px] w-[18px] ${hasUserVisitedAnyPin.data ? "fill-primary" : ""}`} />
+              <span className="text-sm font-semibold tabular-nums">{totalUniqueVisitors}</span>
+            </div>
           </div>
           
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
