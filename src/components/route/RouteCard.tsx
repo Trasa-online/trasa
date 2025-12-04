@@ -27,7 +27,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
   // Use the rating stored in the database (calculated from attraction pins only)
   const averageRating = route.rating || 0;
 
-  // Get pin visitors for all pins on this route
+  // Get pin visitors with profiles for all pins on this route
   const { data: pinVisitorsMap = {} } = useQuery({
     queryKey: ["route-card-pin-visitors", route.id],
     queryFn: async () => {
@@ -36,24 +36,34 @@ const RouteCard = ({ route }: RouteCardProps) => {
 
       const { data, error } = await supabase
         .from("pin_visits")
-        .select("pin_id, user_id")
-        .in("pin_id", pinIds);
+        .select("pin_id, user_id, created_at, profiles:user_id (username, avatar_url)")
+        .in("pin_id", pinIds)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       
-      // Group by pin_id and count unique users
-      const visitorsMap: Record<string, number> = {};
-      const uniqueByPin: Record<string, Set<string>> = {};
+      // Group by pin_id with visitor details (max 3 per pin)
+      const visitorsMap: Record<string, { count: number; visitors: any[] }> = {};
+      const uniqueByPin: Record<string, Map<string, any>> = {};
       
       data?.forEach((visit: any) => {
         if (!uniqueByPin[visit.pin_id]) {
-          uniqueByPin[visit.pin_id] = new Set();
+          uniqueByPin[visit.pin_id] = new Map();
         }
-        uniqueByPin[visit.pin_id].add(visit.user_id);
+        if (!uniqueByPin[visit.pin_id].has(visit.user_id)) {
+          uniqueByPin[visit.pin_id].set(visit.user_id, {
+            user_id: visit.user_id,
+            profiles: visit.profiles,
+          });
+        }
       });
       
-      Object.entries(uniqueByPin).forEach(([pinId, users]) => {
-        visitorsMap[pinId] = users.size;
+      Object.entries(uniqueByPin).forEach(([pinId, usersMap]) => {
+        const visitors = Array.from(usersMap.values()).slice(0, 3);
+        visitorsMap[pinId] = {
+          count: usersMap.size,
+          visitors,
+        };
       });
       
       return visitorsMap;
@@ -342,7 +352,8 @@ const RouteCard = ({ route }: RouteCardProps) => {
       {sortedPins.length > 0 && (
         <div className="divide-y divide-border/50">
           {(pinsExpanded ? sortedPins : sortedPins.slice(0, MAX_VISIBLE_PINS)).map((pin: any, index: number) => {
-            const visitorCount = pinVisitorsMap[pin.id] || 0;
+            const pinVisitorData = pinVisitorsMap[pin.id] || { count: 0, visitors: [] };
+            const { count: visitorCount, visitors } = pinVisitorData;
             return (
               <div 
                 key={pin.id} 
@@ -386,9 +397,23 @@ const RouteCard = ({ route }: RouteCardProps) => {
                       </p>
                     )}
                     {visitorCount > 0 && (
-                      <div className="flex items-center gap-1 mt-1.5 text-[10px] text-muted-foreground">
-                        <Users className="h-3 w-3" />
-                        <span>{visitorCount} {visitorCount === 1 ? 'osoba tu była' : visitorCount < 5 ? 'osoby tu były' : 'osób tu było'}</span>
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <div className="flex -space-x-1.5">
+                          {visitors.map((visitor: any, idx: number) => (
+                            <Avatar key={visitor.user_id} className="h-5 w-5 ring-2 ring-background">
+                              <AvatarImage src={visitor.profiles?.avatar_url || ""} />
+                              <AvatarFallback className="text-[8px] bg-muted">
+                                {visitor.profiles?.username?.charAt(0).toUpperCase() || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                          ))}
+                        </div>
+                        {visitorCount > 3 && (
+                          <span className="text-[10px] text-muted-foreground">+{visitorCount - 3}</span>
+                        )}
+                        <span className="text-[10px] text-muted-foreground">
+                          {visitorCount === 1 ? 'była tu' : visitorCount < 5 ? 'były tu' : 'było tu'}
+                        </span>
                       </div>
                     )}
                   </div>
