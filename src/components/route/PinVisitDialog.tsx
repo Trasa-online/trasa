@@ -85,27 +85,17 @@ export const PinVisitDialog = ({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (isEditing) {
-        const { error } = await supabase
-          .from("pin_visits")
-          .update({
-            image_url: imageUrl || null,
-            description: description || null,
-            rating: rating || null,
-          })
-          .eq("pin_id", pinId)
-          .eq("user_id", userId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("pin_visits").insert({
+      // Use upsert to handle both new visits and updates
+      const { error } = await supabase
+        .from("pin_visits")
+        .upsert({
           pin_id: pinId,
           user_id: userId,
           image_url: imageUrl || null,
           description: description || null,
           rating: rating || null,
-        });
-        if (error) throw error;
-      }
+        }, { onConflict: 'pin_id,user_id' });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pin-visitors", pinId] });
