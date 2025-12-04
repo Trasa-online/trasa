@@ -109,6 +109,7 @@ export const PinVisitDialog = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pin-visitors", pinId] });
+      queryClient.invalidateQueries({ queryKey: ["route-pin-visitors"] });
       toast({ title: isEditing ? "Zaktualizowano odwiedziny" : "Dodano odwiedziny!" });
       onOpenChange(false);
     },
