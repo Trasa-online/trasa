@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Star, MapPin, Eye, Bookmark, ArrowRight, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Footprints } from "lucide-react";
+import { Heart, MessageCircle, Star, MapPin, Bookmark, ArrowRight, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Footprints } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
@@ -375,44 +375,40 @@ const RouteCard = ({ route }: RouteCardProps) => {
       )}
 
       {/* Footer Section */}
-      <div className="p-3 bg-muted/20 border-t border-border/50">
+      <div className="px-4 py-3 bg-muted/30 border-t border-border/50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
             <button 
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors group/btn"
+              className="flex items-center gap-2 text-muted-foreground hover:text-red-500 transition-all duration-200 group/btn"
             >
-              <Heart className="h-4 w-4 group-hover/btn:scale-110 transition-transform" />
-              <span className="text-sm font-medium">{route.likes?.length || 0}</span>
+              <Heart className="h-[18px] w-[18px] group-hover/btn:scale-110 transition-transform" />
+              <span className="text-sm font-semibold tabular-nums">{route.likes?.length || 0}</span>
             </button>
             <button 
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors group/btn"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all duration-200 group/btn"
             >
-              <MessageCircle className="h-4 w-4 group-hover/btn:scale-110 transition-transform" />
-              <span className="text-sm font-medium">{route.comments?.length || 0}</span>
+              <MessageCircle className="h-[18px] w-[18px] group-hover/btn:scale-110 transition-transform" />
+              <span className="text-sm font-semibold tabular-nums">{route.comments?.length || 0}</span>
             </button>
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Bookmark className="h-4 w-4" />
-              <span className="text-sm font-medium">{saveCount}</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Eye className="h-4 w-4" />
-              <span className="text-sm font-medium">{route.views}</span>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Bookmark className="h-[18px] w-[18px]" />
+              <span className="text-sm font-semibold tabular-nums">{saveCount}</span>
             </div>
             <button 
               onClick={handleCompletion}
               disabled={completionMutation.isPending}
-              className={`flex items-center gap-1.5 transition-colors group/btn ${isCompleted ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+              className={`flex items-center gap-2 transition-all duration-200 group/btn disabled:opacity-50 ${isCompleted ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
             >
-              <Footprints className={`h-4 w-4 group-hover/btn:scale-110 transition-transform ${isCompleted ? "fill-primary" : ""}`} />
-              <span className="text-sm font-medium">{completionCount}</span>
+              <Footprints className={`h-[18px] w-[18px] group-hover/btn:scale-110 transition-transform ${isCompleted ? "fill-primary" : ""}`} />
+              <span className="text-sm font-semibold tabular-nums">{completionCount}</span>
             </button>
           </div>
           
-          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
             <span>Zobacz</span>
-            <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+            <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
           </div>
         </div>
       </div>
