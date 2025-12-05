@@ -182,7 +182,7 @@ const PinDetails = () => {
 
       <div className="p-4 space-y-6">
         {/* Pin Image */}
-        {pin.image_url && (
+        {pin.image_url ? (
           <div
             className="relative aspect-video rounded-lg overflow-hidden cursor-pointer"
             onClick={() => openLightbox(allImages, 0)}
@@ -192,6 +192,14 @@ const PinDetails = () => {
               alt={displayName || pin.address}
               className="w-full h-full object-cover"
             />
+          </div>
+        ) : (
+          <div className="relative aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-muted via-muted/80 to-muted/50">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="p-4 rounded-full bg-background/60 backdrop-blur-sm">
+                <MapPin className="h-10 w-10 text-muted-foreground" />
+              </div>
+            </div>
           </div>
         )}
 
