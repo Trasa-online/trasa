@@ -125,6 +125,11 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
                 </AvatarFallback>
               </Avatar>
             ))}
+            {visitorCount > 3 && (
+              <div className="h-5 w-5 ring-2 ring-background rounded-full bg-muted flex items-center justify-center">
+                <span className="text-[8px] font-bold">+{visitorCount - 3}</span>
+              </div>
+            )}
           </div>
           
           {averageRating > 0 && (
