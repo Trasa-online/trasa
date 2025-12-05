@@ -51,56 +51,60 @@ const VisitCard = ({
 
   return (
     <div className="p-3 bg-muted/40 rounded-xl border border-border/50">
-      <div className="flex items-center gap-2 mb-2">
-        <Link to={`/profile/${visit.profiles?.id}`}>
-          <Avatar className="h-6 w-6">
-            <AvatarImage src={visit.profiles?.avatar_url || ""} />
-            <AvatarFallback className="text-[10px]">
-              {visit.profiles?.username?.charAt(0).toUpperCase() || "?"}
-            </AvatarFallback>
-          </Avatar>
-        </Link>
-        <Link
-          to={`/profile/${visit.profiles?.id}`}
-          className="text-sm font-medium hover:text-primary"
-        >
-          {visit.profiles?.username || "Anonim"}
-        </Link>
-        {visit.rating && visit.rating > 0 && (
-          <div className="flex items-center gap-0.5 ml-auto">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Star
-                key={star}
-                className={`h-3 w-3 ${
-                  star <= visit.rating
-                    ? "fill-yellow-400 text-yellow-400"
-                    : "text-muted-foreground/30"
-                }`}
-              />
-            ))}
+      {/* Horizontal layout like reference */}
+      <div className="flex gap-3">
+        {/* Left: Image */}
+        {visit.image_url ? (
+          <div
+            className="shrink-0 w-20 h-20 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => {
+              const imageIndex = allImages.indexOf(visit.image_url);
+              openLightbox(allImages, imageIndex >= 0 ? imageIndex : 0);
+            }}
+          >
+            <img
+              src={visit.image_url}
+              alt={`Zdjęcie od ${visit.profiles?.username}`}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="shrink-0 w-20 h-20 rounded-lg bg-gradient-to-br from-muted via-muted/80 to-muted/50 flex items-center justify-center">
+            <Link to={`/profile/${visit.profiles?.id}`}>
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={visit.profiles?.avatar_url || ""} />
+                <AvatarFallback className="text-sm">
+                  {visit.profiles?.username?.charAt(0).toUpperCase() || "?"}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
           </div>
         )}
-      </div>
-      
-      {visit.image_url && (
-        <div
-          className="mb-2 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-          onClick={() => {
-            const imageIndex = allImages.indexOf(visit.image_url);
-            openLightbox(allImages, imageIndex >= 0 ? imageIndex : 0);
-          }}
-        >
-          <img
-            src={visit.image_url}
-            alt={`Zdjęcie od ${visit.profiles?.username}`}
-            className="w-full h-32 object-cover"
-          />
-        </div>
-      )}
 
-      {visit.description && (
-        <p className="text-xs text-muted-foreground leading-relaxed mb-2">{visit.description}</p>
-      )}
+        {/* Right: Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <Link
+              to={`/profile/${visit.profiles?.id}`}
+              className="font-semibold text-sm hover:text-primary line-clamp-1"
+            >
+              {visit.profiles?.username || "Anonim"}
+            </Link>
+            {visit.rating && visit.rating > 0 && (
+              <div className="flex items-center gap-0.5 shrink-0">
+                <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                <span className="text-sm font-medium">{visit.rating.toFixed(1)}</span>
+              </div>
+            )}
+          </div>
+
+          {visit.description && (
+            <p className="text-xs text-muted-foreground leading-relaxed mt-1 line-clamp-2">
+              {visit.description}
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* Like and Comment actions */}
       <div className="flex items-center gap-3 pt-2 border-t border-border/30">
