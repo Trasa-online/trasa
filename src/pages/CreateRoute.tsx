@@ -94,13 +94,28 @@ const CreateRoute = () => {
     }
   };
 
+  const resetFormState = () => {
+    setTitle("");
+    setDescription("");
+    setRouteDescription("");
+    setPins([{ 
+      place_name: "", address: "", description: "", image_url: "", 
+      images: [], rating: 0, pin_order: 0, tags: [], 
+      mentioned_users: [], latitude: undefined, longitude: undefined 
+    }]);
+    setRouteNotes([]);
+    setCurrentPinIndex(0);
+    setStep(1);
+    setShowPinsList(false);
+    setShowAltName(false);
+    setShowCustomTagInput(false);
+    setRouteRating(0);
+  };
+
   const confirmExit = () => {
     setShowExitConfirm(false);
-    if (step === 1) {
-      navigate("/");
-    } else {
-      setStep(1);
-    }
+    resetFormState();
+    navigate("/");
   };
 
   useEffect(() => {
