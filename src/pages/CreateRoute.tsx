@@ -474,45 +474,8 @@ const CreateRoute = () => {
           <>
             {showPinsList && pins.filter(p => p.address).length > 0 ? (
               <div className="space-y-4 pb-24">
-                {/* Interactive Map for adding pins */}
-                <div className="space-y-2">
-                  <Label>Dodaj piny na mapie</Label>
-                  <InteractiveRouteMap
-                    pins={pins.filter(p => p.latitude && p.longitude)}
-                    className="h-48"
-                    onPinAdd={(pinData) => {
-                      const newPin: Pin = {
-                        place_name: pinData.place_name,
-                        address: pinData.address,
-                        description: "",
-                        image_url: "",
-                        images: [],
-                        rating: 0,
-                        pin_order: pins.length,
-                        tags: [],
-                        mentioned_users: [],
-                        latitude: pinData.latitude,
-                        longitude: pinData.longitude,
-                      };
-                      setPins(prev => [...prev, newPin]);
-                      toast({ title: "Pin dodany", description: pinData.place_name || pinData.address });
-                    }}
-                  />
-                </div>
-
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold">Pinezki w trasie</h2>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => {
-                      setShowPinsList(false);
-                      addPin();
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Ręcznie
-                  </Button>
                 </div>
 
                 <DraggablePinList
