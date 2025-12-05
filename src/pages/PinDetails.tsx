@@ -1,8 +1,8 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Pencil, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,16 +11,29 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const PinDetails = () => {
   const { pinId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [showVisitDialog, setShowVisitDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Fetch pin data
   const { data: pin, isLoading: pinLoading } = useQuery({
@@ -84,6 +97,27 @@ const PinDetails = () => {
   // Check if current user has already rated
   const currentUserVisit = visits.find((v: any) => v.user_id === user?.id);
   const hasVisited = !!currentUserVisit;
+
+  // Delete visit mutation
+  const deleteVisitMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("pin_visits")
+        .delete()
+        .eq("pin_id", pinId)
+        .eq("user_id", user?.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pin-visits-details", pinId] });
+      queryClient.invalidateQueries({ queryKey: ["route-pin-visitors"] });
+      toast({ title: "Usunięto ocenę" });
+      setShowDeleteConfirm(false);
+    },
+    onError: () => {
+      toast({ title: "Wystąpił błąd", variant: "destructive" });
+    },
+  });
 
   if (pinLoading) {
     return (
@@ -257,24 +291,34 @@ const PinDetails = () => {
 
         {/* Rate Button */}
         {user && (
-          <div className="flex justify-center">
-            <Button
-              onClick={() => setShowVisitDialog(true)}
-              variant={hasVisited ? "outline" : "default"}
-              className={hasVisited ? "border-border" : "bg-foreground text-background hover:bg-foreground/90"}
-            >
-              {hasVisited ? (
-                <>
-                  <Eye className="h-4 w-4 mr-2" />
-                  Zobacz ocenę
-                </>
-              ) : (
-                <>
-                  <Star className="h-4 w-4 mr-2" />
-                  Dodaj coś od siebie
-                </>
-              )}
-            </Button>
+          <div className="flex justify-center gap-2">
+            {hasVisited ? (
+              <>
+                <Button
+                  onClick={() => setShowVisitDialog(true)}
+                  variant="outline"
+                  className="border-border"
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edytuj ocenę
+                </Button>
+                <Button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  variant="outline"
+                  className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={() => setShowVisitDialog(true)}
+                className="bg-foreground text-background hover:bg-foreground/90"
+              >
+                <Star className="h-4 w-4 mr-2" />
+                Dodaj coś od siebie
+              </Button>
+            )}
           </div>
         )}
 
@@ -375,6 +419,27 @@ const PinDetails = () => {
           } : null}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Usuń ocenę</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz usunąć swoją ocenę? Ta akcja jest nieodwracalna.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteVisitMutation.mutate()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Usuń
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
