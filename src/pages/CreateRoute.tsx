@@ -16,6 +16,16 @@ import UserMentionInput from "@/components/route/UserMentionInput";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import RouteMap from "@/components/RouteMap";
 import DraggablePinList from "@/components/route/DraggablePinList";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Pin {
   id?: string;
@@ -52,6 +62,44 @@ const CreateRoute = () => {
   const [noAddressRemembered, setNoAddressRemembered] = useState(false);
   const [showPinsList, setShowPinsList] = useState(false);
   const [showAltName, setShowAltName] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  // Check if user has added any pins with data
+  const hasAddedPins = pins.some(p => p.address && p.address.trim() !== "");
+
+  const handleBackClick = () => {
+    if (step === 3) {
+      setStep(2);
+      setShowPinsList(true);
+    } else if (step === 2) {
+      if (showPinsList) {
+        // Going back from pins list - check if there are pins
+        if (hasAddedPins) {
+          setShowExitConfirm(true);
+        } else {
+          setStep(1);
+        }
+      } else {
+        setShowPinsList(true);
+      }
+    } else {
+      // Step 1 - check if there are pins before navigating away
+      if (hasAddedPins) {
+        setShowExitConfirm(true);
+      } else {
+        navigate("/");
+      }
+    }
+  };
+
+  const confirmExit = () => {
+    setShowExitConfirm(false);
+    if (step === 1) {
+      navigate("/");
+    } else {
+      setStep(1);
+    }
+  };
 
   useEffect(() => {
     setNoAddressRemembered(pins[currentPinIndex]?.address === "Brak adresu");
@@ -352,20 +400,7 @@ const CreateRoute = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center gap-4 z-10">
-        <button onClick={() => {
-          if (step === 3) {
-            setStep(2);
-            setShowPinsList(true);
-          } else if (step === 2) {
-            if (showPinsList) {
-              setStep(1);
-            } else {
-              setShowPinsList(true);
-            }
-          } else {
-            navigate("/");
-          }
-        }}>
+        <button onClick={handleBackClick}>
           <ArrowLeft className="h-6 w-6" />
         </button>
         <h1 className="text-xl font-semibold flex-1">
@@ -967,6 +1002,27 @@ const CreateRoute = () => {
           </>
         ) : null}
       </div>
+
+      {/* Exit Confirmation Dialog */}
+      <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Czy na pewno chcesz wyjść?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Masz niezapisane zmiany. Jeśli wyjdziesz, stracisz dodane pinezki.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zostań</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmExit}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Wyjdź
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
