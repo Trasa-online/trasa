@@ -99,8 +99,9 @@ export const PinVisitDialog = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pin-visitors", pinId] });
+      queryClient.invalidateQueries({ queryKey: ["pin-visits-details", pinId] });
       queryClient.invalidateQueries({ queryKey: ["route-pin-visitors"] });
-      toast({ title: isEditing ? "Zaktualizowano odwiedziny" : "Dodano odwiedziny!" });
+      toast({ title: isEditing ? "Zaktualizowano opinię" : "Dodano opinię!" });
       onOpenChange(false);
     },
     onError: () => {
@@ -110,11 +111,11 @@ export const PinVisitDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md mx-4 max-h-[90vh] overflow-y-auto bg-background border-border">
         <DialogHeader className="pb-2">
           <DialogTitle className="flex items-center gap-2 text-lg">
-            <MapPin className="h-5 w-5 text-primary" />
-            {isEditing ? "Edytuj odwiedziny" : "Byłem tu!"}
+            <MapPin className="h-5 w-5" />
+            {isEditing ? "Edytuj swoją opinię" : "Dodaj coś od siebie"}
           </DialogTitle>
           <p className="text-sm text-muted-foreground mt-1">{pinName}</p>
         </DialogHeader>
@@ -133,13 +134,13 @@ export const PinVisitDialog = ({
                 <button
                   type="button"
                   onClick={removeImage}
-                  className="absolute top-2 right-2 p-1.5 bg-background/90 backdrop-blur rounded-full hover:bg-background transition-colors"
+                  className="absolute top-2 right-2 p-1.5 bg-background/90 backdrop-blur rounded-full hover:bg-background transition-colors border border-border"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
             ) : (
-              <label className="flex flex-col items-center justify-center aspect-video rounded-xl border-2 border-dashed border-border bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors">
+              <label className="flex flex-col items-center justify-center aspect-video rounded-xl border-2 border-dashed border-border bg-muted/20 hover:bg-muted/40 cursor-pointer transition-colors">
                 <input
                   type="file"
                   accept="image/*"
@@ -149,13 +150,13 @@ export const PinVisitDialog = ({
                 />
                 {uploading ? (
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <div className="h-10 w-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <div className="h-10 w-10 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
                     <span className="text-sm">Przesyłanie...</span>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <div className="p-3 rounded-full bg-primary/10">
-                      <Camera className="h-6 w-6 text-primary" />
+                    <div className="p-3 rounded-full bg-foreground/10">
+                      <Camera className="h-6 w-6" />
                     </div>
                     <span className="text-sm font-medium">Dodaj zdjęcie</span>
                     <span className="text-xs">Kliknij lub przeciągnij</span>
@@ -181,7 +182,7 @@ export const PinVisitDialog = ({
                   <Star
                     className={`h-8 w-8 transition-colors ${
                       star <= (hoveredRating || rating)
-                        ? "fill-yellow-400 text-yellow-400"
+                        ? "fill-foreground text-foreground"
                         : "text-muted-foreground/30"
                     }`}
                   />
@@ -210,14 +211,14 @@ export const PinVisitDialog = ({
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="flex-1"
+              className="flex-1 border-border"
             >
               Anuluj
             </Button>
             <Button
               onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending}
-              className="flex-1"
+              className="flex-1 bg-foreground text-background hover:bg-foreground/90"
             >
               {saveMutation.isPending ? (
                 "Zapisywanie..."
@@ -226,7 +227,7 @@ export const PinVisitDialog = ({
               ) : (
                 <>
                   <Upload className="h-4 w-4 mr-2" />
-                  Potwierdź wizytę
+                  Zapisz
                 </>
               )}
             </Button>
