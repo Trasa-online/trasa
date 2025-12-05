@@ -541,6 +541,54 @@ export type Database = {
         }
         Relationships: []
       }
+      visit_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          user_id: string
+          visit_pin_id: string
+          visit_user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          user_id: string
+          visit_pin_id: string
+          visit_user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+          visit_pin_id?: string
+          visit_user_id?: string
+        }
+        Relationships: []
+      }
+      visit_likes: {
+        Row: {
+          created_at: string | null
+          user_id: string
+          visit_pin_id: string
+          visit_user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          user_id: string
+          visit_pin_id: string
+          visit_user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          user_id?: string
+          visit_pin_id?: string
+          visit_user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       admin_user_stats: {
