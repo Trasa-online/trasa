@@ -183,6 +183,8 @@ export const ShareImageDialog = ({ open, onOpenChange, route }: ShareImageDialog
   const handleShare = async () => {
     if (!generatedImage) return;
 
+    const routeUrl = `${window.location.origin}/route/${route.id}`;
+
     try {
       const response = await fetch(generatedImage);
       const blob = await response.blob();
@@ -191,7 +193,8 @@ export const ShareImageDialog = ({ open, onOpenChange, route }: ShareImageDialog
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: route.title,
-          text: route.description || `Sprawdź trasę: ${route.title}`,
+          text: `${route.description || `Sprawdź trasę: ${route.title}`}\n\n${routeUrl}`,
+          url: routeUrl,
           files: [file],
         });
       } else {
