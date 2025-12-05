@@ -144,7 +144,7 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
         <div className="ml-auto flex items-center gap-1">
           {hasVisited ? (
             <span className="text-[10px] text-foreground font-medium flex items-center gap-1">
-              Edytuj ocenę
+              Zobacz ocenę
             </span>
           ) : (
             <span className="text-[10px] text-foreground font-medium flex items-center gap-1">

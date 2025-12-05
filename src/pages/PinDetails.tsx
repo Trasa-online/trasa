@@ -266,7 +266,7 @@ const PinDetails = () => {
               {hasVisited ? (
                 <>
                   <Check className="h-4 w-4 mr-2" />
-                  Edytuj ocenę
+                  Zobacz ocenę
                 </>
               ) : (
                 <>
