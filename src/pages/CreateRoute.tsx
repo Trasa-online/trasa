@@ -61,7 +61,6 @@ const CreateRoute = () => {
   const [routeDescription, setRouteDescription] = useState("");
   const [routeRating, setRouteRating] = useState(0);
   const [showCustomTagInput, setShowCustomTagInput] = useState(false);
-  const [noAddressRemembered, setNoAddressRemembered] = useState(false);
   const [showPinsList, setShowPinsList] = useState(false);
   const [showAltName, setShowAltName] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
@@ -119,7 +118,6 @@ const CreateRoute = () => {
   };
 
   useEffect(() => {
-    setNoAddressRemembered(pins[currentPinIndex]?.address === "Brak adresu");
     setShowAltName(!!pins[currentPinIndex]?.place_name);
   }, [currentPinIndex, pins]);
 
@@ -584,7 +582,6 @@ const CreateRoute = () => {
                             });
                           }}
                           placeholder="Wpisz adres miejsca"
-                          disabled={noAddressRemembered}
                         />
                       </div>
                       <MapPinSelector
@@ -617,24 +614,6 @@ const CreateRoute = () => {
                         {pins[currentPinIndex]?.address}
                       </p>
                     )}
-                    <div className="flex items-center gap-2 mt-2">
-                      <Checkbox
-                        id="no-address"
-                        checked={noAddressRemembered}
-                        onCheckedChange={(checked) => {
-                          setNoAddressRemembered(!!checked);
-                          if (checked) {
-                            updatePin(currentPinIndex, "address", "Brak adresu");
-                          } else {
-                            updatePin(currentPinIndex, "address", "");
-                          }
-                        }}
-                      />
-                      <label htmlFor="no-address" className="text-xs text-muted-foreground cursor-pointer">
-                        Nie pamiętam adresu
-                      </label>
-                    </div>
-                    
                     {/* Alternative pin name checkbox and input */}
                     <div className="flex items-center gap-2 mt-3">
                       <Checkbox
