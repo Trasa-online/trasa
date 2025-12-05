@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { Maximize2 } from 'lucide-react';
 
 const MAPBOX_ACCESS_TOKEN = "pk.eyJ1IjoibWFjaWFzMzQiLCJhIjoiY21pbmgxeWUzMjI0czNqc2Y0ZGl4Nnp6diJ9.iYtSuDlTEsCGTfuyNJzpmg";
 
@@ -8,6 +9,7 @@ interface Pin {
   latitude?: number;
   longitude?: number;
   place_name?: string;
+  address?: string;
   is_transport?: boolean;
   pin_order?: number;
 }
@@ -15,9 +17,11 @@ interface Pin {
 interface RouteMapProps {
   pins: Pin[];
   className?: string;
+  onClick?: () => void;
+  showExpandButton?: boolean;
 }
 
-const RouteMap = ({ pins, className = "" }: RouteMapProps) => {
+const RouteMap = ({ pins, className = "", onClick, showExpandButton = false }: RouteMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
@@ -62,7 +66,7 @@ const RouteMap = ({ pins, className = "" }: RouteMapProps) => {
       el.style.cssText = `
         width: 28px;
         height: 28px;
-        background: hsl(var(--primary));
+        background: #000;
         border: 2px solid white;
         border-radius: 50%;
         display: flex;
@@ -80,7 +84,7 @@ const RouteMap = ({ pins, className = "" }: RouteMapProps) => {
         .setLngLat([pin.longitude, pin.latitude])
         .setPopup(
           new mapboxgl.Popup({ offset: 25 })
-            .setHTML(`<p style="font-weight: 500; margin: 0;">${pin.place_name || `Punkt ${index + 1}`}</p>`)
+            .setHTML(`<p style="font-weight: 500; margin: 0;">${pin.place_name || pin.address || `Punkt ${index + 1}`}</p>`)
         )
         .addTo(map.current);
 
@@ -106,8 +110,22 @@ const RouteMap = ({ pins, className = "" }: RouteMapProps) => {
   }, [pins]);
 
   return (
-    <div className={`relative rounded-lg overflow-hidden border border-border ${className}`}>
+    <div 
+      className={`relative rounded-lg overflow-hidden border border-border ${className} ${onClick ? 'cursor-pointer' : ''}`}
+      onClick={onClick}
+    >
       <div ref={mapContainer} className="w-full h-full min-h-[160px]" />
+      {showExpandButton && onClick && (
+        <button 
+          className="absolute top-2 left-2 p-2 bg-background/90 backdrop-blur-sm rounded-md border border-border shadow-sm hover:bg-background transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+        >
+          <Maximize2 className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 };
