@@ -568,13 +568,15 @@ const CreateRoute = () => {
                             setPins(prevPins => {
                               const newPins = [...prevPins];
                               const isPlaceName = fullAddress && value !== fullAddress;
-                              newPins[currentPinIndex] = {
-                                ...newPins[currentPinIndex],
-                                address: fullAddress || value,
-                                place_name: isPlaceName ? value : newPins[currentPinIndex].place_name,
-                                latitude: coordinates?.latitude,
-                                longitude: coordinates?.longitude,
-                              };
+                              if (newPins[currentPinIndex]) {
+                                newPins[currentPinIndex] = {
+                                  ...newPins[currentPinIndex],
+                                  address: fullAddress || value,
+                                  place_name: isPlaceName ? value : newPins[currentPinIndex].place_name,
+                                  latitude: coordinates?.latitude,
+                                  longitude: coordinates?.longitude,
+                                };
+                              }
                               if (isPlaceName) {
                                 setShowAltName(true);
                               }
@@ -718,7 +720,7 @@ const CreateRoute = () => {
                       {pins[currentPinIndex]?.image_url ? (
                         <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
                           <img
-                            src={pins[currentPinIndex].image_url}
+                            src={pins[currentPinIndex]?.image_url}
                             alt="Podgląd zdjęcia"
                             className="w-full h-full object-cover"
                           />
