@@ -810,11 +810,11 @@ const RouteDetails = () => {
   return (
     <LightboxContext.Provider value={{ openLightbox }}>
     <div className="min-h-screen bg-background pb-16">
-      <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center gap-4 z-10">
+      <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center gap-3 z-10">
         <button onClick={() => navigate("/")}>
-          <ArrowLeft className="h-6 w-6" />
+          <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-xl font-semibold flex-1">Szczegóły trasy</h1>
+        <h1 className="text-base font-semibold flex-1">Szczegóły trasy</h1>
         {isOwner && (
           <div className="flex items-center gap-2">
             <Button
