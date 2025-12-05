@@ -1012,13 +1012,22 @@ const CreateRoute = () => {
               Masz niezapisane zmiany. Jeśli wyjdziesz, stracisz dodane pinezki.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel>Zostań</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowExitConfirm(false);
+                saveRoute("draft");
+              }}
+              className="bg-foreground text-background hover:bg-foreground/90"
+            >
+              Zapisz i wyjdź
+            </AlertDialogAction>
             <AlertDialogAction
               onClick={confirmExit}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Wyjdź
+              Wyjdź bez zapisywania
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
