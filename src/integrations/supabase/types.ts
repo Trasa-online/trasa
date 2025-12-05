@@ -574,6 +574,7 @@ export type Database = {
         | "follower"
         | "new_route"
         | "mention"
+        | "pin_visit"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -708,6 +709,7 @@ export const Constants = {
         "follower",
         "new_route",
         "mention",
+        "pin_visit",
       ],
     },
   },
