@@ -809,7 +809,7 @@ const RouteDetails = () => {
     <LightboxContext.Provider value={{ openLightbox }}>
     <div className="min-h-screen bg-background pb-16">
       <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center gap-4 z-10">
-        <button onClick={() => navigate(-1)}>
+        <button onClick={() => navigate("/")}>
           <ArrowLeft className="h-6 w-6" />
         </button>
         <h1 className="text-xl font-semibold flex-1">Szczegóły trasy</h1>
