@@ -27,7 +27,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
   // Use the rating stored in the database (calculated from attraction pins only)
   const averageRating = route.rating || 0;
 
-  // Get pin visitors with profiles for all pins on this route
+  // Get pin visitors with profiles and ratings for all pins on this route
   const { data: pinVisitorsMap = {} } = useQuery({
     queryKey: ["route-card-pin-visitors", route.id],
     queryFn: async () => {
@@ -36,21 +36,23 @@ const RouteCard = ({ route }: RouteCardProps) => {
 
       const { data, error } = await supabase
         .from("pin_visits")
-        .select("pin_id, user_id, created_at, image_url, profiles:user_id (username, avatar_url)")
+        .select("pin_id, user_id, created_at, image_url, rating, profiles:user_id (username, avatar_url)")
         .in("pin_id", pinIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       
-      // Group by pin_id with visitor details (max 3 per pin) and images
-      const visitorsMap: Record<string, { count: number; visitors: any[]; images: string[] }> = {};
+      // Group by pin_id with visitor details (max 3 per pin), images and ratings
+      const visitorsMap: Record<string, { count: number; visitors: any[]; images: string[]; avgRating: number }> = {};
       const uniqueByPin: Record<string, Map<string, any>> = {};
       const imagesByPin: Record<string, string[]> = {};
+      const ratingsByPin: Record<string, number[]> = {};
       
       data?.forEach((visit: any) => {
         if (!uniqueByPin[visit.pin_id]) {
           uniqueByPin[visit.pin_id] = new Map();
           imagesByPin[visit.pin_id] = [];
+          ratingsByPin[visit.pin_id] = [];
         }
         if (!uniqueByPin[visit.pin_id].has(visit.user_id)) {
           uniqueByPin[visit.pin_id].set(visit.user_id, {
@@ -62,14 +64,21 @@ const RouteCard = ({ route }: RouteCardProps) => {
         if (visit.image_url && !imagesByPin[visit.pin_id].includes(visit.image_url)) {
           imagesByPin[visit.pin_id].push(visit.image_url);
         }
+        // Collect ratings for average calculation
+        if (visit.rating && visit.rating > 0) {
+          ratingsByPin[visit.pin_id].push(visit.rating);
+        }
       });
       
       Object.entries(uniqueByPin).forEach(([pinId, usersMap]) => {
         const visitors = Array.from(usersMap.values()).slice(0, 3);
+        const ratings = ratingsByPin[pinId] || [];
+        const avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
         visitorsMap[pinId] = {
           count: usersMap.size,
           visitors,
           images: imagesByPin[pinId] || [],
+          avgRating,
         };
       });
       
@@ -359,8 +368,8 @@ const RouteCard = ({ route }: RouteCardProps) => {
       {sortedPins.length > 0 && (
         <div className="divide-y divide-border/50">
           {(pinsExpanded ? sortedPins : sortedPins.slice(0, MAX_VISIBLE_PINS)).map((pin: any, index: number) => {
-            const pinVisitorData = pinVisitorsMap[pin.id] || { count: 0, visitors: [], images: [] };
-            const { count: visitorCount, visitors, images } = pinVisitorData;
+            const pinVisitorData = pinVisitorsMap[pin.id] || { count: 0, visitors: [], images: [], avgRating: 0 };
+            const { count: visitorCount, visitors } = pinVisitorData;
             return (
               <div 
                 key={pin.id} 
@@ -408,7 +417,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
                       </p>
                     )}
                     {visitorCount > 0 && (
-                      <div className="flex items-center gap-1.5 mt-2">
+                      <div className="flex items-center gap-2 mt-2">
                         <div className="flex -space-x-1.5">
                           {visitors.map((visitor: any) => (
                             <Avatar key={visitor.user_id} className="h-5 w-5 ring-2 ring-background">
@@ -424,6 +433,12 @@ const RouteCard = ({ route }: RouteCardProps) => {
                             </div>
                           )}
                         </div>
+                        {pinVisitorData.avgRating > 0 && (
+                          <div className="flex items-center gap-0.5 text-xs">
+                            <Star className="h-3 w-3 fill-star text-star" />
+                            <span className="font-medium">{pinVisitorData.avgRating.toFixed(1)}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
