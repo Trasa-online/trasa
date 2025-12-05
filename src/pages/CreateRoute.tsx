@@ -191,8 +191,24 @@ const CreateRoute = () => {
   }, [pins]);
 
   const addPin = () => {
-    setPins([...pins, { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: pins.length, tags: [], mentioned_users: [], latitude: undefined, longitude: undefined }]);
-    setCurrentPinIndex(pins.length);
+    setPins(prevPins => {
+      const newPin: Pin = { 
+        place_name: "", 
+        address: "", 
+        description: "", 
+        image_url: "", 
+        images: [], 
+        rating: 0, 
+        pin_order: prevPins.length, 
+        tags: [], 
+        mentioned_users: [], 
+        latitude: undefined, 
+        longitude: undefined 
+      };
+      const newPins = [...prevPins, newPin];
+      setCurrentPinIndex(newPins.length - 1);
+      return newPins;
+    });
   };
 
   const removePin = (index: number) => {
