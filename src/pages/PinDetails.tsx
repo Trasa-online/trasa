@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Heart, Send, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { pl } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,12 +86,17 @@ const VisitCard = ({
         {/* Right: Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <Link
-              to={`/profile/${visit.profiles?.id}`}
-              className="font-semibold text-sm hover:text-primary line-clamp-1"
-            >
-              {visit.profiles?.username || "Anonim"}
-            </Link>
+            <div className="min-w-0">
+              <Link
+                to={`/profile/${visit.profiles?.id}`}
+                className="font-semibold text-sm hover:text-primary line-clamp-1"
+              >
+                {visit.profiles?.username || "Anonim"}
+              </Link>
+              <p className="text-[10px] text-muted-foreground">
+                {format(new Date(visit.created_at), "d MMM yyyy", { locale: pl })}
+              </p>
+            </div>
             {visit.rating && visit.rating > 0 && (
               <div className="flex items-center gap-0.5 shrink-0">
                 <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
