@@ -127,22 +127,6 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
             ))}
           </div>
           
-          {/* Image thumbnail with count */}
-          {firstImage && (
-            <div className="relative">
-              <img
-                src={firstImage}
-                alt="Zdjęcie z odwiedzin"
-                className="h-6 w-6 rounded object-cover"
-              />
-              {imageCount > 1 && (
-                <div className="absolute inset-0 bg-black/50 rounded flex items-center justify-center">
-                  <span className="text-[8px] font-bold text-white">+{imageCount}</span>
-                </div>
-              )}
-            </div>
-          )}
-          
           {averageRating > 0 && (
             <span className="flex items-center gap-0.5 text-yellow-600">
               <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
