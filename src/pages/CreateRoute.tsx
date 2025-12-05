@@ -555,22 +555,38 @@ const CreateRoute = () => {
                   <div>
                     <Label>Adres *</Label>
                     <AddressAutocomplete
-                      value={pins[currentPinIndex]?.address || ""}
-                      onChange={(value, coordinates) => {
+                      value={pins[currentPinIndex]?.place_name || pins[currentPinIndex]?.address || ""}
+                      onChange={(value, coordinates, fullAddress) => {
                         setPins(prevPins => {
                           const newPins = [...prevPins];
+                          // If fullAddress exists, value is the place name - use it for place_name
+                          // and fullAddress for address field
+                          const isPlaceName = fullAddress && value !== fullAddress;
                           newPins[currentPinIndex] = {
                             ...newPins[currentPinIndex],
-                            address: value,
+                            address: fullAddress || value,
+                            place_name: isPlaceName ? value : newPins[currentPinIndex].place_name,
                             latitude: coordinates?.latitude,
                             longitude: coordinates?.longitude,
                           };
+                          // Auto-show alt name field if place name was set
+                          if (isPlaceName) {
+                            setShowAltName(true);
+                          }
                           return newPins;
                         });
                       }}
                       placeholder="Wpisz adres miejsca"
                       disabled={noAddressRemembered}
                     />
+                    {/* Show full address when place_name is different */}
+                    {pins[currentPinIndex]?.place_name && 
+                     pins[currentPinIndex]?.address && 
+                     pins[currentPinIndex]?.place_name !== pins[currentPinIndex]?.address && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {pins[currentPinIndex]?.address}
+                      </p>
+                    )}
                     <div className="flex items-center gap-2 mt-2">
                       <Checkbox
                         id="no-address"

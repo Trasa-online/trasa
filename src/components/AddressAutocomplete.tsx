@@ -11,7 +11,7 @@ interface Coordinates {
 
 interface AddressAutocompleteProps {
   value: string;
-  onChange: (value: string, coordinates?: Coordinates) => void;
+  onChange: (value: string, coordinates?: Coordinates, fullAddress?: string) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -107,9 +107,18 @@ const AddressAutocomplete = ({
   };
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
-    const address = suggestion.full_address || suggestion.place_formatted || suggestion.name;
-    setQuery(address);
-    onChange(address, suggestion.coordinates);
+    // Prioritize place name for POIs (restaurants, attractions, etc.)
+    // Use full_address only if name is missing or is the same as address
+    const isPlaceName = suggestion.name && 
+      suggestion.name !== suggestion.full_address && 
+      suggestion.name !== suggestion.place_formatted;
+    
+    const displayValue = isPlaceName 
+      ? suggestion.name 
+      : (suggestion.full_address || suggestion.place_formatted || suggestion.name);
+    
+    setQuery(displayValue);
+    onChange(displayValue, suggestion.coordinates, suggestion.full_address);
     setIsOpen(false);
     setSuggestions([]);
   };
