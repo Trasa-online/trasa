@@ -85,10 +85,10 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
       <>
         <button
           onClick={() => setShowVisitDialog(true)}
-          className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-full transition-all hover:scale-105 active:scale-95"
+          className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 text-xs font-medium bg-foreground text-background hover:bg-foreground/90 rounded-full transition-all hover:scale-105 active:scale-95"
         >
           <Star className="h-3.5 w-3.5" />
-          <span>Oceń</span>
+          <span>Dodaj coś od siebie</span>
         </button>
         <PinVisitDialog
           open={showVisitDialog}
@@ -156,17 +156,14 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
         
         <div className="ml-auto flex items-center gap-1">
           {hasVisited ? (
-            <span className="text-[10px] text-green-600 font-medium flex items-center gap-1">
+            <span className="text-[10px] text-foreground font-medium flex items-center gap-1">
               <Check className="h-3 w-3" />
-              Ocenione
-              {currentUserVisit?.rating && currentUserVisit.rating > 0 && (
-                <span>({currentUserVisit.rating}★)</span>
-              )}
+              Edytuj ocenę
             </span>
           ) : (
-            <span className="text-[10px] text-primary font-medium flex items-center gap-1">
+            <span className="text-[10px] text-foreground font-medium flex items-center gap-1">
               <Star className="h-3 w-3" />
-              Oceń
+              Dodaj coś od siebie
             </span>
           )}
           {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}

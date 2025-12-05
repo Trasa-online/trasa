@@ -256,21 +256,17 @@ const PinDetails = () => {
             <Button
               onClick={() => setShowVisitDialog(true)}
               variant={hasVisited ? "outline" : "default"}
-              className={hasVisited ? "border-green-500 text-green-600" : ""}
+              className={hasVisited ? "border-border" : "bg-foreground text-background hover:bg-foreground/90"}
             >
               {hasVisited ? (
                 <>
                   <Check className="h-4 w-4 mr-2" />
-                  Ocenione
-                  {currentUserVisit?.rating && currentUserVisit.rating > 0 && (
-                    <span className="ml-1">({currentUserVisit.rating}★)</span>
-                  )}
-                  <span className="ml-2 text-xs opacity-70">- edytuj</span>
+                  Edytuj ocenę
                 </>
               ) : (
                 <>
                   <Star className="h-4 w-4 mr-2" />
-                  Oceń to miejsce
+                  Dodaj coś od siebie
                 </>
               )}
             </Button>
