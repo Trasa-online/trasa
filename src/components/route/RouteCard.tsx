@@ -420,20 +420,6 @@ const RouteCard = ({ route }: RouteCardProps) => {
                             </div>
                           )}
                         </div>
-                        {images.length > 0 && (
-                          <div className="relative">
-                            <img
-                              src={images[0]}
-                              alt="Visit photo"
-                              className="h-6 w-6 rounded object-cover ring-1 ring-border"
-                            />
-                            {images.length > 1 && (
-                              <div className="absolute inset-0 bg-black/50 rounded flex items-center justify-center">
-                                <span className="text-[8px] font-bold text-white">+{images.length - 1}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
                       </div>
                     )}
                   </div>
