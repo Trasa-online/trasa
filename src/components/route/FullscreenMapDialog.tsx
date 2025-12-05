@@ -1,5 +1,4 @@
-import { useEffect, useRef } from 'react';
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -26,11 +25,15 @@ export const FullscreenMapDialog = ({ open, onOpenChange, pins, title }: Fullscr
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
-    if (!open || !mapContainer.current) return;
+    if (!open) {
+      setMapReady(false);
+      return;
+    }
 
-    // Small delay to ensure dialog is fully rendered
+    // Delay to ensure container is mounted
     const timeout = setTimeout(() => {
       if (!mapContainer.current) return;
 
@@ -51,6 +54,10 @@ export const FullscreenMapDialog = ({ open, onOpenChange, pins, title }: Fullscr
         style: 'mapbox://styles/mapbox/streets-v12',
         center: center,
         zoom: validPins.length === 1 ? 15 : validPins.length > 1 ? 12 : 3,
+      });
+
+      map.current.on('load', () => {
+        setMapReady(true);
       });
 
       map.current.addControl(
@@ -107,7 +114,7 @@ export const FullscreenMapDialog = ({ open, onOpenChange, pins, title }: Fullscr
         });
         map.current.fitBounds(bounds, { padding: 60, maxZoom: 15 });
       }
-    }, 100);
+    }, 150);
 
     return () => {
       clearTimeout(timeout);
@@ -118,54 +125,54 @@ export const FullscreenMapDialog = ({ open, onOpenChange, pins, title }: Fullscr
     };
   }, [open, pins]);
 
+  const validPins = pins.filter(pin => pin.latitude && pin.longitude)
+    .sort((a, b) => (a.pin_order || 0) - (b.pin_order || 0));
+
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[100vw] max-h-[100vh] w-screen h-screen p-0 gap-0 border-0 rounded-none">
-        {/* Header */}
-        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-background/90 to-transparent">
-          <h2 className="font-semibold text-lg truncate pr-4">{title || "Mapa trasy"}</h2>
-          <button 
-            onClick={() => onOpenChange(false)}
-            className="p-2 bg-background/90 backdrop-blur-sm rounded-full border border-border shadow-sm hover:bg-background transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <div className="fixed inset-0 z-50 bg-background">
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 bg-gradient-to-b from-background via-background/80 to-transparent">
+        <h2 className="font-semibold text-lg truncate pr-4">{title || "Mapa trasy"}</h2>
+        <button 
+          onClick={() => onOpenChange(false)}
+          className="p-2 bg-background/90 backdrop-blur-sm rounded-full border border-border shadow-sm hover:bg-muted transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
 
-        {/* Pin list */}
-        <div className="absolute bottom-0 left-0 right-0 z-10 p-4 bg-gradient-to-t from-background/95 to-transparent">
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {pins
-              .filter(pin => pin.latitude && pin.longitude)
-              .sort((a, b) => (a.pin_order || 0) - (b.pin_order || 0))
-              .map((pin, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    if (map.current && pin.latitude && pin.longitude) {
-                      map.current.flyTo({
-                        center: [pin.longitude, pin.latitude],
-                        zoom: 16,
-                        duration: 1000
-                      });
-                    }
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 bg-background border border-border rounded-full whitespace-nowrap hover:bg-muted transition-colors shrink-0"
-                >
-                  <span className="w-6 h-6 bg-foreground text-background rounded-full flex items-center justify-center text-xs font-semibold">
-                    {index + 1}
-                  </span>
-                  <span className="text-sm font-medium max-w-[150px] truncate">
-                    {pin.place_name || pin.address || `Punkt ${index + 1}`}
-                  </span>
-                </button>
-              ))}
-          </div>
+      {/* Pin list */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 p-4 pb-6 bg-gradient-to-t from-background via-background/80 to-transparent">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          {validPins.map((pin, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                if (map.current && pin.latitude && pin.longitude) {
+                  map.current.flyTo({
+                    center: [pin.longitude, pin.latitude],
+                    zoom: 16,
+                    duration: 1000
+                  });
+                }
+              }}
+              className="flex items-center gap-2 px-3 py-2 bg-background border border-border rounded-full whitespace-nowrap hover:bg-muted transition-colors shrink-0"
+            >
+              <span className="w-6 h-6 bg-foreground text-background rounded-full flex items-center justify-center text-xs font-semibold">
+                {index + 1}
+              </span>
+              <span className="text-sm font-medium max-w-[150px] truncate">
+                {pin.place_name || pin.address || `Punkt ${index + 1}`}
+              </span>
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Map */}
-        <div ref={mapContainer} className="w-full h-full" />
-      </DialogContent>
-    </Dialog>
+      {/* Map */}
+      <div ref={mapContainer} className="absolute inset-0 z-10" />
+    </div>
   );
 };
