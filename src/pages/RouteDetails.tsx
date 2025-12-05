@@ -149,9 +149,6 @@ const PinVisitors = ({ pinId, pinName, currentUserId }: { pinId: string; pinName
               <span className="font-medium">{averageRating.toFixed(1)}</span>
             </span>
           )}
-          <span className="font-medium">
-            {visitorCount} {visitorCount === 1 ? 'osoba' : visitorCount < 5 ? 'osoby' : 'osób'}
-          </span>
         </div>
         
         <div className="ml-auto flex items-center gap-1">
