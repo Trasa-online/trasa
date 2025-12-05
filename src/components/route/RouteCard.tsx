@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Star, MapPin, Bookmark, ArrowRight, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Footprints, Share2, Users } from "lucide-react";
+import { Heart, MessageCircle, Star, MapPin, Bookmark, ArrowRight, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
@@ -87,46 +87,6 @@ const RouteCard = ({ route }: RouteCardProps) => {
     enabled: sortedPins.length > 0,
   });
 
-  // Calculate total unique visitors across all pins
-  const { data: totalUniqueVisitors = 0 } = useQuery({
-    queryKey: ["route-card-total-visitors", route.id],
-    queryFn: async () => {
-      const pinIds = sortedPins.map((p: any) => p.id);
-      if (pinIds.length === 0) return 0;
-
-      const { data, error } = await supabase
-        .from("pin_visits")
-        .select("user_id")
-        .in("pin_id", pinIds);
-
-      if (error) throw error;
-      
-      const uniqueUsers = new Set(data?.map((v: any) => v.user_id));
-      return uniqueUsers.size;
-    },
-    enabled: sortedPins.length > 0,
-  });
-
-  // Check if current user visited any pin
-  const hasUserVisitedAnyPin = useQuery({
-    queryKey: ["route-card-user-visited", route.id, user?.id],
-    queryFn: async () => {
-      if (!user) return false;
-      const pinIds = sortedPins.map((p: any) => p.id);
-      if (pinIds.length === 0) return false;
-
-      const { data, error } = await supabase
-        .from("pin_visits")
-        .select("pin_id")
-        .in("pin_id", pinIds)
-        .eq("user_id", user.id)
-        .limit(1);
-
-      if (error) throw error;
-      return (data?.length || 0) > 0;
-    },
-    enabled: sortedPins.length > 0 && !!user,
-  });
 
   // Check if route is saved by current user
   const { data: isSaved = false } = useQuery({
@@ -481,13 +441,6 @@ const RouteCard = ({ route }: RouteCardProps) => {
             <div className="flex items-center gap-2 text-muted-foreground">
               <Bookmark className="h-[18px] w-[18px]" />
               <span className="text-sm font-semibold tabular-nums">{saveCount}</span>
-            </div>
-            <div 
-              className={`flex items-center gap-2 ${hasUserVisitedAnyPin.data ? "text-primary" : "text-muted-foreground"}`}
-              title={`${totalUniqueVisitors} ${totalUniqueVisitors === 1 ? 'osoba odwiedziła' : 'osób odwiedziło'} miejsca na trasie`}
-            >
-              <Footprints className={`h-[18px] w-[18px] ${hasUserVisitedAnyPin.data ? "fill-primary" : ""}`} />
-              <span className="text-sm font-semibold tabular-nums">{totalUniqueVisitors}</span>
             </div>
           </div>
           
