@@ -10,8 +10,18 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Camera, X, Upload, MapPin, Star } from "lucide-react";
+import { Camera, X, Upload, MapPin, Star, Trash2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface PinVisitDialogProps {
   open: boolean;
@@ -41,8 +51,32 @@ export const PinVisitDialog = ({
   const [imageUrl, setImageUrl] = useState(existingVisit?.image_url || "");
   const [uploading, setUploading] = useState(false);
   const [hoveredRating, setHoveredRating] = useState(0);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isEditing = !!existingVisit;
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("pin_visits")
+        .delete()
+        .eq("pin_id", pinId)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pin-visitors", pinId] });
+      queryClient.invalidateQueries({ queryKey: ["pin-visits-details", pinId] });
+      queryClient.invalidateQueries({ queryKey: ["route-pin-visitors"] });
+      toast({ title: "Usunięto ocenę" });
+      setShowDeleteConfirm(false);
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast({ title: "Wystąpił błąd", variant: "destructive" });
+    },
+  });
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -208,6 +242,15 @@ export const PinVisitDialog = ({
 
           {/* Actions */}
           <div className="flex gap-3 pt-2">
+            {isEditing && (
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
@@ -234,6 +277,27 @@ export const PinVisitDialog = ({
           </div>
         </div>
       </DialogContent>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Usuń ocenę</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz usunąć swoją ocenę? Ta akcja jest nieodwracalna.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteMutation.mutate()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Usuń
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
