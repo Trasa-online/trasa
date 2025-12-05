@@ -17,6 +17,7 @@ import AddressAutocomplete from "@/components/AddressAutocomplete";
 import RouteMap from "@/components/RouteMap";
 import InteractiveRouteMap from "@/components/InteractiveRouteMap";
 import DraggablePinList from "@/components/route/DraggablePinList";
+import MapPinSelector from "@/components/route/MapPinSelector";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -567,61 +568,67 @@ const CreateRoute = () => {
                     </div>
                   </div>
 
-                  {/* Interactive Map preview - allows adding more pins */}
-                  <div className="space-y-2">
-                    <Label>Mapa {pins.some(p => p.latitude && p.longitude) ? '' : '(kliknij aby dodać pin)'}</Label>
-                    <InteractiveRouteMap 
-                      pins={pins.filter(p => p.latitude && p.longitude)}
-                      className="h-40 rounded-lg"
-                      onPinAdd={(pinData) => {
-                        const newPin: Pin = {
-                          place_name: pinData.place_name,
-                          address: pinData.address,
-                          description: "",
-                          image_url: "",
-                          images: [],
-                          rating: 0,
-                          pin_order: pins.length,
-                          tags: [],
-                          mentioned_users: [],
-                          latitude: pinData.latitude,
-                          longitude: pinData.longitude,
-                        };
-                        setPins(prev => [...prev, newPin]);
-                        setCurrentPinIndex(pins.length);
-                        toast({ title: "Pin dodany", description: pinData.place_name || pinData.address });
-                      }}
-                    />
-                  </div>
+                  {/* Map preview - shows existing pins */}
+                  {pins.some(p => p.latitude && p.longitude) && (
+                    <div className="space-y-2">
+                      <Label>Podgląd mapy</Label>
+                      <RouteMap 
+                        pins={pins.filter(p => p.latitude && p.longitude)}
+                        className="h-32 rounded-lg"
+                      />
+                    </div>
+                  )}
 
                   {/* Address - moved to top */}
                   <div>
                     <Label>Adres *</Label>
-                    <AddressAutocomplete
-                      value={pins[currentPinIndex]?.place_name || pins[currentPinIndex]?.address || ""}
-                      onChange={(value, coordinates, fullAddress) => {
-                        setPins(prevPins => {
-                          const newPins = [...prevPins];
-                          // If fullAddress exists, value is the place name - use it for place_name
-                          // and fullAddress for address field
-                          const isPlaceName = fullAddress && value !== fullAddress;
-                          newPins[currentPinIndex] = {
-                            ...newPins[currentPinIndex],
-                            address: fullAddress || value,
-                            place_name: isPlaceName ? value : newPins[currentPinIndex].place_name,
-                            latitude: coordinates?.latitude,
-                            longitude: coordinates?.longitude,
-                          };
-                          // Auto-show alt name field if place name was set
-                          if (isPlaceName) {
-                            setShowAltName(true);
-                          }
-                          return newPins;
-                        });
-                      }}
-                      placeholder="Wpisz adres miejsca"
-                      disabled={noAddressRemembered}
-                    />
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <AddressAutocomplete
+                          value={pins[currentPinIndex]?.place_name || pins[currentPinIndex]?.address || ""}
+                          onChange={(value, coordinates, fullAddress) => {
+                            setPins(prevPins => {
+                              const newPins = [...prevPins];
+                              const isPlaceName = fullAddress && value !== fullAddress;
+                              newPins[currentPinIndex] = {
+                                ...newPins[currentPinIndex],
+                                address: fullAddress || value,
+                                place_name: isPlaceName ? value : newPins[currentPinIndex].place_name,
+                                latitude: coordinates?.latitude,
+                                longitude: coordinates?.longitude,
+                              };
+                              if (isPlaceName) {
+                                setShowAltName(true);
+                              }
+                              return newPins;
+                            });
+                          }}
+                          placeholder="Wpisz adres miejsca"
+                          disabled={noAddressRemembered}
+                        />
+                      </div>
+                      <MapPinSelector
+                        existingPins={pins.filter(p => p.latitude && p.longitude)}
+                        onPinSelect={(pinData) => {
+                          setPins(prevPins => {
+                            const newPins = [...prevPins];
+                            const isPlaceName = pinData.place_name && pinData.place_name !== pinData.address;
+                            newPins[currentPinIndex] = {
+                              ...newPins[currentPinIndex],
+                              address: pinData.address,
+                              place_name: isPlaceName ? pinData.place_name : '',
+                              latitude: pinData.latitude,
+                              longitude: pinData.longitude,
+                            };
+                            if (isPlaceName) {
+                              setShowAltName(true);
+                            }
+                            return newPins;
+                          });
+                          toast({ title: "Lokalizacja wybrana", description: pinData.place_name || pinData.address });
+                        }}
+                      />
+                    </div>
                     {/* Show full address when place_name is different */}
                     {pins[currentPinIndex]?.place_name && 
                      pins[currentPinIndex]?.address && 
