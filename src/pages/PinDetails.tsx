@@ -131,19 +131,11 @@ const PinDetails = () => {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">
-                {currentPinIndex + 1}/{routePins.length}
-              </span>
-              <h1 className="font-semibold truncate">
-                {displayName || pin.address}
-              </h1>
-            </div>
             <Link
               to={`/route/${pin.routes.id}`}
               className="text-xs text-muted-foreground hover:text-primary truncate block"
             >
-              z trasy: {pin.routes.title}
+              Z trasy: {pin.routes.title}
             </Link>
           </div>
         </div>
@@ -180,7 +172,7 @@ const PinDetails = () => {
         </div>
       )}
 
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-4">
         {/* Pin Image */}
         {pin.image_url ? (
           <div
@@ -203,14 +195,19 @@ const PinDetails = () => {
           </div>
         )}
 
-        {/* Pin Info */}
-        <div className="space-y-3">
+        {/* Pin Name & Address - right below image */}
+        <div className="space-y-1">
+          <h1 className="font-semibold text-lg">{displayName || pin.address}</h1>
           {displayName && (
             <div className="flex items-start gap-2">
               <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
               <span className="text-sm text-muted-foreground">{pin.address}</span>
             </div>
           )}
+        </div>
+
+        {/* Pin Info */}
+        <div className="space-y-3">
 
           {/* Author's Rating */}
           {pin.rating && pin.rating > 0 && (
