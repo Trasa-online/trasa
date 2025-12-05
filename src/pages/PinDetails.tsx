@@ -295,52 +295,43 @@ const PinDetails = () => {
               Brak ocen od użytkowników. Bądź pierwszy!
             </p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {visits.map((visit: any) => (
-                <div key={visit.user_id} className="bg-muted/30 rounded-lg p-4 space-y-3">
-                  {/* User Header */}
-                  <div className="flex items-center gap-3">
+                <div key={visit.user_id} className="p-3 bg-muted/40 rounded-xl border border-border/50">
+                  <div className="flex items-center gap-2 mb-2">
                     <Link to={`/profile/${visit.profiles?.id}`}>
-                      <Avatar className="h-10 w-10 ring-2 ring-background">
+                      <Avatar className="h-6 w-6">
                         <AvatarImage src={visit.profiles?.avatar_url || ""} />
-                        <AvatarFallback className="bg-primary/10">
+                        <AvatarFallback className="text-[10px]">
                           {visit.profiles?.username?.charAt(0).toUpperCase() || "?"}
                         </AvatarFallback>
                       </Avatar>
                     </Link>
-                    <div className="flex-1 min-w-0">
-                      <Link
-                        to={`/profile/${visit.profiles?.id}`}
-                        className="font-medium text-sm hover:text-primary truncate block"
-                      >
-                        {visit.profiles?.username || "Nieznany użytkownik"}
-                      </Link>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(visit.created_at).toLocaleDateString("pl-PL", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </span>
-                    </div>
-
-                    {/* Rating */}
+                    <Link
+                      to={`/profile/${visit.profiles?.id}`}
+                      className="text-sm font-medium hover:text-primary"
+                    >
+                      {visit.profiles?.username || "Anonim"}
+                    </Link>
                     {visit.rating && visit.rating > 0 && (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-0.5 ml-auto">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <Star
                             key={star}
-                            className={`h-4 w-4 ${star <= visit.rating ? "fill-yellow-400 text-yellow-400" : "text-muted"}`}
+                            className={`h-3 w-3 ${
+                              star <= visit.rating
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-muted-foreground/30"
+                            }`}
                           />
                         ))}
                       </div>
                     )}
                   </div>
-
-                  {/* Visit Photo */}
+                  
                   {visit.image_url && (
                     <div
-                      className="relative aspect-video rounded-lg overflow-hidden cursor-pointer"
+                      className="mb-2 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={() => {
                         const imageIndex = allImages.indexOf(visit.image_url);
                         openLightbox(allImages, imageIndex >= 0 ? imageIndex : 0);
@@ -349,14 +340,13 @@ const PinDetails = () => {
                       <img
                         src={visit.image_url}
                         alt={`Zdjęcie od ${visit.profiles?.username}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-32 object-cover"
                       />
                     </div>
                   )}
 
-                  {/* Visit Description */}
                   {visit.description && (
-                    <p className="text-sm leading-relaxed">{visit.description}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{visit.description}</p>
                   )}
                 </div>
               ))}
