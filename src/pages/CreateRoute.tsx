@@ -118,8 +118,8 @@ const CreateRoute = () => {
   };
 
   useEffect(() => {
-    setShowAltName(!!pins[currentPinIndex]?.place_name);
-  }, [currentPinIndex, pins]);
+    setShowAltName(false);
+  }, [currentPinIndex]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -561,7 +561,7 @@ const CreateRoute = () => {
                     <div className="flex gap-2">
                       <div className="flex-1">
                         <AddressAutocomplete
-                          value={pins[currentPinIndex]?.place_name || pins[currentPinIndex]?.address || ""}
+                          value={pins[currentPinIndex]?.address || ""}
                           onChange={(value, coordinates, fullAddress) => {
                             setPins(prevPins => {
                               const newPins = [...prevPins];
@@ -570,13 +570,10 @@ const CreateRoute = () => {
                                 newPins[currentPinIndex] = {
                                   ...newPins[currentPinIndex],
                                   address: fullAddress || value,
-                                  place_name: isPlaceName ? value : newPins[currentPinIndex].place_name,
+                                  place_name: isPlaceName ? value : (fullAddress || value),
                                   latitude: coordinates?.latitude,
                                   longitude: coordinates?.longitude,
                                 };
-                              }
-                              if (isPlaceName) {
-                                setShowAltName(true);
                               }
                               return newPins;
                             });
@@ -589,59 +586,44 @@ const CreateRoute = () => {
                         onPinSelect={(pinData) => {
                           setPins(prevPins => {
                             const newPins = [...prevPins];
-                            const isPlaceName = pinData.place_name && pinData.place_name !== pinData.address;
                             newPins[currentPinIndex] = {
                               ...newPins[currentPinIndex],
                               address: pinData.address,
-                              place_name: isPlaceName ? pinData.place_name : '',
+                              place_name: pinData.place_name || pinData.address,
                               latitude: pinData.latitude,
                               longitude: pinData.longitude,
                             };
-                            if (isPlaceName) {
-                              setShowAltName(true);
-                            }
                             return newPins;
                           });
                           toast({ title: "Lokalizacja wybrana", description: pinData.place_name || pinData.address });
                         }}
                       />
                     </div>
-                    {/* Show full address when place_name is different */}
-                    {pins[currentPinIndex]?.place_name && 
-                     pins[currentPinIndex]?.address && 
-                     pins[currentPinIndex]?.place_name !== pins[currentPinIndex]?.address && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {pins[currentPinIndex]?.address}
-                      </p>
-                    )}
-                    {/* Alternative pin name checkbox and input */}
-                    <div className="flex items-center gap-2 mt-3">
+                  </div>
+
+                  {/* Place name - locked by default, editable when checkbox is checked */}
+                  <div>
+                    <Label>Nazwa własna miejsca</Label>
+                    <Input
+                      value={pins[currentPinIndex]?.place_name || ""}
+                      onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
+                      placeholder="Nazwa miejsca"
+                      disabled={!showAltName}
+                      className={!showAltName ? "bg-muted/50" : ""}
+                    />
+                    <div className="flex items-center gap-2 mt-2">
                       <Checkbox
                         id="alt-name"
-                        checked={showAltName || !!pins[currentPinIndex]?.place_name}
+                        checked={showAltName}
                         onCheckedChange={(checked) => {
                           setShowAltName(!!checked);
-                          if (!checked) {
-                            updatePin(currentPinIndex, "place_name", "");
-                          }
                         }}
                       />
                       <label htmlFor="alt-name" className="text-xs text-muted-foreground cursor-pointer">
-                        Alternatywna nazwa pina
+                        Zmień nazwę miejsca
                       </label>
                     </div>
                   </div>
-                  
-                  {/* Alternative pin name input - shows when checkbox is checked */}
-                  {(showAltName || pins[currentPinIndex]?.place_name) && (
-                    <div>
-                      <Input
-                        value={pins[currentPinIndex]?.place_name || ""}
-                        onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
-                        placeholder="Wpisz alternatywną nazwę miejsca"
-                      />
-                    </div>
-                  )}
 
                   {/* Description */}
                   <div>
