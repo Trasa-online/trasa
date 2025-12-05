@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 
@@ -21,6 +21,11 @@ const PinDetails = () => {
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [showVisitDialog, setShowVisitDialog] = useState(false);
+  
+  // Swipe handling
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const minSwipeDistance = 50;
 
   // Fetch pin data
   const { data: pin, isLoading: pinLoading } = useQuery({
@@ -81,6 +86,33 @@ const PinDetails = () => {
   const prevPin = currentPinIndex > 0 ? routePins[currentPinIndex - 1] : null;
   const nextPin = currentPinIndex < routePins.length - 1 ? routePins[currentPinIndex + 1] : null;
 
+  // Swipe handlers
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    touchEndX.current = null;
+    touchStartX.current = e.targetTouches[0].clientX;
+  }, []);
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  }, []);
+
+  const onTouchEnd = useCallback(() => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && nextPin) {
+      navigate(`/pin/${nextPin.id}`);
+    } else if (isRightSwipe && prevPin) {
+      navigate(`/pin/${prevPin.id}`);
+    }
+    
+    touchStartX.current = null;
+    touchEndX.current = null;
+  }, [nextPin, prevPin, navigate]);
+
   // Check if current user has already rated
   const currentUserVisit = visits.find((v: any) => v.user_id === user?.id);
   const hasVisited = !!currentUserVisit;
@@ -123,7 +155,12 @@ const PinDetails = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div 
+      className="min-h-screen bg-background pb-20"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b">
         <div className="flex items-center gap-3 p-4">
