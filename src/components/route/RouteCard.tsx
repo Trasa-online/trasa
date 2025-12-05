@@ -364,7 +364,11 @@ const RouteCard = ({ route }: RouteCardProps) => {
             return (
               <div 
                 key={pin.id} 
-                className="p-3 hover:bg-muted/30 transition-colors"
+                className="p-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/pin/${pin.id}`);
+                }}
               >
                 <div className="flex gap-3">
                   <div className="flex-shrink-0 relative group/img">
