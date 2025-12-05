@@ -514,6 +514,11 @@ const PinDetails = () => {
               <span className="text-sm text-muted-foreground">{pin.address}</span>
             </div>
           )}
+          {pin.created_at && (
+            <p className="text-xs text-muted-foreground">
+              Dodano: {format(new Date(pin.created_at), "d MMM yyyy", { locale: pl })}
+            </p>
+          )}
         </div>
 
         {/* Pin Info */}
