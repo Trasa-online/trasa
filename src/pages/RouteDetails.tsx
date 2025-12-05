@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Footprints, Share2, Image, Users, ChevronDown, ChevronUp, Star } from "lucide-react";
 import { ShareImageDialog } from "@/components/route/ShareImageDialog";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
+import { FullscreenMapDialog } from "@/components/route/FullscreenMapDialog";
 import StarRating from "@/components/route/StarRating";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -433,6 +434,7 @@ const RouteDetails = () => {
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [deletingRoute, setDeletingRoute] = useState(false);
   const [showShareImageDialog, setShowShareImageDialog] = useState(false);
+  const [showFullscreenMap, setShowFullscreenMap] = useState(false);
   const { lightboxState, openLightbox, setLightboxOpen } = useLightbox();
   useEffect(() => {
     if (!loading && !user) {
@@ -917,6 +919,8 @@ const RouteDetails = () => {
             <RouteMap 
               pins={route.pins.sort((a: any, b: any) => a.pin_order - b.pin_order)}
               className="h-48"
+              onClick={() => setShowFullscreenMap(true)}
+              showExpandButton
             />
           </div>
         )}
@@ -1109,7 +1113,15 @@ const RouteDetails = () => {
           title: route.title,
           description: route.description,
           pins: route.pins,
+          profiles: route.profiles,
         }}
+      />
+
+      <FullscreenMapDialog
+        open={showFullscreenMap}
+        onOpenChange={setShowFullscreenMap}
+        pins={route.pins?.sort((a: any, b: any) => a.pin_order - b.pin_order) || []}
+        title={route.title}
       />
 
       <ImageLightbox
