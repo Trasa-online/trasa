@@ -1,16 +1,187 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Heart, Send, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useRef, useCallback } from "react";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
+import { toast } from "sonner";
+
+// Component for visit card with likes and comments
+const VisitCard = ({
+  visit,
+  pinId,
+  allImages,
+  openLightbox,
+  likesCount,
+  isLiked,
+  comments,
+  user,
+  onLike,
+  onComment,
+  onDeleteComment,
+}: {
+  visit: any;
+  pinId: string;
+  allImages: string[];
+  openLightbox: (images: string[], index: number) => void;
+  likesCount: number;
+  isLiked: boolean;
+  comments: any[];
+  user: any;
+  onLike: () => void;
+  onComment: (content: string) => void;
+  onDeleteComment: (commentId: string) => void;
+}) => {
+  const [commentInput, setCommentInput] = useState("");
+  const [showComments, setShowComments] = useState(false);
+
+  const handleSubmitComment = () => {
+    if (!commentInput.trim()) return;
+    onComment(commentInput);
+    setCommentInput("");
+  };
+
+  return (
+    <div className="p-3 bg-muted/40 rounded-xl border border-border/50">
+      <div className="flex items-center gap-2 mb-2">
+        <Link to={`/profile/${visit.profiles?.id}`}>
+          <Avatar className="h-6 w-6">
+            <AvatarImage src={visit.profiles?.avatar_url || ""} />
+            <AvatarFallback className="text-[10px]">
+              {visit.profiles?.username?.charAt(0).toUpperCase() || "?"}
+            </AvatarFallback>
+          </Avatar>
+        </Link>
+        <Link
+          to={`/profile/${visit.profiles?.id}`}
+          className="text-sm font-medium hover:text-primary"
+        >
+          {visit.profiles?.username || "Anonim"}
+        </Link>
+        {visit.rating && visit.rating > 0 && (
+          <div className="flex items-center gap-0.5 ml-auto">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Star
+                key={star}
+                className={`h-3 w-3 ${
+                  star <= visit.rating
+                    ? "fill-yellow-400 text-yellow-400"
+                    : "text-muted-foreground/30"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+      
+      {visit.image_url && (
+        <div
+          className="mb-2 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={() => {
+            const imageIndex = allImages.indexOf(visit.image_url);
+            openLightbox(allImages, imageIndex >= 0 ? imageIndex : 0);
+          }}
+        >
+          <img
+            src={visit.image_url}
+            alt={`Zdjęcie od ${visit.profiles?.username}`}
+            className="w-full h-32 object-cover"
+          />
+        </div>
+      )}
+
+      {visit.description && (
+        <p className="text-xs text-muted-foreground leading-relaxed mb-2">{visit.description}</p>
+      )}
+
+      {/* Like and Comment actions */}
+      <div className="flex items-center gap-3 pt-2 border-t border-border/30">
+        <button
+          onClick={onLike}
+          disabled={!user}
+          className={`flex items-center gap-1 text-xs transition-colors ${
+            isLiked ? "text-red-500" : "text-muted-foreground hover:text-red-500"
+          } disabled:opacity-50`}
+        >
+          <Heart className={`h-3.5 w-3.5 ${isLiked ? "fill-red-500" : ""}`} />
+          <span>{likesCount > 0 ? likesCount : ""}</span>
+        </button>
+        
+        <button
+          onClick={() => setShowComments(!showComments)}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <MessageSquare className="h-3.5 w-3.5" />
+          <span>{comments.length > 0 ? comments.length : ""}</span>
+        </button>
+      </div>
+
+      {/* Comments section */}
+      {showComments && (
+        <div className="mt-3 pt-2 border-t border-border/30 space-y-2">
+          {comments.map((comment: any) => (
+            <div key={comment.id} className="flex gap-2 text-xs">
+              <Link to={`/profile/${comment.profiles?.id}`}>
+                <Avatar className="h-5 w-5">
+                  <AvatarImage src={comment.profiles?.avatar_url || ""} />
+                  <AvatarFallback className="text-[8px]">
+                    {comment.profiles?.username?.charAt(0).toUpperCase() || "?"}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+              <div className="flex-1 min-w-0">
+                <span className="font-medium">{comment.profiles?.username}</span>
+                <span className="text-muted-foreground ml-1">{comment.content}</span>
+              </div>
+              {user?.id === comment.user_id && (
+                <button
+                  onClick={() => onDeleteComment(comment.id)}
+                  className="text-muted-foreground hover:text-destructive p-0.5"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          ))}
+          
+          {user && (
+            <div className="flex gap-2 pt-1">
+              <Input
+                value={commentInput}
+                onChange={(e) => setCommentInput(e.target.value)}
+                placeholder="Dodaj komentarz..."
+                className="h-7 text-xs"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSubmitComment();
+                  }
+                }}
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 shrink-0"
+                onClick={handleSubmitComment}
+                disabled={!commentInput.trim()}
+              >
+                <Send className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const PinDetails = () => {
   const { pinId } = useParams();
@@ -73,6 +244,97 @@ const PinDetails = () => {
       return data || [];
     },
     enabled: !!pinId,
+  });
+
+  // Fetch visit likes
+  const { data: visitLikes = [] } = useQuery({
+    queryKey: ["visit-likes", pinId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("visit_likes")
+        .select("*")
+        .eq("visit_pin_id", pinId);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!pinId,
+  });
+
+  // Fetch visit comments
+  const { data: visitComments = [] } = useQuery({
+    queryKey: ["visit-comments", pinId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("visit_comments")
+        .select("*, profiles:user_id(id, username, avatar_url)")
+        .eq("visit_pin_id", pinId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!pinId,
+  });
+
+  // Like mutation
+  const likeMutation = useMutation({
+    mutationFn: async ({ visitPinId, visitUserId }: { visitPinId: string; visitUserId: string }) => {
+      const isLiked = visitLikes.some(
+        (l: any) => l.visit_pin_id === visitPinId && l.visit_user_id === visitUserId && l.user_id === user?.id
+      );
+
+      if (isLiked) {
+        await supabase
+          .from("visit_likes")
+          .delete()
+          .eq("visit_pin_id", visitPinId)
+          .eq("visit_user_id", visitUserId)
+          .eq("user_id", user?.id);
+      } else {
+        await supabase.from("visit_likes").insert({
+          visit_pin_id: visitPinId,
+          visit_user_id: visitUserId,
+          user_id: user?.id,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["visit-likes", pinId] });
+    },
+  });
+
+  // Comment mutation
+  const commentMutation = useMutation({
+    mutationFn: async ({ visitPinId, visitUserId, content }: { visitPinId: string; visitUserId: string; content: string }) => {
+      const { error } = await supabase.from("visit_comments").insert({
+        visit_pin_id: visitPinId,
+        visit_user_id: visitUserId,
+        user_id: user?.id,
+        content: content.trim(),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["visit-comments", pinId] });
+      toast.success("Dodano komentarz");
+    },
+  });
+
+  // Delete comment mutation
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (commentId: string) => {
+      const { error } = await supabase
+        .from("visit_comments")
+        .delete()
+        .eq("id", commentId)
+        .eq("user_id", user?.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["visit-comments", pinId] });
+      toast.success("Usunięto komentarz");
+    },
   });
 
   const openLightbox = (images: string[], index: number) => {
@@ -330,60 +592,34 @@ const PinDetails = () => {
             </p>
           ) : (
             <div className="space-y-3">
-              {visits.map((visit: any) => (
-                <div key={visit.user_id} className="p-3 bg-muted/40 rounded-xl border border-border/50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Link to={`/profile/${visit.profiles?.id}`}>
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={visit.profiles?.avatar_url || ""} />
-                        <AvatarFallback className="text-[10px]">
-                          {visit.profiles?.username?.charAt(0).toUpperCase() || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Link>
-                    <Link
-                      to={`/profile/${visit.profiles?.id}`}
-                      className="text-sm font-medium hover:text-primary"
-                    >
-                      {visit.profiles?.username || "Anonim"}
-                    </Link>
-                    {visit.rating && visit.rating > 0 && (
-                      <div className="flex items-center gap-0.5 ml-auto">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`h-3 w-3 ${
-                              star <= visit.rating
-                                ? "fill-yellow-400 text-yellow-400"
-                                : "text-muted-foreground/30"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {visit.image_url && (
-                    <div
-                      className="mb-2 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => {
-                        const imageIndex = allImages.indexOf(visit.image_url);
-                        openLightbox(allImages, imageIndex >= 0 ? imageIndex : 0);
-                      }}
-                    >
-                      <img
-                        src={visit.image_url}
-                        alt={`Zdjęcie od ${visit.profiles?.username}`}
-                        className="w-full h-32 object-cover"
-                      />
-                    </div>
-                  )}
+              {visits.map((visit: any) => {
+                const visitLikesCount = visitLikes.filter(
+                  (l: any) => l.visit_pin_id === pinId && l.visit_user_id === visit.user_id
+                ).length;
+                const isLiked = visitLikes.some(
+                  (l: any) => l.visit_pin_id === pinId && l.visit_user_id === visit.user_id && l.user_id === user?.id
+                );
+                const comments = visitComments.filter(
+                  (c: any) => c.visit_user_id === visit.user_id
+                );
 
-                  {visit.description && (
-                    <p className="text-xs text-muted-foreground leading-relaxed">{visit.description}</p>
-                  )}
-                </div>
-              ))}
+                return (
+                  <VisitCard
+                    key={visit.user_id}
+                    visit={visit}
+                    pinId={pinId || ""}
+                    allImages={allImages}
+                    openLightbox={openLightbox}
+                    likesCount={visitLikesCount}
+                    isLiked={isLiked}
+                    comments={comments}
+                    user={user}
+                    onLike={() => likeMutation.mutate({ visitPinId: pinId || "", visitUserId: visit.user_id })}
+                    onComment={(content) => commentMutation.mutate({ visitPinId: pinId || "", visitUserId: visit.user_id, content })}
+                    onDeleteComment={(commentId) => deleteCommentMutation.mutate(commentId)}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
