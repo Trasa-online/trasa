@@ -414,6 +414,11 @@ const RouteCard = ({ route }: RouteCardProps) => {
                               </AvatarFallback>
                             </Avatar>
                           ))}
+                          {visitorCount > 3 && (
+                            <div className="h-5 w-5 ring-2 ring-background rounded-full bg-muted flex items-center justify-center">
+                              <span className="text-[8px] font-bold">+{visitorCount - 3}</span>
+                            </div>
+                          )}
                         </div>
                         {images.length > 0 && (
                           <div className="relative">
@@ -429,12 +434,6 @@ const RouteCard = ({ route }: RouteCardProps) => {
                             )}
                           </div>
                         )}
-                        {visitorCount > 3 && (
-                          <span className="text-[10px] text-muted-foreground">+{visitorCount - 3}</span>
-                        )}
-                        <span className="text-[10px] text-muted-foreground">
-                          {visitorCount === 1 ? 'była tu' : visitorCount < 5 ? 'były tu' : 'było tu'}
-                        </span>
                       </div>
                     )}
                   </div>
