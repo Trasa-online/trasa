@@ -145,8 +145,8 @@ export const PinVisitDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md mx-4 max-h-[90vh] overflow-y-auto bg-background border-border">
-        <DialogHeader className="pb-2">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-background border-border">
+        <DialogHeader className="pb-4">
           <DialogTitle className="flex items-center gap-2 text-lg">
             <MapPin className="h-5 w-5" />
             {isEditing ? "Edytuj swoją opinię" : "Dodaj coś od siebie"}
@@ -154,7 +154,7 @@ export const PinVisitDialog = ({
           <p className="text-sm text-muted-foreground mt-1">{pinName}</p>
         </DialogHeader>
 
-        <div className="space-y-5 pt-2">
+        <div className="space-y-5 pt-4">
           {/* Image upload */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Zdjęcie z miejsca</Label>
@@ -241,7 +241,7 @@ export const PinVisitDialog = ({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-4">
             {isEditing && (
               <Button
                 variant="outline"
