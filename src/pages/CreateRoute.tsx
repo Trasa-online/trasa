@@ -578,15 +578,16 @@ const CreateRoute = () => {
                       <div className="flex-1">
                         <AddressAutocomplete
                           value={pins[currentPinIndex]?.address || ""}
-                          onChange={(value, coordinates, fullAddress) => {
+                          onChange={(value, coordinates, fullAddress, placeName) => {
                             setPins(prevPins => {
                               const newPins = [...prevPins];
-                              const isPlaceName = fullAddress && value !== fullAddress;
                               if (newPins[currentPinIndex]) {
+                                // Address field gets the full combined address (with place name included)
+                                // Place name field gets the POI name if available, otherwise the full address
                                 newPins[currentPinIndex] = {
                                   ...newPins[currentPinIndex],
                                   address: fullAddress || value,
-                                  place_name: isPlaceName ? value : (fullAddress || value),
+                                  place_name: placeName || fullAddress || value,
                                   latitude: coordinates?.latitude,
                                   longitude: coordinates?.longitude,
                                 };
@@ -636,7 +637,7 @@ const CreateRoute = () => {
                         }}
                       />
                       <label htmlFor="alt-name" className="text-xs text-muted-foreground cursor-pointer">
-                        Zmień nazwę miejsca
+                        Zmień nazwę pina
                       </label>
                     </div>
                   </div>
