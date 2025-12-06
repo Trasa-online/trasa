@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Heart, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Heart, Send, Trash2, Pencil, X, Check } from "lucide-react";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,6 +29,7 @@ const VisitCard = ({
   onLike,
   onComment,
   onDeleteComment,
+  onEditComment,
 }: {
   visit: any;
   pinId: string;
@@ -41,14 +42,34 @@ const VisitCard = ({
   onLike: () => void;
   onComment: (content: string) => void;
   onDeleteComment: (commentId: string) => void;
+  onEditComment: (commentId: string, content: string) => void;
 }) => {
   const [commentInput, setCommentInput] = useState("");
   const [showComments, setShowComments] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
 
   const handleSubmitComment = () => {
     if (!commentInput.trim()) return;
     onComment(commentInput);
     setCommentInput("");
+  };
+
+  const handleStartEdit = (comment: any) => {
+    setEditingCommentId(comment.id);
+    setEditingContent(comment.content);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingContent.trim() || !editingCommentId) return;
+    onEditComment(editingCommentId, editingContent);
+    setEditingCommentId(null);
+    setEditingContent("");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditingContent("");
   };
 
   return (
@@ -148,17 +169,58 @@ const VisitCard = ({
                   </AvatarFallback>
                 </Avatar>
               </Link>
-              <div className="flex-1 min-w-0">
-                <span className="font-medium">{comment.profiles?.username}</span>
-                <span className="text-muted-foreground ml-1">{comment.content}</span>
-              </div>
-              {user?.id === comment.user_id && (
-                <button
-                  onClick={() => onDeleteComment(comment.id)}
-                  className="text-muted-foreground hover:text-destructive p-0.5"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
+              {editingCommentId === comment.id ? (
+                <div className="flex-1 flex gap-1">
+                  <Input
+                    value={editingContent}
+                    onChange={(e) => setEditingContent(e.target.value)}
+                    className="h-6 text-xs flex-1"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSaveEdit();
+                      } else if (e.key === "Escape") {
+                        handleCancelEdit();
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={handleSaveEdit}
+                    className="text-primary hover:text-primary/80 p-0.5"
+                  >
+                    <Check className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="text-muted-foreground hover:text-foreground p-0.5"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium">{comment.profiles?.username}</span>
+                    <span className="text-muted-foreground ml-1">{comment.content}</span>
+                  </div>
+                  {user?.id === comment.user_id && (
+                    <div className="flex gap-0.5">
+                      <button
+                        onClick={() => handleStartEdit(comment)}
+                        className="text-muted-foreground hover:text-primary p-0.5"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button
+                        onClick={() => onDeleteComment(comment.id)}
+                        className="text-muted-foreground hover:text-destructive p-0.5"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ))}
@@ -345,6 +407,22 @@ const PinDetails = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["visit-comments", pinId] });
       toast.success("Usunięto komentarz");
+    },
+  });
+
+  // Edit comment mutation
+  const editCommentMutation = useMutation({
+    mutationFn: async ({ commentId, content }: { commentId: string; content: string }) => {
+      const { error } = await supabase
+        .from("visit_comments")
+        .update({ content: content.trim() })
+        .eq("id", commentId)
+        .eq("user_id", user?.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["visit-comments", pinId] });
+      toast.success("Zaktualizowano komentarz");
     },
   });
 
@@ -633,6 +711,7 @@ const PinDetails = () => {
                     onLike={() => likeMutation.mutate({ visitPinId: pinId || "", visitUserId: visit.user_id })}
                     onComment={(content) => commentMutation.mutate({ visitPinId: pinId || "", visitUserId: visit.user_id, content })}
                     onDeleteComment={(commentId) => deleteCommentMutation.mutate(commentId)}
+                    onEditComment={(commentId, content) => editCommentMutation.mutate({ commentId, content })}
                   />
                 );
               })}
