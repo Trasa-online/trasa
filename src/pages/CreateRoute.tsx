@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
@@ -62,7 +62,7 @@ const CreateRoute = () => {
   const [routeRating, setRouteRating] = useState(0);
   const [showCustomTagInput, setShowCustomTagInput] = useState(false);
   const [showPinsList, setShowPinsList] = useState(false);
-  const [showAltName, setShowAltName] = useState(false);
+  
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   // Check if user has added any pins with data
@@ -106,7 +106,6 @@ const CreateRoute = () => {
     setCurrentPinIndex(0);
     setStep(1);
     setShowPinsList(false);
-    setShowAltName(false);
     setShowCustomTagInput(false);
     setRouteRating(0);
   };
@@ -117,9 +116,6 @@ const CreateRoute = () => {
     navigate("/");
   };
 
-  useEffect(() => {
-    setShowAltName(false);
-  }, [currentPinIndex]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -618,29 +614,6 @@ const CreateRoute = () => {
                     </div>
                   </div>
 
-                  {/* Place name - locked by default, editable when checkbox is checked */}
-                  <div>
-                    <Label>Nazwa własna miejsca</Label>
-                    <Input
-                      value={pins[currentPinIndex]?.place_name || ""}
-                      onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
-                      placeholder="Nazwa miejsca"
-                      disabled={!showAltName}
-                      className={!showAltName ? "bg-muted/50" : ""}
-                    />
-                    <div className="flex items-center gap-2 mt-2">
-                      <Checkbox
-                        id="alt-name"
-                        checked={showAltName}
-                        onCheckedChange={(checked) => {
-                          setShowAltName(!!checked);
-                        }}
-                      />
-                      <label htmlFor="alt-name" className="text-xs text-muted-foreground cursor-pointer">
-                        Zmień nazwę pina
-                      </label>
-                    </div>
-                  </div>
 
                   {/* Description */}
                   <div>
