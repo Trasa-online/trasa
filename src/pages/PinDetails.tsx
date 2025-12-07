@@ -53,6 +53,8 @@ const VisitCard = ({
     if (!commentInput.trim()) return;
     onComment(commentInput);
     setCommentInput("");
+    // Ensure comments section stays open after adding comment
+    setShowComments(true);
   };
 
   const handleStartEdit = (comment: any) => {
