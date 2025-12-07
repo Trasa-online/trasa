@@ -137,7 +137,7 @@ const VisitCard = ({
       </div>
 
       {/* Like and Comment actions */}
-      <div className="flex items-center gap-3 pt-2 border-t border-border/30">
+      <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border/30">
         <button
           onClick={onLike}
           disabled={!user}
@@ -158,8 +158,35 @@ const VisitCard = ({
         </button>
       </div>
 
-      {/* Comments section */}
-      {showComments && (
+      {/* Comment input - always visible for logged users */}
+      {user && (
+        <div className="flex gap-2 mt-3 pt-2 border-t border-border/30">
+          <Input
+            value={commentInput}
+            onChange={(e) => setCommentInput(e.target.value)}
+            placeholder="Dodaj komentarz..."
+            className="h-8 text-xs"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleSubmitComment();
+              }
+            }}
+          />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 shrink-0"
+            onClick={handleSubmitComment}
+            disabled={!commentInput.trim()}
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Comments list - expandable */}
+      {showComments && comments.length > 0 && (
         <div className="mt-3 pt-2 border-t border-border/30 space-y-2">
           {comments.map((comment: any) => (
             <div key={comment.id} className="flex gap-2 text-xs">
@@ -226,32 +253,6 @@ const VisitCard = ({
               )}
             </div>
           ))}
-          
-          {user && (
-            <div className="flex gap-2 pt-1">
-              <Input
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                placeholder="Dodaj komentarz..."
-                className="h-7 text-xs"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleSubmitComment();
-                  }
-                }}
-              />
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7 shrink-0"
-                onClick={handleSubmitComment}
-                disabled={!commentInput.trim()}
-              >
-                <Send className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
         </div>
       )}
     </div>
