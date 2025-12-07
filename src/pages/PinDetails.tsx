@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Heart, Send, Trash2, Pencil, X, Check } from "lucide-react";
+import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Heart, Send, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,7 +29,6 @@ const VisitCard = ({
   onLike,
   onComment,
   onDeleteComment,
-  onEditComment,
 }: {
   visit: any;
   pinId: string;
@@ -42,36 +41,14 @@ const VisitCard = ({
   onLike: () => void;
   onComment: (content: string) => void;
   onDeleteComment: (commentId: string) => void;
-  onEditComment: (commentId: string, content: string) => void;
 }) => {
   const [commentInput, setCommentInput] = useState("");
   const [showComments, setShowComments] = useState(false);
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editingContent, setEditingContent] = useState("");
 
   const handleSubmitComment = () => {
     if (!commentInput.trim()) return;
     onComment(commentInput);
     setCommentInput("");
-    // Ensure comments section stays open after adding comment
-    setShowComments(true);
-  };
-
-  const handleStartEdit = (comment: any) => {
-    setEditingCommentId(comment.id);
-    setEditingContent(comment.content);
-  };
-
-  const handleSaveEdit = () => {
-    if (!editingContent.trim() || !editingCommentId) return;
-    onEditComment(editingCommentId, editingContent);
-    setEditingCommentId(null);
-    setEditingContent("");
-  };
-
-  const handleCancelEdit = () => {
-    setEditingCommentId(null);
-    setEditingContent("");
   };
 
   return (
@@ -137,7 +114,7 @@ const VisitCard = ({
       </div>
 
       {/* Like and Comment actions */}
-      <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border/30">
+      <div className="flex items-center gap-3 pt-2 border-t border-border/30">
         <button
           onClick={onLike}
           disabled={!user}
@@ -158,35 +135,8 @@ const VisitCard = ({
         </button>
       </div>
 
-      {/* Comment input - always visible for logged users */}
-      {user && (
-        <div className="flex gap-2 mt-3 pt-2 border-t border-border/30">
-          <Input
-            value={commentInput}
-            onChange={(e) => setCommentInput(e.target.value)}
-            placeholder="Dodaj komentarz..."
-            className="h-8 text-xs"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleSubmitComment();
-              }
-            }}
-          />
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8 shrink-0"
-            onClick={handleSubmitComment}
-            disabled={!commentInput.trim()}
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-
-      {/* Comments list - expandable */}
-      {showComments && comments.length > 0 && (
+      {/* Comments section */}
+      {showComments && (
         <div className="mt-3 pt-2 border-t border-border/30 space-y-2">
           {comments.map((comment: any) => (
             <div key={comment.id} className="flex gap-2 text-xs">
@@ -198,61 +148,46 @@ const VisitCard = ({
                   </AvatarFallback>
                 </Avatar>
               </Link>
-              {editingCommentId === comment.id ? (
-                <div className="flex-1 flex gap-1">
-                  <Input
-                    value={editingContent}
-                    onChange={(e) => setEditingContent(e.target.value)}
-                    className="h-6 text-xs flex-1"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleSaveEdit();
-                      } else if (e.key === "Escape") {
-                        handleCancelEdit();
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={handleSaveEdit}
-                    className="text-primary hover:text-primary/80 p-0.5"
-                  >
-                    <Check className="h-3 w-3" />
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    className="text-muted-foreground hover:text-foreground p-0.5"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium">{comment.profiles?.username}</span>
-                    <span className="text-muted-foreground ml-1">{comment.content}</span>
-                  </div>
-                  {user?.id === comment.user_id && (
-                    <div className="flex gap-0.5">
-                      <button
-                        onClick={() => handleStartEdit(comment)}
-                        className="text-muted-foreground hover:text-primary p-0.5"
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                      <button
-                        onClick={() => onDeleteComment(comment.id)}
-                        className="text-muted-foreground hover:text-destructive p-0.5"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  )}
-                </>
+              <div className="flex-1 min-w-0">
+                <span className="font-medium">{comment.profiles?.username}</span>
+                <span className="text-muted-foreground ml-1">{comment.content}</span>
+              </div>
+              {user?.id === comment.user_id && (
+                <button
+                  onClick={() => onDeleteComment(comment.id)}
+                  className="text-muted-foreground hover:text-destructive p-0.5"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
               )}
             </div>
           ))}
+          
+          {user && (
+            <div className="flex gap-2 pt-1">
+              <Input
+                value={commentInput}
+                onChange={(e) => setCommentInput(e.target.value)}
+                placeholder="Dodaj komentarz..."
+                className="h-7 text-xs"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSubmitComment();
+                  }
+                }}
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 shrink-0"
+                onClick={handleSubmitComment}
+                disabled={!commentInput.trim()}
+              >
+                <Send className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -341,30 +276,14 @@ const PinDetails = () => {
   const { data: visitComments = [] } = useQuery({
     queryKey: ["visit-comments", pinId],
     queryFn: async () => {
-      const { data: commentsData, error } = await supabase
+      const { data, error } = await supabase
         .from("visit_comments")
-        .select("*")
+        .select("*, profiles:user_id(id, username, avatar_url)")
         .eq("visit_pin_id", pinId)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      if (!commentsData || commentsData.length === 0) return [];
-
-      // Fetch profiles for comment authors
-      const userIds = [...new Set(commentsData.map((c: any) => c.user_id))];
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("id, username, avatar_url")
-        .in("id", userIds);
-
-      const profilesMap = new Map(
-        (profilesData || []).map((p: any) => [p.id, p])
-      );
-
-      return commentsData.map((c: any) => ({
-        ...c,
-        profiles: profilesMap.get(c.user_id) || null,
-      }));
+      return data || [];
     },
     enabled: !!pinId,
   });
@@ -426,22 +345,6 @@ const PinDetails = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["visit-comments", pinId] });
       toast.success("Usunięto komentarz");
-    },
-  });
-
-  // Edit comment mutation
-  const editCommentMutation = useMutation({
-    mutationFn: async ({ commentId, content }: { commentId: string; content: string }) => {
-      const { error } = await supabase
-        .from("visit_comments")
-        .update({ content: content.trim() })
-        .eq("id", commentId)
-        .eq("user_id", user?.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["visit-comments", pinId] });
-      toast.success("Zaktualizowano komentarz");
     },
   });
 
@@ -611,11 +514,6 @@ const PinDetails = () => {
               <span className="text-sm text-muted-foreground">{pin.address}</span>
             </div>
           )}
-          {pin.created_at && (
-            <p className="text-xs text-muted-foreground">
-              Dodano: {format(new Date(pin.created_at), "d MMM yyyy", { locale: pl })}
-            </p>
-          )}
         </div>
 
         {/* Pin Info */}
@@ -730,7 +628,6 @@ const PinDetails = () => {
                     onLike={() => likeMutation.mutate({ visitPinId: pinId || "", visitUserId: visit.user_id })}
                     onComment={(content) => commentMutation.mutate({ visitPinId: pinId || "", visitUserId: visit.user_id, content })}
                     onDeleteComment={(commentId) => deleteCommentMutation.mutate(commentId)}
-                    onEditComment={(commentId, content) => editCommentMutation.mutate({ commentId, content })}
                   />
                 );
               })}

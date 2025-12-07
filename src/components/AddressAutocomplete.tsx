@@ -11,7 +11,7 @@ interface Coordinates {
 
 interface AddressAutocompleteProps {
   value: string;
-  onChange: (value: string, coordinates?: Coordinates, fullAddress?: string, placeName?: string) => void;
+  onChange: (value: string, coordinates?: Coordinates, fullAddress?: string) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -107,23 +107,18 @@ const AddressAutocomplete = ({
   };
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
-    // Check if there's a distinct place name (POI name like restaurant, attraction)
+    // Prioritize place name for POIs (restaurants, attractions, etc.)
+    // Use full_address only if name is missing or is the same as address
     const isPlaceName = suggestion.name && 
       suggestion.name !== suggestion.full_address && 
       suggestion.name !== suggestion.place_formatted;
     
-    // Build full address that includes the place name if it exists
-    const baseAddress = suggestion.full_address || suggestion.place_formatted || suggestion.name;
-    const fullAddressWithName = isPlaceName && baseAddress && !baseAddress.startsWith(suggestion.name)
-      ? `${suggestion.name}, ${baseAddress}`
-      : baseAddress;
-    
-    // Display value is the combined address
-    const displayValue = fullAddressWithName;
+    const displayValue = isPlaceName 
+      ? suggestion.name 
+      : (suggestion.full_address || suggestion.place_formatted || suggestion.name);
     
     setQuery(displayValue);
-    // Pass: displayValue (combined), coordinates, fullAddressWithName (for address field), suggestion.name (for place_name)
-    onChange(displayValue, suggestion.coordinates, fullAddressWithName, isPlaceName ? suggestion.name : undefined);
+    onChange(displayValue, suggestion.coordinates, suggestion.full_address);
     setIsOpen(false);
     setSuggestions([]);
   };
