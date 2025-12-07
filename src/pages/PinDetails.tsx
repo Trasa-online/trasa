@@ -341,14 +341,30 @@ const PinDetails = () => {
   const { data: visitComments = [] } = useQuery({
     queryKey: ["visit-comments", pinId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: commentsData, error } = await supabase
         .from("visit_comments")
-        .select("*, profiles:user_id(id, username, avatar_url)")
+        .select("*")
         .eq("visit_pin_id", pinId)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      if (!commentsData || commentsData.length === 0) return [];
+
+      // Fetch profiles for comment authors
+      const userIds = [...new Set(commentsData.map((c: any) => c.user_id))];
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", userIds);
+
+      const profilesMap = new Map(
+        (profilesData || []).map((p: any) => [p.id, p])
+      );
+
+      return commentsData.map((c: any) => ({
+        ...c,
+        profiles: profilesMap.get(c.user_id) || null,
+      }));
     },
     enabled: !!pinId,
   });
