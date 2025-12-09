@@ -186,8 +186,8 @@ const DraggablePinList = ({
   const filteredPins = pins.filter(p => p.address);
 
   const renderNoteForm = (pinIndex: number, isEditing: boolean) => (
-    <div className="bg-card border border-amber-200 dark:border-amber-800 rounded-lg p-3 space-y-2.5">
-      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+    <div className="bg-card border border-border rounded-lg p-3 space-y-2.5">
+      <div className="flex items-center gap-2 text-foreground">
         <Sparkles className="h-4 w-4" />
         <span className="text-xs font-medium">
           {isEditing ? "Edytuj ciekawostkę" : "Dodaj ciekawostkę"}
@@ -248,7 +248,7 @@ const DraggablePinList = ({
         <Button
           type="button"
           size="sm"
-          className="h-8 text-xs bg-amber-500 hover:bg-amber-600 text-white"
+          className="h-8 text-xs"
           onClick={() => isEditing ? confirmEditNote() : confirmAddNote(pinIndex)}
           disabled={!noteText.trim() && !noteImage}
         >
@@ -269,9 +269,9 @@ const DraggablePinList = ({
     return (
       <div 
         key={noteIndex}
-        className="flex items-start gap-2 p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg"
+        className="flex items-start gap-2 p-2.5 bg-muted/50 border border-border rounded-lg"
       >
-        <Sparkles className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+        <Sparkles className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
         <div className="flex-1 min-w-0">
           {note.text && (
             <p className="text-xs text-foreground leading-relaxed">{note.text}</p>
@@ -315,73 +315,68 @@ const DraggablePinList = ({
     const hasNotes = pinNotes.length > 0;
 
     return (
-      <div className="relative py-2">
-        {/* Connecting line */}
-        <div className="absolute left-[22px] top-0 bottom-0 w-px bg-border" />
-        
-        <div className="ml-[42px] mr-2">
-          {/* Notes exist - show collapsed/expanded view */}
-          {hasNotes && !isExpanded && (
+      <div className="py-1">
+        {/* Notes exist - show collapsed/expanded view */}
+        {hasNotes && !isExpanded && (
+          <button
+            type="button"
+            onClick={() => setExpandedNotePinIndex(pinIndex)}
+            className="w-full flex items-center gap-2 py-2.5 px-3 text-xs bg-muted/50 border border-border rounded-lg hover:bg-muted transition-colors"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-foreground font-medium">
+              {pinNotes.length} ciekawostk{pinNotes.length === 1 ? 'a' : pinNotes.length < 5 ? 'i' : 'ek'} na trasie
+            </span>
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground ml-auto" />
+          </button>
+        )}
+
+        {/* Expanded notes view */}
+        {hasNotes && isExpanded && (
+          <div className="space-y-1">
             <button
               type="button"
-              onClick={() => setExpandedNotePinIndex(pinIndex)}
-              className="w-full flex items-center gap-2 py-2 px-3 text-xs bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors"
+              onClick={() => {
+                setExpandedNotePinIndex(null);
+                cancelNoteEdit();
+              }}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-1"
             >
-              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-              <span className="text-amber-700 dark:text-amber-300 font-medium">
-                {pinNotes.length} ciekawostk{pinNotes.length === 1 ? 'a' : pinNotes.length < 5 ? 'i' : 'ek'} na trasie
-              </span>
-              <ChevronDown className="h-3.5 w-3.5 text-amber-500 ml-auto" />
+              <ChevronUp className="h-3.5 w-3.5" />
+              <span>Zwiń ciekawostki</span>
             </button>
-          )}
-
-          {/* Expanded notes view */}
-          {hasNotes && isExpanded && (
-            <div className="space-y-2">
+            
+            {pinNotes.map((note, noteIndex) => renderNoteDisplay(note, pinIndex, noteIndex))}
+            
+            {isAddingNote ? (
+              renderNoteForm(pinIndex, false)
+            ) : canAddMoreNotes && onPinNotesChange && (
               <button
                 type="button"
-                onClick={() => {
-                  setExpandedNotePinIndex(null);
-                  cancelNoteEdit();
-                }}
-                className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+                onClick={() => startAddingNote(pinIndex)}
+                className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-foreground/50 rounded-lg transition-colors"
               >
-                <ChevronUp className="h-3.5 w-3.5" />
-                <span>Zwiń ciekawostki</span>
+                <Plus className="h-3.5 w-3.5" />
+                <span>Dodaj ciekawostkę ({pinNotes.length}/{MAX_NOTES_PER_PIN})</span>
               </button>
-              
-              {pinNotes.map((note, noteIndex) => renderNoteDisplay(note, pinIndex, noteIndex))}
-              
-              {isAddingNote ? (
-                renderNoteForm(pinIndex, false)
-              ) : canAddMoreNotes && onPinNotesChange && (
-                <button
-                  type="button"
-                  onClick={() => startAddingNote(pinIndex)}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 border border-dashed border-muted-foreground/30 hover:border-amber-400 dark:hover:border-amber-600 rounded-lg transition-colors"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>Dodaj ciekawostkę ({pinNotes.length}/{MAX_NOTES_PER_PIN})</span>
-                </button>
-              )}
-            </div>
-          )}
+            )}
+          </div>
+        )}
 
-          {/* No notes - show add button */}
-          {!hasNotes && !isAddingNote && onPinNotesChange && (
-            <button
-              type="button"
-              onClick={() => startAddingNote(pinIndex)}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 border border-dashed border-muted-foreground/30 hover:border-amber-400 dark:hover:border-amber-600 rounded-lg transition-colors"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Dodaj ciekawostkę na trasie</span>
-            </button>
-          )}
+        {/* No notes - show add button */}
+        {!hasNotes && !isAddingNote && onPinNotesChange && (
+          <button
+            type="button"
+            onClick={() => startAddingNote(pinIndex)}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-foreground/50 rounded-lg transition-colors"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Dodaj ciekawostkę na trasie</span>
+          </button>
+        )}
 
-          {/* Adding note form when no existing notes */}
-          {!hasNotes && isAddingNote && renderNoteForm(pinIndex, false)}
-        </div>
+        {/* Adding note form when no existing notes */}
+        {!hasNotes && isAddingNote && renderNoteForm(pinIndex, false)}
       </div>
     );
   };
@@ -453,7 +448,7 @@ const DraggablePinList = ({
 
                   {/* Show notes count indicator when NOT in editor mode */}
                   {!showNotesEditor && pin.notes && pin.notes.length > 0 && (
-                    <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-1">
                       <Sparkles className="h-3 w-3" />
                       <span>{pin.notes.length} ciekawostk{pin.notes.length === 1 ? 'a' : pin.notes.length < 5 ? 'i' : 'ek'}</span>
                     </div>
