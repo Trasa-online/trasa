@@ -145,9 +145,10 @@ const Search = () => {
 
   return (
     <>
-      <PageHeader
+      <PageHeader 
         title="Szukaj" 
         showBack
+        onBackClick={() => navigate("/")}
       />
       
       <div className="sticky top-0 bg-background z-10 border-b border-border pt-2 pb-4 px-4">
@@ -304,7 +305,7 @@ const Search = () => {
             {/* Wyniki tras */}
             {searchResults?.routes && searchResults.routes.length > 0 && (
               <div>
-                <h3 className="font-semibold mb-3">Trasy</h3>
+                <h3 className="font-semibold mb-3">Trasy ({searchResults.routes.length})</h3>
                 <div className="space-y-4">
                   {searchResults.routes.map((route: any) => (
                     <RouteCard key={route.id} route={route} />
@@ -316,7 +317,7 @@ const Search = () => {
             {/* Wyniki użytkowników */}
             {searchResults?.users && searchResults.users.length > 0 && (
               <div>
-                <h3 className="font-semibold mb-3">Użytkownicy</h3>
+                <h3 className="font-semibold mb-3">Użytkownicy ({searchResults.users.length})</h3>
                 <div className="space-y-3">
                   {searchResults.users.map((user: any) => (
                     <div
@@ -346,7 +347,7 @@ const Search = () => {
             {/* Wyniki miejsc */}
             {searchResults?.places && searchResults.places.length > 0 && (
               <div>
-                <h3 className="font-semibold mb-3">Miejsca</h3>
+                <h3 className="font-semibold mb-3">Miejsca ({searchResults.places.length})</h3>
                 <div className="space-y-3">
                   {searchResults.places.map((pin: any) => (
                     <div
