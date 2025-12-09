@@ -5,12 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Heart, MessageCircle, UserPlus, MapPin, Star } from "lucide-react";
+import { Heart, MessageCircle, UserPlus, MapPin, Star, RefreshCw } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-type NotificationType = "like" | "comment" | "follower" | "new_route" | "mention" | "pin_visit";
+type NotificationType = "like" | "comment" | "follower" | "new_route" | "mention" | "pin_visit" | "route_updated";
 
 interface Notification {
   id: string;
@@ -151,6 +151,8 @@ const Notifications = () => {
         return <UserPlus className="h-5 w-5 text-green-500" />;
       case "new_route":
         return <MapPin className="h-5 w-5 text-purple-500" />;
+      case "route_updated":
+        return <RefreshCw className="h-5 w-5 text-blue-500" />;
       case "mention":
         return <UserPlus className="h-5 w-5 text-orange-500" />;
       case "pin_visit":
@@ -184,6 +186,13 @@ const Notifications = () => {
         return (
           <>
             <span className="font-semibold">{notification.actor.username}</span> dodał nową trasę:{" "}
+            <span className="font-semibold">{notification.route?.title}</span>
+          </>
+        );
+      case "route_updated":
+        return (
+          <>
+            <span className="font-semibold">{notification.actor.username}</span> zaktualizował trasę:{" "}
             <span className="font-semibold">{notification.route?.title}</span>
           </>
         );
