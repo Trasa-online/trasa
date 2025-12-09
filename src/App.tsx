@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import AppLayout from "./components/layout/AppLayout";
 import Feed from "./pages/Feed";
 import Auth from "./pages/Auth";
 import MyRoutes from "./pages/MyRoutes";
@@ -28,19 +29,19 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route path="/" element={<Feed />} />
-          <Route path="/my-routes" element={<MyRoutes />} />
-          <Route path="/create" element={<CreateRoute />} />
-          <Route path="/edit/:id" element={<CreateRoute />} />
-          <Route path="/saved" element={<SavedRoutes />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/route/:id" element={<RouteDetails />} />
-          <Route path="/pin/:pinId" element={<PinDetails />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/profile/:userId" element={<Profile />} />
-          <Route path="/friends/:userId" element={<Friends />} />
+          <Route path="/" element={<AppLayout><Feed /></AppLayout>} />
+          <Route path="/my-routes" element={<AppLayout><MyRoutes /></AppLayout>} />
+          <Route path="/create" element={<AppLayout><CreateRoute /></AppLayout>} />
+          <Route path="/edit/:id" element={<AppLayout><CreateRoute /></AppLayout>} />
+          <Route path="/saved" element={<AppLayout><SavedRoutes /></AppLayout>} />
+          <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
+          <Route path="/route/:id" element={<AppLayout><RouteDetails /></AppLayout>} />
+          <Route path="/pin/:pinId" element={<AppLayout><PinDetails /></AppLayout>} />
+          <Route path="/search" element={<AppLayout><Search /></AppLayout>} />
+          <Route path="/admin" element={<AppLayout><Admin /></AppLayout>} />
+          <Route path="/notifications" element={<AppLayout><Notifications /></AppLayout>} />
+          <Route path="/profile/:userId" element={<AppLayout><Profile /></AppLayout>} />
+          <Route path="/friends/:userId" element={<AppLayout><Friends /></AppLayout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
