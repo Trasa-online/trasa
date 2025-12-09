@@ -29,6 +29,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+interface PinNote {
+  id?: string;
+  text: string;
+  imageUrl?: string;
+  note_order: number;
+}
+
 interface Pin {
   id?: string;
   place_name: string;
@@ -42,6 +49,7 @@ interface Pin {
   mentioned_users: string[];
   latitude?: number;
   longitude?: number;
+  notes: PinNote[];
 }
 
 const CreateRoute = () => {
@@ -52,9 +60,9 @@ const CreateRoute = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [pins, setPins] = useState<Pin[]>([
-    { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: 0, tags: [], mentioned_users: [], latitude: undefined, longitude: undefined },
+    { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: 0, tags: [], mentioned_users: [], latitude: undefined, longitude: undefined, notes: [] },
   ]);
-  const [routeNotes, setRouteNotes] = useState<{ afterPinIndex: number; text: string; imageUrl?: string }[]>([]);
+  // routeNotes state removed - notes are now stored per-pin
   const [currentPinIndex, setCurrentPinIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(1);
@@ -100,9 +108,9 @@ const CreateRoute = () => {
     setPins([{ 
       place_name: "", address: "", description: "", image_url: "", 
       images: [], rating: 0, pin_order: 0, tags: [], 
-      mentioned_users: [], latitude: undefined, longitude: undefined 
+      mentioned_users: [], latitude: undefined, longitude: undefined,
+      notes: []
     }]);
-    setRouteNotes([]);
     setCurrentPinIndex(0);
     setStep(1);
     setShowPinsList(false);
@@ -135,13 +143,18 @@ const CreateRoute = () => {
 
       if (error) throw error;
 
-      // Fetch route notes separately
-      const { data: notes } = await supabase
-        .from("route_notes")
-        .select("*")
-        .eq("route_id", id);
+      // Fetch pin notes for each pin
+      const pinIds = data.pins?.map((p: any) => p.id) || [];
+      let pinNotes: any[] = [];
+      if (pinIds.length > 0) {
+        const { data: notes } = await supabase
+          .from("route_notes")
+          .select("*")
+          .in("pin_id", pinIds);
+        pinNotes = notes || [];
+      }
 
-      return { ...data, route_notes: notes || [] };
+      return { ...data, pin_notes: pinNotes };
     },
     enabled: !!id && !!user,
   });
@@ -152,6 +165,7 @@ const CreateRoute = () => {
       setDescription(existingRoute.description || "");
       setRouteDescription(existingRoute.description || "");
       if (existingRoute.pins?.length > 0) {
+        const pinNotes = existingRoute.pin_notes || [];
         setPins(
           existingRoute.pins
             .sort((a: any, b: any) => a.pin_order - b.pin_order)
@@ -160,17 +174,18 @@ const CreateRoute = () => {
               mentioned_users: pin.mentioned_users || [],
               images: pin.images || [],
               rating: typeof pin.rating === 'number' ? pin.rating : 0,
+              notes: pinNotes
+                .filter((n: any) => n.pin_id === pin.id)
+                .sort((a: any, b: any) => a.note_order - b.note_order)
+                .map((n: any) => ({
+                  id: n.id,
+                  text: n.text || "",
+                  imageUrl: n.image_url,
+                  note_order: n.note_order,
+                })),
             }))
         );
         setShowPinsList(true);
-      }
-      // Load route notes
-      if (existingRoute.route_notes?.length > 0) {
-        setRouteNotes(existingRoute.route_notes.map((n: any) => ({
-          afterPinIndex: n.after_pin_index,
-          text: n.text,
-          imageUrl: n.image_url
-        })));
       }
       setStep(2);
     }
@@ -199,7 +214,8 @@ const CreateRoute = () => {
         tags: [], 
         mentioned_users: [], 
         latitude: undefined, 
-        longitude: undefined 
+        longitude: undefined,
+        notes: []
       };
       const newPins = [...prevPins, newPin];
       setCurrentPinIndex(newPins.length - 1);
@@ -213,17 +229,13 @@ const CreateRoute = () => {
     if (currentPinIndex >= newPins.length) {
       setCurrentPinIndex(Math.max(0, newPins.length - 1));
     }
-    // Also update route notes indexes
-    setRouteNotes(prev => prev
-      .filter(n => n.afterPinIndex !== index - 1)
-      .map(n => n.afterPinIndex > index ? { ...n, afterPinIndex: n.afterPinIndex - 1 } : n)
-    );
   };
 
-  const addRouteNote = async (afterIndex: number, note: string, imageUrl?: string) => {
-    let uploadedImageUrl: string | undefined;
+  // Helper to upload note image to storage
+  const uploadNoteImage = async (imageUrl: string): Promise<string | null> => {
+    if (!imageUrl.startsWith("data:") || !user) return imageUrl;
     
-    if (imageUrl && imageUrl.startsWith("data:") && user) {
+    try {
       const response = await fetch(imageUrl);
       const blob = await response.blob();
       const fileExt = "jpg";
@@ -233,24 +245,15 @@ const CreateRoute = () => {
         .from("route-images")
         .upload(fileName, blob);
 
-      if (!uploadError) {
-        const { data: { publicUrl } } = supabase.storage
-          .from("route-images")
-          .getPublicUrl(fileName);
-        uploadedImageUrl = publicUrl;
-      }
+      if (uploadError) return null;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("route-images")
+        .getPublicUrl(fileName);
+      return publicUrl;
+    } catch {
+      return null;
     }
-
-    setRouteNotes(prev => [
-      ...prev.filter(n => n.afterPinIndex !== afterIndex),
-      { afterPinIndex: afterIndex, text: note, imageUrl: uploadedImageUrl }
-    ]);
-    
-    toast({ title: "Dodano notatkę" });
-  };
-
-  const removeRouteNote = (afterIndex: number) => {
-    setRouteNotes(prev => prev.filter(n => n.afterPinIndex !== afterIndex));
   };
 
   const updatePin = (index: number, field: keyof Pin, value: any) => {
@@ -331,10 +334,11 @@ const CreateRoute = () => {
 
         if (routeError) throw routeError;
 
+        // Delete existing pins (cascades to route_notes via FK)
         await supabase.from("pins").delete().eq("route_id", id);
 
         for (const pin of validPins) {
-          const { error: pinError } = await supabase.from("pins").insert({
+          const { data: insertedPin, error: pinError } = await supabase.from("pins").insert({
             route_id: id,
             place_name: pin.place_name,
             address: pin.address || "Brak adresu",
@@ -350,8 +354,27 @@ const CreateRoute = () => {
             mentioned_users: pin.mentioned_users,
             latitude: pin.latitude,
             longitude: pin.longitude,
-          });
+          }).select().single();
           if (pinError) throw pinError;
+
+          // Save notes for this pin
+          if (pin.notes && pin.notes.length > 0 && insertedPin) {
+            for (const note of pin.notes) {
+              // Upload image if it's base64
+              let imageUrl = note.imageUrl;
+              if (imageUrl && imageUrl.startsWith("data:")) {
+                const uploaded = await uploadNoteImage(imageUrl);
+                imageUrl = uploaded || undefined;
+              }
+              await supabase.from("route_notes").insert({
+                route_id: id,
+                pin_id: insertedPin.id,
+                text: note.text,
+                image_url: imageUrl,
+                note_order: note.note_order,
+              });
+            }
+          }
         }
       } else {
         const { data: route, error: routeError } = await supabase
@@ -364,7 +387,7 @@ const CreateRoute = () => {
         routeId = route.id;
 
         for (const pin of validPins) {
-          const { error: pinError } = await supabase.from("pins").insert({
+          const { data: insertedPin, error: pinError } = await supabase.from("pins").insert({
             route_id: route.id,
             place_name: pin.place_name,
             address: pin.address || "Brak adresu",
@@ -380,24 +403,27 @@ const CreateRoute = () => {
             mentioned_users: pin.mentioned_users,
             latitude: pin.latitude,
             longitude: pin.longitude,
-          });
+          }).select().single();
           if (pinError) throw pinError;
-        }
-      }
 
-      // Save route notes
-      if (routeId) {
-        // Delete existing notes first
-        await supabase.from("route_notes").delete().eq("route_id", routeId);
-
-        // Insert new notes
-        for (const note of routeNotes) {
-          await supabase.from("route_notes").insert({
-            route_id: routeId,
-            after_pin_index: note.afterPinIndex,
-            text: note.text,
-            image_url: note.imageUrl
-          });
+          // Save notes for this pin
+          if (pin.notes && pin.notes.length > 0 && insertedPin) {
+            for (const note of pin.notes) {
+              // Upload image if it's base64
+              let imageUrl = note.imageUrl;
+              if (imageUrl && imageUrl.startsWith("data:")) {
+                const uploaded = await uploadNoteImage(imageUrl);
+                imageUrl = uploaded || undefined;
+              }
+              await supabase.from("route_notes").insert({
+                route_id: route.id,
+                pin_id: insertedPin.id,
+                text: note.text,
+                image_url: imageUrl,
+                note_order: note.note_order,
+              });
+            }
+          }
         }
       }
 
@@ -496,11 +522,7 @@ const CreateRoute = () => {
                     setShowPinsList(false);
                   }}
                   onPinRemove={removePin}
-                  routeNotes={routeNotes}
-                  onAddNote={addRouteNote}
-                  onRemoveNote={removeRouteNote}
                   showRemoveButton={true}
-                  showInsertButtons={true}
                   compact={true}
                 />
 
@@ -891,13 +913,11 @@ const CreateRoute = () => {
                 className="h-40"
               />
 
-              {/* Pins list with notes */}
+              {/* Pins list */}
               <DraggablePinList
                 pins={pins}
                 onReorder={setPins}
-                routeNotes={routeNotes}
                 showRemoveButton={false}
-                showInsertButtons={true}
                 compact={false}
               />
 
