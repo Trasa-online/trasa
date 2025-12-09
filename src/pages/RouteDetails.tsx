@@ -90,24 +90,30 @@ const PinVisitors = ({ pinId }: { pinId: string }) => {
 };
 
 // Component to display pins with notes
-const RouteNotesDisplay = ({ pins, routeNotes, currentUserId }: { pins: any[]; routeNotes: any[]; currentUserId: string }) => {
-  const [expandedNoteImages, setExpandedNoteImages] = useStateLocal<Set<number>>(new Set());
+const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pinNotes: any[]; currentUserId: string }) => {
+  const [expandedNoteImages, setExpandedNoteImages] = useStateLocal<Set<string>>(new Set());
   const lightbox = useContext(LightboxContext);
 
-  const toggleNoteImage = (index: number) => {
+  const toggleNoteImage = (noteId: string) => {
     setExpandedNoteImages(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(index)) {
-        newSet.delete(index);
+      if (newSet.has(noteId)) {
+        newSet.delete(noteId);
       } else {
-        newSet.add(index);
+        newSet.add(noteId);
       }
       return newSet;
     });
   };
 
   const sortedPins = pins?.slice().sort((a: any, b: any) => a.pin_order - b.pin_order) || [];
-  const notesMap = new Map(routeNotes?.map((n: any) => [n.after_pin_index, n]) || []);
+  
+  // Group notes by pin_id
+  const notesByPinId = new Map<string, any[]>();
+  pinNotes?.forEach((note: any) => {
+    const existing = notesByPinId.get(note.pin_id) || [];
+    notesByPinId.set(note.pin_id, [...existing, note].sort((a, b) => a.note_order - b.note_order));
+  });
 
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
@@ -119,8 +125,7 @@ const RouteNotesDisplay = ({ pins, routeNotes, currentUserId }: { pins: any[]; r
       
       <div className="divide-y divide-border/50">
         {sortedPins.map((pin: any, index: number) => {
-          const noteAfterThis = notesMap.get(index);
-          const isImageExpanded = expandedNoteImages.has(index);
+          const pinNotesForThis = notesByPinId.get(pin.id) || [];
 
           return (
             <div key={pin.id}>
@@ -182,38 +187,45 @@ const RouteNotesDisplay = ({ pins, routeNotes, currentUserId }: { pins: any[]; r
                 </div>
               </div>
               
-              {/* Display note after this pin */}
-              {noteAfterThis && (
-                <div className="mx-4 mb-4 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <Sparkles className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400">Ciekawe na trasie</p>
-                        {noteAfterThis.image_url && (
-                          <button
-                            type="button"
-                            onClick={() => toggleNoteImage(index)}
-                            className="flex items-center gap-0.5 text-[9px] text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
-                          >
-                            <ImageIcon className="h-3 w-3" />
-                            <span>{isImageExpanded ? 'ukryj' : 'pokaż'}</span>
-                          </button>
-                        )}
-                      </div>
-                      {noteAfterThis.text && (
-                        <p className="text-xs text-foreground leading-relaxed mt-0.5">{noteAfterThis.text}</p>
-                      )}
-                      {noteAfterThis.image_url && isImageExpanded && (
-                        <div 
-                          className="mt-2 relative h-20 w-28 rounded-lg overflow-hidden ring-1 ring-border cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={() => lightbox.openLightbox([noteAfterThis.image_url])}
-                        >
-                          <img src={noteAfterThis.image_url} alt="Notatka" className="w-full h-full object-cover" />
+              {/* Display notes for this pin */}
+              {pinNotesForThis.length > 0 && (
+                <div className="mx-4 mb-4 space-y-2">
+                  {pinNotesForThis.map((note: any) => {
+                    const isImageExpanded = expandedNoteImages.has(note.id);
+                    return (
+                      <div key={note.id} className="p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <Sparkles className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400">Ciekawe na trasie</p>
+                              {note.image_url && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleNoteImage(note.id)}
+                                  className="flex items-center gap-0.5 text-[9px] text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+                                >
+                                  <ImageIcon className="h-3 w-3" />
+                                  <span>{isImageExpanded ? 'ukryj' : 'pokaż'}</span>
+                                </button>
+                              )}
+                            </div>
+                            {note.text && (
+                              <p className="text-xs text-foreground leading-relaxed mt-0.5">{note.text}</p>
+                            )}
+                            {note.image_url && isImageExpanded && (
+                              <div 
+                                className="mt-2 relative h-20 w-28 rounded-lg overflow-hidden ring-1 ring-border cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => lightbox.openLightbox([note.image_url])}
+                              >
+                                <img src={note.image_url} alt="Notatka" className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -259,13 +271,18 @@ const RouteDetails = () => {
 
       if (error) throw error;
 
-      // Fetch route notes separately
-      const { data: notes } = await supabase
-        .from("route_notes")
-        .select("*")
-        .eq("route_id", id);
+      // Fetch pin notes - now linked to pins
+      const pinIds = data.pins?.map((p: any) => p.id) || [];
+      let pinNotes: any[] = [];
+      if (pinIds.length > 0) {
+        const { data: notes } = await supabase
+          .from("route_notes")
+          .select("*")
+          .in("pin_id", pinIds);
+        pinNotes = notes || [];
+      }
 
-      return { ...data, route_notes: notes || [] };
+      return { ...data, pin_notes: pinNotes };
     },
     enabled: !!id && !!user,
   });
@@ -765,7 +782,7 @@ const RouteDetails = () => {
         {/* Pins Section */}
         <RouteNotesDisplay 
           pins={route.pins}
-          routeNotes={route.route_notes}
+          pinNotes={route.pin_notes}
           currentUserId={user.id}
         />
 
