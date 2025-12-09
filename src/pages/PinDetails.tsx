@@ -30,6 +30,9 @@ const VisitCard = ({
   onComment,
   onDeleteComment,
   onEditComment,
+  isOwnVisit,
+  onEditVisit,
+  onDeleteVisit,
 }: {
   visit: any;
   pinId: string;
@@ -43,6 +46,9 @@ const VisitCard = ({
   onComment: (content: string) => void;
   onDeleteComment: (commentId: string) => void;
   onEditComment: (commentId: string, content: string) => void;
+  isOwnVisit?: boolean;
+  onEditVisit?: () => void;
+  onDeleteVisit?: () => void;
 }) => {
   const [commentInput, setCommentInput] = useState("");
   const [showComments, setShowComments] = useState(false);
@@ -120,12 +126,30 @@ const VisitCard = ({
                 {format(new Date(visit.created_at), "d MMM yyyy", { locale: pl })}
               </p>
             </div>
-            {visit.rating && visit.rating > 0 && (
-              <div className="flex items-center gap-0.5 shrink-0">
-                <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                <span className="text-sm font-medium">{visit.rating.toFixed(1)}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2 shrink-0">
+              {visit.rating && visit.rating > 0 && (
+                <div className="flex items-center gap-0.5">
+                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                  <span className="text-sm font-medium">{visit.rating.toFixed(1)}</span>
+                </div>
+              )}
+              {isOwnVisit && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={onEditVisit}
+                    className="p-1 text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={onDeleteVisit}
+                    className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {visit.description && (
@@ -667,25 +691,15 @@ const PinDetails = () => {
           )}
         </div>
 
-        {/* Rate Button */}
-        {user && (
+        {/* Rate Button - only show if user hasn't rated yet */}
+        {user && !hasVisited && (
           <div className="flex justify-center">
             <Button
               onClick={() => setShowVisitDialog(true)}
-              variant={hasVisited ? "outline" : "default"}
-              className={hasVisited ? "border-border" : "bg-foreground text-background hover:bg-foreground/90"}
+              className="bg-foreground text-background hover:bg-foreground/90"
             >
-              {hasVisited ? (
-                <>
-                  <Eye className="h-4 w-4 mr-2" />
-                  Zobacz ocenę
-                </>
-              ) : (
-                <>
-                  <Star className="h-4 w-4 mr-2" />
-                  Dodaj coś od siebie
-                </>
-              )}
+              <Star className="h-4 w-4 mr-2" />
+              Dodaj coś od siebie
             </Button>
           </div>
         )}
@@ -716,6 +730,8 @@ const PinDetails = () => {
                   (c: any) => c.visit_user_id === visit.user_id
                 );
 
+                const isOwnVisit = user?.id === visit.user_id;
+
                 return (
                   <VisitCard
                     key={visit.user_id}
@@ -731,6 +747,21 @@ const PinDetails = () => {
                     onComment={(content) => commentMutation.mutate({ visitPinId: pinId || "", visitUserId: visit.user_id, content })}
                     onDeleteComment={(commentId) => deleteCommentMutation.mutate(commentId)}
                     onEditComment={(commentId, content) => editCommentMutation.mutate({ commentId, content })}
+                    isOwnVisit={isOwnVisit}
+                    onEditVisit={() => setShowVisitDialog(true)}
+                    onDeleteVisit={() => {
+                      if (confirm("Czy na pewno chcesz usunąć swoją ocenę?")) {
+                        supabase
+                          .from("pin_visits")
+                          .delete()
+                          .eq("pin_id", pinId)
+                          .eq("user_id", user?.id)
+                          .then(() => {
+                            queryClient.invalidateQueries({ queryKey: ["pin-visits-details", pinId] });
+                            toast.success("Usunięto ocenę");
+                          });
+                      }
+                    }}
                   />
                 );
               })}
