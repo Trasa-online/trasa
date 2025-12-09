@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -46,14 +46,23 @@ export const PinVisitDialog = ({
 }: PinVisitDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [description, setDescription] = useState(existingVisit?.description || "");
-  const [rating, setRating] = useState(existingVisit?.rating || 0);
-  const [imageUrl, setImageUrl] = useState(existingVisit?.image_url || "");
+  const [description, setDescription] = useState("");
+  const [rating, setRating] = useState(0);
+  const [imageUrl, setImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isEditing = !!existingVisit;
+
+  // Sync state when dialog opens or existingVisit changes
+  useEffect(() => {
+    if (open) {
+      setDescription(existingVisit?.description || "");
+      setRating(existingVisit?.rating || 0);
+      setImageUrl(existingVisit?.image_url || "");
+    }
+  }, [open, existingVisit]);
 
   // Delete mutation
   const deleteMutation = useMutation({
