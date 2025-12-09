@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-type NotificationType = "like" | "comment" | "follower" | "new_route" | "mention" | "pin_visit" | "route_updated";
+type NotificationType = "like" | "comment" | "follower" | "new_route" | "mention" | "pin_visit" | "route_updated" | "visit_comment";
 
 interface Notification {
   id: string;
@@ -157,6 +157,8 @@ const Notifications = () => {
         return <UserPlus className="h-5 w-5 text-orange-500" />;
       case "pin_visit":
         return <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />;
+      case "visit_comment":
+        return <MessageCircle className="h-5 w-5 text-blue-500" />;
     }
   };
 
@@ -208,6 +210,12 @@ const Notifications = () => {
           <>
             <span className="font-semibold">{notification.actor.username}</span> dodał ocenę w Twojej trasie{" "}
             <span className="font-semibold">{notification.route?.title}</span>
+          </>
+        );
+      case "visit_comment":
+        return (
+          <>
+            <span className="font-semibold">{notification.actor.username}</span> skomentował Twoją ocenę
           </>
         );
     }
