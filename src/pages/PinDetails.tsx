@@ -15,6 +15,16 @@ import { useState, useRef, useCallback } from "react";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Component for visit card with likes and comments
 const VisitCard = ({
@@ -292,6 +302,7 @@ const PinDetails = () => {
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [showVisitDialog, setShowVisitDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   // Swipe handling
   const touchStartX = useRef<number | null>(null);
@@ -749,19 +760,7 @@ const PinDetails = () => {
                     onEditComment={(commentId, content) => editCommentMutation.mutate({ commentId, content })}
                     isOwnVisit={isOwnVisit}
                     onEditVisit={() => setShowVisitDialog(true)}
-                    onDeleteVisit={() => {
-                      if (confirm("Czy na pewno chcesz usunąć swoją ocenę?")) {
-                        supabase
-                          .from("pin_visits")
-                          .delete()
-                          .eq("pin_id", pinId)
-                          .eq("user_id", user?.id)
-                          .then(() => {
-                            queryClient.invalidateQueries({ queryKey: ["pin-visits-details", pinId] });
-                            toast.success("Usunięto ocenę");
-                          });
-                      }
-                    }}
+                    onDeleteVisit={() => setShowDeleteDialog(true)}
                   />
                 );
               })}
@@ -793,6 +792,35 @@ const PinDetails = () => {
           } : null}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Usuń ocenę</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz usunąć swoją ocenę? Tej operacji nie można cofnąć.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                await supabase
+                  .from("pin_visits")
+                  .delete()
+                  .eq("pin_id", pinId)
+                  .eq("user_id", user?.id);
+                queryClient.invalidateQueries({ queryKey: ["pin-visits-details", pinId] });
+                toast.success("Usunięto ocenę");
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Usuń
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );
