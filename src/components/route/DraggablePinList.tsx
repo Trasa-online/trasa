@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { X, GripVertical, Sparkles, Plus, Camera, Check, Pencil, ImageIcon } from "lucide-react";
+import { X, GripVertical, Sparkles, Plus, Camera, Check, Pencil, ChevronDown, ChevronUp } from "lucide-react";
 
 interface PinNote {
   id?: string;
@@ -116,6 +116,7 @@ const DraggablePinList = ({
 
   const startAddingNote = (pinIndex: number) => {
     setAddingNoteToPinIndex(pinIndex);
+    setExpandedNotePinIndex(pinIndex);
     setEditingNoteInfo(null);
     setNoteText("");
     setNoteImage(null);
@@ -185,19 +186,23 @@ const DraggablePinList = ({
   const filteredPins = pins.filter(p => p.address);
 
   const renderNoteForm = (pinIndex: number, isEditing: boolean) => (
-    <div 
-      className="mt-2 border border-primary rounded-lg p-2.5 bg-card space-y-2"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="flex gap-2 items-start">
-        <Textarea
-          value={noteText}
-          onChange={(e) => setNoteText(e.target.value)}
-          placeholder="Co ciekawego na trasie..."
-          className="min-h-[40px] h-10 text-xs resize-none flex-1"
-          rows={1}
-          autoFocus
-        />
+    <div className="bg-card border border-amber-200 dark:border-amber-800 rounded-lg p-3 space-y-2.5">
+      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+        <Sparkles className="h-4 w-4" />
+        <span className="text-xs font-medium">
+          {isEditing ? "Edytuj ciekawostkę" : "Dodaj ciekawostkę"}
+        </span>
+      </div>
+      
+      <Textarea
+        value={noteText}
+        onChange={(e) => setNoteText(e.target.value)}
+        placeholder="Co ciekawego między tymi miejscami..."
+        className="min-h-[60px] text-sm resize-none"
+        autoFocus
+      />
+      
+      <div className="flex items-center gap-2">
         <input
           type="file"
           ref={fileInputRef}
@@ -208,33 +213,34 @@ const DraggablePinList = ({
         <Button
           type="button"
           variant="outline"
-          size="icon"
-          className="h-10 w-10 flex-shrink-0"
+          size="sm"
+          className="h-8 text-xs"
           onClick={() => fileInputRef.current?.click()}
         >
-          <Camera className="h-4 w-4" />
+          <Camera className="h-3.5 w-3.5 mr-1.5" />
+          Dodaj zdjęcie
         </Button>
+        
+        {noteImage && (
+          <div className="relative h-10 w-14 rounded overflow-hidden ring-1 ring-border">
+            <img src={noteImage} alt="Preview" className="w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={() => setNoteImage(null)}
+              className="absolute top-0 right-0 bg-background/80 rounded-bl p-0.5"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
       </div>
       
-      {noteImage && (
-        <div className="relative h-16 w-24 rounded overflow-hidden">
-          <img src={noteImage} alt="Preview" className="w-full h-full object-cover" />
-          <button
-            type="button"
-            onClick={() => setNoteImage(null)}
-            className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </div>
-      )}
-      
-      <div className="flex gap-1.5 justify-end">
+      <div className="flex gap-2 justify-end pt-1">
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 text-xs"
+          className="h-8 text-xs"
           onClick={cancelNoteEdit}
         >
           Anuluj
@@ -242,11 +248,11 @@ const DraggablePinList = ({
         <Button
           type="button"
           size="sm"
-          className="h-7 text-xs"
+          className="h-8 text-xs bg-amber-500 hover:bg-amber-600 text-white"
           onClick={() => isEditing ? confirmEditNote() : confirmAddNote(pinIndex)}
           disabled={!noteText.trim() && !noteImage}
         >
-          <Check className="h-3 w-3 mr-1" />
+          <Check className="h-3.5 w-3.5 mr-1" />
           {isEditing ? "Zapisz" : "Dodaj"}
         </Button>
       </div>
@@ -257,60 +263,136 @@ const DraggablePinList = ({
     const isEditing = editingNoteInfo?.pinIndex === pinIndex && editingNoteInfo?.noteIndex === noteIndex;
     
     if (isEditing) {
-      return renderNoteForm(pinIndex, true);
+      return <div key={noteIndex}>{renderNoteForm(pinIndex, true)}</div>;
     }
 
     return (
       <div 
         key={noteIndex}
-        className="p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg"
-        onClick={(e) => e.stopPropagation()}
+        className="flex items-start gap-2 p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg"
       >
-        <div className="flex items-start gap-2">
-          <Sparkles className="h-3 w-3 text-amber-500 mt-0.5 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            {note.text && (
-              <p className="text-[11px] text-foreground leading-relaxed">{note.text}</p>
-            )}
-            {note.imageUrl && (
-              <div className="mt-1.5 relative h-12 w-20 rounded overflow-hidden ring-1 ring-border">
-                <img src={note.imageUrl} alt="Notatka" className="w-full h-full object-cover" />
-              </div>
-            )}
-          </div>
-          {onPinNotesChange && (
-            <div className="flex items-center gap-0.5">
-              <button
-                type="button"
-                onClick={() => startEditingNote(pinIndex, noteIndex, note)}
-                className="text-muted-foreground hover:text-foreground p-1 hover:bg-muted rounded"
-              >
-                <Pencil className="h-3 w-3" />
-              </button>
-              <button
-                type="button"
-                onClick={() => removeNote(pinIndex, noteIndex)}
-                className="text-muted-foreground hover:text-destructive p-1 hover:bg-muted rounded"
-              >
-                <X className="h-3 w-3" />
-              </button>
+        <Sparkles className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          {note.text && (
+            <p className="text-xs text-foreground leading-relaxed">{note.text}</p>
+          )}
+          {note.imageUrl && (
+            <div className="mt-2 relative h-16 w-24 rounded overflow-hidden ring-1 ring-border">
+              <img src={note.imageUrl} alt="Notatka" className="w-full h-full object-cover" />
             </div>
           )}
+        </div>
+        {onPinNotesChange && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => startEditingNote(pinIndex, noteIndex, note)}
+              className="text-muted-foreground hover:text-foreground p-1 hover:bg-muted rounded"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => removeNote(pinIndex, noteIndex)}
+              className="text-muted-foreground hover:text-destructive p-1 hover:bg-muted rounded"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderBetweenPinsSection = (pinIndex: number, isLastPin: boolean) => {
+    if (!showNotesEditor || isLastPin) return null;
+    
+    const pin = pins[pinIndex];
+    const pinNotes = pin?.notes || [];
+    const isExpanded = expandedNotePinIndex === pinIndex;
+    const isAddingNote = addingNoteToPinIndex === pinIndex;
+    const canAddMoreNotes = pinNotes.length < MAX_NOTES_PER_PIN;
+    const hasNotes = pinNotes.length > 0;
+
+    return (
+      <div className="relative py-2">
+        {/* Connecting line */}
+        <div className="absolute left-[22px] top-0 bottom-0 w-px bg-border" />
+        
+        <div className="ml-[42px] mr-2">
+          {/* Notes exist - show collapsed/expanded view */}
+          {hasNotes && !isExpanded && (
+            <button
+              type="button"
+              onClick={() => setExpandedNotePinIndex(pinIndex)}
+              className="w-full flex items-center gap-2 py-2 px-3 text-xs bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              <span className="text-amber-700 dark:text-amber-300 font-medium">
+                {pinNotes.length} ciekawostk{pinNotes.length === 1 ? 'a' : pinNotes.length < 5 ? 'i' : 'ek'} na trasie
+              </span>
+              <ChevronDown className="h-3.5 w-3.5 text-amber-500 ml-auto" />
+            </button>
+          )}
+
+          {/* Expanded notes view */}
+          {hasNotes && isExpanded && (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setExpandedNotePinIndex(null);
+                  cancelNoteEdit();
+                }}
+                className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+                <span>Zwiń ciekawostki</span>
+              </button>
+              
+              {pinNotes.map((note, noteIndex) => renderNoteDisplay(note, pinIndex, noteIndex))}
+              
+              {isAddingNote ? (
+                renderNoteForm(pinIndex, false)
+              ) : canAddMoreNotes && onPinNotesChange && (
+                <button
+                  type="button"
+                  onClick={() => startAddingNote(pinIndex)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 border border-dashed border-muted-foreground/30 hover:border-amber-400 dark:hover:border-amber-600 rounded-lg transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Dodaj ciekawostkę ({pinNotes.length}/{MAX_NOTES_PER_PIN})</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* No notes - show add button */}
+          {!hasNotes && !isAddingNote && onPinNotesChange && (
+            <button
+              type="button"
+              onClick={() => startAddingNote(pinIndex)}
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 border border-dashed border-muted-foreground/30 hover:border-amber-400 dark:hover:border-amber-600 rounded-lg transition-colors"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Dodaj ciekawostkę na trasie</span>
+            </button>
+          )}
+
+          {/* Adding note form when no existing notes */}
+          {!hasNotes && isAddingNote && renderNoteForm(pinIndex, false)}
         </div>
       </div>
     );
   };
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-0">
       {filteredPins.map((pin, index) => {
         const actualIndex = pins.findIndex(p => p.pin_order === pin.pin_order);
         const isDragging = draggedIndex === index;
         const isDragOver = dragOverIndex === index;
-        const isExpanded = expandedNotePinIndex === index;
-        const pinNotes = pin.notes || [];
-        const canAddMoreNotes = pinNotes.length < MAX_NOTES_PER_PIN;
-        const isAddingNote = addingNoteToPinIndex === index;
+        const isLastPin = index === filteredPins.length - 1;
 
         return (
           <div key={`pin-${pin.pin_order}`}>
@@ -369,57 +451,11 @@ const DraggablePinList = ({
                     </div>
                   )}
 
-                  {/* Notes indicator/toggle when showNotesEditor is true */}
-                  {showNotesEditor && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setExpandedNotePinIndex(isExpanded ? null : index);
-                        cancelNoteEdit();
-                      }}
-                      className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 mt-1"
-                    >
-                      <Sparkles className="h-3 w-3" />
-                      <span>
-                        {pinNotes.length > 0 
-                          ? `${pinNotes.length} ciekawostk${pinNotes.length === 1 ? 'a' : pinNotes.length < 5 ? 'i' : 'ek'}` 
-                          : 'Dodaj ciekawostkę'
-                        }
-                      </span>
-                      {pinNotes.length > 0 && (
-                        <span className="text-muted-foreground">
-                          ({isExpanded ? 'zwiń' : 'rozwiń'})
-                        </span>
-                      )}
-                    </button>
-                  )}
-
                   {/* Show notes count indicator when NOT in editor mode */}
-                  {!showNotesEditor && pinNotes.length > 0 && (
-                    <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
+                  {!showNotesEditor && pin.notes && pin.notes.length > 0 && (
+                    <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 mt-1">
                       <Sparkles className="h-3 w-3" />
-                      <span>{pinNotes.length} ciekawostk{pinNotes.length === 1 ? 'a' : pinNotes.length < 5 ? 'i' : 'ek'}</span>
-                    </div>
-                  )}
-
-                  {/* Expanded notes section */}
-                  {showNotesEditor && isExpanded && (
-                    <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
-                      {pinNotes.map((note, noteIndex) => renderNoteDisplay(note, index, noteIndex))}
-                      
-                      {isAddingNote ? (
-                        renderNoteForm(index, false)
-                      ) : canAddMoreNotes && onPinNotesChange && (
-                        <button
-                          type="button"
-                          onClick={() => startAddingNote(index)}
-                          className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[10px] text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded border border-dashed border-muted-foreground/30 hover:border-amber-300 dark:hover:border-amber-700 transition-colors"
-                        >
-                          <Plus className="h-3 w-3" />
-                          <span>Dodaj ciekawostkę ({pinNotes.length}/{MAX_NOTES_PER_PIN})</span>
-                        </button>
-                      )}
+                      <span>{pin.notes.length} ciekawostk{pin.notes.length === 1 ? 'a' : pin.notes.length < 5 ? 'i' : 'ek'}</span>
                     </div>
                   )}
 
@@ -449,6 +485,9 @@ const DraggablePinList = ({
                 )}
               </div>
             </div>
+
+            {/* Between pins section for adding notes */}
+            {renderBetweenPinsSection(index, isLastPin)}
           </div>
         );
       })}
