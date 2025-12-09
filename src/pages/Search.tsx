@@ -12,7 +12,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import AppLayout from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -145,8 +144,8 @@ const Search = () => {
   });
 
   return (
-    <AppLayout>
-      <PageHeader 
+    <>
+      <PageHeader
         title="Szukaj" 
         showBack
       />
@@ -285,106 +284,18 @@ const Search = () => {
 
       {/* Content */}
       <div className="p-4">
-          {!searchQuery && selectedTags.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-2">
-                <MapPin className="h-6 w-6 text-muted-foreground" />
-              </div>
-              
-              <h2 className="text-base font-semibold mb-1">Odkrywaj TRASA</h2>
-              <p className="text-xs text-muted-foreground max-w-xs">
-                Szukaj tras, użytkowników i miejsc
-              </p>
+        {!searchQuery && selectedTags.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-2">
+              <MapPin className="h-6 w-6 text-muted-foreground" />
             </div>
-          ) : (
-            <div className="space-y-6">
-              {isLoading && (
-                <p className="text-center text-muted-foreground py-8">Wyszukiwanie...</p>
-              )}
-
-              {/* Wyniki tras */}
-              {searchResults?.routes && searchResults.routes.length > 0 && (
-                <div>
-                  <h3 className="font-semibold mb-3">Trasy</h3>
-                  <div className="space-y-4">
-                    {searchResults.routes.map((route: any) => (
-                      <RouteCard key={route.id} route={route} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Wyniki użytkowników */}
-              {searchResults?.users && searchResults.users.length > 0 && (
-                <div>
-                  <h3 className="font-semibold mb-3">Użytkownicy</h3>
-                  <div className="space-y-3">
-                    {searchResults.users.map((user: any) => (
-                      <div
-                        key={user.id}
-                        onClick={() => navigate(`/profile/${user.id}`)}
-                        className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl hover:bg-accent cursor-pointer transition-colors"
-                      >
-                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                          {user.avatar_url ? (
-                            <img src={user.avatar_url} alt={user.username} className="w-full h-full rounded-full object-cover" />
-                          ) : (
-                            <span className="text-lg font-semibold">{user.username?.[0]?.toUpperCase()}</span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold">{user.username}</p>
-                          {user.bio && (
-                            <p className="text-sm text-muted-foreground line-clamp-1">{user.bio}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Wyniki miejsc */}
-              {searchResults?.places && searchResults.places.length > 0 && (
-                <div>
-                  <h3 className="font-semibold mb-3">Miejsca</h3>
-                  <div className="space-y-3">
-                    {searchResults.places.map((pin: any) => (
-                      <div
-                        key={pin.id}
-                        onClick={() => navigate(`/route/${pin.routes.id}`)}
-                        className="flex gap-3 p-4 bg-card border border-border rounded-xl hover:bg-accent cursor-pointer transition-colors"
-                      >
-                        <img
-                          src={pin.image_url || '/placeholder.svg'}
-                          alt={pin.place_name}
-                          className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold mb-1">{pin.place_name}</h4>
-                          <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Z trasy: {pin.routes.title}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {!isLoading && 
-               !searchResults?.routes?.length && 
-               !searchResults?.users?.length && 
-               !searchResults?.places?.length && (
-                <p className="text-center text-muted-foreground py-8">
-                  Nie znaleziono wyników
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Always show sections with latest data */}
+            
+            <h2 className="text-base font-semibold mb-1">Odkrywaj TRASA</h2>
+            <p className="text-xs text-muted-foreground max-w-xs">
+              Szukaj tras, użytkowników i miejsc
+            </p>
+          </div>
+        ) : (
           <div className="space-y-6">
             {isLoading && (
               <p className="text-center text-muted-foreground py-8">Wyszukiwanie...</p>
@@ -464,15 +375,15 @@ const Search = () => {
             {!isLoading && 
              !searchResults?.routes?.length && 
              !searchResults?.users?.length && 
-            !searchResults?.places?.length &&
-            (searchQuery || selectedTags.length > 0) && (
-            <p className="text-center text-muted-foreground py-8">
-              Nie znaleziono wyników
-            </p>
-          )}
-        </div>
+             !searchResults?.places?.length && (
+              <p className="text-center text-muted-foreground py-8">
+                Nie znaleziono wyników
+              </p>
+            )}
+          </div>
+        )}
       </div>
-    </AppLayout>
+    </>
   );
 };
 
