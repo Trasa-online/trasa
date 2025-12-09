@@ -144,14 +144,14 @@ const Search = () => {
   });
 
   return (
-    <>
+    <div className="overflow-x-hidden">
       <PageHeader 
         title="Szukaj" 
         showBack
         onBackClick={() => navigate("/")}
       />
       
-      <div className="sticky top-0 bg-background z-10 border-b border-border pt-2 pb-4 px-4">
+      <div className="sticky top-0 bg-background z-10 border-b border-border pt-2 pb-4 px-4 overflow-hidden">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -239,7 +239,7 @@ const Search = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mt-4">
+        <div className="flex gap-2 mt-4 overflow-x-auto scrollbar-hide -mx-4 px-4">
           <button
             onClick={() => setActiveTab("all")}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
@@ -384,7 +384,7 @@ const Search = () => {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 };
 
