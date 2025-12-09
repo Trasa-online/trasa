@@ -396,30 +396,40 @@ export type Database = {
       }
       route_notes: {
         Row: {
-          after_pin_index: number
           created_at: string | null
           id: string
           image_url: string | null
+          note_order: number
+          pin_id: string | null
           route_id: string
           text: string | null
         }
         Insert: {
-          after_pin_index: number
           created_at?: string | null
           id?: string
           image_url?: string | null
+          note_order?: number
+          pin_id?: string | null
           route_id: string
           text?: string | null
         }
         Update: {
-          after_pin_index?: number
           created_at?: string | null
           id?: string
           image_url?: string | null
+          note_order?: number
+          pin_id?: string | null
           route_id?: string
           text?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "route_notes_pin_id_fkey"
+            columns: ["pin_id"]
+            isOneToOne: false
+            referencedRelation: "pins"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "route_notes_route_id_fkey"
             columns: ["route_id"]
