@@ -18,6 +18,7 @@ import RouteMap from "@/components/RouteMap";
 import InteractiveRouteMap from "@/components/InteractiveRouteMap";
 import DraggablePinList from "@/components/route/DraggablePinList";
 import MapPinSelector from "@/components/route/MapPinSelector";
+import PinNotesSection from "@/components/route/PinNotesSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -522,7 +523,9 @@ const CreateRoute = () => {
                     setShowPinsList(false);
                   }}
                   onPinRemove={removePin}
+                  onPinNotesChange={(pinIndex, notes) => updatePin(pinIndex, "notes", notes)}
                   showRemoveButton={true}
+                  showNotesEditor={true}
                   compact={true}
                 />
 
@@ -730,6 +733,25 @@ const CreateRoute = () => {
                     </div>
                   </div>
 
+                  {/* Pin notes section - ciekawe na trasie */}
+                  <PinNotesSection
+                    notes={pins[currentPinIndex]?.notes || []}
+                    onNotesChange={(notes) => updatePin(currentPinIndex, "notes", notes)}
+                    onImageUpload={async (file) => {
+                      if (!user) return null;
+                      const fileExt = file.name.split(".").pop();
+                      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+                      const { error: uploadError } = await supabase.storage
+                        .from("route-images")
+                        .upload(fileName, file);
+                      if (uploadError) return null;
+                      const { data: { publicUrl } } = supabase.storage
+                        .from("route-images")
+                        .getPublicUrl(fileName);
+                      return publicUrl;
+                    }}
+                  />
+
                   {/* Tag selection - all visible */}
                   <div className="pb-32">
                     <Label>Kategoria (Opcjonalne)</Label>
@@ -917,7 +939,9 @@ const CreateRoute = () => {
               <DraggablePinList
                 pins={pins}
                 onReorder={setPins}
+                onPinNotesChange={(pinIndex, notes) => updatePin(pinIndex, "notes", notes)}
                 showRemoveButton={false}
+                showNotesEditor={true}
                 compact={false}
               />
 
