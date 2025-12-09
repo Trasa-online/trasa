@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Footprints, Share2, Image, Star, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
+import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Share2, Image, Star, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
 import { ShareImageDialog } from "@/components/route/ShareImageDialog";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 import { FullscreenMapDialog } from "@/components/route/FullscreenMapDialog";
@@ -790,13 +790,6 @@ const RouteDetails = () => {
             <Bookmark className={`h-[18px] w-[18px] transition-transform hover:scale-110 ${isSaved ? "fill-foreground" : ""}`} />
             <span className="text-sm font-semibold tabular-nums">{saveCount}</span>
           </button>
-          <div
-            className={`flex items-center gap-2 transition-all duration-200 ${hasUserVisitedAnyPin ? "text-primary" : "text-muted-foreground"}`}
-            title={`${routePinVisitors.length} ${routePinVisitors.length === 1 ? 'osoba odwiedziła' : 'osób odwiedziło'} miejsca na trasie`}
-          >
-            <Footprints className={`h-[18px] w-[18px] ${hasUserVisitedAnyPin ? "fill-primary" : ""}`} />
-            <span className="text-sm font-semibold tabular-nums">{routePinVisitors.length}</span>
-          </div>
         </div>
 
         <div className="space-y-4">
