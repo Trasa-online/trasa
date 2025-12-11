@@ -749,28 +749,38 @@ const RouteDetails = () => {
               return null;
             };
 
+            const MAX_VISIBLE_TAGS = 6;
+            const displayTags = tagsExpanded ? uniqueTags : uniqueTags.slice(0, MAX_VISIBLE_TAGS);
+            const remainingCount = uniqueTags.length - MAX_VISIBLE_TAGS;
+
             return uniqueTags.length > 0 ? (
-              <div className="pt-3 mt-3 border-t border-border/30">
-                <div className={`flex flex-wrap gap-2 ${!tagsExpanded ? 'max-h-[4.5rem] overflow-hidden' : ''}`}>
-                  {uniqueTags.map((tag: string, idx: number) => {
-                    const TagIcon = getTagIcon(tag);
-                    return (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground"
-                      >
-                        {TagIcon && <TagIcon className="h-3.5 w-3.5" />}
-                        <span>{tag}</span>
-                      </span>
-                    );
-                  })}
-                </div>
-                {uniqueTags.length > 6 && (
+              <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-border/30 transition-all duration-300">
+                {displayTags.map((tag: string, idx: number) => {
+                  const TagIcon = getTagIcon(tag);
+                  return (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground"
+                    >
+                      {TagIcon && <TagIcon className="h-3.5 w-3.5" />}
+                      <span>{tag}</span>
+                    </span>
+                  );
+                })}
+                {remainingCount > 0 && !tagsExpanded && (
                   <button
-                    onClick={() => setTagsExpanded(!tagsExpanded)}
-                    className="text-xs text-muted-foreground hover:text-foreground mt-2 transition-colors"
+                    onClick={() => setTagsExpanded(true)}
+                    className="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors cursor-pointer"
                   >
-                    {tagsExpanded ? 'Zwiń tagi' : 'Pokaż więcej tagów'}
+                    +{remainingCount}
+                  </button>
+                )}
+                {tagsExpanded && remainingCount > 0 && (
+                  <button
+                    onClick={() => setTagsExpanded(false)}
+                    className="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+                  >
+                    Zwiń
                   </button>
                 )}
               </div>
