@@ -6,8 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Share2, Image, Star, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
-import { ShareImageDialog } from "@/components/route/ShareImageDialog";
+import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Share2, Star, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 import { FullscreenMapDialog } from "@/components/route/FullscreenMapDialog";
 import StarRating from "@/components/route/StarRating";
@@ -247,7 +246,7 @@ const RouteDetails = () => {
   const [editingContent, setEditingContent] = useState("");
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [deletingRoute, setDeletingRoute] = useState(false);
-  const [showShareImageDialog, setShowShareImageDialog] = useState(false);
+  
   const [showFullscreenMap, setShowFullscreenMap] = useState(false);
   const [tagsExpanded, setTagsExpanded] = useState(false);
   const { lightboxState, openLightbox, setLightboxOpen } = useLightbox();
@@ -701,13 +700,6 @@ const RouteDetails = () => {
               <Share2 className="h-6 w-6" />
             </button>
             <button
-              onClick={() => setShowShareImageDialog(true)}
-              className="p-2 hover:bg-accent rounded-lg transition-colors"
-              title="Generuj obrazek"
-            >
-              <Image className="h-6 w-6" />
-            </button>
-            <button
               onClick={() => saveMutation.mutate()}
               className="p-2 hover:bg-accent rounded-lg transition-colors"
             >
@@ -973,17 +965,6 @@ const RouteDetails = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <ShareImageDialog
-        open={showShareImageDialog}
-        onOpenChange={setShowShareImageDialog}
-        route={{
-          id: route.id,
-          title: route.title,
-          description: route.description,
-          pins: route.pins,
-          profiles: route.profiles,
-        }}
-      />
 
       <FullscreenMapDialog
         open={showFullscreenMap}
