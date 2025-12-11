@@ -91,11 +91,11 @@ const PinVisitors = ({ pinId }: { pinId: string }) => {
 
 // Component to display pins with notes
 const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pinNotes: any[]; currentUserId: string }) => {
-  const [expandedNoteImages, setExpandedNoteImages] = useStateLocal<Set<string>>(new Set());
+  const [hiddenNoteImages, setHiddenNoteImages] = useStateLocal<Set<string>>(new Set());
   const lightbox = useContext(LightboxContext);
 
   const toggleNoteImage = (noteId: string) => {
-    setExpandedNoteImages(prev => {
+    setHiddenNoteImages(prev => {
       const newSet = new Set(prev);
       if (newSet.has(noteId)) {
         newSet.delete(noteId);
@@ -191,7 +191,7 @@ const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pin
               {pinNotesForThis.length > 0 && (
                 <div className="mx-4 mb-4 space-y-2">
                   {pinNotesForThis.map((note: any) => {
-                    const isImageExpanded = expandedNoteImages.has(note.id);
+                    const isImageHidden = hiddenNoteImages.has(note.id);
                     return (
                       <div key={note.id} className="p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
                         <div className="flex items-start gap-2">
@@ -206,14 +206,14 @@ const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pin
                                   className="flex items-center gap-0.5 text-[9px] text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
                                 >
                                   <ImageIcon className="h-3 w-3" />
-                                  <span>{isImageExpanded ? 'ukryj' : 'pokaż'}</span>
+                                  <span>{isImageHidden ? 'pokaż' : 'ukryj'}</span>
                                 </button>
                               )}
                             </div>
                             {note.text && (
                               <p className="text-xs text-foreground leading-relaxed mt-0.5">{note.text}</p>
                             )}
-                            {note.image_url && isImageExpanded && (
+                            {note.image_url && !isImageHidden && (
                               <div 
                                 className="mt-2 relative h-20 w-28 rounded-lg overflow-hidden ring-1 ring-border cursor-pointer hover:opacity-90 transition-opacity"
                                 onClick={() => lightbox.openLightbox([note.image_url])}
@@ -249,6 +249,7 @@ const RouteDetails = () => {
   const [deletingRoute, setDeletingRoute] = useState(false);
   const [showShareImageDialog, setShowShareImageDialog] = useState(false);
   const [showFullscreenMap, setShowFullscreenMap] = useState(false);
+  const [tagsExpanded, setTagsExpanded] = useState(false);
   const { lightboxState, openLightbox, setLightboxOpen } = useLightbox();
   useEffect(() => {
     if (!loading && !user) {
@@ -749,19 +750,29 @@ const RouteDetails = () => {
             };
 
             return uniqueTags.length > 0 ? (
-              <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-border/30">
-                {uniqueTags.map((tag: string, idx: number) => {
-                  const TagIcon = getTagIcon(tag);
-                  return (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground"
-                    >
-                      {TagIcon && <TagIcon className="h-3.5 w-3.5" />}
-                      <span>{tag}</span>
-                    </span>
-                  );
-                })}
+              <div className="pt-3 mt-3 border-t border-border/30">
+                <div className={`flex flex-wrap gap-2 ${!tagsExpanded ? 'max-h-[4.5rem] overflow-hidden' : ''}`}>
+                  {uniqueTags.map((tag: string, idx: number) => {
+                    const TagIcon = getTagIcon(tag);
+                    return (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground"
+                      >
+                        {TagIcon && <TagIcon className="h-3.5 w-3.5" />}
+                        <span>{tag}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+                {uniqueTags.length > 6 && (
+                  <button
+                    onClick={() => setTagsExpanded(!tagsExpanded)}
+                    className="text-xs text-muted-foreground hover:text-foreground mt-2 transition-colors"
+                  >
+                    {tagsExpanded ? 'Zwiń tagi' : 'Pokaż więcej tagów'}
+                  </button>
+                )}
               </div>
             ) : null;
           })()}
