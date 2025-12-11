@@ -31,8 +31,8 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/" element={<AppLayout><Feed /></AppLayout>} />
           <Route path="/my-routes" element={<AppLayout><MyRoutes /></AppLayout>} />
-          <Route path="/create" element={<AppLayout><CreateRoute /></AppLayout>} />
-          <Route path="/edit/:id" element={<AppLayout><CreateRoute /></AppLayout>} />
+          <Route path="/create" element={<CreateRoute />} />
+          <Route path="/edit/:id" element={<CreateRoute />} />
           <Route path="/saved" element={<AppLayout><SavedRoutes /></AppLayout>} />
           <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
           <Route path="/route/:id" element={<AppLayout><RouteDetails /></AppLayout>} />
