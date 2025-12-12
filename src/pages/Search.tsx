@@ -32,6 +32,37 @@ const PREDEFINED_TAGS = [
   { name: "Morze", icon: Waves },
 ];
 
+// Proste mapowanie krajów (PL -> EN) dla lepszego wyszukiwania po krajach
+const COUNTRY_SYNONYMS: Record<string, string[]> = {
+  japonia: ["japonia", "japan"],
+  portugalia: ["portugalia", "portugal"],
+  hiszpania: ["hiszpania", "spain"],
+  wlochy: ["wlochy", "włochy", "italy"],
+  francja: ["francja", "france"],
+  niemcy: ["niemcy", "germany"],
+  austria: ["austria", "austria"],
+  usa: ["usa", "stany zjednoczone", "united states", "u.s.a."],
+};
+
+const normalize = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+const getSearchTerms = (rawQuery: string): string[] => {
+  const q = normalize(rawQuery.trim());
+  if (!q) return [];
+
+  const terms = new Set<string>();
+  terms.add(q);
+
+  const countryTerms = COUNTRY_SYNONYMS[q];
+  countryTerms?.forEach((t) => terms.add(normalize(t)));
+
+  return Array.from(terms);
+};
+
 const Search = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -86,40 +117,61 @@ const Search = () => {
         if (error) throw error;
 
         let filteredRoutes = routes || [];
-        const query = searchQuery.trim().toLowerCase();
+        const searchTerms = getSearchTerms(searchQuery);
 
-        // Filter by search query - check title, description, pins (place_name, address, tags, translations)
-        if (query) {
+        // Filter by search query - tytuł, opis, miejsca w pinach, adresy, tagi i tłumaczenia
+        if (searchTerms.length) {
           filteredRoutes = filteredRoutes.filter((route: any) => {
-            // Check route title and description
-            if (route.title?.toLowerCase().includes(query) || 
-                route.description?.toLowerCase().includes(query)) {
+            const title = normalize(route.title || "");
+            const description = normalize(route.description || "");
+
+            // Sprawdź tytuł i opis trasy
+            if (
+              searchTerms.some(
+                (term) => title.includes(term) || description.includes(term)
+              )
+            ) {
               return true;
             }
-            
-            // Check pins: place_name, address, tags, and translations
+
+            // Sprawdź piny: nazwa miejsca, adres, tagi, tłumaczenia
             const pins = route.pins || [];
             return pins.some((pin: any) => {
-              // Check place_name and address
-              if (pin.place_name?.toLowerCase().includes(query) ||
-                  pin.address?.toLowerCase().includes(query)) {
+              const placeName = normalize(pin.place_name || "");
+              const address = normalize(pin.address || "");
+
+              if (
+                searchTerms.some(
+                  (term) => placeName.includes(term) || address.includes(term)
+                )
+              ) {
                 return true;
               }
-              
-              // Check tags
-              const tags = pin.tags || [];
-              if (tags.some((tag: string) => tag.toLowerCase().includes(query))) {
+
+              const tags: string[] = pin.tags || [];
+              if (
+                tags.some((tag) => {
+                  const normTag = normalize(tag);
+                  return searchTerms.some((term) => normTag.includes(term));
+                })
+              ) {
                 return true;
               }
-              
-              // Check translations
+
               if (pin.name_translations) {
-                const translations = Object.values(pin.name_translations) as string[];
-                if (translations.some(t => t?.toLowerCase().includes(query))) {
+                const translations = Object.values(
+                  pin.name_translations
+                ) as string[];
+                if (
+                  translations.some((t) => {
+                    const normT = normalize(t || "");
+                    return searchTerms.some((term) => normT.includes(term));
+                  })
+                ) {
                   return true;
                 }
               }
-              
+
               return false;
             });
           });
@@ -128,10 +180,14 @@ const Search = () => {
         // Filter by selected tags if any
         if (selectedTags.length > 0) {
           filteredRoutes = filteredRoutes.filter((route: any) => {
-            const routeTags = route.pins?.flatMap((pin: any) => pin.tags || []) || [];
+            const routeTags =
+              route.pins?.flatMap((pin: any) => pin.tags || []) || [];
             // Route must have ALL selected tags
-            return selectedTags.every(selectedTag => 
-              routeTags.some((tag: string) => tag.toLowerCase() === selectedTag.toLowerCase())
+            return selectedTags.every((selectedTag) =>
+              routeTags.some(
+                (tag: string) =>
+                  normalize(tag) === normalize(selectedTag)
+              )
             );
           });
         }
@@ -151,7 +207,7 @@ const Search = () => {
         results.users = users;
       }
 
-      // Wyszukiwanie miejsc (including translations)
+      // Wyszukiwanie miejsc (w tym tłumaczenia i tagi)
       if (activeTab === "places" || activeTab === "all") {
         const { data: places, error } = await supabase
           .from("pins")
@@ -163,30 +219,52 @@ const Search = () => {
             )
           `)
           .eq("routes.status", "published")
-          .or(`place_name.ilike.%${searchQuery}%,address.ilike.%${searchQuery}%`)
-          .limit(50);
+          .limit(200);
 
         if (error) throw error;
-        
-        // Filter client-side for translations
-        const filteredPlaces = places?.filter((pin: any) => {
-          const matchesBasic = 
-            pin.place_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            pin.address?.toLowerCase().includes(searchQuery.toLowerCase());
-          
-          if (matchesBasic) return true;
-          
-          // Check translations
+
+        const searchTerms = getSearchTerms(searchQuery);
+
+        const filteredPlaces = (places || []).filter((pin: any) => {
+          if (!searchTerms.length) return true;
+
+          const placeName = normalize(pin.place_name || "");
+          const address = normalize(pin.address || "");
+
+          if (
+            searchTerms.some(
+              (term) => placeName.includes(term) || address.includes(term)
+            )
+          ) {
+            return true;
+          }
+
+          const tags: string[] = pin.tags || [];
+          if (
+            tags.some((tag) => {
+              const normTag = normalize(tag);
+              return searchTerms.some((term) => normTag.includes(term));
+            })
+          ) {
+            return true;
+          }
+
           if (pin.name_translations) {
             const translations = Object.values(pin.name_translations) as string[];
-            return translations.some(t => 
-              t?.toLowerCase().includes(searchQuery.toLowerCase())
-            );
+            if (
+              translations.some((t) => {
+                const normT = normalize(t || "");
+                return searchTerms.some((term) => normT.includes(term));
+              })
+            ) {
+              return true;
+            }
           }
+
           return false;
         });
-        
-        results.places = filteredPlaces?.slice(0, 20);
+
+        results.places = filteredPlaces.slice(0, 20);
       }
 
       return results;
