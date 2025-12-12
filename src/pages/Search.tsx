@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import RouteCard from "@/components/route/RouteCard";
+import { findCountryKey, isInCountryBounds } from "@/lib/countryBoundingBoxes";
 
 type TabType = "all" | "routes" | "users" | "places";
 
@@ -32,36 +33,11 @@ const PREDEFINED_TAGS = [
   { name: "Morze", icon: Waves },
 ];
 
-// Proste mapowanie krajów (PL -> EN) dla lepszego wyszukiwania po krajach
-const COUNTRY_SYNONYMS: Record<string, string[]> = {
-  japonia: ["japonia", "japan"],
-  portugalia: ["portugalia", "portugal"],
-  hiszpania: ["hiszpania", "spain"],
-  wlochy: ["wlochy", "włochy", "italy"],
-  francja: ["francja", "france"],
-  niemcy: ["niemcy", "germany"],
-  austria: ["austria", "austria"],
-  usa: ["usa", "stany zjednoczone", "united states", "u.s.a."],
-};
-
 const normalize = (value: string) =>
   value
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
-
-const getSearchTerms = (rawQuery: string): string[] => {
-  const q = normalize(rawQuery.trim());
-  if (!q) return [];
-
-  const terms = new Set<string>();
-  terms.add(q);
-
-  const countryTerms = COUNTRY_SYNONYMS[q];
-  countryTerms?.forEach((t) => terms.add(normalize(t)));
-
-  return Array.from(terms);
-};
 
 const Search = () => {
   const navigate = useNavigate();
@@ -117,63 +93,60 @@ const Search = () => {
         if (error) throw error;
 
         let filteredRoutes = routes || [];
-        const searchTerms = getSearchTerms(searchQuery);
+        const normalizedQuery = normalize(searchQuery.trim());
+        const countryKey = normalizedQuery ? findCountryKey(searchQuery.trim()) : null;
 
-        // Filter by search query - tytuł, opis, miejsca w pinach, adresy, tagi i tłumaczenia
-        if (searchTerms.length) {
+        // Filter by search query - tytuł, opis, miejsca w pinach, adresy, tagi, tłumaczenia, lub lokalizacja geograficzna
+        if (normalizedQuery) {
           filteredRoutes = filteredRoutes.filter((route: any) => {
             const title = normalize(route.title || "");
             const description = normalize(route.description || "");
 
             // Sprawdź tytuł i opis trasy
-            if (
-              searchTerms.some(
-                (term) => title.includes(term) || description.includes(term)
-              )
-            ) {
+            if (title.includes(normalizedQuery) || description.includes(normalizedQuery)) {
               return true;
             }
 
             // Sprawdź piny: nazwa miejsca, adres, tagi, tłumaczenia
             const pins = route.pins || [];
-            return pins.some((pin: any) => {
+            const matchesTextSearch = pins.some((pin: any) => {
               const placeName = normalize(pin.place_name || "");
               const address = normalize(pin.address || "");
 
-              if (
-                searchTerms.some(
-                  (term) => placeName.includes(term) || address.includes(term)
-                )
-              ) {
+              if (placeName.includes(normalizedQuery) || address.includes(normalizedQuery)) {
                 return true;
               }
 
               const tags: string[] = pin.tags || [];
-              if (
-                tags.some((tag) => {
-                  const normTag = normalize(tag);
-                  return searchTerms.some((term) => normTag.includes(term));
-                })
-              ) {
+              if (tags.some((tag) => normalize(tag).includes(normalizedQuery))) {
                 return true;
               }
 
               if (pin.name_translations) {
-                const translations = Object.values(
-                  pin.name_translations
-                ) as string[];
-                if (
-                  translations.some((t) => {
-                    const normT = normalize(t || "");
-                    return searchTerms.some((term) => normT.includes(term));
-                  })
-                ) {
+                const translations = Object.values(pin.name_translations) as string[];
+                if (translations.some((t) => normalize(t || "").includes(normalizedQuery))) {
                   return true;
                 }
               }
 
               return false;
             });
+
+            if (matchesTextSearch) return true;
+
+            // Sprawdź czy którykolwiek pin znajduje się w granicach szukanego kraju
+            if (countryKey) {
+              const matchesCountryBounds = pins.some((pin: any) => 
+                isInCountryBounds(
+                  pin.latitude ? Number(pin.latitude) : null,
+                  pin.longitude ? Number(pin.longitude) : null,
+                  countryKey
+                )
+              );
+              if (matchesCountryBounds) return true;
+            }
+
+            return false;
           });
         }
 
@@ -223,40 +196,38 @@ const Search = () => {
 
         if (error) throw error;
 
-        const searchTerms = getSearchTerms(searchQuery);
+        const normalizedQuery = normalize(searchQuery.trim());
+        const countryKey = normalizedQuery ? findCountryKey(searchQuery.trim()) : null;
 
         const filteredPlaces = (places || []).filter((pin: any) => {
-          if (!searchTerms.length) return true;
+          if (!normalizedQuery) return true;
 
           const placeName = normalize(pin.place_name || "");
           const address = normalize(pin.address || "");
 
-          if (
-            searchTerms.some(
-              (term) => placeName.includes(term) || address.includes(term)
-            )
-          ) {
+          if (placeName.includes(normalizedQuery) || address.includes(normalizedQuery)) {
             return true;
           }
 
           const tags: string[] = pin.tags || [];
-          if (
-            tags.some((tag) => {
-              const normTag = normalize(tag);
-              return searchTerms.some((term) => normTag.includes(term));
-            })
-          ) {
+          if (tags.some((tag) => normalize(tag).includes(normalizedQuery))) {
             return true;
           }
 
           if (pin.name_translations) {
             const translations = Object.values(pin.name_translations) as string[];
-            if (
-              translations.some((t) => {
-                const normT = normalize(t || "");
-                return searchTerms.some((term) => normT.includes(term));
-              })
-            ) {
+            if (translations.some((t) => normalize(t || "").includes(normalizedQuery))) {
+              return true;
+            }
+          }
+
+          // Sprawdź czy pin znajduje się w granicach szukanego kraju
+          if (countryKey) {
+            if (isInCountryBounds(
+              pin.latitude ? Number(pin.latitude) : null,
+              pin.longitude ? Number(pin.longitude) : null,
+              countryKey
+            )) {
               return true;
             }
           }
