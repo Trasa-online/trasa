@@ -52,6 +52,7 @@ export const PinVisitDialog = ({
   const [uploading, setUploading] = useState(false);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const isEditing = !!existingVisit;
 
@@ -61,6 +62,7 @@ export const PinVisitDialog = ({
       setDescription(existingVisit?.description || "");
       setRating(existingVisit?.rating || 0);
       setImageUrl(existingVisit?.image_url || "");
+      setSubmitted(false);
     }
   }, [open, existingVisit]);
 
@@ -187,6 +189,9 @@ export const PinVisitDialog = ({
                 </button>
               ))}
             </div>
+            {submitted && rating === 0 && (
+              <p className="text-xs text-destructive">Ocena jest wymagana</p>
+            )}
           </div>
 
           {/* Description */}
@@ -196,12 +201,19 @@ export const PinVisitDialog = ({
               placeholder="Opisz swoje wrażenia z tego miejsca..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="min-h-[100px] resize-none"
+              className={`min-h-[100px] resize-none ${submitted && !description.trim() ? 'border-destructive' : ''}`}
               maxLength={500}
             />
-            <p className="text-xs text-muted-foreground text-right">
-              {description.length}/500
-            </p>
+            <div className="flex justify-between">
+              {submitted && !description.trim() ? (
+                <p className="text-xs text-destructive">Komentarz jest wymagany</p>
+              ) : (
+                <span />
+              )}
+              <p className="text-xs text-muted-foreground">
+                {description.length}/500
+              </p>
+            </div>
           </div>
 
           {/* Image upload */}
@@ -268,8 +280,13 @@ export const PinVisitDialog = ({
               Anuluj
             </Button>
             <Button
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending || rating === 0 || !description.trim()}
+              onClick={() => {
+                setSubmitted(true);
+                if (rating > 0 && description.trim()) {
+                  saveMutation.mutate();
+                }
+              }}
+              disabled={saveMutation.isPending}
               className="flex-1 bg-foreground text-background hover:bg-foreground/90"
             >
               {saveMutation.isPending ? "Zapisywanie..." : isEditing ? "Zapisz zmiany" : "Dodaj"}
