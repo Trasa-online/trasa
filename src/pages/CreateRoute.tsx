@@ -47,7 +47,6 @@ interface Pin {
   rating: number;
   pin_order: number;
   tags: string[];
-  mentioned_users: string[];
   latitude?: number;
   longitude?: number;
   notes: PinNote[];
@@ -61,8 +60,9 @@ const CreateRoute = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [pins, setPins] = useState<Pin[]>([
-    { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: 0, tags: [], mentioned_users: [], latitude: undefined, longitude: undefined, notes: [] },
+    { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: 0, tags: [], latitude: undefined, longitude: undefined, notes: [] },
   ]);
+  const [routeMentionedUsers, setRouteMentionedUsers] = useState<string[]>([]);
   // routeNotes state removed - notes are now stored per-pin
   const [currentPinIndex, setCurrentPinIndex] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -109,9 +109,10 @@ const CreateRoute = () => {
     setPins([{ 
       place_name: "", address: "", description: "", image_url: "", 
       images: [], rating: 0, pin_order: 0, tags: [], 
-      mentioned_users: [], latitude: undefined, longitude: undefined,
+      latitude: undefined, longitude: undefined,
       notes: []
     }]);
+    setRouteMentionedUsers([]);
     setCurrentPinIndex(0);
     setStep(1);
     setShowPinsList(false);
@@ -172,7 +173,6 @@ const CreateRoute = () => {
             .sort((a: any, b: any) => a.pin_order - b.pin_order)
             .map((pin: any) => ({
               ...pin,
-              mentioned_users: pin.mentioned_users || [],
               images: pin.images || [],
               rating: typeof pin.rating === 'number' ? pin.rating : 0,
               notes: pinNotes
@@ -213,7 +213,6 @@ const CreateRoute = () => {
         rating: 0, 
         pin_order: prevPins.length, 
         tags: [], 
-        mentioned_users: [], 
         latitude: undefined, 
         longitude: undefined,
         notes: []
@@ -352,7 +351,7 @@ const CreateRoute = () => {
             is_transport: false,
             transport_type: "",
             transport_end: "",
-            mentioned_users: pin.mentioned_users,
+            mentioned_users: routeMentionedUsers,
             latitude: pin.latitude,
             longitude: pin.longitude,
           }).select().single();
@@ -401,7 +400,7 @@ const CreateRoute = () => {
             is_transport: false,
             transport_type: "",
             transport_end: "",
-            mentioned_users: pin.mentioned_users,
+            mentioned_users: routeMentionedUsers,
             latitude: pin.latitude,
             longitude: pin.longitude,
           }).select().single();
@@ -660,21 +659,6 @@ const CreateRoute = () => {
                     </p>
                   </div>
 
-                  {/* Friend mentions */}
-                  <div>
-                    <Label>Oznacz znajomych (Opcjonalne)</Label>
-                    <UserMentionInput
-                      selectedUserIds={pins[currentPinIndex]?.mentioned_users || []}
-                      onUserSelect={(userId) => {
-                        const currentUsers = pins[currentPinIndex]?.mentioned_users || [];
-                        updatePin(currentPinIndex, "mentioned_users", [...currentUsers, userId]);
-                      }}
-                      onUserRemove={(userId) => {
-                        const currentUsers = pins[currentPinIndex]?.mentioned_users || [];
-                        updatePin(currentPinIndex, "mentioned_users", currentUsers.filter(id => id !== userId));
-                      }}
-                    />
-                  </div>
 
                   {/* Rating - centered */}
                   <div>
@@ -945,6 +929,36 @@ const CreateRoute = () => {
                 compact={false}
               />
 
+              {/* Friend mentions for route */}
+              <div className="space-y-2 border-t border-border pt-4">
+                <Label className="text-sm">Oznacz znajomych (Opcjonalne)</Label>
+                <UserMentionInput
+                  selectedUserIds={routeMentionedUsers}
+                  onUserSelect={(userId) => {
+                    setRouteMentionedUsers(prev => [...prev, userId]);
+                  }}
+                  onUserRemove={(userId) => {
+                    setRouteMentionedUsers(prev => prev.filter(id => id !== userId));
+                  }}
+                />
+              </div>
+
+              {/* Route description */}
+              <div className="space-y-2 border-t border-border pt-4">
+                <Label htmlFor="route-description" className="text-sm">Opis trasy (Opcjonalne)</Label>
+                <Textarea
+                  id="route-description"
+                  value={routeDescription}
+                  onChange={(e) => setRouteDescription(e.target.value)}
+                  placeholder="Podziel się ogólnymi wrażeniami i najważniejszymi szczegółami..."
+                  rows={3}
+                  className="resize-none text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Opowiedz obserwującym, co sprawiło, że ta trasa była wyjątkowa
+                </p>
+              </div>
+
               {/* Overall route rating */}
               <div className="space-y-3 border-t border-border pt-4">
                 <div className="flex items-center justify-between">
@@ -971,22 +985,6 @@ const CreateRoute = () => {
                     </ul>
                   </div>
                 )}
-              </div>
-
-              {/* Route description */}
-              <div className="space-y-2">
-                <Label htmlFor="route-description" className="text-sm">Opis trasy (Opcjonalne)</Label>
-                <Textarea
-                  id="route-description"
-                  value={routeDescription}
-                  onChange={(e) => setRouteDescription(e.target.value)}
-                  placeholder="Podziel się ogólnymi wrażeniami i najważniejszymi szczegółami..."
-                  rows={3}
-                  className="resize-none text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Opowiedz obserwującym, co sprawiło, że ta trasa była wyjątkowa
-                </p>
               </div>
             </div>
 

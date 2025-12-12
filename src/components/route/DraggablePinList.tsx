@@ -21,7 +21,7 @@ interface Pin {
   rating: number;
   pin_order: number;
   tags: string[];
-  mentioned_users: string[];
+  mentioned_users?: string[];
   latitude?: number;
   longitude?: number;
   notes: PinNote[];
