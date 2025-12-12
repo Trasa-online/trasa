@@ -131,11 +131,30 @@ const Search = () => {
             )
           `)
           .eq("routes.status", "published")
-          .or(`place_name.ilike.%${searchQuery}%,address.ilike.%${searchQuery}%,name_translations::text.ilike.%${searchQuery}%`)
-          .limit(20);
+          .or(`place_name.ilike.%${searchQuery}%,address.ilike.%${searchQuery}%`)
+          .limit(50);
 
         if (error) throw error;
-        results.places = places;
+        
+        // Filter client-side for translations
+        const filteredPlaces = places?.filter((pin: any) => {
+          const matchesBasic = 
+            pin.place_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            pin.address?.toLowerCase().includes(searchQuery.toLowerCase());
+          
+          if (matchesBasic) return true;
+          
+          // Check translations
+          if (pin.name_translations) {
+            const translations = Object.values(pin.name_translations) as string[];
+            return translations.some(t => 
+              t?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+          }
+          return false;
+        });
+        
+        results.places = filteredPlaces?.slice(0, 20);
       }
 
       return results;
