@@ -929,20 +929,6 @@ const CreateRoute = () => {
                 compact={false}
               />
 
-              {/* Friend mentions for route */}
-              <div className="space-y-2 border-t border-border pt-4">
-                <Label className="text-sm">Oznacz znajomych (Opcjonalne)</Label>
-                <UserMentionInput
-                  selectedUserIds={routeMentionedUsers}
-                  onUserSelect={(userId) => {
-                    setRouteMentionedUsers(prev => [...prev, userId]);
-                  }}
-                  onUserRemove={(userId) => {
-                    setRouteMentionedUsers(prev => prev.filter(id => id !== userId));
-                  }}
-                />
-              </div>
-
               {/* Route description */}
               <div className="space-y-2 border-t border-border pt-4">
                 <Label htmlFor="route-description" className="text-sm">Opis trasy (Opcjonalne)</Label>
@@ -957,6 +943,20 @@ const CreateRoute = () => {
                 <p className="text-xs text-muted-foreground">
                   Opowiedz obserwującym, co sprawiło, że ta trasa była wyjątkowa
                 </p>
+              </div>
+
+              {/* Friend mentions for route */}
+              <div className="space-y-2 border-t border-border pt-4">
+                <Label className="text-sm">Oznacz znajomych (Opcjonalne)</Label>
+                <UserMentionInput
+                  selectedUserIds={routeMentionedUsers}
+                  onUserSelect={(userId) => {
+                    setRouteMentionedUsers(prev => [...prev, userId]);
+                  }}
+                  onUserRemove={(userId) => {
+                    setRouteMentionedUsers(prev => prev.filter(id => id !== userId));
+                  }}
+                />
               </div>
 
               {/* Overall route rating */}
