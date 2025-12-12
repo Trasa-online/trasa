@@ -164,9 +164,49 @@ export const PinVisitDialog = ({
         </DialogHeader>
 
         <div className="space-y-5 pt-4">
+          {/* Rating */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Twoja ocena *</Label>
+            <div className="flex items-center justify-center gap-1 py-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setRating(star)}
+                  onMouseEnter={() => setHoveredRating(star)}
+                  onMouseLeave={() => setHoveredRating(0)}
+                  className="p-1 transition-transform hover:scale-110"
+                >
+                  <Star
+                    className={`h-8 w-8 transition-colors ${
+                      star <= (hoveredRating || rating)
+                        ? "fill-foreground text-foreground"
+                        : "text-muted-foreground/30"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Twój komentarz *</Label>
+            <Textarea
+              placeholder="Opisz swoje wrażenia z tego miejsca..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="min-h-[100px] resize-none"
+              maxLength={500}
+            />
+            <p className="text-xs text-muted-foreground text-right">
+              {description.length}/500
+            </p>
+          </div>
+
           {/* Image upload */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Zdjęcie z miejsca</Label>
+            <Label className="text-sm font-medium">Zdjęcie z miejsca (opcjonalne)</Label>
             {imageUrl ? (
               <div className="relative aspect-video rounded-xl overflow-hidden bg-muted">
                 <img
@@ -209,46 +249,6 @@ export const PinVisitDialog = ({
             )}
           </div>
 
-          {/* Rating */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Twoja ocena</Label>
-            <div className="flex items-center justify-center gap-1 py-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star)}
-                  onMouseEnter={() => setHoveredRating(star)}
-                  onMouseLeave={() => setHoveredRating(0)}
-                  className="p-1 transition-transform hover:scale-110"
-                >
-                  <Star
-                    className={`h-8 w-8 transition-colors ${
-                      star <= (hoveredRating || rating)
-                        ? "fill-foreground text-foreground"
-                        : "text-muted-foreground/30"
-                    }`}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Twój komentarz</Label>
-            <Textarea
-              placeholder="Opisz swoje wrażenia z tego miejsca..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="min-h-[100px] resize-none"
-              maxLength={500}
-            />
-            <p className="text-xs text-muted-foreground text-right">
-              {description.length}/500
-            </p>
-          </div>
-
           {/* Actions */}
           <div className="flex gap-3 pt-4">
             {isEditing && (
@@ -269,19 +269,10 @@ export const PinVisitDialog = ({
             </Button>
             <Button
               onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending}
+              disabled={saveMutation.isPending || rating === 0 || !description.trim()}
               className="flex-1 bg-foreground text-background hover:bg-foreground/90"
             >
-              {saveMutation.isPending ? (
-                "Zapisywanie..."
-              ) : isEditing ? (
-                "Zapisz zmiany"
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Dodaj
-                </>
-              )}
+              {saveMutation.isPending ? "Zapisywanie..." : isEditing ? "Zapisz zmiany" : "Dodaj"}
             </Button>
           </div>
         </div>
