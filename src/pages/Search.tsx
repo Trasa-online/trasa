@@ -70,7 +70,7 @@ const Search = () => {
 
       // Wyszukiwanie tras
       if (activeTab === "routes" || activeTab === "all") {
-        let query = supabase
+        const { data: routes, error } = await supabase
           .from("routes")
           .select(`
             *,
@@ -79,23 +79,55 @@ const Search = () => {
             likes (user_id),
             comments (id)
           `)
-          .eq("status", "published");
-
-        // Add text search if query exists
-        if (searchQuery.trim()) {
-          query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
-        }
-
-        const { data: routes, error } = await query
+          .eq("status", "published")
           .order("created_at", { ascending: false })
-          .limit(100);
+          .limit(200);
 
         if (error) throw error;
 
+        let filteredRoutes = routes || [];
+        const query = searchQuery.trim().toLowerCase();
+
+        // Filter by search query - check title, description, pins (place_name, address, tags, translations)
+        if (query) {
+          filteredRoutes = filteredRoutes.filter((route: any) => {
+            // Check route title and description
+            if (route.title?.toLowerCase().includes(query) || 
+                route.description?.toLowerCase().includes(query)) {
+              return true;
+            }
+            
+            // Check pins: place_name, address, tags, and translations
+            const pins = route.pins || [];
+            return pins.some((pin: any) => {
+              // Check place_name and address
+              if (pin.place_name?.toLowerCase().includes(query) ||
+                  pin.address?.toLowerCase().includes(query)) {
+                return true;
+              }
+              
+              // Check tags
+              const tags = pin.tags || [];
+              if (tags.some((tag: string) => tag.toLowerCase().includes(query))) {
+                return true;
+              }
+              
+              // Check translations
+              if (pin.name_translations) {
+                const translations = Object.values(pin.name_translations) as string[];
+                if (translations.some(t => t?.toLowerCase().includes(query))) {
+                  return true;
+                }
+              }
+              
+              return false;
+            });
+          });
+        }
+
         // Filter by selected tags if any
-        let filteredRoutes = routes;
-        if (selectedTags.length > 0 && routes) {
-          filteredRoutes = routes.filter((route: any) => {
+        if (selectedTags.length > 0) {
+          filteredRoutes = filteredRoutes.filter((route: any) => {
             const routeTags = route.pins?.flatMap((pin: any) => pin.tags || []) || [];
             // Route must have ALL selected tags
             return selectedTags.every(selectedTag => 
@@ -104,7 +136,7 @@ const Search = () => {
           });
         }
 
-        results.routes = filteredRoutes?.slice(0, 20);
+        results.routes = filteredRoutes.slice(0, 20);
       }
 
       // Wyszukiwanie użytkowników
