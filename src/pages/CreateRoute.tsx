@@ -357,6 +357,17 @@ const CreateRoute = () => {
           }).select().single();
           if (pinError) throw pinError;
 
+          // Trigger async translation (fire-and-forget)
+          if (insertedPin && pin.place_name) {
+            supabase.functions.invoke('translate-place', {
+              body: { 
+                pin_id: insertedPin.id, 
+                place_name: pin.place_name,
+                address: pin.address 
+              }
+            }).catch(err => console.log('Translation request failed:', err));
+          }
+
           // Save notes for this pin
           if (pin.notes && pin.notes.length > 0 && insertedPin) {
             for (const note of pin.notes) {
@@ -405,6 +416,17 @@ const CreateRoute = () => {
             longitude: pin.longitude,
           }).select().single();
           if (pinError) throw pinError;
+
+          // Trigger async translation (fire-and-forget)
+          if (insertedPin && pin.place_name) {
+            supabase.functions.invoke('translate-place', {
+              body: { 
+                pin_id: insertedPin.id, 
+                place_name: pin.place_name,
+                address: pin.address 
+              }
+            }).catch(err => console.log('Translation request failed:', err));
+          }
 
           // Save notes for this pin
           if (pin.notes && pin.notes.length > 0 && insertedPin) {
