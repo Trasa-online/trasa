@@ -288,6 +288,7 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           mentioned_users: string[] | null
+          name_translations: Json | null
           pin_order: number
           place_name: string
           rating: number | null
@@ -307,6 +308,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           mentioned_users?: string[] | null
+          name_translations?: Json | null
           pin_order: number
           place_name: string
           rating?: number | null
@@ -326,6 +328,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           mentioned_users?: string[] | null
+          name_translations?: Json | null
           pin_order?: number
           place_name?: string
           rating?: number | null

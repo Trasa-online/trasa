@@ -119,7 +119,7 @@ const Search = () => {
         results.users = users;
       }
 
-      // Wyszukiwanie miejsc
+      // Wyszukiwanie miejsc (including translations)
       if (activeTab === "places" || activeTab === "all") {
         const { data: places, error } = await supabase
           .from("pins")
@@ -131,7 +131,7 @@ const Search = () => {
             )
           `)
           .eq("routes.status", "published")
-          .or(`place_name.ilike.%${searchQuery}%,address.ilike.%${searchQuery}%`)
+          .or(`place_name.ilike.%${searchQuery}%,address.ilike.%${searchQuery}%,name_translations::text.ilike.%${searchQuery}%`)
           .limit(20);
 
         if (error) throw error;
