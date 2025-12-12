@@ -15,7 +15,7 @@ import {
 import { PageHeader } from "@/components/layout/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import RouteCard from "@/components/route/RouteCard";
+import CompactRouteCard from "@/components/route/CompactRouteCard";
 import { findCountryKey, isInCountryBounds } from "@/lib/countryBoundingBoxes";
 
 type TabType = "all" | "routes" | "users" | "places";
@@ -406,9 +406,9 @@ const Search = () => {
             {searchResults?.routes && searchResults.routes.length > 0 && (
               <div>
                 <h3 className="font-semibold mb-3">Trasy ({searchResults.routes.length})</h3>
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {searchResults.routes.map((route: any) => (
-                    <RouteCard key={route.id} route={route} />
+                    <CompactRouteCard key={route.id} route={route} />
                   ))}
                 </div>
               </div>
