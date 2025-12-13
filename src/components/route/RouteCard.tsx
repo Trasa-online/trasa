@@ -333,7 +333,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
             return (
               <div 
                 key={pin.id} 
-                className="p-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                className="p-3 hover:bg-accent/50 transition-all cursor-pointer group/pin"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate(`/pin/${pin.id}`);
@@ -360,7 +360,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <h4 className="font-semibold text-sm leading-tight flex-1 min-w-0">{pin.place_name || pin.address}</h4>
+                      <h4 className="font-semibold text-sm leading-tight flex-1 min-w-0 group-hover/pin:text-primary transition-colors">{pin.place_name || pin.address}</h4>
                       {pin.rating && (
                         <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded flex-shrink-0">
                           <Star className="h-3 w-3 fill-star text-star" />
@@ -401,6 +401,9 @@ const RouteCard = ({ route }: RouteCardProps) => {
                         )}
                       </div>
                     )}
+                  </div>
+                  <div className="flex-shrink-0 flex items-center opacity-0 group-hover/pin:opacity-100 transition-opacity">
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </div>
               </div>
