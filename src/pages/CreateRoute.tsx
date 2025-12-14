@@ -66,7 +66,7 @@ const CreateRoute = () => {
   // routeNotes state removed - notes are now stored per-pin
   const [currentPinIndex, setCurrentPinIndex] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [tripType, setTripType] = useState<"planning" | "ongoing" | "returned" | null>(null);
+  const [tripType, setTripType] = useState<"planning" | "ongoing" | "completed" | null>(null);
   const [step, setStep] = useState(0);
   const [routeDescription, setRouteDescription] = useState("");
   const [routeRating, setRouteRating] = useState(0);
@@ -332,7 +332,7 @@ const CreateRoute = () => {
       if (id) {
         const { error: routeError } = await supabase
           .from("routes")
-          .update({ title, description: routeDescription || description, status, rating: routeRating })
+          .update({ title, description: routeDescription || description, status, rating: routeRating, trip_type: tripType || 'completed' })
           .eq("id", id);
 
         if (routeError) throw routeError;
@@ -393,7 +393,7 @@ const CreateRoute = () => {
       } else {
         const { data: route, error: routeError } = await supabase
           .from("routes")
-          .insert({ user_id: user.id, title, description: routeDescription || description, status, rating: routeRating })
+          .insert({ user_id: user.id, title, description: routeDescription || description, status, rating: routeRating, trip_type: tripType || 'completed' })
           .select()
           .single();
 
@@ -534,11 +534,11 @@ const CreateRoute = () => {
 
               <button
                 onClick={() => {
-                  setTripType("returned");
+                  setTripType("completed");
                   setStep(1);
                 }}
                 className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
-                  tripType === "returned" 
+                  tripType === "completed" 
                     ? "border-primary bg-primary/10" 
                     : "border-border hover:border-primary/50 hover:bg-muted/50"
                 }`}

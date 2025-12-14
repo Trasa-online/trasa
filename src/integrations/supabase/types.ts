@@ -450,6 +450,7 @@ export type Database = {
           rating: number | null
           status: string
           title: string
+          trip_type: Database["public"]["Enums"]["trip_type"] | null
           updated_at: string | null
           user_id: string
           views: number
@@ -461,6 +462,7 @@ export type Database = {
           rating?: number | null
           status?: string
           title: string
+          trip_type?: Database["public"]["Enums"]["trip_type"] | null
           updated_at?: string | null
           user_id: string
           views?: number
@@ -472,6 +474,7 @@ export type Database = {
           rating?: number | null
           status?: string
           title?: string
+          trip_type?: Database["public"]["Enums"]["trip_type"] | null
           updated_at?: string | null
           user_id?: string
           views?: number
@@ -638,6 +641,7 @@ export type Database = {
         | "pin_visit"
         | "route_updated"
         | "visit_comment"
+      trip_type: "planning" | "ongoing" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -776,6 +780,7 @@ export const Constants = {
         "route_updated",
         "visit_comment",
       ],
+      trip_type: ["planning", "ongoing", "completed"],
     },
   },
 } as const
