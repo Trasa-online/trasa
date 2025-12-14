@@ -9,12 +9,29 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Trash2, Star, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { QuickNoteDialog } from "@/components/QuickNoteDialog";
 
 const MyRoutes = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [quickNoteOpen, setQuickNoteOpen] = useState(false);
+
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["unread-notifications", user?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user!.id)
+        .eq("read", false);
+
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!user,
+  });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -197,7 +214,19 @@ const MyRoutes = () => {
 
   return (
     <AppLayout>
-      <PageHeader title="TRASA" />
+      <PageHeader 
+        title="TRASA" 
+        showBell 
+        showSearch 
+        showQuickNote
+        unreadCount={unreadCount}
+        onQuickNoteClick={() => setQuickNoteOpen(true)}
+      />
+      
+      <QuickNoteDialog 
+        open={quickNoteOpen} 
+        onOpenChange={setQuickNoteOpen} 
+      />
       
       <div className="p-4">
         <Tabs defaultValue="published" className="w-full">

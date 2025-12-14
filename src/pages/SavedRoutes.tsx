@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -7,10 +7,27 @@ import AppLayout from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import RouteCard from "@/components/route/RouteCard";
 import { Bookmark } from "lucide-react";
+import { QuickNoteDialog } from "@/components/QuickNoteDialog";
 
 const SavedRoutes = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [quickNoteOpen, setQuickNoteOpen] = useState(false);
+
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["unread-notifications", user?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user!.id)
+        .eq("read", false);
+
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!user,
+  });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -45,7 +62,19 @@ const SavedRoutes = () => {
 
   return (
     <AppLayout>
-      <PageHeader title="TRASA" />
+      <PageHeader 
+        title="TRASA" 
+        showBell 
+        showSearch 
+        showQuickNote
+        unreadCount={unreadCount}
+        onQuickNoteClick={() => setQuickNoteOpen(true)}
+      />
+      
+      <QuickNoteDialog 
+        open={quickNoteOpen} 
+        onOpenChange={setQuickNoteOpen} 
+      />
       
       {savedRoutes && savedRoutes.length > 0 ? (
         <div className="p-4 space-y-4">
