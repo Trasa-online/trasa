@@ -1,16 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Loader2, LocateFixed, Search, Plus } from "lucide-react";
+import { MapPin, Loader2, LocateFixed, Search, Plus, ArrowLeft, Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,9 +29,11 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
-  const [selectedRouteId, setSelectedRouteId] = useState<string>("new");
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showNewRouteInput, setShowNewRouteInput] = useState(false);
+  const [newRouteTitle, setNewRouteTitle] = useState("");
   const debounceRef = useRef<NodeJS.Timeout>();
 
   // Fetch user's draft routes
@@ -43,7 +42,7 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
     queryFn: async () => {
       const { data, error } = await supabase
         .from("routes")
-        .select("id, title, pins(id)")
+        .select("id, title, pins(id, image_url)")
         .eq("user_id", user!.id)
         .eq("status", "draft")
         .order("updated_at", { ascending: false });
@@ -59,9 +58,11 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
     if (!open) {
       setAddress("");
       setCoordinates(null);
-      setSelectedRouteId("new");
+      setSelectedRouteId(null);
       setSearchQuery("");
       setSuggestions([]);
+      setShowNewRouteInput(false);
+      setNewRouteTitle("");
     }
   }, [open]);
 
@@ -172,6 +173,15 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
       return;
     }
 
+    if (!selectedRouteId) {
+      toast({
+        variant: "destructive",
+        title: "Błąd",
+        description: "Wybierz trasę",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -179,12 +189,22 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
       let pinOrder = 0;
 
       if (selectedRouteId === "new") {
+        if (!newRouteTitle.trim()) {
+          toast({
+            variant: "destructive",
+            title: "Błąd",
+            description: "Podaj nazwę trasy",
+          });
+          setLoading(false);
+          return;
+        }
+
         // Create new draft route
         const { data: route, error: routeError } = await supabase
           .from("routes")
           .insert({
             user_id: user.id,
-            title: "Szybka notatka",
+            title: newRouteTitle.trim(),
             status: "draft",
             trip_type: "ongoing",
           })
@@ -242,6 +262,10 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
     }
   };
 
+  const handleClose = () => {
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-none w-screen h-screen p-0 m-0 rounded-none border-none sm:max-w-none">
@@ -249,12 +273,15 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
           {/* Header */}
           <div className="bg-background border-b border-border p-4 z-10">
             <div className="max-w-lg mx-auto space-y-3">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <button onClick={handleClose} className="p-1 hover:bg-muted rounded-md transition-colors">
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+                <h2 className="font-semibold flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
                   Szybka notatka
-                </DialogTitle>
-              </DialogHeader>
+                </h2>
+              </div>
 
               {/* Get location button */}
               <Button
@@ -329,34 +356,110 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
           </div>
 
           {/* Bottom panel with route selection and save */}
-          <div className="bg-background border-t border-border p-4 z-10">
+          <div className="bg-background border-t border-border p-4 z-10 max-h-[40vh] overflow-y-auto">
             <div className="max-w-lg mx-auto space-y-4">
               {/* Route selection */}
               <div className="space-y-2">
                 <Label>Dodaj do trasy:</Label>
-                <RadioGroup value={selectedRouteId} onValueChange={setSelectedRouteId}>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="new" id="new-route" />
-                    <Label htmlFor="new-route" className="font-normal flex items-center gap-2 cursor-pointer">
-                      <Plus className="h-4 w-4" />
-                      Utwórz nową trasę
-                    </Label>
-                  </div>
-                  {draftRoutes?.map((route) => (
-                    <div key={route.id} className="flex items-center space-x-2">
-                      <RadioGroupItem value={route.id} id={route.id} />
-                      <Label htmlFor={route.id} className="font-normal cursor-pointer">
-                        {route.title} ({route.pins?.length || 0} pinezek)
-                      </Label>
+                
+                <div className="grid gap-2">
+                  {/* Create new route tile */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRouteId("new");
+                      setShowNewRouteInput(true);
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                      selectedRouteId === "new"
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary/50 hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                      <Plus className="h-6 w-6 text-muted-foreground" />
                     </div>
-                  ))}
-                </RadioGroup>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">Utwórz nową trasę</p>
+                      <p className="text-xs text-muted-foreground">Rozpocznij nową wersję roboczą</p>
+                    </div>
+                    {selectedRouteId === "new" && (
+                      <Check className="h-5 w-5 text-primary flex-shrink-0" />
+                    )}
+                  </button>
+
+                  {/* New route title input */}
+                  {showNewRouteInput && selectedRouteId === "new" && (
+                    <div className="pl-4 border-l-2 border-primary/30 ml-4">
+                      <Input
+                        placeholder="Nazwa nowej trasy..."
+                        value={newRouteTitle}
+                        onChange={(e) => setNewRouteTitle(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                  )}
+
+                  {/* Existing draft routes */}
+                  {draftRoutes?.map((route) => {
+                    const thumbnailImage = route.pins?.find((pin: any) => pin.image_url)?.image_url;
+                    const pinCount = route.pins?.length || 0;
+                    
+                    return (
+                      <button
+                        key={route.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedRouteId(route.id);
+                          setShowNewRouteInput(false);
+                        }}
+                        className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                          selectedRouteId === route.id
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:border-primary/50 hover:bg-muted/50"
+                        }`}
+                      >
+                        {/* Thumbnail */}
+                        <div className="relative flex-shrink-0">
+                          {thumbnailImage ? (
+                            <img
+                              src={thumbnailImage}
+                              alt={route.title}
+                              className="w-14 h-14 object-cover rounded-lg ring-1 ring-border"
+                            />
+                          ) : (
+                            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-muted via-muted/80 to-muted/50 ring-1 ring-border/50 flex items-center justify-center">
+                              <MapPin className="h-5 w-5 text-muted-foreground/50" />
+                            </div>
+                          )}
+                          {/* Pin count badge */}
+                          <div className="absolute -bottom-1 -right-1 bg-background border border-border rounded-full px-1.5 py-0.5 flex items-center gap-0.5">
+                            <MapPin className="h-2.5 w-2.5 text-muted-foreground" />
+                            <span className="text-[9px] font-bold">{pinCount}</span>
+                          </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{route.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {pinCount} {pinCount === 1 ? "pinezka" : pinCount < 5 ? "pinezki" : "pinezek"}
+                          </p>
+                        </div>
+
+                        {selectedRouteId === route.id && (
+                          <Check className="h-5 w-5 text-primary flex-shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <Button
                 className="w-full"
                 onClick={handleSave}
-                disabled={loading || !address.trim()}
+                disabled={loading || !address.trim() || !selectedRouteId || (selectedRouteId === "new" && !newRouteTitle.trim())}
               >
                 {loading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
