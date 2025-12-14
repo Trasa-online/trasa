@@ -311,7 +311,8 @@ const CreateRoute = () => {
       return;
     }
 
-    if (status === "published") {
+    // Rating validation only for non-planning trip types
+    if (status === "published" && tripType !== "planning") {
       const pinsWithoutRating = validPins.filter(p => p.rating <= 0);
       if (pinsWithoutRating.length > 0) {
         toast({ 
@@ -750,81 +751,87 @@ const CreateRoute = () => {
                   </div>
 
 
-                  {/* Rating - centered */}
-                  <div>
-                    <Label>Ocena *</Label>
-                    <div className="mt-2 flex justify-center">
-                      <StarRating
-                        rating={pins[currentPinIndex]?.rating || 0}
-                        onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
-                        size="lg"
-                        interactive={true}
-                      />
+                  {/* Rating - centered - hidden for planning mode */}
+                  {tripType !== "planning" && (
+                    <div>
+                      <Label>Ocena *</Label>
+                      <div className="mt-2 flex justify-center">
+                        <StarRating
+                          rating={pins[currentPinIndex]?.rating || 0}
+                          onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
+                          size="lg"
+                          interactive={true}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Image upload */}
-                  <div>
-                    <Label>Zdjęcie (Opcjonalne)</Label>
-                    <div className="mt-2">
-                      {pins[currentPinIndex]?.image_url ? (
-                        <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
-                          <img
-                            src={pins[currentPinIndex]?.image_url}
-                            alt="Podgląd zdjęcia"
-                            className="w-full h-full object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              updatePin(currentPinIndex, "image_url", "");
-                              updatePin(currentPinIndex, "images", []);
-                            }}
-                            className="absolute top-2 right-2 bg-background/80 hover:bg-background p-2 rounded-full transition-colors"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent transition-colors">
-                          <Camera className="h-12 w-12 text-muted-foreground mb-2" />
-                          <p className="text-sm text-muted-foreground">
-                            Dotknij, aby dodać zdjęcie
-                          </p>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              if (e.target.files && e.target.files.length > 0) {
-                                handleImageUpload(e.target.files, currentPinIndex);
-                                e.target.value = '';
-                              }
-                            }}
-                          />
-                        </label>
-                      )}
+                  {/* Image upload - hidden for planning mode */}
+                  {tripType !== "planning" && (
+                    <div>
+                      <Label>Zdjęcie (Opcjonalne)</Label>
+                      <div className="mt-2">
+                        {pins[currentPinIndex]?.image_url ? (
+                          <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
+                            <img
+                              src={pins[currentPinIndex]?.image_url}
+                              alt="Podgląd zdjęcia"
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updatePin(currentPinIndex, "image_url", "");
+                                updatePin(currentPinIndex, "images", []);
+                              }}
+                              className="absolute top-2 right-2 bg-background/80 hover:bg-background p-2 rounded-full transition-colors"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent transition-colors">
+                            <Camera className="h-12 w-12 text-muted-foreground mb-2" />
+                            <p className="text-sm text-muted-foreground">
+                              Dotknij, aby dodać zdjęcie
+                            </p>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                if (e.target.files && e.target.files.length > 0) {
+                                  handleImageUpload(e.target.files, currentPinIndex);
+                                  e.target.value = '';
+                                }
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Pin notes section - ciekawe na trasie */}
-                  <PinNotesSection
-                    notes={pins[currentPinIndex]?.notes || []}
-                    onNotesChange={(notes) => updatePin(currentPinIndex, "notes", notes)}
-                    onImageUpload={async (file) => {
-                      if (!user) return null;
-                      const fileExt = file.name.split(".").pop();
-                      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-                      const { error: uploadError } = await supabase.storage
-                        .from("route-images")
-                        .upload(fileName, file);
-                      if (uploadError) return null;
-                      const { data: { publicUrl } } = supabase.storage
-                        .from("route-images")
-                        .getPublicUrl(fileName);
-                      return publicUrl;
-                    }}
-                  />
+                  {/* Pin notes section - ciekawe na trasie - hidden for planning mode */}
+                  {tripType !== "planning" && (
+                    <PinNotesSection
+                      notes={pins[currentPinIndex]?.notes || []}
+                      onNotesChange={(notes) => updatePin(currentPinIndex, "notes", notes)}
+                      onImageUpload={async (file) => {
+                        if (!user) return null;
+                        const fileExt = file.name.split(".").pop();
+                        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+                        const { error: uploadError } = await supabase.storage
+                          .from("route-images")
+                          .upload(fileName, file);
+                        if (uploadError) return null;
+                        const { data: { publicUrl } } = supabase.storage
+                          .from("route-images")
+                          .getPublicUrl(fileName);
+                        return publicUrl;
+                      }}
+                    />
+                  )}
 
                   {/* Tag selection - all visible */}
                   <div className="pb-32">
