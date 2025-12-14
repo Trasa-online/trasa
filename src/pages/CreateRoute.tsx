@@ -947,7 +947,7 @@ const CreateRoute = () => {
                         });
                         return;
                       }
-                      if (currentPin.rating <= 0) {
+                      if (tripType !== "planning" && currentPin.rating <= 0) {
                         toast({ 
                           variant: "destructive", 
                           title: "Uzupełnij wymagane pola",
@@ -975,7 +975,7 @@ const CreateRoute = () => {
                         });
                         return;
                       }
-                      if (currentPin.rating <= 0) {
+                      if (tripType !== "planning" && currentPin.rating <= 0) {
                         toast({ 
                           variant: "destructive", 
                           title: "Uzupełnij wymagane pola",
