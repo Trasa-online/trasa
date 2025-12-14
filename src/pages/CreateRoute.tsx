@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Map, Plane, CheckCircle } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -66,8 +66,8 @@ const CreateRoute = () => {
   // routeNotes state removed - notes are now stored per-pin
   const [currentPinIndex, setCurrentPinIndex] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [tripType, setTripType] = useState<"planning" | "ongoing" | "completed" | null>(null);
-  const [step, setStep] = useState(0);
+  const [tripType, setTripType] = useState<"planning" | "ongoing" | "completed">("completed");
+  const [step, setStep] = useState(1);
   const [routeDescription, setRouteDescription] = useState("");
   const [routeRating, setRouteRating] = useState(0);
   const [showCustomTagInput, setShowCustomTagInput] = useState(false);
@@ -93,12 +93,8 @@ const CreateRoute = () => {
       } else {
         setShowPinsList(true);
       }
-    } else if (step === 1) {
-      // Step 1 - go back to step 0 (trip type selection)
-      setStep(0);
-      setTripType(null);
     } else {
-      // Step 0 - navigate away
+      // Step 1 - navigate away
       navigate("/");
     }
   };
@@ -115,8 +111,8 @@ const CreateRoute = () => {
     }]);
     setRouteMentionedUsers([]);
     setCurrentPinIndex(0);
-    setStep(0);
-    setTripType(null);
+    setStep(1);
+    setTripType("completed");
     setShowPinsList(false);
     setShowCustomTagInput(false);
     setRouteRating(0);
@@ -482,78 +478,12 @@ const CreateRoute = () => {
           <ArrowLeft className="h-6 w-6" />
         </button>
         <h1 className="text-xl font-semibold flex-1">
-          {step === 0 ? "Jakie plany?" : step === 1 ? "Utwórz nową trasę" : step === 2 ? (showPinsList ? "Lista pinezek" : title || "Edytuj pinezkę") : "Podsumowanie trasy"}
+          {step === 1 ? "Utwórz nową trasę" : step === 2 ? (showPinsList ? "Lista pinezek" : title || "Edytuj pinezkę") : "Podsumowanie trasy"}
         </h1>
       </div>
 
       <div className="max-w-lg mx-auto p-4 space-y-6">
-        {step === 0 ? (
-          <div className="space-y-6">
-            <p className="text-muted-foreground text-center">Wybierz etap swojej podróży</p>
-            
-            <div className="space-y-3">
-              <button
-                onClick={() => {
-                  setTripType("planning");
-                  setStep(1);
-                }}
-                className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
-                  tripType === "planning" 
-                    ? "border-primary bg-primary/10" 
-                    : "border-border hover:border-primary/50 hover:bg-muted/50"
-                }`}
-              >
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Map className="h-6 w-6 text-primary" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold">Planuję podróż</h3>
-                  <p className="text-sm text-muted-foreground">Tworzę trasę na przyszłą wyprawę</p>
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  setTripType("ongoing");
-                  setStep(1);
-                }}
-                className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
-                  tripType === "ongoing" 
-                    ? "border-primary bg-primary/10" 
-                    : "border-border hover:border-primary/50 hover:bg-muted/50"
-                }`}
-              >
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Plane className="h-6 w-6 text-primary" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold">Jestem w trakcie podróży</h3>
-                  <p className="text-sm text-muted-foreground">Dokumentuję miejsca na bieżąco</p>
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  setTripType("completed");
-                  setStep(1);
-                }}
-                className={`w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
-                  tripType === "completed" 
-                    ? "border-primary bg-primary/10" 
-                    : "border-border hover:border-primary/50 hover:bg-muted/50"
-                }`}
-              >
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="h-6 w-6 text-primary" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold">Wróciłem z podróży</h3>
-                  <p className="text-sm text-muted-foreground">Dzielę się wspomnieniami z wyprawy</p>
-                </div>
-              </button>
-            </div>
-          </div>
-        ) : step === 1 ? (
+        {step === 1 ? (
           <div className="space-y-4">
             <div>
               <Label htmlFor="title">Nazwa trasy * (max 10 słów)</Label>
