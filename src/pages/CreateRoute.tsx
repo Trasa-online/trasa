@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -925,9 +925,26 @@ const CreateRoute = () => {
         ) : step === 3 ? (
           <>
             <div className="space-y-4 pb-80">
-              {/* Header */}
+              {/* Header with editable title */}
               <div className="space-y-2">
-                <h2 className="text-lg font-semibold">{title}</h2>
+                <div className="space-y-1">
+                  <Label htmlFor="summary-title" className="text-sm text-muted-foreground">Nazwa trasy</Label>
+                  <Input
+                    id="summary-title"
+                    value={title}
+                    onChange={(e) => {
+                      const words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0);
+                      if (words.length <= 10 || e.target.value.length < title.length) {
+                        setTitle(e.target.value);
+                      }
+                    }}
+                    placeholder="Nazwa trasy"
+                    className="text-lg font-semibold"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {title.trim() ? title.trim().split(/\s+/).filter(w => w.length > 0).length : 0}/10 słów
+                  </p>
+                </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span>{pins.filter(p => p.address).length} {pins.filter(p => p.address).length === 1 ? 'punkt' : 'punktów'}</span>
                   {routeRating > 0 && (
