@@ -339,8 +339,7 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
                 <button onClick={handleBack} className="p-1 hover:bg-muted rounded-md transition-colors">
                   <ArrowLeft className="h-5 w-5" />
                 </button>
-                <h2 className="font-semibold flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
+                <h2 className="font-semibold">
                   {step === "route" ? "Gdzie chcesz dodać pina?" : "Szybka notatka"}
                 </h2>
               </div>
