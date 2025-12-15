@@ -10,6 +10,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Trash2, Star, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { QuickNoteDialog } from "@/components/QuickNoteDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const MyRoutes = () => {
   const { user, loading } = useAuth();
@@ -17,6 +27,7 @@ const MyRoutes = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [quickNoteOpen, setQuickNoteOpen] = useState(false);
+  const [deletingRouteId, setDeletingRouteId] = useState<string | null>(null);
 
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["unread-notifications", user?.id],
@@ -200,7 +211,7 @@ const MyRoutes = () => {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => deleteMutation.mutate(route.id)}
+              onClick={() => setDeletingRouteId(route.id)}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -262,6 +273,31 @@ const MyRoutes = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <AlertDialog open={!!deletingRouteId} onOpenChange={(open) => !open && setDeletingRouteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Usuń trasę</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz usunąć tę trasę? Tej akcji nie można cofnąć.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (deletingRouteId) {
+                  deleteMutation.mutate(deletingRouteId);
+                  setDeletingRouteId(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Usuń
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };

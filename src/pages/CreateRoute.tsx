@@ -742,26 +742,6 @@ const CreateRoute = () => {
                     </div>
                   )}
 
-                  {/* Pin notes section - ciekawe na trasie - hidden for planning mode */}
-                  {tripType !== "planning" && (
-                    <PinNotesSection
-                      notes={pins[currentPinIndex]?.notes || []}
-                      onNotesChange={(notes) => updatePin(currentPinIndex, "notes", notes)}
-                      onImageUpload={async (file) => {
-                        if (!user) return null;
-                        const fileExt = file.name.split(".").pop();
-                        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-                        const { error: uploadError } = await supabase.storage
-                          .from("route-images")
-                          .upload(fileName, file);
-                        if (uploadError) return null;
-                        const { data: { publicUrl } } = supabase.storage
-                          .from("route-images")
-                          .getPublicUrl(fileName);
-                        return publicUrl;
-                      }}
-                    />
-                  )}
 
                   {/* Tag selection - all visible */}
                   <div className="pb-32">
