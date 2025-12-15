@@ -269,10 +269,10 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-none w-screen h-screen p-0 m-0 rounded-none border-none sm:max-w-none">
-        <div className="relative w-full h-full flex flex-col">
+        <div className="relative w-full h-full flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="bg-background border-b border-border p-4 z-10">
-            <div className="max-w-lg mx-auto space-y-3">
+          <div className="bg-background border-b border-border p-3 z-10 flex-shrink-0">
+            <div className="max-w-lg mx-auto space-y-2">
               <div className="flex items-center gap-3">
                 <button onClick={handleClose} className="p-1 hover:bg-muted rounded-md transition-colors">
                   <ArrowLeft className="h-5 w-5" />
@@ -287,6 +287,7 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 className="w-full"
                 onClick={handleGetLocation}
                 disabled={locating}
@@ -306,18 +307,18 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Wpisz adres lub nazwę miejsca..."
-                  className="pl-10"
+                  className="pl-10 h-9"
                 />
               </div>
 
               {/* Suggestions dropdown */}
               {suggestions.length > 0 && (
-                <div className="bg-background border border-border rounded-lg shadow-lg max-h-32 overflow-y-auto">
+                <div className="bg-background border border-border rounded-lg shadow-lg max-h-28 overflow-y-auto z-50">
                   {suggestions.map((suggestion, index) => (
                     <button
                       key={suggestion.properties?.mapbox_id || index}
                       type="button"
-                      className="w-full text-left px-4 py-2 hover:bg-muted transition-colors border-b border-border last:border-b-0"
+                      className="w-full text-left px-3 py-2 hover:bg-muted transition-colors border-b border-border last:border-b-0"
                       onClick={() => handleSuggestionSelect(suggestion)}
                     >
                       <p className="font-medium text-sm truncate">
@@ -335,32 +336,32 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
 
               {/* Selected address display */}
               {address && (
-                <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
-                  <p className="text-sm font-medium">Wybrana lokalizacja:</p>
-                  <p className="text-sm text-muted-foreground truncate">{address}</p>
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-2">
+                  <p className="text-xs font-medium">Wybrana lokalizacja:</p>
+                  <p className="text-xs text-muted-foreground truncate">{address}</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Map */}
-          <div className="flex-1 relative">
+          {/* Map - fixed height like route creation */}
+          <div className="relative h-40 flex-shrink-0 mx-3 mt-2 rounded-xl overflow-hidden border border-border">
             <InteractiveRouteMap
               pins={coordinates ? [{ latitude: coordinates.lat, longitude: coordinates.lng, place_name: address, address, pin_order: 0 }] : []}
-              className="w-full h-full rounded-none border-none"
+              className="w-full h-full"
               onPinAdd={handleMapPinAdd}
             />
-            <p className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-muted-foreground">
+            <p className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm px-2 py-1 rounded-full text-[10px] text-muted-foreground">
               Kliknij na mapie aby wybrać lokalizację
             </p>
           </div>
 
           {/* Bottom panel with route selection and save */}
-          <div className="bg-background border-t border-border p-4 z-10 max-h-[40vh] overflow-y-auto">
-            <div className="max-w-lg mx-auto space-y-4">
+          <div className="flex-1 bg-background border-t border-border p-3 z-10 overflow-y-auto">
+            <div className="max-w-lg mx-auto space-y-3">
               {/* Route selection */}
               <div className="space-y-2">
-                <Label>Dodaj do trasy:</Label>
+                <Label className="text-sm">Dodaj do trasy:</Label>
                 
                 <div className="grid gap-2">
                   {/* Create new route tile */}
@@ -370,31 +371,32 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
                       setSelectedRouteId("new");
                       setShowNewRouteInput(true);
                     }}
-                    className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                    className={`flex items-center gap-2 p-2 rounded-lg border-2 transition-all text-left ${
                       selectedRouteId === "new"
                         ? "border-primary bg-primary/10"
                         : "border-border hover:border-primary/50 hover:bg-muted/50"
                     }`}
                   >
-                    <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                      <Plus className="h-6 w-6 text-muted-foreground" />
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                      <Plus className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm">Utwórz nową trasę</p>
-                      <p className="text-xs text-muted-foreground">Rozpocznij nową wersję roboczą</p>
+                      <p className="text-[11px] text-muted-foreground">Rozpocznij nową wersję roboczą</p>
                     </div>
                     {selectedRouteId === "new" && (
-                      <Check className="h-5 w-5 text-primary flex-shrink-0" />
+                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
                     )}
                   </button>
 
                   {/* New route title input */}
                   {showNewRouteInput && selectedRouteId === "new" && (
-                    <div className="pl-4 border-l-2 border-primary/30 ml-4">
+                    <div className="pl-3 border-l-2 border-primary/30 ml-3">
                       <Input
                         placeholder="Nazwa nowej trasy..."
                         value={newRouteTitle}
                         onChange={(e) => setNewRouteTitle(e.target.value)}
+                        className="h-9"
                         autoFocus
                       />
                     </div>
@@ -413,7 +415,7 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
                           setSelectedRouteId(route.id);
                           setShowNewRouteInput(false);
                         }}
-                        className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                        className={`flex items-center gap-2 p-2 rounded-lg border-2 transition-all text-left ${
                           selectedRouteId === route.id
                             ? "border-primary bg-primary/10"
                             : "border-border hover:border-primary/50 hover:bg-muted/50"
@@ -425,30 +427,30 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
                             <img
                               src={thumbnailImage}
                               alt={route.title}
-                              className="w-14 h-14 object-cover rounded-lg ring-1 ring-border"
+                              className="w-10 h-10 object-cover rounded-lg ring-1 ring-border"
                             />
                           ) : (
-                            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-muted via-muted/80 to-muted/50 ring-1 ring-border/50 flex items-center justify-center">
-                              <MapPin className="h-5 w-5 text-muted-foreground/50" />
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-muted via-muted/80 to-muted/50 ring-1 ring-border/50 flex items-center justify-center">
+                              <MapPin className="h-4 w-4 text-muted-foreground/50" />
                             </div>
                           )}
                           {/* Pin count badge */}
-                          <div className="absolute -bottom-1 -right-1 bg-background border border-border rounded-full px-1.5 py-0.5 flex items-center gap-0.5">
-                            <MapPin className="h-2.5 w-2.5 text-muted-foreground" />
-                            <span className="text-[9px] font-bold">{pinCount}</span>
+                          <div className="absolute -bottom-1 -right-1 bg-background border border-border rounded-full px-1 py-0.5 flex items-center gap-0.5">
+                            <MapPin className="h-2 w-2 text-muted-foreground" />
+                            <span className="text-[8px] font-bold">{pinCount}</span>
                           </div>
                         </div>
 
                         {/* Content */}
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">{route.title}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-[11px] text-muted-foreground">
                             {pinCount} {pinCount === 1 ? "pinezka" : pinCount < 5 ? "pinezki" : "pinezek"}
                           </p>
                         </div>
 
                         {selectedRouteId === route.id && (
-                          <Check className="h-5 w-5 text-primary flex-shrink-0" />
+                          <Check className="h-4 w-4 text-primary flex-shrink-0" />
                         )}
                       </button>
                     );
