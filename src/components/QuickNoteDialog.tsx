@@ -36,10 +36,14 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showNewRouteInput, setShowNewRouteInput] = useState(false);
   const [newRouteTitle, setNewRouteTitle] = useState("");
+  const [showMapSelector, setShowMapSelector] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout>();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const selectorMapRef = useRef<HTMLDivElement>(null);
+  const selectorMapInstanceRef = useRef<mapboxgl.Map | null>(null);
+  const selectorMarkerRef = useRef<mapboxgl.Marker | null>(null);
 
   // Initialize/update map when coordinates change
   useEffect(() => {
@@ -79,7 +83,70 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
       mapRef.current.remove();
       mapRef.current = null;
     }
+    if (!open && selectorMapInstanceRef.current) {
+      selectorMapInstanceRef.current.remove();
+      selectorMapInstanceRef.current = null;
+    }
   }, [open]);
+
+  // Initialize map selector
+  useEffect(() => {
+    if (!showMapSelector || !selectorMapRef.current) return;
+
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    selectorMapInstanceRef.current = new mapboxgl.Map({
+      container: selectorMapRef.current,
+      style: "mapbox://styles/mapbox/light-v11",
+      center: coordinates ? [coordinates.lng, coordinates.lat] : [21.0122, 52.2297],
+      zoom: coordinates ? 15 : 6,
+    });
+
+    selectorMapInstanceRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+    // Add click handler for pin placement
+    selectorMapInstanceRef.current.on("click", async (e) => {
+      const { lng, lat } = e.lngLat;
+      
+      // Update or create marker
+      if (selectorMarkerRef.current) {
+        selectorMarkerRef.current.setLngLat([lng, lat]);
+      } else {
+        selectorMarkerRef.current = new mapboxgl.Marker({ color: "#ef4444" })
+          .setLngLat([lng, lat])
+          .addTo(selectorMapInstanceRef.current!);
+      }
+
+      // Reverse geocode to get address
+      try {
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&language=pl`
+        );
+        const data = await response.json();
+        if (data.features && data.features.length > 0) {
+          const place = data.features[0];
+          setAddress(place.place_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        } else {
+          setAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        }
+        setCoordinates({ lat, lng });
+      } catch (error) {
+        console.error("Reverse geocoding error:", error);
+        setAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        setCoordinates({ lat, lng });
+      }
+    });
+
+    return () => {
+      if (selectorMarkerRef.current) {
+        selectorMarkerRef.current.remove();
+        selectorMarkerRef.current = null;
+      }
+      if (selectorMapInstanceRef.current) {
+        selectorMapInstanceRef.current.remove();
+        selectorMapInstanceRef.current = null;
+      }
+    };
+  }, [showMapSelector]);
 
   // Fetch user's draft routes
   const { data: draftRoutes } = useQuery({
@@ -109,6 +176,7 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
       setSuggestions([]);
       setShowNewRouteInput(false);
       setNewRouteTitle("");
+      setShowMapSelector(false);
     }
   }, [open]);
 
@@ -456,15 +524,29 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
               <div className="max-w-lg mx-auto space-y-4">
                 <Label className="text-sm font-medium">Adres</Label>
                 
-                {/* Search input */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Wpisz adres lub nazwę miejsca..."
-                    className="pl-10"
-                  />
+                {/* Search input with map selector */}
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Wpisz adres lub nazwę miejsca..."
+                      className="pl-10"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      // Open fullscreen map for manual selection
+                      setShowMapSelector(true);
+                    }}
+                    title="Wybierz na mapie"
+                  >
+                    <MapPin className="h-4 w-4" />
+                  </Button>
                 </div>
 
                 {/* Suggestions dropdown */}
@@ -550,6 +632,34 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
             </div>
           </div>
         </div>
+
+        {/* Fullscreen Map Selector */}
+        {showMapSelector && (
+          <div className="absolute inset-0 z-50 bg-background flex flex-col">
+            <div className="bg-background border-b border-border p-4 flex items-center gap-3">
+              <button 
+                onClick={() => setShowMapSelector(false)} 
+                className="p-1 hover:bg-muted rounded-md transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <h2 className="font-semibold">Wybierz lokalizację na mapie</h2>
+            </div>
+            <div ref={selectorMapRef} className="flex-1" />
+            <div className="p-4 bg-background border-t border-border">
+              <p className="text-sm text-muted-foreground text-center mb-3">
+                Dotknij mapy, aby wybrać lokalizację
+              </p>
+              <Button 
+                className="w-full" 
+                onClick={() => setShowMapSelector(false)}
+                disabled={!address}
+              >
+                {address ? "Potwierdź lokalizację" : "Wybierz punkt na mapie"}
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
