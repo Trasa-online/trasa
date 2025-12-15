@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import InteractiveRouteMap from "@/components/InteractiveRouteMap";
 
 interface QuickNoteDialogProps {
   open: boolean;
@@ -41,9 +42,6 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
-  const selectorMapRef = useRef<HTMLDivElement>(null);
-  const selectorMapInstanceRef = useRef<mapboxgl.Map | null>(null);
-  const selectorMarkerRef = useRef<mapboxgl.Marker | null>(null);
 
   // Initialize/update map when coordinates change
   useEffect(() => {
@@ -83,70 +81,14 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
       mapRef.current.remove();
       mapRef.current = null;
     }
-    if (!open && selectorMapInstanceRef.current) {
-      selectorMapInstanceRef.current.remove();
-      selectorMapInstanceRef.current = null;
-    }
   }, [open]);
 
-  // Initialize map selector
-  useEffect(() => {
-    if (!showMapSelector || !selectorMapRef.current) return;
-
-    mapboxgl.accessToken = MAPBOX_TOKEN;
-    selectorMapInstanceRef.current = new mapboxgl.Map({
-      container: selectorMapRef.current,
-      style: "mapbox://styles/mapbox/light-v11",
-      center: coordinates ? [coordinates.lng, coordinates.lat] : [21.0122, 52.2297],
-      zoom: coordinates ? 15 : 6,
-    });
-
-    selectorMapInstanceRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
-
-    // Add click handler for pin placement
-    selectorMapInstanceRef.current.on("click", async (e) => {
-      const { lng, lat } = e.lngLat;
-      
-      // Update or create marker
-      if (selectorMarkerRef.current) {
-        selectorMarkerRef.current.setLngLat([lng, lat]);
-      } else {
-        selectorMarkerRef.current = new mapboxgl.Marker({ color: "#ef4444" })
-          .setLngLat([lng, lat])
-          .addTo(selectorMapInstanceRef.current!);
-      }
-
-      // Reverse geocode to get address
-      try {
-        const response = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&language=pl`
-        );
-        const data = await response.json();
-        if (data.features && data.features.length > 0) {
-          const place = data.features[0];
-          setAddress(place.place_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-        } else {
-          setAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-        }
-        setCoordinates({ lat, lng });
-      } catch (error) {
-        console.error("Reverse geocoding error:", error);
-        setAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-        setCoordinates({ lat, lng });
-      }
-    });
-
-    return () => {
-      if (selectorMarkerRef.current) {
-        selectorMarkerRef.current.remove();
-        selectorMarkerRef.current = null;
-      }
-      if (selectorMapInstanceRef.current) {
-        selectorMapInstanceRef.current.remove();
-        selectorMapInstanceRef.current = null;
-      }
-    };
-  }, [showMapSelector]);
+  // Handle pin selection from InteractiveRouteMap
+  const handleMapPinAdd = (pinData: { latitude: number; longitude: number; place_name: string; address: string }) => {
+    setCoordinates({ lat: pinData.latitude, lng: pinData.longitude });
+    setAddress(pinData.address || pinData.place_name || `${pinData.latitude.toFixed(6)}, ${pinData.longitude.toFixed(6)}`);
+    setShowMapSelector(false);
+  };
 
   // Fetch user's draft routes
   const { data: draftRoutes } = useQuery({
@@ -645,18 +587,12 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
               </button>
               <h2 className="font-semibold">Wybierz lokalizację na mapie</h2>
             </div>
-            <div ref={selectorMapRef} className="flex-1" />
-            <div className="p-4 bg-background border-t border-border">
-              <p className="text-sm text-muted-foreground text-center mb-3">
-                Dotknij mapy, aby wybrać lokalizację
-              </p>
-              <Button 
-                className="w-full" 
-                onClick={() => setShowMapSelector(false)}
-                disabled={!address}
-              >
-                {address ? "Potwierdź lokalizację" : "Wybierz punkt na mapie"}
-              </Button>
+            <div className="flex-1">
+              <InteractiveRouteMap
+                pins={[]}
+                className="h-full rounded-none border-0"
+                onPinAdd={handleMapPinAdd}
+              />
             </div>
           </div>
         )}
