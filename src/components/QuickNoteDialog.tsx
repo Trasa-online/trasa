@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
 
 interface QuickNoteDialogProps {
   open: boolean;
@@ -35,6 +37,49 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
   const [showNewRouteInput, setShowNewRouteInput] = useState(false);
   const [newRouteTitle, setNewRouteTitle] = useState("");
   const debounceRef = useRef<NodeJS.Timeout>();
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markerRef = useRef<mapboxgl.Marker | null>(null);
+
+  // Initialize/update map when coordinates change
+  useEffect(() => {
+    if (!coordinates || !mapContainerRef.current || step !== "address") return;
+
+    if (!mapRef.current) {
+      mapboxgl.accessToken = MAPBOX_TOKEN;
+      mapRef.current = new mapboxgl.Map({
+        container: mapContainerRef.current,
+        style: "mapbox://styles/mapbox/light-v11",
+        center: [coordinates.lng, coordinates.lat],
+        zoom: 15,
+      });
+    } else {
+      mapRef.current.setCenter([coordinates.lng, coordinates.lat]);
+    }
+
+    // Update marker
+    if (markerRef.current) {
+      markerRef.current.remove();
+    }
+    markerRef.current = new mapboxgl.Marker({ color: "#ef4444" })
+      .setLngLat([coordinates.lng, coordinates.lat])
+      .addTo(mapRef.current);
+
+    return () => {
+      if (markerRef.current) {
+        markerRef.current.remove();
+        markerRef.current = null;
+      }
+    };
+  }, [coordinates, step]);
+
+  // Cleanup map on dialog close
+  useEffect(() => {
+    if (!open && mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+  }, [open]);
 
   // Fetch user's draft routes
   const { data: draftRoutes } = useQuery({
@@ -453,6 +498,13 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
                     <p className="text-sm">{address}</p>
                   </div>
                 )}
+
+                {/* Map preview when coordinates exist */}
+                {coordinates && (
+                  <div className="rounded-xl overflow-hidden border border-border">
+                    <div ref={mapContainerRef} className="h-40 w-full" />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -491,11 +543,7 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
                     onClick={handleSave}
                     disabled={loading || !address.trim()}
                   >
-                    {loading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <MapPin className="h-4 w-4 mr-2" />
-                    )}
+                    {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Zapisz pinezkę
                   </Button>
                 </>
