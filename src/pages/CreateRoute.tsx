@@ -1076,18 +1076,20 @@ const CreateRoute = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel>Zostań</AlertDialogCancel>
+            <AlertDialogCancel disabled={saving}>Zostań</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                setShowExitConfirm(false);
+              onClick={(e) => {
+                e.preventDefault();
                 saveRoute("draft");
               }}
+              disabled={saving}
               className="bg-foreground text-background hover:bg-foreground/90"
             >
-              Zapisz i wyjdź
+              {saving ? "Zapisywanie..." : "Zapisz i wyjdź"}
             </AlertDialogAction>
             <AlertDialogAction
               onClick={confirmExit}
+              disabled={saving}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Wyjdź bez zapisywania
