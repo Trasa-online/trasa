@@ -88,9 +88,23 @@ const RouteCard = ({ route }: RouteCardProps) => {
   });
 
 
-  // Check if current user has liked the route
-  const isLiked = route.likes?.some((like: any) => like.user_id === user?.id) || false;
-  const likesCount = route.likes?.length || 0;
+  // Fetch likes with polling for real-time updates
+  const { data: likesData } = useQuery({
+    queryKey: ["route-card-likes", route.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("likes")
+        .select("user_id")
+        .eq("route_id", route.id);
+
+      if (error) throw error;
+      return data || [];
+    },
+    refetchInterval: 15000, // Refresh every 15 seconds
+  });
+
+  const isLiked = likesData?.some((like: any) => like.user_id === user?.id) || false;
+  const likesCount = likesData?.length || 0;
 
   // Like/unlike route mutation
   const likeRouteMutation = useMutation({
@@ -112,8 +126,10 @@ const RouteCard = ({ route }: RouteCardProps) => {
       }
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["route-card-likes", route.id] });
       queryClient.invalidateQueries({ queryKey: ["feed-routes"] });
       queryClient.invalidateQueries({ queryKey: ["route", route.id] });
+      queryClient.invalidateQueries({ queryKey: ["route-likes", route.id] });
     },
     onError: () => {
       toast.error("Nie udało się polubić trasy");
