@@ -88,7 +88,52 @@ const RouteCard = ({ route }: RouteCardProps) => {
   });
 
 
-  // Check if route is saved by current user
+  // Check if current user has liked the route
+  const isLiked = route.likes?.some((like: any) => like.user_id === user?.id) || false;
+  const likesCount = route.likes?.length || 0;
+
+  // Like/unlike route mutation
+  const likeRouteMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Must be logged in");
+
+      if (isLiked) {
+        const { error } = await supabase
+          .from("likes")
+          .delete()
+          .eq("route_id", route.id)
+          .eq("user_id", user.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("likes")
+          .insert({ route_id: route.id, user_id: user.id });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["feed-routes"] });
+      queryClient.invalidateQueries({ queryKey: ["route", route.id] });
+    },
+    onError: () => {
+      toast.error("Nie udało się polubić trasy");
+    },
+  });
+
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      toast.error("Musisz być zalogowany");
+      return;
+    }
+    likeRouteMutation.mutate();
+  };
+
+  const handleCommentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/route/${route.id}#comments`);
+  };
+
   const { data: isSaved = false } = useQuery({
     queryKey: ["is-saved", route.id, user?.id],
     queryFn: async () => {
@@ -428,14 +473,15 @@ const RouteCard = ({ route }: RouteCardProps) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-5">
             <button 
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-2 text-muted-foreground hover:text-red-500 transition-all duration-200 group/btn"
+              onClick={handleLike}
+              disabled={likeRouteMutation.isPending}
+              className="flex items-center gap-2 text-muted-foreground hover:text-red-500 transition-all duration-200 group/btn disabled:opacity-50"
             >
-              <Heart className="h-[18px] w-[18px] group-hover/btn:scale-110 transition-transform" />
-              <span className="text-sm font-semibold tabular-nums">{route.likes?.length || 0}</span>
+              <Heart className={`h-[18px] w-[18px] group-hover/btn:scale-110 transition-transform ${isLiked ? "fill-red-500 text-red-500" : ""}`} />
+              <span className="text-sm font-semibold tabular-nums">{likesCount}</span>
             </button>
             <button 
-              onClick={(e) => e.stopPropagation()}
+              onClick={handleCommentClick}
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all duration-200 group/btn"
             >
               <MessageCircle className="h-[18px] w-[18px] group-hover/btn:scale-110 transition-transform" />

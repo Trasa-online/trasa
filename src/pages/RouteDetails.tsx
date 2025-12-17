@@ -1,5 +1,5 @@
 import { useEffect, useState, createContext, useContext } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -433,6 +433,19 @@ const RouteDetails = () => {
     incrementViews();
   }, [route?.id]);
 
+  // Scroll to comments section if hash is #comments
+  const location = useLocation();
+  useEffect(() => {
+    if (location.hash === "#comments") {
+      setTimeout(() => {
+        const commentsSection = document.getElementById("comments");
+        if (commentsSection) {
+          commentsSection.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 300);
+    }
+  }, [location.hash, comments]);
+
   const isLiked = likes?.some((like) => like.user_id === user?.id);
 
   const likeMutation = useMutation({
@@ -822,7 +835,7 @@ const RouteDetails = () => {
           </button>
         </div>
 
-        <div className="space-y-4">
+        <div id="comments" className="space-y-4 scroll-mt-20">
           <h3 className="text-lg font-semibold">Komentarze</h3>
           {comments?.map((c: any) => {
             const commentLikesCount = commentLikes?.filter(
