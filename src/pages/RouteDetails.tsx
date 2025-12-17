@@ -299,6 +299,7 @@ const RouteDetails = () => {
       return data;
     },
     enabled: !!id && !!user,
+    refetchInterval: 15000, // Refresh every 15 seconds
   });
 
   const { data: comments } = useQuery({
