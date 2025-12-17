@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -74,6 +74,10 @@ const CreateRoute = () => {
   const [showPinsList, setShowPinsList] = useState(false);
   
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+  const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const routeIdRef = useRef<string | null>(id || null);
 
   // Check if user has added any pins with data
   const hasAddedPins = pins.some(p => p.address && p.address.trim() !== "");
@@ -124,6 +128,157 @@ const CreateRoute = () => {
     navigate("/");
   };
 
+  // Auto-save function (silent, doesn't navigate)
+  const autoSaveRoute = useCallback(async () => {
+    if (!user || !title.trim() || !hasAddedPins || saving || autoSaving) return;
+    
+    const validPins = pins.filter(p => p.address).map(p => ({
+      ...p,
+      place_name: p.place_name || p.address
+    }));
+    
+    if (validPins.length === 0) return;
+
+    setAutoSaving(true);
+
+    try {
+      if (routeIdRef.current) {
+        // Update existing route
+        await supabase
+          .from("routes")
+          .update({ 
+            title, 
+            description: routeDescription || description, 
+            status: "draft", 
+            rating: routeRating, 
+            trip_type: tripType || 'completed' 
+          })
+          .eq("id", routeIdRef.current);
+
+        // Delete existing pins
+        await supabase.from("pins").delete().eq("route_id", routeIdRef.current);
+
+        // Insert updated pins
+        for (const pin of validPins) {
+          const { data: insertedPin } = await supabase.from("pins").insert({
+            route_id: routeIdRef.current,
+            place_name: pin.place_name,
+            address: pin.address || "Brak adresu",
+            description: pin.description,
+            image_url: pin.image_url,
+            images: pin.images || [],
+            rating: pin.rating,
+            pin_order: pin.pin_order,
+            tags: pin.tags,
+            is_transport: false,
+            latitude: pin.latitude,
+            longitude: pin.longitude,
+          }).select().single();
+
+          // Save notes
+          if (pin.notes && pin.notes.length > 0 && insertedPin) {
+            for (const note of pin.notes) {
+              await supabase.from("route_notes").insert({
+                route_id: routeIdRef.current,
+                pin_id: insertedPin.id,
+                text: note.text,
+                image_url: note.imageUrl,
+                note_order: note.note_order,
+              });
+            }
+          }
+        }
+      } else {
+        // Create new route
+        const { data: route, error: routeError } = await supabase
+          .from("routes")
+          .insert({ 
+            user_id: user.id, 
+            title, 
+            description: routeDescription || description, 
+            status: "draft", 
+            rating: routeRating, 
+            trip_type: tripType || 'completed' 
+          })
+          .select()
+          .single();
+
+        if (routeError) throw routeError;
+        routeIdRef.current = route.id;
+
+        for (const pin of validPins) {
+          const { data: insertedPin } = await supabase.from("pins").insert({
+            route_id: route.id,
+            place_name: pin.place_name,
+            address: pin.address || "Brak adresu",
+            description: pin.description,
+            image_url: pin.image_url,
+            images: pin.images || [],
+            rating: pin.rating,
+            pin_order: pin.pin_order,
+            tags: pin.tags,
+            is_transport: false,
+            latitude: pin.latitude,
+            longitude: pin.longitude,
+          }).select().single();
+
+          if (pin.notes && pin.notes.length > 0 && insertedPin) {
+            for (const note of pin.notes) {
+              await supabase.from("route_notes").insert({
+                route_id: route.id,
+                pin_id: insertedPin.id,
+                text: note.text,
+                image_url: note.imageUrl,
+                note_order: note.note_order,
+              });
+            }
+          }
+        }
+      }
+
+      setLastAutoSave(new Date());
+    } catch (error) {
+      console.error("Auto-save error:", error);
+    } finally {
+      setAutoSaving(false);
+    }
+  }, [user, title, description, routeDescription, pins, routeRating, tripType, hasAddedPins, saving, autoSaving]);
+
+  // Auto-save interval (every 30 seconds)
+  useEffect(() => {
+    if (step >= 2 && hasAddedPins && title.trim()) {
+      autoSaveIntervalRef.current = setInterval(() => {
+        autoSaveRoute();
+      }, 30000);
+    }
+
+    return () => {
+      if (autoSaveIntervalRef.current) {
+        clearInterval(autoSaveIntervalRef.current);
+      }
+    };
+  }, [step, hasAddedPins, title, autoSaveRoute]);
+
+  // Beforeunload event - warn user about unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasAddedPins && step >= 2) {
+        e.preventDefault();
+        e.returnValue = "Masz niezapisane zmiany. Czy na pewno chcesz opuścić stronę?";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasAddedPins, step]);
+
+  // Update routeIdRef when editing existing route
+  useEffect(() => {
+    if (id) {
+      routeIdRef.current = id;
+    }
+  }, [id]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -480,6 +635,15 @@ const CreateRoute = () => {
         <h1 className="text-xl font-semibold flex-1">
           {step === 1 ? "Utwórz nową trasę" : step === 2 ? (showPinsList ? "Lista pinezek" : title || "Edytuj pinezkę") : "Podsumowanie trasy"}
         </h1>
+        {step >= 2 && hasAddedPins && (
+          <div className="text-xs text-muted-foreground">
+            {autoSaving ? (
+              <span className="animate-pulse">Zapisywanie...</span>
+            ) : lastAutoSave ? (
+              <span>Zapisano {lastAutoSave.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}</span>
+            ) : null}
+          </div>
+        )}
       </div>
 
       <div className="max-w-lg mx-auto p-4 space-y-6">
