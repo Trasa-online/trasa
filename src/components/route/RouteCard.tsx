@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Heart, MessageCircle, Star, MapPin, Bookmark, ArrowRight, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Share2 } from "lucide-react";
@@ -100,8 +100,31 @@ const RouteCard = ({ route }: RouteCardProps) => {
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 15000, // Refresh every 15 seconds
+    refetchInterval: 30000, // Fallback polling every 30 seconds
   });
+
+  // Supabase Realtime subscription for instant like updates
+  useEffect(() => {
+    const channel = supabase
+      .channel(`likes-${route.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'likes',
+          filter: `route_id=eq.${route.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["route-card-likes", route.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [route.id, queryClient]);
 
   const isLiked = likesData?.some((like: any) => like.user_id === user?.id) || false;
   const likesCount = likesData?.length || 0;
