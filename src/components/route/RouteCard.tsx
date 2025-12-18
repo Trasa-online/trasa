@@ -285,14 +285,28 @@ const RouteCard = ({ route }: RouteCardProps) => {
       <div className="p-4 border-b border-border/50">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 ring-2 ring-border">
+            <Avatar 
+              className="h-10 w-10 ring-2 ring-border cursor-pointer hover:ring-primary transition-all"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/profile/${route.user_id}`);
+              }}
+            >
               <AvatarImage src={route.profiles?.avatar_url} />
               <AvatarFallback className="text-xs">
                 {route.profiles?.username?.[0]?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-semibold text-sm">{route.profiles?.username}</p>
+              <p 
+                className="font-semibold text-sm cursor-pointer hover:text-primary transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/profile/${route.user_id}`);
+                }}
+              >
+                {route.profiles?.username}
+              </p>
               <p className="text-xs text-muted-foreground">
                 {format(new Date(route.created_at), "dd MMM yyyy")}
               </p>
