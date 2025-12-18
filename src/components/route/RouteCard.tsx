@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getPinImage } from "@/lib/pinPlaceholders";
 
 interface RouteCardProps {
   route: any;
@@ -439,19 +440,11 @@ const RouteCard = ({ route }: RouteCardProps) => {
               >
                 <div className="flex gap-3">
                   <div className="flex-shrink-0 relative group/img">
-                    {pin.image_url ? (
-                      <img
-                        src={pin.image_url}
-                        alt={pin.place_name}
-                        className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
-                      />
-                    ) : (
-                      <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-muted via-muted/80 to-muted/50 ring-1 ring-border/50 flex items-center justify-center">
-                        <div className="w-10 h-10 rounded-full bg-background/60 backdrop-blur-sm flex items-center justify-center">
-                          <MapPin className="h-5 w-5 text-muted-foreground/70" />
-                        </div>
-                      </div>
-                    )}
+                    <img
+                      src={getPinImage(pin)}
+                      alt={pin.place_name}
+                      className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
+                    />
                     <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
                       <span className="text-xs font-bold">{index + 1}</span>
                     </div>

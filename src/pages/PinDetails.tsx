@@ -15,6 +15,7 @@ import { useState, useRef, useCallback } from "react";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 import { toast } from "sonner";
+import { getPinImage } from "@/lib/pinPlaceholders";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -616,26 +617,16 @@ const PinDetails = () => {
 
       <div className="p-4 space-y-4">
         {/* Pin Image */}
-        {pin.image_url ? (
-          <div
-            className="relative aspect-video rounded-lg overflow-hidden cursor-pointer"
-            onClick={() => openLightbox(allImages, 0)}
-          >
-            <img
-              src={pin.image_url}
-              alt={displayName || pin.address}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        ) : (
-          <div className="relative aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-muted via-muted/80 to-muted/50">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="p-4 rounded-full bg-background/60 backdrop-blur-sm">
-                <MapPin className="h-10 w-10 text-muted-foreground" />
-              </div>
-            </div>
-          </div>
-        )}
+        <div
+          className="relative aspect-video rounded-lg overflow-hidden cursor-pointer"
+          onClick={() => pin.image_url && openLightbox(allImages, 0)}
+        >
+          <img
+            src={getPinImage(pin)}
+            alt={displayName || pin.address}
+            className="w-full h-full object-cover"
+          />
+        </div>
 
         {/* Pin Name & Address - right below image */}
         <div className="space-y-1">

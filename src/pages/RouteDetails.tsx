@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Share2, Star, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
+import { getPinImage } from "@/lib/pinPlaceholders";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 import { FullscreenMapDialog } from "@/components/route/FullscreenMapDialog";
 import StarRating from "@/components/route/StarRating";
@@ -130,29 +131,25 @@ const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pin
             <div key={pin.id}>
               <div className="p-4">
                 <div className="flex gap-3">
-                  {pin.image_url ? (
-                    <div 
-                      className="flex-shrink-0 relative cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => {
+                  <div 
+                    className="flex-shrink-0 relative cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => {
+                      if (pin.image_url) {
                         const allImages = sortedPins.filter((p: any) => p.image_url).map((p: any) => p.image_url);
                         const idx = allImages.indexOf(pin.image_url);
                         lightbox.openLightbox(allImages, idx >= 0 ? idx : 0);
-                      }}
-                    >
-                      <img
-                        src={pin.image_url}
-                        alt={pin.place_name || pin.address}
-                        className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
-                      />
-                      <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
-                        <span className="text-xs font-bold">{index + 1}</span>
-                      </div>
+                      }
+                    }}
+                  >
+                    <img
+                      src={getPinImage(pin)}
+                      alt={pin.place_name || pin.address}
+                      className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
+                    />
+                    <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
+                      <span className="text-xs font-bold">{index + 1}</span>
                     </div>
-                  ) : (
-                    <div className="flex-shrink-0 w-20 h-20 bg-muted rounded-lg flex items-center justify-center ring-1 ring-border">
-                      <span className="text-xl font-bold">{index + 1}</span>
-                    </div>
-                  )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
