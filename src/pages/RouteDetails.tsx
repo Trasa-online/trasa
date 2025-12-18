@@ -299,8 +299,34 @@ const RouteDetails = () => {
       return data;
     },
     enabled: !!id && !!user,
-    refetchInterval: 15000, // Refresh every 15 seconds
+    refetchInterval: 30000, // Fallback polling every 30 seconds
   });
+
+  // Supabase Realtime subscription for instant like updates
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel(`route-likes-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'likes',
+          filter: `route_id=eq.${id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["route-likes", id] });
+          queryClient.invalidateQueries({ queryKey: ["route-card-likes", id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, queryClient]);
 
   const { data: comments } = useQuery({
     queryKey: ["route-comments", id],
