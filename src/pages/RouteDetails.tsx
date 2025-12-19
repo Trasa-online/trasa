@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Share2, Star, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
-import { getPinImage } from "@/lib/pinPlaceholders";
+import { getPinImage, getPinImagesForRoute } from "@/lib/pinPlaceholders";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 import { FullscreenMapDialog } from "@/components/route/FullscreenMapDialog";
 import StarRating from "@/components/route/StarRating";
@@ -108,6 +108,9 @@ const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pin
 
   const sortedPins = pins?.slice().sort((a: any, b: any) => a.pin_order - b.pin_order) || [];
   
+  // Get images for all pins ensuring no consecutive placeholders are the same
+  const pinImages = getPinImagesForRoute(sortedPins);
+  
   // Group notes by pin_id
   const notesByPinId = new Map<string, any[]>();
   pinNotes?.forEach((note: any) => {
@@ -142,7 +145,7 @@ const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pin
                     }}
                   >
                     <img
-                      src={getPinImage(pin)}
+                      src={pinImages[index]}
                       alt={pin.place_name || pin.address}
                       className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
                     />
