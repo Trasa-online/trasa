@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getPinImagesForRoute } from "@/lib/pinPlaceholders";
 
 interface CompactRouteCardProps {
   route: any;
@@ -22,8 +23,9 @@ const CompactRouteCard = ({ route }: CompactRouteCardProps) => {
   // Use the rating stored in the database
   const averageRating = route.rating || 0;
 
-  // Get first pin image as thumbnail
-  const thumbnailImage = sortedPins.find((pin: any) => pin.image_url)?.image_url;
+  // Get images for pins (first one is used as thumbnail)
+  const pinImages = getPinImagesForRoute(sortedPins);
+  const thumbnailImage = pinImages[0];
 
   // Check if route is saved by current user
   const { data: isSaved = false } = useQuery({

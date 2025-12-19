@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getPinImage } from "@/lib/pinPlaceholders";
+import { getPinImagesForRoute } from "@/lib/pinPlaceholders";
 
 interface RouteCardProps {
   route: any;
@@ -24,6 +24,9 @@ const RouteCard = ({ route }: RouteCardProps) => {
   
   // Sort pins by pin_order for consistent display
   const sortedPins = route.pins?.slice().sort((a: any, b: any) => a.pin_order - b.pin_order) || [];
+  
+  // Get images for all pins ensuring no consecutive placeholders are the same
+  const pinImages = getPinImagesForRoute(sortedPins);
   
   // Use the rating stored in the database (calculated from attraction pins only)
   const averageRating = route.rating || 0;
@@ -427,6 +430,8 @@ const RouteCard = ({ route }: RouteCardProps) => {
       {sortedPins.length > 0 && (
         <div className="divide-y divide-border/50">
           {(pinsExpanded ? sortedPins : sortedPins.slice(0, MAX_VISIBLE_PINS)).map((pin: any, index: number) => {
+            // Calculate the actual index for pinImages when pins are collapsed
+            const actualIndex = pinsExpanded ? index : index;
             const pinVisitorData = pinVisitorsMap[pin.id] || { count: 0, visitors: [], images: [], avgRating: 0 };
             const { count: visitorCount, visitors } = pinVisitorData;
             return (
@@ -441,7 +446,7 @@ const RouteCard = ({ route }: RouteCardProps) => {
                 <div className="flex gap-3">
                   <div className="flex-shrink-0 relative group/img">
                     <img
-                      src={getPinImage(pin)}
+                      src={pinImages[index]}
                       alt={pin.place_name}
                       className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
                     />
