@@ -19,6 +19,7 @@ import InteractiveRouteMap from "@/components/InteractiveRouteMap";
 import DraggablePinList from "@/components/route/DraggablePinList";
 import MapPinSelector from "@/components/route/MapPinSelector";
 import PinNotesSection from "@/components/route/PinNotesSection";
+import { findOriginalPinCreator } from "@/lib/pinDiscovery";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -174,6 +175,8 @@ const CreateRoute = () => {
 
         // Insert updated pins
         for (const pin of validPins) {
+          const originalCreatorId = await findOriginalPinCreator(pin.latitude, pin.longitude);
+          
           const { data: insertedPin } = await supabase.from("pins").insert({
             route_id: routeIdRef.current,
             place_name: pin.place_name,
@@ -187,6 +190,7 @@ const CreateRoute = () => {
             is_transport: false,
             latitude: pin.latitude,
             longitude: pin.longitude,
+            original_creator_id: originalCreatorId || user.id,
           }).select().single();
 
           // Save notes
@@ -221,6 +225,8 @@ const CreateRoute = () => {
         routeIdRef.current = route.id;
 
         for (const pin of validPins) {
+          const originalCreatorId = await findOriginalPinCreator(pin.latitude, pin.longitude);
+          
           const { data: insertedPin } = await supabase.from("pins").insert({
             route_id: route.id,
             place_name: pin.place_name,
@@ -234,6 +240,7 @@ const CreateRoute = () => {
             is_transport: false,
             latitude: pin.latitude,
             longitude: pin.longitude,
+            original_creator_id: originalCreatorId || user.id,
           }).select().single();
 
           if (pin.notes && pin.notes.length > 0 && insertedPin) {
@@ -595,6 +602,9 @@ const CreateRoute = () => {
         await supabase.from("pins").delete().eq("route_id", id);
 
         for (const pin of validPins) {
+          // Find original creator for this location
+          const originalCreatorId = await findOriginalPinCreator(pin.latitude, pin.longitude);
+          
           const { data: insertedPin, error: pinError } = await supabase.from("pins").insert({
             route_id: id,
             place_name: pin.place_name,
@@ -611,6 +621,7 @@ const CreateRoute = () => {
             mentioned_users: routeMentionedUsers,
             latitude: pin.latitude,
             longitude: pin.longitude,
+            original_creator_id: originalCreatorId || user.id,
           }).select().single();
           if (pinError) throw pinError;
 
@@ -655,6 +666,9 @@ const CreateRoute = () => {
         routeId = route.id;
 
         for (const pin of validPins) {
+          // Find original creator for this location
+          const originalCreatorId = await findOriginalPinCreator(pin.latitude, pin.longitude);
+          
           const { data: insertedPin, error: pinError } = await supabase.from("pins").insert({
             route_id: route.id,
             place_name: pin.place_name,
@@ -671,6 +685,7 @@ const CreateRoute = () => {
             mentioned_users: routeMentionedUsers,
             latitude: pin.latitude,
             longitude: pin.longitude,
+            original_creator_id: originalCreatorId || user.id,
           }).select().single();
           if (pinError) throw pinError;
 
