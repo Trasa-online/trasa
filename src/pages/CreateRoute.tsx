@@ -120,6 +120,20 @@ const CreateRoute = () => {
     setShowPinsList(false);
     setShowCustomTagInput(false);
     setRouteRating(0);
+    routeIdRef.current = null; // Reset so new draft is created
+  };
+
+  // Discard current draft and start fresh
+  const discardDraft = async () => {
+    if (routeIdRef.current && user) {
+      // Delete the draft from database
+      await supabase.from("routes").delete().eq("id", routeIdRef.current).eq("user_id", user.id);
+    }
+    resetFormState();
+    toast({
+      title: "Wersja robocza została usunięta",
+      description: "Możesz rozpocząć nową trasę",
+    });
   };
 
   const confirmExit = () => {
@@ -259,10 +273,12 @@ const CreateRoute = () => {
     };
   }, [step, hasAddedPins, title, autoSaveRoute]);
 
-  // Beforeunload event - warn user about unsaved changes
+  // Beforeunload event - warn user and save draft
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasAddedPins && step >= 2) {
+        // Try to save draft before leaving
+        autoSaveRoute();
         e.preventDefault();
         e.returnValue = "Masz niezapisane zmiany. Czy na pewno chcesz opuścić stronę?";
         return e.returnValue;
@@ -271,7 +287,19 @@ const CreateRoute = () => {
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [hasAddedPins, step]);
+  }, [hasAddedPins, step, autoSaveRoute]);
+
+  // Save draft when user switches tabs or minimizes browser
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && hasAddedPins && step >= 2 && title.trim()) {
+        autoSaveRoute();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [hasAddedPins, step, title, autoSaveRoute]);
 
   // Update routeIdRef when editing existing route
   useEffect(() => {
@@ -286,6 +314,7 @@ const CreateRoute = () => {
     }
   }, [user, loading, navigate]);
 
+  // Fetch existing route when editing
   const { data: existingRoute } = useQuery({
     queryKey: ["route", id],
     queryFn: async () => {
@@ -313,6 +342,80 @@ const CreateRoute = () => {
     },
     enabled: !!id && !!user,
   });
+
+  // Load user's draft when entering /create (not editing)
+  const { data: userDraft } = useQuery({
+    queryKey: ["user-draft", user?.id],
+    queryFn: async () => {
+      if (!user || id) return null; // Don't load if editing existing route
+      
+      const { data, error } = await supabase
+        .from("routes")
+        .select("*, pins (*)")
+        .eq("user_id", user.id)
+        .eq("status", "draft")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) return null;
+      if (!data.pins || data.pins.length === 0) return null;
+
+      // Fetch pin notes
+      const pinIds = data.pins.map((p: any) => p.id);
+      let pinNotes: any[] = [];
+      if (pinIds.length > 0) {
+        const { data: notes } = await supabase
+          .from("route_notes")
+          .select("*")
+          .in("pin_id", pinIds);
+        pinNotes = notes || [];
+      }
+
+      return { ...data, pin_notes: pinNotes };
+    },
+    enabled: !!user && !id,
+  });
+
+  // Load draft data when available
+  useEffect(() => {
+    if (userDraft && !id) {
+      routeIdRef.current = userDraft.id;
+      setTitle(userDraft.title);
+      setDescription(userDraft.description || "");
+      setRouteDescription(userDraft.description || "");
+      setTripType(userDraft.trip_type || "completed");
+      setRouteRating(userDraft.rating || 0);
+      
+      if (userDraft.pins?.length > 0) {
+        const pinNotes = userDraft.pin_notes || [];
+        setPins(
+          userDraft.pins
+            .sort((a: any, b: any) => a.pin_order - b.pin_order)
+            .map((pin: any) => ({
+              ...pin,
+              images: pin.images || [],
+              rating: typeof pin.rating === 'number' ? pin.rating : 0,
+              notes: pinNotes
+                .filter((n: any) => n.pin_id === pin.id)
+                .sort((a: any, b: any) => a.note_order - b.note_order)
+                .map((n: any) => ({
+                  id: n.id,
+                  text: n.text || "",
+                  imageUrl: n.image_url,
+                  note_order: n.note_order,
+                })),
+            }))
+        );
+        setShowPinsList(true);
+        setStep(2);
+        toast({
+          title: "Wersja robocza została wczytana",
+          description: "Kontynuujesz edycję ostatniej trasy",
+        });
+      }
+    }
+  }, [userDraft, id, toast]);
 
   useEffect(() => {
     if (existingRoute) {
@@ -636,12 +739,20 @@ const CreateRoute = () => {
           {step === 1 ? "Utwórz nową trasę" : step === 2 ? (showPinsList ? "Lista pinezek" : title || "Edytuj pinezkę") : "Podsumowanie trasy"}
         </h1>
         {step >= 2 && hasAddedPins && (
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground text-right">
             {autoSaving ? (
               <span className="animate-pulse">Zapisywanie...</span>
             ) : lastAutoSave ? (
               <span>Zapisano {lastAutoSave.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}</span>
             ) : null}
+            {routeIdRef.current && !id && (
+              <button
+                onClick={discardDraft}
+                className="block text-destructive hover:underline mt-0.5"
+              >
+                Porzuć roboczą
+              </button>
+            )}
           </div>
         )}
       </div>
