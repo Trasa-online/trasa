@@ -289,6 +289,7 @@ export type Database = {
           longitude: number | null
           mentioned_users: string[] | null
           name_translations: Json | null
+          original_creator_id: string | null
           pin_order: number
           place_name: string
           rating: number | null
@@ -309,6 +310,7 @@ export type Database = {
           longitude?: number | null
           mentioned_users?: string[] | null
           name_translations?: Json | null
+          original_creator_id?: string | null
           pin_order: number
           place_name: string
           rating?: number | null
@@ -329,6 +331,7 @@ export type Database = {
           longitude?: number | null
           mentioned_users?: string[] | null
           name_translations?: Json | null
+          original_creator_id?: string | null
           pin_order?: number
           place_name?: string
           rating?: number | null
@@ -338,6 +341,20 @@ export type Database = {
           transport_type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "pins_original_creator_id_fkey"
+            columns: ["original_creator_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pins_original_creator_id_fkey"
+            columns: ["original_creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pins_route_id_fkey"
             columns: ["route_id"]
@@ -621,6 +638,10 @@ export type Database = {
       }
     }
     Functions: {
+      find_original_pin_creator: {
+        Args: { p_latitude: number; p_longitude: number }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

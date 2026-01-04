@@ -310,13 +310,13 @@ const PinDetails = () => {
   const touchEndX = useRef<number | null>(null);
   const minSwipeDistance = 50;
 
-  // Fetch pin data
+  // Fetch pin data with original creator
   const { data: pin, isLoading: pinLoading } = useQuery({
     queryKey: ["pin-details", pinId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pins")
-        .select("*, routes!inner(id, title, user_id, profiles:user_id(username, avatar_url))")
+        .select("*, routes!inner(id, title, user_id, profiles:user_id(id, username, avatar_url)), original_creator:original_creator_id(id, username, avatar_url)")
         .eq("id", pinId)
         .maybeSingle();
 
@@ -641,6 +641,24 @@ const PinDetails = () => {
             <p className="text-xs text-muted-foreground">
               Dodano: {format(new Date(pin.created_at), "d MMM yyyy", { locale: pl })}
             </p>
+          )}
+          
+          {/* Discovered by - show original creator if different from route author */}
+          {pin.original_creator && pin.original_creator.id !== pin.routes?.user_id && (
+            <Link
+              to={`/profile/${pin.original_creator.id}`}
+              className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              <span>Odkryte przez</span>
+              <Avatar className="h-4 w-4">
+                <AvatarImage src={pin.original_creator.avatar_url || ""} />
+                <AvatarFallback className="text-[8px]">
+                  {pin.original_creator.username?.charAt(0).toUpperCase() || "?"}
+                </AvatarFallback>
+              </Avatar>
+              <span className="font-medium">{pin.original_creator.username}</span>
+            </Link>
           )}
         </div>
 
