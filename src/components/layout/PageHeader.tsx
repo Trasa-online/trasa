@@ -62,7 +62,7 @@ export const PageHeader = ({
               variant="ghost"
               size="icon"
               onClick={onQuickNoteClick}
-              className="h-9 w-9"
+              className="h-9 w-9 bg-muted"
             >
               <MapPinPlus className="h-5 w-5" />
             </Button>
