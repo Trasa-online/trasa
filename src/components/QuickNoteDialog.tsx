@@ -340,7 +340,7 @@ export const QuickNoteDialog = ({ open, onOpenChange }: QuickNoteDialogProps) =>
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-none w-screen h-screen p-0 m-0 rounded-none border-none sm:max-w-none">
+      <DialogContent className="max-w-none w-screen h-screen max-h-screen p-0 m-0 rounded-none border-none sm:max-w-none sm:rounded-none inset-0 translate-x-0 translate-y-0 left-0 top-0 [&>button]:hidden">
         <div className="relative w-full h-full flex flex-col overflow-hidden">
           {/* Header */}
           <div className="bg-background border-b border-border p-4 z-10 flex-shrink-0">
