@@ -16,6 +16,7 @@ import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 import { toast } from "sonner";
 import { getPinImage } from "@/lib/pinPlaceholders";
+import RouteMap from "@/components/RouteMap";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -627,6 +628,14 @@ const PinDetails = () => {
             className="w-full h-full object-cover"
           />
         </div>
+
+        {/* Pin Map Preview */}
+        {pin.latitude && pin.longitude && (
+          <RouteMap
+            pins={[{ latitude: pin.latitude, longitude: pin.longitude, place_name: displayName || pin.address }]}
+            className="h-40"
+          />
+        )}
 
         {/* Pin Name & Address - right below image */}
         <div className="space-y-1">
