@@ -1258,7 +1258,7 @@ const CreateRoute = () => {
                       setShowPinsList(true);
                     }}
                   >
-                    Powrót do listy pinezek
+                    Przejdź do listy pinezek
                   </Button>
                 </div>
               </>
