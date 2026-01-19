@@ -728,30 +728,6 @@ const PinDetails = () => {
               Dodano: {format(new Date(pin.created_at), "d MMM yyyy", { locale: pl })}
             </p>
           )}
-          
-          {/* Discovery info - show for original discoverer or other users */}
-          {pin.original_creator?.id === user?.id && (
-            <div className="inline-flex items-center gap-1.5 text-xs text-emerald-600">
-              <Trophy className="h-3.5 w-3.5" />
-              <span className="font-medium">Twoje odkrycie!</span>
-            </div>
-          )}
-          {pin.original_creator && pin.original_creator.id !== user?.id && pin.original_creator.id !== pin.routes?.user_id && (
-            <Link
-              to={`/profile/${pin.original_creator.id}`}
-              className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
-            >
-              <Eye className="h-3.5 w-3.5" />
-              <span>Odkryte przez</span>
-              <Avatar className="h-4 w-4">
-                <AvatarImage src={pin.original_creator.avatar_url || ""} />
-                <AvatarFallback className="text-[8px]">
-                  {pin.original_creator.username?.charAt(0).toUpperCase() || "?"}
-                </AvatarFallback>
-              </Avatar>
-              <span className="font-medium">{pin.original_creator.username}</span>
-            </Link>
-          )}
         </div>
 
         {/* Pin Map Preview - below address, reduced size */}
