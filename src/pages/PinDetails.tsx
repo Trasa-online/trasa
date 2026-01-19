@@ -788,9 +788,6 @@ const PinDetails = () => {
               <p className="text-sm text-muted-foreground">
                 Nikt jeszcze nie dodał tego miejsca do swojej trasy
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Bądź pierwszy który je odkryje!
-              </p>
             </div>
           ) : (
             <div className="space-y-3">
