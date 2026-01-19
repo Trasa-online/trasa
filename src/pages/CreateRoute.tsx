@@ -941,7 +941,7 @@ const CreateRoute = () => {
                       onClick={() => setShowQuickMapSelector(true)}
                     >
                       <MapPinPlus className="h-4 w-4 mr-2" />
-                      Z mapy
+                      Szybkie dodanie
                     </Button>
                   </div>
                 </div>
