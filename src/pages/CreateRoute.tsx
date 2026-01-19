@@ -81,6 +81,11 @@ const CreateRoute = () => {
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const routeIdRef = useRef<string | null>(id || null);
+  
+  // Draft dialog states
+  const [showDraftDialog, setShowDraftDialog] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState<any>(null);
+  const [draftDecisionMade, setDraftDecisionMade] = useState(false);
 
   // Check if user has added any pins with data
   const hasAddedPins = pins.some(p => p.address && p.address.trim() !== "");
@@ -386,45 +391,78 @@ const CreateRoute = () => {
     enabled: !!user && !id,
   });
 
-  // Load draft data when available
+  // Show draft dialog when draft is available (instead of auto-loading)
   useEffect(() => {
-    if (userDraft && !id) {
-      routeIdRef.current = userDraft.id;
-      setTitle(userDraft.title);
-      setDescription(userDraft.description || "");
-      setRouteDescription(userDraft.description || "");
-      setTripType(userDraft.trip_type || "completed");
-      setRouteRating(userDraft.rating || 0);
-      
-      if (userDraft.pins?.length > 0) {
-        const pinNotes = userDraft.pin_notes || [];
-        setPins(
-          userDraft.pins
-            .sort((a: any, b: any) => a.pin_order - b.pin_order)
-            .map((pin: any) => ({
-              ...pin,
-              images: pin.images || [],
-              rating: typeof pin.rating === 'number' ? pin.rating : 0,
-              notes: pinNotes
-                .filter((n: any) => n.pin_id === pin.id)
-                .sort((a: any, b: any) => a.note_order - b.note_order)
-                .map((n: any) => ({
-                  id: n.id,
-                  text: n.text || "",
-                  imageUrl: n.image_url,
-                  note_order: n.note_order,
-                })),
-            }))
-        );
-        setShowPinsList(true);
-        setStep(2);
-        toast({
-          title: "Wersja robocza została wczytana",
-          description: "Kontynuujesz edycję ostatniej trasy",
-        });
-      }
+    if (userDraft && !id && !draftDecisionMade) {
+      setPendingDraft(userDraft);
+      setShowDraftDialog(true);
     }
-  }, [userDraft, id, toast]);
+  }, [userDraft, id, draftDecisionMade]);
+
+  // Function to load the pending draft
+  const loadDraft = () => {
+    if (!pendingDraft) return;
+    
+    routeIdRef.current = pendingDraft.id;
+    setTitle(pendingDraft.title);
+    setDescription(pendingDraft.description || "");
+    setRouteDescription(pendingDraft.description || "");
+    setTripType(pendingDraft.trip_type || "completed");
+    setRouteRating(pendingDraft.rating || 0);
+    
+    if (pendingDraft.pins?.length > 0) {
+      const pinNotes = pendingDraft.pin_notes || [];
+      setPins(
+        pendingDraft.pins
+          .sort((a: any, b: any) => a.pin_order - b.pin_order)
+          .map((pin: any) => ({
+            ...pin,
+            images: pin.images || [],
+            rating: typeof pin.rating === 'number' ? pin.rating : 0,
+            notes: pinNotes
+              .filter((n: any) => n.pin_id === pin.id)
+              .sort((a: any, b: any) => a.note_order - b.note_order)
+              .map((n: any) => ({
+                id: n.id,
+                text: n.text || "",
+                imageUrl: n.image_url,
+                note_order: n.note_order,
+              })),
+          }))
+      );
+      setShowPinsList(true);
+      setStep(2);
+    }
+    
+    setDraftDecisionMade(true);
+    setShowDraftDialog(false);
+    setPendingDraft(null);
+    
+    toast({
+      title: "Wersja robocza została wczytana",
+      description: "Kontynuujesz edycję ostatniej trasy",
+    });
+  };
+
+  // Function to start a new route (delete existing draft)
+  const startNewRoute = async () => {
+    if (pendingDraft && user) {
+      // Delete the draft from database
+      await supabase.from("pins").delete().eq("route_id", pendingDraft.id);
+      await supabase.from("route_notes").delete().eq("route_id", pendingDraft.id);
+      await supabase.from("routes").delete().eq("id", pendingDraft.id).eq("user_id", user.id);
+    }
+    
+    resetFormState();
+    setDraftDecisionMade(true);
+    setShowDraftDialog(false);
+    setPendingDraft(null);
+    
+    toast({
+      title: "Nowa trasa",
+      description: "Możesz rozpocząć tworzenie nowej trasy",
+    });
+  };
 
   useEffect(() => {
     if (existingRoute) {
@@ -1432,6 +1470,49 @@ const CreateRoute = () => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Wyjdź bez zapisywania
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Draft Found Dialog */}
+      <AlertDialog open={showDraftDialog} onOpenChange={setShowDraftDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Znaleziono wersję roboczą</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Masz zapisaną wersję roboczą trasy:</p>
+                {pendingDraft && (
+                  <div className="bg-muted p-3 rounded-lg">
+                    <p className="font-medium text-foreground">{pendingDraft.title || "Bez tytułu"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {pendingDraft.pins?.length || 0} {pendingDraft.pins?.length === 1 ? "pinezka" : "pinezek"}
+                    </p>
+                  </div>
+                )}
+                <p>Czy chcesz kontynuować edycję, czy zacząć nową trasę?</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                loadDraft();
+              }}
+              className="bg-foreground text-background hover:bg-foreground/90"
+            >
+              Kontynuuj wersję roboczą
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                startNewRoute();
+              }}
+              className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+            >
+              Zacznij nową trasę
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
