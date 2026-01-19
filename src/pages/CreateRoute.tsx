@@ -1282,16 +1282,31 @@ const CreateRoute = () => {
               />
 
               {/* Pins list */}
-              <DraggablePinList
-                pins={pins}
-                onReorder={setPins}
-                onPinNotesChange={(pinIndex, notes) => updatePin(pinIndex, "notes", notes)}
-                onPinNameChange={(pinIndex, name) => updatePin(pinIndex, "place_name", name)}
-                showRemoveButton={false}
-                showNotesEditor={true}
-                showNameEditor={true}
-                compact={false}
-              />
+              <div className="space-y-3">
+                <DraggablePinList
+                  pins={pins}
+                  onReorder={setPins}
+                  onPinNotesChange={(pinIndex, notes) => updatePin(pinIndex, "notes", notes)}
+                  onPinNameChange={(pinIndex, name) => updatePin(pinIndex, "place_name", name)}
+                  showRemoveButton={false}
+                  showNotesEditor={true}
+                  showNameEditor={true}
+                  compact={false}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    addPin();
+                    setStep(2);
+                    setShowPinsList(false);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Dodaj pinezkę
+                </Button>
+              </div>
 
               {/* Route description */}
               <div className="space-y-2">
