@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -19,7 +19,7 @@ import InteractiveRouteMap from "@/components/InteractiveRouteMap";
 import DraggablePinList from "@/components/route/DraggablePinList";
 import MapPinSelector from "@/components/route/MapPinSelector";
 import PinNotesSection from "@/components/route/PinNotesSection";
-import { findOriginalPinCreator } from "@/lib/pinDiscovery";
+import { findOriginalPinCreator, checkPinDiscoveryInfo } from "@/lib/pinDiscovery";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +51,8 @@ interface Pin {
   latitude?: number;
   longitude?: number;
   notes: PinNote[];
+  original_creator_id?: string;
+  original_creator_username?: string;
 }
 
 const CreateRoute = () => {
@@ -909,18 +911,24 @@ const CreateRoute = () => {
                       <div className="flex-1">
                         <AddressAutocomplete
                           value={pins[currentPinIndex]?.address || ""}
-                          onChange={(value, coordinates, fullAddress, placeName) => {
+                          onChange={async (value, coordinates, fullAddress, placeName) => {
+                            // Check for original creator
+                            let discoveryInfo: { originalCreatorId: string | null; originalCreatorUsername: string | null } | null = null;
+                            if (coordinates?.latitude && coordinates?.longitude) {
+                              discoveryInfo = await checkPinDiscoveryInfo(coordinates.latitude, coordinates.longitude);
+                            }
+                            
                             setPins(prevPins => {
                               const newPins = [...prevPins];
                               if (newPins[currentPinIndex]) {
-                                // Address field gets the full combined address (with place name included)
-                                // Place name field gets the POI name if available, otherwise the full address
                                 newPins[currentPinIndex] = {
                                   ...newPins[currentPinIndex],
                                   address: fullAddress || value,
                                   place_name: placeName || fullAddress || value,
                                   latitude: coordinates?.latitude,
                                   longitude: coordinates?.longitude,
+                                  original_creator_id: discoveryInfo?.originalCreatorId || undefined,
+                                  original_creator_username: discoveryInfo?.originalCreatorUsername || undefined,
                                 };
                               }
                               return newPins;
@@ -931,7 +939,10 @@ const CreateRoute = () => {
                       </div>
                       <MapPinSelector
                         existingPins={pins.filter(p => p.latitude && p.longitude)}
-                        onPinSelect={(pinData) => {
+                        onPinSelect={async (pinData) => {
+                          // Check for original creator
+                          const discoveryInfo = await checkPinDiscoveryInfo(pinData.latitude, pinData.longitude);
+                          
                           setPins(prevPins => {
                             const newPins = [...prevPins];
                             newPins[currentPinIndex] = {
@@ -940,6 +951,8 @@ const CreateRoute = () => {
                               place_name: pinData.place_name || pinData.address,
                               latitude: pinData.latitude,
                               longitude: pinData.longitude,
+                              original_creator_id: discoveryInfo?.originalCreatorId || undefined,
+                              original_creator_username: discoveryInfo?.originalCreatorUsername || undefined,
                             };
                             return newPins;
                           });
@@ -947,6 +960,23 @@ const CreateRoute = () => {
                         }}
                       />
                     </div>
+                    
+                    {/* Discovery info */}
+                    {pins[currentPinIndex]?.original_creator_username && 
+                     pins[currentPinIndex]?.original_creator_id !== user?.id && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg p-2 mt-2">
+                        <Sparkles className="h-4 w-4 text-yellow-500" />
+                        <span>
+                          Odkryte przez{" "}
+                          <Link 
+                            to={`/profile/${pins[currentPinIndex]?.original_creator_id}`} 
+                            className="font-medium text-primary hover:underline"
+                          >
+                            @{pins[currentPinIndex]?.original_creator_username}
+                          </Link>
+                        </span>
+                      </div>
+                    )}
                   </div>
 
 
