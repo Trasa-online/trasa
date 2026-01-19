@@ -72,5 +72,5 @@ export const MOCK_BUSINESS_DATA: BusinessData = {
   reviews_count: 127
 };
 
-// ID of the pin we'll use for testing premium view
-export const MOCK_PREMIUM_PIN_ID = "942fe44d-2cb5-430e-bba5-407421323fa4";
+// ID of the pin we'll use for testing premium view (Stołówka Gdańska)
+export const MOCK_PREMIUM_PIN_ID = "e59e1845-305c-4385-86a6-1f3e00b5e5bd";
