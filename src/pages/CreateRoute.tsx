@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import InteractiveRouteMap from "@/components/InteractiveRouteMap";
 import DraggablePinList from "@/components/route/DraggablePinList";
 import MapPinSelector from "@/components/route/MapPinSelector";
 import PinNotesSection from "@/components/route/PinNotesSection";
+import RouteSelectionDialog from "@/components/route/RouteSelectionDialog";
 import { findOriginalPinCreator, checkPinDiscoveryInfo } from "@/lib/pinDiscovery";
 import {
   AlertDialog,
@@ -57,6 +58,7 @@ interface Pin {
 
 const CreateRoute = () => {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -76,6 +78,7 @@ const CreateRoute = () => {
   const [showCustomTagInput, setShowCustomTagInput] = useState(false);
   const [showPinsList, setShowPinsList] = useState(false);
   const [showQuickMapSelector, setShowQuickMapSelector] = useState(false);
+  const [showRouteSelectionDialog, setShowRouteSelectionDialog] = useState(false);
   
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
@@ -451,8 +454,15 @@ const CreateRoute = () => {
         setShowPinsList(true);
       }
       setStep(2);
+      
+      // If quickAdd param is present, open the map selector immediately
+      if (searchParams.get("quickAdd") === "true") {
+        setShowQuickMapSelector(true);
+        // Clear the query param
+        setSearchParams({}, { replace: true });
+      }
     }
-  }, [existingRoute]);
+  }, [existingRoute, searchParams, setSearchParams]);
 
   useEffect(() => {
     const validPins = pins.filter(p => p.rating > 0);
@@ -852,12 +862,25 @@ const CreateRoute = () => {
                   toast({ variant: "destructive", title: "Nazwa trasy jest wymagana" });
                   return;
                 }
-                setShowQuickMapSelector(true);
+                setShowRouteSelectionDialog(true);
               }}
             >
               <MapPinPlus className="h-4 w-4 mr-2" />
               Szybkie dodanie
             </Button>
+
+            <RouteSelectionDialog
+              open={showRouteSelectionDialog}
+              onOpenChange={setShowRouteSelectionDialog}
+              onSelectNewRoute={() => {
+                setShowRouteSelectionDialog(false);
+                setShowQuickMapSelector(true);
+              }}
+              onSelectExistingRoute={(routeId) => {
+                setShowRouteSelectionDialog(false);
+                navigate(`/edit/${routeId}?quickAdd=true`);
+              }}
+            />
           </div>
         ) : step === 2 ? (
           <>
