@@ -5,12 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Heart, MessageCircle, UserPlus, MapPin, Star, RefreshCw } from "lucide-react";
+import { Heart, MessageCircle, UserPlus, MapPin, Star, RefreshCw, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-type NotificationType = "like" | "comment" | "follower" | "new_route" | "mention" | "pin_visit" | "route_updated" | "visit_comment";
+type NotificationType = "like" | "comment" | "follower" | "new_route" | "mention" | "pin_visit" | "route_updated" | "visit_comment" | "discovery_used";
 
 interface Notification {
   id: string;
@@ -159,6 +159,8 @@ const Notifications = () => {
         return <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />;
       case "visit_comment":
         return <MessageCircle className="h-5 w-5 text-blue-500" />;
+      case "discovery_used":
+        return <Sparkles className="h-5 w-5 text-amber-500" />;
     }
   };
 
@@ -216,6 +218,13 @@ const Notifications = () => {
         return (
           <>
             <span className="font-semibold">{notification.actor.username}</span> skomentował Twoją ocenę
+          </>
+        );
+      case "discovery_used":
+        return (
+          <>
+            <span className="font-semibold">{notification.actor.username}</span> użył Twojego odkrytego miejsca w trasie{" "}
+            <span className="font-semibold">{notification.route?.title}</span>
           </>
         );
     }
