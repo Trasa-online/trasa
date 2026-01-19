@@ -82,11 +82,6 @@ const CreateRoute = () => {
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const routeIdRef = useRef<string | null>(id || null);
-  
-  // Draft dialog states
-  const [showDraftDialog, setShowDraftDialog] = useState(false);
-  const [pendingDraft, setPendingDraft] = useState<any>(null);
-  const [draftDecisionMade, setDraftDecisionMade] = useState(false);
 
   // Check if user has added any pins with data
   const hasAddedPins = pins.some(p => p.address && p.address.trim() !== "");
@@ -392,78 +387,41 @@ const CreateRoute = () => {
     enabled: !!user && !id,
   });
 
-  // Show draft dialog when draft is available (instead of auto-loading)
+  // Auto-load draft when available (no dialog)
   useEffect(() => {
-    if (userDraft && !id && !draftDecisionMade) {
-      setPendingDraft(userDraft);
-      setShowDraftDialog(true);
+    if (userDraft && !id) {
+      routeIdRef.current = userDraft.id;
+      setTitle(userDraft.title);
+      setDescription(userDraft.description || "");
+      setRouteDescription(userDraft.description || "");
+      setTripType(userDraft.trip_type || "completed");
+      setRouteRating(userDraft.rating || 0);
+      
+      if (userDraft.pins?.length > 0) {
+        const pinNotes = userDraft.pin_notes || [];
+        setPins(
+          userDraft.pins
+            .sort((a: any, b: any) => a.pin_order - b.pin_order)
+            .map((pin: any) => ({
+              ...pin,
+              images: pin.images || [],
+              rating: typeof pin.rating === 'number' ? pin.rating : 0,
+              notes: pinNotes
+                .filter((n: any) => n.pin_id === pin.id)
+                .sort((a: any, b: any) => a.note_order - b.note_order)
+                .map((n: any) => ({
+                  id: n.id,
+                  text: n.text || "",
+                  imageUrl: n.image_url,
+                  note_order: n.note_order,
+                })),
+            }))
+        );
+        setShowPinsList(true);
+        setStep(2);
+      }
     }
-  }, [userDraft, id, draftDecisionMade]);
-
-  // Function to load the pending draft
-  const loadDraft = () => {
-    if (!pendingDraft) return;
-    
-    routeIdRef.current = pendingDraft.id;
-    setTitle(pendingDraft.title);
-    setDescription(pendingDraft.description || "");
-    setRouteDescription(pendingDraft.description || "");
-    setTripType(pendingDraft.trip_type || "completed");
-    setRouteRating(pendingDraft.rating || 0);
-    
-    if (pendingDraft.pins?.length > 0) {
-      const pinNotes = pendingDraft.pin_notes || [];
-      setPins(
-        pendingDraft.pins
-          .sort((a: any, b: any) => a.pin_order - b.pin_order)
-          .map((pin: any) => ({
-            ...pin,
-            images: pin.images || [],
-            rating: typeof pin.rating === 'number' ? pin.rating : 0,
-            notes: pinNotes
-              .filter((n: any) => n.pin_id === pin.id)
-              .sort((a: any, b: any) => a.note_order - b.note_order)
-              .map((n: any) => ({
-                id: n.id,
-                text: n.text || "",
-                imageUrl: n.image_url,
-                note_order: n.note_order,
-              })),
-          }))
-      );
-      setShowPinsList(true);
-      setStep(2);
-    }
-    
-    setDraftDecisionMade(true);
-    setShowDraftDialog(false);
-    setPendingDraft(null);
-    
-    toast({
-      title: "Wersja robocza została wczytana",
-      description: "Kontynuujesz edycję ostatniej trasy",
-    });
-  };
-
-  // Function to start a new route (delete existing draft)
-  const startNewRoute = async () => {
-    if (pendingDraft && user) {
-      // Delete the draft from database
-      await supabase.from("pins").delete().eq("route_id", pendingDraft.id);
-      await supabase.from("route_notes").delete().eq("route_id", pendingDraft.id);
-      await supabase.from("routes").delete().eq("id", pendingDraft.id).eq("user_id", user.id);
-    }
-    
-    resetFormState();
-    setDraftDecisionMade(true);
-    setShowDraftDialog(false);
-    setPendingDraft(null);
-    
-    toast({
-      title: "Nowa trasa",
-      description: "Możesz rozpocząć tworzenie nowej trasy",
-    });
-  };
+  }, [userDraft, id]);
 
   useEffect(() => {
     if (existingRoute) {
@@ -885,19 +843,36 @@ const CreateRoute = () => {
               </ul>
             </div>
 
-            <Button
-              variant="default"
-              className="w-full"
-              onClick={() => {
-                if (!title.trim()) {
-                  toast({ variant: "destructive", title: "Nazwa trasy jest wymagana" });
-                  return;
-                }
-                setStep(2);
-              }}
-            >
-              Kontynuj
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="default"
+                className="flex-1"
+                onClick={() => {
+                  if (!title.trim()) {
+                    toast({ variant: "destructive", title: "Nazwa trasy jest wymagana" });
+                    return;
+                  }
+                  setStep(2);
+                }}
+              >
+                Kontynuj
+              </Button>
+              <Button
+                type="button"
+                variant="default"
+                className="bg-muted hover:bg-muted/80 text-foreground"
+                onClick={() => {
+                  if (!title.trim()) {
+                    toast({ variant: "destructive", title: "Nazwa trasy jest wymagana" });
+                    return;
+                  }
+                  setShowQuickMapSelector(true);
+                }}
+              >
+                <MapPinPlus className="h-4 w-4 mr-2" />
+                Szybkie dodanie
+              </Button>
+            </div>
           </div>
         ) : step === 2 ? (
           <>
@@ -921,29 +896,18 @@ const CreateRoute = () => {
                     showNotesEditor={true}
                     compact={true}
                   />
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        addPin();
-                        setShowPinsList(false);
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Dodaj pinezkę
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="default"
-                      className="bg-muted hover:bg-muted/80 text-foreground"
-                      onClick={() => setShowQuickMapSelector(true)}
-                    >
-                      <MapPinPlus className="h-4 w-4 mr-2" />
-                      Szybkie dodanie
-                    </Button>
-                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      addPin();
+                      setShowPinsList(false);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Dodaj pinezkę
+                  </Button>
                 </div>
 
                 <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
@@ -1528,48 +1492,6 @@ const CreateRoute = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Draft Found Dialog */}
-      <AlertDialog open={showDraftDialog} onOpenChange={setShowDraftDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Znaleziono wersję roboczą</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2">
-                <p>Masz zapisaną wersję roboczą trasy:</p>
-                {pendingDraft && (
-                  <div className="bg-muted p-3 rounded-lg">
-                    <p className="font-medium text-foreground">{pendingDraft.title || "Bez tytułu"}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {pendingDraft.pins?.length || 0} {pendingDraft.pins?.length === 1 ? "pinezka" : "pinezek"}
-                    </p>
-                  </div>
-                )}
-                <p>Czy chcesz kontynuować edycję, czy zacząć nową trasę?</p>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                loadDraft();
-              }}
-              className="bg-foreground text-background hover:bg-foreground/90"
-            >
-              Kontynuuj wersję roboczą
-            </AlertDialogAction>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                startNewRoute();
-              }}
-              className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            >
-              Zacznij nową trasę
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Quick Map Selector Fullscreen Overlay */}
       {showQuickMapSelector && (
