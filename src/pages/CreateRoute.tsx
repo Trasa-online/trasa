@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, MapPinPlus } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -75,6 +75,7 @@ const CreateRoute = () => {
   const [routeRating, setRouteRating] = useState(0);
   const [showCustomTagInput, setShowCustomTagInput] = useState(false);
   const [showPinsList, setShowPinsList] = useState(false);
+  const [showQuickMapSelector, setShowQuickMapSelector] = useState(false);
   
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
@@ -596,6 +597,47 @@ const CreateRoute = () => {
     });
   };
 
+  // Handler for quick pin add from map
+  const handleQuickPinAdd = async (pinData: { latitude: number; longitude: number; place_name: string; address: string }) => {
+    const discoveryInfo = await checkPinDiscoveryInfo(pinData.latitude, pinData.longitude);
+    
+    const newPin: Pin = {
+      place_name: pinData.place_name || pinData.address,
+      address: pinData.address || pinData.place_name,
+      description: "",
+      image_url: "",
+      images: [],
+      rating: 0,
+      pin_order: pins.filter(p => p.address).length,
+      tags: [],
+      latitude: pinData.latitude,
+      longitude: pinData.longitude,
+      notes: [],
+      original_creator_id: discoveryInfo?.originalCreatorId || undefined,
+      original_creator_username: discoveryInfo?.originalCreatorUsername || undefined,
+    };
+    
+    // Add to pins list
+    setPins(prevPins => {
+      // If there's an empty pin at the end, replace it
+      const lastPin = prevPins[prevPins.length - 1];
+      if (!lastPin.address) {
+        const newPins = [...prevPins];
+        newPins[newPins.length - 1] = newPin;
+        return newPins;
+      }
+      return [...prevPins, newPin];
+    });
+    
+    setShowQuickMapSelector(false);
+    setShowPinsList(true);
+    
+    toast({
+      title: "Pin dodany",
+      description: `Dodano: ${pinData.place_name || pinData.address}`,
+    });
+  };
+
   const saveRoute = async (status: "draft" | "published") => {
     if (!user || !title.trim()) {
       toast({ variant: "destructive", title: "Nazwa trasy jest wymagana" });
@@ -879,18 +921,29 @@ const CreateRoute = () => {
                     showNotesEditor={true}
                     compact={true}
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      addPin();
-                      setShowPinsList(false);
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Dodaj pinezkę
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        addPin();
+                        setShowPinsList(false);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Dodaj pinezkę
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="default"
+                      className="bg-muted hover:bg-muted/80 text-foreground"
+                      onClick={() => setShowQuickMapSelector(true)}
+                    >
+                      <MapPinPlus className="h-4 w-4 mr-2" />
+                      Z mapy
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
@@ -1517,6 +1570,28 @@ const CreateRoute = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Quick Map Selector Fullscreen Overlay */}
+      {showQuickMapSelector && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+          <div className="bg-background border-b border-border p-4 flex items-center gap-3">
+            <button 
+              onClick={() => setShowQuickMapSelector(false)} 
+              className="p-1 hover:bg-muted rounded-md transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <h2 className="font-semibold">Szybkie dodanie pina</h2>
+          </div>
+          <div className="flex-1">
+            <InteractiveRouteMap
+              pins={pins.filter(p => p.latitude && p.longitude)}
+              className="h-full rounded-none border-0"
+              onPinAdd={handleQuickPinAdd}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

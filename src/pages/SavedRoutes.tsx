@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -7,12 +7,10 @@ import AppLayout from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import RouteCard from "@/components/route/RouteCard";
 import { Bookmark } from "lucide-react";
-import { QuickNoteDialog } from "@/components/QuickNoteDialog";
 
 const SavedRoutes = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [quickNoteOpen, setQuickNoteOpen] = useState(false);
 
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["unread-notifications", user?.id],
@@ -68,12 +66,7 @@ const SavedRoutes = () => {
         showSearch 
         showQuickNote
         unreadCount={unreadCount}
-        onQuickNoteClick={() => setQuickNoteOpen(true)}
-      />
-      
-      <QuickNoteDialog 
-        open={quickNoteOpen} 
-        onOpenChange={setQuickNoteOpen} 
+        onQuickNoteClick={() => navigate("/create")}
       />
       
       {savedRoutes && savedRoutes.length > 0 ? (
