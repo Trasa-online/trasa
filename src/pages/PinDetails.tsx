@@ -305,6 +305,9 @@ const PinDetails = () => {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [showVisitDialog, setShowVisitDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [pinCommentInput, setPinCommentInput] = useState("");
+  const [editingPinCommentId, setEditingPinCommentId] = useState<string | null>(null);
+  const [editingPinCommentContent, setEditingPinCommentContent] = useState("");
   
   // Swipe handling
   const touchStartX = useRef<number | null>(null);
@@ -478,6 +481,88 @@ const PinDetails = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["visit-comments", pinId] });
+      toast.success("Zaktualizowano komentarz");
+    },
+  });
+
+  // Fetch pin comments
+  const { data: pinComments = [] } = useQuery({
+    queryKey: ["pin-comments", pinId],
+    queryFn: async () => {
+      const { data: commentsData, error } = await supabase
+        .from("pin_comments")
+        .select("*")
+        .eq("pin_id", pinId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      if (!commentsData || commentsData.length === 0) return [];
+
+      const userIds = [...new Set(commentsData.map((c: any) => c.user_id))];
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", userIds);
+
+      const profilesMap = new Map(
+        (profilesData || []).map((p: any) => [p.id, p])
+      );
+
+      return commentsData.map((c: any) => ({
+        ...c,
+        profiles: profilesMap.get(c.user_id) || null,
+      }));
+    },
+    enabled: !!pinId,
+  });
+
+  // Add pin comment mutation
+  const addPinCommentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const { error } = await supabase.from("pin_comments").insert({
+        pin_id: pinId,
+        user_id: user?.id,
+        content: content.trim(),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pin-comments", pinId] });
+      setPinCommentInput("");
+      toast.success("Dodano komentarz");
+    },
+  });
+
+  // Delete pin comment mutation
+  const deletePinCommentMutation = useMutation({
+    mutationFn: async (commentId: string) => {
+      const { error } = await supabase
+        .from("pin_comments")
+        .delete()
+        .eq("id", commentId)
+        .eq("user_id", user?.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pin-comments", pinId] });
+      toast.success("Usunięto komentarz");
+    },
+  });
+
+  // Edit pin comment mutation
+  const editPinCommentMutation = useMutation({
+    mutationFn: async ({ commentId, content }: { commentId: string; content: string }) => {
+      const { error } = await supabase
+        .from("pin_comments")
+        .update({ content: content.trim() })
+        .eq("id", commentId)
+        .eq("user_id", user?.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pin-comments", pinId] });
+      setEditingPinCommentId(null);
+      setEditingPinCommentContent("");
       toast.success("Zaktualizowano komentarz");
     },
   });
@@ -726,18 +811,128 @@ const PinDetails = () => {
           )}
         </div>
 
-        {/* Rate Button - only show if user hasn't rated yet */}
-        {user && !hasVisited && (
-          <div className="flex justify-center">
-            <Button
-              onClick={() => setShowVisitDialog(true)}
-              className="bg-foreground text-background hover:bg-foreground/90"
-            >
-              <Star className="h-4 w-4 mr-2" />
-              Dodaj coś od siebie
-            </Button>
-          </div>
-        )}
+
+        {/* Pin Comments Section */}
+        <div className="space-y-3">
+          <h2 className="font-semibold flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Komentarze ({pinComments.length})
+          </h2>
+
+          {/* Add comment input */}
+          {user && (
+            <div className="flex gap-2">
+              <Input
+                value={pinCommentInput}
+                onChange={(e) => setPinCommentInput(e.target.value)}
+                placeholder="Dodaj komentarz..."
+                className="flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && pinCommentInput.trim()) {
+                    e.preventDefault();
+                    addPinCommentMutation.mutate(pinCommentInput);
+                  }
+                }}
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => pinCommentInput.trim() && addPinCommentMutation.mutate(pinCommentInput)}
+                disabled={!pinCommentInput.trim() || addPinCommentMutation.isPending}
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Comments list */}
+          {pinComments.length > 0 && (
+            <div className="space-y-2">
+              {pinComments.map((comment: any) => (
+                <div key={comment.id} className="flex gap-2 p-2 bg-muted/40 rounded-lg">
+                  <Link to={`/profile/${comment.profiles?.id}`}>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={comment.profiles?.avatar_url || ""} />
+                      <AvatarFallback className="text-xs">
+                        {comment.profiles?.username?.charAt(0).toUpperCase() || "?"}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
+                  {editingPinCommentId === comment.id ? (
+                    <div className="flex-1 flex gap-2 items-center">
+                      <Input
+                        value={editingPinCommentContent}
+                        onChange={(e) => setEditingPinCommentContent(e.target.value)}
+                        className="flex-1 h-8 text-sm"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            editPinCommentMutation.mutate({ commentId: comment.id, content: editingPinCommentContent });
+                          } else if (e.key === "Escape") {
+                            setEditingPinCommentId(null);
+                            setEditingPinCommentContent("");
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => editPinCommentMutation.mutate({ commentId: comment.id, content: editingPinCommentContent })}
+                        className="text-primary hover:text-primary/80 p-1"
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingPinCommentId(null);
+                          setEditingPinCommentContent("");
+                        }}
+                        className="text-muted-foreground hover:text-foreground p-1"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to={`/profile/${comment.profiles?.id}`}
+                            className="font-medium text-sm hover:text-primary"
+                          >
+                            {comment.profiles?.username || "Anonim"}
+                          </Link>
+                          <span className="text-[10px] text-muted-foreground">
+                            {format(new Date(comment.created_at), "d MMM yyyy", { locale: pl })}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{comment.content}</p>
+                      </div>
+                      {user?.id === comment.user_id && (
+                        <div className="flex gap-1 shrink-0">
+                          <button
+                            onClick={() => {
+                              setEditingPinCommentId(comment.id);
+                              setEditingPinCommentContent(comment.content);
+                            }}
+                            className="text-muted-foreground hover:text-primary p-1"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deletePinCommentMutation.mutate(comment.id)}
+                            className="text-muted-foreground hover:text-destructive p-1"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <Separator />
 
