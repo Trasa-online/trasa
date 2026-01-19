@@ -662,6 +662,7 @@ export type Database = {
         | "pin_visit"
         | "route_updated"
         | "visit_comment"
+        | "discovery_used"
       trip_type: "planning" | "ongoing" | "completed"
     }
     CompositeTypes: {
@@ -800,6 +801,7 @@ export const Constants = {
         "pin_visit",
         "route_updated",
         "visit_comment",
+        "discovery_used",
       ],
       trip_type: ["planning", "ongoing", "completed"],
     },
