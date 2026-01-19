@@ -827,19 +827,33 @@ const CreateRoute = () => {
                   <h2 className="text-lg font-semibold">Pinezki w trasie</h2>
                 </div>
 
-                <DraggablePinList
-                  pins={pins}
-                  onReorder={setPins}
-                  onPinClick={(index) => {
-                    setCurrentPinIndex(index);
-                    setShowPinsList(false);
-                  }}
-                  onPinRemove={removePin}
-                  onPinNotesChange={(pinIndex, notes) => updatePin(pinIndex, "notes", notes)}
-                  showRemoveButton={true}
-                  showNotesEditor={true}
-                  compact={true}
-                />
+                <div className="space-y-3">
+                  <DraggablePinList
+                    pins={pins}
+                    onReorder={setPins}
+                    onPinClick={(index) => {
+                      setCurrentPinIndex(index);
+                      setShowPinsList(false);
+                    }}
+                    onPinRemove={removePin}
+                    onPinNotesChange={(pinIndex, notes) => updatePin(pinIndex, "notes", notes)}
+                    showRemoveButton={true}
+                    showNotesEditor={true}
+                    compact={true}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      addPin();
+                      setShowPinsList(false);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Dodaj pinezkę
+                  </Button>
+                </div>
 
                 <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
                   <Button
@@ -1181,37 +1195,9 @@ const CreateRoute = () => {
                   </div>
                 </div>
 
-                <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 space-y-2 max-w-lg mx-auto">
+                <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
                   <Button
                     variant="default"
-                    className="w-full"
-                    onClick={() => {
-                      const currentPin = pins[currentPinIndex];
-                      if (!currentPin?.address) {
-                        toast({ 
-                          variant: "destructive", 
-                          title: "Uzupełnij wymagane pola",
-                          description: "Adres jest wymagany przed dodaniem kolejnej pinezki"
-                        });
-                        return;
-                      }
-                      if (tripType !== "planning" && currentPin.rating <= 0) {
-                        toast({ 
-                          variant: "destructive", 
-                          title: "Uzupełnij wymagane pola",
-                          description: "Ocena jest wymagana przed dodaniem kolejnej pinezki"
-                        });
-                        return;
-                      }
-                      setShowPinsList(false);
-                      addPin();
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Dodaj kolejną pinezkę
-                  </Button>
-                  <Button
-                    variant="outline"
                     className="w-full"
                     onClick={() => {
                       const currentPin = pins[currentPinIndex];
