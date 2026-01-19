@@ -1412,9 +1412,10 @@ const CreateRoute = () => {
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel disabled={saving}>Zostań</AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.preventDefault();
-                saveRoute("draft");
+                await saveRoute("draft");
+                setShowExitConfirm(false);
               }}
               disabled={saving}
               className="bg-foreground text-background hover:bg-foreground/90"
@@ -1422,7 +1423,11 @@ const CreateRoute = () => {
               {saving ? "Zapisywanie..." : "Zapisz i wyjdź"}
             </AlertDialogAction>
             <AlertDialogAction
-              onClick={confirmExit}
+              onClick={(e) => {
+                e.preventDefault();
+                setShowExitConfirm(false);
+                confirmExit();
+              }}
               disabled={saving}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
