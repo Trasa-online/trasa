@@ -838,56 +838,6 @@ const PinDetails = () => {
           </>
         )}
 
-        {/* User Ratings Section */}
-        <div>
-          <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Oceny użytkowników ({visits.length})
-          </h2>
-
-          {visits.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              Brak ocen od użytkowników. Bądź pierwszy!
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {visits.map((visit: any) => {
-                const visitLikesCount = visitLikes.filter(
-                  (l: any) => l.visit_pin_id === pinId && l.visit_user_id === visit.user_id
-                ).length;
-                const isLiked = visitLikes.some(
-                  (l: any) => l.visit_pin_id === pinId && l.visit_user_id === visit.user_id && l.user_id === user?.id
-                );
-                const comments = visitComments.filter(
-                  (c: any) => c.visit_user_id === visit.user_id
-                );
-
-                const isOwnVisit = user?.id === visit.user_id;
-
-                return (
-                  <VisitCard
-                    key={visit.user_id}
-                    visit={visit}
-                    pinId={pinId || ""}
-                    allImages={allImages}
-                    openLightbox={openLightbox}
-                    likesCount={visitLikesCount}
-                    isLiked={isLiked}
-                    comments={comments}
-                    user={user}
-                    onLike={() => likeMutation.mutate({ visitPinId: pinId || "", visitUserId: visit.user_id })}
-                    onComment={(content) => commentMutation.mutate({ visitPinId: pinId || "", visitUserId: visit.user_id, content })}
-                    onDeleteComment={(commentId) => deleteCommentMutation.mutate(commentId)}
-                    onEditComment={(commentId, content) => editCommentMutation.mutate({ commentId, content })}
-                    isOwnVisit={isOwnVisit}
-                    onEditVisit={() => setShowVisitDialog(true)}
-                    onDeleteVisit={() => setShowDeleteDialog(true)}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Lightbox */}
