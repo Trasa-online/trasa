@@ -78,13 +78,15 @@ const RouteMap = ({ pins, className = "", onClick, showExpandButton = false }: R
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         cursor: pointer;
       `;
-      el.textContent = String(index + 1);
+      // Use pin_order if available, otherwise fall back to index + 1
+      const pinNumber = pin.pin_order !== undefined ? pin.pin_order + 1 : index + 1;
+      el.textContent = String(pinNumber);
 
       const marker = new mapboxgl.Marker(el)
         .setLngLat([pin.longitude, pin.latitude])
         .setPopup(
           new mapboxgl.Popup({ offset: 25 })
-            .setHTML(`<p style="font-weight: 500; margin: 0;">${pin.place_name || pin.address || `Punkt ${index + 1}`}</p>`)
+            .setHTML(`<p style="font-weight: 500; margin: 0;">${pin.place_name || pin.address || `Punkt ${pinNumber}`}</p>`)
         )
         .addTo(map.current);
 
