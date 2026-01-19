@@ -35,18 +35,8 @@ const PremiumPinHeader = ({ business, address }: PremiumPinHeaderProps) => {
         </div>
       </div>
 
-      {/* Logo overlapping cover */}
-      <div className="absolute left-4 bottom-0 translate-y-1/2">
-        <Avatar className="h-20 w-20 border-4 border-background shadow-xl">
-          <AvatarImage src={business.logo_url} alt={business.business_name} />
-          <AvatarFallback className="text-xl font-bold bg-primary text-primary-foreground">
-            {business.business_name.charAt(0)}
-          </AvatarFallback>
-        </Avatar>
-      </div>
-
       {/* Business info below cover */}
-      <div className="pt-12 px-4 pb-4 space-y-2">
+      <div className="pt-4 px-4 pb-4 space-y-2">
         <div className="space-y-1">
           <h1 className="text-xl font-bold">{business.business_name}</h1>
           <div className="flex items-center gap-2 flex-wrap">
