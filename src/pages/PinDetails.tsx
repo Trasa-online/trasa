@@ -705,7 +705,12 @@ const PinDetails = () => {
         {/* Pin Map Preview */}
         {pin.latitude && pin.longitude && (
           <RouteMap
-            pins={[{ latitude: pin.latitude, longitude: pin.longitude, place_name: displayName || pin.address }]}
+            pins={[{ 
+              latitude: pin.latitude, 
+              longitude: pin.longitude, 
+              place_name: displayName || pin.address,
+              pin_order: pin.pin_order
+            }]}
             className="h-32"
           />
         )}
