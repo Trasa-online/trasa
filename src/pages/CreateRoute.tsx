@@ -843,36 +843,21 @@ const CreateRoute = () => {
               </ul>
             </div>
 
-            <div className="flex gap-2">
-              <Button
-                variant="default"
-                className="flex-1"
-                onClick={() => {
-                  if (!title.trim()) {
-                    toast({ variant: "destructive", title: "Nazwa trasy jest wymagana" });
-                    return;
-                  }
-                  setStep(2);
-                }}
-              >
-                Kontynuj
-              </Button>
-              <Button
-                type="button"
-                variant="default"
-                className="bg-muted hover:bg-muted/80 text-foreground"
-                onClick={() => {
-                  if (!title.trim()) {
-                    toast({ variant: "destructive", title: "Nazwa trasy jest wymagana" });
-                    return;
-                  }
-                  setShowQuickMapSelector(true);
-                }}
-              >
-                <MapPinPlus className="h-4 w-4 mr-2" />
-                Szybkie dodanie
-              </Button>
-            </div>
+            <Button
+              type="button"
+              variant="default"
+              className="w-full"
+              onClick={() => {
+                if (!title.trim()) {
+                  toast({ variant: "destructive", title: "Nazwa trasy jest wymagana" });
+                  return;
+                }
+                setShowQuickMapSelector(true);
+              }}
+            >
+              <MapPinPlus className="h-4 w-4 mr-2" />
+              Szybkie dodanie
+            </Button>
           </div>
         ) : step === 2 ? (
           <>
