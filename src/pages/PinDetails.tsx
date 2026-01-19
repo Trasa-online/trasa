@@ -702,19 +702,6 @@ const PinDetails = () => {
       )}
 
       <div className="p-4 space-y-4">
-        {/* Pin Map Preview */}
-        {pin.latitude && pin.longitude && (
-          <RouteMap
-            pins={[{ 
-              latitude: pin.latitude, 
-              longitude: pin.longitude, 
-              place_name: displayName || pin.address,
-              pin_order: pin.pin_order
-            }]}
-            className="h-32"
-          />
-        )}
-
         {/* Pin Image */}
         <div
           className="relative aspect-video rounded-lg overflow-hidden cursor-pointer"
@@ -766,6 +753,19 @@ const PinDetails = () => {
             </Link>
           )}
         </div>
+
+        {/* Pin Map Preview - below address, reduced size */}
+        {pin.latitude && pin.longitude && (
+          <RouteMap
+            pins={[{ 
+              latitude: pin.latitude, 
+              longitude: pin.longitude, 
+              place_name: displayName || pin.address,
+              pin_order: pin.pin_order
+            }]}
+            className="h-[6.4rem]"
+          />
+        )}
 
         {/* Pin Info */}
         <div className="space-y-3">
