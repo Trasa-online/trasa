@@ -985,8 +985,20 @@ const CreateRoute = () => {
                     )}
                   </div>
 
+                  {/* Place name - editable */}
+                  <div>
+                    <Label>Nazwa miejsca</Label>
+                    <Input
+                      value={pins[currentPinIndex]?.place_name || ""}
+                      onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
+                      placeholder="Nazwa miejsca (np. Pałac Kultury)"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Możesz zmienić nazwę na bardziej przyjazną
+                    </p>
+                  </div>
 
-                  {/* Description */}
+
                   <div>
                     <Label>Opis (Opcjonalne)</Label>
                     <Textarea
@@ -1274,8 +1286,10 @@ const CreateRoute = () => {
                 pins={pins}
                 onReorder={setPins}
                 onPinNotesChange={(pinIndex, notes) => updatePin(pinIndex, "notes", notes)}
+                onPinNameChange={(pinIndex, name) => updatePin(pinIndex, "place_name", name)}
                 showRemoveButton={false}
                 showNotesEditor={true}
+                showNameEditor={true}
                 compact={false}
               />
 

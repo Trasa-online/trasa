@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { X, GripVertical, Sparkles, Plus, Camera, Check, Pencil, ChevronDown, ChevronUp } from "lucide-react";
 
 interface PinNote {
@@ -33,8 +34,10 @@ interface DraggablePinListProps {
   onPinClick?: (index: number) => void;
   onPinRemove?: (index: number) => void;
   onPinNotesChange?: (pinIndex: number, notes: PinNote[]) => void;
+  onPinNameChange?: (pinIndex: number, name: string) => void;
   showRemoveButton?: boolean;
   showNotesEditor?: boolean;
+  showNameEditor?: boolean;
   compact?: boolean;
 }
 
@@ -46,8 +49,10 @@ const DraggablePinList = ({
   onPinClick,
   onPinRemove,
   onPinNotesChange,
+  onPinNameChange,
   showRemoveButton = true,
   showNotesEditor = false,
+  showNameEditor = false,
   compact = false,
 }: DraggablePinListProps) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -57,6 +62,8 @@ const DraggablePinList = ({
   const [noteText, setNoteText] = useState("");
   const [noteImage, setNoteImage] = useState<string | null>(null);
   const [addingNoteToPinIndex, setAddingNoteToPinIndex] = useState<number | null>(null);
+  const [editingNameIndex, setEditingNameIndex] = useState<number | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -419,7 +426,60 @@ const DraggablePinList = ({
                 
                 <div className="flex-1 min-w-0 space-y-0.5">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium truncate">{pin.place_name || pin.address}</p>
+                    {showNameEditor && editingNameIndex === actualIndex ? (
+                      <div className="flex-1 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <Input
+                          value={editingNameValue}
+                          onChange={(e) => setEditingNameValue(e.target.value)}
+                          className="h-7 text-sm"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              onPinNameChange?.(actualIndex, editingNameValue);
+                              setEditingNameIndex(null);
+                            } else if (e.key === 'Escape') {
+                              setEditingNameIndex(null);
+                            }
+                          }}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 flex-shrink-0"
+                          onClick={() => {
+                            onPinNameChange?.(actualIndex, editingNameValue);
+                            setEditingNameIndex(null);
+                          }}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 flex-shrink-0"
+                          onClick={() => setEditingNameIndex(null)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{pin.place_name || pin.address}</p>
+                        {showNameEditor && onPinNameChange && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingNameIndex(actualIndex);
+                              setEditingNameValue(pin.place_name || pin.address);
+                            }}
+                            className="flex-shrink-0 text-muted-foreground hover:text-foreground p-0.5"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    )}
                     {pin.rating > 0 && (
                       <div className="flex items-center gap-0.5 text-xs flex-shrink-0">
                         <span className="text-yellow-500">★</span>
