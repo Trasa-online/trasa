@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Trash2, Star, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { QuickNoteDialog } from "@/components/QuickNoteDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,7 @@ const MyRoutes = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [quickNoteOpen, setQuickNoteOpen] = useState(false);
   const [deletingRouteId, setDeletingRouteId] = useState<string | null>(null);
 
   const { data: unreadCount = 0 } = useQuery({
@@ -229,7 +231,12 @@ const MyRoutes = () => {
         showSearch 
         showQuickNote
         unreadCount={unreadCount}
-        onQuickNoteClick={() => navigate("/create")}
+        onQuickNoteClick={() => setQuickNoteOpen(true)}
+      />
+      
+      <QuickNoteDialog 
+        open={quickNoteOpen} 
+        onOpenChange={setQuickNoteOpen} 
       />
       
       <div className="p-4">

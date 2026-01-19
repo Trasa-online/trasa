@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -7,10 +7,12 @@ import AppLayout from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import RouteCard from "@/components/route/RouteCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { QuickNoteDialog } from "@/components/QuickNoteDialog";
 
 const Feed = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [quickNoteOpen, setQuickNoteOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -112,7 +114,14 @@ const Feed = () => {
         title="TRASA" 
         showBell 
         showSearch 
+        showQuickNote
         unreadCount={unreadCount}
+        onQuickNoteClick={() => setQuickNoteOpen(true)}
+      />
+      
+      <QuickNoteDialog 
+        open={quickNoteOpen} 
+        onOpenChange={setQuickNoteOpen} 
       />
       
       <div className="p-4 space-y-4">
