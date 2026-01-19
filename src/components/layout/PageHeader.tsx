@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Search, StickyNote } from "lucide-react";
+import { ArrowLeft, Bell, Search, MapPinPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface PageHeaderProps {
@@ -64,7 +64,7 @@ export const PageHeader = ({
               onClick={onQuickNoteClick}
               className="h-9 w-9"
             >
-              <StickyNote className="h-5 w-5" />
+              <MapPinPlus className="h-5 w-5" />
             </Button>
           )}
           {showBell && (
