@@ -1353,14 +1353,7 @@ const CreateRoute = () => {
               </div>
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 space-y-2 max-w-lg mx-auto">
-              <Button
-                variant="outline"
-                className="w-full text-sm"
-                onClick={() => setStep(2)}
-              >
-                + Dodaj kolejną pinezkę
-              </Button>
+            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
               <div className="flex gap-2">
                 {existingRoute?.status === "published" ? (
                   <>
