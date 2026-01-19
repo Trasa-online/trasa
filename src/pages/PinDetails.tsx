@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Heart, Send, Trash2, Pencil, X, Check } from "lucide-react";
+import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Heart, Send, Trash2, Pencil, X, Check, Trophy } from "lucide-react";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -643,8 +643,14 @@ const PinDetails = () => {
             </p>
           )}
           
-          {/* Discovered by - show original creator if different from route author */}
-          {pin.original_creator && pin.original_creator.id !== pin.routes?.user_id && (
+          {/* Discovery info - show for original discoverer or other users */}
+          {pin.original_creator?.id === user?.id && (
+            <div className="inline-flex items-center gap-1.5 text-xs text-emerald-600">
+              <Trophy className="h-3.5 w-3.5" />
+              <span className="font-medium">Twoje odkrycie!</span>
+            </div>
+          )}
+          {pin.original_creator && pin.original_creator.id !== user?.id && pin.original_creator.id !== pin.routes?.user_id && (
             <Link
               to={`/profile/${pin.original_creator.id}`}
               className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"

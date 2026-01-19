@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -962,6 +962,12 @@ const CreateRoute = () => {
                     </div>
                     
                     {/* Discovery info */}
+                    {pins[currentPinIndex]?.original_creator_id === user?.id && (
+                      <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-2 mt-2">
+                        <Trophy className="h-4 w-4" />
+                        <span className="font-medium">Twoje odkrycie! Jesteś pierwszym odkrywcą tego miejsca</span>
+                      </div>
+                    )}
                     {pins[currentPinIndex]?.original_creator_username && 
                      pins[currentPinIndex]?.original_creator_id !== user?.id && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg p-2 mt-2">
