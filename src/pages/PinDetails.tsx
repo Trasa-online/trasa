@@ -17,6 +17,8 @@ import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 import { toast } from "sonner";
 import { getPinImage } from "@/lib/pinPlaceholders";
 import RouteMap from "@/components/RouteMap";
+import PremiumPinView from "@/components/business/PremiumPinView";
+import { MOCK_BUSINESS_DATA, MOCK_PREMIUM_PIN_ID } from "@/components/business/mockBusinessData";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -586,6 +588,27 @@ const PinDetails = () => {
           </button>
         </div>
       </div>
+    );
+  }
+
+  // Check if this is a premium pin (mock for now)
+  if (pinId === MOCK_PREMIUM_PIN_ID) {
+    return (
+      <PremiumPinView
+        pin={{
+          id: pin.id,
+          address: pin.address,
+          place_name: pin.place_name,
+          latitude: pin.latitude,
+          longitude: pin.longitude,
+          pin_order: pin.pin_order,
+          routes: {
+            id: pin.routes.id,
+            title: pin.routes.title
+          }
+        }}
+        business={MOCK_BUSINESS_DATA}
+      />
     );
   }
 
