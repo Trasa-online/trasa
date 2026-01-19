@@ -1453,7 +1453,7 @@ const CreateRoute = () => {
               onClick={async (e) => {
                 e.preventDefault();
                 await saveRoute("draft");
-                setShowExitConfirm(false);
+                // Navigation happens inside saveRoute, no need to close dialog
               }}
               disabled={saving}
               className="bg-foreground text-background hover:bg-foreground/90"
