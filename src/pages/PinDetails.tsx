@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Heart, Send, Trash2, Pencil, X, Check, Trophy } from "lucide-react";
+import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Heart, Send, Trash2, Pencil, X, Check, Trophy, Users } from "lucide-react";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -406,6 +406,48 @@ const PinDetails = () => {
     enabled: !!pinId,
   });
 
+  // Fetch pins from same location (other users who added this place)
+  const { data: sameLocationPins = [] } = useQuery({
+    queryKey: ["same-location-pins", pin?.latitude, pin?.longitude, pinId],
+    queryFn: async () => {
+      if (!pin?.latitude || !pin?.longitude) return [];
+      
+      const lat = Number(pin.latitude);
+      const lng = Number(pin.longitude);
+      
+      const { data, error } = await supabase
+        .from("pins")
+        .select(`
+          id,
+          place_name,
+          rating,
+          description,
+          image_url,
+          images,
+          created_at,
+          route_id,
+          routes!inner(
+            id, 
+            title, 
+            status, 
+            user_id,
+            profiles:user_id(id, username, avatar_url)
+          )
+        `)
+        .gte("latitude", lat - 0.0005)
+        .lte("latitude", lat + 0.0005)
+        .gte("longitude", lng - 0.0005)
+        .lte("longitude", lng + 0.0005)
+        .eq("routes.status", "published")
+        .neq("id", pinId)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!pin?.latitude && !!pin?.longitude && !!pinId,
+  });
+
   // Like mutation
   const likeMutation = useMutation({
     mutationFn: async ({ visitPinId, visitUserId }: { visitPinId: string; visitUserId: string }) => {
@@ -708,6 +750,93 @@ const PinDetails = () => {
         </div>
 
         <Separator />
+
+        {/* Other Users Who Added This Location */}
+        {sameLocationPins.length > 0 && (
+          <>
+            <div>
+              <h2 className="font-semibold mb-4 flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Inni użytkownicy dodali to miejsce ({sameLocationPins.length})
+              </h2>
+
+              <div className="space-y-3">
+                {sameLocationPins.map((locationPin: any) => {
+                  const profile = locationPin.routes?.profiles;
+                  const route = locationPin.routes;
+                  
+                  return (
+                    <div 
+                      key={locationPin.id}
+                      className="p-3 bg-muted/40 rounded-xl border border-border/50"
+                    >
+                      <div className="flex gap-3">
+                        {/* Left: Avatar or Image */}
+                        {locationPin.image_url ? (
+                          <div
+                            className="shrink-0 w-16 h-16 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => openLightbox([locationPin.image_url], 0)}
+                          >
+                            <img
+                              src={locationPin.image_url}
+                              alt={locationPin.place_name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <Link to={`/profile/${profile?.id}`}>
+                            <Avatar className="h-16 w-16">
+                              <AvatarImage src={profile?.avatar_url || ""} />
+                              <AvatarFallback className="text-lg">
+                                {profile?.username?.charAt(0).toUpperCase() || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                          </Link>
+                        )}
+
+                        {/* Right: Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <Link
+                                to={`/profile/${profile?.id}`}
+                                className="font-semibold text-sm hover:text-primary line-clamp-1"
+                              >
+                                {profile?.username || "Anonim"}
+                              </Link>
+                              <Link
+                                to={`/route/${route?.id}`}
+                                className="text-xs text-muted-foreground hover:text-primary line-clamp-1 block"
+                              >
+                                Na trasie: {route?.title}
+                              </Link>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {format(new Date(locationPin.created_at), "d MMM yyyy", { locale: pl })}
+                              </p>
+                            </div>
+                            {locationPin.rating && locationPin.rating > 0 && (
+                              <div className="flex items-center gap-0.5 shrink-0">
+                                <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                                <span className="text-sm font-medium">{locationPin.rating}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {locationPin.description && (
+                            <p className="text-xs text-muted-foreground leading-relaxed mt-1 line-clamp-2">
+                              {locationPin.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <Separator />
+          </>
+        )}
 
         {/* User Ratings Section */}
         <div>
