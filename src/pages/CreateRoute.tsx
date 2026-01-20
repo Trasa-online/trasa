@@ -174,6 +174,26 @@ const CreateRoute = () => {
     setAutoSaving(true);
 
     try {
+      // Prepare all pins data BEFORE any database operations
+      const pinsToInsert = await Promise.all(validPins.map(async (pin) => {
+        const originalCreatorId = await findOriginalPinCreator(pin.latitude, pin.longitude);
+        return {
+          place_name: pin.place_name,
+          address: pin.address || "Brak adresu",
+          description: pin.description,
+          image_url: pin.image_url,
+          images: pin.images || [],
+          rating: pin.rating,
+          pin_order: pin.pin_order,
+          tags: pin.tags,
+          is_transport: false,
+          latitude: pin.latitude,
+          longitude: pin.longitude,
+          original_creator_id: originalCreatorId || user.id,
+          notes: pin.notes, // Keep notes reference for later
+        };
+      }));
+
       if (routeIdRef.current) {
         // Update existing route
         await supabase
@@ -190,37 +210,48 @@ const CreateRoute = () => {
         // Delete existing pins
         await supabase.from("pins").delete().eq("route_id", routeIdRef.current);
 
-        // Insert updated pins
-        for (const pin of validPins) {
-          const originalCreatorId = await findOriginalPinCreator(pin.latitude, pin.longitude);
-          
-          const { data: insertedPin } = await supabase.from("pins").insert({
+        // BATCH INSERT - single request for all pins
+        const { data: insertedPins, error: pinsError } = await supabase
+          .from("pins")
+          .insert(pinsToInsert.map(p => ({
             route_id: routeIdRef.current,
-            place_name: pin.place_name,
-            address: pin.address || "Brak adresu",
-            description: pin.description,
-            image_url: pin.image_url,
-            images: pin.images || [],
-            rating: pin.rating,
-            pin_order: pin.pin_order,
-            tags: pin.tags,
-            is_transport: false,
-            latitude: pin.latitude,
-            longitude: pin.longitude,
-            original_creator_id: originalCreatorId || user.id,
-          }).select().single();
+            place_name: p.place_name,
+            address: p.address,
+            description: p.description,
+            image_url: p.image_url,
+            images: p.images,
+            rating: p.rating,
+            pin_order: p.pin_order,
+            tags: p.tags,
+            is_transport: p.is_transport,
+            latitude: p.latitude,
+            longitude: p.longitude,
+            original_creator_id: p.original_creator_id,
+          })))
+          .select();
 
-          // Save notes
-          if (pin.notes && pin.notes.length > 0 && insertedPin) {
-            for (const note of pin.notes) {
-              await supabase.from("route_notes").insert({
-                route_id: routeIdRef.current,
-                pin_id: insertedPin.id,
-                text: note.text,
-                image_url: note.imageUrl,
-                note_order: note.note_order,
-              });
+        if (pinsError) throw pinsError;
+
+        // Batch insert notes after pins are created
+        if (insertedPins) {
+          const allNotesToInsert: any[] = [];
+          for (let i = 0; i < insertedPins.length; i++) {
+            const pinData = pinsToInsert[i];
+            const insertedPin = insertedPins[i];
+            if (pinData.notes && pinData.notes.length > 0) {
+              for (const note of pinData.notes) {
+                allNotesToInsert.push({
+                  route_id: routeIdRef.current,
+                  pin_id: insertedPin.id,
+                  text: note.text,
+                  image_url: note.imageUrl,
+                  note_order: note.note_order,
+                });
+              }
             }
+          }
+          if (allNotesToInsert.length > 0) {
+            await supabase.from("route_notes").insert(allNotesToInsert);
           }
         }
       } else {
@@ -241,35 +272,48 @@ const CreateRoute = () => {
         if (routeError) throw routeError;
         routeIdRef.current = route.id;
 
-        for (const pin of validPins) {
-          const originalCreatorId = await findOriginalPinCreator(pin.latitude, pin.longitude);
-          
-          const { data: insertedPin } = await supabase.from("pins").insert({
+        // BATCH INSERT - single request for all pins
+        const { data: insertedPins, error: pinsError } = await supabase
+          .from("pins")
+          .insert(pinsToInsert.map(p => ({
             route_id: route.id,
-            place_name: pin.place_name,
-            address: pin.address || "Brak adresu",
-            description: pin.description,
-            image_url: pin.image_url,
-            images: pin.images || [],
-            rating: pin.rating,
-            pin_order: pin.pin_order,
-            tags: pin.tags,
-            is_transport: false,
-            latitude: pin.latitude,
-            longitude: pin.longitude,
-            original_creator_id: originalCreatorId || user.id,
-          }).select().single();
+            place_name: p.place_name,
+            address: p.address,
+            description: p.description,
+            image_url: p.image_url,
+            images: p.images,
+            rating: p.rating,
+            pin_order: p.pin_order,
+            tags: p.tags,
+            is_transport: p.is_transport,
+            latitude: p.latitude,
+            longitude: p.longitude,
+            original_creator_id: p.original_creator_id,
+          })))
+          .select();
 
-          if (pin.notes && pin.notes.length > 0 && insertedPin) {
-            for (const note of pin.notes) {
-              await supabase.from("route_notes").insert({
-                route_id: route.id,
-                pin_id: insertedPin.id,
-                text: note.text,
-                image_url: note.imageUrl,
-                note_order: note.note_order,
-              });
+        if (pinsError) throw pinsError;
+
+        // Batch insert notes
+        if (insertedPins) {
+          const allNotesToInsert: any[] = [];
+          for (let i = 0; i < insertedPins.length; i++) {
+            const pinData = pinsToInsert[i];
+            const insertedPin = insertedPins[i];
+            if (pinData.notes && pinData.notes.length > 0) {
+              for (const note of pinData.notes) {
+                allNotesToInsert.push({
+                  route_id: route.id,
+                  pin_id: insertedPin.id,
+                  text: note.text,
+                  image_url: note.imageUrl,
+                  note_order: note.note_order,
+                });
+              }
             }
+          }
+          if (allNotesToInsert.length > 0) {
+            await supabase.from("route_notes").insert(allNotesToInsert);
           }
         }
       }
@@ -666,6 +710,40 @@ const CreateRoute = () => {
     try {
       let routeId = id;
 
+      // Prepare all pins data BEFORE any database operations
+      const pinsToInsert = await Promise.all(validPins.map(async (pin) => {
+        const originalCreatorId = await findOriginalPinCreator(pin.latitude, pin.longitude);
+        
+        // Process note images upfront
+        const processedNotes = pin.notes ? await Promise.all(pin.notes.map(async (note) => {
+          let imageUrl = note.imageUrl;
+          if (imageUrl && imageUrl.startsWith("data:")) {
+            const uploaded = await uploadNoteImage(imageUrl);
+            imageUrl = uploaded || undefined;
+          }
+          return { ...note, imageUrl };
+        })) : [];
+
+        return {
+          place_name: pin.place_name,
+          address: pin.address || "Brak adresu",
+          description: pin.description,
+          image_url: pin.image_url,
+          images: pin.images || [],
+          rating: pin.rating,
+          pin_order: pin.pin_order,
+          tags: pin.tags,
+          is_transport: false,
+          transport_type: "",
+          transport_end: "",
+          mentioned_users: routeMentionedUsers,
+          latitude: pin.latitude,
+          longitude: pin.longitude,
+          original_creator_id: originalCreatorId || user.id,
+          notes: processedNotes,
+        };
+      }));
+
       if (id) {
         const { error: routeError } = await supabase
           .from("routes")
@@ -677,58 +755,67 @@ const CreateRoute = () => {
         // Delete existing pins (cascades to route_notes via FK)
         await supabase.from("pins").delete().eq("route_id", id);
 
-        for (const pin of validPins) {
-          // Find original creator for this location
-          const originalCreatorId = await findOriginalPinCreator(pin.latitude, pin.longitude);
-          
-          const { data: insertedPin, error: pinError } = await supabase.from("pins").insert({
+        // BATCH INSERT - single request for all pins
+        const { data: insertedPins, error: pinsError } = await supabase
+          .from("pins")
+          .insert(pinsToInsert.map(p => ({
             route_id: id,
-            place_name: pin.place_name,
-            address: pin.address || "Brak adresu",
-            description: pin.description,
-            image_url: pin.image_url,
-            images: pin.images || [],
-            rating: pin.rating,
-            pin_order: pin.pin_order,
-            tags: pin.tags,
-            is_transport: false,
-            transport_type: "",
-            transport_end: "",
-            mentioned_users: routeMentionedUsers,
-            latitude: pin.latitude,
-            longitude: pin.longitude,
-            original_creator_id: originalCreatorId || user.id,
-          }).select().single();
-          if (pinError) throw pinError;
+            place_name: p.place_name,
+            address: p.address,
+            description: p.description,
+            image_url: p.image_url,
+            images: p.images,
+            rating: p.rating,
+            pin_order: p.pin_order,
+            tags: p.tags,
+            is_transport: p.is_transport,
+            transport_type: p.transport_type,
+            transport_end: p.transport_end,
+            mentioned_users: p.mentioned_users,
+            latitude: p.latitude,
+            longitude: p.longitude,
+            original_creator_id: p.original_creator_id,
+          })))
+          .select();
 
-          // Trigger async translation (fire-and-forget)
-          if (insertedPin && pin.place_name) {
-            supabase.functions.invoke('translate-place', {
-              body: { 
-                pin_id: insertedPin.id, 
-                place_name: pin.place_name,
-                address: pin.address 
-              }
-            }).catch(err => console.log('Translation request failed:', err));
-          }
+        if (pinsError) throw pinsError;
 
-          // Save notes for this pin
-          if (pin.notes && pin.notes.length > 0 && insertedPin) {
-            for (const note of pin.notes) {
-              // Upload image if it's base64
-              let imageUrl = note.imageUrl;
-              if (imageUrl && imageUrl.startsWith("data:")) {
-                const uploaded = await uploadNoteImage(imageUrl);
-                imageUrl = uploaded || undefined;
-              }
-              await supabase.from("route_notes").insert({
-                route_id: id,
-                pin_id: insertedPin.id,
-                text: note.text,
-                image_url: imageUrl,
-                note_order: note.note_order,
-              });
+        // Fire translations and collect notes
+        if (insertedPins) {
+          const allNotesToInsert: any[] = [];
+          
+          for (let i = 0; i < insertedPins.length; i++) {
+            const pinData = pinsToInsert[i];
+            const insertedPin = insertedPins[i];
+            
+            // Trigger async translation (fire-and-forget)
+            if (pinData.place_name) {
+              supabase.functions.invoke('translate-place', {
+                body: { 
+                  pin_id: insertedPin.id, 
+                  place_name: pinData.place_name,
+                  address: pinData.address 
+                }
+              }).catch(err => console.log('Translation request failed:', err));
             }
+
+            // Collect notes for batch insert
+            if (pinData.notes && pinData.notes.length > 0) {
+              for (const note of pinData.notes) {
+                allNotesToInsert.push({
+                  route_id: id,
+                  pin_id: insertedPin.id,
+                  text: note.text,
+                  image_url: note.imageUrl,
+                  note_order: note.note_order,
+                });
+              }
+            }
+          }
+          
+          // Batch insert all notes
+          if (allNotesToInsert.length > 0) {
+            await supabase.from("route_notes").insert(allNotesToInsert);
           }
         }
       } else {
@@ -741,58 +828,67 @@ const CreateRoute = () => {
         if (routeError) throw routeError;
         routeId = route.id;
 
-        for (const pin of validPins) {
-          // Find original creator for this location
-          const originalCreatorId = await findOriginalPinCreator(pin.latitude, pin.longitude);
-          
-          const { data: insertedPin, error: pinError } = await supabase.from("pins").insert({
+        // BATCH INSERT - single request for all pins
+        const { data: insertedPins, error: pinsError } = await supabase
+          .from("pins")
+          .insert(pinsToInsert.map(p => ({
             route_id: route.id,
-            place_name: pin.place_name,
-            address: pin.address || "Brak adresu",
-            description: pin.description,
-            image_url: pin.image_url,
-            images: pin.images || [],
-            rating: pin.rating,
-            pin_order: pin.pin_order,
-            tags: pin.tags,
-            is_transport: false,
-            transport_type: "",
-            transport_end: "",
-            mentioned_users: routeMentionedUsers,
-            latitude: pin.latitude,
-            longitude: pin.longitude,
-            original_creator_id: originalCreatorId || user.id,
-          }).select().single();
-          if (pinError) throw pinError;
+            place_name: p.place_name,
+            address: p.address,
+            description: p.description,
+            image_url: p.image_url,
+            images: p.images,
+            rating: p.rating,
+            pin_order: p.pin_order,
+            tags: p.tags,
+            is_transport: p.is_transport,
+            transport_type: p.transport_type,
+            transport_end: p.transport_end,
+            mentioned_users: p.mentioned_users,
+            latitude: p.latitude,
+            longitude: p.longitude,
+            original_creator_id: p.original_creator_id,
+          })))
+          .select();
 
-          // Trigger async translation (fire-and-forget)
-          if (insertedPin && pin.place_name) {
-            supabase.functions.invoke('translate-place', {
-              body: { 
-                pin_id: insertedPin.id, 
-                place_name: pin.place_name,
-                address: pin.address 
-              }
-            }).catch(err => console.log('Translation request failed:', err));
-          }
+        if (pinsError) throw pinsError;
 
-          // Save notes for this pin
-          if (pin.notes && pin.notes.length > 0 && insertedPin) {
-            for (const note of pin.notes) {
-              // Upload image if it's base64
-              let imageUrl = note.imageUrl;
-              if (imageUrl && imageUrl.startsWith("data:")) {
-                const uploaded = await uploadNoteImage(imageUrl);
-                imageUrl = uploaded || undefined;
-              }
-              await supabase.from("route_notes").insert({
-                route_id: route.id,
-                pin_id: insertedPin.id,
-                text: note.text,
-                image_url: imageUrl,
-                note_order: note.note_order,
-              });
+        // Fire translations and collect notes
+        if (insertedPins) {
+          const allNotesToInsert: any[] = [];
+          
+          for (let i = 0; i < insertedPins.length; i++) {
+            const pinData = pinsToInsert[i];
+            const insertedPin = insertedPins[i];
+            
+            // Trigger async translation (fire-and-forget)
+            if (pinData.place_name) {
+              supabase.functions.invoke('translate-place', {
+                body: { 
+                  pin_id: insertedPin.id, 
+                  place_name: pinData.place_name,
+                  address: pinData.address 
+                }
+              }).catch(err => console.log('Translation request failed:', err));
             }
+
+            // Collect notes for batch insert
+            if (pinData.notes && pinData.notes.length > 0) {
+              for (const note of pinData.notes) {
+                allNotesToInsert.push({
+                  route_id: route.id,
+                  pin_id: insertedPin.id,
+                  text: note.text,
+                  image_url: note.imageUrl,
+                  note_order: note.note_order,
+                });
+              }
+            }
+          }
+          
+          // Batch insert all notes
+          if (allNotesToInsert.length > 0) {
+            await supabase.from("route_notes").insert(allNotesToInsert);
           }
         }
       }
