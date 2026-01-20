@@ -86,6 +86,9 @@ const CreateRoute = () => {
   const [showDraftDialog, setShowDraftDialog] = useState(false);
   const [pendingDraft, setPendingDraft] = useState<any>(null);
   const [draftDecisionMade, setDraftDecisionMade] = useState(false);
+  
+  // Lock to prevent concurrent saves
+  const saveInProgressRef = useRef(false);
 
   // Check if user has added any pins with data
   const hasAddedPins = pins.some(p => p.address && p.address.trim() !== "");
@@ -152,15 +155,22 @@ const CreateRoute = () => {
 
   // Auto-save function (silent, doesn't navigate)
   const autoSaveRoute = useCallback(async () => {
-    if (!user || !title.trim() || !hasAddedPins || saving || autoSaving) return;
+    // Prevent concurrent saves
+    if (!user || !title.trim() || saving || saveInProgressRef.current) return;
     
-    const validPins = pins.filter(p => p.address).map(p => ({
+    // For drafts, keep pins that have ANY data (more permissive than publish)
+    const pinsToSave = pins.filter(p => 
+      p.address || p.place_name || p.description || p.latitude || p.images.length > 0
+    );
+    
+    if (pinsToSave.length === 0) return;
+    
+    const validPins = pinsToSave.map(p => ({
       ...p,
-      place_name: p.place_name || p.address
+      place_name: p.place_name || p.address || "Nowy pin"
     }));
-    
-    if (validPins.length === 0) return;
 
+    saveInProgressRef.current = true;
     setAutoSaving(true);
 
     try {
@@ -268,9 +278,10 @@ const CreateRoute = () => {
     } catch (error) {
       console.error("Auto-save error:", error);
     } finally {
+      saveInProgressRef.current = false;
       setAutoSaving(false);
     }
-  }, [user, title, description, routeDescription, pins, routeRating, tripType, hasAddedPins, saving, autoSaving]);
+  }, [user, title, description, routeDescription, pins, routeRating, tripType, saving]);
 
   // Auto-save interval (every 30 seconds)
   useEffect(() => {
@@ -307,6 +318,19 @@ const CreateRoute = () => {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && hasAddedPins && step >= 2 && title.trim()) {
+        // Save backup to localStorage before auto-save attempt
+        try {
+          localStorage.setItem('route_draft_backup', JSON.stringify({
+            title,
+            pins,
+            routeDescription,
+            tripType,
+            routeRating,
+            timestamp: Date.now()
+          }));
+        } catch (e) {
+          console.error("localStorage backup failed:", e);
+        }
         autoSaveRoute();
       }
     };
@@ -602,9 +626,20 @@ const CreateRoute = () => {
       return;
     }
 
-    const validPins = pins.filter(p => p.address).map(p => ({
+    // Prevent concurrent saves
+    if (saveInProgressRef.current) {
+      toast({ title: "Zapis w toku, poczekaj..." });
+      return;
+    }
+
+    // For drafts, keep pins with any data; for published, require address
+    const pinsToSave = status === "published" 
+      ? pins.filter(p => p.address)
+      : pins.filter(p => p.address || p.place_name || p.description || p.latitude || p.images.length > 0);
+
+    const validPins = pinsToSave.map(p => ({
       ...p,
-      place_name: p.place_name || p.address
+      place_name: p.place_name || p.address || "Nowy pin"
     }));
     
     if (validPins.length === 0) {
@@ -625,6 +660,7 @@ const CreateRoute = () => {
       }
     }
 
+    saveInProgressRef.current = true;
     setSaving(true);
 
     try {
@@ -778,6 +814,7 @@ const CreateRoute = () => {
     } catch (error: any) {
       toast({ variant: "destructive", title: "Błąd", description: error.message });
     } finally {
+      saveInProgressRef.current = false;
       setSaving(false);
     }
   };
