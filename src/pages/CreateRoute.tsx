@@ -232,13 +232,18 @@ const CreateRoute = () => {
 
         if (pinsError) throw pinsError;
 
-        // Batch insert notes after pins are created
+        // Batch insert notes after pins are created - map by pin_order to ensure correct matching
         if (insertedPins) {
           const allNotesToInsert: any[] = [];
-          for (let i = 0; i < insertedPins.length; i++) {
-            const pinData = pinsToInsert[i];
-            const insertedPin = insertedPins[i];
-            if (pinData.notes && pinData.notes.length > 0) {
+          
+          // Create a map of pin_order -> inserted pin for reliable matching
+          const insertedPinsByOrder = new Map(
+            insertedPins.map(p => [p.pin_order, p])
+          );
+          
+          for (const pinData of pinsToInsert) {
+            const insertedPin = insertedPinsByOrder.get(pinData.pin_order);
+            if (insertedPin && pinData.notes && pinData.notes.length > 0) {
               for (const note of pinData.notes) {
                 allNotesToInsert.push({
                   route_id: routeIdRef.current,
@@ -294,13 +299,18 @@ const CreateRoute = () => {
 
         if (pinsError) throw pinsError;
 
-        // Batch insert notes
+        // Batch insert notes - map by pin_order to ensure correct matching
         if (insertedPins) {
           const allNotesToInsert: any[] = [];
-          for (let i = 0; i < insertedPins.length; i++) {
-            const pinData = pinsToInsert[i];
-            const insertedPin = insertedPins[i];
-            if (pinData.notes && pinData.notes.length > 0) {
+          
+          // Create a map of pin_order -> inserted pin for reliable matching
+          const insertedPinsByOrder = new Map(
+            insertedPins.map(p => [p.pin_order, p])
+          );
+          
+          for (const pinData of pinsToInsert) {
+            const insertedPin = insertedPinsByOrder.get(pinData.pin_order);
+            if (insertedPin && pinData.notes && pinData.notes.length > 0) {
               for (const note of pinData.notes) {
                 allNotesToInsert.push({
                   route_id: route.id,
@@ -780,13 +790,18 @@ const CreateRoute = () => {
 
         if (pinsError) throw pinsError;
 
-        // Fire translations and collect notes
+        // Fire translations and collect notes - map by pin_order to ensure correct matching
         if (insertedPins) {
           const allNotesToInsert: any[] = [];
           
-          for (let i = 0; i < insertedPins.length; i++) {
-            const pinData = pinsToInsert[i];
-            const insertedPin = insertedPins[i];
+          // Create a map of pin_order -> inserted pin for reliable matching
+          const insertedPinsByOrder = new Map(
+            insertedPins.map(p => [p.pin_order, p])
+          );
+          
+          for (const pinData of pinsToInsert) {
+            const insertedPin = insertedPinsByOrder.get(pinData.pin_order);
+            if (!insertedPin) continue;
             
             // Trigger async translation (fire-and-forget)
             if (pinData.place_name) {
@@ -853,13 +868,18 @@ const CreateRoute = () => {
 
         if (pinsError) throw pinsError;
 
-        // Fire translations and collect notes
+        // Fire translations and collect notes - map by pin_order to ensure correct matching
         if (insertedPins) {
           const allNotesToInsert: any[] = [];
           
-          for (let i = 0; i < insertedPins.length; i++) {
-            const pinData = pinsToInsert[i];
-            const insertedPin = insertedPins[i];
+          // Create a map of pin_order -> inserted pin for reliable matching
+          const insertedPinsByOrder = new Map(
+            insertedPins.map(p => [p.pin_order, p])
+          );
+          
+          for (const pinData of pinsToInsert) {
+            const insertedPin = insertedPinsByOrder.get(pinData.pin_order);
+            if (!insertedPin) continue;
             
             // Trigger async translation (fire-and-forget)
             if (pinData.place_name) {
