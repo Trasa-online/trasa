@@ -122,20 +122,6 @@ const Waitlist = () => {
           </form>
         )}
 
-        {/* Links */}
-        <div className="text-center text-sm text-muted-foreground space-y-2">
-          <p>
-            Masz już konto?{" "}
-            <Link to="/auth" className="text-primary hover:underline font-medium">
-              Zaloguj się
-            </Link>
-          </p>
-          <p>
-            <Link to="/" className="text-primary hover:underline font-medium">
-              Wróć do strony głównej
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );
