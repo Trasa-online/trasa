@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AppLayout from "./components/layout/AppLayout";
 import Feed from "./pages/Feed";
 import Auth from "./pages/Auth";
+import Waitlist from "./pages/Waitlist";
 import MyRoutes from "./pages/MyRoutes";
 import CreateRoute from "./pages/CreateRoute";
 import SavedRoutes from "./pages/SavedRoutes";
@@ -29,6 +30,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
+          <Route path="/waitlist" element={<Waitlist />} />
           <Route path="/" element={<AppLayout><Feed /></AppLayout>} />
           <Route path="/my-routes" element={<AppLayout><MyRoutes /></AppLayout>} />
           <Route path="/create" element={<CreateRoute />} />
