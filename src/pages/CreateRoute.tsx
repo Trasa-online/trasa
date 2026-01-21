@@ -754,22 +754,26 @@ const CreateRoute = () => {
         };
       }));
 
-      if (id) {
+      // Use routeIdRef.current (from auto-save) OR id from URL params
+      const existingRouteId = routeIdRef.current || id;
+
+      if (existingRouteId) {
         const { error: routeError } = await supabase
           .from("routes")
           .update({ title, description: routeDescription || description, status, rating: routeRating, trip_type: tripType || 'completed' })
-          .eq("id", id);
+          .eq("id", existingRouteId);
 
         if (routeError) throw routeError;
+        routeId = existingRouteId;
 
         // Delete existing pins (cascades to route_notes via FK)
-        await supabase.from("pins").delete().eq("route_id", id);
+        await supabase.from("pins").delete().eq("route_id", existingRouteId);
 
         // BATCH INSERT - single request for all pins
         const { data: insertedPins, error: pinsError } = await supabase
           .from("pins")
           .insert(pinsToInsert.map(p => ({
-            route_id: id,
+            route_id: existingRouteId,
             place_name: p.place_name,
             address: p.address,
             description: p.description,
@@ -818,7 +822,7 @@ const CreateRoute = () => {
             if (pinData.notes && pinData.notes.length > 0) {
               for (const note of pinData.notes) {
                 allNotesToInsert.push({
-                  route_id: id,
+                  route_id: existingRouteId,
                   pin_id: insertedPin.id,
                   text: note.text,
                   image_url: note.imageUrl,
@@ -842,6 +846,7 @@ const CreateRoute = () => {
 
         if (routeError) throw routeError;
         routeId = route.id;
+        routeIdRef.current = route.id; // Store for future saves
 
         // BATCH INSERT - single request for all pins
         const { data: insertedPins, error: pinsError } = await supabase
@@ -913,7 +918,7 @@ const CreateRoute = () => {
         }
       }
 
-      const isUpdating = !!id;
+      const isUpdating = !!existingRouteId;
       const wasPublished = existingRoute?.status === "published";
       
       let toastMessage = "";
