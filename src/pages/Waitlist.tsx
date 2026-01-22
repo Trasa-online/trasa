@@ -217,12 +217,17 @@ const Waitlist = () => {
           </form>
         )}
 
-        {/* Waitlist Counter */}
-        {waitlistCount !== null && waitlistCount > 0 && (
-          <p className="text-center text-sm text-muted-foreground">
-            Już <span className="font-semibold text-foreground transition-all duration-300">{animatedCount}</span> {waitlistCount === 1 ? "osoba czeka" : "osób czeka"} na start
+        {/* Waitlist Counter - always visible */}
+        <div className="text-center">
+          <div className="inline-flex items-center gap-2 bg-muted/50 rounded-full px-4 py-2">
+            <span className="text-2xl font-bold text-primary">{animatedCount}</span>
+            <span className="text-muted-foreground">/</span>
+            <span className="text-lg font-medium text-muted-foreground">50</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            {waitlistCount === null ? "Ładowanie..." : "miejsc w zamkniętej becie"}
           </p>
-        )}
+        </div>
 
       </div>
     </div>
