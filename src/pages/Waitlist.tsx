@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,12 +8,57 @@ import { z } from "zod";
 
 const emailSchema = z.string().trim().email({ message: "Podaj poprawny adres email" });
 
+// Custom hook for counting animation
+const useCountUp = (target: number | null, duration: number = 1500) => {
+  const [count, setCount] = useState(0);
+  const previousTarget = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (target === null || target === 0) return;
+
+    const startValue = previousTarget.current ?? 0;
+    const difference = target - startValue;
+    
+    if (difference <= 0) {
+      setCount(target);
+      previousTarget.current = target;
+      return;
+    }
+
+    const startTime = performance.now();
+    
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Ease-out cubic for smooth deceleration
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      
+      const currentCount = Math.floor(startValue + difference * easeOut);
+      setCount(currentCount);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setCount(target);
+        previousTarget.current = target;
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, [target, duration]);
+
+  return count;
+};
+
 const Waitlist = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [waitlistCount, setWaitlistCount] = useState<number | null>(null);
   const { toast } = useToast();
+
+  const animatedCount = useCountUp(waitlistCount);
 
   useEffect(() => {
     const fetchCount = async () => {
@@ -135,7 +180,7 @@ const Waitlist = () => {
         {/* Waitlist Counter */}
         {waitlistCount !== null && waitlistCount > 0 && (
           <p className="text-center text-sm text-muted-foreground">
-            Już <span className="font-semibold text-foreground">{waitlistCount}</span> {waitlistCount === 1 ? "osoba czeka" : "osób czeka"} na start
+            Już <span className="font-semibold text-foreground transition-all duration-300">{animatedCount}</span> {waitlistCount === 1 ? "osoba czeka" : "osób czeka"} na start
           </p>
         )}
 
