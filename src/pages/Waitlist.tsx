@@ -5,26 +5,29 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { Mail, ArrowRight, CheckCircle2 } from "lucide-react";
 import { z } from "zod";
+import confetti from "canvas-confetti";
 
 const emailSchema = z.string().trim().email({ message: "Podaj poprawny adres email" });
 
 // Custom hook for counting animation
 const useCountUp = (target: number | null, duration: number = 1500) => {
   const [count, setCount] = useState(0);
-  const previousTarget = useRef<number | null>(null);
+  const hasAnimated = useRef(false);
 
   useEffect(() => {
-    if (target === null || target === 0) return;
-
-    const startValue = previousTarget.current ?? 0;
-    const difference = target - startValue;
-    
-    if (difference <= 0) {
-      setCount(target);
-      previousTarget.current = target;
+    if (target === null) return;
+    if (target === 0) {
+      setCount(0);
       return;
     }
 
+    // Only animate on first load, not on updates
+    if (hasAnimated.current) {
+      setCount(target);
+      return;
+    }
+
+    hasAnimated.current = true;
     const startTime = performance.now();
     
     const animate = (currentTime: number) => {
@@ -34,14 +37,13 @@ const useCountUp = (target: number | null, duration: number = 1500) => {
       // Ease-out cubic for smooth deceleration
       const easeOut = 1 - Math.pow(1 - progress, 3);
       
-      const currentCount = Math.floor(startValue + difference * easeOut);
+      const currentCount = Math.floor(target * easeOut);
       setCount(currentCount);
 
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
         setCount(target);
-        previousTarget.current = target;
       }
     };
 
@@ -49,6 +51,43 @@ const useCountUp = (target: number | null, duration: number = 1500) => {
   }, [target, duration]);
 
   return count;
+};
+
+// Confetti celebration function
+const triggerConfetti = () => {
+  const duration = 2000;
+  const end = Date.now() + duration;
+
+  const frame = () => {
+    confetti({
+      particleCount: 3,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0, y: 0.7 },
+      colors: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'],
+    });
+    confetti({
+      particleCount: 3,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1, y: 0.7 },
+      colors: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'],
+    });
+
+    if (Date.now() < end) {
+      requestAnimationFrame(frame);
+    }
+  };
+
+  // Initial burst
+  confetti({
+    particleCount: 100,
+    spread: 70,
+    origin: { y: 0.6 },
+    colors: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#ffffff'],
+  });
+
+  frame();
 };
 
 const Waitlist = () => {
@@ -101,6 +140,7 @@ const Waitlist = () => {
         }
       } else {
         setSuccess(true);
+        triggerConfetti();
         toast({
           title: "Dziękujemy!",
           description: "Powiadomimy Cię gdy aplikacja będzie gotowa.",
