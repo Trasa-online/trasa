@@ -1,10 +1,9 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { Mail, Rocket, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Mail, ArrowRight, CheckCircle2 } from "lucide-react";
 import { z } from "zod";
 
 const emailSchema = z.string().trim().email({ message: "Podaj poprawny adres email" });
@@ -13,7 +12,18 @@ const Waitlist = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [waitlistCount, setWaitlistCount] = useState<number | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchCount = async () => {
+      const { count } = await supabase
+        .from("waitlist")
+        .select("*", { count: "exact", head: true });
+      setWaitlistCount(count);
+    };
+    fetchCount();
+  }, [success]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +81,7 @@ const Waitlist = () => {
             TRASA
           </h1>
           <div className="flex items-center justify-center gap-2 text-primary">
-            <Rocket className="h-5 w-5" />
+            <span className="text-xl">📍</span>
             <span className="text-sm font-medium">Wkrótce dostępna</span>
           </div>
         </div>
@@ -79,10 +89,10 @@ const Waitlist = () => {
         {/* Description */}
         <div className="text-center space-y-2">
           <p className="text-lg text-muted-foreground">
-            Twórz i udostępniaj trasy podróży ze znajomymi
+            Twoje podróże. Jedna TRASA
           </p>
           <p className="text-sm text-muted-foreground">
-            Zostaw email, a powiadomimy Cię gdy aplikacja będzie gotowa do użycia.
+            Odbierz zaproszenie do zamkniętej bety
           </p>
         </div>
 
@@ -116,10 +126,17 @@ const Waitlist = () => {
               className="w-full h-12 text-base gap-2"
               disabled={loading}
             >
-              {loading ? "Zapisywanie..." : "Powiadom mnie"}
+              {loading ? "Zapisywanie..." : "Powiadom mnie o starcie"}
               {!loading && <ArrowRight className="h-4 w-4" />}
             </Button>
           </form>
+        )}
+
+        {/* Waitlist Counter */}
+        {waitlistCount !== null && waitlistCount > 0 && (
+          <p className="text-center text-sm text-muted-foreground">
+            Już <span className="font-semibold text-foreground">{waitlistCount}</span> {waitlistCount === 1 ? "osoba czeka" : "osób czeka"} na start
+          </p>
         )}
 
       </div>
