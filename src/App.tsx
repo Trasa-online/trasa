@@ -19,6 +19,7 @@ import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Friends from "./pages/Friends";
 import PinDetails from "./pages/PinDetails";
+import QRCodePage from "./pages/QRCode";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
+          <Route path="/qr" element={<QRCodePage />} />
           <Route path="/" element={<Waitlist />} />
           <Route path="/feed" element={<AppLayout><Feed /></AppLayout>} />
           <Route path="/my-routes" element={<AppLayout><MyRoutes /></AppLayout>} />
