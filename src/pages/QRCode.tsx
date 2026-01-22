@@ -38,12 +38,6 @@ const QRCodePage = () => {
           />
         </div>
 
-        <p className="text-sm text-muted-foreground">{targetUrl}</p>
-
-        <Button onClick={downloadQR} className="gap-2">
-          <Download className="h-4 w-4" />
-          Pobierz jako PNG
-        </Button>
       </div>
     </div>
   );
