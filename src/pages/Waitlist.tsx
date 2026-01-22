@@ -63,7 +63,7 @@ const Waitlist = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 -mt-16">
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="text-center space-y-2">

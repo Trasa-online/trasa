@@ -7,10 +7,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -28,38 +26,18 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        toast({
-          title: "Zalogowano pomyślnie!",
-          description: "Witamy z powrotem w TRASA",
-        });
-        navigate("/");
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: {
-              username,
-            },
-          },
-        });
-
-        if (error) throw error;
-
-        toast({
-          title: "Konto utworzone!",
-          description: "Sprawdź swoją skrzynkę email, aby potwierdzić konto.",
-        });
-      }
+      toast({
+        title: "Zalogowano pomyślnie!",
+        description: "Witamy z powrotem w TRASA",
+      });
+      navigate("/");
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -77,25 +55,11 @@ const Auth = () => {
         <div className="text-center">
           <h1 className="text-4xl font-bold mb-2">TRASA</h1>
           <p className="text-muted-foreground">
-            {isLogin ? "Zaloguj się do swojego konta" : "Utwórz nowe konto"}
+            Zaloguj się do swojego konta
           </p>
         </div>
 
         <form onSubmit={handleAuth} className="space-y-4">
-          {!isLogin && (
-            <div className="space-y-2">
-              <Label htmlFor="username">Nazwa użytkownika</Label>
-              <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                placeholder="twoja_nazwa"
-              />
-            </div>
-          )}
-
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -121,20 +85,9 @@ const Auth = () => {
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Ładowanie..." : isLogin ? "Zaloguj się" : "Zarejestruj się"}
+            {loading ? "Ładowanie..." : "Zaloguj się"}
           </Button>
         </form>
-
-        <div className="text-center">
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            {isLogin
-              ? "Nie masz konta? Zarejestruj się"
-              : "Masz już konto? Zaloguj się"}
-          </button>
-        </div>
       </div>
     </div>
   );
