@@ -21,9 +21,9 @@ const QRCodePage = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
       <div className="text-center space-y-6">
-        <h1 className="text-2xl font-bold text-foreground">Kod QR do Trasa</h1>
+        <h1 className="text-2xl font-bold text-foreground">Dołącz do TRASY</h1>
         <p className="text-muted-foreground">
-          Zeskanuj kod, aby przejść do waitlisty
+          Zeskanuj kod i bądź pierwszym testerem narzędzia!
         </p>
 
         <div
