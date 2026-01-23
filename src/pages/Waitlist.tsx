@@ -163,8 +163,7 @@ const Waitlist = () => {
         {/* Headline */}
         <div className="text-center space-y-6">
           <p className="text-lg font-bold text-foreground leading-relaxed">
-            Opowiedz o swoich doświadczeniach i pomóż innym podróżować{" "}
-            <span className="text-[#39FF14]">lepiej</span>
+            Opowiedz o swoich doświadczeniach i pomóż innym podróżować lepiej
           </p>
           
           {/* Logo */}
@@ -174,7 +173,7 @@ const Waitlist = () => {
           
           {/* Sub-copy */}
           <p className="text-sm text-muted-foreground">
-            Dołącz do nas i zbuduj z nami najlepsze narzędzie każdego podróżnika
+            Dołącz do nas i zbuduj z nami najważniejsze narzędzie każdego podróżnika
           </p>
         </div>
 
@@ -215,15 +214,24 @@ const Waitlist = () => {
         )}
 
         {/* Waitlist Counter - always visible */}
-        <div className="text-center">
+        <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-2 bg-muted/50 rounded-full px-4 py-2">
             <span className="text-2xl font-bold text-primary">{animatedCount}</span>
             <span className="text-muted-foreground">/</span>
             <span className="text-lg font-medium text-muted-foreground">50</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="text-xs text-muted-foreground">
             {waitlistCount === null ? "Ładowanie..." : "osób zapisanych na waitlistę"}
           </p>
+          {/* Progress bar */}
+          <div className="w-full max-w-xs mx-auto">
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary rounded-full transition-all duration-1000 ease-out"
+                style={{ width: `${Math.min((animatedCount / 50) * 100, 100)}%` }}
+              />
+            </div>
+          </div>
         </div>
 
       </div>
