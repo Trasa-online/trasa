@@ -160,24 +160,21 @@ const Waitlist = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 -mt-16">
       <div className="w-full max-w-md space-y-8">
-        {/* Logo */}
-        <div className="text-center space-y-2">
+        {/* Headline */}
+        <div className="text-center space-y-6">
+          <p className="text-lg font-bold text-foreground leading-relaxed">
+            Opowiedz o swoich doświadczeniach i pomóż innym podróżować{" "}
+            <span className="text-[#39FF14]">lepiej</span>
+          </p>
+          
+          {/* Logo */}
           <h1 className="text-4xl font-bold tracking-tight text-foreground">
             TRASA
           </h1>
-          <div className="flex items-center justify-center gap-2 text-primary">
-            <span className="text-xl">📍</span>
-            <span className="text-sm font-medium">Wkrótce dostępna</span>
-          </div>
-        </div>
-
-        {/* Description */}
-        <div className="text-center space-y-2">
-          <p className="text-lg text-muted-foreground">
-            Twoje podróże. Jedna TRASA
-          </p>
+          
+          {/* Sub-copy */}
           <p className="text-sm text-muted-foreground">
-            Odbierz zaproszenie do zamkniętej bety
+            Dołącz do nas i zbuduj z nami najlepsze narzędzie każdego podróżnika
           </p>
         </div>
 
@@ -225,7 +222,7 @@ const Waitlist = () => {
             <span className="text-lg font-medium text-muted-foreground">50</span>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            {waitlistCount === null ? "Ładowanie..." : "miejsc w zamkniętej becie"}
+            {waitlistCount === null ? "Ładowanie..." : "osób zapisanych na waitlistę"}
           </p>
         </div>
 
