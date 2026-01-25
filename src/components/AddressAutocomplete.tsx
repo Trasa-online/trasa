@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -28,24 +28,35 @@ interface Suggestion {
   };
 }
 
-const AddressAutocomplete = ({
+/**
+ * Memoized address autocomplete with debounced input handling.
+ * Uses local state for immediate UI feedback, syncs to parent only on selection.
+ */
+const AddressAutocomplete = memo(function AddressAutocomplete({
   value,
   onChange,
   placeholder = "Wpisz adres",
   disabled = false,
   className,
-}: AddressAutocompleteProps) => {
-  const [query, setQuery] = useState(value);
+}: AddressAutocompleteProps) {
+  const [localQuery, setLocalQuery] = useState(value);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<NodeJS.Timeout>();
+  const isTypingRef = useRef(false);
+  const lastExternalValueRef = useRef(value);
 
+  // Sync from parent only when value genuinely changes externally (e.g., switching pins)
   useEffect(() => {
-    setQuery(value);
+    if (!isTypingRef.current && value !== lastExternalValueRef.current) {
+      setLocalQuery(value);
+      lastExternalValueRef.current = value;
+    }
   }, [value]);
 
+  // Handle click outside to close suggestions
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -57,7 +68,16 @@ const AddressAutocomplete = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fetchSuggestions = async (searchQuery: string) => {
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
+
+  const fetchSuggestions = useCallback(async (searchQuery: string) => {
     if (!searchQuery || searchQuery.length < 2) {
       setSuggestions([]);
       return;
@@ -90,23 +110,26 @@ const AddressAutocomplete = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    setQuery(newValue);
-    onChange(newValue);
+    isTypingRef.current = true;
+    setLocalQuery(newValue);
 
+    // Clear existing debounce
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
 
+    // Debounce API call (300ms for suggestions)
     debounceRef.current = setTimeout(() => {
       fetchSuggestions(newValue);
+      isTypingRef.current = false;
     }, 300);
-  };
+  }, [fetchSuggestions]);
 
-  const handleSuggestionClick = (suggestion: Suggestion) => {
+  const handleSuggestionClick = useCallback((suggestion: Suggestion) => {
     // Check if there's a distinct place name (POI name like restaurant, attraction)
     const isPlaceName = suggestion.name && 
       suggestion.name !== suggestion.full_address && 
@@ -121,23 +144,28 @@ const AddressAutocomplete = ({
     // Display value is the combined address
     const displayValue = fullAddressWithName;
     
-    setQuery(displayValue);
+    setLocalQuery(displayValue);
+    lastExternalValueRef.current = displayValue;
+    isTypingRef.current = false;
+    
     // Pass: displayValue (combined), coordinates, fullAddressWithName (for address field), suggestion.name (for place_name)
     onChange(displayValue, suggestion.coordinates, fullAddressWithName, isPlaceName ? suggestion.name : undefined);
     setIsOpen(false);
     setSuggestions([]);
-  };
+  }, [onChange]);
+
+  const handleFocus = useCallback(() => {
+    if (suggestions.length > 0) {
+      setIsOpen(true);
+    }
+  }, [suggestions.length]);
 
   return (
     <div ref={containerRef} className="relative">
       <Input
-        value={query}
+        value={localQuery}
         onChange={handleInputChange}
-        onFocus={() => {
-          if (suggestions.length > 0) {
-            setIsOpen(true);
-          }
-        }}
+        onFocus={handleFocus}
         placeholder={placeholder}
         disabled={disabled}
         className={className}
@@ -173,6 +201,6 @@ const AddressAutocomplete = ({
       )}
     </div>
   );
-};
+});
 
 export default AddressAutocomplete;
