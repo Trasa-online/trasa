@@ -89,6 +89,9 @@ const CreateRoute = () => {
   
   // Lock to prevent concurrent saves
   const saveInProgressRef = useRef(false);
+  
+  // Flag to prevent auto-save during draft loading (CRITICAL: prevents race conditions)
+  const draftLoadingRef = useRef(false);
 
   // Check if user has added any pins with data
   const hasAddedPins = pins.some(p => p.address && p.address.trim() !== "");
@@ -155,15 +158,25 @@ const CreateRoute = () => {
 
   // Auto-save function (silent, doesn't navigate)
   const autoSaveRoute = useCallback(async () => {
-    // Prevent concurrent saves
+    // Prevent concurrent saves and saves during draft loading
     if (!user || !title.trim() || saving || saveInProgressRef.current) return;
+    
+    // CRITICAL: Block auto-save while draft is being loaded to prevent race conditions
+    if (draftLoadingRef.current) {
+      console.log("Auto-save blocked: draft is loading");
+      return;
+    }
     
     // For drafts, keep pins that have ANY data (more permissive than publish)
     const pinsToSave = pins.filter(p => 
       p.address || p.place_name || p.description || p.latitude || p.images.length > 0
     );
     
-    if (pinsToSave.length === 0) return;
+    // CRITICAL: Don't proceed if we have no valid pins - prevents data loss
+    if (pinsToSave.length === 0) {
+      console.log("Auto-save skipped: no valid pins to save");
+      return;
+    }
     
     const validPins = pinsToSave.map(p => ({
       ...p,
@@ -195,6 +208,14 @@ const CreateRoute = () => {
       }));
 
       if (routeIdRef.current) {
+        // CRITICAL: Verify we have pins to insert BEFORE deleting existing ones
+        if (pinsToInsert.length === 0) {
+          console.warn("Auto-save aborted: pinsToInsert is empty, would cause data loss");
+          saveInProgressRef.current = false;
+          setAutoSaving(false);
+          return;
+        }
+
         // Update existing route
         await supabase
           .from("routes")
@@ -207,7 +228,8 @@ const CreateRoute = () => {
           })
           .eq("id", routeIdRef.current);
 
-        // Delete existing pins
+        // Delete existing pins and notes (in correct order to avoid FK issues)
+        await supabase.from("route_notes").delete().eq("route_id", routeIdRef.current);
         await supabase.from("pins").delete().eq("route_id", routeIdRef.current);
 
         // BATCH INSERT - single request for all pins
@@ -481,6 +503,8 @@ const CreateRoute = () => {
   const loadDraft = () => {
     if (!pendingDraft) return;
     
+    // Set loading flag to block auto-save during draft load
+    draftLoadingRef.current = true;
     routeIdRef.current = pendingDraft.id;
     setTitle(pendingDraft.title);
     setDescription(pendingDraft.description || "");
@@ -516,6 +540,12 @@ const CreateRoute = () => {
     setShowDraftDialog(false);
     setPendingDraft(null);
     
+    // Clear loading flag after state is set (use setTimeout to ensure React has processed state updates)
+    setTimeout(() => {
+      draftLoadingRef.current = false;
+      console.log("Draft loaded, auto-save enabled");
+    }, 500);
+    
     toast({
       title: "Wersja robocza została wczytana",
       description: "Kontynuujesz edycję ostatniej trasy",
@@ -544,6 +574,9 @@ const CreateRoute = () => {
 
   useEffect(() => {
     if (existingRoute) {
+      // Block auto-save during existing route load
+      draftLoadingRef.current = true;
+      
       setTitle(existingRoute.title);
       setDescription(existingRoute.description || "");
       setRouteDescription(existingRoute.description || "");
@@ -570,6 +603,12 @@ const CreateRoute = () => {
         setShowPinsList(true);
       }
       setStep(2);
+      
+      // Enable auto-save after state is set
+      setTimeout(() => {
+        draftLoadingRef.current = false;
+        console.log("Existing route loaded, auto-save enabled");
+      }, 500);
     }
   }, [existingRoute]);
 
