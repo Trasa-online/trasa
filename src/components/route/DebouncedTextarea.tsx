@@ -26,13 +26,17 @@ const DebouncedTextarea = memo(function DebouncedTextarea({
 }: DebouncedTextareaProps) {
   const [localValue, setLocalValue] = useState(value);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isExternalUpdate = useRef(false);
+  // Track if we're in the middle of user input to prevent external overwrites
+  const isTypingRef = useRef(false);
+  // Track the last value we sent to parent to avoid unnecessary syncs
+  const lastSentValueRef = useRef(value);
 
   // Sync from parent when value changes externally (e.g., switching pins)
+  // Only update if not currently typing and the value is genuinely different
   useEffect(() => {
-    if (value !== localValue) {
-      isExternalUpdate.current = true;
+    if (!isTypingRef.current && value !== lastSentValueRef.current) {
       setLocalValue(value);
+      lastSentValueRef.current = value;
     }
   }, [value]);
 
@@ -44,6 +48,7 @@ const DebouncedTextarea = memo(function DebouncedTextarea({
       return; // Don't allow more words
     }
 
+    isTypingRef.current = true;
     setLocalValue(newValue);
 
     // Clear existing timeout
@@ -54,6 +59,8 @@ const DebouncedTextarea = memo(function DebouncedTextarea({
     // Debounce the parent update
     timeoutRef.current = setTimeout(() => {
       onChange(newValue);
+      lastSentValueRef.current = newValue;
+      isTypingRef.current = false;
     }, debounceMs);
   };
 
@@ -66,15 +73,15 @@ const DebouncedTextarea = memo(function DebouncedTextarea({
     };
   }, []);
 
-  // Flush pending changes when component unmounts or pin changes
+  // Flush pending changes when component unmounts
   useEffect(() => {
     return () => {
-      if (timeoutRef.current && localValue !== value) {
+      if (timeoutRef.current && localValue !== lastSentValueRef.current) {
         clearTimeout(timeoutRef.current);
         onChange(localValue);
       }
     };
-  }, [localValue, value, onChange]);
+  }, [localValue, onChange]);
 
   const wordCount = localValue.trim() 
     ? localValue.trim().split(/\s+/).filter(w => w.length > 0).length 
