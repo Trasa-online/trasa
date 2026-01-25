@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import DebouncedTextarea from "@/components/route/DebouncedTextarea";
 
 import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
@@ -1250,21 +1251,14 @@ const CreateRoute = () => {
 
                   <div>
                     <Label>Opis (Opcjonalne)</Label>
-                    <Textarea
+                    <DebouncedTextarea
                       value={pins[currentPinIndex]?.description || ""}
-                      onChange={(e) => {
-                        const words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0);
-                        if (words.length <= 150 || e.target.value.length < (pins[currentPinIndex]?.description || "").length) {
-                          updatePin(currentPinIndex, "description", e.target.value);
-                        }
-                      }}
+                      onChange={(value) => updatePin(currentPinIndex, "description", value)}
                       placeholder="Wpisz notatki o tym miejscu..."
                       rows={3}
-                      className="resize-none"
+                      maxWords={150}
+                      debounceMs={500}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {(pins[currentPinIndex]?.description || "").trim() ? (pins[currentPinIndex]?.description || "").trim().split(/\s+/).filter(w => w.length > 0).length : 0}/150 słów
-                    </p>
                   </div>
 
 
