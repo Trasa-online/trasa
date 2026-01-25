@@ -396,6 +396,90 @@ export type Database = {
           },
         ]
       }
+      pins_backup: {
+        Row: {
+          address: string
+          can_restore: boolean | null
+          deleted_at: string
+          deletion_source: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          images: string[] | null
+          is_transport: boolean | null
+          latitude: number | null
+          longitude: number | null
+          mentioned_users: string[] | null
+          name_translations: Json | null
+          original_created_at: string | null
+          original_creator_id: string | null
+          original_pin_id: string
+          pin_order: number
+          place_name: string
+          rating: number | null
+          route_id: string
+          route_title: string | null
+          tags: string[] | null
+          transport_end: string | null
+          transport_type: string | null
+          user_id: string
+        }
+        Insert: {
+          address: string
+          can_restore?: boolean | null
+          deleted_at?: string
+          deletion_source?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          images?: string[] | null
+          is_transport?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          mentioned_users?: string[] | null
+          name_translations?: Json | null
+          original_created_at?: string | null
+          original_creator_id?: string | null
+          original_pin_id: string
+          pin_order: number
+          place_name: string
+          rating?: number | null
+          route_id: string
+          route_title?: string | null
+          tags?: string[] | null
+          transport_end?: string | null
+          transport_type?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string
+          can_restore?: boolean | null
+          deleted_at?: string
+          deletion_source?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          images?: string[] | null
+          is_transport?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          mentioned_users?: string[] | null
+          name_translations?: Json | null
+          original_created_at?: string | null
+          original_creator_id?: string | null
+          original_pin_id?: string
+          pin_order?: number
+          place_name?: string
+          rating?: number | null
+          route_id?: string
+          route_title?: string | null
+          tags?: string[] | null
+          transport_end?: string | null
+          transport_type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -706,6 +790,13 @@ export type Database = {
         Returns: boolean
       }
       increment_route_views: { Args: { route_id: string }; Returns: undefined }
+      restore_pins_from_backup: {
+        Args: { p_backup_ids: string[]; p_target_route_id?: string }
+        Returns: {
+          restored_count: number
+          restored_pin_ids: string[]
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
