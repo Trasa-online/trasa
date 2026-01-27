@@ -73,4 +73,4 @@ export const MOCK_BUSINESS_DATA: BusinessData = {
 };
 
 // ID of the pin we'll use for testing premium view (Stołówka Gdańska)
-export const MOCK_PREMIUM_PIN_ID = "1f8ec86e-e0b4-490f-86b9-b9f166658406";
+export const MOCK_PREMIUM_PIN_ID = "fe266c93-57dc-436b-a37a-2b02b4fa2016";
