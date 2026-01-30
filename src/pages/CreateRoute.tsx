@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import DebouncedTextarea from "@/components/route/DebouncedTextarea";
 
-import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Eye } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Eye, Check } from "lucide-react";
 import RoutePreviewDialog from "@/components/route/RoutePreviewDialog";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,7 @@ import MapPinSelector from "@/components/route/MapPinSelector";
 import PinNotesSection from "@/components/route/PinNotesSection";
 import StepIndicator from "@/components/route/StepIndicator";
 import { findOriginalPinCreator, checkPinDiscoveryInfo } from "@/lib/pinDiscovery";
+import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/imageCompression";
 import {
   AlertDialog,
@@ -1376,8 +1377,25 @@ const CreateRoute = () => {
 
                   {/* Tag selection - all visible */}
                   <div className="pb-32">
-                    <Label>Kategoria (Opcjonalne)</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <Label className="text-sm font-medium">Kategoria (Opcjonalne)</Label>
+                      {(pins[currentPinIndex]?.tags?.length || 0) > 0 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => updatePin(currentPinIndex, "tags", [])}
+                          className="text-xs h-7 px-2 text-muted-foreground hover:text-destructive"
+                        >
+                          Wyczyść wszystkie
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Możesz wybrać kilka kategorii
+                    </p>
+                    
+                    <div className="flex flex-wrap gap-2">
                       {[
                         { name: "Restauracja", icon: UtensilsCrossed },
                         { name: "Kawiarnia", icon: Coffee },
@@ -1390,10 +1408,15 @@ const CreateRoute = () => {
                       ].map(({ name, icon: Icon }) => {
                         const isSelected = pins[currentPinIndex]?.tags?.includes(name);
                         return (
-                          <Badge
+                          <button
                             key={name}
-                            variant={isSelected ? "default" : "outline"}
-                            className="cursor-pointer flex items-center gap-1.5 px-3 py-2 text-sm"
+                            type="button"
+                            className={cn(
+                              "inline-flex items-center gap-1.5 px-3 h-10 rounded-full text-sm font-medium transition-all duration-150",
+                              isSelected
+                                ? "bg-foreground text-background border-2 border-foreground"
+                                : "bg-background text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground"
+                            )}
                             onClick={() => {
                               const currentTags = pins[currentPinIndex]?.tags || [];
                               const newTags = isSelected 
@@ -1404,16 +1427,20 @@ const CreateRoute = () => {
                           >
                             <Icon className="h-4 w-4" />
                             {name}
-                            {isSelected && <X className="h-3.5 w-3.5 ml-1" />}
-                          </Badge>
+                            {isSelected && <Check className="h-3 w-3 ml-0.5" />}
+                          </button>
                         );
                       })}
+                      
+                      {/* Divider */}
+                      <div className="w-px h-8 bg-border self-center mx-1" />
+                      
                       {/* "Inne" tag - opens custom input inline */}
                       {showCustomTagInput ? (
                         <Input
                           autoFocus
                           placeholder="Wpisz i naciśnij Enter"
-                          className="h-9 w-40"
+                          className="h-10 w-44 rounded-full"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && e.currentTarget.value.trim()) {
                               const newTag = e.currentTarget.value.trim();
@@ -1438,14 +1465,14 @@ const CreateRoute = () => {
                           }}
                         />
                       ) : (
-                        <Badge
-                          variant="outline"
-                          className="cursor-pointer flex items-center gap-1.5 px-3 py-2 text-sm"
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 px-3 h-10 rounded-full text-sm font-medium bg-background text-muted-foreground border border-dashed border-border hover:bg-accent hover:text-accent-foreground transition-colors"
                           onClick={() => setShowCustomTagInput(true)}
                         >
                           <Plus className="h-4 w-4" />
                           Inne
-                        </Badge>
+                        </button>
                       )}
                     </div>
                     
@@ -1453,21 +1480,23 @@ const CreateRoute = () => {
                     {pins[currentPinIndex]?.tags?.filter(
                       tag => !["Restauracja", "Kawiarnia", "Jedzenie", "Zakupy", "Pamiątki", "Herbata", "Góry", "Morze"].includes(tag)
                     ).length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
+                      <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border">
+                        <span className="text-xs text-muted-foreground self-center mr-1">Własne:</span>
                         {pins[currentPinIndex]?.tags?.filter(
                           tag => !["Restauracja", "Kawiarnia", "Jedzenie", "Zakupy", "Pamiątki", "Herbata", "Góry", "Morze"].includes(tag)
                         ).map(tag => (
-                          <Badge
+                          <button
                             key={tag}
-                            variant="default"
-                            className="cursor-pointer flex items-center gap-1.5 px-3 py-2 text-sm"
+                            type="button"
+                            className="inline-flex items-center gap-1.5 px-3 h-10 rounded-full text-sm font-medium bg-foreground text-background border-2 border-foreground transition-all duration-150"
                             onClick={() => {
                               const currentTags = pins[currentPinIndex]?.tags || [];
                               updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== tag));
                             }}
                           >
-                            {tag} <X className="h-3.5 w-3.5 ml-1" />
-                          </Badge>
+                            {tag}
+                            <X className="h-3 w-3 ml-0.5" />
+                          </button>
                         ))}
                       </div>
                     )}
