@@ -7,7 +7,8 @@ import AppLayout from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Trash2, Star, Eye } from "lucide-react";
+import { MapPin, Trash2, Star, Eye, Plus, FileText } from "lucide-react";
+import EmptyState from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import { QuickNoteDialog } from "@/components/QuickNoteDialog";
 import {
@@ -255,9 +256,14 @@ const MyRoutes = () => {
               <RouteItem key={route.id} route={route} />
             ))}
             {publishedRoutes?.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
-                Nie masz jeszcze opublikowanych tras
-              </p>
+              <EmptyState
+                icon={MapPin}
+                title="Brak opublikowanych tras"
+                description="Stwórz swoją pierwszą trasę i podziel się nią ze znajomymi!"
+                actionLabel="Stwórz pierwszą trasę"
+                actionIcon={Plus}
+                onAction={() => navigate("/create")}
+              />
             )}
           </TabsContent>
 
@@ -266,9 +272,14 @@ const MyRoutes = () => {
               <RouteItem key={route.id} route={route} />
             ))}
             {draftRoutes?.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
-                Nie masz roboczych tras
-              </p>
+              <EmptyState
+                icon={FileText}
+                title="Brak roboczych tras"
+                description="Rozpocznij tworzenie trasy, a zostanie automatycznie zapisana jako robocza"
+                actionLabel="Zacznij nową trasę"
+                actionIcon={Plus}
+                onAction={() => navigate("/create")}
+              />
             )}
           </TabsContent>
         </Tabs>

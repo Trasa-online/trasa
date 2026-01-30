@@ -7,6 +7,8 @@ import AppLayout from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Users, UserPlus } from "lucide-react";
+import EmptyState from "@/components/ui/empty-state";
 import { toast } from "sonner";
 
 const Friends = () => {
@@ -123,9 +125,17 @@ const Friends = () => {
           ))}
 
           {!friends?.length && (
-            <p className="text-center text-muted-foreground py-12">
-              Brak znajomych
-            </p>
+            <EmptyState
+              icon={Users}
+              title={isOwnProfile ? "Nie obserwujesz jeszcze nikogo" : "Brak obserwowanych"}
+              description={isOwnProfile 
+                ? "Odkryj inspirujące trasy innych użytkowników i zacznij ich obserwować!"
+                : `${profile?.username || "Ten użytkownik"} nie obserwuje jeszcze nikogo`
+              }
+              actionLabel={isOwnProfile ? "Szukaj użytkowników" : undefined}
+              actionIcon={isOwnProfile ? UserPlus : undefined}
+              onAction={isOwnProfile ? () => navigate("/search") : undefined}
+            />
           )}
         </div>
       </div>
