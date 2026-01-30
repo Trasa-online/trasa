@@ -88,11 +88,16 @@ const Notifications = () => {
           filter: `user_id=eq.${user.id}`
         },
         () => {
-          // Refetch when notification is marked as read
+          // Silently refetch when notification is marked as read
+          // NO toast here - user knows they marked it as read
           queryClient.invalidateQueries({ queryKey: ["notifications", user.id] });
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) {
+          console.error('Notification subscription error:', err);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -125,7 +130,7 @@ const Notifications = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      toast.success("Wszystkie powiadomienia oznaczone jako przeczytane");
+      // Removed toast - marking as read is a silent action
     },
   });
 
