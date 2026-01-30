@@ -82,6 +82,11 @@ const CreateRoute = () => {
   const [showPinsList, setShowPinsList] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   
+  // Undo deletion state
+  const [deletedPinBuffer, setDeletedPinBuffer] = useState<Pin | null>(null);
+  const [deletedPinIndex, setDeletedPinIndex] = useState<number | null>(null);
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
@@ -668,11 +673,68 @@ const CreateRoute = () => {
   };
 
   const removePin = (index: number) => {
+    const removedPin = pins[index];
     const newPins = pins.filter((_, i) => i !== index).map((pin, i) => ({ ...pin, pin_order: i }));
+    
+    // Store deleted pin for potential undo
+    setDeletedPinBuffer(removedPin);
+    setDeletedPinIndex(index);
+    
     setPins(newPins);
     if (currentPinIndex >= newPins.length) {
       setCurrentPinIndex(Math.max(0, newPins.length - 1));
     }
+    
+    // Clear any existing timeout
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+    }
+    
+    // Show toast with undo option
+    toast({
+      title: "Pinezka usunięta",
+      description: `${removedPin.place_name || removedPin.address || "Pinezka"} została usunięta`,
+      action: (
+        <Button 
+          size="sm" 
+          variant="outline"
+          onClick={() => handleUndoDelete(removedPin, index, newPins)}
+        >
+          Cofnij
+        </Button>
+      ),
+      duration: 5000,
+    });
+    
+    // Clear buffer after 5 seconds
+    undoTimeoutRef.current = setTimeout(() => {
+      setDeletedPinBuffer(null);
+      setDeletedPinIndex(null);
+    }, 5000);
+  };
+  
+  const handleUndoDelete = (pin: Pin, originalIndex: number, currentPins: Pin[]) => {
+    // Clear the timeout since we're undoing
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+    }
+    
+    // Insert pin back at original position
+    const newPins = [...currentPins];
+    newPins.splice(originalIndex, 0, pin);
+    
+    // Re-index pin_order
+    const reindexedPins = newPins.map((p, i) => ({ ...p, pin_order: i }));
+    setPins(reindexedPins);
+    
+    // Clear buffer
+    setDeletedPinBuffer(null);
+    setDeletedPinIndex(null);
+    
+    toast({
+      title: "Przywrócono pinezkę",
+      description: `${pin.place_name || pin.address || "Pinezka"} została przywrócona`,
+    });
   };
 
   // Helper to upload note image to storage
