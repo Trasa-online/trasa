@@ -1245,11 +1245,25 @@ const CreateRoute = () => {
                       />
                     </div>
                     
-                    {/* Discovery info */}
+                    {/* Discovery Achievement Card */}
                     {pins[currentPinIndex]?.original_creator_id === user?.id && (
-                      <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-2 mt-2">
-                        <Trophy className="h-4 w-4" />
-                        <span className="font-medium">Twoje odkrycie! Jesteś pierwszym odkrywcą tego miejsca</span>
+                      <div className="mt-3 animate-scale-in bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/40 dark:to-amber-900/30 border-2 border-amber-400 dark:border-amber-600 rounded-xl p-4 shadow-md">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 animate-bounce">
+                            <Trophy className="h-8 w-8 text-amber-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100">
+                              🎉 Gratulacje!
+                            </h3>
+                            <p className="text-sm text-amber-800 dark:text-amber-200 mt-0.5">
+                              Jesteś pierwszym odkrywcą tego miejsca!
+                            </p>
+                            <span className="inline-block mt-2 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-200/50 dark:bg-amber-800/40 px-2 py-0.5 rounded-full">
+                              Zdobyty: {new Date().toLocaleDateString('pl-PL')}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     )}
                     {pins[currentPinIndex]?.original_creator_username && 
