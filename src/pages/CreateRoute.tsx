@@ -169,21 +169,39 @@ const CreateRoute = () => {
       return;
     }
     
-    // For drafts, keep pins that have ANY data (more permissive than publish)
-    const pinsToSave = pins.filter(p => 
-      p.address || p.place_name || p.description || p.latitude || p.images.length > 0
-    );
+    // For drafts, keep pins that have COORDINATES or meaningful data
+    // CRITICAL: Properly check for valid coordinates (including 0)
+    const pinsToSave = pins.filter(p => {
+      // A pin is valid if it has coordinates (including 0,0 which is valid!)
+      const hasCoordinates = (
+        typeof p.latitude === 'number' && 
+        typeof p.longitude === 'number'
+      );
+      
+      // OR if it has any other meaningful data
+      const hasData = !!(
+        p.address?.trim() || 
+        p.place_name?.trim() || 
+        p.description?.trim() || 
+        p.images?.length > 0
+      );
+      
+      return hasCoordinates || hasData;
+    }).map((p, idx) => ({
+      ...p,
+      pin_order: idx, // Re-index to ensure correct order
+      place_name: p.place_name || p.address || `Punkt ${idx + 1}`
+    }));
     
-    // CRITICAL: Don't proceed if we have no valid pins - prevents data loss
+    // CRITICAL: Only skip if we have ZERO pins after filtering
     if (pinsToSave.length === 0) {
       console.log("Auto-save skipped: no valid pins to save");
       return;
     }
     
-    const validPins = pinsToSave.map(p => ({
-      ...p,
-      place_name: p.place_name || p.address || "Nowy pin"
-    }));
+    console.log(`Auto-save: Found ${pinsToSave.length} valid pins out of ${pins.length} total pins`);
+    
+    const validPins = pinsToSave;
 
     saveInProgressRef.current = true;
     setAutoSaving(true);
