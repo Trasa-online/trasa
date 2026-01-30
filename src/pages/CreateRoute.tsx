@@ -21,6 +21,7 @@ import DraggablePinList from "@/components/route/DraggablePinList";
 import MapPinSelector from "@/components/route/MapPinSelector";
 import PinNotesSection from "@/components/route/PinNotesSection";
 import { findOriginalPinCreator, checkPinDiscoveryInfo } from "@/lib/pinDiscovery";
+import { compressImage } from "@/lib/imageCompression";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -687,31 +688,42 @@ const CreateRoute = () => {
     if (!user) return;
 
     const file = files[0];
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+    
+    try {
+      // Compress image before uploading
+      const compressedBlob = await compressImage(file, 1920, 1920, 0.8);
+      const fileName = `${user.id}/${Date.now()}.jpg`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("route-images")
-      .upload(fileName, file);
+      const { error: uploadError } = await supabase.storage
+        .from("route-images")
+        .upload(fileName, compressedBlob, {
+          contentType: "image/jpeg"
+        });
 
-    if (uploadError) {
-      toast({ variant: "destructive", title: "Błąd podczas przesyłania zdjęcia" });
-      return;
+      if (uploadError) {
+        toast({ variant: "destructive", title: "Błąd podczas przesyłania zdjęcia" });
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("route-images")
+        .getPublicUrl(fileName);
+
+      setPins(prevPins => {
+        const newPins = [...prevPins];
+        newPins[pinIndex] = {
+          ...newPins[pinIndex],
+          image_url: publicUrl,
+          images: [publicUrl]
+        };
+        return newPins;
+      });
+      
+      toast({ title: "Zdjęcie dodane" });
+    } catch (error) {
+      console.error("Image compression error:", error);
+      toast({ variant: "destructive", title: "Błąd podczas przetwarzania zdjęcia" });
     }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from("route-images")
-      .getPublicUrl(fileName);
-
-    setPins(prevPins => {
-      const newPins = [...prevPins];
-      newPins[pinIndex] = {
-        ...newPins[pinIndex],
-        image_url: publicUrl,
-        images: [publicUrl]
-      };
-      return newPins;
-    });
   };
 
   const saveRoute = async (status: "draft" | "published") => {
@@ -741,18 +753,7 @@ const CreateRoute = () => {
       return;
     }
 
-    // Rating validation only for non-planning trip types
-    if (status === "published" && tripType !== "planning") {
-      const pinsWithoutRating = validPins.filter(p => p.rating <= 0);
-      if (pinsWithoutRating.length > 0) {
-        toast({ 
-          variant: "destructive", 
-          title: "Wszystkie pinezki muszą mieć ocenę", 
-          description: "Dodaj ocenę do wszystkich pinezek przed publikacją"
-        });
-        return;
-      }
-    }
+    // Rating is now optional - no validation needed
 
     saveInProgressRef.current = true;
     setSaving(true);
@@ -1265,7 +1266,7 @@ const CreateRoute = () => {
                   {/* Rating - centered - hidden for planning mode */}
                   {tripType !== "planning" && (
                     <div>
-                      <Label>Ocena *</Label>
+                      <Label>Ocena (Opcjonalne)</Label>
                       <div className="mt-2 flex justify-center">
                         <StarRating
                           rating={pins[currentPinIndex]?.rating || 0}
@@ -1274,6 +1275,15 @@ const CreateRoute = () => {
                           interactive={true}
                         />
                       </div>
+                      {pins[currentPinIndex]?.rating > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => updatePin(currentPinIndex, "rating", 0)}
+                          className="mt-2 text-xs text-muted-foreground hover:text-destructive text-center w-full"
+                        >
+                          Usuń ocenę
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -1438,14 +1448,7 @@ const CreateRoute = () => {
                         });
                         return;
                       }
-                      if (tripType !== "planning" && currentPin.rating <= 0) {
-                        toast({ 
-                          variant: "destructive", 
-                          title: "Uzupełnij wymagane pola",
-                          description: "Ocena jest wymagana przed powrotem do listy"
-                        });
-                        return;
-                      }
+                      // Rating is now optional - no validation needed
                       setShowPinsList(true);
                     }}
                   >
