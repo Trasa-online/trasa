@@ -752,12 +752,7 @@ const RouteDetails = () => {
 
         {/* Route Header with Title and Rating */}
         <div className="bg-card border border-border rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <h2 className="text-xl font-bold leading-tight flex-1">{route.title}</h2>
-            <div className="flex items-center gap-1.5 bg-muted px-2.5 py-1 rounded-lg flex-shrink-0">
-              <StarRating rating={Math.round(avgRating * 10) / 10} size="sm" />
-            </div>
-          </div>
+          <h2 className="text-xl font-bold leading-tight mb-3">{route.title}</h2>
           {route.description && (
             <p className="text-sm text-muted-foreground leading-relaxed">
               {route.description}
