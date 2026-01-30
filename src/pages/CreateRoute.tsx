@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import DebouncedTextarea from "@/components/route/DebouncedTextarea";
 
-import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Eye } from "lucide-react";
+import RoutePreviewDialog from "@/components/route/RoutePreviewDialog";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -78,6 +79,7 @@ const CreateRoute = () => {
   const [routeRating, setRouteRating] = useState(0);
   const [showCustomTagInput, setShowCustomTagInput] = useState(false);
   const [showPinsList, setShowPinsList] = useState(false);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
@@ -1579,14 +1581,46 @@ const CreateRoute = () => {
                 <Textarea
                   id="route-description"
                   value={routeDescription}
-                  onChange={(e) => setRouteDescription(e.target.value)}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 500) {
+                      setRouteDescription(e.target.value);
+                    }
+                  }}
                   placeholder="Podziel się ogólnymi wrażeniami i najważniejszymi szczegółami..."
                   rows={3}
                   className="resize-none text-sm"
+                  maxLength={500}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Opowiedz obserwującym, co sprawiło, że ta trasa była wyjątkowa
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Opowiedz obserwującym, co sprawiło, że ta trasa była wyjątkowa
+                  </p>
+                  <p className={`text-xs font-medium transition-colors ${
+                    routeDescription.length >= 500 
+                      ? "text-destructive" 
+                      : routeDescription.length >= 450 
+                        ? "text-orange-600" 
+                        : routeDescription.length >= 400 
+                          ? "text-amber-600" 
+                          : "text-muted-foreground"
+                  }`}>
+                    {routeDescription.length >= 500 && (
+                      <span className="mr-1">Osiągnięto limit •</span>
+                    )}
+                    {routeDescription.length}/500 znaków
+                  </p>
+                </div>
+                
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowPreviewDialog(true)}
+                  className="w-full"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Podgląd opublikowanej trasy
+                </Button>
               </div>
 
               {/* Friend mentions for route */}
@@ -1758,6 +1792,16 @@ const CreateRoute = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Route Preview Dialog */}
+      <RoutePreviewDialog
+        open={showPreviewDialog}
+        onOpenChange={setShowPreviewDialog}
+        title={title}
+        description={routeDescription}
+        pins={pins}
+        username={user?.email?.split('@')[0] || "Ty"}
+      />
     </div>
   );
 };
