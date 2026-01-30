@@ -1101,9 +1101,9 @@ const CreateRoute = () => {
         <div className="max-w-lg mx-auto">
           <StepIndicator
             steps={[
-              { label: "Podstawy", shortLabel: "Podstawy" },
-              { label: "Pinezki", shortLabel: "Pinezki" },
-              { label: "Podsumowanie", shortLabel: "Podsumow." },
+              { label: "Info" },
+              { label: "Pinezki" },
+              { label: "Gotowe" },
             ]}
             currentStep={step}
           />
