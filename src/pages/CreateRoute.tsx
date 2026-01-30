@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import DebouncedTextarea from "@/components/route/DebouncedTextarea";
 
-import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Eye, Check } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Eye, Check, MapPin } from "lucide-react";
 import RoutePreviewDialog from "@/components/route/RoutePreviewDialog";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,7 @@ import StepIndicator from "@/components/route/StepIndicator";
 import { findOriginalPinCreator, checkPinDiscoveryInfo } from "@/lib/pinDiscovery";
 import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/imageCompression";
+import EmptyState from "@/components/ui/empty-state";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1156,51 +1157,66 @@ const CreateRoute = () => {
           </div>
         ) : step === 2 ? (
           <>
-            {showPinsList && pins.filter(p => p.address).length > 0 ? (
-              <div className="space-y-4 pb-24">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">Pinezki w trasie</h2>
-                </div>
+            {showPinsList ? (
+              pins.filter(p => p.address).length > 0 ? (
+                <div className="space-y-4 pb-24">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Pinezki w trasie</h2>
+                  </div>
 
-                <div className="space-y-3">
-                  <DraggablePinList
-                    pins={pins}
-                    onReorder={setPins}
-                    onPinClick={(index) => {
-                      setCurrentPinIndex(index);
-                      setShowPinsList(false);
-                    }}
-                    onPinRemove={removePin}
-                    onPinNotesChange={(pinIndex, notes) => updatePin(pinIndex, "notes", notes)}
-                    showRemoveButton={true}
-                    showNotesEditor={true}
-                    compact={true}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      addPin();
-                      setShowPinsList(false);
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Dodaj pinezkę
-                  </Button>
-                </div>
+                  <div className="space-y-3">
+                    <DraggablePinList
+                      pins={pins}
+                      onReorder={setPins}
+                      onPinClick={(index) => {
+                        setCurrentPinIndex(index);
+                        setShowPinsList(false);
+                      }}
+                      onPinRemove={removePin}
+                      onPinNotesChange={(pinIndex, notes) => updatePin(pinIndex, "notes", notes)}
+                      showRemoveButton={true}
+                      showNotesEditor={true}
+                      compact={true}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        addPin();
+                        setShowPinsList(false);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Dodaj pinezkę
+                    </Button>
+                  </div>
 
-                <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
-                  <Button
-                    variant="default"
-                    className="w-full"
-                    onClick={() => setStep(3)}
-                    disabled={pins.filter(p => p.address).length === 0}
-                  >
-                    Przejdź do podsumowania
-                  </Button>
+                  <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
+                    <Button
+                      variant="default"
+                      className="w-full"
+                      onClick={() => setStep(3)}
+                      disabled={pins.filter(p => p.address).length === 0}
+                    >
+                      Przejdź do podsumowania
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <EmptyState
+                  icon={MapPin}
+                  title="Brak pinezek w trasie"
+                  description="Dodaj pierwsze miejsca, które chcesz uwzględnić w swojej trasie"
+                  actionLabel="Dodaj pierwszą pinezkę"
+                  actionIcon={Plus}
+                  onAction={() => {
+                    addPin();
+                    setShowPinsList(false);
+                  }}
+                  className="py-12"
+                />
+              )
             ) : (
               <>
                 <div className="space-y-4">
