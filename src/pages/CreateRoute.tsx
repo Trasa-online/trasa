@@ -20,6 +20,7 @@ import InteractiveRouteMap from "@/components/InteractiveRouteMap";
 import DraggablePinList from "@/components/route/DraggablePinList";
 import MapPinSelector from "@/components/route/MapPinSelector";
 import PinNotesSection from "@/components/route/PinNotesSection";
+import StepIndicator from "@/components/route/StepIndicator";
 import { findOriginalPinCreator, checkPinDiscoveryInfo } from "@/lib/pinDiscovery";
 import { compressImage } from "@/lib/imageCompression";
 import {
@@ -1027,6 +1028,20 @@ const CreateRoute = () => {
             )}
           </div>
         )}
+      </div>
+
+      {/* Step Progress Indicator */}
+      <div className="sticky top-[57px] bg-background border-b border-border py-3 px-4 z-10">
+        <div className="max-w-lg mx-auto">
+          <StepIndicator
+            steps={[
+              { label: "Podstawy", shortLabel: "Podstawy" },
+              { label: "Pinezki", shortLabel: "Pinezki" },
+              { label: "Podsumowanie", shortLabel: "Podsumow." },
+            ]}
+            currentStep={step}
+          />
+        </div>
       </div>
 
       <div className="max-w-lg mx-auto p-4 space-y-6">
