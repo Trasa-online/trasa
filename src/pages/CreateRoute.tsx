@@ -8,8 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import DebouncedTextarea from "@/components/route/DebouncedTextarea";
 
-import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Eye, Check, MapPin } from "lucide-react";
-import RoutePreviewDialog from "@/components/route/RoutePreviewDialog";
+import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Check, MapPin } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -81,7 +80,6 @@ const CreateRoute = () => {
   const [routeRating, setRouteRating] = useState(0);
   const [showCustomTagInput, setShowCustomTagInput] = useState(false);
   const [showPinsList, setShowPinsList] = useState(false);
-  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   
   // Undo deletion state
   const [deletedPinBuffer, setDeletedPinBuffer] = useState<Pin | null>(null);
@@ -1607,7 +1605,7 @@ const CreateRoute = () => {
           </>
         ) : step === 3 ? (
           <>
-            <div className="space-y-4 pb-80">
+            <div className="space-y-4 pb-24">
               {/* Header with editable title */}
               <div className="space-y-2">
                 <div className="space-y-1">
@@ -1628,16 +1626,9 @@ const CreateRoute = () => {
                     {title.trim() ? title.trim().split(/\s+/).filter(w => w.length > 0).length : 0}/10 słów
                   </p>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span>{pins.filter(p => p.address).length} {pins.filter(p => p.address).length === 1 ? 'punkt' : 'punktów'}</span>
-                  {routeRating > 0 && (
-                    <div className="flex items-center gap-1 text-foreground">
-                      <span className="text-yellow-500">★</span>
-                      <span className="font-medium">{routeRating.toFixed(1)}</span>
-                      <span className="text-muted-foreground text-xs">Ogólna ocena</span>
-                    </div>
-                  )}
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  {pins.filter(p => p.address).length} {pins.filter(p => p.address).length === 1 ? 'punkt' : 'punktów'}
+                </p>
               </div>
 
               {/* Route map */}
@@ -1689,36 +1680,20 @@ const CreateRoute = () => {
                   className="resize-none text-sm"
                   maxLength={500}
                 />
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    Opowiedz obserwującym, co sprawiło, że ta trasa była wyjątkowa
-                  </p>
-                  <p className={`text-xs font-medium transition-colors ${
-                    routeDescription.length >= 500 
-                      ? "text-destructive" 
-                      : routeDescription.length >= 450 
-                        ? "text-orange-600" 
-                        : routeDescription.length >= 400 
-                          ? "text-amber-600" 
-                          : "text-muted-foreground"
-                  }`}>
-                    {routeDescription.length >= 500 && (
-                      <span className="mr-1">Osiągnięto limit •</span>
-                    )}
-                    {routeDescription.length}/500 znaków
-                  </p>
-                </div>
-                
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowPreviewDialog(true)}
-                  className="w-full"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Podgląd opublikowanej trasy
-                </Button>
+                <p className={`text-xs font-medium transition-colors ${
+                  routeDescription.length >= 500 
+                    ? "text-destructive" 
+                    : routeDescription.length >= 450 
+                      ? "text-orange-600" 
+                      : routeDescription.length >= 400 
+                        ? "text-amber-600" 
+                        : "text-muted-foreground"
+                }`}>
+                  {routeDescription.length >= 500 && (
+                    <span className="mr-1">Osiągnięto limit •</span>
+                  )}
+                  {routeDescription.length}/500 znaków
+                </p>
               </div>
 
               {/* Friend mentions for route */}
@@ -1735,33 +1710,6 @@ const CreateRoute = () => {
                 />
               </div>
 
-              {/* Overall route rating */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Ogólna ocena trasy</Label>
-                  <span className="text-sm font-medium flex items-center gap-1">
-                    <span className="text-yellow-500">★</span>
-                    {routeRating.toFixed(1)}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Ocena jest obliczana automatycznie na podstawie średniej z {pins.filter(p => p.rating > 0).length} {pins.filter(p => p.rating > 0).length === 1 ? 'ocenionej pinezki' : 'ocenionych pinezek'}
-                </p>
-                {pins.filter(p => p.rating > 0).length > 0 && (
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <p className="font-medium">Uwzględnione oceny:</p>
-                    <ul className="space-y-0.5 pl-4">
-                      {pins.filter(p => p.rating > 0).map((pin, idx) => (
-                        <li key={idx} className="flex items-center gap-2">
-                          <span className="text-yellow-500">★</span>
-                          <span>{pin.rating.toFixed(1)}</span>
-                          <span>- {pin.place_name}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
             </div>
 
             <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
@@ -1890,16 +1838,6 @@ const CreateRoute = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
-      {/* Route Preview Dialog */}
-      <RoutePreviewDialog
-        open={showPreviewDialog}
-        onOpenChange={setShowPreviewDialog}
-        title={title}
-        description={routeDescription}
-        pins={pins}
-        username={user?.email?.split('@')[0] || "Ty"}
-      />
     </div>
   );
 };

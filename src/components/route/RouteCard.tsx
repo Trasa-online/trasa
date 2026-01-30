@@ -335,15 +335,9 @@ const RouteCard = ({ route }: RouteCardProps) => {
 
         {/* Title and Rating */}
         <div className="space-y-2">
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="text-lg font-bold leading-tight flex-1 group-hover:text-foreground/90 transition-colors">
-              {route.title}
-            </h3>
-            <div className="flex items-center gap-1.5 bg-muted px-2.5 py-1 rounded-lg flex-shrink-0">
-              <Star className="h-4 w-4 fill-star text-star" />
-              <span className="font-bold text-sm">{Math.round(averageRating * 10) / 10}</span>
-            </div>
-          </div>
+          <h3 className="text-lg font-bold leading-tight group-hover:text-foreground/90 transition-colors">
+            {route.title}
+          </h3>
           
           {route.description && (
             <p className="text-sm text-muted-foreground line-clamp-4 leading-relaxed">
