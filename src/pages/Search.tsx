@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { Search as SearchIcon, Map, Users, MapPin, X, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Filter } from "lucide-react";
+import { Search as SearchIcon, MapPin, X, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import CompactRouteCard from "@/components/route/CompactRouteCard";
 import { findCountryKey, isInCountryBounds } from "@/lib/countryBoundingBoxes";
+import { useDebounce } from "@/hooks/useDebounce";
 
 type TabType = "all" | "routes" | "users" | "places";
 
@@ -47,6 +48,9 @@ const Search = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const urlTagFilter = searchParams.get("tag");
+  
+  // Debounce search query to prevent API spam
+  const debouncedQuery = useDebounce(searchQuery, 300);
 
   // Initialize selected tags from URL
   useEffect(() => {
@@ -71,13 +75,15 @@ const Search = () => {
   };
 
   const { data: searchResults, isLoading } = useQuery({
-    queryKey: ["search", searchQuery, activeTab, selectedTags],
+    queryKey: ["search", debouncedQuery, activeTab, selectedTags],
     queryFn: async () => {
       const results: any = {};
+      const normalizedQuery = normalize(debouncedQuery.trim());
+      const countryKey = normalizedQuery ? findCountryKey(debouncedQuery.trim()) : null;
 
       // Wyszukiwanie tras
       if (activeTab === "routes" || activeTab === "all") {
-        const { data: routes, error } = await supabase
+        let query = supabase
           .from("routes")
           .select(`
             *,
@@ -86,28 +92,32 @@ const Search = () => {
             likes (user_id),
             comments (id)
           `)
-          .eq("status", "published")
+          .eq("status", "published");
+
+        // Server-side text search for title/description
+        if (normalizedQuery) {
+          query = query.or(`title.ilike.%${debouncedQuery.trim()}%,description.ilike.%${debouncedQuery.trim()}%`);
+        }
+
+        const { data: routes, error } = await query
           .order("created_at", { ascending: false })
-          .limit(200);
+          .limit(50); // Reduced from 200
 
         if (error) throw error;
 
         let filteredRoutes = routes || [];
-        const normalizedQuery = normalize(searchQuery.trim());
-        const countryKey = normalizedQuery ? findCountryKey(searchQuery.trim()) : null;
 
-        // Filter by search query - tytuł, opis, miejsca w pinach, adresy, tagi, tłumaczenia, lub lokalizacja geograficzna
+        // Additional client-side filtering for pins data (can't be done server-side easily)
         if (normalizedQuery) {
           filteredRoutes = filteredRoutes.filter((route: any) => {
+            // Already matched by server-side title/description filter
             const title = normalize(route.title || "");
             const description = normalize(route.description || "");
-
-            // Sprawdź tytuł i opis trasy
             if (title.includes(normalizedQuery) || description.includes(normalizedQuery)) {
               return true;
             }
 
-            // Sprawdź piny: nazwa miejsca, adres, tagi, tłumaczenia
+            // Check pins: place name, address, tags, translations
             const pins = route.pins || [];
             const matchesTextSearch = pins.some((pin: any) => {
               const placeName = normalize(pin.place_name || "");
@@ -134,7 +144,7 @@ const Search = () => {
 
             if (matchesTextSearch) return true;
 
-            // Sprawdź czy którykolwiek pin znajduje się w granicach szukanego kraju
+            // Check if any pin is within country bounds
             if (countryKey) {
               const matchesCountryBounds = pins.some((pin: any) => 
                 isInCountryBounds(
@@ -155,7 +165,6 @@ const Search = () => {
           filteredRoutes = filteredRoutes.filter((route: any) => {
             const routeTags =
               route.pins?.flatMap((pin: any) => pin.tags || []) || [];
-            // Route must have ALL selected tags
             return selectedTags.every((selectedTag) =>
               routeTags.some(
                 (tag: string) =>
@@ -240,7 +249,7 @@ const Search = () => {
 
       return results;
     },
-    enabled: true, // Always enabled to show results on load
+    enabled: debouncedQuery.length > 0 || selectedTags.length > 0 // Only run when there's a query or tags
   });
 
   return (
@@ -385,7 +394,7 @@ const Search = () => {
 
       {/* Content */}
       <div className="p-4">
-        {!searchQuery && selectedTags.length === 0 ? (
+        {!debouncedQuery && selectedTags.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-2">
               <MapPin className="h-6 w-6 text-muted-foreground" />
