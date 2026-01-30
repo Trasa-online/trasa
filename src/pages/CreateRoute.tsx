@@ -1314,25 +1314,16 @@ const CreateRoute = () => {
 
                   {/* Rating - centered - hidden for planning mode */}
                   {tripType !== "planning" && (
-                    <div>
-                      <Label>Ocena (Opcjonalne)</Label>
-                      <div className="mt-2 flex justify-center">
-                        <StarRating
-                          rating={pins[currentPinIndex]?.rating || 0}
-                          onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
-                          size="lg"
-                          interactive={true}
-                        />
-                      </div>
-                      {pins[currentPinIndex]?.rating > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => updatePin(currentPinIndex, "rating", 0)}
-                          className="mt-2 text-xs text-muted-foreground hover:text-destructive text-center w-full"
-                        >
-                          Usuń ocenę
-                        </button>
-                      )}
+                    <div className="py-2">
+                      <StarRating
+                        rating={pins[currentPinIndex]?.rating || 0}
+                        onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
+                        size="lg"
+                        interactive={true}
+                        showLabel={true}
+                        showValue={true}
+                        showReset={true}
+                      />
                     </div>
                   )}
 
