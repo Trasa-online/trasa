@@ -794,19 +794,31 @@ const PinDetails = () => {
       )}
 
       <div className="p-4 space-y-4">
-        {/* Pin Image */}
-        <div
-          className="relative aspect-video rounded-lg overflow-hidden cursor-pointer"
-          onClick={() => pin.image_url && openLightbox(allImages, 0)}
-        >
-          <img
-            src={getPinImage(pin)}
-            alt={displayName || pin.address}
-            className="w-full h-full object-cover"
-          />
-        </div>
+        {/* User Photos Gallery - at the very top */}
+        {allImages.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              Zdjęcia użytkowników ({allImages.length})
+            </h3>
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+              {allImages.map((img, index) => (
+                <div
+                  key={index}
+                  className="shrink-0 w-24 h-24 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ring-1 ring-border"
+                  onClick={() => openLightbox(allImages, index)}
+                >
+                  <img
+                    src={img}
+                    alt={`Zdjęcie ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-        {/* Pin Name & Address - right below image */}
+        {/* Pin Name & Address */}
         <div className="space-y-2">
           <h1 className="font-semibold text-lg">{displayName || pin.address}</h1>
           
@@ -854,7 +866,7 @@ const PinDetails = () => {
           )}
         </div>
 
-        {/* Pin Map Preview - below address, reduced size */}
+        {/* Pin Map Preview - enlarged */}
         {pin.latitude && pin.longitude && (
           <RouteMap
             pins={[{ 
@@ -863,60 +875,36 @@ const PinDetails = () => {
               place_name: displayName || pin.address,
               pin_order: pin.pin_order
             }]}
-            className="h-[6.4rem]"
+            className="h-48"
           />
         )}
 
-        {/* Pin Info */}
+        {/* Pin Info - only ratings and tags */}
         <div className="space-y-3">
-
-          {/* Ratings Section */}
-          <div className="space-y-3">
-            {/* Aggregate rating from all canonical visits */}
-            {canonicalStats.averageRating > 0 && (
-              <div className="p-3 bg-muted/40 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Średnia ocena użytkowników
-                    <span className="text-xs ml-1">
-                      ({canonicalStats.ratingsCount} {canonicalStats.ratingsCount === 1 ? 'ocena' : canonicalStats.ratingsCount < 5 ? 'oceny' : 'ocen'})
-                    </span>
+          {/* Aggregate rating from all canonical visits */}
+          {canonicalStats.averageRating > 0 && (
+            <div className="p-3 bg-muted/40 rounded-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">
+                  Średnia ocena użytkowników
+                  <span className="text-xs ml-1">
+                    ({canonicalStats.ratingsCount} {canonicalStats.ratingsCount === 1 ? 'ocena' : canonicalStats.ratingsCount < 5 ? 'oceny' : 'ocen'})
                   </span>
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                  <span className="text-lg font-semibold">{canonicalStats.averageRating.toFixed(1)}</span>
-                  <div className="flex items-center gap-0.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={`h-4 w-4 ${star <= Math.round(canonicalStats.averageRating) ? "fill-yellow-400 text-yellow-400" : "text-muted"}`}
-                      />
-                    ))}
-                  </div>
-                </div>
+                </span>
               </div>
-            )}
-
-            {/* Original route author's rating */}
-            {pin.rating && pin.rating > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Ocena autora trasy:</span>
+              <div className="flex items-center gap-2 mt-1">
+                <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                <span className="text-lg font-semibold">{canonicalStats.averageRating.toFixed(1)}</span>
                 <div className="flex items-center gap-0.5">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Star
                       key={star}
-                      className={`h-4 w-4 ${star <= pin.rating ? "fill-yellow-400 text-yellow-400" : "text-muted"}`}
+                      className={`h-4 w-4 ${star <= Math.round(canonicalStats.averageRating) ? "fill-yellow-400 text-yellow-400" : "text-muted"}`}
                     />
                   ))}
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* Description */}
-          {pin.description && (
-            <p className="text-sm leading-relaxed">{pin.description}</p>
+            </div>
           )}
 
           {/* Tags */}
