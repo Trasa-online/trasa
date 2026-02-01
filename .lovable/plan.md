@@ -1,124 +1,187 @@
 
-# Plan: Uproszczenie Quick Capture - Natychmiastowe dodawanie miejsc
+
+# Plan: Szybki tryb w jednym Drawerze - bez nawigacji
 
 ## Problem
-Obecna logika szybkiego trybu jest zbyt skomplikowana:
-1. User klika "+" → wybiera tryb → klika "Dalej" → przechodzi na stronę `/create?mode=quick`
-2. Na stronie widzi Step 2 z wieloma elementami: permission prompts, EmptyState, przyciski
-3. Musi kliknąć "Dodaj miejsce" → dopiero wtedy otwiera się sheet z lokalizacją
+Obecny flow jest zbyt skomplikowany:
+1. Klik "+" otwiera drawer
+2. Wybór trybu + klik "Kontynuuj"
+3. Nawigacja do osobnej strony `/quick-capture`
+4. Czekanie na załadowanie strony
+5. Dopiero wtedy lokalizacja się wykrywa
 
-**To wymaga 4-5 kliknięć zanim user może dodać miejsce!**
+**To 3-4 kliknięcia i zmiana strony zanim user może cokolwiek zrobić!**
 
-## Twoja wizja
-User klika "+" → wybiera "Szybki tryb" → **natychmiast** widzi prosty ekran:
-- Lokalizacja auto-wykryta (zgoda już wyrażona wcześniej)
-- Opcjonalne zdjęcie
-- Przycisk "Zapisz"
-- Gotowe w 10 sekund!
+## Rozwiazanie: Wszystko w Drawerze
 
-## Rozwiązanie
-
-### Podejście: Oddzielna strona `/quick-capture`
-
-Zamiast komplikować logikę w `CreateRoute.tsx`, stworzymy **dedykowaną, ultra-prostą stronę** dla szybkiego trybu.
+Zamiast nawigować do osobnej strony, po wybraniu "Szybki tryb" drawer zmienia się w tryb dodawania miejsc:
 
 ```text
 ┌─────────────────────────────────────────┐
-│  ← Wstecz              ⚡ Szybkie dodawanie  │
+│   ━━━━━━━━━━                           │ (drawer handle)
+├─────────────────────────────────────────┤
+│  ⚡ Szybkie dodawanie                   │
 ├─────────────────────────────────────────┤
 │                                         │
-│   📍 Lokalizacja                        │
-│   ┌─────────────────────────────────┐   │
-│   │ ✓ Kawiarnia Złota              │   │
-│   │   ul. Marszałkowska 12, Warszawa│   │
-│   │   [Wykryj ponownie]            │   │
-│   └─────────────────────────────────┘   │
+│  TRASA: [Dropdown ▼]                    │
+│  ┌─────────────────────────────────────┐│
+│  │ + Nowa trasa                        ││
+│  │ • Wypad poza miasto Celestynów      ││
+│  │ • Katowice Konferencja              ││
+│  └─────────────────────────────────────┘│
 │                                         │
-│   📷 Zdjęcie (opcjonalne)               │
-│   ┌─────────────────────────────────┐   │
-│   │                                 │   │
-│   │     [Dotknij aby dodać]         │   │
-│   │                                 │   │
-│   └─────────────────────────────────┘   │
+│  📍 LOKALIZACJA:                        │
+│  ┌─────────────────────────────────────┐│
+│  │ ✓ Kawiarnia Złota                   ││
+│  │   ul. Marszałkowska 12, Warszawa    ││
+│  │   [🔄 Wykryj ponownie]              ││
+│  └─────────────────────────────────────┘│
+│  LUB: [Wpisz adres ręcznie...]         │
 │                                         │
-│   Lista miejsc: (2)                     │
-│   ┌────┐ ┌────┐                         │
-│   │ 1  │ │ 2  │                         │
-│   └────┘ └────┘                         │
+│  📷 ZDJĘCIE: (opcjonalne)              │
+│  [    Dotknij aby dodać    ]           │
 │                                         │
-├─────────────────────────────────────────┤
-│  [Zapisz miejsce]  [Zakończ trasę →]    │
+│  ────────────────────────────────────  │
+│  Dodane: 📍2  📍1  📍 (miniaturki)      │
+│                                         │
+│  [  ✓ Zapisz miejsce  ]  [Zakończ →]   │
 └─────────────────────────────────────────┘
 ```
 
+## Flow uzytkownika (NOWY)
+
+1. **Klik "+"** - otwiera drawer z wyborem trybu
+2. **Klik "Szybki tryb"** - drawer natychmiast przechodzi do trybu szybkiego dodawania (bez "Kontynuuj"!)
+3. **Lokalizacja wykrywa się automatycznie** - user widzi swoją pozycję w ciągu sekundy
+4. **Opcjonalnie zdjęcie** - klik w obszar zdjęcia
+5. **"Zapisz miejsce"** - dodaje pin, czyści formularz, wykrywa nową lokalizację
+6. **"Zakończ"** - tworzy trasę i przechodzi do edycji/podsumowania
+
+**Rezultat: 2 kliknięcia do pierwszego pinu!** (+ wybór trybu + zapisz)
+
 ## Zmiany do wprowadzenia
 
-### 1. Nowa strona: `src/pages/QuickCapture.tsx`
-- Ultra-prosta strona dedykowana szybkiemu dodawaniu
-- Auto-wykrywa lokalizację od razu przy wejściu
-- Pokazuje tylko: lokalizację + zdjęcie + listę dodanych miejsc
-- Przyciski: "Zapisz miejsce" (dodaje i czyści formularz) + "Zakończ trasę" (przechodzi do podsumowania)
+### 1. Rozbudowa `CreateModeDrawer.tsx`
 
-### 2. Aktualizacja `CreateModeDrawer.tsx`
-- "Szybki tryb" → nawiguje do `/quick-capture` zamiast `/create?mode=quick`
-- "Szczegółowy tryb" → nawiguje do `/create` (bez zmian)
+Drawer będzie miał dwa stany:
+- `mode: 'select'` - wybór trybu (obecny widok)
+- `mode: 'quick-capture'` - tryb szybkiego dodawania (nowy widok)
 
-### 3. Aktualizacja routingu w `App.tsx`
-- Dodanie nowej ścieżki `/quick-capture` → `QuickCapture`
+Kliknięcie "Szybki tryb" natychmiast przechodzi do `quick-capture` (bez przycisku "Kontynuuj").
 
-### 4. Cleanup w `CreateRoute.tsx`
-- Usunięcie logiki `quickCaptureMode` (już niepotrzebna)
-- Usunięcie obsługi `?mode=quick` z URL
-- Usunięcie `QuickAddPinSheet` (przeniesiona logika do nowej strony)
-- Uproszczenie Step 2 (tylko szczegółowy tryb)
+### 2. Logika szybkiego dodawania w Drawerze
 
-## Szczegóły techniczne
+Drawer będzie zawierał:
+- **Wybór trasy**: Dropdown z opcjami:
+  - "Nowa trasa" (domyślnie, z auto-generowanym tytułem)
+  - Lista wersji roboczych usera (max 5 ostatnich)
+- **Auto-lokalizacja**: Wykrywanie GPS od razu po przejściu do trybu quick-capture
+- **Fallback na ręczne wpisanie**: Komponent AddressAutocomplete jako alternatywa
+- **Zdjęcie**: Opcjonalne, z kamerą
+- **Lista dodanych miejsc**: Miniaturki z numerami
+- **Przyciski**: "Zapisz miejsce" + "Zakończ trasę"
 
-### `QuickCapture.tsx` - kluczowe elementy:
+### 3. Usunięcie `/quick-capture` page
+
+Strona `QuickCapture.tsx` nie będzie już potrzebna - cała logika przeniesiona do drawera.
+
+### 4. Aktualizacja routingu
+
+- Usunięcie ścieżki `/quick-capture` z `App.tsx`
+- Usunięcie pliku `src/pages/QuickCapture.tsx`
+
+## Szczegoly techniczne
+
+### Stan drawera:
 
 ```typescript
-// Stan
+type DrawerMode = 'select' | 'quick-capture';
+
+const [mode, setMode] = useState<DrawerMode>('select');
+const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
 const [pins, setPins] = useState<QuickPin[]>([]);
-const [currentLocation, setCurrentLocation] = useState(null);
-const [imageUrl, setImageUrl] = useState(null);
-const [detecting, setDetecting] = useState(true);
+const [location, setLocation] = useState<Location | null>(null);
+const [detectingLocation, setDetectingLocation] = useState(false);
+const [imageUrl, setImageUrl] = useState<string | null>(null);
+const [drafts, setDrafts] = useState<DraftRoute[]>([]);
+```
 
-// Auto-detect location on mount
-useEffect(() => {
+### Wybor trybu (natychmiastowy):
+
+```typescript
+// Klikniecie "Szybki tryb" od razu przechodzi do quick-capture
+<button onClick={() => {
+  setMode('quick-capture');
+  detectLocation(); // Zaczyna wykrywanie od razu
+  fetchUserDrafts(); // Pobiera wersje robocze
+}}>
+  Szybki tryb
+</button>
+```
+
+### Wybor trasy (dropdown):
+
+```typescript
+<Select value={selectedRouteId || 'new'} onValueChange={handleRouteSelect}>
+  <SelectTrigger>
+    <SelectValue placeholder="Wybierz lub utworz trase" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="new">
+      + Nowa trasa ({defaultTitle})
+    </SelectItem>
+    {drafts.map(draft => (
+      <SelectItem key={draft.id} value={draft.id}>
+        {draft.title}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+```
+
+### Zapisywanie pinu:
+
+```typescript
+const handleSavePin = async () => {
+  if (!location) return;
+  
+  // Jezeli nowa trasa - utworz ja najpierw
+  let routeId = selectedRouteId;
+  if (!routeId) {
+    const { data } = await supabase.from('routes').insert({
+      user_id: user.id,
+      title: defaultTitle,
+      status: 'draft'
+    }).select().single();
+    routeId = data.id;
+    setSelectedRouteId(routeId);
+  }
+  
+  // Dodaj pin do bazy
+  await supabase.from('pins').insert({
+    route_id: routeId,
+    place_name: location.place_name,
+    address: location.address,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    image_url: imageUrl,
+    pin_order: pins.length
+  });
+  
+  // Reset i wykryj nowa lokalizacje
+  setPins([...pins, { ...location, image_url: imageUrl }]);
+  setImageUrl(null);
   detectLocation();
-}, []);
-
-// Po kliknięciu "Zapisz miejsce"
-const handleSavePin = () => {
-  setPins([...pins, { ...currentLocation, imageUrl }]);
-  setImageUrl(null); // Reset zdjęcia
-  detectLocation();  // Auto-wykryj nową lokalizację
+  
   toast({ title: "Miejsce dodane! ⚡" });
-};
-
-// Po kliknięciu "Zakończ trasę"
-const handleFinish = async () => {
-  // Utwórz trasę w Supabase z domyślnym tytułem
-  // Dodaj wszystkie piny
-  // Przekieruj do edycji/podsumowania
-  navigate(`/create/${routeId}?step=3`);
 };
 ```
 
-### Flow użytkownika:
+## Korzysci
 
-1. **Klik "+"** → otwiera CreateModeDrawer
-2. **Wybór "Szybki tryb"** → klik "Kontynuuj"
-3. **Strona QuickCapture** → lokalizacja już się wykrywa
-4. **Opcjonalnie zdjęcie** → klik w obszar kamery
-5. **"Zapisz miejsce"** → pin dodany, formularz się czyści, wykrywa nową lokalizację
-6. **Powtórz 4-5** dla kolejnych miejsc
-7. **"Zakończ trasę"** → przechodzi do podsumowania w CreateRoute
+- **Minimum klikniec**: 2 kliknięcia do pierwszego pinu
+- **Brak nawigacji**: Wszystko dzieje się w drawerze, bez zmiany strony
+- **Natychmiastowe dzialanie**: Lokalizacja wykrywa się od razu po wyborze trybu
+- **Wybor trasy**: Można dodawać do istniejącej wersji roboczej
+- **Ciaglosc**: Drawer pozostaje otwarty - można dodawać kolejne miejsca
 
-## Korzyści
-
-- **Minimum kliknięć**: 2 kliknięcia do pierwszego pinu (wybór trybu + zapisz)
-- **Auto-lokalizacja**: Nie trzeba nic klikać - lokalizacja się wykrywa
-- **Ciągłość**: Po zapisaniu od razu gotowy do następnego pinu
-- **Prostota**: Jeden ekran, zero kroków, zero skomplikowanej logiki
-- **Czysty kod**: Oddzielna strona = łatwiejsze utrzymanie
