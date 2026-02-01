@@ -110,23 +110,38 @@ const CreateRoute = () => {
   const hasAddedPins = pins.some(p => p.address && p.address.trim() !== "");
 
   const handleBackClick = () => {
+    // If on step 3 (summary), go back to step 2
     if (step === 3) {
       setStep(2);
-      setShowPinsList(true);
-    } else if (step === 2) {
-      if (showPinsList) {
-        // Going back from pins list - check if there are pins
-        if (hasAddedPins) {
-          setShowExitConfirm(true);
-        } else {
-          setStep(1);
-        }
-      } else {
+      setShowPinsList(true);  // Always show list when going back to step 2
+      return;
+    }
+    
+    // If on step 2 (pins)
+    if (step === 2) {
+      // If editing a pin, go back to list first
+      if (!showPinsList) {
         setShowPinsList(true);
+        return;
       }
+      
+      // Check if user has added any pins with data
+      if (hasAddedPins) {
+        // Show confirmation dialog before losing work
+        setShowExitConfirm(true);
+      } else {
+        // No work to lose, go back to step 1
+        setStep(1);
+      }
+      return;
+    }
+    
+    // If on step 1 (basics), navigate away
+    // Check if there's any work that would be lost
+    if (title.trim() || description.trim()) {
+      setShowExitConfirm(true);
     } else {
-      // Step 1 - navigate away
-      navigate("/");
+      navigate("/feed");
     }
   };
 
