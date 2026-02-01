@@ -308,6 +308,7 @@ const PinDetails = () => {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [showVisitDialog, setShowVisitDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
   
   // Swipe handling
   const touchStartX = useRef<number | null>(null);
@@ -1037,11 +1038,47 @@ const PinDetails = () => {
                           )}
                         </div>
 
-                        {/* Description/Comment */}
+                        {/* Description/Comment - expandable */}
                         {visit.description && (
-                          <p className="text-xs text-foreground leading-relaxed mt-2 line-clamp-3">
-                            {visit.description}
-                          </p>
+                          <div className="mt-2">
+                            <p 
+                              className={cn(
+                                "text-xs text-foreground leading-relaxed cursor-pointer",
+                                !expandedDescriptions.has(visit.id) && "line-clamp-2"
+                              )}
+                              onClick={() => {
+                                setExpandedDescriptions(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(visit.id)) {
+                                    next.delete(visit.id);
+                                  } else {
+                                    next.add(visit.id);
+                                  }
+                                  return next;
+                                });
+                              }}
+                            >
+                              {visit.description}
+                            </p>
+                            {visit.description.length > 100 && (
+                              <button
+                                onClick={() => {
+                                  setExpandedDescriptions(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(visit.id)) {
+                                      next.delete(visit.id);
+                                    } else {
+                                      next.add(visit.id);
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                className="text-[10px] text-muted-foreground hover:text-primary mt-0.5"
+                              >
+                                {expandedDescriptions.has(visit.id) ? "Zwiń" : "Rozwiń"}
+                              </button>
+                            )}
+                          </div>
                         )}
                         
                         {/* Tags if any */}
