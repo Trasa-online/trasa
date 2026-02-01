@@ -111,10 +111,8 @@ const Feed = () => {
       <PageHeader 
         title="TRASA" 
         showBell 
-        showSearch 
-        showQuickNote
+        showSearch
         unreadCount={unreadCount}
-        onQuickNoteClick={() => navigate("/create?mode=quick")}
       />
       
       <div className="p-4 space-y-4">

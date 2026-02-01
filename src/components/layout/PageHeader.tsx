@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Search, Zap } from "lucide-react";
+import { ArrowLeft, Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface PageHeaderProps {
@@ -8,11 +8,9 @@ interface PageHeaderProps {
   showBack?: boolean;
   showBell?: boolean;
   showSearch?: boolean;
-  showQuickNote?: boolean;
   unreadCount?: number;
   rightAction?: ReactNode;
   onBackClick?: () => void;
-  onQuickNoteClick?: () => void;
 }
 
 export const PageHeader = ({
@@ -20,11 +18,9 @@ export const PageHeader = ({
   showBack = false,
   showBell = false,
   showSearch = false,
-  showQuickNote = false,
   unreadCount = 0,
   rightAction,
   onBackClick,
-  onQuickNoteClick,
 }: PageHeaderProps) => {
   const navigate = useNavigate();
 
@@ -57,16 +53,6 @@ export const PageHeader = ({
         {/* Right side */}
         <div className="flex items-center gap-2">
           {rightAction}
-          {showQuickNote && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onQuickNoteClick}
-              className="h-9 w-9 bg-primary/10 text-primary"
-            >
-              <Zap className="h-5 w-5" />
-            </Button>
-          )}
           {showBell && (
             <Button
               variant="ghost"
@@ -76,7 +62,7 @@ export const PageHeader = ({
             >
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
