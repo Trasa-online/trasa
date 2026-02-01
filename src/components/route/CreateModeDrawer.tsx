@@ -65,6 +65,8 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
   // Quick capture state
   const [drafts, setDrafts] = useState<DraftRoute[]>([]);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [customRouteTitle, setCustomRouteTitle] = useState<string>('');
+  const [showTitleInput, setShowTitleInput] = useState(false);
   const [pins, setPins] = useState<QuickPin[]>([]);
   const [location, setLocation] = useState<DetectedLocation | null>(null);
   const [detectingLocation, setDetectingLocation] = useState(false);
@@ -236,11 +238,12 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
       
       // Create new route if needed
       if (!routeId || routeId === 'new') {
+        const routeTitle = customRouteTitle.trim() || defaultTitle;
         const { data: newRoute, error: routeError } = await supabase
           .from('routes')
           .insert({
             user_id: user.id,
-            title: defaultTitle,
+            title: routeTitle,
             status: 'draft'
           })
           .select()
@@ -251,7 +254,7 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
         setSelectedRouteId(routeId);
         
         // Add to drafts list
-        setDrafts(prev => [{ id: routeId!, title: defaultTitle, pin_count: 0 }, ...prev]);
+        setDrafts(prev => [{ id: routeId!, title: routeTitle, pin_count: 0 }, ...prev]);
       }
       
       // Add pin to database
@@ -334,6 +337,8 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
     setMode('select');
     setSelectedMode(null);
     setSelectedRouteId(null);
+    setCustomRouteTitle('');
+    setShowTitleInput(false);
     setPins([]);
     setLocation(null);
     setLocationError(null);
@@ -460,7 +465,13 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
                 <label className="text-sm font-medium text-muted-foreground">TRASA</label>
                 <Select 
                   value={selectedRouteId || 'new'} 
-                  onValueChange={setSelectedRouteId}
+                  onValueChange={(value) => {
+                    setSelectedRouteId(value);
+                    setShowTitleInput(value === 'new');
+                    if (value !== 'new') {
+                      setCustomRouteTitle('');
+                    }
+                  }}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Wybierz lub utwórz trasę" />
@@ -483,6 +494,43 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
                     ))}
                   </SelectContent>
                 </Select>
+                
+                {/* Optional title input for new route */}
+                {(selectedRouteId === 'new' || !selectedRouteId) && (
+                  <div className="space-y-1.5">
+                    {!showTitleInput ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowTitleInput(true)}
+                        className="text-xs text-muted-foreground hover:text-foreground underline"
+                      >
+                        Nadaj własną nazwę trasie
+                      </button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={customRouteTitle}
+                          onChange={(e) => setCustomRouteTitle(e.target.value)}
+                          placeholder={defaultTitle}
+                          className="flex-1 h-9 px-3 rounded-md border border-input bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 shrink-0"
+                          onClick={() => {
+                            setShowTitleInput(false);
+                            setCustomRouteTitle('');
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Location section */}
