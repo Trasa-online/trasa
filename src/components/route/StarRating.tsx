@@ -16,6 +16,14 @@ interface StarRatingProps {
   className?: string;
 }
 
+const ratingLabels = [
+  "Bardzo słabe",
+  "Słabe", 
+  "Przeciętne",
+  "Dobre",
+  "Wspaniałe"
+];
+
 const StarRating = ({
   rating,
   maxRating = 5,
@@ -44,7 +52,8 @@ const StarRating = ({
       navigator.vibrate(10);
     }
     
-    onRatingChange?.(starValue);
+    // Allow deselecting by clicking same star
+    onRatingChange?.(rating === starValue ? 0 : starValue);
   };
 
   const handleReset = () => {
@@ -55,14 +64,18 @@ const StarRating = ({
   };
 
   const displayRating = hoveredStar !== null ? hoveredStar : rating;
+  const currentLabel = displayRating > 0 ? ratingLabels[displayRating - 1] : null;
 
   return (
     <div className={cn("flex flex-col items-center", className)}>
       {showLabel && interactive && (
         <div className="text-center mb-2">
           <Label className="text-sm font-medium">Twoja ocena</Label>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Dotknij gwiazdki aby ocenić
+          <p className={cn(
+            "text-xs mt-0.5 transition-colors duration-150 min-h-[1.25rem]",
+            currentLabel ? "text-foreground font-medium" : "text-muted-foreground"
+          )}>
+            {currentLabel || "Dotknij gwiazdki aby ocenić"}
           </p>
         </div>
       )}
@@ -86,7 +99,7 @@ const StarRating = ({
                 className={cn(
                   "transition-all duration-150 ease-in-out",
                   interactive && "cursor-pointer",
-                  interactive && "hover:scale-110 active:scale-95",
+                  interactive && "hover:scale-125 active:scale-95",
                   interactive && isPressed && "scale-95",
                   !interactive && "cursor-default"
                 )}
@@ -118,6 +131,13 @@ const StarRating = ({
           </Button>
         )}
       </div>
+      
+      {/* Show label for non-interactive (view) mode */}
+      {!interactive && rating > 0 && (
+        <p className="text-xs text-muted-foreground mt-1">
+          {ratingLabels[rating - 1]}
+        </p>
+      )}
       
       {showValue && rating > 0 && (
         <p className="text-sm text-center mt-2 animate-fade-in">
