@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      canonical_pins: {
+        Row: {
+          address: string | null
+          average_rating: number | null
+          created_at: string | null
+          discovered_at: string | null
+          discovered_by_user_id: string | null
+          id: string
+          latitude: number
+          longitude: number
+          place_name: string
+          total_visits: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          average_rating?: number | null
+          created_at?: string | null
+          discovered_at?: string | null
+          discovered_by_user_id?: string | null
+          id?: string
+          latitude: number
+          longitude: number
+          place_name: string
+          total_visits?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          average_rating?: number | null
+          created_at?: string | null
+          discovered_at?: string | null
+          discovered_by_user_id?: string | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          place_name?: string
+          total_visits?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canonical_pins_discovered_by_user_id_fkey"
+            columns: ["discovered_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canonical_pins_discovered_by_user_id_fkey"
+            columns: ["discovered_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comment_likes: {
         Row: {
           comment_id: string
@@ -311,6 +368,7 @@ export type Database = {
       pins: {
         Row: {
           address: string
+          canonical_pin_id: string | null
           created_at: string | null
           description: string | null
           id: string
@@ -329,9 +387,11 @@ export type Database = {
           tags: string[] | null
           transport_end: string | null
           transport_type: string | null
+          visited_at: string | null
         }
         Insert: {
           address: string
+          canonical_pin_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -350,9 +410,11 @@ export type Database = {
           tags?: string[] | null
           transport_end?: string | null
           transport_type?: string | null
+          visited_at?: string | null
         }
         Update: {
           address?: string
+          canonical_pin_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -371,8 +433,16 @@ export type Database = {
           tags?: string[] | null
           transport_end?: string | null
           transport_type?: string | null
+          visited_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "pins_canonical_pin_id_fkey"
+            columns: ["canonical_pin_id"]
+            isOneToOne: false
+            referencedRelation: "canonical_pins"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pins_original_creator_id_fkey"
             columns: ["original_creator_id"]
@@ -778,9 +848,23 @@ export type Database = {
       }
     }
     Functions: {
+      find_nearby_canonical_pin: {
+        Args: { radius_meters?: number; search_lat: number; search_lng: number }
+        Returns: string
+      }
       find_original_pin_creator: {
         Args: { p_latitude: number; p_longitude: number }
         Returns: string
+      }
+      get_canonical_pin_stats: {
+        Args: { pin_id: string }
+        Returns: {
+          average_rating: number
+          first_visit: string
+          latest_visit: string
+          total_visits: number
+          unique_routes: number
+        }[]
       }
       has_role: {
         Args: {
