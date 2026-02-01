@@ -8,11 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import DebouncedTextarea from "@/components/route/DebouncedTextarea";
 
-import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Check, MapPin, Star } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Check, MapPin, Star, Users } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import UserMentionInput from "@/components/route/UserMentionInput";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import RouteMap from "@/components/RouteMap";
@@ -22,7 +23,7 @@ import MapPinSelector from "@/components/route/MapPinSelector";
 import PinNotesSection from "@/components/route/PinNotesSection";
 import StepIndicator from "@/components/route/StepIndicator";
 
-import { findOriginalPinCreator, checkPinDiscoveryInfo } from "@/lib/pinDiscovery";
+import { findOriginalPinCreator, checkPinDiscoveryInfo, getCanonicalPinInfo, CanonicalPinInfo } from "@/lib/pinDiscovery";
 import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/imageCompression";
 import EmptyState from "@/components/ui/empty-state";
@@ -61,6 +62,11 @@ interface Pin {
   original_creator_username?: string;
   canonical_pin_id?: string;
   visited_at?: string;
+  // Canonical pin info for Single Source of Truth
+  canonical_discoverer_avatar?: string;
+  canonical_discovered_at?: string;
+  canonical_total_visits?: number;
+  canonical_average_rating?: number;
 }
 
 const CreateRoute = () => {
@@ -1444,10 +1450,10 @@ const CreateRoute = () => {
                         <AddressAutocomplete
                           value={pins[currentPinIndex]?.address || ""}
                           onChange={async (value, coordinates, fullAddress, placeName) => {
-                            // Check for original creator
-                            let discoveryInfo: { originalCreatorId: string | null; originalCreatorUsername: string | null } | null = null;
+                            // Get full canonical pin info
+                            let canonicalInfo: CanonicalPinInfo = { isExisting: false };
                             if (coordinates?.latitude && coordinates?.longitude) {
-                              discoveryInfo = await checkPinDiscoveryInfo(coordinates.latitude, coordinates.longitude);
+                              canonicalInfo = await getCanonicalPinInfo(coordinates.latitude, coordinates.longitude);
                             }
                             
                             setPins(prevPins => {
@@ -1459,12 +1465,26 @@ const CreateRoute = () => {
                                   place_name: placeName || fullAddress || value,
                                   latitude: coordinates?.latitude,
                                   longitude: coordinates?.longitude,
-                                  original_creator_id: discoveryInfo?.originalCreatorId || undefined,
-                                  original_creator_username: discoveryInfo?.originalCreatorUsername || undefined,
+                                  // Canonical pin data
+                                  canonical_pin_id: canonicalInfo.canonicalPinId,
+                                  original_creator_id: canonicalInfo.discoveredByUserId,
+                                  original_creator_username: canonicalInfo.discoveredByUsername,
+                                  canonical_discoverer_avatar: canonicalInfo.discoveredByAvatar,
+                                  canonical_discovered_at: canonicalInfo.discoveredAt,
+                                  canonical_total_visits: canonicalInfo.totalVisits,
+                                  canonical_average_rating: canonicalInfo.averageRating,
                                 };
                               }
                               return newPins;
                             });
+                            
+                            // Update discovery status
+                            if (coordinates?.latitude && coordinates?.longitude) {
+                              setIsNewDiscovery(prev => ({
+                                ...prev,
+                                [currentPinIndex]: !canonicalInfo.isExisting
+                              }));
+                            }
                           }}
                           placeholder="Wpisz adres miejsca"
                         />
@@ -1472,8 +1492,8 @@ const CreateRoute = () => {
                       <MapPinSelector
                         existingPins={pins.filter(p => p.latitude && p.longitude)}
                         onPinSelect={async (pinData) => {
-                          // Check for original creator
-                          const discoveryInfo = await checkPinDiscoveryInfo(pinData.latitude, pinData.longitude);
+                          // Get full canonical pin info
+                          const canonicalInfo = await getCanonicalPinInfo(pinData.latitude, pinData.longitude);
                           
                           setPins(prevPins => {
                             const newPins = [...prevPins];
@@ -1483,11 +1503,24 @@ const CreateRoute = () => {
                               place_name: pinData.place_name || pinData.address,
                               latitude: pinData.latitude,
                               longitude: pinData.longitude,
-                              original_creator_id: discoveryInfo?.originalCreatorId || undefined,
-                              original_creator_username: discoveryInfo?.originalCreatorUsername || undefined,
+                              // Canonical pin data
+                              canonical_pin_id: canonicalInfo.canonicalPinId,
+                              original_creator_id: canonicalInfo.discoveredByUserId,
+                              original_creator_username: canonicalInfo.discoveredByUsername,
+                              canonical_discoverer_avatar: canonicalInfo.discoveredByAvatar,
+                              canonical_discovered_at: canonicalInfo.discoveredAt,
+                              canonical_total_visits: canonicalInfo.totalVisits,
+                              canonical_average_rating: canonicalInfo.averageRating,
                             };
                             return newPins;
                           });
+                          
+                          // Update discovery status
+                          setIsNewDiscovery(prev => ({
+                            ...prev,
+                            [currentPinIndex]: !canonicalInfo.isExisting
+                          }));
+                          
                           toast({ title: "Lokalizacja wybrana", description: pinData.place_name || pinData.address });
                         }}
                       />
@@ -1559,22 +1592,61 @@ const CreateRoute = () => {
                       </div>
                     )}
 
-                    {/* Show if someone else discovered it */}
+                    {/* Existing Place Info Card - Single Source of Truth */}
                     {pins[currentPinIndex]?.canonical_pin_id && 
                      !isNewDiscovery[currentPinIndex] &&
-                     pins[currentPinIndex]?.original_creator_username && 
-                     pins[currentPinIndex]?.original_creator_id !== user?.id && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg p-2 mt-2">
-                        <Sparkles className="h-4 w-4 text-yellow-500" />
-                        <span>
-                          Odkryte przez{" "}
-                          <Link 
-                            to={`/profile/${pins[currentPinIndex]?.original_creator_id}`} 
-                            className="font-medium text-primary hover:underline"
-                          >
-                            @{pins[currentPinIndex]?.original_creator_username}
-                          </Link>
-                        </span>
+                     pins[currentPinIndex]?.original_creator_id && (
+                      <div className="mt-3 bg-muted/50 rounded-xl p-4 space-y-3 border border-border">
+                        {/* Discoverer info */}
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 border-2 border-primary/20">
+                            <AvatarImage src={pins[currentPinIndex]?.canonical_discoverer_avatar} />
+                            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                              {pins[currentPinIndex]?.original_creator_username?.[0]?.toUpperCase() || '?'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 text-sm">
+                              <Trophy className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                              <span className="text-muted-foreground">Odkryte przez</span>
+                              <Link 
+                                to={`/profile/${pins[currentPinIndex]?.original_creator_id}`}
+                                className="font-semibold text-foreground hover:text-primary truncate"
+                              >
+                                @{pins[currentPinIndex]?.original_creator_username}
+                              </Link>
+                            </div>
+                            {pins[currentPinIndex]?.canonical_discovered_at && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {new Date(pins[currentPinIndex]?.canonical_discovered_at!).toLocaleDateString('pl-PL', {
+                                  day: 'numeric',
+                                  month: 'long',
+                                  year: 'numeric'
+                                })}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Stats row */}
+                        <div className="flex items-center gap-4 text-sm border-t border-border pt-3">
+                          <div className="flex items-center gap-1.5">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{pins[currentPinIndex]?.canonical_total_visits || 1}</span>
+                            <span className="text-muted-foreground">
+                              {(pins[currentPinIndex]?.canonical_total_visits || 1) === 1 ? 'wizyta' : 'wizyt'}
+                            </span>
+                          </div>
+                          {(pins[currentPinIndex]?.canonical_average_rating || 0) > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <Star className="h-4 w-4 fill-star text-star" />
+                              <span className="font-medium">
+                                {pins[currentPinIndex]?.canonical_average_rating?.toFixed(1)}
+                              </span>
+                              <span className="text-muted-foreground">średnia</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
