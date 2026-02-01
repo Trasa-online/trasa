@@ -21,6 +21,7 @@ import DraggablePinList from "@/components/route/DraggablePinList";
 import MapPinSelector from "@/components/route/MapPinSelector";
 import PinNotesSection from "@/components/route/PinNotesSection";
 import StepIndicator from "@/components/route/StepIndicator";
+import { QuickAddPinSheet } from "@/components/route/QuickAddPinSheet";
 import { findOriginalPinCreator, checkPinDiscoveryInfo } from "@/lib/pinDiscovery";
 import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/imageCompression";
@@ -84,6 +85,7 @@ const CreateRoute = () => {
   const [showPinsList, setShowPinsList] = useState(false);
   const [isNewDiscovery, setIsNewDiscovery] = useState<{ [key: number]: boolean }>({});
   const [quickCaptureMode, setQuickCaptureMode] = useState(false);
+  const [showQuickAddSheet, setShowQuickAddSheet] = useState(false);
   
   // Undo deletion state
   const [deletedPinBuffer, setDeletedPinBuffer] = useState<Pin | null>(null);
@@ -1385,19 +1387,39 @@ const CreateRoute = () => {
                       showNotesEditor={true}
                       compact={true}
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => {
-                        addPin();
-                        setShowPinsList(false);
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Dodaj pinezkę
-                    </Button>
+                    {quickCaptureMode ? (
+                      <Button
+                        type="button"
+                        variant="default"
+                        className="w-full h-14 text-base shadow-lg"
+                        onClick={() => setShowQuickAddSheet(true)}
+                      >
+                        <Zap className="h-5 w-5 mr-2" />
+                        Dodaj miejsce
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          addPin();
+                          setShowPinsList(false);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Dodaj pinezkę
+                      </Button>
+                    )}
                   </div>
+                  
+                  {quickCaptureMode && (
+                    <div className="text-center p-3 bg-primary/5 rounded-lg border border-primary/20">
+                      <p className="text-sm text-primary font-medium">
+                        ⚡ Szybki tryb - 10 sekund na pin!
+                      </p>
+                    </div>
+                  )}
 
                   <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
                     <Button
@@ -1411,18 +1433,35 @@ const CreateRoute = () => {
                   </div>
                 </div>
               ) : (
-                <EmptyState
-                  icon={MapPin}
-                  title="Brak pinezek w trasie"
-                  description="Dodaj pierwsze miejsca, które chcesz uwzględnić w swojej trasie"
-                  actionLabel="Dodaj pierwszą pinezkę"
-                  actionIcon={Plus}
-                  onAction={() => {
-                    addPin();
-                    setShowPinsList(false);
-                  }}
-                  className="py-12"
-                />
+              <div className="space-y-6">
+                  <EmptyState
+                    icon={MapPin}
+                    title="Brak pinezek w trasie"
+                    description={quickCaptureMode 
+                      ? "Dodaj miejsca szybko - lokalizacja i zdjęcie!" 
+                      : "Dodaj pierwsze miejsca, które chcesz uwzględnić w swojej trasie"
+                    }
+                    actionLabel={quickCaptureMode ? "Dodaj miejsce" : "Dodaj pierwszą pinezkę"}
+                    actionIcon={quickCaptureMode ? Zap : Plus}
+                    onAction={() => {
+                      if (quickCaptureMode) {
+                        setShowQuickAddSheet(true);
+                      } else {
+                        addPin();
+                        setShowPinsList(false);
+                      }
+                    }}
+                    className="py-12"
+                  />
+                  
+                  {quickCaptureMode && (
+                    <div className="text-center p-3 bg-primary/5 rounded-lg border border-primary/20">
+                      <p className="text-sm text-primary font-medium">
+                        ⚡ Szybki tryb - 10 sekund na pin!
+                      </p>
+                    </div>
+                  )}
+                </div>
               )
             ) : (
               <>
@@ -2104,6 +2143,33 @@ const CreateRoute = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Quick Add Pin Sheet */}
+      {quickCaptureMode && user && (
+        <QuickAddPinSheet
+          open={showQuickAddSheet}
+          onOpenChange={setShowQuickAddSheet}
+          userId={user.id}
+          onPinAdd={(newPin) => {
+            // Add pin to state
+            const newPins = [...pins.filter(p => p.address), {
+              place_name: newPin.place_name,
+              address: newPin.address,
+              description: "",
+              image_url: newPin.image_url || "",
+              images: newPin.image_url ? [newPin.image_url] : [],
+              rating: 0,
+              pin_order: pins.filter(p => p.address).length,
+              tags: [],
+              latitude: newPin.latitude,
+              longitude: newPin.longitude,
+              notes: []
+            }];
+            setPins(newPins);
+            setShowPinsList(true);
+          }}
+        />
+      )}
     </div>
   );
 };
