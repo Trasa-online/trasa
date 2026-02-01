@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Waitlist from "./pages/Waitlist";
 import MyRoutes from "./pages/MyRoutes";
 import CreateRoute from "./pages/CreateRoute";
+import QuickCapture from "./pages/QuickCapture";
 import SavedRoutes from "./pages/SavedRoutes";
 import Settings from "./pages/Settings";
 import RouteDetails from "./pages/RouteDetails";
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/feed" element={<AppLayout><Feed /></AppLayout>} />
           <Route path="/my-routes" element={<AppLayout><MyRoutes /></AppLayout>} />
           <Route path="/create" element={<CreateRoute />} />
+          <Route path="/quick-capture" element={<QuickCapture />} />
           <Route path="/edit/:id" element={<CreateRoute />} />
           <Route path="/saved" element={<AppLayout><SavedRoutes /></AppLayout>} />
           <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />

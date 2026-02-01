@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import DebouncedTextarea from "@/components/route/DebouncedTextarea";
 
-import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Check, MapPin, Star, Zap, Edit } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Check, MapPin, Star } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -21,7 +21,7 @@ import DraggablePinList from "@/components/route/DraggablePinList";
 import MapPinSelector from "@/components/route/MapPinSelector";
 import PinNotesSection from "@/components/route/PinNotesSection";
 import StepIndicator from "@/components/route/StepIndicator";
-import { QuickAddPinSheet } from "@/components/route/QuickAddPinSheet";
+
 import { findOriginalPinCreator, checkPinDiscoveryInfo } from "@/lib/pinDiscovery";
 import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/imageCompression";
@@ -84,10 +84,6 @@ const CreateRoute = () => {
   const [showCustomTagInput, setShowCustomTagInput] = useState(false);
   const [showPinsList, setShowPinsList] = useState(false);
   const [isNewDiscovery, setIsNewDiscovery] = useState<{ [key: number]: boolean }>({});
-  const [quickCaptureMode, setQuickCaptureMode] = useState(false);
-  const [showQuickAddSheet, setShowQuickAddSheet] = useState(false);
-  const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   
   // Undo deletion state
   const [deletedPinBuffer, setDeletedPinBuffer] = useState<Pin | null>(null);
@@ -114,89 +110,6 @@ const CreateRoute = () => {
   // Check if user has added any pins with data
   const hasAddedPins = pins.some(p => p.address && p.address.trim() !== "");
 
-  // Check for quick mode from URL params
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('mode') === 'quick') {
-      setQuickCaptureMode(true);
-      // Skip step 1 and go directly to step 2 with default title
-      if (!title) {
-        setTitle(`Trasa ${new Date().toLocaleDateString('pl-PL')}`);
-        setStep(2);
-      }
-    }
-  }, []);
-
-  // Check location permission when entering Step 2 with Quick Capture mode
-  useEffect(() => {
-    if (step === 2 && quickCaptureMode) {
-      checkLocationPermission();
-    }
-  }, [step, quickCaptureMode]);
-
-  const checkLocationPermission = async () => {
-    if (!('geolocation' in navigator)) {
-      setLocationPermission('denied');
-      return;
-    }
-
-    try {
-      // Check permission state
-      const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-      setLocationPermission(permissionStatus.state as 'granted' | 'denied' | 'prompt');
-
-      // Listen for permission changes
-      permissionStatus.addEventListener('change', () => {
-        setLocationPermission(permissionStatus.state as 'granted' | 'denied' | 'prompt');
-      });
-
-      // If granted, get current location
-      if (permissionStatus.state === 'granted') {
-        getCurrentLocation();
-      }
-    } catch (error) {
-      // Fallback for browsers that don't support permissions API
-      setLocationPermission('prompt');
-    }
-  };
-
-  const getCurrentLocation = () => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setCurrentLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        });
-      },
-      (error) => {
-        console.error('Location error:', error);
-      }
-    );
-  };
-
-  const requestLocationPermission = () => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocationPermission('granted');
-        setCurrentLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        });
-        toast({
-          title: "Lokalizacja włączona!",
-          description: "Możesz teraz szybko dodawać miejsca",
-        });
-      },
-      (error) => {
-        setLocationPermission('denied');
-        toast({
-          variant: "destructive",
-          title: "Brak dostępu do lokalizacji",
-          description: "Włącz lokalizację w ustawieniach przeglądarki",
-        });
-      }
-    );
-  };
 
   const handleBackClick = () => {
     // If on step 3 (summary), go back to step 2
@@ -1299,7 +1212,7 @@ const CreateRoute = () => {
           <ArrowLeft className="h-6 w-6" />
         </button>
         <h1 className="text-xl font-semibold flex-1">
-          {step === 1 ? "Utwórz nową trasę" : step === 2 ? (quickCaptureMode ? "Szybkie dodawanie" : "Pinezki w trasie") : "Podsumowanie trasy"}
+          {step === 1 ? "Utwórz nową trasę" : step === 2 ? "Pinezki w trasie" : "Podsumowanie trasy"}
         </h1>
         {step >= 2 && hasAddedPins && (
           <div className="text-xs text-muted-foreground text-right">
@@ -1355,80 +1268,6 @@ const CreateRoute = () => {
               </p>
             </div>
 
-            {/* Trip Mode Selection */}
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Jak chcesz tworzyć trasę?</Label>
-              <p className="text-sm text-muted-foreground">
-                Wybierz tryb dodawania miejsc do trasy
-              </p>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Quick Capture Mode */}
-                <button
-                  type="button"
-                  onClick={() => setQuickCaptureMode(true)}
-                  className={cn(
-                    "p-5 rounded-xl border-2 transition-all text-left",
-                    quickCaptureMode 
-                      ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md" 
-                      : "border-border hover:border-primary/50 hover:shadow-sm"
-                  )}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="text-4xl">⚡</div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-base mb-1">Szybki tryb</div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Dodawaj miejsca w 10 sekund podczas wycieczki. Lokalizacja i zdjęcie - gotowe!
-                      </p>
-                      <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-primary">
-                        <Zap className="h-3 w-3" />
-                        <span>Idealny podczas podróży</span>
-                      </div>
-                    </div>
-                    {quickCaptureMode && (
-                      <Check className="h-5 w-5 text-primary flex-shrink-0" />
-                    )}
-                  </div>
-                </button>
-                
-                {/* Detailed Mode */}
-                <button
-                  type="button"
-                  onClick={() => setQuickCaptureMode(false)}
-                  className={cn(
-                    "p-5 rounded-xl border-2 transition-all text-left",
-                    !quickCaptureMode 
-                      ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md" 
-                      : "border-border hover:border-primary/50 hover:shadow-sm"
-                  )}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="text-4xl">✍️</div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-base mb-1">Szczegółowy tryb</div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Pełna kontrola. Dodawaj opisy, oceny, kategorie i notatki od razu.
-                      </p>
-                      <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-primary">
-                        <Edit className="h-3 w-3" />
-                        <span>Idealny po podróży</span>
-                      </div>
-                    </div>
-                    {!quickCaptureMode && (
-                      <Check className="h-5 w-5 text-primary flex-shrink-0" />
-                    )}
-                  </div>
-                </button>
-              </div>
-              
-              {/* Helpful hint */}
-              <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  💡 <strong>Wskazówka:</strong> Nie martw się! Niezależnie od wybranego trybu, zawsze możesz dodać szczegóły później.
-                </p>
-              </div>
-            </div>
 
             <Button
               variant="default"
@@ -1446,50 +1285,6 @@ const CreateRoute = () => {
           </div>
         ) : step === 2 ? (
           <>
-            {/* Location Permission Prompt */}
-            {quickCaptureMode && locationPermission !== 'granted' && (
-              <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-200 dark:border-amber-800 rounded-xl">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 p-2 bg-amber-100 dark:bg-amber-900/50 rounded-lg">
-                    <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
-                      Włącz lokalizację
-                    </h3>
-                    <p className="text-sm text-amber-800 dark:text-amber-200 mb-3 leading-relaxed">
-                      Szybki tryb działa najlepiej z włączoną lokalizacją. Będziesz mógł dodawać miejsca w 10 sekund!
-                    </p>
-                    <Button
-                      type="button"
-                      onClick={requestLocationPermission}
-                      size="sm"
-                      className="bg-amber-600 hover:bg-amber-700 text-white"
-                    >
-                      <MapPin className="h-4 w-4 mr-2" />
-                      Włącz lokalizację
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Location Active Indicator */}
-            {quickCaptureMode && locationPermission === 'granted' && currentLocation && (
-              <div className="mb-4 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2">
-                <div className="flex-shrink-0 p-1.5 bg-green-100 dark:bg-green-900/50 rounded-full">
-                  <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                    Lokalizacja aktywna
-                  </p>
-                  <p className="text-xs text-green-700 dark:text-green-300">
-                    {currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}
-                  </p>
-                </div>
-              </div>
-            )}
 
             {showPinsList ? (
               pins.filter(p => p.address).length > 0 ? (
@@ -1512,39 +1307,19 @@ const CreateRoute = () => {
                       showNotesEditor={true}
                       compact={true}
                     />
-                    {quickCaptureMode ? (
-                      <Button
-                        type="button"
-                        variant="default"
-                        className="w-full h-14 text-base shadow-lg"
-                        onClick={() => setShowQuickAddSheet(true)}
-                      >
-                        <Zap className="h-5 w-5 mr-2" />
-                        Dodaj miejsce
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => {
-                          addPin();
-                          setShowPinsList(false);
-                        }}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Dodaj pinezkę
-                      </Button>
-                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        addPin();
+                        setShowPinsList(false);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Dodaj pinezkę
+                    </Button>
                   </div>
-                  
-                  {quickCaptureMode && (
-                    <div className="text-center p-3 bg-primary/5 rounded-lg border border-primary/20">
-                      <p className="text-sm text-primary font-medium">
-                        ⚡ Szybki tryb - 10 sekund na pin!
-                      </p>
-                    </div>
-                  )}
 
                   <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
                     <Button
@@ -1558,34 +1333,19 @@ const CreateRoute = () => {
                   </div>
                 </div>
               ) : (
-              <div className="space-y-6">
+                <div className="space-y-6">
                   <EmptyState
                     icon={MapPin}
                     title="Brak pinezek w trasie"
-                    description={quickCaptureMode 
-                      ? "Dodaj miejsca szybko - lokalizacja i zdjęcie!" 
-                      : "Dodaj pierwsze miejsca, które chcesz uwzględnić w swojej trasie"
-                    }
-                    actionLabel={quickCaptureMode ? "Dodaj miejsce" : "Dodaj pierwszą pinezkę"}
-                    actionIcon={quickCaptureMode ? Zap : Plus}
+                    description="Dodaj pierwsze miejsca, które chcesz uwzględnić w swojej trasie"
+                    actionLabel="Dodaj pierwszą pinezkę"
+                    actionIcon={Plus}
                     onAction={() => {
-                      if (quickCaptureMode) {
-                        setShowQuickAddSheet(true);
-                      } else {
-                        addPin();
-                        setShowPinsList(false);
-                      }
+                      addPin();
+                      setShowPinsList(false);
                     }}
                     className="py-12"
                   />
-                  
-                  {quickCaptureMode && (
-                    <div className="text-center p-3 bg-primary/5 rounded-lg border border-primary/20">
-                      <p className="text-sm text-primary font-medium">
-                        ⚡ Szybki tryb - 10 sekund na pin!
-                      </p>
-                    </div>
-                  )}
                 </div>
               )
             ) : (
@@ -2269,32 +2029,6 @@ const CreateRoute = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Quick Add Pin Sheet */}
-      {quickCaptureMode && user && (
-        <QuickAddPinSheet
-          open={showQuickAddSheet}
-          onOpenChange={setShowQuickAddSheet}
-          userId={user.id}
-          onPinAdd={(newPin) => {
-            // Add pin to state
-            const newPins = [...pins.filter(p => p.address), {
-              place_name: newPin.place_name,
-              address: newPin.address,
-              description: "",
-              image_url: newPin.image_url || "",
-              images: newPin.image_url ? [newPin.image_url] : [],
-              rating: 0,
-              pin_order: pins.filter(p => p.address).length,
-              tags: [],
-              latitude: newPin.latitude,
-              longitude: newPin.longitude,
-              notes: []
-            }];
-            setPins(newPins);
-            setShowPinsList(true);
-          }}
-        />
-      )}
     </div>
   );
 };

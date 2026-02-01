@@ -22,7 +22,7 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
 
   const handleContinue = () => {
     if (selectedMode === 'quick') {
-      navigate("/create?mode=quick");
+      navigate("/quick-capture");
     } else {
       navigate("/create");
     }
