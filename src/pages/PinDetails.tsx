@@ -19,6 +19,7 @@ import { getPinImage } from "@/lib/pinPlaceholders";
 import RouteMap from "@/components/RouteMap";
 import PremiumPinView from "@/components/business/PremiumPinView";
 import { MOCK_BUSINESS_DATA, MOCK_PREMIUM_PIN_ID } from "@/components/business/mockBusinessData";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -909,50 +910,78 @@ const PinDetails = () => {
 
         <Separator />
 
-        {/* Other Users Who Added This Location - always show */}
+        {/* All Visits to This Location */}
         <div>
-          <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Inni użytkownicy dodali to miejsce {sameLocationPins.length > 0 && `(${sameLocationPins.length})`}
+          <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Odwiedzający
+            {allCanonicalVisits.length > 0 && (
+              <span className="text-muted-foreground font-normal text-sm">
+                ({allCanonicalVisits.length})
+              </span>
+            )}
           </h2>
 
-          {sameLocationPins.length === 0 ? (
+          {canonicalVisitsLoading ? (
             <div className="py-8 text-center">
-              <Users className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Nikt jeszcze nie dodał tego miejsca do swojej trasy
+              <div className="inline-flex items-center gap-2 text-muted-foreground">
+                <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm">Ładowanie wizyt...</span>
+              </div>
+            </div>
+          ) : allCanonicalVisits.length === 0 ? (
+            <div className="py-12 text-center">
+              <Users className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-sm font-medium text-muted-foreground mb-1">
+                Nikt jeszcze nie odwiedził tego miejsca
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Bądź pierwszą osobą, która doda to miejsce do swojej trasy!
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {sameLocationPins.map((locationPin: any) => {
-                const profile = locationPin.routes?.profiles;
-                const route = locationPin.routes;
+              {allCanonicalVisits.map((visit: any) => {
+                const routeProfile = visit.routes?.profiles;
+                const route = visit.routes;
+                const isCurrentUserVisit = visit.routes?.user_id === user?.id;
                 
                 return (
                   <div 
-                    key={locationPin.id}
-                    className="p-3 bg-muted/40 rounded-xl border border-border/50"
+                    key={visit.id}
+                    className={cn(
+                      "p-3 rounded-xl border transition-colors",
+                      isCurrentUserVisit 
+                        ? "bg-primary/5 border-primary/20" 
+                        : "bg-muted/40 border-border/50 hover:border-border"
+                    )}
                   >
                     <div className="flex gap-3">
-                      {/* Left: Avatar or Image */}
-                      {locationPin.image_url ? (
+                      {/* Left: Photo or Avatar */}
+                      {visit.image_url ? (
                         <div
-                          className="shrink-0 w-16 h-16 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={() => openLightbox([locationPin.image_url], 0)}
+                          className="shrink-0 w-16 h-16 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ring-2 ring-background shadow-sm"
+                          onClick={() => {
+                            // Collect all visit images for lightbox
+                            const visitImages = allCanonicalVisits
+                              .filter((v: any) => v.image_url)
+                              .map((v: any) => v.image_url);
+                            const imageIndex = visitImages.indexOf(visit.image_url);
+                            openLightbox(visitImages, Math.max(0, imageIndex));
+                          }}
                         >
                           <img
-                            src={locationPin.image_url}
-                            alt={locationPin.place_name}
+                            src={visit.image_url}
+                            alt={`Zdjęcie od ${routeProfile?.username}`}
                             className="w-full h-full object-cover"
                           />
                         </div>
                       ) : (
-                        <Link to={`/profile/${profile?.id}`}>
-                          <Avatar className="h-16 w-16">
-                            <AvatarImage src={profile?.avatar_url || ""} />
-                            <AvatarFallback className="text-lg">
-                              {profile?.username?.charAt(0).toUpperCase() || "?"}
+                        <Link to={`/profile/${routeProfile?.id}`}>
+                          <Avatar className="h-16 w-16 ring-2 ring-background shadow-sm">
+                            <AvatarImage src={routeProfile?.avatar_url || ""} />
+                            <AvatarFallback className="text-lg font-semibold">
+                              {routeProfile?.username?.charAt(0).toUpperCase() || "?"}
                             </AvatarFallback>
                           </Avatar>
                         </Link>
@@ -960,36 +989,62 @@ const PinDetails = () => {
 
                       {/* Right: Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <Link
-                              to={`/profile/${profile?.id}`}
-                              className="font-semibold text-sm hover:text-primary line-clamp-1"
-                            >
-                              {profile?.username || "Anonim"}
-                            </Link>
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <Link
+                                to={`/profile/${routeProfile?.id}`}
+                                className="font-semibold text-sm hover:text-primary line-clamp-1 transition-colors"
+                              >
+                                {routeProfile?.username || "Anonim"}
+                              </Link>
+                              {isCurrentUserVisit && (
+                                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                                  Ty
+                                </span>
+                              )}
+                            </div>
                             <Link
                               to={`/route/${route?.id}`}
-                              className="text-xs text-muted-foreground hover:text-primary line-clamp-1 block"
+                              className="text-xs text-muted-foreground hover:text-primary line-clamp-1 block transition-colors"
                             >
-                              Na trasie: {route?.title}
+                              Z trasy: {route?.title}
                             </Link>
                             <p className="text-[10px] text-muted-foreground mt-0.5">
-                              {format(new Date(locationPin.created_at), "d MMM yyyy", { locale: pl })}
+                              {format(new Date(visit.visited_at || visit.created_at), "d MMMM yyyy", { locale: pl })}
                             </p>
                           </div>
-                          {locationPin.rating && locationPin.rating > 0 && (
-                            <div className="flex items-center gap-0.5 shrink-0">
-                              <Star className="h-3.5 w-3.5 fill-[hsl(var(--star))] text-[hsl(var(--star))]" />
-                              <span className="text-sm font-medium">{locationPin.rating}</span>
+                          
+                          {/* Rating */}
+                          {visit.rating && visit.rating > 0 && (
+                            <div className="flex items-center gap-0.5 shrink-0 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 rounded-md">
+                              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                              <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                                {visit.rating}
+                              </span>
                             </div>
                           )}
                         </div>
 
-                        {locationPin.description && (
-                          <p className="text-xs text-muted-foreground leading-relaxed mt-1 line-clamp-2">
-                            {locationPin.description}
+                        {/* Description/Comment */}
+                        {visit.description && (
+                          <p className="text-xs text-foreground leading-relaxed mt-2 line-clamp-3">
+                            {visit.description}
                           </p>
+                        )}
+                        
+                        {/* Tags if any */}
+                        {visit.tags && visit.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {visit.tags.slice(0, 3).map((tag: string, i: number) => (
+                              <span 
+                                key={i}
+                                className="text-[10px] bg-secondary px-2 py-0.5 rounded-full"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </div>
                     </div>
