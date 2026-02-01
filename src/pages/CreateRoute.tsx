@@ -114,6 +114,19 @@ const CreateRoute = () => {
   // Check if user has added any pins with data
   const hasAddedPins = pins.some(p => p.address && p.address.trim() !== "");
 
+  // Check for quick mode from URL params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') === 'quick') {
+      setQuickCaptureMode(true);
+      // Skip step 1 and go directly to step 2 with default title
+      if (!title) {
+        setTitle(`Trasa ${new Date().toLocaleDateString('pl-PL')}`);
+        setStep(2);
+      }
+    }
+  }, []);
+
   // Check location permission when entering Step 2 with Quick Capture mode
   useEffect(() => {
     if (step === 2 && quickCaptureMode) {

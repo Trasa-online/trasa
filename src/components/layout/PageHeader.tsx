@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Search, MapPinPlus } from "lucide-react";
+import { ArrowLeft, Bell, Search, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface PageHeaderProps {
@@ -62,9 +62,9 @@ export const PageHeader = ({
               variant="ghost"
               size="icon"
               onClick={onQuickNoteClick}
-              className="h-9 w-9 bg-muted"
+              className="h-9 w-9 bg-primary/10 text-primary"
             >
-              <MapPinPlus className="h-5 w-5" />
+              <Zap className="h-5 w-5" />
             </Button>
           )}
           {showBell && (
