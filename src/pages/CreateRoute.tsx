@@ -58,6 +58,8 @@ interface Pin {
   notes: PinNote[];
   original_creator_id?: string;
   original_creator_username?: string;
+  canonical_pin_id?: string;
+  visited_at?: string;
 }
 
 const CreateRoute = () => {
@@ -809,6 +811,81 @@ const CreateRoute = () => {
     }
   };
 
+  // Helper to find or create canonical pin for a location
+  const findOrCreateCanonicalPin = async (
+    latitude: number,
+    longitude: number,
+    placeName: string,
+    address: string,
+    userId: string
+  ): Promise<string | null> => {
+    try {
+      console.log('Looking for canonical pin at:', latitude, longitude);
+      
+      // Call the SQL function to find nearby pin (within 50m)
+      const { data: nearbyPinId, error: searchError } = await supabase
+        .rpc('find_nearby_canonical_pin', {
+          search_lat: latitude,
+          search_lng: longitude,
+          radius_meters: 50
+        });
+
+      if (searchError) {
+        console.error('Error searching for nearby pin:', searchError);
+        throw searchError;
+      }
+
+      // If found, return existing canonical pin ID
+      if (nearbyPinId) {
+        console.log('✓ Found existing canonical pin:', nearbyPinId);
+        
+        // Increment visit count
+        const { error: updateError } = await supabase
+          .from('canonical_pins')
+          .update({ 
+            total_visits: (await supabase.from('canonical_pins').select('total_visits').eq('id', nearbyPinId).single()).data?.total_visits + 1,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', nearbyPinId);
+        
+        if (updateError) {
+          console.warn('Failed to increment visit count:', updateError);
+        }
+        
+        return nearbyPinId;
+      }
+
+      // If not found, create new canonical pin
+      console.log('✓ Creating NEW canonical pin (first discovery!)');
+      const { data: newPin, error: createError } = await supabase
+        .from('canonical_pins')
+        .insert({
+          place_name: placeName,
+          address: address,
+          latitude: latitude,
+          longitude: longitude,
+          discovered_by_user_id: userId,
+          discovered_at: new Date().toISOString(),
+          total_visits: 1,
+          average_rating: 0
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating canonical pin:', createError);
+        throw createError;
+      }
+
+      console.log('✓ New canonical pin created:', newPin.id);
+      return newPin.id;
+    } catch (error) {
+      console.error('Error in findOrCreateCanonicalPin:', error);
+      // Return null instead of throwing - route can still be saved without canonical pin
+      return null;
+    }
+  };
+
   const saveRoute = async (status: "draft" | "published") => {
     if (!user || !title.trim()) {
       toast({ variant: "destructive", title: "Nazwa trasy jest wymagana" });
@@ -846,7 +923,25 @@ const CreateRoute = () => {
 
       // Prepare all pins data BEFORE any database operations
       const pinsToInsert = await Promise.all(validPins.map(async (pin) => {
-        const originalCreatorId = await findOriginalPinCreator(pin.latitude, pin.longitude);
+        // Find or create canonical pin for this location
+        let canonicalPinId: string | null = null;
+        
+        if (pin.latitude && pin.longitude) {
+          try {
+            canonicalPinId = await findOrCreateCanonicalPin(
+              pin.latitude,
+              pin.longitude,
+              pin.place_name || pin.address || "Nowe miejsce",
+              pin.address || "Brak adresu",
+              user.id
+            );
+            
+            console.log(`Pin "${pin.place_name}" → Canonical ID: ${canonicalPinId || 'none'}`);
+          } catch (error) {
+            console.error('Failed to find/create canonical pin:', error);
+            // Continue without canonical pin if there's an error
+          }
+        }
         
         // Process note images upfront
         const processedNotes = pin.notes ? await Promise.all(pin.notes.map(async (note) => {
@@ -873,7 +968,8 @@ const CreateRoute = () => {
           mentioned_users: routeMentionedUsers,
           latitude: pin.latitude,
           longitude: pin.longitude,
-          original_creator_id: originalCreatorId || user.id,
+          canonical_pin_id: canonicalPinId,
+          visited_at: new Date().toISOString(),
           notes: processedNotes,
         };
       }));
@@ -912,7 +1008,8 @@ const CreateRoute = () => {
             mentioned_users: p.mentioned_users,
             latitude: p.latitude,
             longitude: p.longitude,
-            original_creator_id: p.original_creator_id,
+            canonical_pin_id: p.canonical_pin_id,
+            visited_at: p.visited_at,
           })))
           .select();
 
@@ -991,7 +1088,8 @@ const CreateRoute = () => {
             mentioned_users: p.mentioned_users,
             latitude: p.latitude,
             longitude: p.longitude,
-            original_creator_id: p.original_creator_id,
+            canonical_pin_id: p.canonical_pin_id,
+            visited_at: p.visited_at,
           })))
           .select();
 
