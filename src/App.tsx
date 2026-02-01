@@ -33,8 +33,8 @@ const App = () => (
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/qr" element={<QRCodePage />} />
-          <Route path="/" element={<Waitlist />} />
-          <Route path="/feed" element={<AppLayout><Feed /></AppLayout>} />
+          <Route path="/waitlist" element={<Waitlist />} />
+          <Route path="/" element={<AppLayout><Feed /></AppLayout>} />
           <Route path="/my-routes" element={<AppLayout><MyRoutes /></AppLayout>} />
           <Route path="/create" element={<CreateRoute />} />
           
