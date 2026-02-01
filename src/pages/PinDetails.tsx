@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useRef, useCallback, useMemo } from "react";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
-import { PinVisitDialog } from "@/components/route/PinVisitDialog";
+import { PinVisitDrawer } from "@/components/route/PinVisitDrawer";
 import { toast } from "sonner";
 import { getPinImage } from "@/lib/pinPlaceholders";
 import RouteMap from "@/components/RouteMap";
@@ -309,6 +309,7 @@ const PinDetails = () => {
   const [showVisitDialog, setShowVisitDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
+  const [showAllVisits, setShowAllVisits] = useState(false);
   
   // Swipe handling
   const touchStartX = useRef<number | null>(null);
@@ -953,7 +954,7 @@ const PinDetails = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {allCanonicalVisits.map((visit: any) => {
+              {(showAllVisits ? allCanonicalVisits : allCanonicalVisits.slice(0, 3)).map((visit: any) => {
                 const routeProfile = visit.routes?.profiles;
                 const route = visit.routes;
                 const isCurrentUserVisit = visit.routes?.user_id === user?.id;
@@ -972,14 +973,10 @@ const PinDetails = () => {
                       {/* Left: Photo or Avatar */}
                       {visit.image_url ? (
                         <div
-                          className="shrink-0 w-16 h-16 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ring-2 ring-background shadow-sm"
+                          className="shrink-0 w-20 h-20 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ring-1 ring-border"
                           onClick={() => {
-                            // Collect all visit images for lightbox
-                            const visitImages = allCanonicalVisits
-                              .filter((v: any) => v.image_url)
-                              .map((v: any) => v.image_url);
-                            const imageIndex = visitImages.indexOf(visit.image_url);
-                            openLightbox(visitImages, Math.max(0, imageIndex));
+                            const imageIndex = allImages.indexOf(visit.image_url);
+                            openLightbox(allImages, imageIndex >= 0 ? imageIndex : 0);
                           }}
                         >
                           <img
@@ -989,14 +986,16 @@ const PinDetails = () => {
                           />
                         </div>
                       ) : (
-                        <Link to={`/profile/${routeProfile?.id}`}>
-                          <Avatar className="h-16 w-16 ring-2 ring-background shadow-sm">
-                            <AvatarImage src={routeProfile?.avatar_url || ""} />
-                            <AvatarFallback className="text-lg font-semibold">
-                              {routeProfile?.username?.charAt(0).toUpperCase() || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                        </Link>
+                        <div className="shrink-0 w-20 h-20 rounded-lg bg-gradient-to-br from-muted via-muted/80 to-muted/50 flex items-center justify-center">
+                          <Link to={`/profile/${routeProfile?.id}`}>
+                            <Avatar className="h-10 w-10 ring-2 ring-border/50">
+                              <AvatarImage src={routeProfile?.avatar_url || ""} />
+                              <AvatarFallback className="text-sm font-medium">
+                                {routeProfile?.username?.charAt(0).toUpperCase() || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                          </Link>
+                        </div>
                       )}
 
                       {/* Right: Info */}
@@ -1099,6 +1098,27 @@ const PinDetails = () => {
                   </div>
                 );
               })}
+              
+              {/* Show more link */}
+              {allCanonicalVisits.length > 3 && !showAllVisits && (
+                <p 
+                  onClick={() => setShowAllVisits(true)}
+                  className="text-sm text-muted-foreground hover:text-primary cursor-pointer text-center py-2"
+                >
+                  Pokaż więcej ({allCanonicalVisits.length - 3})
+                </p>
+              )}
+              
+              {/* "Twoje wrażenia" button */}
+              {user && (
+                <Button 
+                  variant="secondary" 
+                  className="w-full mt-2"
+                  onClick={() => setShowVisitDialog(true)}
+                >
+                  Twoje wrażenia
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -1200,9 +1220,9 @@ const PinDetails = () => {
         onOpenChange={setLightboxOpen}
       />
 
-      {/* Visit Dialog */}
+      {/* Visit Drawer */}
       {user && (
-        <PinVisitDialog
+        <PinVisitDrawer
           open={showVisitDialog}
           onOpenChange={setShowVisitDialog}
           pinId={pinId || ""}
