@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 import { toast } from "sonner";
@@ -344,6 +344,93 @@ const PinDetails = () => {
     },
     enabled: !!pin?.routes?.id,
   });
+
+  // Get canonical pin data if it exists
+  const { data: canonicalPin, isLoading: canonicalPinLoading } = useQuery({
+    queryKey: ["canonical-pin", pin?.canonical_pin_id],
+    queryFn: async () => {
+      if (!pin?.canonical_pin_id) return null;
+      
+      const { data, error } = await supabase
+        .from("canonical_pins")
+        .select(`
+          *,
+          discovered_by:discovered_by_user_id (
+            id,
+            username,
+            avatar_url
+          )
+        `)
+        .eq("id", pin.canonical_pin_id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching canonical pin:', error);
+        return null;
+      }
+      
+      return data;
+    },
+    enabled: !!pin?.canonical_pin_id
+  });
+
+  // Get all visits to this canonical pin (for aggregated stats)
+  const { data: allCanonicalVisits = [], isLoading: canonicalVisitsLoading } = useQuery({
+    queryKey: ["pin-all-visits", pin?.canonical_pin_id],
+    queryFn: async () => {
+      if (!pin?.canonical_pin_id) return [];
+      
+      const { data, error } = await supabase
+        .from("pins")
+        .select(`
+          *,
+          routes!inner (
+            id,
+            title,
+            user_id,
+            profiles:user_id (
+              id,
+              username,
+              avatar_url
+            )
+          )
+        `)
+        .eq("canonical_pin_id", pin.canonical_pin_id)
+        .order("visited_at", { ascending: false });
+
+      if (error) {
+        console.error('Error fetching canonical visits:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
+    enabled: !!pin?.canonical_pin_id
+  });
+
+  // Calculate statistics from all canonical visits
+  const canonicalStats = useMemo(() => {
+    if (!allCanonicalVisits || allCanonicalVisits.length === 0) {
+      return {
+        totalVisits: 0,
+        averageRating: 0,
+        ratingsCount: 0,
+        uniqueRoutes: 0
+      };
+    }
+    
+    const validRatings = allCanonicalVisits.filter((v: any) => v.rating && v.rating > 0);
+    const uniqueRouteIds = new Set(allCanonicalVisits.map((v: any) => v.routes.id));
+    
+    return {
+      totalVisits: allCanonicalVisits.length,
+      averageRating: validRatings.length > 0 
+        ? validRatings.reduce((acc: number, v: any) => acc + v.rating, 0) / validRatings.length 
+        : 0,
+      ratingsCount: validRatings.length,
+      uniqueRoutes: uniqueRouteIds.size
+    };
+  }, [allCanonicalVisits]);
 
   // Fetch pin visits/ratings
   const { data: visits = [] } = useQuery({
@@ -696,17 +783,49 @@ const PinDetails = () => {
         </div>
 
         {/* Pin Name & Address - right below image */}
-        <div className="space-y-1">
+        <div className="space-y-2">
           <h1 className="font-semibold text-lg">{displayName || pin.address}</h1>
+          
           {displayName && (
             <div className="flex items-start gap-2">
               <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
               <span className="text-sm text-muted-foreground">{pin.address}</span>
             </div>
           )}
+          
+          {/* Show discoverer badge if canonical pin exists */}
+          {canonicalPin?.discovered_by && (
+            <div className="flex items-center gap-2 text-sm">
+              <Trophy className="h-4 w-4 text-amber-500" />
+              <span className="text-muted-foreground">
+                Odkryte przez{" "}
+                <Link to={`/profile/${canonicalPin.discovered_by.id}`} className="font-medium text-foreground hover:text-primary">
+                  @{canonicalPin.discovered_by.username}
+                </Link>
+                {" "}· {format(new Date(canonicalPin.discovered_at), "d MMMM yyyy", { locale: pl })}
+              </span>
+            </div>
+          )}
+          
+          {/* Show visit stats if there are multiple visits */}
+          {canonicalStats.totalVisits > 1 && (
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Users className="h-4 w-4" />
+                {canonicalStats.totalVisits} {canonicalStats.totalVisits === 1 ? 'wizyta' : canonicalStats.totalVisits < 5 ? 'wizyty' : 'wizyt'}
+              </div>
+              {canonicalStats.uniqueRoutes > 1 && (
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  W {canonicalStats.uniqueRoutes} trasach
+                </div>
+              )}
+            </div>
+          )}
+          
           {pin.created_at && (
             <p className="text-xs text-muted-foreground">
-              Dodano: {format(new Date(pin.created_at), "d MMM yyyy", { locale: pl })}
+              Dodano do tej trasy: {format(new Date(pin.created_at), "d MMM yyyy", { locale: pl })}
             </p>
           )}
         </div>
@@ -727,34 +846,49 @@ const PinDetails = () => {
         {/* Pin Info */}
         <div className="space-y-3">
 
-          {/* Author's Rating */}
-          {pin.rating && pin.rating > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Ocena autora:</span>
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className={`h-4 w-4 ${star <= pin.rating ? "fill-yellow-400 text-yellow-400" : "text-muted"}`}
-                  />
-                ))}
+          {/* Ratings Section */}
+          <div className="space-y-3">
+            {/* Aggregate rating from all canonical visits */}
+            {canonicalStats.averageRating > 0 && (
+              <div className="p-3 bg-muted/40 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Średnia ocena użytkowników
+                    <span className="text-xs ml-1">
+                      ({canonicalStats.ratingsCount} {canonicalStats.ratingsCount === 1 ? 'ocena' : canonicalStats.ratingsCount < 5 ? 'oceny' : 'ocen'})
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  <span className="text-lg font-semibold">{canonicalStats.averageRating.toFixed(1)}</span>
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`h-4 w-4 ${star <= Math.round(canonicalStats.averageRating) ? "fill-yellow-400 text-yellow-400" : "text-muted"}`}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Average User Rating */}
-          {averageRating > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Średnia ocena użytkowników:</span>
-              <div className="flex items-center gap-1">
-                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                <span className="font-medium">{averageRating.toFixed(1)}</span>
-                <span className="text-xs text-muted-foreground">
-                  ({visitorsWithRating.length} {visitorsWithRating.length === 1 ? 'ocena' : visitorsWithRating.length < 5 ? 'oceny' : 'ocen'})
-                </span>
+            {/* Original route author's rating */}
+            {pin.rating && pin.rating > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Ocena autora trasy:</span>
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`h-4 w-4 ${star <= pin.rating ? "fill-yellow-400 text-yellow-400" : "text-muted"}`}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Description */}
           {pin.description && (
