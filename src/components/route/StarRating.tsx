@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ const ratingLabels = [
   "Wspaniałe"
 ];
 
-const StarRating = ({
+const StarRating = memo(function StarRating({
   rating,
   maxRating = 5,
   size = "sm",
@@ -34,7 +34,7 @@ const StarRating = ({
   showValue = false,
   showReset = false,
   className,
-}: StarRatingProps) => {
+}: StarRatingProps) {
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
   const [isPressed, setIsPressed] = useState(false);
 
@@ -146,6 +146,6 @@ const StarRating = ({
       )}
     </div>
   );
-};
+});
 
 export default StarRating;

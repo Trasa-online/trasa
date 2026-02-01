@@ -796,11 +796,47 @@ const CreateRoute = () => {
     }
   };
 
-  const updatePin = (index: number, field: keyof Pin, value: any) => {
-    const newPins = [...pins];
-    newPins[index] = { ...newPins[index], [field]: value };
-    setPins(newPins);
-  };
+  const updatePin = useCallback((index: number, field: keyof Pin, value: any) => {
+    setPins(prevPins => {
+      const newPins = [...prevPins];
+      newPins[index] = { ...newPins[index], [field]: value };
+      return newPins;
+    });
+  }, []);
+
+  // Memoized rating change handler to prevent UI flickering
+  const handleRatingChange = useCallback((rating: number) => {
+    setPins(prevPins => {
+      const newPins = [...prevPins];
+      newPins[currentPinIndex] = { ...newPins[currentPinIndex], rating };
+      return newPins;
+    });
+  }, [currentPinIndex]);
+
+  // Memoized tag toggle handler to prevent UI flickering
+  const handleTagToggle = useCallback((tagName: string) => {
+    setPins(prevPins => {
+      const newPins = [...prevPins];
+      const currentTags = newPins[currentPinIndex]?.tags || [];
+      const isSelected = currentTags.includes(tagName);
+      newPins[currentPinIndex] = {
+        ...newPins[currentPinIndex],
+        tags: isSelected 
+          ? currentTags.filter(t => t !== tagName)
+          : [...currentTags, tagName]
+      };
+      return newPins;
+    });
+  }, [currentPinIndex]);
+
+  // Memoized clear all tags handler
+  const handleClearAllTags = useCallback(() => {
+    setPins(prevPins => {
+      const newPins = [...prevPins];
+      newPins[currentPinIndex] = { ...newPins[currentPinIndex], tags: [] };
+      return newPins;
+    });
+  }, [currentPinIndex]);
 
   const handleImageUpload = async (files: FileList, pinIndex: number) => {
     if (!user) return;
@@ -1575,7 +1611,7 @@ const CreateRoute = () => {
                     <div className="py-2">
                       <StarRating
                         rating={pins[currentPinIndex]?.rating || 0}
-                        onRatingChange={(rating) => updatePin(currentPinIndex, "rating", rating)}
+                        onRatingChange={handleRatingChange}
                         size="lg"
                         interactive={true}
                         showLabel={true}
@@ -1641,7 +1677,7 @@ const CreateRoute = () => {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => updatePin(currentPinIndex, "tags", [])}
+                          onClick={handleClearAllTags}
                           className="text-xs h-7 px-2 text-muted-foreground hover:text-destructive"
                         >
                           <X className="h-3 w-3 mr-1" />
@@ -1677,13 +1713,7 @@ const CreateRoute = () => {
                                 ? "bg-foreground text-background border-foreground shadow-md scale-105"
                                 : "bg-background text-foreground border-border hover:border-foreground/50 hover:bg-accent"
                             )}
-                            onClick={() => {
-                              const currentTags = pins[currentPinIndex]?.tags || [];
-                              const newTags = isSelected 
-                                ? currentTags.filter(t => t !== name)
-                                : [...currentTags, name];
-                              updatePin(currentPinIndex, "tags", newTags);
-                            }}
+                            onClick={() => handleTagToggle(name)}
                           >
                             <Icon className="h-4 w-4" />
                             <span>{name}</span>
