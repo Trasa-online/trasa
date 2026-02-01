@@ -405,6 +405,15 @@ const CreateRoute = () => {
     };
   }, [step, hasAddedPins, title, autoSaveRoute]);
 
+  // Cleanup undo timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (undoTimeoutRef.current) {
+        clearTimeout(undoTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Beforeunload event - warn user and save draft
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
