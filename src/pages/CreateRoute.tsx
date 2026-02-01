@@ -1627,10 +1627,10 @@ const CreateRoute = () => {
                   )}
 
 
-                  {/* Tag selection - all visible */}
+                  {/* Categories/Tags Selection - Enhanced */}
                   <div className="pb-32">
-                    <div className="flex items-center justify-between mb-1">
-                      <Label className="text-sm font-medium">Kategoria (Opcjonalne)</Label>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-base font-semibold">Kategoria (Opcjonalne)</Label>
                       {(pins[currentPinIndex]?.tags?.length || 0) > 0 && (
                         <Button
                           type="button"
@@ -1639,22 +1639,25 @@ const CreateRoute = () => {
                           onClick={() => updatePin(currentPinIndex, "tags", [])}
                           className="text-xs h-7 px-2 text-muted-foreground hover:text-destructive"
                         >
+                          <X className="h-3 w-3 mr-1" />
                           Wyczyść wszystkie
                         </Button>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Możesz wybrać kilka kategorii
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Możesz wybrać kilka kategorii dla tego miejsca
                     </p>
                     
-                    <div className="flex flex-wrap gap-2">
+                    {/* Predefined categories */}
+                    <div className="flex flex-wrap gap-2 mb-3">
                       {[
                         { name: "Restauracja", icon: UtensilsCrossed },
                         { name: "Kawiarnia", icon: Coffee },
                         { name: "Jedzenie", icon: UtensilsCrossed },
+                        { name: "Kawa", icon: Coffee },
+                        { name: "Herbata", icon: Coffee },
                         { name: "Zakupy", icon: ShoppingBag },
                         { name: "Pamiątki", icon: Gift },
-                        { name: "Herbata", icon: Coffee },
                         { name: "Góry", icon: Mountain },
                         { name: "Morze", icon: Waves }
                       ].map(({ name, icon: Icon }) => {
@@ -1664,10 +1667,10 @@ const CreateRoute = () => {
                             key={name}
                             type="button"
                             className={cn(
-                              "inline-flex items-center gap-1.5 px-3 h-10 rounded-full text-sm font-medium transition-all duration-150",
+                              "inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-all duration-150",
                               isSelected
-                                ? "bg-foreground text-background border-2 border-foreground"
-                                : "bg-background text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground"
+                                ? "bg-foreground text-background border-foreground shadow-md scale-105"
+                                : "bg-background text-foreground border-border hover:border-foreground/50 hover:bg-accent"
                             )}
                             onClick={() => {
                               const currentTags = pins[currentPinIndex]?.tags || [];
@@ -1678,78 +1681,84 @@ const CreateRoute = () => {
                             }}
                           >
                             <Icon className="h-4 w-4" />
-                            {name}
-                            {isSelected && <Check className="h-3 w-3 ml-0.5" />}
+                            <span>{name}</span>
+                            {isSelected && <Check className="h-4 w-4 ml-1" />}
                           </button>
                         );
                       })}
-                      
-                      {/* Divider */}
-                      <div className="w-px h-8 bg-border self-center mx-1" />
-                      
-                      {/* "Inne" tag - opens custom input inline */}
-                      {showCustomTagInput ? (
+                    </div>
+                    
+                    {/* Custom tag input */}
+                    {!showCustomTagInput ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowCustomTagInput(true)}
+                        className="w-full"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Dodaj własną kategorię
+                      </Button>
+                    ) : (
+                      <div className="flex gap-2">
                         <Input
+                          placeholder="Wpisz nazwę kategorii..."
                           autoFocus
-                          placeholder="Wpisz i naciśnij Enter"
-                          className="h-10 w-44 rounded-full"
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                              const newTag = e.currentTarget.value.trim();
-                              const currentTags = pins[currentPinIndex]?.tags || [];
-                              if (!currentTags.some(t => t.toLowerCase() === newTag.toLowerCase())) {
-                                updatePin(currentPinIndex, "tags", [...currentTags, newTag]);
+                            if (e.key === 'Enter') {
+                              const value = e.currentTarget.value.trim();
+                              if (value) {
+                                const currentTags = pins[currentPinIndex]?.tags || [];
+                                if (!currentTags.some(t => t.toLowerCase() === value.toLowerCase())) {
+                                  updatePin(currentPinIndex, "tags", [...currentTags, value]);
+                                }
+                                e.currentTarget.value = '';
+                                setShowCustomTagInput(false);
                               }
-                              e.currentTarget.value = '';
-                            } else if (e.key === 'Escape') {
+                            }
+                            if (e.key === 'Escape') {
                               setShowCustomTagInput(false);
                             }
                           }}
-                          onBlur={(e) => {
-                            if (e.currentTarget.value.trim()) {
-                              const newTag = e.currentTarget.value.trim();
-                              const currentTags = pins[currentPinIndex]?.tags || [];
-                              if (!currentTags.some(t => t.toLowerCase() === newTag.toLowerCase())) {
-                                updatePin(currentPinIndex, "tags", [...currentTags, newTag]);
-                              }
-                            }
-                            setShowCustomTagInput(false);
-                          }}
                         />
-                      ) : (
-                        <button
+                        <Button
                           type="button"
-                          className="inline-flex items-center gap-1.5 px-3 h-10 rounded-full text-sm font-medium bg-background text-muted-foreground border border-dashed border-border hover:bg-accent hover:text-accent-foreground transition-colors"
-                          onClick={() => setShowCustomTagInput(true)}
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShowCustomTagInput(false)}
                         >
-                          <Plus className="h-4 w-4" />
-                          Inne
-                        </button>
-                      )}
-                    </div>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                     
-                    {/* Custom tags display */}
-                    {pins[currentPinIndex]?.tags?.filter(
-                      tag => !["Restauracja", "Kawiarnia", "Jedzenie", "Zakupy", "Pamiątki", "Herbata", "Góry", "Morze"].includes(tag)
-                    ).length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border">
-                        <span className="text-xs text-muted-foreground self-center mr-1">Własne:</span>
-                        {pins[currentPinIndex]?.tags?.filter(
-                          tag => !["Restauracja", "Kawiarnia", "Jedzenie", "Zakupy", "Pamiątki", "Herbata", "Góry", "Morze"].includes(tag)
-                        ).map(tag => (
-                          <button
-                            key={tag}
-                            type="button"
-                            className="inline-flex items-center gap-1.5 px-3 h-10 rounded-full text-sm font-medium bg-foreground text-background border-2 border-foreground transition-all duration-150"
-                            onClick={() => {
-                              const currentTags = pins[currentPinIndex]?.tags || [];
-                              updatePin(currentPinIndex, "tags", currentTags.filter(t => t !== tag));
-                            }}
-                          >
-                            {tag}
-                            <X className="h-3 w-3 ml-0.5" />
-                          </button>
-                        ))}
+                    {/* Selected tags summary */}
+                    {pins[currentPinIndex]?.tags && pins[currentPinIndex].tags.length > 0 && (
+                      <div className="mt-4 p-3 bg-muted/50 rounded-lg border border-border">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">
+                          Wybrane kategorie ({pins[currentPinIndex].tags.length}):
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {pins[currentPinIndex].tags.map((tag: string, index: number) => (
+                            <span
+                              key={index}
+                              className="inline-flex items-center gap-1.5 bg-background px-2.5 py-1 rounded-md text-sm border"
+                            >
+                              {tag}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newTags = pins[currentPinIndex].tags.filter((_: string, i: number) => i !== index);
+                                  updatePin(currentPinIndex, "tags", newTags);
+                                }}
+                                className="hover:bg-destructive/10 rounded-full p-0.5 transition-colors"
+                              >
+                                <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
