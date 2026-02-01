@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Heart, Send, Trash2, Pencil, X, Check, Trophy, Users } from "lucide-react";
+import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Heart, Send, Trash2, Pencil, X, Check, Trophy, Users, Route } from "lucide-react";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -1054,6 +1054,93 @@ const PinDetails = () => {
             </div>
           )}
         </div>
+
+        {/* Routes Containing This Pin */}
+        {allCanonicalVisits.length > 0 && (
+          <>
+            <Separator />
+            
+            <div>
+              <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                <Route className="h-5 w-5" />
+                To miejsce w trasach
+                <span className="text-muted-foreground font-normal text-sm">
+                  ({canonicalStats.uniqueRoutes})
+                </span>
+              </h2>
+              
+              <div className="space-y-2">
+                {/* Group visits by route and show unique routes */}
+                {Array.from(
+                  new Map(
+                    allCanonicalVisits.map((visit: any) => [
+                      visit.routes.id,
+                      visit
+                    ])
+                  ).values()
+                ).map((visit: any) => {
+                  const route = visit.routes;
+                  const routeProfile = visit.routes?.profiles;
+                  const isCurrentRoute = route.id === pin.routes?.id;
+                  
+                  return (
+                    <Link
+                      key={route.id}
+                      to={`/route/${route.id}`}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-xl border transition-all hover:bg-muted/60",
+                        isCurrentRoute
+                          ? "bg-primary/5 border-primary/20"
+                          : "bg-muted/40 border-border/50 hover:border-border"
+                      )}
+                    >
+                      {/* Route author avatar */}
+                      <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarImage src={routeProfile?.avatar_url || ""} />
+                        <AvatarFallback className="text-sm font-medium">
+                          {routeProfile?.username?.[0]?.toUpperCase() || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      {/* Route info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm line-clamp-1">
+                            {route.title}
+                          </span>
+                          {isCurrentRoute && (
+                            <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium shrink-0">
+                              Aktualna trasa
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          by @{routeProfile?.username}
+                        </span>
+                      </div>
+                      
+                      {/* Arrow icon */}
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    </Link>
+                  );
+                })}
+              </div>
+              
+              {/* Summary text */}
+              {canonicalStats.uniqueRoutes > 0 && (
+                <p className="text-xs text-muted-foreground text-center mt-4">
+                  To miejsce znajduje się w {canonicalStats.uniqueRoutes}{" "}
+                  {canonicalStats.uniqueRoutes === 1 
+                    ? 'trasie' 
+                    : canonicalStats.uniqueRoutes < 5 
+                      ? 'trasach' 
+                      : 'trasach'
+                  }
+                </p>
+              )}
+            </div>
+          </>
+        )}
 
       </div>
 
