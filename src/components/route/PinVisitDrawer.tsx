@@ -36,6 +36,8 @@ interface PinVisitDrawerProps {
     description?: string;
     rating?: number;
   } | null;
+  /** If true, also update the pin.description on save (for route owners) */
+  syncWithPinDescription?: boolean;
 }
 
 export const PinVisitDrawer = ({
@@ -45,6 +47,7 @@ export const PinVisitDrawer = ({
   pinName,
   userId,
   existingVisit,
+  syncWithPinDescription = false,
 }: PinVisitDrawerProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -132,6 +135,7 @@ export const PinVisitDrawer = ({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      // Save/update pin_visits
       const { error } = await supabase
         .from("pin_visits")
         .upsert({
@@ -142,11 +146,28 @@ export const PinVisitDrawer = ({
           rating: rating || null,
         }, { onConflict: 'pin_id,user_id' });
       if (error) throw error;
+
+      // If syncWithPinDescription is enabled, also update the pin.description and rating
+      if (syncWithPinDescription) {
+        const { error: pinError } = await supabase
+          .from("pins")
+          .update({ 
+            description: description || null,
+            rating: rating || null,
+          })
+          .eq("id", pinId);
+        if (pinError) {
+          console.error("Failed to sync pin description:", pinError);
+          // Don't throw - the visit was saved successfully
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pin-visitors", pinId] });
       queryClient.invalidateQueries({ queryKey: ["pin-visits-details", pinId] });
       queryClient.invalidateQueries({ queryKey: ["route-pin-visitors"] });
+      queryClient.invalidateQueries({ queryKey: ["pin-details", pinId] });
+      queryClient.invalidateQueries({ queryKey: ["route-pins"] });
       toast({ title: isEditing ? "Zaktualizowano opinię" : "Dodano opinię!" });
       onOpenChange(false);
     },

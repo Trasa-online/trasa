@@ -1195,6 +1195,7 @@ const PinDetails = () => {
             description: currentUserVisit.description,
             rating: currentUserVisit.rating,
           } : null}
+          syncWithPinDescription={pin.routes.user_id === user.id}
         />
       )}
 
