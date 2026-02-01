@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import DebouncedTextarea from "@/components/route/DebouncedTextarea";
 
-import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Check, MapPin } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Check, MapPin, Star } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -1443,35 +1443,64 @@ const CreateRoute = () => {
                       />
                     </div>
                     
-                    {/* Discovery Achievement Badge - Enhanced */}
+                    {/* Discovery Achievement Badge - Ultra Enhanced */}
                     {pins[currentPinIndex]?.latitude && 
                      pins[currentPinIndex]?.longitude && 
                      isNewDiscovery[currentPinIndex] && (
-                      <div className="mt-3 animate-scale-in overflow-hidden rounded-xl border-2 border-amber-400 dark:border-amber-600 shadow-lg">
-                        <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-950/60 dark:via-yellow-950/40 dark:to-orange-950/30 p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 animate-bounce">
-                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
-                                <Trophy className="h-6 w-6 text-white" />
+                      <div className="mt-4 relative">
+                        {/* Glow effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-amber-400/20 via-yellow-400/20 to-amber-400/20 blur-2xl rounded-2xl"></div>
+                        
+                        {/* Main card */}
+                        <div className="relative animate-in fade-in slide-in-from-bottom-4 duration-500 bg-gradient-to-br from-amber-50 via-amber-100 to-yellow-50 dark:from-amber-950/50 dark:via-amber-900/40 dark:to-yellow-900/30 border-2 border-amber-400 dark:border-amber-600 rounded-2xl p-6 shadow-xl overflow-hidden">
+                          {/* Decorative elements */}
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-300/20 to-transparent rounded-full blur-3xl"></div>
+                          <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-yellow-300/20 to-transparent rounded-full blur-2xl"></div>
+                          
+                          {/* Content */}
+                          <div className="relative flex items-start gap-4">
+                            {/* Trophy icon with pulse */}
+                            <div className="flex-shrink-0 relative">
+                              <div className="absolute inset-0 bg-amber-400/30 rounded-full blur-lg animate-pulse"></div>
+                              <div className="relative bg-amber-500/10 dark:bg-amber-400/10 p-3 rounded-full border-2 border-amber-400/50">
+                                <Trophy className="h-8 w-8 text-amber-500 animate-bounce" style={{ animationDuration: '2s' }} />
                               </div>
                             </div>
+                            
+                            {/* Text content */}
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100">
-                                🎉 Gratulacje!
-                              </h3>
-                              <p className="text-sm text-amber-800 dark:text-amber-200 mt-0.5">
-                                Jesteś pierwszym odkrywcą tego miejsca!
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="text-2xl font-bold text-amber-900 dark:text-amber-100">
+                                  🎉 Gratulacje!
+                                </h3>
+                                <span className="text-xl animate-bounce" style={{ animationDelay: '0.1s' }}>✨</span>
+                              </div>
+                              
+                              <p className="text-base text-amber-800 dark:text-amber-200 font-medium leading-relaxed mb-1">
+                                Jesteś <strong className="text-amber-900 dark:text-amber-100">pierwszym odkrywcą</strong> tego miejsca!
                               </p>
-                              <p className="text-xs text-amber-700/80 dark:text-amber-300/70 mt-1">
-                                Inni użytkownicy będą mogli znaleźć to miejsce dzięki Tobie.
+                              
+                              <p className="text-sm text-amber-700 dark:text-amber-300 leading-relaxed mb-4">
+                                Inni użytkownicy będą mogli znaleźć to miejsce dzięki Tobie. Twoje odkrycie zostanie zapisane w historii tego miejsca.
                               </p>
-                              <div className="flex flex-wrap gap-2 mt-3">
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-200/60 dark:bg-amber-800/50 px-2.5 py-1 rounded-full">
-                                  <MapPin className="h-3 w-3" />
-                                  Odkryty: {new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                              
+                              {/* Badges */}
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-200/70 dark:bg-amber-800/50 px-3 py-1.5 rounded-full border border-amber-400/30 shadow-sm">
+                                  <Trophy className="h-3.5 w-3.5" />
+                                  Odkryty: {new Date().toLocaleDateString('pl-PL', { 
+                                    day: 'numeric', 
+                                    month: 'long', 
+                                    year: 'numeric' 
+                                  })}
                                 </span>
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-200/60 dark:bg-orange-800/50 px-2.5 py-1 rounded-full">
-                                  ✨ Pierwsza wizyta
+                                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-200/70 dark:bg-amber-800/50 px-3 py-1.5 rounded-full border border-amber-400/30 shadow-sm">
+                                  <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                                  Pierwsza wizyta
+                                </span>
+                                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-200/70 dark:bg-amber-800/50 px-3 py-1.5 rounded-full border border-amber-400/30 shadow-sm">
+                                  <Sparkles className="h-3.5 w-3.5" />
+                                  Explorer
                                 </span>
                               </div>
                             </div>
