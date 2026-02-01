@@ -82,6 +82,7 @@ const CreateRoute = () => {
   const [routeRating, setRouteRating] = useState(0);
   const [showCustomTagInput, setShowCustomTagInput] = useState(false);
   const [showPinsList, setShowPinsList] = useState(false);
+  const [isNewDiscovery, setIsNewDiscovery] = useState<{ [key: number]: boolean }>({});
   
   // Undo deletion state
   const [deletedPinBuffer, setDeletedPinBuffer] = useState<Pin | null>(null);
@@ -452,6 +453,18 @@ const CreateRoute = () => {
     }
   }, [id]);
 
+  // Clear discovery status when pin location changes or is cleared
+  useEffect(() => {
+    const currentPin = pins[currentPinIndex];
+    if (currentPin && !currentPin.latitude && !currentPin.longitude) {
+      setIsNewDiscovery(prev => {
+        const updated = { ...prev };
+        delete updated[currentPinIndex];
+        return updated;
+      });
+    }
+  }, [pins, currentPinIndex]);
+
   useEffect(() => {
     if (!loading && !user) {
       navigate("/auth");
@@ -818,7 +831,7 @@ const CreateRoute = () => {
     placeName: string,
     address: string,
     userId: string
-  ): Promise<string | null> => {
+  ): Promise<{ id: string | null; isNewDiscovery: boolean }> => {
     try {
       console.log('Looking for canonical pin at:', latitude, longitude);
       
@@ -852,7 +865,7 @@ const CreateRoute = () => {
           console.warn('Failed to increment visit count:', updateError);
         }
         
-        return nearbyPinId;
+        return { id: nearbyPinId, isNewDiscovery: false };
       }
 
       // If not found, create new canonical pin
@@ -878,11 +891,11 @@ const CreateRoute = () => {
       }
 
       console.log('✓ New canonical pin created:', newPin.id);
-      return newPin.id;
+      return { id: newPin.id, isNewDiscovery: true };
     } catch (error) {
       console.error('Error in findOrCreateCanonicalPin:', error);
       // Return null instead of throwing - route can still be saved without canonical pin
-      return null;
+      return { id: null, isNewDiscovery: false };
     }
   };
 
@@ -928,7 +941,7 @@ const CreateRoute = () => {
         
         if (pin.latitude && pin.longitude) {
           try {
-            canonicalPinId = await findOrCreateCanonicalPin(
+            const result = await findOrCreateCanonicalPin(
               pin.latitude,
               pin.longitude,
               pin.place_name || pin.address || "Nowe miejsce",
@@ -936,7 +949,15 @@ const CreateRoute = () => {
               user.id
             );
             
-            console.log(`Pin "${pin.place_name}" → Canonical ID: ${canonicalPinId || 'none'}`);
+            canonicalPinId = result.id;
+            
+            // Track if this is a new discovery
+            if (result.isNewDiscovery) {
+              const pinIndex = pins.indexOf(pin);
+              setIsNewDiscovery(prev => ({ ...prev, [pinIndex]: true }));
+            }
+            
+            console.log(`Pin "${pin.place_name}" → Canonical ID: ${canonicalPinId || 'none'}, New Discovery: ${result.isNewDiscovery}`);
           } catch (error) {
             console.error('Failed to find/create canonical pin:', error);
             // Continue without canonical pin if there's an error
@@ -1422,28 +1443,47 @@ const CreateRoute = () => {
                       />
                     </div>
                     
-                    {/* Discovery Achievement Card */}
-                    {pins[currentPinIndex]?.original_creator_id === user?.id && (
-                      <div className="mt-3 animate-scale-in bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/40 dark:to-amber-900/30 border-2 border-amber-400 dark:border-amber-600 rounded-xl p-4 shadow-md">
-                        <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 animate-bounce">
-                            <Trophy className="h-8 w-8 text-amber-500" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100">
-                              🎉 Gratulacje!
-                            </h3>
-                            <p className="text-sm text-amber-800 dark:text-amber-200 mt-0.5">
-                              Jesteś pierwszym odkrywcą tego miejsca!
-                            </p>
-                            <span className="inline-block mt-2 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-200/50 dark:bg-amber-800/40 px-2 py-0.5 rounded-full">
-                              Zdobyty: {new Date().toLocaleDateString('pl-PL')}
-                            </span>
+                    {/* Discovery Achievement Badge - Enhanced */}
+                    {pins[currentPinIndex]?.latitude && 
+                     pins[currentPinIndex]?.longitude && 
+                     isNewDiscovery[currentPinIndex] && (
+                      <div className="mt-3 animate-scale-in overflow-hidden rounded-xl border-2 border-amber-400 dark:border-amber-600 shadow-lg">
+                        <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-950/60 dark:via-yellow-950/40 dark:to-orange-950/30 p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 animate-bounce">
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+                                <Trophy className="h-6 w-6 text-white" />
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100">
+                                🎉 Gratulacje!
+                              </h3>
+                              <p className="text-sm text-amber-800 dark:text-amber-200 mt-0.5">
+                                Jesteś pierwszym odkrywcą tego miejsca!
+                              </p>
+                              <p className="text-xs text-amber-700/80 dark:text-amber-300/70 mt-1">
+                                Inni użytkownicy będą mogli znaleźć to miejsce dzięki Tobie.
+                              </p>
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-200/60 dark:bg-amber-800/50 px-2.5 py-1 rounded-full">
+                                  <MapPin className="h-3 w-3" />
+                                  Odkryty: {new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                </span>
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-200/60 dark:bg-orange-800/50 px-2.5 py-1 rounded-full">
+                                  ✨ Pierwsza wizyta
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
                     )}
-                    {pins[currentPinIndex]?.original_creator_username && 
+
+                    {/* Show if someone else discovered it */}
+                    {pins[currentPinIndex]?.canonical_pin_id && 
+                     !isNewDiscovery[currentPinIndex] &&
+                     pins[currentPinIndex]?.original_creator_username && 
                      pins[currentPinIndex]?.original_creator_id !== user?.id && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg p-2 mt-2">
                         <Sparkles className="h-4 w-4 text-yellow-500" />
