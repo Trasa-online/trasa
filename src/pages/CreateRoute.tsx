@@ -86,6 +86,8 @@ const CreateRoute = () => {
   const [isNewDiscovery, setIsNewDiscovery] = useState<{ [key: number]: boolean }>({});
   const [quickCaptureMode, setQuickCaptureMode] = useState(false);
   const [showQuickAddSheet, setShowQuickAddSheet] = useState(false);
+  const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   
   // Undo deletion state
   const [deletedPinBuffer, setDeletedPinBuffer] = useState<Pin | null>(null);
@@ -111,6 +113,77 @@ const CreateRoute = () => {
 
   // Check if user has added any pins with data
   const hasAddedPins = pins.some(p => p.address && p.address.trim() !== "");
+
+  // Check location permission when entering Step 2 with Quick Capture mode
+  useEffect(() => {
+    if (step === 2 && quickCaptureMode) {
+      checkLocationPermission();
+    }
+  }, [step, quickCaptureMode]);
+
+  const checkLocationPermission = async () => {
+    if (!('geolocation' in navigator)) {
+      setLocationPermission('denied');
+      return;
+    }
+
+    try {
+      // Check permission state
+      const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+      setLocationPermission(permissionStatus.state as 'granted' | 'denied' | 'prompt');
+
+      // Listen for permission changes
+      permissionStatus.addEventListener('change', () => {
+        setLocationPermission(permissionStatus.state as 'granted' | 'denied' | 'prompt');
+      });
+
+      // If granted, get current location
+      if (permissionStatus.state === 'granted') {
+        getCurrentLocation();
+      }
+    } catch (error) {
+      // Fallback for browsers that don't support permissions API
+      setLocationPermission('prompt');
+    }
+  };
+
+  const getCurrentLocation = () => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCurrentLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+      },
+      (error) => {
+        console.error('Location error:', error);
+      }
+    );
+  };
+
+  const requestLocationPermission = () => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocationPermission('granted');
+        setCurrentLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+        toast({
+          title: "Lokalizacja włączona!",
+          description: "Możesz teraz szybko dodawać miejsca",
+        });
+      },
+      (error) => {
+        setLocationPermission('denied');
+        toast({
+          variant: "destructive",
+          title: "Brak dostępu do lokalizacji",
+          description: "Włącz lokalizację w ustawieniach przeglądarki",
+        });
+      }
+    );
+  };
 
   const handleBackClick = () => {
     // If on step 3 (summary), go back to step 2
@@ -1366,6 +1439,51 @@ const CreateRoute = () => {
           </div>
         ) : step === 2 ? (
           <>
+            {/* Location Permission Prompt */}
+            {quickCaptureMode && locationPermission !== 'granted' && (
+              <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-200 dark:border-amber-800 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 p-2 bg-amber-100 dark:bg-amber-900/50 rounded-lg">
+                    <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                      Włącz lokalizację
+                    </h3>
+                    <p className="text-sm text-amber-800 dark:text-amber-200 mb-3 leading-relaxed">
+                      Szybki tryb działa najlepiej z włączoną lokalizacją. Będziesz mógł dodawać miejsca w 10 sekund!
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={requestLocationPermission}
+                      size="sm"
+                      className="bg-amber-600 hover:bg-amber-700 text-white"
+                    >
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Włącz lokalizację
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Location Active Indicator */}
+            {quickCaptureMode && locationPermission === 'granted' && currentLocation && (
+              <div className="mb-4 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2">
+                <div className="flex-shrink-0 p-1.5 bg-green-100 dark:bg-green-900/50 rounded-full">
+                  <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                    Lokalizacja aktywna
+                  </p>
+                  <p className="text-xs text-green-700 dark:text-green-300">
+                    {currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {showPinsList ? (
               pins.filter(p => p.address).length > 0 ? (
                 <div className="space-y-4 pb-24">
