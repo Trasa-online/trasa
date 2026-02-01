@@ -722,19 +722,42 @@ const PinDetails = () => {
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {/* Header */}
+      {/* Header - matching RouteCard style */}
       <div className="sticky top-0 z-10 bg-background border-b">
         <div className="flex items-center gap-3 p-4">
-          <button onClick={() => navigate(`/route/${pin.routes.id}`)} className="p-1">
+          <button onClick={() => navigate(-1)} className="p-1 hover:bg-accent rounded-lg transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <div className="flex-1 min-w-0">
-            <Link
-              to={`/route/${pin.routes.id}`}
-              className="text-xs text-muted-foreground hover:text-primary truncate block"
+          <div className="flex-1 min-w-0 flex items-center gap-3">
+            <Avatar 
+              className="h-8 w-8 ring-2 ring-border cursor-pointer hover:ring-primary transition-all shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/profile/${pin.routes.user_id}`);
+              }}
             >
-              Z trasy: {pin.routes.title}
-            </Link>
+              <AvatarImage src={pin.routes.profiles?.avatar_url} />
+              <AvatarFallback className="text-xs">
+                {pin.routes.profiles?.username?.[0]?.toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p 
+                className="font-semibold text-sm cursor-pointer hover:text-primary transition-colors truncate"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/profile/${pin.routes.user_id}`);
+                }}
+              >
+                {pin.routes.profiles?.username}
+              </p>
+              <Link
+                to={`/route/${pin.routes.id}`}
+                className="text-xs text-muted-foreground hover:text-primary truncate block"
+              >
+                Z trasy: {pin.routes.title}
+              </Link>
+            </div>
           </div>
         </div>
       </div>
