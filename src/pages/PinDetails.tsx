@@ -451,6 +451,53 @@ const PinDetails = () => {
     enabled: !!pinId,
   });
 
+  // Combine all visitors: users who added pins to routes + users who left reviews
+  const allVisitors = useMemo(() => {
+    const visitorsMap = new Map<string, any>();
+    
+    // First, add all users who added this place to their routes (from allCanonicalVisits)
+    allCanonicalVisits.forEach((pinData: any) => {
+      const userId = pinData.routes?.user_id;
+      if (!userId) return;
+      
+      const profile = pinData.routes?.profiles;
+      visitorsMap.set(userId, {
+        user_id: userId,
+        pin_id: pinData.id,
+        profiles: profile,
+        rating: pinData.rating,
+        description: pinData.description,
+        image_url: pinData.image_url,
+        created_at: pinData.visited_at || pinData.created_at,
+        source: 'route' as const,
+        route_id: pinData.routes?.id,
+        route_title: pinData.routes?.title,
+      });
+    });
+    
+    // Then, override/merge with pin_visits data (opinions have priority)
+    visits.forEach((visit: any) => {
+      const existing = visitorsMap.get(visit.user_id);
+      visitorsMap.set(visit.user_id, {
+        user_id: visit.user_id,
+        pin_id: visit.pin_id,
+        profiles: visit.profiles,
+        rating: visit.rating || existing?.rating,
+        description: visit.description || existing?.description,
+        image_url: visit.image_url || existing?.image_url,
+        created_at: visit.created_at,
+        source: 'review' as const,
+        route_id: existing?.route_id,
+        route_title: existing?.route_title,
+      });
+    });
+    
+    // Convert to array and sort by created_at descending
+    return Array.from(visitorsMap.values()).sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }, [allCanonicalVisits, visits]);
+
   // Fetch visit likes
   const { data: visitLikes = [] } = useQuery({
     queryKey: ["visit-likes", pinId],
@@ -923,37 +970,38 @@ const PinDetails = () => {
 
         <Separator />
 
-        {/* All Visits to This Location - uses pin_visits table */}
+        {/* All Visits to This Location - combined from routes + reviews */}
         <div>
           <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
             <Users className="h-5 w-5" />
             Odwiedzający
-            {visits.length > 0 && (
+            {allVisitors.length > 0 && (
               <span className="text-muted-foreground font-normal text-sm">
-                ({visits.length})
+                ({allVisitors.length})
               </span>
             )}
           </h2>
 
-          {visits.length === 0 ? (
+          {allVisitors.length === 0 ? (
             <div className="py-12 text-center">
               <Users className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
               <p className="text-sm font-medium text-muted-foreground mb-1">
-                Nikt jeszcze nie podzielił się wrażeniami z tego miejsca
+                Nikt jeszcze nie odwiedził tego miejsca
               </p>
               <p className="text-xs text-muted-foreground">
-                Bądź pierwszą osobą, która doda opinię!
+                Bądź pierwszą osobą!
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {(showAllVisits ? visits : visits.slice(0, 3)).map((visit: any) => {
-                const profile = visit.profiles;
-                const isCurrentUserVisit = visit.user_id === user?.id;
+              {(showAllVisits ? allVisitors : allVisitors.slice(0, 3)).map((visitor: any) => {
+                const profile = visitor.profiles;
+                const isCurrentUserVisit = visitor.user_id === user?.id;
+                const hasReview = visitor.source === 'review' || visitor.description || visitor.rating;
                 
                 return (
                   <div 
-                    key={`${visit.pin_id}-${visit.user_id}`}
+                    key={`visitor-${visitor.user_id}`}
                     className={cn(
                       "p-3 rounded-xl border transition-colors",
                       isCurrentUserVisit 
@@ -963,16 +1011,16 @@ const PinDetails = () => {
                   >
                     <div className="flex gap-3">
                       {/* Left: Photo or Avatar */}
-                      {visit.image_url ? (
+                      {visitor.image_url ? (
                         <div
                           className="shrink-0 w-20 h-20 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ring-1 ring-border"
                           onClick={() => {
-                            const imageIndex = allImages.indexOf(visit.image_url);
+                            const imageIndex = allImages.indexOf(visitor.image_url);
                             openLightbox(allImages, imageIndex >= 0 ? imageIndex : 0);
                           }}
                         >
                           <img
-                            src={visit.image_url}
+                            src={visitor.image_url}
                             alt={`Zdjęcie od ${profile?.username}`}
                             className="w-full h-full object-cover"
                           />
@@ -994,7 +1042,7 @@ const PinDetails = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <Link
                                 to={`/profile/${profile?.id}`}
                                 className="font-semibold text-sm hover:text-primary line-clamp-1 transition-colors"
@@ -1006,38 +1054,43 @@ const PinDetails = () => {
                                   Ty
                                 </span>
                               )}
+                              {!hasReview && (
+                                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                  w trasie
+                                </span>
+                              )}
                             </div>
                             <p className="text-[10px] text-muted-foreground mt-0.5">
-                              {format(new Date(visit.created_at), "d MMMM yyyy", { locale: pl })}
+                              {format(new Date(visitor.created_at), "d MMMM yyyy", { locale: pl })}
                             </p>
                           </div>
                           
                           {/* Rating */}
-                          {visit.rating && visit.rating > 0 && (
-                            <div className="flex items-center gap-0.5 shrink-0 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 rounded-md">
-                              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                              <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">
-                                {visit.rating}
+                          {visitor.rating && visitor.rating > 0 && (
+                            <div className="flex items-center gap-0.5 shrink-0 bg-muted px-2 py-1 rounded-md">
+                              <Star className="h-3.5 w-3.5 fill-foreground text-foreground" />
+                              <span className="text-sm font-semibold">
+                                {visitor.rating}
                               </span>
                             </div>
                           )}
                         </div>
 
                         {/* Description/Comment - expandable */}
-                        {visit.description && (
+                        {visitor.description && (
                           <div className="mt-2">
                             <p 
                               className={cn(
                                 "text-xs text-foreground leading-relaxed",
-                                !expandedDescriptions.has(`${visit.pin_id}-${visit.user_id}`) && "line-clamp-2"
+                                !expandedDescriptions.has(`visitor-${visitor.user_id}`) && "line-clamp-2"
                               )}
                             >
-                              {visit.description}
+                              {visitor.description}
                             </p>
-                            {visit.description.length > 50 && (
+                            {visitor.description.length > 50 && (
                               <button
                                 onClick={() => {
-                                  const key = `${visit.pin_id}-${visit.user_id}`;
+                                  const key = `visitor-${visitor.user_id}`;
                                   setExpandedDescriptions(prev => {
                                     const next = new Set(prev);
                                     if (next.has(key)) {
@@ -1050,7 +1103,7 @@ const PinDetails = () => {
                                 }}
                                 className="text-[10px] text-muted-foreground hover:text-primary mt-1 font-medium"
                               >
-                                {expandedDescriptions.has(`${visit.pin_id}-${visit.user_id}`) ? "Zwiń" : "Rozwiń"}
+                                {expandedDescriptions.has(`visitor-${visitor.user_id}`) ? "Zwiń" : "Rozwiń"}
                               </button>
                             )}
                           </div>
@@ -1062,12 +1115,12 @@ const PinDetails = () => {
               })}
               
               {/* Show more link */}
-              {visits.length > 3 && !showAllVisits && (
+              {allVisitors.length > 3 && !showAllVisits && (
                 <p 
                   onClick={() => setShowAllVisits(true)}
                   className="text-sm text-muted-foreground hover:text-primary cursor-pointer text-center py-2"
                 >
-                  Pokaż więcej ({visits.length - 3})
+                  Pokaż więcej ({allVisitors.length - 3})
                 </p>
               )}
             </div>
