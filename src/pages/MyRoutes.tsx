@@ -93,13 +93,36 @@ const MyRoutes = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (routeId: string) => {
+      // First delete all pins associated with the route
+      const { error: pinsError } = await supabase
+        .from("pins")
+        .delete()
+        .eq("route_id", routeId);
+      
+      if (pinsError) {
+        console.error("Error deleting pins:", pinsError);
+        throw pinsError;
+      }
+      
+      // Then delete the route
       const { error } = await supabase.from("routes").delete().eq("id", routeId);
-      if (error) throw error;
+      if (error) {
+        console.error("Error deleting route:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-routes-published"] });
       queryClient.invalidateQueries({ queryKey: ["my-routes-draft"] });
       toast({ title: "Trasa została usunięta" });
+    },
+    onError: (error) => {
+      console.error("Delete mutation error:", error);
+      toast({
+        variant: "destructive",
+        title: "Błąd",
+        description: "Nie udało się usunąć trasy"
+      });
     },
   });
 
