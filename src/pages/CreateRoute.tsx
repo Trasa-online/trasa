@@ -195,12 +195,6 @@ const CreateRoute = () => {
     
     // If on step 2 (pins)
     if (step === 2) {
-      // If editing a pin, go back to list first
-      if (!showPinsList) {
-        setShowPinsList(true);
-        return;
-      }
-      
       // Check if user has added any pins with data
       if (hasAddedPins) {
         // Show confirmation dialog before losing work
@@ -1292,7 +1286,7 @@ const CreateRoute = () => {
           <ArrowLeft className="h-6 w-6" />
         </button>
         <h1 className="text-xl font-semibold flex-1">
-          {step === 1 ? "Utwórz nową trasę" : step === 2 ? (showPinsList ? "Lista pinezek" : title || "Edytuj pinezkę") : "Podsumowanie trasy"}
+          {step === 1 ? "Utwórz nową trasę" : step === 2 ? (quickCaptureMode ? "Szybkie dodawanie" : "Pinezki w trasie") : "Podsumowanie trasy"}
         </h1>
         {step >= 2 && hasAddedPins && (
           <div className="text-xs text-muted-foreground text-right">
