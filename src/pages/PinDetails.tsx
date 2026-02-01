@@ -923,45 +923,37 @@ const PinDetails = () => {
 
         <Separator />
 
-        {/* All Visits to This Location */}
+        {/* All Visits to This Location - uses pin_visits table */}
         <div>
           <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
             <Users className="h-5 w-5" />
             Odwiedzający
-            {allCanonicalVisits.length > 0 && (
+            {visits.length > 0 && (
               <span className="text-muted-foreground font-normal text-sm">
-                ({allCanonicalVisits.length})
+                ({visits.length})
               </span>
             )}
           </h2>
 
-          {canonicalVisitsLoading ? (
-            <div className="py-8 text-center">
-              <div className="inline-flex items-center gap-2 text-muted-foreground">
-                <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-sm">Ładowanie wizyt...</span>
-              </div>
-            </div>
-          ) : allCanonicalVisits.length === 0 ? (
+          {visits.length === 0 ? (
             <div className="py-12 text-center">
               <Users className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
               <p className="text-sm font-medium text-muted-foreground mb-1">
-                Nikt jeszcze nie odwiedził tego miejsca
+                Nikt jeszcze nie podzielił się wrażeniami z tego miejsca
               </p>
               <p className="text-xs text-muted-foreground">
-                Bądź pierwszą osobą, która doda to miejsce do swojej trasy!
+                Bądź pierwszą osobą, która doda opinię!
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {(showAllVisits ? allCanonicalVisits : allCanonicalVisits.slice(0, 3)).map((visit: any) => {
-                const routeProfile = visit.routes?.profiles;
-                const route = visit.routes;
-                const isCurrentUserVisit = visit.routes?.user_id === user?.id;
+              {(showAllVisits ? visits : visits.slice(0, 3)).map((visit: any) => {
+                const profile = visit.profiles;
+                const isCurrentUserVisit = visit.user_id === user?.id;
                 
                 return (
                   <div 
-                    key={visit.id}
+                    key={`${visit.pin_id}-${visit.user_id}`}
                     className={cn(
                       "p-3 rounded-xl border transition-colors",
                       isCurrentUserVisit 
@@ -981,17 +973,17 @@ const PinDetails = () => {
                         >
                           <img
                             src={visit.image_url}
-                            alt={`Zdjęcie od ${routeProfile?.username}`}
+                            alt={`Zdjęcie od ${profile?.username}`}
                             className="w-full h-full object-cover"
                           />
                         </div>
                       ) : (
                         <div className="shrink-0 w-20 h-20 rounded-lg bg-gradient-to-br from-muted via-muted/80 to-muted/50 flex items-center justify-center">
-                          <Link to={`/profile/${routeProfile?.id}`}>
+                          <Link to={`/profile/${profile?.id}`}>
                             <Avatar className="h-10 w-10 ring-2 ring-border/50">
-                              <AvatarImage src={routeProfile?.avatar_url || ""} />
+                              <AvatarImage src={profile?.avatar_url || ""} />
                               <AvatarFallback className="text-sm font-medium">
-                                {routeProfile?.username?.charAt(0).toUpperCase() || "?"}
+                                {profile?.username?.charAt(0).toUpperCase() || "?"}
                               </AvatarFallback>
                             </Avatar>
                           </Link>
@@ -1004,10 +996,10 @@ const PinDetails = () => {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <Link
-                                to={`/profile/${routeProfile?.id}`}
+                                to={`/profile/${profile?.id}`}
                                 className="font-semibold text-sm hover:text-primary line-clamp-1 transition-colors"
                               >
-                                {routeProfile?.username || "Anonim"}
+                                {profile?.username || "Anonim"}
                               </Link>
                               {isCurrentUserVisit && (
                                 <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
@@ -1015,14 +1007,8 @@ const PinDetails = () => {
                                 </span>
                               )}
                             </div>
-                            <Link
-                              to={`/route/${route?.id}`}
-                              className="text-xs text-muted-foreground hover:text-primary line-clamp-1 block transition-colors"
-                            >
-                              Z trasy: {route?.title}
-                            </Link>
                             <p className="text-[10px] text-muted-foreground mt-0.5">
-                              {format(new Date(visit.visited_at || visit.created_at), "d MMMM yyyy", { locale: pl })}
+                              {format(new Date(visit.created_at), "d MMMM yyyy", { locale: pl })}
                             </p>
                           </div>
                           
@@ -1042,55 +1028,31 @@ const PinDetails = () => {
                           <div className="mt-2">
                             <p 
                               className={cn(
-                                "text-xs text-foreground leading-relaxed cursor-pointer",
-                                !expandedDescriptions.has(visit.id) && "line-clamp-2"
+                                "text-xs text-foreground leading-relaxed",
+                                !expandedDescriptions.has(`${visit.pin_id}-${visit.user_id}`) && "line-clamp-2"
                               )}
-                              onClick={() => {
-                                setExpandedDescriptions(prev => {
-                                  const next = new Set(prev);
-                                  if (next.has(visit.id)) {
-                                    next.delete(visit.id);
-                                  } else {
-                                    next.add(visit.id);
-                                  }
-                                  return next;
-                                });
-                              }}
                             >
                               {visit.description}
                             </p>
-                            {visit.description.length > 100 && (
+                            {visit.description.length > 50 && (
                               <button
                                 onClick={() => {
+                                  const key = `${visit.pin_id}-${visit.user_id}`;
                                   setExpandedDescriptions(prev => {
                                     const next = new Set(prev);
-                                    if (next.has(visit.id)) {
-                                      next.delete(visit.id);
+                                    if (next.has(key)) {
+                                      next.delete(key);
                                     } else {
-                                      next.add(visit.id);
+                                      next.add(key);
                                     }
                                     return next;
                                   });
                                 }}
-                                className="text-[10px] text-muted-foreground hover:text-primary mt-0.5"
+                                className="text-[10px] text-muted-foreground hover:text-primary mt-1 font-medium"
                               >
-                                {expandedDescriptions.has(visit.id) ? "Zwiń" : "Rozwiń"}
+                                {expandedDescriptions.has(`${visit.pin_id}-${visit.user_id}`) ? "Zwiń" : "Rozwiń"}
                               </button>
                             )}
-                          </div>
-                        )}
-                        
-                        {/* Tags if any */}
-                        {visit.tags && visit.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {visit.tags.slice(0, 3).map((tag: string, i: number) => (
-                              <span 
-                                key={i}
-                                className="text-[10px] bg-secondary px-2 py-0.5 rounded-full"
-                              >
-                                {tag}
-                              </span>
-                            ))}
                           </div>
                         )}
                       </div>
@@ -1100,26 +1062,26 @@ const PinDetails = () => {
               })}
               
               {/* Show more link */}
-              {allCanonicalVisits.length > 3 && !showAllVisits && (
+              {visits.length > 3 && !showAllVisits && (
                 <p 
                   onClick={() => setShowAllVisits(true)}
                   className="text-sm text-muted-foreground hover:text-primary cursor-pointer text-center py-2"
                 >
-                  Pokaż więcej ({allCanonicalVisits.length - 3})
+                  Pokaż więcej ({visits.length - 3})
                 </p>
               )}
-              
-              {/* "Twoje wrażenia" button */}
-              {user && (
-                <Button 
-                  variant="secondary" 
-                  className="w-full mt-2"
-                  onClick={() => setShowVisitDialog(true)}
-                >
-                  Twoje wrażenia
-                </Button>
-              )}
             </div>
+          )}
+          
+          {/* "Twoje wrażenia" button - always visible for logged users */}
+          {user && (
+            <Button 
+              variant="secondary" 
+              className="w-full mt-4"
+              onClick={() => setShowVisitDialog(true)}
+            >
+              Twoje wrażenia
+            </Button>
           )}
         </div>
 
