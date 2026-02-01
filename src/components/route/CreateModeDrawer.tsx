@@ -277,17 +277,14 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
         d.id === routeId ? { ...d, pin_count: d.pin_count + 1 } : d
       ));
       
-      // Reset for next pin
-      setImageUrl(null);
-      setLocation(null);
-      
       toast({
         title: "Miejsce dodane! ⚡",
         description: `${location.place_name} zapisane na trasie`
       });
       
-      // Detect new location
-      detectLocation();
+      // Close drawer and navigate to feed
+      handleClose();
+      navigate('/feed');
       
     } catch (error) {
       console.error("Save error:", error);
