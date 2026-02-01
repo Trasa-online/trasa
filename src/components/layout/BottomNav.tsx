@@ -12,6 +12,7 @@ const BottomNav = () => {
         <div className="grid grid-cols-5 h-16 max-w-lg mx-auto">
           <NavLink
             to="/"
+            end
             className="flex flex-col items-center justify-center gap-1 text-background/60 relative"
             activeClassName="text-background"
           >
