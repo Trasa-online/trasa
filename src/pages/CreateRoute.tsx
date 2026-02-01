@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import DebouncedTextarea from "@/components/route/DebouncedTextarea";
 
-import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Check, MapPin, Star } from "lucide-react";
+import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Check, MapPin, Star, Zap, Edit } from "lucide-react";
 import StarRating from "@/components/route/StarRating";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -83,6 +83,7 @@ const CreateRoute = () => {
   const [showCustomTagInput, setShowCustomTagInput] = useState(false);
   const [showPinsList, setShowPinsList] = useState(false);
   const [isNewDiscovery, setIsNewDiscovery] = useState<{ [key: number]: boolean }>({});
+  const [quickCaptureMode, setQuickCaptureMode] = useState(false);
   
   // Undo deletion state
   const [deletedPinBuffer, setDeletedPinBuffer] = useState<Pin | null>(null);
@@ -1272,14 +1273,79 @@ const CreateRoute = () => {
               </p>
             </div>
 
-            <div className="bg-muted rounded-lg p-4 text-sm space-y-2">
-              <p className="font-medium">Co dalej?</p>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li>Dodaj nieograniczoną liczbę pinezek do trasy</li>
-                <li>Każda pinezka wymaga nazwy, adresu i oceny</li>
-                <li>Opcjonalnie dodaj zdjęcia, opisy i wzmianki</li>
-                <li>Przeglądaj i publikuj, gdy będzie gotowa</li>
-              </ul>
+            {/* Trip Mode Selection */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Jak chcesz tworzyć trasę?</Label>
+              <p className="text-sm text-muted-foreground">
+                Wybierz tryb dodawania miejsc do trasy
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Quick Capture Mode */}
+                <button
+                  type="button"
+                  onClick={() => setQuickCaptureMode(true)}
+                  className={cn(
+                    "p-5 rounded-xl border-2 transition-all text-left",
+                    quickCaptureMode 
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md" 
+                      : "border-border hover:border-primary/50 hover:shadow-sm"
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="text-4xl">⚡</div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-base mb-1">Szybki tryb</div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Dodawaj miejsca w 10 sekund podczas wycieczki. Lokalizacja i zdjęcie - gotowe!
+                      </p>
+                      <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-primary">
+                        <Zap className="h-3 w-3" />
+                        <span>Idealny podczas podróży</span>
+                      </div>
+                    </div>
+                    {quickCaptureMode && (
+                      <Check className="h-5 w-5 text-primary flex-shrink-0" />
+                    )}
+                  </div>
+                </button>
+                
+                {/* Detailed Mode */}
+                <button
+                  type="button"
+                  onClick={() => setQuickCaptureMode(false)}
+                  className={cn(
+                    "p-5 rounded-xl border-2 transition-all text-left",
+                    !quickCaptureMode 
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md" 
+                      : "border-border hover:border-primary/50 hover:shadow-sm"
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="text-4xl">✍️</div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-base mb-1">Szczegółowy tryb</div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Pełna kontrola. Dodawaj opisy, oceny, kategorie i notatki od razu.
+                      </p>
+                      <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-primary">
+                        <Edit className="h-3 w-3" />
+                        <span>Idealny po podróży</span>
+                      </div>
+                    </div>
+                    {!quickCaptureMode && (
+                      <Check className="h-5 w-5 text-primary flex-shrink-0" />
+                    )}
+                  </div>
+                </button>
+              </div>
+              
+              {/* Helpful hint */}
+              <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  💡 <strong>Wskazówka:</strong> Nie martw się! Niezależnie od wybranego trybu, zawsze możesz dodać szczegóły później.
+                </p>
+              </div>
             </div>
 
             <Button
