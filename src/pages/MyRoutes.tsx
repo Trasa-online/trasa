@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Trash2, Star, Eye, Plus, FileText } from "lucide-react";
 import EmptyState from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
-import { QuickNoteDialog } from "@/components/QuickNoteDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +26,6 @@ const MyRoutes = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [quickNoteOpen, setQuickNoteOpen] = useState(false);
   const [deletingRouteId, setDeletingRouteId] = useState<string | null>(null);
 
   const { data: unreadCount = 0 } = useQuery({
@@ -229,15 +227,8 @@ const MyRoutes = () => {
       <PageHeader 
         title="TRASA" 
         showBell 
-        showSearch 
-        showQuickNote
+        showSearch
         unreadCount={unreadCount}
-        onQuickNoteClick={() => setQuickNoteOpen(true)}
-      />
-      
-      <QuickNoteDialog 
-        open={quickNoteOpen} 
-        onOpenChange={setQuickNoteOpen} 
       />
       
       <div className="p-4">
