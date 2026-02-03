@@ -756,13 +756,14 @@ const PinDetails = () => {
     ? visitorsWithRating.reduce((sum: number, v: any) => sum + v.rating, 0) / visitorsWithRating.length
     : 0;
 
-  // Collect all images for lightbox
-  const allImages: string[] = [];
-  if (pin.image_url) allImages.push(pin.image_url);
-  if (pin.images?.length) allImages.push(...pin.images.filter((img: string) => img));
+  // Collect all images for lightbox (with deduplication)
+  const allImagesRaw: string[] = [];
+  if (pin.image_url) allImagesRaw.push(pin.image_url);
+  if (pin.images?.length) allImagesRaw.push(...pin.images.filter((img: string) => img));
   visits.forEach((v: any) => {
-    if (v.image_url) allImages.push(v.image_url);
+    if (v.image_url) allImagesRaw.push(v.image_url);
   });
+  const allImages = Array.from(new Set(allImagesRaw));
 
   return (
     <div 
