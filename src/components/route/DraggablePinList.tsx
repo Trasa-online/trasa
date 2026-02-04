@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { X, GripVertical, Plus, Camera, Check, Pencil, ChevronDown, ChevronUp } from "lucide-react";
 import { NoteType, NOTE_TYPES, NOTE_TYPE_KEYS, getNoteTypeConfig } from "@/lib/noteTypes";
 interface PinNote {
@@ -216,37 +215,29 @@ const DraggablePinList = ({
         </div>
 
         {/* Note Type Selector */}
-        <TooltipProvider delayDuration={300}>
-          <div className="flex gap-1">
-            {NOTE_TYPE_KEYS.map((typeKey) => {
-              const config = NOTE_TYPES[typeKey];
-              const Icon = config.icon;
-              const isActive = selectedNoteType === typeKey;
-              
-              return (
-                <Tooltip key={typeKey}>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedNoteType(typeKey)}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-medium transition-all ${
-                        isActive 
-                          ? `${config.activeBg} ${config.activeBorder} ${config.labelColor}` 
-                          : `bg-background border-border text-muted-foreground ${config.hoverBg} ${config.hoverBorder}`
-                      }`}
-                    >
-                      <Icon className={`h-3.5 w-3.5 ${isActive ? config.iconColor : ''}`} />
-                      <span className="hidden sm:inline">{config.label}</span>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="sm:hidden">
-                    <p>{config.label}</p>
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
-          </div>
-        </TooltipProvider>
+        <div className="flex flex-wrap gap-1.5">
+          {NOTE_TYPE_KEYS.map((typeKey) => {
+            const config = NOTE_TYPES[typeKey];
+            const Icon = config.icon;
+            const isActive = selectedNoteType === typeKey;
+            
+            return (
+              <button
+                key={typeKey}
+                type="button"
+                onClick={() => setSelectedNoteType(typeKey)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-medium transition-all ${
+                  isActive 
+                    ? `${config.activeBg} ${config.activeBorder} ${config.labelColor}` 
+                    : `bg-background border-border text-muted-foreground ${config.hoverBg} ${config.hoverBorder}`
+                }`}
+              >
+                <Icon className={`h-3.5 w-3.5 ${isActive ? config.iconColor : ''}`} />
+                <span>{config.label}</span>
+              </button>
+            );
+          })}
+        </div>
         
         <Textarea
           value={noteText}
