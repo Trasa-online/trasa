@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { X, GripVertical, Sparkles, Plus, Camera, Check, Pencil, ChevronDown, ChevronUp } from "lucide-react";
+import { NoteType } from "@/lib/noteTypes";
 
 interface PinNote {
   id?: string;
   text: string;
   imageUrl?: string;
   note_order: number;
+  note_type: NoteType;
 }
 
 interface Pin {
@@ -153,6 +155,7 @@ const DraggablePinList = ({
       text: noteText.trim(),
       imageUrl: noteImage || undefined,
       note_order: pin.notes?.length || 0,
+      note_type: 'fact',
     };
     
     onPinNotesChange(pinIndex, [...(pin.notes || []), newNote]);

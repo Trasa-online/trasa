@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, Sparkles, ImageIcon, Share2, Star, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
+import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, ImageIcon, Share2, Star, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
+import { getNoteTypeConfig, NoteType } from "@/lib/noteTypes";
 import { getPinImage, getPinImagesForRoute } from "@/lib/pinPlaceholders";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 import { FullscreenMapDialog } from "@/components/route/FullscreenMapDialog";
@@ -191,18 +192,21 @@ const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pin
                 <div className="mx-4 mb-4 space-y-2">
                   {pinNotesForThis.map((note: any) => {
                     const isImageHidden = hiddenNoteImages.has(note.id);
+                    const noteConfig = getNoteTypeConfig(note.note_type as NoteType);
+                    const Icon = noteConfig.icon;
+                    
                     return (
-                      <div key={note.id} className="p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <div key={note.id} className={`p-2 border rounded-lg ${noteConfig.bgColor} ${noteConfig.borderColor}`}>
                         <div className="flex items-start gap-2">
-                          <Sparkles className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+                          <Icon className={`h-3.5 w-3.5 mt-0.5 flex-shrink-0 ${noteConfig.iconColor}`} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400">Ciekawe na trasie</p>
+                              <p className={`text-[10px] font-medium ${noteConfig.labelColor}`}>{noteConfig.label}</p>
                               {note.image_url && (
                                 <button
                                   type="button"
                                   onClick={() => toggleNoteImage(note.id)}
-                                  className="flex items-center gap-0.5 text-[9px] text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+                                  className={`flex items-center gap-0.5 text-[9px] ${noteConfig.labelColor} hover:opacity-80`}
                                 >
                                   <ImageIcon className="h-3 w-3" />
                                   <span>{isImageHidden ? 'pokaż' : 'ukryj'}</span>
