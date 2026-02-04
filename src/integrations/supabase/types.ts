@@ -606,6 +606,7 @@ export type Database = {
           id: string
           image_url: string | null
           note_order: number
+          note_type: string
           pin_id: string | null
           route_id: string
           text: string | null
@@ -615,6 +616,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           note_order?: number
+          note_type?: string
           pin_id?: string | null
           route_id: string
           text?: string | null
@@ -624,6 +626,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           note_order?: number
+          note_type?: string
           pin_id?: string | null
           route_id?: string
           text?: string | null

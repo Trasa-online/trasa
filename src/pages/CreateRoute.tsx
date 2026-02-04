@@ -38,11 +38,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+import { NoteType } from "@/lib/noteTypes";
+
 interface PinNote {
   id?: string;
   text: string;
   imageUrl?: string;
   note_order: number;
+  note_type: NoteType;
 }
 
 interface Pin {
@@ -321,6 +324,7 @@ const CreateRoute = () => {
                   text: note.text,
                   image_url: note.imageUrl,
                   note_order: note.note_order,
+                  note_type: note.note_type || 'fact',
                 });
               }
             }
@@ -388,6 +392,7 @@ const CreateRoute = () => {
                   text: note.text,
                   image_url: note.imageUrl,
                   note_order: note.note_order,
+                  note_type: note.note_type || 'fact',
                 });
               }
             }
@@ -598,6 +603,7 @@ const CreateRoute = () => {
                 text: n.text || "",
                 imageUrl: n.image_url,
                 note_order: n.note_order,
+                note_type: n.note_type || 'fact',
               })),
           }))
       );
@@ -666,6 +672,7 @@ const CreateRoute = () => {
                   text: n.text || "",
                   imageUrl: n.image_url,
                   note_order: n.note_order,
+                  note_type: n.note_type || 'fact',
                 })),
             }))
         );
