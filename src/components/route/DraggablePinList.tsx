@@ -3,9 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { X, GripVertical, Sparkles, Plus, Camera, Check, Pencil, ChevronDown, ChevronUp } from "lucide-react";
-import { NoteType } from "@/lib/noteTypes";
-
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { X, GripVertical, Plus, Camera, Check, Pencil, ChevronDown, ChevronUp } from "lucide-react";
+import { NoteType, NOTE_TYPES, NOTE_TYPE_KEYS, getNoteTypeConfig } from "@/lib/noteTypes";
 interface PinNote {
   id?: string;
   text: string;
@@ -66,6 +66,7 @@ const DraggablePinList = ({
   const [addingNoteToPinIndex, setAddingNoteToPinIndex] = useState<number | null>(null);
   const [editingNameIndex, setEditingNameIndex] = useState<number | null>(null);
   const [editingNameValue, setEditingNameValue] = useState("");
+  const [selectedNoteType, setSelectedNoteType] = useState<NoteType>('fact');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -129,6 +130,7 @@ const DraggablePinList = ({
     setEditingNoteInfo(null);
     setNoteText("");
     setNoteImage(null);
+    setSelectedNoteType('fact');
   };
 
   const startEditingNote = (pinIndex: number, noteIndex: number, note: PinNote) => {
@@ -136,6 +138,7 @@ const DraggablePinList = ({
     setAddingNoteToPinIndex(null);
     setNoteText(note.text);
     setNoteImage(note.imageUrl || null);
+    setSelectedNoteType(note.note_type || 'fact');
   };
 
   const cancelNoteEdit = () => {
@@ -143,6 +146,7 @@ const DraggablePinList = ({
     setEditingNoteInfo(null);
     setNoteText("");
     setNoteImage(null);
+    setSelectedNoteType('fact');
   };
 
   const confirmAddNote = (pinIndex: number) => {
@@ -155,7 +159,7 @@ const DraggablePinList = ({
       text: noteText.trim(),
       imageUrl: noteImage || undefined,
       note_order: pin.notes?.length || 0,
-      note_type: 'fact',
+      note_type: selectedNoteType,
     };
     
     onPinNotesChange(pinIndex, [...(pin.notes || []), newNote]);
@@ -174,6 +178,7 @@ const DraggablePinList = ({
       ...updatedNotes[noteIndex],
       text: noteText.trim(),
       imageUrl: noteImage || undefined,
+      note_type: selectedNoteType,
     };
     
     onPinNotesChange(pinIndex, updatedNotes);
@@ -195,79 +200,119 @@ const DraggablePinList = ({
 
   const filteredPins = pins.filter(p => p.address);
 
-  const renderNoteForm = (pinIndex: number, isEditing: boolean) => (
-    <div className="bg-card border border-border rounded-lg p-3 space-y-2.5">
-      <div className="flex items-center gap-2 text-foreground">
-        <Sparkles className="h-4 w-4" />
-        <span className="text-xs font-medium">
-          {isEditing ? "Edytuj ciekawostkę" : "Dodaj ciekawostkę"}
-        </span>
-      </div>
-      
-      <Textarea
-        value={noteText}
-        onChange={(e) => setNoteText(e.target.value)}
-        placeholder="Co ciekawego między tymi miejscami..."
-        className="min-h-[60px] text-sm resize-none"
-        autoFocus
-      />
-      
-      <div className="flex items-center gap-2">
-        <input
-          type="file"
-          ref={fileInputRef}
-          accept="image/*"
-          onChange={handleImageUpload}
-          className="hidden"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-8 text-xs"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Camera className="h-3.5 w-3.5 mr-1.5" />
-          Dodaj zdjęcie
-        </Button>
-        
-        {noteImage && (
-          <div className="relative h-10 w-14 rounded overflow-hidden ring-1 ring-border">
-            <img src={noteImage} alt="Preview" className="w-full h-full object-cover" />
-            <button
-              type="button"
-              onClick={() => setNoteImage(null)}
-              className="absolute top-0 right-0 bg-background/80 rounded-bl p-0.5"
-            >
-              <X className="h-3 w-3" />
-            </button>
+  const renderNoteForm = (pinIndex: number, isEditing: boolean) => {
+    const currentConfig = getNoteTypeConfig(selectedNoteType);
+    const CurrentIcon = currentConfig.icon;
+    
+    return (
+      <div className="bg-card border border-border rounded-lg p-3 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-foreground">
+            <CurrentIcon className={`h-4 w-4 ${currentConfig.iconColor}`} />
+            <span className="text-xs font-medium">
+              {isEditing ? "Edytuj notatkę" : "Dodaj notatkę"}
+            </span>
           </div>
-        )}
+        </div>
+
+        {/* Note Type Selector */}
+        <TooltipProvider delayDuration={300}>
+          <div className="flex gap-1">
+            {NOTE_TYPE_KEYS.map((typeKey) => {
+              const config = NOTE_TYPES[typeKey];
+              const Icon = config.icon;
+              const isActive = selectedNoteType === typeKey;
+              
+              return (
+                <Tooltip key={typeKey}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNoteType(typeKey)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-medium transition-all ${
+                        isActive 
+                          ? `${config.activeBg} ${config.activeBorder} ${config.labelColor}` 
+                          : `bg-background border-border text-muted-foreground ${config.hoverBg} ${config.hoverBorder}`
+                      }`}
+                    >
+                      <Icon className={`h-3.5 w-3.5 ${isActive ? config.iconColor : ''}`} />
+                      <span className="hidden sm:inline">{config.label}</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="sm:hidden">
+                    <p>{config.label}</p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </div>
+        </TooltipProvider>
+        
+        <Textarea
+          value={noteText}
+          onChange={(e) => setNoteText(e.target.value)}
+          placeholder="Opisz to miejsce lub trasę..."
+          className="min-h-[60px] text-sm resize-none"
+          autoFocus
+        />
+        
+        <div className="flex items-center gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Camera className="h-3.5 w-3.5 mr-1.5" />
+            Dodaj zdjęcie
+          </Button>
+          
+          {noteImage && (
+            <div className="relative h-10 w-14 rounded overflow-hidden ring-1 ring-border">
+              <img src={noteImage} alt="Preview" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => setNoteImage(null)}
+                className="absolute top-0 right-0 bg-background/80 rounded-bl p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex gap-2 justify-end pt-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs"
+            onClick={cancelNoteEdit}
+          >
+            Anuluj
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => isEditing ? confirmEditNote() : confirmAddNote(pinIndex)}
+            disabled={!noteText.trim() && !noteImage}
+          >
+            <Check className="h-3.5 w-3.5 mr-1" />
+            {isEditing ? "Zapisz" : "Dodaj"}
+          </Button>
+        </div>
       </div>
-      
-      <div className="flex gap-2 justify-end pt-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-8 text-xs"
-          onClick={cancelNoteEdit}
-        >
-          Anuluj
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          className="h-8 text-xs"
-          onClick={() => isEditing ? confirmEditNote() : confirmAddNote(pinIndex)}
-          disabled={!noteText.trim() && !noteImage}
-        >
-          <Check className="h-3.5 w-3.5 mr-1" />
-          {isEditing ? "Zapisz" : "Dodaj"}
-        </Button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderNoteDisplay = (note: PinNote, pinIndex: number, noteIndex: number) => {
     const isEditing = editingNoteInfo?.pinIndex === pinIndex && editingNoteInfo?.noteIndex === noteIndex;
@@ -276,15 +321,19 @@ const DraggablePinList = ({
       return <div key={noteIndex}>{renderNoteForm(pinIndex, true)}</div>;
     }
 
+    const noteConfig = getNoteTypeConfig(note.note_type);
+    const NoteIcon = noteConfig.icon;
+
     return (
       <div 
         key={noteIndex}
-        className="flex items-start gap-2 p-2.5 bg-muted/50 border border-border rounded-lg"
+        className={`flex items-start gap-2 p-2.5 rounded-lg border ${noteConfig.bgColor} ${noteConfig.borderColor}`}
       >
-        <Sparkles className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+        <NoteIcon className={`h-3.5 w-3.5 mt-0.5 flex-shrink-0 ${noteConfig.iconColor}`} />
         <div className="flex-1 min-w-0">
+          <span className={`text-[10px] font-medium ${noteConfig.labelColor}`}>{noteConfig.label}</span>
           {note.text && (
-            <p className="text-xs text-foreground leading-relaxed">{note.text}</p>
+            <p className="text-xs text-foreground leading-relaxed mt-0.5">{note.text}</p>
           )}
           {note.imageUrl && (
             <div className="mt-2 relative h-16 w-24 rounded overflow-hidden ring-1 ring-border">
@@ -333,9 +382,15 @@ const DraggablePinList = ({
             onClick={() => setExpandedNotePinIndex(pinIndex)}
             className="w-full flex items-center gap-2 py-2.5 px-3 text-xs bg-muted/50 border border-border rounded-lg hover:bg-muted transition-colors"
           >
-            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="flex -space-x-1">
+              {pinNotes.slice(0, 3).map((note, i) => {
+                const config = getNoteTypeConfig(note.note_type);
+                const Icon = config.icon;
+                return <Icon key={i} className={`h-3.5 w-3.5 ${config.iconColor}`} />;
+              })}
+            </div>
             <span className="text-foreground font-medium">
-              {pinNotes.length} ciekawostk{pinNotes.length === 1 ? 'a' : pinNotes.length < 5 ? 'i' : 'ek'} na trasie
+              {pinNotes.length} notat{pinNotes.length === 1 ? 'ka' : pinNotes.length < 5 ? 'ki' : 'ek'} na trasie
             </span>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground ml-auto" />
           </button>
@@ -380,8 +435,8 @@ const DraggablePinList = ({
             onClick={() => startAddingNote(pinIndex)}
             className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-foreground/50 rounded-lg transition-colors"
           >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Dodaj ciekawostkę na trasie</span>
+            <Plus className="h-3.5 w-3.5" />
+            <span>Dodaj notatkę na trasie</span>
           </button>
         )}
 
@@ -512,8 +567,14 @@ const DraggablePinList = ({
                   {/* Show notes count indicator when NOT in editor mode */}
                   {!showNotesEditor && pin.notes && pin.notes.length > 0 && (
                     <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-1">
-                      <Sparkles className="h-3 w-3" />
-                      <span>{pin.notes.length} ciekawostk{pin.notes.length === 1 ? 'a' : pin.notes.length < 5 ? 'i' : 'ek'}</span>
+                      <div className="flex -space-x-0.5">
+                        {pin.notes.slice(0, 3).map((note, i) => {
+                          const config = getNoteTypeConfig(note.note_type);
+                          const Icon = config.icon;
+                          return <Icon key={i} className={`h-3 w-3 ${config.iconColor}`} />;
+                        })}
+                      </div>
+                      <span>{pin.notes.length} notat{pin.notes.length === 1 ? 'ka' : pin.notes.length < 5 ? 'ki' : 'ek'}</span>
                     </div>
                   )}
 
