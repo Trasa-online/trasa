@@ -1,167 +1,205 @@
 
-# Plan: Sekcja "Odwiedzający" - przycisk "Twoje wrażenia" + limit opinii
+# Plan wdrożenia: Notatki na trasie z typami
 
 ## Cel
+Rozbudowanie obecnego systemu "Ciekawostek" o wsparcie dla wielu typów notatek, które lepiej opisuja rozne aspekty podrozy - od ciekawostek, przez doswiadczenia, po praktyczne rady i ostrzezenia.
 
-Zmodyfikować sekcję "Odwiedzający" w widoku pojedynczej pinezki (`/pin/:pinId`):
-1. Pokazywać tylko 3 opinie domyślnie
-2. Dodać tekst "Pokaż więcej" do rozwinięcia wszystkich opinii
-3. Dodać przycisk secondary "Twoje wrażenia" na dole sekcji
-4. Po kliknięciu "Twoje wrażenia" - pokazać drawer zamiast obecnego dialogu
+---
 
-## Aktualny stan
+## Faza 1: Zmiany w bazie danych
 
-- `PinVisitDialog` już istnieje i obsługuje dodawanie/edycję oceny, opisu i zdjęcia
-- Jest renderowany jako `Dialog` (modal)
-- `showVisitDialog` state już istnieje w `PinDetails.tsx`
-- Sekcja "Odwiedzający" pokazuje wszystkie wizyty bez limitu
+### 1.1 Migracja - dodanie kolumny `note_type`
 
-## Zmiany do wprowadzenia
+Dodanie nowej kolumny do tabeli `route_notes`:
 
-### 1. Nowy state dla "Pokaż więcej"
+```sql
+ALTER TABLE public.route_notes 
+ADD COLUMN note_type text NOT NULL DEFAULT 'fact';
+
+COMMENT ON COLUMN public.route_notes.note_type IS 
+'Typ notatki: fact (ciekawostka), experience (doswiadczenie), tip (rada), warning (ostrzezenie)';
+```
+
+**Typy notatek:**
+| Typ | Klucz | Ikona | Kolor |
+|-----|-------|-------|-------|
+| Ciekawostka | `fact` | Sparkles | Amber (obecny) |
+| Doswiadczenie | `experience` | Heart | Rose |
+| Rada | `tip` | Lightbulb | Blue |
+| Ostrzezenie | `warning` | AlertTriangle | Orange |
+
+---
+
+## Faza 2: Aktualizacja interfejsu typow
+
+### 2.1 Nowy typ TypeScript
+
+Utworzenie stalych i typow w nowym pliku `src/lib/noteTypes.ts`:
 
 ```typescript
-const [showAllVisits, setShowAllVisits] = useState(false);
+export const NOTE_TYPES = {
+  fact: {
+    label: 'Ciekawostka',
+    icon: Sparkles,
+    bgColor: 'bg-amber-50 dark:bg-amber-950/30',
+    borderColor: 'border-amber-200 dark:border-amber-800',
+    iconColor: 'text-amber-500',
+    labelColor: 'text-amber-600 dark:text-amber-400',
+  },
+  experience: {
+    label: 'Doswiadczenie',
+    icon: Heart,
+    bgColor: 'bg-rose-50 dark:bg-rose-950/30',
+    borderColor: 'border-rose-200 dark:border-rose-800',
+    iconColor: 'text-rose-500',
+    labelColor: 'text-rose-600 dark:text-rose-400',
+  },
+  tip: {
+    label: 'Rada',
+    icon: Lightbulb,
+    bgColor: 'bg-blue-50 dark:bg-blue-950/30',
+    borderColor: 'border-blue-200 dark:border-blue-800',
+    iconColor: 'text-blue-500',
+    labelColor: 'text-blue-600 dark:text-blue-400',
+  },
+  warning: {
+    label: 'Ostrzezenie',
+    icon: AlertTriangle,
+    bgColor: 'bg-orange-50 dark:bg-orange-950/30',
+    borderColor: 'border-orange-200 dark:border-orange-800',
+    iconColor: 'text-orange-500',
+    labelColor: 'text-orange-600 dark:text-orange-400',
+  },
+} as const;
+
+export type NoteType = keyof typeof NOTE_TYPES;
 ```
 
-### 2. Ograniczenie wyświetlanych wizyt do 3
+---
 
-W sekcji "Odwiedzający" zamiast mapowania wszystkich:
-```tsx
-// Przed
-{allCanonicalVisits.map((visit: any) => {...})}
+## Faza 3: Modyfikacja komponentu tworzenia
 
-// Po
-{(showAllVisits ? allCanonicalVisits : allCanonicalVisits.slice(0, 3)).map((visit: any) => {...})}
-```
+### 3.1 Aktualizacja `PinNotesSection.tsx`
 
-### 3. Tekst "Pokaż więcej" (nie button)
-
-Po mapie wizyt, jeśli jest więcej niż 3:
-```tsx
-{allCanonicalVisits.length > 3 && !showAllVisits && (
-  <p 
-    onClick={() => setShowAllVisits(true)}
-    className="text-sm text-muted-foreground hover:text-primary cursor-pointer text-center py-2"
-  >
-    Pokaż więcej ({allCanonicalVisits.length - 3})
-  </p>
-)}
-```
-
-### 4. Nowy komponent PinVisitDrawer
-
-Utworzyć nowy komponent `src/components/route/PinVisitDrawer.tsx` który używa `Drawer` zamiast `Dialog`:
-
-- Przeniesie całą logikę z `PinVisitDialog`
-- Zmieni `Dialog` na `Drawer` z `DrawerContent`, `DrawerHeader`, `DrawerTitle`, `DrawerDescription`
-- Zachowa tę samą funkcjonalność (ocena gwiazdkami, opis, upload zdjęcia)
-
-### 5. Przycisk "Twoje wrażenia" na dole sekcji
-
-Po liście wizyt i "Pokaż więcej":
-```tsx
-<div className="mt-4">
-  <Button 
-    variant="secondary" 
-    className="w-full"
-    onClick={() => setShowVisitDialog(true)}
-  >
-    Twoje wrażenia
-  </Button>
-</div>
-```
-
-### 6. Zamiana PinVisitDialog na PinVisitDrawer
-
-W renderze:
-```tsx
-{user && (
-  <PinVisitDrawer
-    open={showVisitDialog}
-    onOpenChange={setShowVisitDialog}
-    pinId={pinId || ""}
-    pinName={displayName || pin.address}
-    userId={user.id}
-    existingVisit={hasVisited ? {...} : null}
-  />
-)}
-```
-
-## Pliki do modyfikacji/utworzenia
-
-| Plik | Operacja | Opis |
-|------|----------|------|
-| `src/components/route/PinVisitDrawer.tsx` | Utworzenie | Nowy komponent drawer z formularzem oceny |
-| `src/pages/PinDetails.tsx` | Modyfikacja | State, limit 3 opinii, "Pokaż więcej", przycisk "Twoje wrażenia", import drawera |
-
-## Szczegóły komponentu PinVisitDrawer
-
-```tsx
-// Imports
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
-// ... pozostałe importy jak w PinVisitDialog
-
-// Interfejs identyczny jak PinVisitDialog
-interface PinVisitDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  pinId: string;
-  pinName: string;
-  userId: string;
-  existingVisit?: {
-    image_url?: string;
-    description?: string;
-    rating?: number;
-  } | null;
+**Zmiany w interfejsie `PinNote`:**
+```typescript
+interface PinNote {
+  id?: string;
+  text: string;
+  imageUrl?: string;
+  note_order: number;
+  note_type: NoteType; // NOWE
 }
-
-// Logika taka sama jak w PinVisitDialog
-// Zmiana struktury JSX:
-
-return (
-  <Drawer open={open} onOpenChange={onOpenChange}>
-    <DrawerContent className="max-h-[90vh]">
-      <DrawerHeader>
-        <DrawerTitle className="flex items-center gap-2">
-          <MapPin className="h-5 w-5" />
-          {isEditing ? "Edytuj swoją opinię" : "Twoje wrażenia"}
-        </DrawerTitle>
-        <DrawerDescription>{pinName}</DrawerDescription>
-      </DrawerHeader>
-      
-      <div className="px-4 pb-4 space-y-5 overflow-y-auto">
-        {/* Rating - identyczne */}
-        {/* Description - identyczne */}
-        {/* Image upload - identyczne */}
-      </div>
-      
-      <DrawerFooter>
-        {/* Buttons - identyczne */}
-      </DrawerFooter>
-    </DrawerContent>
-    
-    {/* Delete Confirmation AlertDialog - identyczne */}
-  </Drawer>
-);
 ```
 
-## Wizualizacja zmian UI
+**Nowy UI wyboru typu** - przed polem tekstowym pojawia sie selektor typu:
 
 ```text
-┌────────────────────────────────────────────────────┐
-│ 👥 Odwiedzający (5)                                │
-├────────────────────────────────────────────────────┤
-│ [Wizyta 1 - Avatar, username, ocena, opis...]     │
-│ [Wizyta 2 - Avatar, username, ocena, opis...]     │
-│ [Wizyta 3 - Avatar, username, ocena, opis...]     │
-│                                                    │
-│            Pokaż więcej (2)                        │  ← tekst klikalny
-│                                                    │
-│ ┌────────────────────────────────────────────────┐ │
-│ │              Twoje wrażenia                    │ │  ← Button secondary
-│ └────────────────────────────────────────────────┘ │
-└────────────────────────────────────────────────────┘
++------------------------------------------+
+| [Ciekawostka] [Doswiadczenie] [Rada] [!] |   <- przyciski typu
++------------------------------------------+
+| [                Tekst notatki...      ] |
+|                                    [Foto]|
++------------------------------------------+
 ```
 
-Po kliknięciu "Twoje wrażenia" - drawer wysuwa się z dołu z formularzem.
+Przyciski typu beda:
+- Kompaktowe ikony z tooltipem
+- Aktywny typ podswietlony kolorem
+- Domyslnie wybrana "Ciekawostka" (fact)
+
+### 3.2 Zmiana etykiety sekcji
+
+Z "Ciekawe na trasie" na "Notatki na trasie" z nowa ikona (StickyNote lub NotebookPen).
+
+---
+
+## Faza 4: Modyfikacja wyswietlania
+
+### 4.1 Aktualizacja `RouteDetails.tsx` - komponent `RouteNotesDisplay`
+
+Kazda notatka bedzie wyswietlana z odpowiednim stylem na podstawie `note_type`:
+
+```text
++-- Ciekawostka ----------------------+
+| [Sparkles] Ciekawe na trasie        |
+|                                     |
+| Tekst notatki o ciekawostce...      |
++-------------------------------------+
+
++-- Doswiadczenie --------------------+
+| [Heart] Doswiadczenie               |
+|                                     |
+| To miejsce ma magiczna atmosfere... |
++-------------------------------------+
+```
+
+### 4.2 Logika wyswietlania
+
+- Notatki grupowane przy odpowiednich pinach (bez zmian)
+- Kazdy typ ma wlasny kolor tla, obramowania i ikone
+- Etykieta dynamiczna na podstawie `note_type`
+
+---
+
+## Faza 5: Aktualizacja zapisywania
+
+### 5.1 `CreateRoute.tsx` - funkcja `autoSaveRoute`
+
+Dodanie `note_type` do obiektow notatek przy zapisie:
+
+```typescript
+allNotesToInsert.push({
+  route_id: routeIdRef.current,
+  pin_id: insertedPin.id,
+  text: note.text,
+  image_url: note.imageUrl,
+  note_order: note.note_order,
+  note_type: note.note_type || 'fact', // NOWE
+});
+```
+
+### 5.2 Wczytywanie istniejacych tras
+
+Przy edycji trasy - mapowanie `note_type` z bazy na stan komponentu.
+
+---
+
+## Podsumowanie zmian w plikach
+
+| Plik | Rodzaj zmiany |
+|------|---------------|
+| `supabase/migrations/[nowa].sql` | Dodanie kolumny `note_type` |
+| `src/lib/noteTypes.ts` | NOWY - definicje typow i stylowania |
+| `src/components/route/PinNotesSection.tsx` | Dodanie selektora typu, aktualizacja interfejsu |
+| `src/pages/CreateRoute.tsx` | Zapis `note_type`, wczytywanie przy edycji |
+| `src/pages/RouteDetails.tsx` | Dynamiczne stylowanie na podstawie typu |
+
+---
+
+## Szczegoly techniczne
+
+### Wybor typu w UI
+
+Selektor typow bedzie zaimplementowany jako grupa przyciskow Toggle:
+
+```tsx
+<ToggleGroup type="single" value={noteType} onValueChange={setNoteType}>
+  {Object.entries(NOTE_TYPES).map(([key, config]) => (
+    <ToggleGroupItem key={key} value={key} className="...">
+      <config.icon className="h-4 w-4" />
+    </ToggleGroupItem>
+  ))}
+</ToggleGroup>
+```
+
+### Kompatybilnosc wsteczna
+
+- Istniejace notatki bez `note_type` beda traktowane jako `fact` (domyslna wartosc)
+- Migracja nie wymaga aktualizacji istniejacych danych
+
+### Przyszle rozszerzenia (poza zakresem)
+
+- Oficjalne notatki biznesowe dla Premium Pins
+- Filtrowanie notatek po typie w widoku trasy
+- Statystyki typow notatek w profilu uzytkownika
