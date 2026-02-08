@@ -1296,15 +1296,15 @@ const CreateRoute = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center gap-4 z-10">
-        <button onClick={handleBackClick}>
-          <ArrowLeft className="h-6 w-6" />
+      <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border/50 px-4 py-3 flex items-center gap-3 z-10">
+        <button onClick={handleBackClick} className="p-1 -ml-1 hover:bg-muted rounded-md transition-colors">
+          <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-xl font-semibold flex-1">
-          {step === 1 ? "Utwórz nową trasę" : step === 2 ? "Pinezki w trasie" : "Podsumowanie trasy"}
+        <h1 className="text-base font-medium flex-1 text-foreground">
+          {step === 1 ? "Nowa trasa" : step === 2 ? "Pinezki" : "Podsumowanie"}
         </h1>
         {step >= 2 && hasAddedPins && (
-          <div className="text-xs text-muted-foreground text-right">
+          <div className="text-[11px] text-muted-foreground text-right">
             {autoSaving ? (
               <span className="animate-pulse">Zapisywanie...</span>
             ) : lastAutoSave ? (
@@ -1315,7 +1315,7 @@ const CreateRoute = () => {
                 onClick={discardDraft}
                 className="block text-destructive hover:underline mt-0.5"
               >
-                Porzuć roboczą
+                Porzuć
               </button>
             )}
           </div>
@@ -1323,7 +1323,7 @@ const CreateRoute = () => {
       </div>
 
       {/* Step Progress Indicator */}
-      <div className="sticky top-[57px] bg-background border-b border-border py-3 px-4 z-10">
+      <div className="sticky top-[49px] bg-background/95 backdrop-blur-sm border-b border-border/50 py-2.5 px-4 z-10">
         <div className="max-w-lg mx-auto">
           <StepIndicator
             steps={[
@@ -1338,9 +1338,11 @@ const CreateRoute = () => {
 
       <div className="max-w-lg mx-auto p-4 space-y-6">
         {step === 1 ? (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <Label htmlFor="title">Nazwa trasy * (max 10 słów)</Label>
+              <label htmlFor="title" className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block mb-1.5">
+                Nazwa trasy <span className="text-destructive">*</span>
+              </label>
               <Input
                 id="title"
                 value={title}
@@ -1351,8 +1353,9 @@ const CreateRoute = () => {
                   }
                 }}
                 placeholder="np. Ukryte skarby Tokio"
+                className="text-base border-muted-foreground/20 focus:border-foreground"
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-[11px] text-muted-foreground mt-1">
                 {title.trim() ? title.trim().split(/\s+/).filter(w => w.length > 0).length : 0}/10 słów
               </p>
             </div>
@@ -1360,11 +1363,11 @@ const CreateRoute = () => {
             {/* Folder selector */}
             {folders.length > 0 && (
               <div>
-                <Label>Folder (opcjonalny)</Label>
+                <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block mb-1.5">Folder</label>
                 <select
                   value={folderId || ""}
                   onChange={(e) => setFolderId(e.target.value || null)}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="w-full h-10 rounded-md border border-muted-foreground/20 bg-background px-3 py-2 text-sm focus:border-foreground focus:outline-none transition-colors"
                 >
                   <option value="">Bez folderu</option>
                   {folders.map((f) => (
@@ -1394,9 +1397,8 @@ const CreateRoute = () => {
             {showPinsList ? (
               pins.filter(p => p.address).length > 0 ? (
                 <div className="space-y-4 pb-24">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">Pinezki w trasie</h2>
-                  </div>
+                  <h2 className="text-sm font-medium text-muted-foreground tracking-wide uppercase">Pinezki w trasie</h2>
+
 
                   <div className="space-y-3">
                     <DraggablePinList
@@ -1426,14 +1428,14 @@ const CreateRoute = () => {
                     </Button>
                   </div>
 
-                  <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
+                  <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border/50 p-4 max-w-lg mx-auto">
                     <Button
                       variant="default"
-                      className="w-full"
+                      className="w-full text-[13px]"
                       onClick={() => setStep(3)}
                       disabled={pins.filter(p => p.address).length === 0}
                     >
-                      Przejdź do podsumowania
+                      Dalej
                     </Button>
                   </div>
                 </div>
@@ -1455,9 +1457,9 @@ const CreateRoute = () => {
               )
             ) : (
               <>
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">
+                    <h2 className="text-sm font-medium text-muted-foreground tracking-wide uppercase">
                       Pinezka {currentPinIndex + 1}/{pins.length}
                     </h2>
                     <div className="flex gap-2">
@@ -1496,8 +1498,8 @@ const CreateRoute = () => {
 
                   {/* Map preview - shows existing pins */}
                   {pins.some(p => p.latitude && p.longitude) && (
-                    <div className="space-y-2">
-                      <Label>Podgląd mapy</Label>
+                    <div className="space-y-1.5">
+                      <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase">Podgląd mapy</label>
                       <RouteMap 
                         pins={pins.filter(p => p.latitude && p.longitude)}
                         className="h-32 rounded-lg"
@@ -1507,7 +1509,9 @@ const CreateRoute = () => {
 
                   {/* Address - moved to top */}
                   <div>
-                    <Label>Adres *</Label>
+                    <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block mb-1.5">
+                      Adres <span className="text-destructive">*</span>
+                    </label>
                     <div className="flex gap-2">
                       <div className="flex-1">
                         <AddressAutocomplete
@@ -1664,15 +1668,13 @@ const CreateRoute = () => {
 
                   {/* Place name - editable */}
                   <div>
-                    <Label>Nazwa miejsca</Label>
+                    <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block mb-1.5">Nazwa miejsca</label>
                     <Input
                       value={pins[currentPinIndex]?.place_name || ""}
                       onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
-                      placeholder="Nazwa miejsca (np. Pałac Kultury)"
+                      placeholder="np. Pałac Kultury"
+                      className="border-muted-foreground/20 focus:border-foreground"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Możesz zmienić nazwę na bardziej przyjazną
-                    </p>
                   </div>
 
 
@@ -1685,52 +1687,50 @@ const CreateRoute = () => {
                     tripType={tripType}
                   />
 
-                  {/* Image upload */}
+                  {/* Image upload - minimal */}
                   <div>
-                    <Label>Zdjęcie (Opcjonalne)</Label>
-                    <div className="mt-2">
-                      {pins[currentPinIndex]?.image_url ? (
-                        <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
-                          <img
-                            src={pins[currentPinIndex]?.image_url}
-                            alt="Podgląd zdjęcia"
-                            className="w-full h-full object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              updatePin(currentPinIndex, "image_url", "");
-                              updatePin(currentPinIndex, "images", []);
-                            }}
-                            className="absolute top-2 right-2 bg-background/80 hover:bg-background p-2 rounded-full transition-colors"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent transition-colors">
-                          <Camera className="h-12 w-12 text-muted-foreground mb-2" />
-                          <p className="text-sm text-muted-foreground">
-                            Dotknij, aby dodać zdjęcie
-                          </p>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              if (e.target.files && e.target.files.length > 0) {
-                                handleImageUpload(e.target.files, currentPinIndex);
-                                e.target.value = '';
-                              }
-                            }}
-                          />
-                        </label>
-                      )}
-                    </div>
+                    <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block mb-1.5">Zdjęcie</label>
+                    {pins[currentPinIndex]?.image_url ? (
+                      <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
+                        <img
+                          src={pins[currentPinIndex]?.image_url}
+                          alt="Podgląd"
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updatePin(currentPinIndex, "image_url", "");
+                            updatePin(currentPinIndex, "images", []);
+                          }}
+                          className="absolute top-2 right-2 bg-background/80 hover:bg-background p-1.5 rounded-full transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center h-32 border border-dashed border-muted-foreground/30 rounded-lg cursor-pointer hover:border-muted-foreground/50 hover:bg-muted/30 transition-all">
+                        <Camera className="h-8 w-8 text-muted-foreground/50 mb-1.5" />
+                        <p className="text-[13px] text-muted-foreground">
+                          Dodaj zdjęcie
+                        </p>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              handleImageUpload(e.target.files, currentPinIndex);
+                              e.target.value = '';
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
                   </div>
                 </div>
 
-                <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
+                <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border/50 p-4 max-w-lg mx-auto">
                   <Button
                     variant="default"
                     className="w-full"
@@ -1740,15 +1740,22 @@ const CreateRoute = () => {
                         toast({ 
                           variant: "destructive", 
                           title: "Uzupełnij wymagane pola",
-                          description: "Adres jest wymagany przed powrotem do listy"
+                          description: "Adres jest wymagany"
                         });
                         return;
                       }
-                      // Rating is now optional - no validation needed
+                      if (!currentPin?.recommended_for || currentPin.recommended_for.length === 0) {
+                        toast({ 
+                          variant: "destructive", 
+                          title: "Uzupełnij wymagane pola",
+                          description: "Wybierz dla kogo polecasz to miejsce"
+                        });
+                        return;
+                      }
                       setShowPinsList(true);
                     }}
                   >
-                    Przejdź do listy pinezek
+                    Gotowe
                   </Button>
                 </div>
               </>
@@ -1756,36 +1763,36 @@ const CreateRoute = () => {
           </>
         ) : step === 3 ? (
           <>
-            <div className="space-y-4 pb-24">
+            <div className="space-y-5 pb-24">
               {/* Header with editable title */}
-              <div className="space-y-2">
-                <div className="space-y-1">
-                  <Label htmlFor="summary-title" className="text-sm text-muted-foreground">Nazwa trasy</Label>
-                  <Input
-                    id="summary-title"
-                    value={title}
-                    onChange={(e) => {
-                      const words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0);
-                      if (words.length <= 10 || e.target.value.length < title.length) {
-                        setTitle(e.target.value);
-                      }
-                    }}
-                    placeholder="Nazwa trasy"
-                    className="text-lg font-semibold"
-                  />
-                  <p className="text-xs text-muted-foreground">
+              <div className="space-y-1.5">
+                <label htmlFor="summary-title" className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block">Nazwa trasy</label>
+                <Input
+                  id="summary-title"
+                  value={title}
+                  onChange={(e) => {
+                    const words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0);
+                    if (words.length <= 10 || e.target.value.length < title.length) {
+                      setTitle(e.target.value);
+                    }
+                  }}
+                  placeholder="Nazwa trasy"
+                  className="text-lg font-medium border-muted-foreground/20 focus:border-foreground"
+                />
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] text-muted-foreground">
                     {title.trim() ? title.trim().split(/\s+/).filter(w => w.length > 0).length : 0}/10 słów
                   </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {pins.filter(p => p.address).length} {pins.filter(p => p.address).length === 1 ? 'punkt' : 'punktów'}
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {pins.filter(p => p.address).length} {pins.filter(p => p.address).length === 1 ? 'punkt' : 'punktów'}
-                </p>
               </div>
 
               {/* Route map */}
               <RouteMap 
                 pins={pins.filter(p => p.address).map(p => ({ ...p, place_name: p.place_name || p.address }))}
-                className="h-40"
+                className="h-40 rounded-lg"
               />
               {/* Review summary stats */}
               <RouteReviewSummary pins={pins} />
@@ -1805,21 +1812,21 @@ const CreateRoute = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full"
+                  className="w-full text-[13px]"
                   onClick={() => {
                     addPin();
                     setStep(2);
                     setShowPinsList(false);
                   }}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-1.5" />
                   Dodaj pinezkę
                 </Button>
               </div>
 
               {/* Route description */}
-              <div className="space-y-2">
-                <Label htmlFor="route-description" className="text-sm">Opis trasy (Opcjonalne)</Label>
+              <div className="space-y-1.5">
+                <label htmlFor="route-description" className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block">Opis trasy</label>
                 <Textarea
                   id="route-description"
                   value={routeDescription}
@@ -1828,30 +1835,23 @@ const CreateRoute = () => {
                       setRouteDescription(e.target.value);
                     }
                   }}
-                  placeholder="Podziel się ogólnymi wrażeniami i najważniejszymi szczegółami..."
+                  placeholder="Podziel się wrażeniami..."
                   rows={3}
-                  className="resize-none text-sm"
+                  className="resize-none text-sm border-muted-foreground/20 focus:border-foreground"
                   maxLength={500}
                 />
-                <p className={`text-xs font-medium transition-colors ${
+                <p className={`text-[10px] font-medium transition-colors ${
                   routeDescription.length >= 500 
                     ? "text-destructive" 
-                    : routeDescription.length >= 450 
-                      ? "text-orange-600" 
-                      : routeDescription.length >= 400 
-                        ? "text-amber-600" 
-                        : "text-muted-foreground"
+                    : "text-muted-foreground"
                 }`}>
-                  {routeDescription.length >= 500 && (
-                    <span className="mr-1">Osiągnięto limit •</span>
-                  )}
-                  {routeDescription.length}/500 znaków
+                  {routeDescription.length}/500
                 </p>
               </div>
 
               {/* Friend mentions for route */}
-              <div className="space-y-2">
-                <Label className="text-sm">Oznacz znajomych (Opcjonalne)</Label>
+              <div className="space-y-1.5">
+                <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block">Oznacz znajomych</label>
                 <UserMentionInput
                   selectedUserIds={routeMentionedUsers}
                   onUserSelect={(userId) => {
@@ -1865,32 +1865,13 @@ const CreateRoute = () => {
 
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 max-w-lg mx-auto">
+            <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border/50 p-4 max-w-lg mx-auto">
               <div className="flex gap-2">
                 {existingRoute?.status === "published" ? (
                   <>
                     <Button
                       variant="outline"
-                      className="flex-1 text-sm"
-                      onClick={() => saveRoute("draft")}
-                      disabled={saving}
-                    >
-                      Zapisz jako roboczą
-                    </Button>
-                    <Button
-                      variant="default"
-                      className="flex-1 text-sm"
-                      onClick={() => saveRoute("published")}
-                      disabled={saving}
-                    >
-                      Aktualizuj trasę
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      variant="outline"
-                      className="flex-1 text-sm"
+                      className="flex-1 text-[13px]"
                       onClick={() => saveRoute("draft")}
                       disabled={saving}
                     >
@@ -1898,11 +1879,30 @@ const CreateRoute = () => {
                     </Button>
                     <Button
                       variant="default"
-                      className="flex-1 text-sm"
+                      className="flex-1 text-[13px]"
                       onClick={() => saveRoute("published")}
                       disabled={saving}
                     >
-                      Opublikuj trasę
+                      Aktualizuj
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="flex-1 text-[13px]"
+                      onClick={() => saveRoute("draft")}
+                      disabled={saving}
+                    >
+                      Robocza
+                    </Button>
+                    <Button
+                      variant="default"
+                      className="flex-1 text-[13px]"
+                      onClick={() => saveRoute("published")}
+                      disabled={saving}
+                    >
+                      Opublikuj
                     </Button>
                   </>
                 )}

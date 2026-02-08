@@ -24,41 +24,38 @@ const StepIndicator = ({ steps, currentStep, className }: StepIndicatorProps) =>
 
           return (
             <div key={index} className="flex items-center flex-1 last:flex-none">
-              {/* Step circle */}
               <div className="flex flex-col items-center">
                 <div
                   className={cn(
-                    "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-colors",
-                    isCompleted && "bg-muted-foreground/30 text-foreground",
-                    isCurrent && "bg-foreground text-background ring-1 ring-foreground/20 ring-offset-1 ring-offset-background",
-                    isFuture && "bg-muted border border-border text-muted-foreground"
+                    "w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-medium transition-all",
+                    isCompleted && "bg-foreground/10 text-foreground",
+                    isCurrent && "bg-foreground text-background",
+                    isFuture && "bg-muted text-muted-foreground/50"
                   )}
                 >
                   {isCompleted ? (
-                    <Check className="h-3.5 w-3.5" />
+                    <Check className="h-3 w-3" />
                   ) : (
                     stepNumber
                   )}
                 </div>
-                {/* Label - visible on all screens */}
                 <span
                   className={cn(
-                    "text-[10px] mt-1 font-medium text-center",
+                    "text-[10px] mt-1 font-medium text-center tracking-wide",
                     isCompleted && "text-muted-foreground",
                     isCurrent && "text-foreground",
-                    isFuture && "text-muted-foreground/70"
+                    isFuture && "text-muted-foreground/50"
                   )}
                 >
                   {step.shortLabel || step.label}
                 </span>
               </div>
 
-              {/* Connector line */}
               {index < steps.length - 1 && (
                 <div
                   className={cn(
-                    "flex-1 h-0.5 mx-2 sm:mx-3 transition-colors",
-                    stepNumber < currentStep ? "bg-primary/70" : "bg-border"
+                    "flex-1 h-px mx-3 transition-colors",
+                    stepNumber < currentStep ? "bg-foreground/20" : "bg-border"
                   )}
                 />
               )}
