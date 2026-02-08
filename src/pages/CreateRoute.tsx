@@ -23,6 +23,7 @@ import DraggablePinList from "@/components/route/DraggablePinList";
 import MapPinSelector from "@/components/route/MapPinSelector";
 import PinNotesSection from "@/components/route/PinNotesSection";
 import StepIndicator from "@/components/route/StepIndicator";
+import RouteReviewSummary from "@/components/route/RouteReviewSummary";
 
 import { findOriginalPinCreator, checkPinDiscoveryInfo, getCanonicalPinInfo, CanonicalPinInfo } from "@/lib/pinDiscovery";
 import { cn } from "@/lib/utils";
@@ -1786,6 +1787,8 @@ const CreateRoute = () => {
                 pins={pins.filter(p => p.address).map(p => ({ ...p, place_name: p.place_name || p.address }))}
                 className="h-40"
               />
+              {/* Review summary stats */}
+              <RouteReviewSummary pins={pins} />
 
               {/* Pins list */}
               <div className="space-y-3">
