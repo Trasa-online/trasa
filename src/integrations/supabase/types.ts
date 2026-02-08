@@ -600,6 +600,39 @@ export type Database = {
           },
         ]
       }
+      route_folders: {
+        Row: {
+          cover_image_url: string | null
+          created_at: string | null
+          description: string | null
+          folder_order: number
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          folder_order?: number
+          id?: string
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          folder_order?: number
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       route_notes: {
         Row: {
           created_at: string | null
@@ -652,6 +685,8 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
+          folder_id: string | null
+          folder_order: number | null
           id: string
           rating: number | null
           status: string
@@ -664,6 +699,8 @@ export type Database = {
         Insert: {
           created_at?: string | null
           description?: string | null
+          folder_id?: string | null
+          folder_order?: number | null
           id?: string
           rating?: number | null
           status?: string
@@ -676,6 +713,8 @@ export type Database = {
         Update: {
           created_at?: string | null
           description?: string | null
+          folder_id?: string | null
+          folder_order?: number | null
           id?: string
           rating?: number | null
           status?: string
@@ -686,6 +725,13 @@ export type Database = {
           views?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "routes_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "route_folders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "routes_user_id_fkey"
             columns: ["user_id"]
