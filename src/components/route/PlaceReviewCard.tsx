@@ -159,12 +159,17 @@ const ChipSelector = ({
   );
 };
 
-const SectionLabel = ({ children, required = false }: { children: React.ReactNode; required?: boolean }) => (
-  <div className="flex items-baseline gap-1.5">
+const SectionLabel = ({ children, required = false, optional = false }: { children: React.ReactNode; required?: boolean; optional?: boolean }) => (
+  <div className="flex items-center gap-2">
     <h3 className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase">
       {children}
     </h3>
     {required && <span className="text-[11px] text-destructive font-medium">*</span>}
+    {optional && (
+      <span className="text-[10px] font-medium text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded">
+        Opcjonalnie
+      </span>
+    )}
   </div>
 );
 
@@ -258,7 +263,7 @@ const PlaceReviewCard = ({
       {/* Cons */}
       {isNotPlanning && (
         <section className="space-y-2.5">
-          <SectionLabel>Co mogło być lepsze?</SectionLabel>
+          <SectionLabel optional>Co mogło być lepsze?</SectionLabel>
           <ChipSelector
             options={CONS_OPTIONS}
             selected={pin.cons || []}
@@ -301,7 +306,7 @@ const PlaceReviewCard = ({
 
       {/* One liner */}
       <section className="space-y-2.5">
-        <SectionLabel>Jedno zdanie</SectionLabel>
+        <SectionLabel optional>Jedno zdanie od Ciebie</SectionLabel>
         <div>
           <Textarea
             value={pin.one_liner || ""}
@@ -310,7 +315,7 @@ const PlaceReviewCard = ({
                 onUpdate("one_liner", e.target.value);
               }
             }}
-            placeholder="Dobre jedzenie, ale drugi raz bym nie planował specjalnie..."
+            placeholder="Twoje krótkie wrażenie z tego miejsca..."
             className="resize-none min-h-[52px] text-sm border-muted-foreground/20 focus:border-foreground"
             rows={2}
           />
