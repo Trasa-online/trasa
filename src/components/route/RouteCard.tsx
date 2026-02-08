@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import PinReviewBadges from "@/components/route/PinReviewBadges";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Heart, MessageCircle, Star, MapPin, Bookmark, ArrowRight, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -466,6 +467,8 @@ const RouteCard = ({ route }: RouteCardProps) => {
                         {pin.description}
                       </p>
                     )}
+                    {/* Pin review badges */}
+                    <PinReviewBadges pin={pin} />
                     {visitorCount > 0 && (
                       <div className="flex items-center gap-2 mt-2">
                         <div className="flex -space-x-1.5">
