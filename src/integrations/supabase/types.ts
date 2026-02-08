@@ -369,8 +369,10 @@ export type Database = {
         Row: {
           address: string
           canonical_pin_id: string | null
+          cons: string[] | null
           created_at: string | null
           description: string | null
+          expectation_met: string | null
           id: string
           image_url: string | null
           images: string[] | null
@@ -379,21 +381,27 @@ export type Database = {
           longitude: number | null
           mentioned_users: string[] | null
           name_translations: Json | null
+          one_liner: string | null
           original_creator_id: string | null
           pin_order: number
           place_name: string
+          pros: string[] | null
           rating: number | null
+          recommended_for: string[] | null
           route_id: string
           tags: string[] | null
           transport_end: string | null
           transport_type: string | null
+          trip_role: string | null
           visited_at: string | null
         }
         Insert: {
           address: string
           canonical_pin_id?: string | null
+          cons?: string[] | null
           created_at?: string | null
           description?: string | null
+          expectation_met?: string | null
           id?: string
           image_url?: string | null
           images?: string[] | null
@@ -402,21 +410,27 @@ export type Database = {
           longitude?: number | null
           mentioned_users?: string[] | null
           name_translations?: Json | null
+          one_liner?: string | null
           original_creator_id?: string | null
           pin_order: number
           place_name: string
+          pros?: string[] | null
           rating?: number | null
+          recommended_for?: string[] | null
           route_id: string
           tags?: string[] | null
           transport_end?: string | null
           transport_type?: string | null
+          trip_role?: string | null
           visited_at?: string | null
         }
         Update: {
           address?: string
           canonical_pin_id?: string | null
+          cons?: string[] | null
           created_at?: string | null
           description?: string | null
+          expectation_met?: string | null
           id?: string
           image_url?: string | null
           images?: string[] | null
@@ -425,14 +439,18 @@ export type Database = {
           longitude?: number | null
           mentioned_users?: string[] | null
           name_translations?: Json | null
+          one_liner?: string | null
           original_creator_id?: string | null
           pin_order?: number
           place_name?: string
+          pros?: string[] | null
           rating?: number | null
+          recommended_for?: string[] | null
           route_id?: string
           tags?: string[] | null
           transport_end?: string | null
           transport_type?: string | null
+          trip_role?: string | null
           visited_at?: string | null
         }
         Relationships: [
@@ -470,9 +488,11 @@ export type Database = {
         Row: {
           address: string
           can_restore: boolean | null
+          cons: string[] | null
           deleted_at: string
           deletion_source: string | null
           description: string | null
+          expectation_met: string | null
           id: string
           image_url: string | null
           images: string[] | null
@@ -481,25 +501,31 @@ export type Database = {
           longitude: number | null
           mentioned_users: string[] | null
           name_translations: Json | null
+          one_liner: string | null
           original_created_at: string | null
           original_creator_id: string | null
           original_pin_id: string
           pin_order: number
           place_name: string
+          pros: string[] | null
           rating: number | null
+          recommended_for: string[] | null
           route_id: string
           route_title: string | null
           tags: string[] | null
           transport_end: string | null
           transport_type: string | null
+          trip_role: string | null
           user_id: string
         }
         Insert: {
           address: string
           can_restore?: boolean | null
+          cons?: string[] | null
           deleted_at?: string
           deletion_source?: string | null
           description?: string | null
+          expectation_met?: string | null
           id?: string
           image_url?: string | null
           images?: string[] | null
@@ -508,25 +534,31 @@ export type Database = {
           longitude?: number | null
           mentioned_users?: string[] | null
           name_translations?: Json | null
+          one_liner?: string | null
           original_created_at?: string | null
           original_creator_id?: string | null
           original_pin_id: string
           pin_order: number
           place_name: string
+          pros?: string[] | null
           rating?: number | null
+          recommended_for?: string[] | null
           route_id: string
           route_title?: string | null
           tags?: string[] | null
           transport_end?: string | null
           transport_type?: string | null
+          trip_role?: string | null
           user_id: string
         }
         Update: {
           address?: string
           can_restore?: boolean | null
+          cons?: string[] | null
           deleted_at?: string
           deletion_source?: string | null
           description?: string | null
+          expectation_met?: string | null
           id?: string
           image_url?: string | null
           images?: string[] | null
@@ -535,17 +567,21 @@ export type Database = {
           longitude?: number | null
           mentioned_users?: string[] | null
           name_translations?: Json | null
+          one_liner?: string | null
           original_created_at?: string | null
           original_creator_id?: string | null
           original_pin_id?: string
           pin_order?: number
           place_name?: string
+          pros?: string[] | null
           rating?: number | null
+          recommended_for?: string[] | null
           route_id?: string
           route_title?: string | null
           tags?: string[] | null
           transport_end?: string | null
           transport_type?: string | null
+          trip_role?: string | null
           user_id?: string
         }
         Relationships: []

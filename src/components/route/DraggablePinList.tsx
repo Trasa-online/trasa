@@ -27,6 +27,12 @@ interface Pin {
   latitude?: number;
   longitude?: number;
   notes: PinNote[];
+  expectation_met: "yes" | "average" | "no" | null;
+  pros: string[];
+  cons: string[];
+  trip_role: "must_see" | "nice_addition" | "skippable" | null;
+  one_liner: string;
+  recommended_for: string[];
 }
 
 interface DraggablePinListProps {

@@ -71,6 +71,13 @@ interface Pin {
   canonical_discovered_at?: string;
   canonical_total_visits?: number;
   canonical_average_rating?: number;
+  // Review fields
+  expectation_met: "yes" | "average" | "no" | null;
+  pros: string[];
+  cons: string[];
+  trip_role: "must_see" | "nice_addition" | "skippable" | null;
+  one_liner: string;
+  recommended_for: string[];
 }
 
 const CreateRoute = () => {
@@ -84,7 +91,7 @@ const CreateRoute = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [pins, setPins] = useState<Pin[]>([
-    { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: 0, tags: [], latitude: undefined, longitude: undefined, notes: [] },
+    { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: 0, tags: [], latitude: undefined, longitude: undefined, notes: [], expectation_met: null, pros: [], cons: [], trip_role: null, one_liner: "", recommended_for: [] },
   ]);
   const [routeMentionedUsers, setRouteMentionedUsers] = useState<string[]>([]);
   // routeNotes state removed - notes are now stored per-pin
@@ -162,7 +169,8 @@ const CreateRoute = () => {
       place_name: "", address: "", description: "", image_url: "", 
       images: [], rating: 0, pin_order: 0, tags: [], 
       latitude: undefined, longitude: undefined,
-      notes: []
+      notes: [],
+      expectation_met: null, pros: [], cons: [], trip_role: null, one_liner: "", recommended_for: []
     }]);
     setRouteMentionedUsers([]);
     setCurrentPinIndex(0);
@@ -258,7 +266,13 @@ const CreateRoute = () => {
           latitude: pin.latitude,
           longitude: pin.longitude,
           original_creator_id: originalCreatorId || user.id,
-          notes: pin.notes, // Keep notes reference for later
+          notes: pin.notes,
+          expectation_met: pin.expectation_met || null,
+          pros: pin.pros || [],
+          cons: pin.cons || [],
+          trip_role: pin.trip_role || null,
+          one_liner: pin.one_liner || "",
+          recommended_for: pin.recommended_for || [],
         };
       }));
 
@@ -305,6 +319,12 @@ const CreateRoute = () => {
             latitude: p.latitude,
             longitude: p.longitude,
             original_creator_id: p.original_creator_id,
+            expectation_met: p.expectation_met,
+            pros: p.pros,
+            cons: p.cons,
+            trip_role: p.trip_role,
+            one_liner: p.one_liner,
+            recommended_for: p.recommended_for,
           })))
           .select();
 
@@ -374,6 +394,12 @@ const CreateRoute = () => {
             latitude: p.latitude,
             longitude: p.longitude,
             original_creator_id: p.original_creator_id,
+            expectation_met: p.expectation_met,
+            pros: p.pros,
+            cons: p.cons,
+            trip_role: p.trip_role,
+            one_liner: p.one_liner,
+            recommended_for: p.recommended_for,
           })))
           .select();
 
@@ -601,6 +627,12 @@ const CreateRoute = () => {
             ...pin,
             images: pin.images || [],
             rating: typeof pin.rating === 'number' ? pin.rating : 0,
+            expectation_met: pin.expectation_met || null,
+            pros: pin.pros || [],
+            cons: pin.cons || [],
+            trip_role: pin.trip_role || null,
+            one_liner: pin.one_liner || "",
+            recommended_for: pin.recommended_for || [],
             notes: pinNotes
               .filter((n: any) => n.pin_id === pin.id)
               .sort((a: any, b: any) => a.note_order - b.note_order)
@@ -671,6 +703,12 @@ const CreateRoute = () => {
               ...pin,
               images: pin.images || [],
               rating: typeof pin.rating === 'number' ? pin.rating : 0,
+              expectation_met: pin.expectation_met || null,
+              pros: pin.pros || [],
+              cons: pin.cons || [],
+              trip_role: pin.trip_role || null,
+              one_liner: pin.one_liner || "",
+              recommended_for: pin.recommended_for || [],
               notes: pinNotes
                 .filter((n: any) => n.pin_id === pin.id)
                 .sort((a: any, b: any) => a.note_order - b.note_order)
@@ -718,7 +756,13 @@ const CreateRoute = () => {
         tags: [], 
         latitude: undefined, 
         longitude: undefined,
-        notes: []
+        notes: [],
+        expectation_met: null,
+        pros: [],
+        cons: [],
+        trip_role: null,
+        one_liner: "",
+        recommended_for: []
       };
       const newPins = [...prevPins, newPin];
       setCurrentPinIndex(newPins.length - 1);
@@ -1068,6 +1112,12 @@ const CreateRoute = () => {
           canonical_pin_id: canonicalPinId,
           visited_at: new Date().toISOString(),
           notes: processedNotes,
+          expectation_met: pin.expectation_met || null,
+          pros: pin.pros || [],
+          cons: pin.cons || [],
+          trip_role: pin.trip_role || null,
+          one_liner: pin.one_liner || "",
+          recommended_for: pin.recommended_for || [],
         };
       }));
 
@@ -1107,6 +1157,12 @@ const CreateRoute = () => {
             longitude: p.longitude,
             canonical_pin_id: p.canonical_pin_id,
             visited_at: p.visited_at,
+            expectation_met: p.expectation_met,
+            pros: p.pros,
+            cons: p.cons,
+            trip_role: p.trip_role,
+            one_liner: p.one_liner,
+            recommended_for: p.recommended_for,
           })))
           .select();
 
@@ -1187,6 +1243,12 @@ const CreateRoute = () => {
             longitude: p.longitude,
             canonical_pin_id: p.canonical_pin_id,
             visited_at: p.visited_at,
+            expectation_met: p.expectation_met,
+            pros: p.pros,
+            cons: p.cons,
+            trip_role: p.trip_role,
+            one_liner: p.one_liner,
+            recommended_for: p.recommended_for,
           })))
           .select();
 
