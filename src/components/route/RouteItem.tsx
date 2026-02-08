@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { MapPin, Trash2, Star, Eye } from "lucide-react";
+import PinReviewBadges from "@/components/route/PinReviewBadges";
 
 interface RouteItemProps {
   route: any;
@@ -52,21 +53,25 @@ const RouteItem = ({ route, onDelete }: RouteItemProps) => {
       {sortedPins.length > 0 && (
         <div className="divide-y divide-border/50">
           {displayPins.map((pin: any, index: number) => (
-            <div
-              key={pin.id}
-              className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
-              onClick={() => navigate(`/route/${route.id}`)}
-            >
-              <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
-                <span className="text-xs font-bold">{index + 1}</span>
-              </div>
-              <span className="text-sm font-medium flex-1 truncate">{pin.place_name || pin.address}</span>
-              {pin.rating > 0 && (
-                <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded">
-                  <Star className="h-3 w-3 fill-star text-star" />
-                  <span className="text-xs font-semibold">{pin.rating.toFixed(1)}</span>
+            <div key={pin.id}>
+              <div
+                className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                onClick={() => navigate(`/route/${route.id}`)}
+              >
+                <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-bold">{index + 1}</span>
                 </div>
-              )}
+                <span className="text-sm font-medium flex-1 truncate">{pin.place_name || pin.address}</span>
+                {pin.rating > 0 && (
+                  <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded">
+                    <Star className="h-3 w-3 fill-star text-star" />
+                    <span className="text-xs font-semibold">{pin.rating.toFixed(1)}</span>
+                  </div>
+                )}
+              </div>
+              <div className="px-3 pb-2">
+                <PinReviewBadges pin={pin} />
+              </div>
             </div>
           ))}
           {sortedPins.length > MAX_VISIBLE_PINS && (

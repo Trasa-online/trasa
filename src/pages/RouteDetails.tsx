@@ -12,6 +12,7 @@ import { getPinImage, getPinImagesForRoute } from "@/lib/pinPlaceholders";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 import { FullscreenMapDialog } from "@/components/route/FullscreenMapDialog";
 import StarRating from "@/components/route/StarRating";
+import PinReviewBadges from "@/components/route/PinReviewBadges";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import RouteMap from "@/components/RouteMap";
@@ -181,6 +182,9 @@ const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pin
                       </p>
                     )}
                     
+                    {/* Pin review badges */}
+                    <PinReviewBadges pin={pin} />
+
                     {/* Pin visitors section */}
                     <PinVisitors pinId={pin.id} />
                   </div>
