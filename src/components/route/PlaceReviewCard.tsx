@@ -191,7 +191,7 @@ const PlaceReviewCard = ({
   );
 
   return (
-    <div className="space-y-5 pb-32">
+    <div className="space-y-5 pb-6">
       {/* 1. HEADER */}
       <div className="bg-muted/30 rounded-xl p-4">
         <h2 className="text-xl font-bold text-foreground">
@@ -370,6 +370,7 @@ const PlaceReviewCard = ({
           options={RECOMMENDED_FOR_OPTIONS}
           selected={pin.recommended_for || []}
           onToggle={(v) => handleChipToggle("recommended_for", v)}
+          allowCustom
         />
       </section>
     </div>
