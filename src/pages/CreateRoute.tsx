@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import DebouncedTextarea from "@/components/route/DebouncedTextarea";
 
-import { ArrowLeft, Plus, X, Camera, Coffee, UtensilsCrossed, ShoppingBag, Gift, Mountain, Waves, Pencil, Sparkles, Trophy, Check, MapPin, Star, Users } from "lucide-react";
-import StarRating from "@/components/route/StarRating";
+
+import { ArrowLeft, Plus, X, Camera, Pencil, Sparkles, Trophy, Check, MapPin, Star, Users } from "lucide-react";
+import PlaceReviewCard from "@/components/route/PlaceReviewCard";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -101,7 +101,7 @@ const CreateRoute = () => {
   const [step, setStep] = useState(1);
   const [routeDescription, setRouteDescription] = useState("");
   const [routeRating, setRouteRating] = useState(0);
-  const [showCustomTagInput, setShowCustomTagInput] = useState(false);
+  
   const [showPinsList, setShowPinsList] = useState(false);
   const [isNewDiscovery, setIsNewDiscovery] = useState<{ [key: number]: boolean }>({});
   
@@ -177,7 +177,7 @@ const CreateRoute = () => {
     setStep(1);
     setTripType("completed");
     setShowPinsList(false);
-    setShowCustomTagInput(false);
+    
     setRouteRating(0);
     routeIdRef.current = null; // Reset so new draft is created
   };
@@ -256,12 +256,14 @@ const CreateRoute = () => {
         return {
           place_name: pin.place_name,
           address: pin.address || "Brak adresu",
-          description: pin.description,
+          description: pin.one_liner || pin.description || "",
           image_url: pin.image_url,
           images: pin.images || [],
-          rating: pin.rating,
+          rating: pin.expectation_met === "yes" ? 5 : pin.expectation_met === "average" ? 3 : pin.expectation_met === "no" ? 1 : (pin.rating || 0),
           pin_order: pin.pin_order,
-          tags: pin.tags,
+          tags: [...(pin.pros || []), ...(pin.recommended_for || [])].length > 0 
+            ? [...(pin.pros || []), ...(pin.recommended_for || [])] 
+            : (pin.tags || []),
           is_transport: false,
           latitude: pin.latitude,
           longitude: pin.longitude,
@@ -868,40 +870,6 @@ const CreateRoute = () => {
     });
   }, []);
 
-  // Memoized rating change handler to prevent UI flickering
-  const handleRatingChange = useCallback((rating: number) => {
-    setPins(prevPins => {
-      const newPins = [...prevPins];
-      newPins[currentPinIndex] = { ...newPins[currentPinIndex], rating };
-      return newPins;
-    });
-  }, [currentPinIndex]);
-
-  // Memoized tag toggle handler to prevent UI flickering
-  const handleTagToggle = useCallback((tagName: string) => {
-    setPins(prevPins => {
-      const newPins = [...prevPins];
-      const currentTags = newPins[currentPinIndex]?.tags || [];
-      const isSelected = currentTags.includes(tagName);
-      newPins[currentPinIndex] = {
-        ...newPins[currentPinIndex],
-        tags: isSelected 
-          ? currentTags.filter(t => t !== tagName)
-          : [...currentTags, tagName]
-      };
-      return newPins;
-    });
-  }, [currentPinIndex]);
-
-  // Memoized clear all tags handler
-  const handleClearAllTags = useCallback(() => {
-    setPins(prevPins => {
-      const newPins = [...prevPins];
-      newPins[currentPinIndex] = { ...newPins[currentPinIndex], tags: [] };
-      return newPins;
-    });
-  }, [currentPinIndex]);
-
   const handleImageUpload = async (files: FileList, pinIndex: number) => {
     if (!user) return;
 
@@ -1097,12 +1065,14 @@ const CreateRoute = () => {
         return {
           place_name: pin.place_name,
           address: pin.address || "Brak adresu",
-          description: pin.description,
+          description: pin.one_liner || pin.description || "",
           image_url: pin.image_url,
           images: pin.images || [],
-          rating: pin.rating,
+          rating: pin.expectation_met === "yes" ? 5 : pin.expectation_met === "average" ? 3 : pin.expectation_met === "no" ? 1 : (pin.rating || 0),
           pin_order: pin.pin_order,
-          tags: pin.tags,
+          tags: [...(pin.pros || []), ...(pin.recommended_for || [])].length > 0 
+            ? [...(pin.pros || []), ...(pin.recommended_for || [])] 
+            : (pin.tags || []),
           is_transport: false,
           transport_type: "",
           transport_end: "",
@@ -1705,209 +1675,57 @@ const CreateRoute = () => {
                   </div>
 
 
+                  {/* PlaceReviewCard - replaces description, rating, and tags */}
+                  <PlaceReviewCard
+                    pin={pins[currentPinIndex]}
+                    pinIndex={currentPinIndex}
+                    totalPins={pins.length}
+                    onUpdate={(field, value) => updatePin(currentPinIndex, field, value)}
+                    tripType={tripType}
+                  />
+
+                  {/* Image upload */}
                   <div>
-                    <Label>Opis (Opcjonalne)</Label>
-                    <DebouncedTextarea
-                      value={pins[currentPinIndex]?.description || ""}
-                      onChange={(value) => updatePin(currentPinIndex, "description", value)}
-                      placeholder="Wpisz notatki o tym miejscu..."
-                      rows={3}
-                      maxWords={150}
-                      debounceMs={500}
-                    />
-                  </div>
-
-
-                  {/* Rating - centered - hidden for planning mode */}
-                  {tripType !== "planning" && (
-                    <div className="py-2">
-                      <StarRating
-                        rating={pins[currentPinIndex]?.rating || 0}
-                        onRatingChange={handleRatingChange}
-                        size="lg"
-                        interactive={true}
-                        showLabel={true}
-                        showValue={true}
-                        showReset={true}
-                      />
-                    </div>
-                  )}
-
-                  {/* Image upload - hidden for planning mode */}
-                  {tripType !== "planning" && (
-                    <div>
-                      <Label>Zdjęcie (Opcjonalne)</Label>
-                      <div className="mt-2">
-                        {pins[currentPinIndex]?.image_url ? (
-                          <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
-                            <img
-                              src={pins[currentPinIndex]?.image_url}
-                              alt="Podgląd zdjęcia"
-                              className="w-full h-full object-cover"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                updatePin(currentPinIndex, "image_url", "");
-                                updatePin(currentPinIndex, "images", []);
-                              }}
-                              className="absolute top-2 right-2 bg-background/80 hover:bg-background p-2 rounded-full transition-colors"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent transition-colors">
-                            <Camera className="h-12 w-12 text-muted-foreground mb-2" />
-                            <p className="text-sm text-muted-foreground">
-                              Dotknij, aby dodać zdjęcie
-                            </p>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                if (e.target.files && e.target.files.length > 0) {
-                                  handleImageUpload(e.target.files, currentPinIndex);
-                                  e.target.value = '';
-                                }
-                              }}
-                            />
-                          </label>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-
-                  {/* Categories/Tags Selection - Enhanced */}
-                  <div className="pb-32">
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-base font-semibold">Kategoria (Opcjonalne)</Label>
-                      {(pins[currentPinIndex]?.tags?.length || 0) > 0 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleClearAllTags}
-                          className="text-xs h-7 px-2 text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-3 w-3 mr-1" />
-                          Wyczyść wszystkie
-                        </Button>
+                    <Label>Zdjęcie (Opcjonalne)</Label>
+                    <div className="mt-2">
+                      {pins[currentPinIndex]?.image_url ? (
+                        <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
+                          <img
+                            src={pins[currentPinIndex]?.image_url}
+                            alt="Podgląd zdjęcia"
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updatePin(currentPinIndex, "image_url", "");
+                              updatePin(currentPinIndex, "images", []);
+                            }}
+                            className="absolute top-2 right-2 bg-background/80 hover:bg-background p-2 rounded-full transition-colors"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent transition-colors">
+                          <Camera className="h-12 w-12 text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground">
+                            Dotknij, aby dodać zdjęcie
+                          </p>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files.length > 0) {
+                                handleImageUpload(e.target.files, currentPinIndex);
+                                e.target.value = '';
+                              }
+                            }}
+                          />
+                        </label>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Możesz wybrać kilka kategorii dla tego miejsca
-                    </p>
-                    
-                    {/* Predefined categories */}
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {[
-                        { name: "Restauracja", icon: UtensilsCrossed },
-                        { name: "Kawiarnia", icon: Coffee },
-                        { name: "Jedzenie", icon: UtensilsCrossed },
-                        { name: "Kawa", icon: Coffee },
-                        { name: "Herbata", icon: Coffee },
-                        { name: "Zakupy", icon: ShoppingBag },
-                        { name: "Pamiątki", icon: Gift },
-                        { name: "Góry", icon: Mountain },
-                        { name: "Morze", icon: Waves }
-                      ].map(({ name, icon: Icon }) => {
-                        const isSelected = pins[currentPinIndex]?.tags?.includes(name);
-                        return (
-                          <button
-                            key={name}
-                            type="button"
-                            className={cn(
-                              "inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-all duration-150",
-                              isSelected
-                                ? "bg-foreground text-background border-foreground shadow-md scale-105"
-                                : "bg-background text-foreground border-border hover:border-foreground/50 hover:bg-accent"
-                            )}
-                            onClick={() => handleTagToggle(name)}
-                          >
-                            <Icon className="h-4 w-4" />
-                            <span>{name}</span>
-                            {isSelected && <Check className="h-4 w-4 ml-1" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    
-                    {/* Custom tag input */}
-                    {!showCustomTagInput ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowCustomTagInput(true)}
-                        className="w-full"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Dodaj własną kategorię
-                      </Button>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Wpisz nazwę kategorii..."
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              const value = e.currentTarget.value.trim();
-                              if (value) {
-                                const currentTags = pins[currentPinIndex]?.tags || [];
-                                if (!currentTags.some(t => t.toLowerCase() === value.toLowerCase())) {
-                                  updatePin(currentPinIndex, "tags", [...currentTags, value]);
-                                }
-                                e.currentTarget.value = '';
-                                setShowCustomTagInput(false);
-                              }
-                            }
-                            if (e.key === 'Escape') {
-                              setShowCustomTagInput(false);
-                            }
-                          }}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setShowCustomTagInput(false)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                    
-                    {/* Selected tags summary */}
-                    {pins[currentPinIndex]?.tags && pins[currentPinIndex].tags.length > 0 && (
-                      <div className="mt-4 p-3 bg-muted/50 rounded-lg border border-border">
-                        <p className="text-xs font-medium text-muted-foreground mb-2">
-                          Wybrane kategorie ({pins[currentPinIndex].tags.length}):
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {pins[currentPinIndex].tags.map((tag: string, index: number) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center gap-1.5 bg-background px-2.5 py-1 rounded-md text-sm border"
-                            >
-                              {tag}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const newTags = pins[currentPinIndex].tags.filter((_: string, i: number) => i !== index);
-                                  updatePin(currentPinIndex, "tags", newTags);
-                                }}
-                                className="hover:bg-destructive/10 rounded-full p-0.5 transition-colors"
-                              >
-                                <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
 
