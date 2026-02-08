@@ -1,205 +1,222 @@
 
-# Plan wdrożenia: Notatki na trasie z typami
 
-## Cel
-Rozbudowanie obecnego systemu "Ciekawostek" o wsparcie dla wielu typów notatek, które lepiej opisuja rozne aspekty podrozy - od ciekawostek, przez doswiadczenia, po praktyczne rady i ostrzezenia.
+# Foldery z trasami - Koncepcja implementacji
+
+## Idea
+
+User tworzy folder (np. "JAPONIA"), a w nim grupuje poszczegolne trasy jako "dni" (#1, #2, #3...). Folder dziala jak kolekcja tras z wspolna okladka i opisem.
 
 ---
 
-## Faza 1: Zmiany w bazie danych
+## 1. Zmiany w bazie danych
 
-### 1.1 Migracja - dodanie kolumny `note_type`
-
-Dodanie nowej kolumny do tabeli `route_notes`:
+### 1.1 Nowa tabela `route_folders`
 
 ```sql
-ALTER TABLE public.route_notes 
-ADD COLUMN note_type text NOT NULL DEFAULT 'fact';
-
-COMMENT ON COLUMN public.route_notes.note_type IS 
-'Typ notatki: fact (ciekawostka), experience (doswiadczenie), tip (rada), warning (ostrzezenie)';
+CREATE TABLE public.route_folders (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id),
+  name text NOT NULL,                    -- np. "JAPONIA"
+  description text,                      -- opis folderu
+  cover_image_url text,                  -- okladka
+  folder_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
 ```
 
-**Typy notatek:**
-| Typ | Klucz | Ikona | Kolor |
-|-----|-------|-------|-------|
-| Ciekawostka | `fact` | Sparkles | Amber (obecny) |
-| Doswiadczenie | `experience` | Heart | Rose |
-| Rada | `tip` | Lightbulb | Blue |
-| Ostrzezenie | `warning` | AlertTriangle | Orange |
+### 1.2 Nowa kolumna w `routes`
 
----
-
-## Faza 2: Aktualizacja interfejsu typow
-
-### 2.1 Nowy typ TypeScript
-
-Utworzenie stalych i typow w nowym pliku `src/lib/noteTypes.ts`:
-
-```typescript
-export const NOTE_TYPES = {
-  fact: {
-    label: 'Ciekawostka',
-    icon: Sparkles,
-    bgColor: 'bg-amber-50 dark:bg-amber-950/30',
-    borderColor: 'border-amber-200 dark:border-amber-800',
-    iconColor: 'text-amber-500',
-    labelColor: 'text-amber-600 dark:text-amber-400',
-  },
-  experience: {
-    label: 'Doswiadczenie',
-    icon: Heart,
-    bgColor: 'bg-rose-50 dark:bg-rose-950/30',
-    borderColor: 'border-rose-200 dark:border-rose-800',
-    iconColor: 'text-rose-500',
-    labelColor: 'text-rose-600 dark:text-rose-400',
-  },
-  tip: {
-    label: 'Rada',
-    icon: Lightbulb,
-    bgColor: 'bg-blue-50 dark:bg-blue-950/30',
-    borderColor: 'border-blue-200 dark:border-blue-800',
-    iconColor: 'text-blue-500',
-    labelColor: 'text-blue-600 dark:text-blue-400',
-  },
-  warning: {
-    label: 'Ostrzezenie',
-    icon: AlertTriangle,
-    bgColor: 'bg-orange-50 dark:bg-orange-950/30',
-    borderColor: 'border-orange-200 dark:border-orange-800',
-    iconColor: 'text-orange-500',
-    labelColor: 'text-orange-600 dark:text-orange-400',
-  },
-} as const;
-
-export type NoteType = keyof typeof NOTE_TYPES;
+```sql
+ALTER TABLE public.routes
+ADD COLUMN folder_id uuid REFERENCES public.route_folders(id) ON DELETE SET NULL,
+ADD COLUMN folder_order integer DEFAULT 0;
 ```
 
----
+- `folder_id` jest nullable - trasy bez folderu dzialaja jak dotychczas
+- `folder_order` okresla kolejnosc dnia w folderze (0 = Dzien 1, 1 = Dzien 2...)
+- `ON DELETE SET NULL` - usuniecie folderu nie kasuje tras, tylko je "odczepia"
 
-## Faza 3: Modyfikacja komponentu tworzenia
+### 1.3 RLS
 
-### 3.1 Aktualizacja `PinNotesSection.tsx`
+```sql
+-- Foldery widoczne publicznie (jak trasy published)
+-- Wlasciciel widzi wszystkie swoje
+-- Inni widza foldery z co najmniej 1 opublikowana trasa
+ALTER TABLE route_folders ENABLE ROW LEVEL SECURITY;
 
-**Zmiany w interfejsie `PinNote`:**
-```typescript
-interface PinNote {
-  id?: string;
-  text: string;
-  imageUrl?: string;
-  note_order: number;
-  note_type: NoteType; // NOWE
-}
+CREATE POLICY "Folder owner full access" ON route_folders
+  FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Public folders viewable" ON route_folders
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM routes 
+      WHERE routes.folder_id = route_folders.id 
+      AND routes.status = 'published'
+    )
+  );
 ```
 
-**Nowy UI wyboru typu** - przed polem tekstowym pojawia sie selektor typu:
+### 1.4 Diagram relacji
 
 ```text
-+------------------------------------------+
-| [Ciekawostka] [Doswiadczenie] [Rada] [!] |   <- przyciski typu
-+------------------------------------------+
-| [                Tekst notatki...      ] |
-|                                    [Foto]|
-+------------------------------------------+
+route_folders (1) ----< (N) routes
+     |                        |
+     +-- id                   +-- folder_id (nullable FK)
+     +-- user_id              +-- folder_order
+     +-- name                 +-- title (np. "Dzien 1 - Tokio")
+     +-- description          +-- ...existing columns
+     +-- cover_image_url
 ```
-
-Przyciski typu beda:
-- Kompaktowe ikony z tooltipem
-- Aktywny typ podswietlony kolorem
-- Domyslnie wybrana "Ciekawostka" (fact)
-
-### 3.2 Zmiana etykiety sekcji
-
-Z "Ciekawe na trasie" na "Notatki na trasie" z nowa ikona (StickyNote lub NotebookPen).
 
 ---
 
-## Faza 4: Modyfikacja wyswietlania
+## 2. Nowe komponenty UI
 
-### 4.1 Aktualizacja `RouteDetails.tsx` - komponent `RouteNotesDisplay`
+### 2.1 Karta folderu - `FolderCard.tsx`
 
-Kazda notatka bedzie wyswietlana z odpowiednim stylem na podstawie `note_type`:
+Wyswietlana na liscie "Moje Trasy" i profilu uzytkownika:
 
 ```text
-+-- Ciekawostka ----------------------+
-| [Sparkles] Ciekawe na trasie        |
-|                                     |
-| Tekst notatki o ciekawostce...      |
-+-------------------------------------+
-
-+-- Doswiadczenie --------------------+
-| [Heart] Doswiadczenie               |
-|                                     |
-| To miejsce ma magiczna atmosfere... |
-+-------------------------------------+
++---------------------------------------+
+| [Okladka folderu - full width]        |
+|                                       |
+|  JAPONIA                              |
+|  "2 tygodnie w Kraju Kwitnacych..."   |
+|                                       |
+|  [Dzien 1] [Dzien 2] [Dzien 3] +4    |  <- mini-chips z dniami
+|                                       |
+|  5 tras  |  23 pinezki  |  4.8 ★     |
++---------------------------------------+
 ```
 
-### 4.2 Logika wyswietlania
+Klikniecie otwiera widok folderu.
 
-- Notatki grupowane przy odpowiednich pinach (bez zmian)
-- Kazdy typ ma wlasny kolor tla, obramowania i ikone
-- Etykieta dynamiczna na podstawie `note_type`
+### 2.2 Widok folderu - `FolderDetails.tsx`
+
+Nowa strona `/folder/:id` z lista tras-dni:
+
+```text
++---------------------------------------+
+| <- Powrot          [Edytuj] [Udostep] |
++---------------------------------------+
+| [Okladka]                             |
+| JAPONIA                               |
+| 14 dni  |  67 pinezek  |  4.7 ★      |
++---------------------------------------+
+|                                       |
+| Dzien 1 - Tokio              4.8 ★   |
+|   8 pinezek  |  Opublikowana         |
+|                                       |
+| Dzien 2 - Kamakura           4.5 ★   |
+|   5 pinezek  |  Opublikowana         |
+|                                       |
+| Dzien 3 - Kioto              4.9 ★   |
+|   6 pinezek  |  Robocza [draft]      |
+|                                       |
+| [+ Dodaj kolejny dzien]              |
++---------------------------------------+
+```
+
+### 2.3 Tworzenie folderu - `CreateFolder.tsx` lub modal
+
+Prosty formularz:
+- Nazwa folderu (np. "JAPONIA")
+- Opis (opcjonalny)
+- Okladka (opcjonalna)
+- Wybor istniejacych tras do dodania (opcjonalny)
 
 ---
 
-## Faza 5: Aktualizacja zapisywania
+## 3. Modyfikacje istniejacych komponentow
 
-### 5.1 `CreateRoute.tsx` - funkcja `autoSaveRoute`
+### 3.1 `MyRoutes.tsx` - nowy tab "Foldery"
 
-Dodanie `note_type` do obiektow notatek przy zapisie:
+Obecne taby: `Opublikowane` | `Robocze`
+
+Po zmianie: `Opublikowane` | `Robocze` | `Foldery`
+
+Tab "Foldery" wyswietla liste `FolderCard` + przycisk "Nowy folder".
+
+Trasy przypisane do folderu moga byc ukryte z glownej listy (lub oznaczone ikona folderu).
+
+### 3.2 `CreateRoute.tsx` - przypisanie do folderu
+
+Dodanie opcjonalnego selecta "Dodaj do folderu" na kroku 1 (metadane trasy):
+
+```text
+Tytul trasy: [Dzien 1 - Tokio        ]
+Opis:        [Swiatynie i ogrody...   ]
+Folder:      [JAPONIA            ▼]  <- dropdown z folderami usera
+```
+
+Jesli user wybierze folder, trasa automatycznie dostaje `folder_order` = nastepny numer.
+
+### 3.3 `RouteDetails.tsx` - breadcrumb do folderu
+
+Jesli trasa nalezy do folderu, nad tytulem pojawia sie link:
+
+```text
+JAPONIA > Dzien 2 - Kamakura
+```
+
+### 3.4 `RouteCard.tsx` - badge folderu
+
+Jesli trasa jest czescia folderu, na karcie pojawia sie maly badge:
+
+```text
+[Folder] JAPONIA - Dzien 2
+```
+
+### 3.5 `BottomNav.tsx` / `CreateModeDrawer.tsx`
+
+Opcja "Nowy folder" obok "Nowa trasa" w drawerze tworzenia.
+
+---
+
+## 4. Routing
+
+Nowe sciezki w `App.tsx`:
 
 ```typescript
-allNotesToInsert.push({
-  route_id: routeIdRef.current,
-  pin_id: insertedPin.id,
-  text: note.text,
-  image_url: note.imageUrl,
-  note_order: note.note_order,
-  note_type: note.note_type || 'fact', // NOWE
-});
+<Route path="/folder/:id" element={<AppLayout><FolderDetails /></AppLayout>} />
+<Route path="/create-folder" element={<CreateFolder />} />
+<Route path="/edit-folder/:id" element={<CreateFolder />} />
 ```
-
-### 5.2 Wczytywanie istniejacych tras
-
-Przy edycji trasy - mapowanie `note_type` z bazy na stan komponentu.
 
 ---
 
-## Podsumowanie zmian w plikach
+## 5. Zachowanie zapisanych tras
 
-| Plik | Rodzaj zmiany |
-|------|---------------|
-| `supabase/migrations/[nowa].sql` | Dodanie kolumny `note_type` |
-| `src/lib/noteTypes.ts` | NOWY - definicje typow i stylowania |
-| `src/components/route/PinNotesSection.tsx` | Dodanie selektora typu, aktualizacja interfejsu |
-| `src/pages/CreateRoute.tsx` | Zapis `note_type`, wczytywanie przy edycji |
-| `src/pages/RouteDetails.tsx` | Dynamiczne stylowanie na podstawie typu |
+`SavedRoutes.tsx` - mozliwosc zapisania calego folderu (nowa tabela `saved_folders` lub grupowanie zapisanych tras po folderze).
 
 ---
 
-## Szczegoly techniczne
+## 6. Podsumowanie plikow
 
-### Wybor typu w UI
+| Plik | Zmiana |
+|------|--------|
+| `supabase/migrations/[nowa].sql` | Tabela `route_folders`, kolumny w `routes`, RLS |
+| `src/components/route/FolderCard.tsx` | NOWY - karta folderu |
+| `src/pages/FolderDetails.tsx` | NOWY - widok szczegolowy folderu |
+| `src/pages/CreateFolder.tsx` | NOWY - tworzenie/edycja folderu |
+| `src/pages/MyRoutes.tsx` | Nowy tab "Foldery" |
+| `src/pages/CreateRoute.tsx` | Dropdown "Dodaj do folderu" |
+| `src/pages/RouteDetails.tsx` | Breadcrumb do folderu |
+| `src/components/route/RouteCard.tsx` | Badge folderu |
+| `src/components/route/CreateModeDrawer.tsx` | Opcja "Nowy folder" |
+| `src/App.tsx` | Nowe routy |
 
-Selektor typow bedzie zaimplementowany jako grupa przyciskow Toggle:
+---
 
-```tsx
-<ToggleGroup type="single" value={noteType} onValueChange={setNoteType}>
-  {Object.entries(NOTE_TYPES).map(([key, config]) => (
-    <ToggleGroupItem key={key} value={key} className="...">
-      <config.icon className="h-4 w-4" />
-    </ToggleGroupItem>
-  ))}
-</ToggleGroup>
-```
+## 7. Wazne decyzje projektowe
 
-### Kompatybilnosc wsteczna
+**Folder vs. "Multi-day Route"**: Folder to luzna kolekcja tras - kazdy dzien to oddzielna, pelna trasa z wlasnymi pinami, notatkami, ocenami. Nie ma jednej "super-trasy" - folder tylko grupuje.
 
-- Istniejace notatki bez `note_type` beda traktowane jako `fact` (domyslna wartosc)
-- Migracja nie wymaga aktualizacji istniejacych danych
+**Widocznosc**: Folder jest widoczny publicznie jesli zawiera co najmniej 1 opublikowana trase. Robocze trasy w folderze widzi tylko wlasciciel.
 
-### Przyszle rozszerzenia (poza zakresem)
+**Kompatybilnosc**: Istniejace trasy dzialaja bez zmian (`folder_id = NULL`). Folder jest calkowicie opcjonalny.
 
-- Oficjalne notatki biznesowe dla Premium Pins
-- Filtrowanie notatek po typie w widoku trasy
-- Statystyki typow notatek w profilu uzytkownika
+**Kolejnosc dni**: `folder_order` na trasach pozwala na drag-and-drop reorderowanie dni w folderze (analogicznie do obecnego DraggablePinList).
+
