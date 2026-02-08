@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useFolders } from "@/hooks/useFolders";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,9 +75,12 @@ interface Pin {
 
 const CreateRoute = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { folders } = useFolders();
+  const [folderId, setFolderId] = useState<string | null>(searchParams.get("folder"));
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [pins, setPins] = useState<Pin[]>([
@@ -275,7 +279,8 @@ const CreateRoute = () => {
             description: routeDescription || description, 
             status: "draft", 
             rating: routeRating, 
-            trip_type: tripType || 'completed' 
+            trip_type: tripType || 'completed',
+            folder_id: folderId || null
           })
           .eq("id", routeIdRef.current);
 
@@ -343,7 +348,8 @@ const CreateRoute = () => {
             description: routeDescription || description, 
             status: "draft", 
             rating: routeRating, 
-            trip_type: tripType || 'completed' 
+            trip_type: tripType || 'completed',
+            folder_id: folderId || null
           })
           .select()
           .single();
@@ -410,7 +416,7 @@ const CreateRoute = () => {
       saveInProgressRef.current = false;
       setAutoSaving(false);
     }
-  }, [user, title, description, routeDescription, pins, routeRating, tripType, saving]);
+  }, [user, title, description, routeDescription, pins, routeRating, tripType, folderId, saving]);
 
   // Auto-save interval (every 30 seconds)
   useEffect(() => {
@@ -655,6 +661,7 @@ const CreateRoute = () => {
       setTitle(existingRoute.title);
       setDescription(existingRoute.description || "");
       setRouteDescription(existingRoute.description || "");
+      setFolderId(existingRoute.folder_id || null);
       if (existingRoute.pins?.length > 0) {
         const pinNotes = existingRoute.pin_notes || [];
         setPins(
@@ -1070,7 +1077,7 @@ const CreateRoute = () => {
       if (existingRouteId) {
         const { error: routeError } = await supabase
           .from("routes")
-          .update({ title, description: routeDescription || description, status, rating: routeRating, trip_type: tripType || 'completed' })
+          .update({ title, description: routeDescription || description, status, rating: routeRating, trip_type: tripType || 'completed', folder_id: folderId || null })
           .eq("id", existingRouteId);
 
         if (routeError) throw routeError;
@@ -1151,7 +1158,7 @@ const CreateRoute = () => {
       } else {
         const { data: route, error: routeError } = await supabase
           .from("routes")
-          .insert({ user_id: user.id, title, description: routeDescription || description, status, rating: routeRating, trip_type: tripType || 'completed' })
+          .insert({ user_id: user.id, title, description: routeDescription || description, status, rating: routeRating, trip_type: tripType || 'completed', folder_id: folderId || null })
           .select()
           .single();
 
@@ -1317,6 +1324,22 @@ const CreateRoute = () => {
               </p>
             </div>
 
+            {/* Folder selector */}
+            {folders.length > 0 && (
+              <div>
+                <Label>Folder (opcjonalny)</Label>
+                <select
+                  value={folderId || ""}
+                  onChange={(e) => setFolderId(e.target.value || null)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Bez folderu</option>
+                  {folders.map((f) => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <Button
               variant="default"

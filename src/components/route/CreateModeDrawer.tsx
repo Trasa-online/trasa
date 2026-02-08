@@ -421,6 +421,32 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
                 </div>
               </button>
 
+              {/* New Folder Option */}
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenChange(false);
+                  setTimeout(() => {
+                    resetState();
+                    navigate("/create-folder");
+                  }, 300);
+                }}
+                className={cn(
+                  "w-full p-4 rounded-xl border-2 transition-all text-left",
+                  "border-border hover:border-primary/50 hover:shadow-sm hover:bg-primary/5"
+                )}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="text-3xl">📁</div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-sm mb-0.5">Nowy folder</div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Grupuj trasy w foldery, np. każdy dzień podróży osobno
+                    </p>
+                  </div>
+                </div>
+              </button>
+
               {/* Helpful hint */}
               <div className="p-3 bg-muted/50 rounded-lg border border-border">
                 <p className="text-xs text-muted-foreground leading-relaxed">

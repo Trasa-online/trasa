@@ -275,6 +275,17 @@ const RouteDetails = () => {
 
       if (error) throw error;
 
+      // Fetch folder info if route belongs to a folder
+      let folderInfo = null;
+      if (data.folder_id) {
+        const { data: folder } = await supabase
+          .from("route_folders")
+          .select("id, name")
+          .eq("id", data.folder_id)
+          .maybeSingle();
+        folderInfo = folder;
+      }
+
       // Fetch pin notes - now linked to pins
       const pinIds = data.pins?.map((p: any) => p.id) || [];
       let pinNotes: any[] = [];
@@ -286,7 +297,7 @@ const RouteDetails = () => {
         pinNotes = notes || [];
       }
 
-      return { ...data, pin_notes: pinNotes };
+      return { ...data, pin_notes: pinNotes, folder: folderInfo };
     },
     enabled: !!id && !!user,
   });
@@ -756,6 +767,17 @@ const RouteDetails = () => {
 
         {/* Route Header with Title and Rating */}
         <div className="bg-card border border-border rounded-xl p-4">
+          {/* Folder breadcrumb */}
+          {route.folder && (
+            <Link 
+              to={`/folder/${route.folder.id}`}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline mb-2"
+            >
+              <span>📁</span>
+              <span>{route.folder.name}</span>
+              <span className="text-muted-foreground">›</span>
+            </Link>
+          )}
           <h2 className="text-xl font-bold leading-tight mb-3">{route.title}</h2>
           {route.description && (
             <p className="text-sm text-muted-foreground leading-relaxed">

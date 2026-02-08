@@ -21,6 +21,8 @@ import Profile from "./pages/Profile";
 import Friends from "./pages/Friends";
 import PinDetails from "./pages/PinDetails";
 import QRCodePage from "./pages/QRCode";
+import FolderDetails from "./pages/FolderDetails";
+import CreateFolder from "./pages/CreateFolder";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +50,9 @@ const App = () => (
           <Route path="/notifications" element={<AppLayout><Notifications /></AppLayout>} />
           <Route path="/profile/:userId" element={<AppLayout><Profile /></AppLayout>} />
           <Route path="/friends/:userId" element={<AppLayout><Friends /></AppLayout>} />
+          <Route path="/folder/:id" element={<AppLayout><FolderDetails /></AppLayout>} />
+          <Route path="/create-folder" element={<CreateFolder />} />
+          <Route path="/edit-folder/:id" element={<CreateFolder />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
