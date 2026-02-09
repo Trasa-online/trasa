@@ -25,7 +25,7 @@ interface Pin {
   latitude?: number;
   longitude?: number;
   notes: PinNote[];
-  expectation_met: "yes" | "average" | "no" | null;
+  expectation_met: "yes" | "average" | "no" | "na" | null;
   pros: string[];
   cons: string[];
   trip_role: "must_see" | "nice_addition" | "skippable" | null;
@@ -47,9 +47,10 @@ const CONS_OPTIONS = ["Tłoczno", "Nie warte ceny", "Słaba organizacja", "Trudn
 const RECOMMENDED_FOR_OPTIONS = ["Solo", "Para", "Rodzina", "Budżetowo", "Slow travel", "Foodie"];
 
 const EXPECTATION_OPTIONS = [
-  { value: "yes" as const, emoji: "😊", label: "Tak", selectedClasses: "bg-green-100 border-green-500 dark:bg-green-900/30 dark:border-green-500" },
-  { value: "average" as const, emoji: "😐", label: "Średnio", selectedClasses: "bg-amber-100 border-amber-500 dark:bg-amber-900/30 dark:border-amber-500" },
+  { value: "yes" as const, emoji: "🤩", label: "Tak", selectedClasses: "bg-green-100 border-green-500 dark:bg-green-900/30 dark:border-green-500" },
+  { value: "average" as const, emoji: "😐", label: "Okej", selectedClasses: "bg-amber-100 border-amber-500 dark:bg-amber-900/30 dark:border-amber-500" },
   { value: "no" as const, emoji: "😕", label: "Nie", selectedClasses: "bg-red-100 border-red-500 dark:bg-red-900/30 dark:border-red-500" },
+  { value: "na" as const, emoji: "➖", label: "Nie dotyczy", selectedClasses: "bg-muted border-muted-foreground/50 dark:bg-muted dark:border-muted-foreground/50" },
 ];
 
 const TRIP_ROLE_OPTIONS = [
