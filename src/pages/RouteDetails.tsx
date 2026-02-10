@@ -11,8 +11,7 @@ import { getNoteTypeConfig, NoteType } from "@/lib/noteTypes";
 import { getPinImage, getPinImagesForRoute } from "@/lib/pinPlaceholders";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 import { FullscreenMapDialog } from "@/components/route/FullscreenMapDialog";
-import StarRating from "@/components/route/StarRating";
-import PinReviewBadges from "@/components/route/PinReviewBadges";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -157,36 +156,61 @@ const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pin
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
+                    {/* Name + trip role badge */}
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Link to={`/pin/${pin.id}`} className="hover:text-primary transition-colors">
-                          <h4 className="font-semibold text-sm leading-tight">
-                            {pin.place_name || pin.address}
-                          </h4>
-                        </Link>
-                      </div>
-                      {!pin.is_transport && pin.rating && (
-                        <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded flex-shrink-0">
-                          <StarRating rating={pin.rating || 0} size="sm" />
-                        </div>
+                      <Link to={`/pin/${pin.id}`} className="hover:text-primary transition-colors">
+                        <h4 className="font-semibold text-sm leading-tight">
+                          {pin.place_name || pin.address}
+                        </h4>
+                      </Link>
+                      {pin.trip_role && (
+                        <span className={cn(
+                          "text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0",
+                          pin.trip_role === "must_see" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                          pin.trip_role === "nice_addition" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                          pin.trip_role === "skippable" && "bg-muted text-muted-foreground"
+                        )}>
+                          {pin.trip_role === "must_see" ? "⭐ Obowiązkowy" : pin.trip_role === "nice_addition" ? "➕ Fajny dodatek" : "🔁 Można pominąć"}
+                        </span>
                       )}
                     </div>
+
                     {pin.place_name && pin.address !== pin.place_name && (
-                      <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
+                      <p className="text-[11px] text-muted-foreground mb-1">{pin.address}</p>
                     )}
-                    {!pin.place_name && (
-                      <p className="text-xs text-muted-foreground mb-1">{pin.address}</p>
-                    )}
-                    {pin.description && (
-                      <p className="text-xs text-muted-foreground leading-relaxed mt-1">
-                        {pin.description}
+
+                    {(pin.one_liner || pin.description) && (
+                      <p className="text-xs text-muted-foreground leading-relaxed mt-1 italic">
+                        „{pin.one_liner || pin.description}"
                       </p>
                     )}
-                    
-                    {/* Pin review badges */}
-                    <PinReviewBadges pin={pin} />
 
-                    {/* Pin visitors section */}
+                    {pin.expectation_met && (
+                      <span className={cn(
+                        "inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full mt-1.5",
+                        pin.expectation_met === "yes" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                        pin.expectation_met === "average" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                        pin.expectation_met === "no" && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      )}>
+                        {pin.expectation_met === "yes" ? "😊 Spełniło oczekiwania" : pin.expectation_met === "average" ? "😐 Średnio" : "😕 Poniżej oczekiwań"}
+                      </span>
+                    )}
+
+                    {(pin.pros?.length > 0 || pin.cons?.length > 0) && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {pin.pros?.slice(0, 3).map((pro: string, i: number) => (
+                          <span key={`pro-${i}`} className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">
+                            +{pro}
+                          </span>
+                        ))}
+                        {pin.cons?.slice(0, 2).map((con: string, i: number) => (
+                          <span key={`con-${i}`} className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                            −{con}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     <PinVisitors pinId={pin.id} />
                   </div>
                 </div>
