@@ -170,6 +170,29 @@ const Profile = () => {
     };
   }, [routes]);
 
+  const travelPreferences = useMemo(() => {
+    if (!routes || routes.length < 2) return null;
+    const allPins = routes.flatMap((r: any) => r.pins || []);
+    if (allPins.length < 5) return null;
+    const prosFreq = new Map<string, number>();
+    allPins.forEach((p: any) => {
+      p.pros?.forEach((pro: string) => prosFreq.set(pro, (prosFreq.get(pro) || 0) + 1));
+    });
+    const topPros = [...prosFreq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([pro]) => pro);
+    const consFreq = new Map<string, number>();
+    allPins.forEach((p: any) => {
+      p.cons?.forEach((con: string) => consFreq.set(con, (consFreq.get(con) || 0) + 1));
+    });
+    const topCons = [...consFreq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([con]) => con);
+    const roleCount = { must_see: 0, nice_addition: 0, skippable: 0 };
+    allPins.forEach((p: any) => {
+      if (p.trip_role && roleCount.hasOwnProperty(p.trip_role)) {
+        roleCount[p.trip_role as keyof typeof roleCount]++;
+      }
+    });
+    return { topPros, topCons, roleCount };
+  }, [routes]);
+
   const handleFollowToggle = async () => {
     if (!user || !userId) return;
 
@@ -344,6 +367,57 @@ const Profile = () => {
               </span>
             )}
           </div>
+        </div>
+      )}
+
+      {user.id !== userId && travelPreferences && (
+        <div className="space-y-3">
+          <h3 className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase">
+            Co ceni w podróży
+          </h3>
+          {travelPreferences.topPros.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[11px] text-muted-foreground">Najczęściej chwali:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {travelPreferences.topPros.map((pro, i) => (
+                  <span key={i} className="text-xs px-2.5 py-1 rounded-full bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 font-medium">
+                    ✓ {pro}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {travelPreferences.topCons.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[11px] text-muted-foreground">Często zwraca uwagę na:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {travelPreferences.topCons.map((con, i) => (
+                  <span key={i} className="text-xs px-2.5 py-1 rounded-full bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 font-medium">
+                    {con}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {(travelPreferences.roleCount.must_see + travelPreferences.roleCount.nice_addition + travelPreferences.roleCount.skippable) > 0 && (
+            <div className="flex gap-2">
+              {travelPreferences.roleCount.must_see > 0 && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">{travelPreferences.roleCount.must_see}</span> obowiązkowych
+                </div>
+              )}
+              {travelPreferences.roleCount.nice_addition > 0 && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">{travelPreferences.roleCount.nice_addition}</span> bonusów
+                </div>
+              )}
+              {travelPreferences.roleCount.skippable > 0 && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">{travelPreferences.roleCount.skippable}</span> do pominięcia
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
