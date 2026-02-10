@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import TripFeedCard from "@/components/feed/TripFeedCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Settings } from "lucide-react";
+import { Settings, MapPin, Plus } from "lucide-react";
 
 const Profile = () => {
   const { user, loading } = useAuth();
@@ -348,13 +348,33 @@ const Profile = () => {
       )}
 
       <div className="space-y-4">
-        {routes?.map((route) => (
-          <TripFeedCard key={route.id} route={route} currentUserId={user?.id} />
-        ))}
-        {!routes?.length && (
-          <p className="text-center text-muted-foreground py-8">
-            Brak opublikowanych tras
-          </p>
+        <h3 className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase">
+          {user.id === userId ? "Twoje trasy" : `Trasy (${routes?.length || 0})`}
+        </h3>
+        {routes && routes.length > 0 ? (
+          <div className="space-y-4">
+            {routes.map((route) => (
+              <TripFeedCard key={route.id} route={route} currentUserId={user?.id} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="bg-muted rounded-full p-4 mb-3">
+              <MapPin className="h-10 w-10 text-muted-foreground/40" />
+            </div>
+            <p className="text-sm font-medium mb-1">
+              {user.id === userId ? "Nie masz jeszcze opublikowanych tras" : "Brak opublikowanych tras"}
+            </p>
+            <p className="text-xs text-muted-foreground mb-3 max-w-[240px]">
+              {user.id === userId ? "Stwórz trasę i podziel się swoimi podróżami" : "Ten podróżnik nie opublikował jeszcze żadnej trasy"}
+            </p>
+            {user.id === userId && (
+              <Button variant="outline" size="sm" onClick={() => navigate("/create")}>
+                <Plus className="h-4 w-4 mr-1.5" />
+                Stwórz trasę
+              </Button>
+            )}
+          </div>
         )}
       </div>
       </div>
