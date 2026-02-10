@@ -288,13 +288,14 @@ const CreateRoute = () => {
           return;
         }
 
-        // Update existing route
+        // Update existing route - preserve published status if editing published route
+        const currentStatus = existingRoute?.status === "published" ? "published" : "draft";
         await supabase
           .from("routes")
           .update({ 
             title, 
             description: routeDescription || description, 
-            status: "draft", 
+            status: currentStatus, 
             rating: routeRating, 
             trip_type: tripType || 'completed',
             folder_id: folderId || null
@@ -1936,7 +1937,9 @@ const CreateRoute = () => {
             <AlertDialogAction
               onClick={async (e) => {
                 e.preventDefault();
-                await saveRoute("draft");
+                // Preserve status: if editing published route, save as published
+                const saveStatus = existingRoute?.status === "published" ? "published" : "draft";
+                await saveRoute(saveStatus);
                 // Navigation happens inside saveRoute, no need to close dialog
               }}
               disabled={saving}
