@@ -863,26 +863,33 @@ const RouteDetails = () => {
           currentUserId={user.id}
         />
 
-        <div className="flex items-center gap-5 py-4 border-y border-border">
+        <div className="flex items-center gap-5 py-3">
           <button
             onClick={() => likeMutation.mutate()}
-            className="flex items-center gap-2 text-muted-foreground hover:text-red-500 transition-all duration-200"
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-red-500 transition-all duration-200"
           >
-            <Heart
-              className={`h-[18px] w-[18px] transition-transform hover:scale-110 ${isLiked ? "fill-red-500 text-red-500" : ""}`}
-            />
+            <Heart className={cn("h-5 w-5 transition-transform active:scale-125", isLiked && "fill-red-500 text-red-500")} />
             <span className="text-sm font-semibold tabular-nums">{likes?.length || 0}</span>
           </button>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <MessageCircle className="h-[18px] w-[18px]" />
+          <button
+            onClick={() => document.getElementById("comments")?.scrollIntoView({ behavior: "smooth" })}
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <MessageCircle className="h-5 w-5" />
             <span className="text-sm font-semibold tabular-nums">{comments?.length || 0}</span>
-          </div>
+          </button>
           <button
             onClick={() => saveMutation.mutate()}
-            className={`flex items-center gap-2 transition-all duration-200 ${isSaved ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            className={cn("flex items-center gap-1.5 transition-all duration-200", isSaved ? "text-foreground" : "text-muted-foreground hover:text-foreground")}
           >
-            <Bookmark className={`h-[18px] w-[18px] transition-transform hover:scale-110 ${isSaved ? "fill-foreground" : ""}`} />
+            <Bookmark className={cn("h-5 w-5 transition-transform active:scale-125", isSaved && "fill-foreground")} />
             <span className="text-sm font-semibold tabular-nums">{saveCount}</span>
+          </button>
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors ml-auto"
+          >
+            <Share2 className="h-5 w-5" />
           </button>
         </div>
 
