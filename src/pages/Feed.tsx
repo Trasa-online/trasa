@@ -1,13 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin } from "lucide-react";
+import { MapPin, RefreshCw } from "lucide-react";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import TripFeedCard from "@/components/feed/TripFeedCard";
+import TripFeedCardSkeleton from "@/components/feed/TripFeedCardSkeleton";
 import { Button } from "@/components/ui/button";
+
+const STALE_MINUTES = 5;
 
 const Feed = () => {
   const { user, loading } = useAuth();
@@ -19,7 +22,7 @@ const Feed = () => {
     }
   }, [user, loading, navigate]);
 
-  const { data: routes, isLoading: routesLoading } = useQuery({
+  const { data: routes, isLoading: routesLoading, dataUpdatedAt, refetch, isFetching } = useQuery({
     queryKey: ["feed-routes", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -56,6 +59,9 @@ const Feed = () => {
     refetchInterval: 30000,
   });
 
+  // Check if data is stale (older than 5 minutes)
+  const isStale = dataUpdatedAt > 0 && Date.now() - dataUpdatedAt > STALE_MINUTES * 60 * 1000;
+
   if (loading) {
     return null;
   }
@@ -74,11 +80,28 @@ const Feed = () => {
       />
       
       <div className="p-4 space-y-4">
+        {/* Refresh banner when data is stale or refetching indicator */}
+        {isFetching && !routesLoading && (
+          <div className="flex items-center justify-center gap-2 py-2 text-xs text-muted-foreground">
+            <RefreshCw className="h-3 w-3 animate-spin" />
+            <span>Odświeżanie...</span>
+          </div>
+        )}
+        {isStale && !isFetching && routes && routes.length > 0 && (
+          <button
+            onClick={() => refetch()}
+            className="w-full flex items-center justify-center gap-2 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <RefreshCw className="h-3 w-3" />
+            <span>Odśwież feed</span>
+          </button>
+        )}
+
         {routesLoading ? (
           <div className="space-y-4">
-            <div className="rounded-xl bg-muted animate-pulse h-[300px]" />
-            <div className="rounded-xl bg-muted animate-pulse h-[280px]" />
-            <div className="rounded-xl bg-muted animate-pulse h-[280px]" />
+            <TripFeedCardSkeleton />
+            <TripFeedCardSkeleton />
+            <TripFeedCardSkeleton />
           </div>
         ) : routes && routes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
