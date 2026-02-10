@@ -1797,31 +1797,16 @@ const CreateRoute = () => {
               {/* Review summary stats */}
               <RouteReviewSummary pins={pins} />
 
-              {/* Pins list */}
-              <div className="space-y-3">
+              {/* Pins list - read-only summary */}
+              <div>
                 <DraggablePinList
                   pins={pins}
                   onReorder={setPins}
-                  onPinNotesChange={(pinIndex, notes) => updatePin(pinIndex, "notes", notes)}
-                  onPinNameChange={(pinIndex, name) => updatePin(pinIndex, "place_name", name)}
                   showRemoveButton={false}
-                  showNotesEditor={true}
-                  showNameEditor={true}
+                  showNotesEditor={false}
+                  showNameEditor={false}
                   compact={false}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full text-[13px]"
-                  onClick={() => {
-                    addPin();
-                    setStep(2);
-                    setShowPinsList(false);
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-1.5" />
-                  Dodaj pinezkę
-                </Button>
               </div>
 
               {/* Route description */}
@@ -1850,7 +1835,7 @@ const CreateRoute = () => {
               </div>
 
               {/* Friend mentions for route */}
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block">Oznacz znajomych</label>
                 <UserMentionInput
                   selectedUserIds={routeMentionedUsers}
