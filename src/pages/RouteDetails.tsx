@@ -100,20 +100,15 @@ const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pin
   const toggleNoteImage = (noteId: string) => {
     setHiddenNoteImages(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(noteId)) {
-        newSet.delete(noteId);
-      } else {
-        newSet.add(noteId);
-      }
+      if (newSet.has(noteId)) newSet.delete(noteId);
+      else newSet.add(noteId);
       return newSet;
     });
   };
 
   const sortedPins = pins?.slice().sort((a: any, b: any) => a.pin_order - b.pin_order) || [];
-  
-  // Get images for all pins ensuring no consecutive placeholders are the same
   const pinImages = getPinImagesForRoute(sortedPins);
-  
+
   // Group notes by pin_id
   const notesByPinId = new Map<string, any[]>();
   pinNotes?.forEach((note: any) => {
@@ -122,145 +117,136 @@ const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pin
   });
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <div className="p-4 border-b border-border/50">
-        <h3 className="text-base font-semibold">
-          Przystanki ({pins?.length || 0})
-        </h3>
-      </div>
-      
-      <div className="divide-y divide-border/50">
-        {sortedPins.map((pin: any, index: number) => {
-          const pinNotesForThis = notesByPinId.get(pin.id) || [];
+    <div className="space-y-3">
+      <h3 className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase">
+        Przystanki ({pins?.length || 0})
+      </h3>
 
-          return (
-            <div key={pin.id}>
-              <div className="p-4">
-                <div className="flex gap-3">
-                  <div 
-                    className="flex-shrink-0 relative cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => {
-                      if (pin.image_url) {
-                        const allImages = sortedPins.filter((p: any) => p.image_url).map((p: any) => p.image_url);
-                        const idx = allImages.indexOf(pin.image_url);
-                        lightbox.openLightbox(allImages, idx >= 0 ? idx : 0);
-                      }
-                    }}
-                  >
-                    <img
-                      src={pinImages[index]}
-                      alt={pin.place_name || pin.address}
-                      className="w-20 h-20 object-cover rounded-lg ring-1 ring-border"
-                    />
-                    <div className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center ring-1 ring-border">
-                      <span className="text-xs font-bold">{index + 1}</span>
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    {/* Name + trip role badge */}
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <Link to={`/pin/${pin.id}`} className="hover:text-primary transition-colors">
-                        <h4 className="font-semibold text-sm leading-tight">
-                          {pin.place_name || pin.address}
-                        </h4>
-                      </Link>
-                      {(() => {
-                        const badge = getTripRoleBadge(pin.trip_role);
-                        return badge ? (
-                          <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0", badge.className)}>
-                            {badge.emoji} {badge.label}
-                          </span>
-                        ) : null;
-                      })()}
-                    </div>
+      {sortedPins.map((pin: any, index: number) => {
+        const pinNotesForThis = notesByPinId.get(pin.id) || [];
+        const hasImage = !!pin.image_url;
+        const displayImage = pinImages[index];
+        const tripRoleBadge = getTripRoleBadge(pin.trip_role);
+        const expectationBadge = getExpectationBadge(pin.expectation_met);
 
-                    {pin.place_name && pin.address !== pin.place_name && (
-                      <p className="text-[11px] text-muted-foreground mb-1">{pin.address}</p>
-                    )}
-
-                    {(pin.one_liner || pin.description) && (
-                      <p className="text-xs text-muted-foreground leading-relaxed mt-1 italic">
-                        „{pin.one_liner || pin.description}"
-                      </p>
-                    )}
-
-                    {(() => {
-                      const badge = getExpectationBadge(pin.expectation_met);
-                      return badge ? (
-                        <span className={cn("inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full mt-1.5", badge.className)}>
-                          {badge.emoji} {badge.label}
-                        </span>
-                      ) : null;
-                    })()}
-
-                    {(pin.pros?.length > 0 || pin.cons?.length > 0) && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {pin.pros?.slice(0, 3).map((pro: string, i: number) => (
-                          <span key={`pro-${i}`} className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">
-                            +{pro}
-                          </span>
-                        ))}
-                        {pin.cons?.slice(0, 2).map((con: string, i: number) => (
-                          <span key={`con-${i}`} className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400">
-                            −{con}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    <PinVisitors pinId={pin.id} />
-                  </div>
-                </div>
+        return (
+          <div key={pin.id} className="bg-card border border-border/50 rounded-xl overflow-hidden">
+            {/* Hero image */}
+            <div
+              className="relative h-36 w-full cursor-pointer"
+              onClick={() => {
+                if (hasImage) {
+                  const allImages = sortedPins.filter((p: any) => p.image_url).map((p: any) => p.image_url);
+                  const idx = allImages.indexOf(pin.image_url);
+                  lightbox.openLightbox(allImages, idx >= 0 ? idx : 0);
+                }
+              }}
+            >
+              <img
+                src={displayImage}
+                alt={pin.place_name || pin.address}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute top-3 left-3 bg-foreground text-background rounded-full w-7 h-7 flex items-center justify-center shadow-md">
+                <span className="text-xs font-bold">{index + 1}</span>
               </div>
-              
-              {/* Display notes for this pin */}
-              {pinNotesForThis.length > 0 && (
-                <div className="mx-4 mb-4 space-y-2">
-                  {pinNotesForThis.map((note: any) => {
-                    const isImageHidden = hiddenNoteImages.has(note.id);
-                    const noteConfig = getNoteTypeConfig(note.note_type as NoteType);
-                    const Icon = noteConfig.icon;
-                    
-                    return (
-                      <div key={note.id} className={`p-2 border rounded-lg ${noteConfig.bgColor} ${noteConfig.borderColor}`}>
-                        <div className="flex items-start gap-2">
-                          <Icon className={`h-3.5 w-3.5 mt-0.5 flex-shrink-0 ${noteConfig.iconColor}`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <p className={`text-[10px] font-medium ${noteConfig.labelColor}`}>{noteConfig.label}</p>
-                              {note.image_url && (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleNoteImage(note.id)}
-                                  className={`flex items-center gap-0.5 text-[9px] ${noteConfig.labelColor} hover:opacity-80`}
-                                >
-                                  <ImageIcon className="h-3 w-3" />
-                                  <span>{isImageHidden ? 'pokaż' : 'ukryj'}</span>
-                                </button>
-                              )}
-                            </div>
-                            {note.text && (
-                              <p className="text-xs text-foreground leading-relaxed mt-0.5">{note.text}</p>
-                            )}
-                            {note.image_url && !isImageHidden && (
-                              <div 
-                                className="mt-2 relative h-20 w-28 rounded-lg overflow-hidden ring-1 ring-border cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => lightbox.openLightbox([note.image_url])}
-                              >
-                                <img src={note.image_url} alt="Notatka" className="w-full h-full object-cover" />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              {tripRoleBadge && (
+                <span className={cn("absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded-full font-medium shadow-sm", tripRoleBadge.className)}>
+                  {tripRoleBadge.emoji} {tripRoleBadge.label}
+                </span>
               )}
             </div>
-          );
-        })}
-      </div>
+
+            {/* Content */}
+            <div className="p-3.5">
+              <div className="flex items-start justify-between gap-2">
+                <Link to={`/pin/${pin.id}`} className="hover:text-primary transition-colors flex-1 min-w-0">
+                  <h4 className="font-semibold text-sm leading-tight truncate">
+                    {pin.place_name || pin.address}
+                  </h4>
+                </Link>
+                {expectationBadge && (
+                  <span className={cn("inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0", expectationBadge.className)}>
+                    {expectationBadge.emoji} {expectationBadge.label}
+                  </span>
+                )}
+              </div>
+
+              {pin.place_name && pin.address !== pin.place_name && (
+                <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{pin.address}</p>
+              )}
+
+              {(pin.one_liner || pin.description) && (
+                <p className="text-xs text-muted-foreground leading-relaxed mt-2 italic">
+                  „{pin.one_liner || pin.description}"
+                </p>
+              )}
+
+              {(pin.pros?.length > 0 || pin.cons?.length > 0) && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {pin.pros?.slice(0, 3).map((pro: string, i: number) => (
+                    <span key={`pro-${i}`} className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">
+                      +{pro}
+                    </span>
+                  ))}
+                  {pin.cons?.slice(0, 2).map((con: string, i: number) => (
+                    <span key={`con-${i}`} className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                      −{con}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <PinVisitors pinId={pin.id} />
+            </div>
+
+            {/* Notes for this pin */}
+            {pinNotesForThis.length > 0 && (
+              <div className="px-3.5 pb-3.5 space-y-2">
+                {pinNotesForThis.map((note: any) => {
+                  const isImageHidden = hiddenNoteImages.has(note.id);
+                  const noteConfig = getNoteTypeConfig(note.note_type as NoteType);
+                  const Icon = noteConfig.icon;
+
+                  return (
+                    <div key={note.id} className={`p-2 border rounded-lg ${noteConfig.bgColor} ${noteConfig.borderColor}`}>
+                      <div className="flex items-start gap-2">
+                        <Icon className={`h-3.5 w-3.5 mt-0.5 flex-shrink-0 ${noteConfig.iconColor}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className={`text-[10px] font-medium ${noteConfig.labelColor}`}>{noteConfig.label}</p>
+                            {note.image_url && (
+                              <button
+                                type="button"
+                                onClick={() => toggleNoteImage(note.id)}
+                                className={`flex items-center gap-0.5 text-[9px] ${noteConfig.labelColor} hover:opacity-80`}
+                              >
+                                <ImageIcon className="h-3 w-3" />
+                                <span>{isImageHidden ? 'pokaż' : 'ukryj'}</span>
+                              </button>
+                            )}
+                          </div>
+                          {note.text && (
+                            <p className="text-xs text-foreground leading-relaxed mt-0.5">{note.text}</p>
+                          )}
+                          {note.image_url && !isImageHidden && (
+                            <div
+                              className="mt-2 relative h-20 w-28 rounded-lg overflow-hidden ring-1 ring-border cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => lightbox.openLightbox([note.image_url])}
+                            >
+                              <img src={note.image_url} alt="Notatka" className="w-full h-full object-cover" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };
