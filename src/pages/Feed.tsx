@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MapPin, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import TripFeedCard from "@/components/feed/TripFeedCard";
@@ -11,10 +13,13 @@ import TripFeedCardSkeleton from "@/components/feed/TripFeedCardSkeleton";
 import { Button } from "@/components/ui/button";
 
 const STALE_MINUTES = 5;
+const TABS = ["Wszystko", "Obserwowani", "Popularne", "Blisko mnie"] as const;
+type Tab = typeof TABS[number];
 
 const Feed = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<Tab>("Wszystko");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -43,6 +48,21 @@ const Feed = () => {
     enabled: !!user,
   });
 
+  // Fetch followed user IDs
+  const { data: followedIds } = useQuery({
+    queryKey: ["followed-ids", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("followers")
+        .select("following_id")
+        .eq("follower_id", user!.id);
+
+      if (error) throw error;
+      return data?.map((f) => f.following_id) || [];
+    },
+    enabled: !!user && activeTab === "Obserwowani",
+  });
+
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["unread-notifications", user?.id],
     queryFn: async () => {
@@ -59,14 +79,30 @@ const Feed = () => {
     refetchInterval: 30000,
   });
 
-  // Check if data is stale (older than 5 minutes)
+  const filteredRoutes = useMemo(() => {
+    if (!routes) return undefined;
+    switch (activeTab) {
+      case "Obserwowani":
+        if (!followedIds) return undefined;
+        return routes.filter((r) => followedIds.includes(r.user_id));
+      case "Popularne":
+        return [...routes].sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
+      default:
+        return routes;
+    }
+  }, [routes, activeTab, followedIds]);
+
+  const handleTabClick = (tab: Tab) => {
+    if (tab === "Blisko mnie") {
+      toast("Wkrótce! Włącz lokalizację, by zobaczyć trasy w okolicy");
+      return;
+    }
+    setActiveTab(tab);
+  };
+
   const isStale = dataUpdatedAt > 0 && Date.now() - dataUpdatedAt > STALE_MINUTES * 60 * 1000;
 
-  if (loading) {
-    return null;
-  }
-
-  if (!user) {
+  if (loading || !user) {
     return null;
   }
 
@@ -78,9 +114,26 @@ const Feed = () => {
         showSearch
         unreadCount={unreadCount}
       />
+
+      {/* Tabs */}
+      <div className="flex gap-2 px-4 py-3 overflow-x-auto no-scrollbar">
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            className={cn(
+              "px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
+              activeTab === tab
+                ? "bg-foreground text-background"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            )}
+            onClick={() => handleTabClick(tab)}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
       
-      <div className="p-4 space-y-4">
-        {/* Refresh banner when data is stale or refetching indicator */}
+      <div className="p-4 pt-0 space-y-4">
         {isFetching && !routesLoading && (
           <div className="flex items-center justify-center gap-2 py-2 text-xs text-muted-foreground">
             <RefreshCw className="h-3 w-3 animate-spin" />
@@ -97,20 +150,24 @@ const Feed = () => {
           </button>
         )}
 
-        {routesLoading ? (
+        {routesLoading || filteredRoutes === undefined ? (
           <div className="space-y-4">
             <TripFeedCardSkeleton />
             <TripFeedCardSkeleton />
             <TripFeedCardSkeleton />
           </div>
-        ) : routes && routes.length === 0 ? (
+        ) : filteredRoutes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="bg-muted rounded-full p-4 mb-4">
               <MapPin className="h-12 w-12 text-muted-foreground/50" />
             </div>
-            <h3 className="text-base font-semibold mb-1">Brak podróży w feedzie</h3>
+            <h3 className="text-base font-semibold mb-1">
+              {activeTab === "Obserwowani" ? "Brak tras od obserwowanych" : "Brak podróży w feedzie"}
+            </h3>
             <p className="text-sm text-muted-foreground mb-4 max-w-[260px]">
-              Zacznij obserwować innych podróżników, aby zobaczyć ich trasy
+              {activeTab === "Obserwowani"
+                ? "Zacznij obserwować podróżników, aby zobaczyć ich trasy tutaj"
+                : "Zacznij obserwować innych podróżników, aby zobaczyć ich trasy"}
             </p>
             <Button variant="outline" size="sm" onClick={() => navigate("/search")}>
               Odkrywaj
@@ -118,7 +175,7 @@ const Feed = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {routes?.map((route) => (
+            {filteredRoutes.map((route) => (
               <TripFeedCard key={route.id} route={route} currentUserId={user.id} />
             ))}
           </div>
