@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import TripFeedCard from "@/components/feed/TripFeedCard";
+import TripFolderCard from "@/components/feed/TripFolderCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Settings, MapPin, Plus } from "lucide-react";
@@ -84,6 +85,40 @@ const Profile = () => {
     enabled: !!userId,
   });
 
+  const { data: userFolders } = useQuery({
+    queryKey: ["user-folders", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("route_folders")
+        .select(`
+          *,
+          routes (
+            id, title, created_at, status, folder_order,
+            pins (id, place_name, address, image_url, images, tags, rating, pin_order, expectation_met, pros, cons, trip_role, one_liner, recommended_for),
+            likes (user_id),
+            comments (id)
+          )
+        `)
+        .eq("user_id", userId!)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const isOwn = user?.id === userId;
+      return (data || [])
+        .filter(folder =>
+          isOwn || folder.routes?.some((r: any) => r.status === "published")
+        )
+        .map(folder => ({
+          ...folder,
+          routes: (folder.routes || [])
+            .filter((r: any) => isOwn || r.status === "published")
+            .sort((a: any, b: any) => (a.folder_order || 0) - (b.folder_order || 0)),
+        }));
+    },
+    enabled: !!userId,
+  });
+
   const { data: isFollowing } = useQuery({
     queryKey: ["is-following", user?.id, userId],
     queryFn: async () => {
@@ -135,21 +170,68 @@ const Profile = () => {
       .map(([tag]) => tag);
   }, [routes]);
 
-  // Wyciągnij kraje z adresów pinów
-  const countriesData = useMemo(() => {
+  // Buduj listę profilu: foldery + samodzielne trasy
+  const profileFeedItems = useMemo(() => {
     if (!routes) return [];
-    const countryRoutes = new Map<string, number>();
-    routes.forEach((route: any) => {
+
+    const routeIdsInFolders = new Set<string>();
+    userFolders?.forEach((folder: any) => {
+      folder.routes?.forEach((r: any) => routeIdsInFolders.add(r.id));
+    });
+
+    const standaloneRoutes = routes.filter((r: any) => !routeIdsInFolders.has(r.id));
+
+    type ProfileItem =
+      | { type: "folder"; data: any; sortDate: string }
+      | { type: "route"; data: any; sortDate: string };
+
+    const items: ProfileItem[] = [
+      ...(userFolders || []).map((folder: any) => ({
+        type: "folder" as const,
+        data: folder,
+        sortDate: folder.created_at,
+      })),
+      ...standaloneRoutes.map((route: any) => ({
+        type: "route" as const,
+        data: route,
+        sortDate: route.created_at,
+      })),
+    ];
+
+    items.sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
+    return items;
+  }, [routes, userFolders]);
+
+  // Wyciągnij kraje z adresów pinów – per podróż (folder lub samodzielna trasa)
+  const countriesData = useMemo(() => {
+    if (!routes && !userFolders) return [];
+    const countryTrips = new Map<string, number>();
+
+    // Z folderów
+    userFolders?.forEach((folder: any) => {
+      const firstPin = folder.routes?.[0]?.pins?.sort((a: any, b: any) => a.pin_order - b.pin_order)?.[0];
+      if (!firstPin?.address) return;
+      const parts = firstPin.address.split(",").map((s: string) => s.trim());
+      const country = parts[parts.length - 1] || "Nieznany";
+      countryTrips.set(country, (countryTrips.get(country) || 0) + 1);
+    });
+
+    // Z samodzielnych tras
+    const routeIdsInFolders = new Set<string>();
+    userFolders?.forEach((f: any) => f.routes?.forEach((r: any) => routeIdsInFolders.add(r.id)));
+
+    routes?.filter((r: any) => !routeIdsInFolders.has(r.id)).forEach((route: any) => {
       const firstPin = route.pins?.sort((a: any, b: any) => a.pin_order - b.pin_order)?.[0];
       if (!firstPin?.address) return;
       const parts = firstPin.address.split(",").map((s: string) => s.trim());
       const country = parts[parts.length - 1] || "Nieznany";
-      countryRoutes.set(country, (countryRoutes.get(country) || 0) + 1);
+      countryTrips.set(country, (countryTrips.get(country) || 0) + 1);
     });
-    return [...countryRoutes.entries()]
+
+    return [...countryTrips.entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([country, count]) => ({ country, count }));
-  }, [routes]);
+  }, [routes, userFolders]);
 
   // Oblicz statystyki zaufania
   const trustStats = useMemo(() => {
@@ -277,8 +359,8 @@ const Profile = () => {
                   <span className="text-muted-foreground ml-1">obserwujących</span>
                 </button>
                 <div className="hover:opacity-70 transition-opacity">
-                  <span className="font-semibold">{routesCount}</span>
-                  <span className="text-muted-foreground ml-1">tras</span>
+                  <span className="font-semibold">{profileFeedItems.length || routesCount}</span>
+                  <span className="text-muted-foreground ml-1">podróży</span>
                 </div>
                 {totalPlaces > 0 && (
                   <div className="hover:opacity-70 transition-opacity">
@@ -323,7 +405,7 @@ const Profile = () => {
               >
                 <span className="text-sm font-medium">{country}</span>
                 <span className="text-[11px] text-muted-foreground">
-                  {count} {count === 1 ? 'trasa' : count < 5 ? 'trasy' : 'tras'}
+                  {count} {count === 1 ? 'podróż' : count < 5 ? 'podróże' : 'podróży'}
                 </span>
               </div>
             ))}
@@ -423,13 +505,27 @@ const Profile = () => {
 
       <div className="space-y-4">
         <h3 className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase">
-          {user.id === userId ? "Twoje trasy" : `Trasy (${routes?.length || 0})`}
+          {user.id === userId ? "Twoje podróże" : `Podróże (${profileFeedItems.length})`}
         </h3>
-        {routes && routes.length > 0 ? (
+        {profileFeedItems.length > 0 ? (
           <div className="space-y-4">
-            {routes.map((route) => (
-              <TripFeedCard key={route.id} route={route} currentUserId={user?.id} />
-            ))}
+            {profileFeedItems.map((item) =>
+              item.type === "folder" ? (
+                <TripFolderCard
+                  key={`folder-${item.data.id}`}
+                  folder={item.data}
+                  routes={item.data.routes}
+                  author={item.data.profiles || profile!}
+                  currentUserId={user?.id}
+                />
+              ) : (
+                <TripFeedCard
+                  key={`route-${item.data.id}`}
+                  route={item.data}
+                  currentUserId={user?.id}
+                />
+              )
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -437,10 +533,10 @@ const Profile = () => {
               <MapPin className="h-10 w-10 text-muted-foreground/40" />
             </div>
             <p className="text-sm font-medium mb-1">
-              {user.id === userId ? "Nie masz jeszcze opublikowanych tras" : "Brak opublikowanych tras"}
+              {user.id === userId ? "Nie masz jeszcze opublikowanych podróży" : "Brak opublikowanych podróży"}
             </p>
             <p className="text-xs text-muted-foreground mb-3 max-w-[240px]">
-              {user.id === userId ? "Stwórz trasę i podziel się swoimi podróżami" : "Ten podróżnik nie opublikował jeszcze żadnej trasy"}
+              {user.id === userId ? "Stwórz trasę i podziel się swoimi podróżami" : "Ten podróżnik nie opublikował jeszcze żadnej podróży"}
             </p>
             {user.id === userId && (
               <Button variant="outline" size="sm" onClick={() => navigate("/create")}>
