@@ -1,4 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { useGoBack } from "@/hooks/useGoBack";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -302,6 +303,7 @@ const VisitCard = ({
 const PinDetails = () => {
   const { pinId } = useParams();
   const navigate = useNavigate();
+  const goBack = useGoBack("/");
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -722,7 +724,7 @@ const PinDetails = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-muted-foreground">Pin nie został znaleziony</p>
-          <button onClick={() => navigate(-1)} className="text-primary mt-2">
+          <button onClick={goBack} className="text-primary mt-2">
             Wróć
           </button>
         </div>
@@ -777,7 +779,7 @@ const PinDetails = () => {
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/50">
         <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-muted rounded-md transition-colors">
+            <button onClick={goBack} className="p-1 -ml-1 hover:bg-muted rounded-md transition-colors">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="min-w-0 flex-1">

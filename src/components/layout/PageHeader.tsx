@@ -28,7 +28,12 @@ export const PageHeader = ({
     if (onBackClick) {
       onBackClick();
     } else {
-      navigate(-1);
+      const historyIdx = window.history.state?.idx;
+      if (typeof historyIdx === "number" && historyIdx > 0) {
+        navigate(-1);
+      } else {
+        navigate("/", { replace: true });
+      }
     }
   };
 

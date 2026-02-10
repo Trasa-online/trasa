@@ -1,5 +1,6 @@
 import { useEffect, useState, createContext, useContext } from "react";
 import { useNavigate, useParams, Link, useLocation } from "react-router-dom";
+import { useGoBack } from "@/hooks/useGoBack";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -253,6 +254,7 @@ const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pin
 
 const RouteDetails = () => {
   const { id } = useParams();
+  const goBack = useGoBack("/");
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -719,7 +721,7 @@ const RouteDetails = () => {
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/50">
         <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-muted rounded-md transition-colors">
+            <button onClick={goBack} className="p-1 -ml-1 hover:bg-muted rounded-md transition-colors">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="min-w-0">
