@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import TripFeedCard from "@/components/feed/TripFeedCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Settings } from "lucide-react";
 
 const Profile = () => {
   const { user, loading } = useAuth();
@@ -156,6 +157,13 @@ const Profile = () => {
         showBell 
         showSearch 
         unreadCount={unreadCount}
+        rightAction={
+          user?.id === userId ? (
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate("/settings")}>
+              <Settings className="h-5 w-5" />
+            </Button>
+          ) : undefined
+        }
       />
       
       <div className="p-4 space-y-4">

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -106,8 +107,8 @@ const Settings = () => {
 
   return (
     <AppLayout>
+      <PageHeader title="Ustawienia profilu" showBack />
       <div className="p-4 space-y-6">
-        <h1 className="text-2xl font-bold">Ustawienia profilu</h1>
 
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
