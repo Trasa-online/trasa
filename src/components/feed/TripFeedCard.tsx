@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Heart, MessageCircle, Bookmark } from "lucide-react";
 import { toast } from "sonner";
+import { getRelativeTime } from "@/lib/reviewHelpers";
 
 interface TripFeedCardProps {
   route: {
@@ -37,20 +38,6 @@ interface TripFeedCardProps {
   currentUserId?: string;
 }
 
-function relativeTime(dateStr: string): string {
-  const now = Date.now();
-  const diff = now - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return "przed chwilą";
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h temu`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} dni temu`;
-  const weeks = Math.floor(days / 7);
-  if (days < 30) return `${weeks} tyg. temu`;
-  const months = Math.floor(days / 30);
-  return `${months} mies. temu`;
-}
 
 function extractLocation(pins: TripFeedCardProps["route"]["pins"]): string | null {
   if (!pins.length) return null;
@@ -182,7 +169,7 @@ const TripFeedCard = ({ route, currentUserId }: TripFeedCardProps) => {
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-semibold truncate">{route.profiles?.username}</span>
             <span className="text-muted-foreground text-xs">·</span>
-            <span className="text-xs text-muted-foreground">{relativeTime(route.created_at)}</span>
+            <span className="text-xs text-muted-foreground">{getRelativeTime(route.created_at)}</span>
           </div>
           {location && (
             <p className="text-xs text-muted-foreground truncate">{location}</p>

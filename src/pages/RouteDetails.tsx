@@ -12,6 +12,7 @@ import { getPinImage, getPinImagesForRoute } from "@/lib/pinPlaceholders";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
 import { FullscreenMapDialog } from "@/components/route/FullscreenMapDialog";
 import { cn } from "@/lib/utils";
+import { getExpectationBadge, getTripRoleBadge, collectRouteTags } from "@/lib/reviewHelpers";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -163,16 +164,14 @@ const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pin
                           {pin.place_name || pin.address}
                         </h4>
                       </Link>
-                      {pin.trip_role && (
-                        <span className={cn(
-                          "text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0",
-                          pin.trip_role === "must_see" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-                          pin.trip_role === "nice_addition" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-                          pin.trip_role === "skippable" && "bg-muted text-muted-foreground"
-                        )}>
-                          {pin.trip_role === "must_see" ? "⭐ Obowiązkowy" : pin.trip_role === "nice_addition" ? "➕ Fajny dodatek" : "🔁 Można pominąć"}
-                        </span>
-                      )}
+                      {(() => {
+                        const badge = getTripRoleBadge(pin.trip_role);
+                        return badge ? (
+                          <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0", badge.className)}>
+                            {badge.emoji} {badge.label}
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
 
                     {pin.place_name && pin.address !== pin.place_name && (
@@ -185,16 +184,14 @@ const RouteNotesDisplay = ({ pins, pinNotes, currentUserId }: { pins: any[]; pin
                       </p>
                     )}
 
-                    {pin.expectation_met && (
-                      <span className={cn(
-                        "inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full mt-1.5",
-                        pin.expectation_met === "yes" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-                        pin.expectation_met === "average" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-                        pin.expectation_met === "no" && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                      )}>
-                        {pin.expectation_met === "yes" ? "😊 Spełniło oczekiwania" : pin.expectation_met === "average" ? "😐 Średnio" : "😕 Poniżej oczekiwań"}
-                      </span>
-                    )}
+                    {(() => {
+                      const badge = getExpectationBadge(pin.expectation_met);
+                      return badge ? (
+                        <span className={cn("inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full mt-1.5", badge.className)}>
+                          {badge.emoji} {badge.label}
+                        </span>
+                      ) : null;
+                    })()}
 
                     {(pin.pros?.length > 0 || pin.cons?.length > 0) && (
                       <div className="flex flex-wrap gap-1 mt-2">
@@ -822,10 +819,7 @@ const RouteDetails = () => {
 
           {/* Tags from recommended_for + pros */}
           {(() => {
-            const allRecommended = route.pins?.flatMap((p: any) => p.recommended_for || []) || [];
-            const allPros = route.pins?.flatMap((p: any) => p.pros || []) || [];
-            const allTags = [...new Set([...allRecommended, ...allPros])];
-
+            const allTags = collectRouteTags(route.pins || []);
             return allTags.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {allTags.slice(0, 8).map((tag: string, idx: number) => (

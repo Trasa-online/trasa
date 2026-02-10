@@ -20,6 +20,7 @@ import RouteMap from "@/components/RouteMap";
 import PremiumPinView from "@/components/business/PremiumPinView";
 import { MOCK_BUSINESS_DATA, MOCK_PREMIUM_PIN_ID } from "@/components/business/mockBusinessData";
 import { cn } from "@/lib/utils";
+import { getExpectationBadge, getTripRoleBadge } from "@/lib/reviewHelpers";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -860,26 +861,22 @@ const PinDetails = () => {
 
           {/* Review badges */}
           <div className="flex flex-wrap gap-1.5">
-            {pin.expectation_met && (
-              <span className={cn(
-                "inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full",
-                pin.expectation_met === "yes" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-                pin.expectation_met === "average" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-                pin.expectation_met === "no" && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-              )}>
-                {pin.expectation_met === "yes" ? "😊 Spełniło oczekiwania" : pin.expectation_met === "average" ? "😐 Średnio" : "😕 Poniżej oczekiwań"}
-              </span>
-            )}
-            {pin.trip_role && (
-              <span className={cn(
-                "inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full",
-                pin.trip_role === "must_see" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-                pin.trip_role === "nice_addition" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-                pin.trip_role === "skippable" && "bg-muted text-muted-foreground"
-              )}>
-                {pin.trip_role === "must_see" ? "⭐ Punkt obowiązkowy" : pin.trip_role === "nice_addition" ? "➕ Fajny dodatek" : "🔁 Można pominąć"}
-              </span>
-            )}
+            {(() => {
+              const badge = getExpectationBadge(pin.expectation_met);
+              return badge ? (
+                <span className={cn("inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full", badge.className)}>
+                  {badge.emoji} {badge.label}
+                </span>
+              ) : null;
+            })()}
+            {(() => {
+              const badge = getTripRoleBadge(pin.trip_role);
+              return badge ? (
+                <span className={cn("inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full", badge.className)}>
+                  {badge.emoji} {badge.label}
+                </span>
+              ) : null;
+            })()}
           </div>
 
           {/* One-liner */}
