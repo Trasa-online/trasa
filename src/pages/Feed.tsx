@@ -9,12 +9,17 @@ import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import TripFeedCard from "@/components/feed/TripFeedCard";
+import TripFolderCard from "@/components/feed/TripFolderCard";
 import TripFeedCardSkeleton from "@/components/feed/TripFeedCardSkeleton";
 import { Button } from "@/components/ui/button";
 
 const STALE_MINUTES = 5;
 const TABS = ["Wszystko", "Obserwowani", "Popularne", "Blisko mnie"] as const;
 type Tab = typeof TABS[number];
+
+type FeedItem =
+  | { type: "folder"; data: any; sortDate: string }
+  | { type: "route"; data: any; sortDate: string };
 
 const Feed = () => {
   const { user, loading } = useAuth();
@@ -44,6 +49,37 @@ const Feed = () => {
 
       if (error) throw error;
       return data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: feedFolders } = useQuery({
+    queryKey: ["feed-folders"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("route_folders")
+        .select(`
+          *,
+          profiles:user_id (username, avatar_url),
+          routes (
+            id, title, created_at, status, folder_order,
+            pins (id, place_name, address, image_url, images, tags, rating, pin_order, expectation_met, pros, cons, trip_role, one_liner, recommended_for),
+            likes (user_id),
+            comments (id)
+          )
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      return (data || [])
+        .filter((folder) => folder.routes?.some((r: any) => r.status === "published"))
+        .map((folder) => ({
+          ...folder,
+          routes: (folder.routes || [])
+            .filter((r: any) => r.status === "published")
+            .sort((a: any, b: any) => (a.folder_order || 0) - (b.folder_order || 0)),
+        }));
     },
     enabled: !!user,
   });
@@ -79,18 +115,59 @@ const Feed = () => {
     refetchInterval: 30000,
   });
 
-  const filteredRoutes = useMemo(() => {
-    if (!routes) return undefined;
+  const feedItems = useMemo(() => {
+    if (!routes || feedFolders === undefined) return undefined;
+
+    const routeIdsInFolders = new Set<string>();
+    (feedFolders || []).forEach((folder) => {
+      folder.routes?.forEach((r: any) => routeIdsInFolders.add(r.id));
+    });
+
+    const standaloneRoutes = routes.filter((r) => !routeIdsInFolders.has(r.id));
+
+    const items: FeedItem[] = [
+      ...(feedFolders || []).map((folder) => ({
+        type: "folder" as const,
+        data: folder,
+        sortDate: folder.created_at,
+      })),
+      ...standaloneRoutes.map((route) => ({
+        type: "route" as const,
+        data: route,
+        sortDate: route.created_at,
+      })),
+    ];
+
+    items.sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
+    return items;
+  }, [routes, feedFolders]);
+
+  const filteredItems = useMemo(() => {
+    if (!feedItems) return undefined;
+
     switch (activeTab) {
       case "Obserwowani":
         if (!followedIds) return undefined;
-        return routes.filter((r) => followedIds.includes(r.user_id));
+        return feedItems.filter((item) => {
+          const userId = item.data.user_id;
+          return followedIds.includes(userId);
+        });
       case "Popularne":
-        return [...routes].sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
+        return [...feedItems].sort((a, b) => {
+          const aLikes =
+            a.type === "folder"
+              ? a.data.routes.reduce((sum: number, r: any) => sum + (r.likes?.length || 0), 0)
+              : a.data.likes?.length || 0;
+          const bLikes =
+            b.type === "folder"
+              ? b.data.routes.reduce((sum: number, r: any) => sum + (r.likes?.length || 0), 0)
+              : b.data.likes?.length || 0;
+          return bLikes - aLikes;
+        });
       default:
-        return routes;
+        return feedItems;
     }
-  }, [routes, activeTab, followedIds]);
+  }, [feedItems, activeTab, followedIds]);
 
   const handleTabClick = (tab: Tab) => {
     if (tab === "Blisko mnie") {
@@ -101,6 +178,7 @@ const Feed = () => {
   };
 
   const isStale = dataUpdatedAt > 0 && Date.now() - dataUpdatedAt > STALE_MINUTES * 60 * 1000;
+  const isLoading = routesLoading || feedFolders === undefined;
 
   if (loading || !user) {
     return null;
@@ -108,9 +186,9 @@ const Feed = () => {
 
   return (
     <>
-      <PageHeader 
-        title="TRASA" 
-        showBell 
+      <PageHeader
+        title="TRASA"
+        showBell
         showSearch
         unreadCount={unreadCount}
       />
@@ -132,9 +210,9 @@ const Feed = () => {
           </button>
         ))}
       </div>
-      
+
       <div className="p-4 pt-0 space-y-4">
-        {isFetching && !routesLoading && (
+        {isFetching && !isLoading && (
           <div className="flex items-center justify-center gap-2 py-2 text-xs text-muted-foreground">
             <RefreshCw className="h-3 w-3 animate-spin" />
             <span>Odświeżanie...</span>
@@ -150,13 +228,13 @@ const Feed = () => {
           </button>
         )}
 
-        {routesLoading || filteredRoutes === undefined ? (
+        {isLoading || filteredItems === undefined ? (
           <div className="space-y-4">
             <TripFeedCardSkeleton />
             <TripFeedCardSkeleton />
             <TripFeedCardSkeleton />
           </div>
-        ) : filteredRoutes.length === 0 ? (
+        ) : filteredItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="bg-muted rounded-full p-4 mb-4">
               <MapPin className="h-12 w-12 text-muted-foreground/50" />
@@ -175,9 +253,23 @@ const Feed = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredRoutes.map((route) => (
-              <TripFeedCard key={route.id} route={route} currentUserId={user.id} />
-            ))}
+            {filteredItems.map((item) =>
+              item.type === "folder" ? (
+                <TripFolderCard
+                  key={`folder-${item.data.id}`}
+                  folder={item.data}
+                  routes={item.data.routes}
+                  author={item.data.profiles}
+                  currentUserId={user.id}
+                />
+              ) : (
+                <TripFeedCard
+                  key={`route-${item.data.id}`}
+                  route={item.data}
+                  currentUserId={user.id}
+                />
+              )
+            )}
           </div>
         )}
       </div>
