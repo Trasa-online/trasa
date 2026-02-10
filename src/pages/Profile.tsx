@@ -150,6 +150,26 @@ const Profile = () => {
       .sort((a, b) => b[1] - a[1])
       .map(([country, count]) => ({ country, count }));
   }, [routes]);
+
+  // Oblicz statystyki zaufania
+  const trustStats = useMemo(() => {
+    if (!routes) return null;
+    const totalLikes = routes.reduce((sum, r) => sum + (r.likes?.length || 0), 0);
+    const totalComments = routes.reduce((sum, r) => sum + (r.comments?.length || 0), 0);
+    const allPins = routes.flatMap((r: any) => r.pins || []);
+    const verifiedPins = allPins.filter((p: any) => p.expectation_met);
+    const verificationRate = allPins.length > 0 ? Math.round((verifiedPins.length / allPins.length) * 100) : 0;
+    const mustSeePins = allPins.filter((p: any) => p.trip_role === "must_see");
+    return {
+      totalLikes,
+      totalComments,
+      totalPins: allPins.length,
+      verificationRate,
+      mustSeeCount: mustSeePins.length,
+      routesCount: routes.length,
+    };
+  }, [routes]);
+
   const handleFollowToggle = async () => {
     if (!user || !userId) return;
 
@@ -284,6 +304,45 @@ const Profile = () => {
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {user.id !== userId && trustStats && trustStats.routesCount > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase">
+            W liczbach
+          </h3>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-center">
+              <p className="text-lg font-bold">{trustStats.totalPins}</p>
+              <p className="text-[11px] text-muted-foreground">miejsc opisanych</p>
+            </div>
+            <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-center">
+              <p className="text-lg font-bold">{trustStats.mustSeeCount}</p>
+              <p className="text-[11px] text-muted-foreground">obowiązkowych</p>
+            </div>
+            <div className="bg-muted/30 rounded-xl p-3 border border-border/50 text-center">
+              <p className="text-lg font-bold">{trustStats.verificationRate}%</p>
+              <p className="text-[11px] text-muted-foreground">zweryfikowanych</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {trustStats.verificationRate >= 80 && (
+              <span className="text-[11px] px-2.5 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-medium">
+                ✓ Sprawdzone trasy
+              </span>
+            )}
+            {trustStats.routesCount >= 3 && (
+              <span className="text-[11px] px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 font-medium">
+                ✓ Regularny twórca
+              </span>
+            )}
+            {trustStats.totalPins >= 20 && (
+              <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-medium">
+                ⭐ Szczegółowe opisy
+              </span>
+            )}
           </div>
         </div>
       )}
