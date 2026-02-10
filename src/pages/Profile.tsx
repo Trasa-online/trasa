@@ -135,6 +135,21 @@ const Profile = () => {
       .map(([tag]) => tag);
   }, [routes]);
 
+  // Wyciągnij kraje z adresów pinów
+  const countriesData = useMemo(() => {
+    if (!routes) return [];
+    const countryRoutes = new Map<string, number>();
+    routes.forEach((route: any) => {
+      const firstPin = route.pins?.sort((a: any, b: any) => a.pin_order - b.pin_order)?.[0];
+      if (!firstPin?.address) return;
+      const parts = firstPin.address.split(",").map((s: string) => s.trim());
+      const country = parts[parts.length - 1] || "Nieznany";
+      countryRoutes.set(country, (countryRoutes.get(country) || 0) + 1);
+    });
+    return [...countryRoutes.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([country, count]) => ({ country, count }));
+  }, [routes]);
   const handleFollowToggle = async () => {
     if (!user || !userId) return;
 
@@ -249,6 +264,27 @@ const Profile = () => {
               {profile.bio}
             </p>
           )}
+        </div>
+      )}
+
+      {countriesData.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase">
+            Gdzie podróżuje
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {countriesData.slice(0, 6).map(({ country, count }) => (
+              <div
+                key={country}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/50 rounded-lg border border-border/50"
+              >
+                <span className="text-sm font-medium">{country}</span>
+                <span className="text-[11px] text-muted-foreground">
+                  {count} {count === 1 ? 'trasa' : count < 5 ? 'trasy' : 'tras'}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
