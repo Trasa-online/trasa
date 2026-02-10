@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Camera, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -26,7 +25,6 @@ const CreateFolder = () => {
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load existing folder data when editing
   const { data: existingFolder } = useQuery({
     queryKey: ["folder-edit", id],
     queryFn: async () => {
@@ -85,7 +83,7 @@ const CreateFolder = () => {
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      toast({ variant: "destructive", title: "Nazwa folderu jest wymagana" });
+      toast({ variant: "destructive", title: "Nazwa podróży jest wymagana" });
       return;
     }
 
@@ -118,17 +116,20 @@ const CreateFolder = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center gap-4 z-10">
-        <button onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-6 w-6" />
+      {/* Header */}
+      <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border/50 px-4 py-3 flex items-center gap-3 z-10">
+        <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-muted rounded-md transition-colors">
+          <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-xl font-semibold">{id ? "Edytuj folder" : "Nowy folder"}</h1>
+        <h1 className="text-base font-medium">{id ? "Edytuj podróż" : "Nowa podróż"}</h1>
       </div>
 
       <div className="max-w-lg mx-auto p-4 space-y-6">
         {/* Cover image */}
-        <div className="space-y-2">
-          <Label>Okładka (opcjonalna)</Label>
+        <div className="space-y-1.5">
+          <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block">
+            Okładka (opcjonalna)
+          </label>
           <input
             ref={fileInputRef}
             type="file"
@@ -169,28 +170,40 @@ const CreateFolder = () => {
         </div>
 
         {/* Name */}
-        <div className="space-y-2">
-          <Label htmlFor="folder-name">Nazwa folderu *</Label>
+        <div className="space-y-1.5">
+          <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block">
+            Nazwa podróży <span className="text-destructive">*</span>
+          </label>
           <Input
-            id="folder-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="np. JAPONIA"
+            placeholder="np. Japonia – 2 tygodnie"
             maxLength={50}
+            className="text-base border-muted-foreground/20 focus:border-foreground"
           />
+          <p className="text-[11px] text-muted-foreground">{name.length}/50 znaków</p>
         </div>
 
         {/* Description */}
-        <div className="space-y-2">
-          <Label htmlFor="folder-desc">Opis (opcjonalny)</Label>
+        <div className="space-y-1.5">
+          <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block">
+            Opis (opcjonalny)
+          </label>
           <Textarea
-            id="folder-desc"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="np. 2 tygodnie w Kraju Kwitnącej Wiśni..."
+            onChange={(e) => {
+              if (e.target.value.length <= 300) setDescription(e.target.value);
+            }}
+            placeholder="Opisz swoją podróż w kilku zdaniach..."
             rows={3}
+            className="resize-none text-sm border-muted-foreground/20 focus:border-foreground"
             maxLength={300}
           />
+          <p className={`text-[10px] font-medium transition-colors ${
+            description.length >= 300 ? "text-destructive" : "text-muted-foreground"
+          }`}>
+            {description.length}/300
+          </p>
         </div>
 
         {/* Submit */}
@@ -199,10 +212,8 @@ const CreateFolder = () => {
           onClick={handleSubmit}
           disabled={saving || !name.trim()}
         >
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : null}
-          {id ? "Zapisz zmiany" : "Utwórz folder"}
+          {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+          {id ? "Zapisz zmiany" : "Utwórz podróż"}
         </Button>
       </div>
     </div>
