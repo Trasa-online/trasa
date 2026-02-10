@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, ImageIcon, Share2, Star, UtensilsCrossed, Coffee, ShoppingBag, Gift, Mountain, Waves } from "lucide-react";
+import { ArrowLeft, Heart, Bookmark, MessageCircle, Send, Pencil, Trash2, X, Check, ImageIcon, Share2, Star } from "lucide-react";
 import { getNoteTypeConfig, NoteType } from "@/lib/noteTypes";
 import { getPinImage, getPinImagesForRoute } from "@/lib/pinPlaceholders";
 import { PinVisitDialog } from "@/components/route/PinVisitDialog";
@@ -14,6 +14,7 @@ import { FullscreenMapDialog } from "@/components/route/FullscreenMapDialog";
 import StarRating from "@/components/route/StarRating";
 import PinReviewBadges from "@/components/route/PinReviewBadges";
 import { format } from "date-fns";
+import { pl } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import RouteMap from "@/components/RouteMap";
 import {
@@ -256,7 +257,7 @@ const RouteDetails = () => {
   const [deletingRoute, setDeletingRoute] = useState(false);
   
   const [showFullscreenMap, setShowFullscreenMap] = useState(false);
-  const [tagsExpanded, setTagsExpanded] = useState(false);
+  
   const { lightboxState, openLightbox, setLightboxOpen } = useLightbox();
   useEffect(() => {
     if (!loading && !user) {
@@ -679,6 +680,25 @@ const RouteDetails = () => {
   // Use the rating stored in the database (calculated from attraction pins only)
   const avgRating = route.rating || 0;
 
+  const handleShare = async () => {
+    const url = `${window.location.origin}/route/${route.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: route.title,
+          text: route.description || `Sprawdź trasę: ${route.title}`,
+          url,
+        });
+      } catch {
+        await navigator.clipboard.writeText(url);
+        toast({ title: "Link skopiowany do schowka" });
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link skopiowany do schowka" });
+    }
+  };
+
   // Collect all images for lightbox
   const allRouteImages = (route.pins || [])
     .filter((p: any) => p.image_url)
@@ -688,162 +708,117 @@ const RouteDetails = () => {
   return (
     <LightboxContext.Provider value={{ openLightbox }}>
     <div className="min-h-screen bg-background pb-16">
-      <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center gap-3 z-10">
-        <button onClick={() => navigate("/")}>
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-base font-semibold flex-1">Szczegóły trasy</h1>
-        {isOwner && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/edit/${route.id}`)}
-            >
-              <Pencil className="h-4 w-4 mr-1" />
-              Edytuj
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setDeletingRoute(true)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+      {/* New sticky header */}
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/50">
+        <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-muted rounded-md transition-colors">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="text-sm font-semibold truncate">{route.title}</h1>
+              <p className="text-xs text-muted-foreground truncate">@{route.profiles?.username}</p>
+            </div>
           </div>
-        )}
+          <div className="flex items-center gap-1">
+            {isOwner && (
+              <>
+                <button onClick={() => navigate(`/edit/${route.id}`)} className="p-2 hover:bg-muted rounded-md transition-colors">
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button onClick={() => setDeletingRoute(true)} className="p-2 hover:bg-muted rounded-md transition-colors text-destructive">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </>
+            )}
+            <button onClick={handleShare} className="p-2 hover:bg-muted rounded-md transition-colors">
+              <Share2 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="max-w-lg mx-auto p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <button 
-            onClick={() => navigate(`/profile/${route.user_id}`)}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-          >
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={route.profiles?.avatar_url} />
-              <AvatarFallback>
-                {route.profiles?.username?.[0]?.toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="text-left">
-              <p className="font-medium">{route.profiles?.username}</p>
-              <p className="text-xs text-muted-foreground">
-                {format(new Date(route.created_at), "MMM dd, yyyy")}
-              </p>
+      <div className="max-w-lg mx-auto">
+        {/* Hero section */}
+        {(() => {
+          const heroPin = route.pins?.find((p: any) => p.image_url);
+          return heroPin ? (
+            <div className="relative aspect-[16/10] overflow-hidden">
+              <img
+                src={heroPin.image_url}
+                alt={route.title}
+                className="w-full h-full object-cover cursor-pointer"
+                onClick={() => {
+                  const allImages = route.pins.filter((p: any) => p.image_url).map((p: any) => p.image_url);
+                  openLightbox(allImages, 0);
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <h2 className="text-xl font-bold text-white leading-tight">{route.title}</h2>
+                <div className="flex items-center gap-3 mt-1.5 text-white/80 text-sm">
+                  <span>📍 {route.pins?.length || 0} miejsc</span>
+                  {avgRating > 0 && <span>⭐ {avgRating.toFixed(1)}</span>}
+                </div>
+              </div>
             </div>
-          </button>
-          <div className="flex items-center gap-1">
+          ) : null;
+        })()}
+
+        <div className="p-4 space-y-4">
+          {/* Author row */}
+          <div className="flex items-center justify-between">
             <button
-              onClick={async () => {
-                const url = `${window.location.origin}/route/${route.id}`;
-                if (navigator.share) {
-                  try {
-                    await navigator.share({
-                      title: route.title,
-                      text: route.description || `Sprawdź trasę: ${route.title}`,
-                      url: url,
-                    });
-                  } catch (err) {
-                    await navigator.clipboard.writeText(url);
-                    toast({ title: "Link skopiowany do schowka" });
-                  }
-                } else {
-                  await navigator.clipboard.writeText(url);
-                  toast({ title: "Link skopiowany do schowka" });
-                }
-              }}
-              className="p-2 hover:bg-accent rounded-lg transition-colors"
+              onClick={() => navigate(`/profile/${route.user_id}`)}
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
             >
-              <Share2 className="h-6 w-6" />
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={route.profiles?.avatar_url} />
+                <AvatarFallback>{route.profiles?.username?.[0]?.toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="text-left">
+                <p className="text-sm font-semibold">{route.profiles?.username}</p>
+                <p className="text-xs text-muted-foreground">
+                  {format(new Date(route.created_at), "d MMM yyyy", { locale: pl })}
+                </p>
+              </div>
             </button>
             <button
               onClick={() => saveMutation.mutate()}
-              className="p-2 hover:bg-accent rounded-lg transition-colors"
+              className="p-2 hover:bg-muted rounded-md transition-colors"
             >
-              <Bookmark
-                className={`h-6 w-6 ${isSaved ? "fill-foreground" : ""}`}
-              />
+              <Bookmark className={`h-5 w-5 ${isSaved ? "fill-foreground" : ""}`} />
             </button>
           </div>
-        </div>
 
-        {/* Route Header with Title and Rating */}
-        <div className="bg-card border border-border rounded-xl p-4">
-          {/* Folder breadcrumb */}
-          {route.folder && (
-            <Link 
-              to={`/folder/${route.folder.id}`}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline mb-2"
-            >
-              <span>📁</span>
-              <span>{route.folder.name}</span>
-              <span className="text-muted-foreground">›</span>
-            </Link>
-          )}
-          <h2 className="text-xl font-bold leading-tight mb-3">{route.title}</h2>
+          {/* Description */}
           {route.description && (
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {route.description}
-            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{route.description}</p>
           )}
-          
-          {/* Tags Section */}
+
+          {/* Tags from recommended_for + pros */}
           {(() => {
-            const sortedPins = route.pins?.slice().sort((a: any, b: any) => a.pin_order - b.pin_order) || [];
-            const allTags = sortedPins.flatMap((pin: any) => pin.tags || []);
-            const uniqueTags = Array.from(new Set(allTags)) as string[];
-            
-            const getTagIcon = (tag: string) => {
-              const tagLower = tag.toLowerCase();
-              if (tagLower === 'restauracja' || tagLower === 'jedzenie') return UtensilsCrossed;
-              if (tagLower === 'kawiarnia' || tagLower === 'kawa' || tagLower === 'herbata') return Coffee;
-              if (tagLower === 'zakupy') return ShoppingBag;
-              if (tagLower === 'pamiątki') return Gift;
-              if (tagLower === 'góry') return Mountain;
-              if (tagLower === 'morze') return Waves;
-              return null;
-            };
+            const allRecommended = route.pins?.flatMap((p: any) => p.recommended_for || []) || [];
+            const allPros = route.pins?.flatMap((p: any) => p.pros || []) || [];
+            const allTags = [...new Set([...allRecommended, ...allPros])];
 
-            const MAX_VISIBLE_TAGS = 6;
-            const displayTags = tagsExpanded ? uniqueTags : uniqueTags.slice(0, MAX_VISIBLE_TAGS);
-            const remainingCount = uniqueTags.length - MAX_VISIBLE_TAGS;
-
-            return uniqueTags.length > 0 ? (
-              <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-border/30 transition-all duration-300">
-                {displayTags.map((tag: string, idx: number) => {
-                  const TagIcon = getTagIcon(tag);
-                  return (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground"
-                    >
-                      {TagIcon && <TagIcon className="h-3.5 w-3.5" />}
-                      <span>{tag}</span>
-                    </span>
-                  );
-                })}
-                {remainingCount > 0 && !tagsExpanded && (
-                  <button
-                    onClick={() => setTagsExpanded(true)}
-                    className="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors cursor-pointer"
-                  >
-                    +{remainingCount}
-                  </button>
-                )}
-                {tagsExpanded && remainingCount > 0 && (
-                  <button
-                    onClick={() => setTagsExpanded(false)}
-                    className="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors cursor-pointer"
-                  >
-                    Zwiń
-                  </button>
-                )}
+            return allTags.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {allTags.slice(0, 8).map((tag: string, idx: number) => (
+                  <span key={idx} className="px-2.5 py-1 text-xs font-medium rounded-full bg-secondary text-secondary-foreground">
+                    #{tag}
+                  </span>
+                ))}
               </div>
             ) : null;
           })()}
-        </div>
+
+          {/* Folder breadcrumb */}
+          {route.folder && (
+            <Link to={`/folder/${route.folder.id}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">
+              📁 {route.folder.name} ›
+            </Link>
+          )}
 
         {/* Route Map */}
         {route.pins && route.pins.length > 0 && (
@@ -990,6 +965,7 @@ const RouteDetails = () => {
               <Send className="h-4 w-4" />
             </Button>
           </div>
+        </div>
         </div>
       </div>
 
