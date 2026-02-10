@@ -772,77 +772,56 @@ const PinDetails = () => {
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {/* Header - matching RouteCard style */}
-      <div className="sticky top-0 z-10 bg-background border-b">
-        <div className="flex items-center gap-3 p-4">
-          <button onClick={() => navigate(-1)} className="p-1 hover:bg-accent rounded-lg transition-colors">
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div className="flex-1 min-w-0 flex items-center gap-3">
-            <Avatar 
-              className="h-8 w-8 ring-2 ring-border cursor-pointer hover:ring-primary transition-all shrink-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/profile/${pin.routes.user_id}`);
-              }}
-            >
+      {/* Header - matching RouteDetails style */}
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/50">
+        <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-muted rounded-md transition-colors">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-sm font-semibold truncate">{displayName || pin.address}</h1>
+              <p className="text-xs text-muted-foreground truncate">
+                z trasy: {pin.routes.title} · @{pin.routes.profiles?.username}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate(`/profile/${pin.routes.user_id}`)}
+            className="shrink-0"
+          >
+            <Avatar className="h-8 w-8 ring-2 ring-border hover:ring-primary transition-all">
               <AvatarImage src={pin.routes.profiles?.avatar_url} />
               <AvatarFallback className="text-xs">
                 {pin.routes.profiles?.username?.[0]?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-0 flex-1">
-              <p 
-                className="font-semibold text-sm cursor-pointer hover:text-primary transition-colors truncate"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/profile/${pin.routes.user_id}`);
-                }}
-              >
-                {pin.routes.profiles?.username}
-              </p>
-              <Link
-                to={`/route/${pin.routes.id}`}
-                className="text-xs text-muted-foreground hover:text-primary truncate block"
-              >
-                Z trasy: {pin.routes.title}
-              </Link>
-            </div>
+          </button>
+        </div>
+
+        {/* Pin navigation - compact */}
+        {routePins.length > 1 && (
+          <div className="flex items-center justify-between px-4 pb-2 max-w-lg mx-auto">
+            <button
+              disabled={!prevPin}
+              onClick={() => prevPin && navigate(`/pin/${prevPin.id}`)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" /> Poprzedni
+            </button>
+            <span className="text-xs text-muted-foreground font-medium">
+              {currentPinIndex + 1} / {routePins.length}
+            </span>
+            <button
+              disabled={!nextPin}
+              onClick={() => nextPin && navigate(`/pin/${nextPin.id}`)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+            >
+              Następny <ChevronRight className="h-3.5 w-3.5" />
+            </button>
           </div>
-        </div>
+        )}
       </div>
-
-      {/* Pin Navigation */}
-      {routePins.length > 1 && (
-        <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={!prevPin}
-            onClick={() => prevPin && navigate(`/pin/${prevPin.id}`)}
-            className="gap-1"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Poprzedni</span>
-          </Button>
-          
-          <span className="text-xs text-muted-foreground">
-            Pin {currentPinIndex + 1} z {routePins.length}
-          </span>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={!nextPin}
-            onClick={() => nextPin && navigate(`/pin/${nextPin.id}`)}
-            className="gap-1"
-          >
-            <span className="hidden sm:inline">Następny</span>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-
       <div className="p-4 space-y-4">
         {/* User Photos Gallery - at the very top */}
         {allImages.length > 0 && (
@@ -868,18 +847,91 @@ const PinDetails = () => {
           </div>
         )}
 
-        {/* Pin Name & Address */}
-        <div className="space-y-2">
+        {/* Pin Name & Address & Review Data */}
+        <div className="space-y-3">
           <h1 className="font-semibold text-lg">{displayName || pin.address}</h1>
-          
+
           {displayName && (
             <div className="flex items-start gap-2">
               <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
               <span className="text-sm text-muted-foreground">{pin.address}</span>
             </div>
           )}
-          
-          {/* Show discoverer badge if canonical pin exists */}
+
+          {/* Review badges */}
+          <div className="flex flex-wrap gap-1.5">
+            {pin.expectation_met && (
+              <span className={cn(
+                "inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full",
+                pin.expectation_met === "yes" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                pin.expectation_met === "average" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                pin.expectation_met === "no" && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+              )}>
+                {pin.expectation_met === "yes" ? "😊 Spełniło oczekiwania" : pin.expectation_met === "average" ? "😐 Średnio" : "😕 Poniżej oczekiwań"}
+              </span>
+            )}
+            {pin.trip_role && (
+              <span className={cn(
+                "inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full",
+                pin.trip_role === "must_see" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                pin.trip_role === "nice_addition" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                pin.trip_role === "skippable" && "bg-muted text-muted-foreground"
+              )}>
+                {pin.trip_role === "must_see" ? "⭐ Punkt obowiązkowy" : pin.trip_role === "nice_addition" ? "➕ Fajny dodatek" : "🔁 Można pominąć"}
+              </span>
+            )}
+          </div>
+
+          {/* One-liner */}
+          {(pin.one_liner || pin.description) && (
+            <p className="text-sm text-muted-foreground leading-relaxed italic border-l-2 border-border pl-3">
+              {pin.one_liner || pin.description}
+            </p>
+          )}
+
+          {/* Pros */}
+          {pin.pros?.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Na plus</p>
+              <div className="flex flex-wrap gap-1">
+                {pin.pros.map((pro: string, i: number) => (
+                  <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">
+                    {pro}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Cons */}
+          {pin.cons?.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Mogło być lepsze</p>
+              <div className="flex flex-wrap gap-1">
+                {pin.cons.map((con: string, i: number) => (
+                  <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                    {con}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recommended for */}
+          {pin.recommended_for?.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Polecane dla</p>
+              <div className="flex flex-wrap gap-1">
+                {pin.recommended_for.map((rec: string, i: number) => (
+                  <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                    {rec}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Discoverer + stats - UNCHANGED */}
           {canonicalPin?.discovered_by && (
             <div className="flex items-center gap-2 text-sm">
               <Trophy className="h-4 w-4 text-amber-500" />
@@ -892,8 +944,7 @@ const PinDetails = () => {
               </span>
             </div>
           )}
-          
-          {/* Show visit stats if there are multiple visits */}
+
           {canonicalStats.totalVisits > 1 && (
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-1 text-muted-foreground">
@@ -908,64 +959,11 @@ const PinDetails = () => {
               )}
             </div>
           )}
-          
+
           {pin.created_at && (
             <p className="text-xs text-muted-foreground">
-              Dodano do tej trasy: {format(new Date(pin.created_at), "d MMM yyyy", { locale: pl })}
+              Dodano: {format(new Date(pin.created_at), "d MMMM yyyy", { locale: pl })}
             </p>
-          )}
-        </div>
-
-        {/* Pin Map Preview - enlarged */}
-        {pin.latitude && pin.longitude && (
-          <RouteMap
-            pins={[{ 
-              latitude: pin.latitude, 
-              longitude: pin.longitude, 
-              place_name: displayName || pin.address,
-              pin_order: pin.pin_order
-            }]}
-            className="h-48"
-          />
-        )}
-
-        {/* Pin Info - only ratings and tags */}
-        <div className="space-y-3">
-          {/* Aggregate rating from all canonical visits */}
-          {canonicalStats.averageRating > 0 && (
-            <div className="p-3 bg-muted/40 rounded-lg">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  Średnia ocena użytkowników
-                  <span className="text-xs ml-1">
-                    ({canonicalStats.ratingsCount} {canonicalStats.ratingsCount === 1 ? 'ocena' : canonicalStats.ratingsCount < 5 ? 'oceny' : 'ocen'})
-                  </span>
-                </span>
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                <span className="text-lg font-semibold">{canonicalStats.averageRating.toFixed(1)}</span>
-                <div className="flex items-center gap-0.5">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`h-4 w-4 ${star <= Math.round(canonicalStats.averageRating) ? "fill-yellow-400 text-yellow-400" : "text-muted"}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Tags */}
-          {pin.tags && pin.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {pin.tags.map((tag: string, i: number) => (
-                <Badge key={i} variant="secondary" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
           )}
         </div>
 
