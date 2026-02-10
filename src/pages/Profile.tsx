@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
-import RouteCard from "@/components/route/RouteCard";
+import TripFeedCard from "@/components/feed/TripFeedCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
@@ -204,7 +204,7 @@ const Profile = () => {
 
       <div className="space-y-4">
         {routes?.map((route) => (
-          <RouteCard key={route.id} route={route} />
+          <TripFeedCard key={route.id} route={route} currentUserId={user?.id} />
         ))}
         {!routes?.length && (
           <p className="text-center text-muted-foreground py-8">
