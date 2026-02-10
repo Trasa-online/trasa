@@ -129,12 +129,12 @@ const Feed = () => {
       ...(feedFolders || []).map((folder) => ({
         type: "folder" as const,
         data: folder,
-        sortDate: folder.created_at,
+        sortDate: folder.updated_at || folder.created_at,
       })),
       ...standaloneRoutes.map((route) => ({
         type: "route" as const,
         data: route,
-        sortDate: route.created_at,
+        sortDate: route.updated_at || route.created_at,
       })),
     ];
 
