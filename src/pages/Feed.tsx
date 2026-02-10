@@ -1,12 +1,13 @@
 import { useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { MapPin } from "lucide-react";
 
 import { PageHeader } from "@/components/layout/PageHeader";
-import RouteCard from "@/components/route/RouteCard";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import TripFeedCard from "@/components/feed/TripFeedCard";
+import { Button } from "@/components/ui/button";
 
 const Feed = () => {
   const { user, loading } = useAuth();
@@ -18,50 +19,7 @@ const Feed = () => {
     }
   }, [user, loading, navigate]);
 
-  const { data: profile } = useQuery({
-    queryKey: ["current-profile", user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user!.id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
-
-  const { data: friendsCount } = useQuery({
-    queryKey: ["friends-count", user?.id],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("followers")
-        .select("*", { count: "exact", head: true })
-        .eq("follower_id", user!.id);
-
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!user,
-  });
-
-  const { data: routesCount } = useQuery({
-    queryKey: ["user-routes-count", user?.id],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("routes")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user!.id);
-
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!user,
-  });
-
-  const { data: routes } = useQuery({
+  const { data: routes, isLoading: routesLoading } = useQuery({
     queryKey: ["feed-routes", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -69,7 +27,7 @@ const Feed = () => {
         .select(`
           *,
           profiles:user_id (username, avatar_url),
-          pins (*),
+          pins (id, place_name, address, image_url, images, tags, rating, pin_order, expectation_met, pros, cons, trip_role, one_liner, recommended_for),
           likes (user_id),
           comments (id)
         `)
@@ -95,11 +53,11 @@ const Feed = () => {
       return count || 0;
     },
     enabled: !!user,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 30000,
   });
 
   if (loading) {
-    return <div>Loading...</div>;
+    return null;
   }
 
   if (!user) {
@@ -116,46 +74,32 @@ const Feed = () => {
       />
       
       <div className="p-4 space-y-4">
-
-        {profile && (
-          <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4 border border-border/50">
-            <Avatar className="h-14 w-14 flex-shrink-0">
-              <AvatarImage src={profile.avatar_url || ""} alt={profile.username} />
-              <AvatarFallback>{profile.username[0].toUpperCase()}</AvatarFallback>
-            </Avatar>
-            
-            <div className="flex-1 min-w-0">
-              <h2 className="text-base font-semibold uppercase">{profile.username}</h2>
-              
-              {profile.bio && (
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{profile.bio}</p>
-              )}
-              
-              <div className="flex gap-4 mt-2">
-                <button 
-                  onClick={() => navigate(`/friends/${user.id}`)}
-                  className="hover:opacity-70 transition-opacity"
-                >
-                  <span className="text-sm font-semibold">{friendsCount}</span>
-                  <span className="text-xs text-muted-foreground ml-1">Friends</span>
-                </button>
-                <Link 
-                  to="/my-routes"
-                  className="hover:opacity-70 transition-opacity"
-                >
-                  <span className="text-sm font-semibold">{routesCount}</span>
-                  <span className="text-xs text-muted-foreground ml-1">Routes</span>
-                </Link>
-              </div>
+        {routesLoading ? (
+          <div className="space-y-4">
+            <div className="rounded-xl bg-muted animate-pulse h-[300px]" />
+            <div className="rounded-xl bg-muted animate-pulse h-[280px]" />
+            <div className="rounded-xl bg-muted animate-pulse h-[280px]" />
+          </div>
+        ) : routes && routes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="bg-muted rounded-full p-4 mb-4">
+              <MapPin className="h-12 w-12 text-muted-foreground/50" />
             </div>
+            <h3 className="text-base font-semibold mb-1">Brak podróży w feedzie</h3>
+            <p className="text-sm text-muted-foreground mb-4 max-w-[260px]">
+              Zacznij obserwować innych podróżników, aby zobaczyć ich trasy
+            </p>
+            <Button variant="outline" size="sm" onClick={() => navigate("/search")}>
+              Odkrywaj
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {routes?.map((route) => (
+              <TripFeedCard key={route.id} route={route} currentUserId={user.id} />
+            ))}
           </div>
         )}
-
-        <div className="space-y-4">
-          {routes?.map((route) => (
-            <RouteCard key={route.id} route={route} />
-          ))}
-        </div>
       </div>
     </>
   );
