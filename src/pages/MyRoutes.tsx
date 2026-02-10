@@ -115,7 +115,7 @@ const MyRoutes = () => {
           <div>
             <h2 className="text-lg font-bold">Twoje trasy</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {(publishedRoutes?.length || 0) + (draftRoutes?.length || 0)} tras · {folders.length} folderów
+              {(publishedRoutes?.length || 0) + (draftRoutes?.length || 0)} tras · {folders.length} podróży
             </p>
           </div>
           <Button size="sm" onClick={() => navigate("/create")}>
@@ -124,6 +124,10 @@ const MyRoutes = () => {
           </Button>
         </div>
       </div>
+
+      <p className="text-xs text-muted-foreground px-4 pb-2">
+        Podróże grupują trasy z jednego wyjazdu (np. "Japonia" z dniami 1-14)
+      </p>
 
       <Tabs defaultValue="published" className="w-full">
         <div className="px-4">
@@ -135,7 +139,7 @@ const MyRoutes = () => {
               Robocze ({draftRoutes?.length || 0})
             </TabsTrigger>
             <TabsTrigger value="folders" className="text-xs">
-              Foldery ({folders.length})
+              Podróże ({folders.length})
             </TabsTrigger>
           </TabsList>
         </div>
@@ -184,9 +188,9 @@ const MyRoutes = () => {
           {folders.length === 0 && (
             <EmptyState
               icon={FolderPlus}
-              title="Brak folderów"
-              description="Grupuj swoje trasy w foldery, np. osobny folder na każdą podróż"
-              actionLabel="Utwórz folder"
+              title="Brak podróży"
+              description="Grupuj swoje trasy w podróże – osobna podróż na każdy wyjazd"
+              actionLabel="Utwórz podróż"
               actionIcon={Plus}
               onAction={() => navigate("/create-folder")}
             />
@@ -224,9 +228,9 @@ const MyRoutes = () => {
       <AlertDialog open={!!deletingFolderId} onOpenChange={(open) => !open && setDeletingFolderId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Usuń folder</AlertDialogTitle>
+            <AlertDialogTitle>Usuń podróż</AlertDialogTitle>
             <AlertDialogDescription>
-              Czy na pewno chcesz usunąć ten folder? Trasy w nim zawarte nie zostaną usunięte, tylko odłączone.
+              Czy na pewno chcesz usunąć tę podróż? Trasy w niej zawarte nie zostaną usunięte, tylko odłączone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
