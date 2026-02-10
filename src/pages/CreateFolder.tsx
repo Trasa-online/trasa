@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useGoBack } from "@/hooks/useGoBack";
 import { useFolders } from "@/hooks/useFolders";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +15,7 @@ import { compressImage } from "@/lib/imageCompression";
 const CreateFolder = () => {
   const { id } = useParams();
   const { user, loading } = useAuth();
+  const goBack = useGoBack("/my-routes");
   const navigate = useNavigate();
   const { toast } = useToast();
   const { createFolder, updateFolder } = useFolders();
@@ -118,7 +120,7 @@ const CreateFolder = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border/50 px-4 py-3 flex items-center gap-3 z-10">
-        <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-muted rounded-md transition-colors">
+        <button onClick={goBack} className="p-1 -ml-1 hover:bg-muted rounded-md transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-base font-medium">{id ? "Edytuj podróż" : "Nowa podróż"}</h1>

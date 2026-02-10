@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useGoBack } from "@/hooks/useGoBack";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 const FolderDetails = () => {
   const { id } = useParams();
   const { user, loading } = useAuth();
+  const goBack = useGoBack("/my-routes");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -57,7 +59,7 @@ const FolderDetails = () => {
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         <FolderOpen className="h-12 w-12 text-muted-foreground" />
         <p className="text-muted-foreground">Folder nie został znaleziony</p>
-        <Button variant="outline" onClick={() => navigate(-1)}>Wróć</Button>
+        <Button variant="outline" onClick={goBack}>Wróć</Button>
       </div>
     );
   }
@@ -103,7 +105,7 @@ const FolderDetails = () => {
     <div className="max-w-lg mx-auto pb-24">
       {/* Header */}
       <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border/50 px-4 py-3 flex items-center gap-3 z-10">
-        <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-muted rounded-md transition-colors">
+        <button onClick={goBack} className="p-1 -ml-1 hover:bg-muted rounded-md transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="flex-1 min-w-0">
