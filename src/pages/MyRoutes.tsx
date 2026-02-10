@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Plus, FileText, FolderPlus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -109,74 +110,89 @@ const MyRoutes = () => {
     <>
       <PageHeader title="TRASA" showBell showSearch unreadCount={unreadCount} />
 
-      <div className="p-4">
-        <Tabs defaultValue="published" className="w-full">
-          <TabsList className="w-full grid grid-cols-3">
-            <TabsTrigger value="published">
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold">Twoje trasy</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {(publishedRoutes?.length || 0) + (draftRoutes?.length || 0)} tras · {folders.length} folderów
+            </p>
+          </div>
+          <Button size="sm" onClick={() => navigate("/create")}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Nowa
+          </Button>
+        </div>
+      </div>
+
+      <Tabs defaultValue="published" className="w-full">
+        <div className="px-4">
+          <TabsList className="w-full grid grid-cols-3 bg-muted/50">
+            <TabsTrigger value="published" className="text-xs">
               Opublikowane ({publishedRoutes?.length || 0})
             </TabsTrigger>
-            <TabsTrigger value="draft">
+            <TabsTrigger value="draft" className="text-xs">
               Robocze ({draftRoutes?.length || 0})
             </TabsTrigger>
-            <TabsTrigger value="folders">
+            <TabsTrigger value="folders" className="text-xs">
               Foldery ({folders.length})
             </TabsTrigger>
           </TabsList>
+        </div>
 
-          <TabsContent value="published" className="space-y-4 mt-4">
-            {publishedRoutes?.map((route) => (
-              <RouteItem key={route.id} route={route} onDelete={setDeletingRouteId} />
-            ))}
-            {publishedRoutes?.length === 0 && (
-              <EmptyState
-                icon={MapPin}
-                title="Brak opublikowanych tras"
-                description="Stwórz swoją pierwszą trasę i podziel się nią ze znajomymi!"
-                actionLabel="Stwórz pierwszą trasę"
-                actionIcon={Plus}
-                onAction={() => navigate("/create")}
-              />
-            )}
-          </TabsContent>
+        <TabsContent value="published" className="space-y-3 px-4 mt-3">
+          {publishedRoutes?.map((route) => (
+            <RouteItem key={route.id} route={route} onDelete={setDeletingRouteId} />
+          ))}
+          {publishedRoutes?.length === 0 && (
+            <EmptyState
+              icon={MapPin}
+              title="Brak opublikowanych tras"
+              description="Stwórz swoją pierwszą trasę i podziel się nią ze znajomymi!"
+              actionLabel="Stwórz pierwszą trasę"
+              actionIcon={Plus}
+              onAction={() => navigate("/create")}
+            />
+          )}
+        </TabsContent>
 
-          <TabsContent value="draft" className="space-y-4 mt-4">
-            {draftRoutes?.map((route) => (
-              <RouteItem key={route.id} route={route} onDelete={setDeletingRouteId} />
-            ))}
-            {draftRoutes?.length === 0 && (
-              <EmptyState
-                icon={FileText}
-                title="Brak roboczych tras"
-                description="Rozpocznij tworzenie trasy, a zostanie automatycznie zapisana jako robocza"
-                actionLabel="Zacznij nową trasę"
-                actionIcon={Plus}
-                onAction={() => navigate("/create")}
-              />
-            )}
-          </TabsContent>
+        <TabsContent value="draft" className="space-y-3 px-4 mt-3">
+          {draftRoutes?.map((route) => (
+            <RouteItem key={route.id} route={route} onDelete={setDeletingRouteId} />
+          ))}
+          {draftRoutes?.length === 0 && (
+            <EmptyState
+              icon={FileText}
+              title="Brak roboczych tras"
+              description="Rozpocznij tworzenie trasy, a zostanie automatycznie zapisana jako robocza"
+              actionLabel="Zacznij nową trasę"
+              actionIcon={Plus}
+              onAction={() => navigate("/create")}
+            />
+          )}
+        </TabsContent>
 
-          <TabsContent value="folders" className="space-y-4 mt-4">
-            {folders.map((folder) => (
-              <FolderCard
-                key={folder.id}
-                folder={folder}
-                onDelete={setDeletingFolderId}
-                onEdit={(id) => navigate(`/edit-folder/${id}`)}
-              />
-            ))}
-            {folders.length === 0 && (
-              <EmptyState
-                icon={FolderPlus}
-                title="Brak folderów"
-                description="Grupuj swoje trasy w foldery, np. osobny folder na każdą podróż"
-                actionLabel="Utwórz folder"
-                actionIcon={Plus}
-                onAction={() => navigate("/create-folder")}
-              />
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
+        <TabsContent value="folders" className="space-y-3 px-4 mt-3">
+          {folders.map((folder) => (
+            <FolderCard
+              key={folder.id}
+              folder={folder}
+              onDelete={setDeletingFolderId}
+              onEdit={(id) => navigate(`/edit-folder/${id}`)}
+            />
+          ))}
+          {folders.length === 0 && (
+            <EmptyState
+              icon={FolderPlus}
+              title="Brak folderów"
+              description="Grupuj swoje trasy w foldery, np. osobny folder na każdą podróż"
+              actionLabel="Utwórz folder"
+              actionIcon={Plus}
+              onAction={() => navigate("/create-folder")}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Delete route dialog */}
       <AlertDialog open={!!deletingRouteId} onOpenChange={(open) => !open && setDeletingRouteId(null)}>
