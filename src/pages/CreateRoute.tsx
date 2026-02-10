@@ -362,6 +362,18 @@ const CreateRoute = () => {
           }
         }
       } else {
+        // Calculate folder_order for new routes in a folder
+        let autoSaveFolderOrder = 0;
+        if (folderId) {
+          const { data: existingRoutes } = await supabase
+            .from("routes")
+            .select("folder_order")
+            .eq("folder_id", folderId)
+            .order("folder_order", { ascending: false })
+            .limit(1);
+          autoSaveFolderOrder = (existingRoutes?.[0]?.folder_order ?? -1) + 1;
+        }
+
         // Create new route
         const { data: route, error: routeError } = await supabase
           .from("routes")
@@ -372,7 +384,8 @@ const CreateRoute = () => {
             status: "draft", 
             rating: routeRating, 
             trip_type: tripType || 'completed',
-            folder_id: folderId || null
+            folder_id: folderId || null,
+            folder_order: autoSaveFolderOrder
           })
           .select()
           .single();
@@ -1095,6 +1108,18 @@ const CreateRoute = () => {
       // Use routeIdRef.current (from auto-save) OR id from URL params
       const existingRouteId = routeIdRef.current || id;
 
+      // Calculate folder_order for new routes in a folder
+      let folderOrder = 0;
+      if (folderId && !existingRouteId) {
+        const { data: existingRoutes } = await supabase
+          .from("routes")
+          .select("folder_order")
+          .eq("folder_id", folderId)
+          .order("folder_order", { ascending: false })
+          .limit(1);
+        folderOrder = (existingRoutes?.[0]?.folder_order ?? -1) + 1;
+      }
+
       if (existingRouteId) {
         const { error: routeError } = await supabase
           .from("routes")
@@ -1185,7 +1210,7 @@ const CreateRoute = () => {
       } else {
         const { data: route, error: routeError } = await supabase
           .from("routes")
-          .insert({ user_id: user.id, title, description: routeDescription || description, status, rating: routeRating, trip_type: tripType || 'completed', folder_id: folderId || null })
+          .insert({ user_id: user.id, title, description: routeDescription || description, status, rating: routeRating, trip_type: tripType || 'completed', folder_id: folderId || null, folder_order: folderOrder })
           .select()
           .single();
 
