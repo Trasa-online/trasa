@@ -1,6 +1,10 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Heart, MessageCircle, Bookmark } from "lucide-react";
+import { toast } from "sonner";
 
 interface TripFeedCardProps {
   route: {
@@ -60,7 +64,49 @@ function extractLocation(pins: TripFeedCardProps["route"]["pins"]): string | nul
 
 const TripFeedCard = ({ route, currentUserId }: TripFeedCardProps) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const pins = route.pins || [];
+
+  // Like state
+  const isLiked = currentUserId ? route.likes?.some((l) => l.user_id === currentUserId) : false;
+  const [optimisticLiked, setOptimisticLiked] = useState(isLiked);
+  const [optimisticCount, setOptimisticCount] = useState(route.likes?.length || 0);
+  const [likeAnimating, setLikeAnimating] = useState(false);
+
+
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentUserId) return;
+      if (optimisticLiked) {
+        const { error } = await supabase
+          .from("likes")
+          .delete()
+          .eq("route_id", route.id)
+          .eq("user_id", currentUserId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("likes")
+          .insert({ route_id: route.id, user_id: currentUserId });
+        if (error) throw error;
+      }
+    },
+    onMutate: () => {
+      setLikeAnimating(true);
+      setTimeout(() => setLikeAnimating(false), 150);
+      setOptimisticLiked((prev) => !prev);
+      setOptimisticCount((prev) => optimisticLiked ? prev - 1 : prev + 1);
+    },
+    onError: () => {
+      // Revert
+      setOptimisticLiked((prev) => !prev);
+      setOptimisticCount((prev) => optimisticLiked ? prev + 1 : prev - 1);
+      toast.error("Nie udało się");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["feed-routes"] });
+    },
+  });
 
   // Hero image
   const heroPin = pins.find((p) => p.image_url || p.images?.length);
@@ -98,11 +144,28 @@ const TripFeedCard = ({ route, currentUserId }: TripFeedCardProps) => {
   // Average rating
   const avgRating = route.rating || 0;
 
-  // Like state
-  const isLiked = currentUserId ? route.likes?.some((l) => l.user_id === currentUserId) : false;
   const isOwnRoute = currentUserId === (route as any).user_id;
 
   const handleCardClick = () => navigate(`/route/${route.id}`);
+
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!currentUserId) {
+      toast.error("Musisz być zalogowany");
+      return;
+    }
+    likeMutation.mutate();
+  };
+
+  const handleComment = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/route/${route.id}#comments`);
+  };
+
+  const handleBookmark = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toast("Zapisywanie podróży – wkrótce!");
+  };
 
   return (
     <div
@@ -214,22 +277,24 @@ const TripFeedCard = ({ route, currentUserId }: TripFeedCardProps) => {
       <div className="flex items-center justify-between px-4 py-3 border-t border-border/50">
         <div className="flex gap-4">
           <button
-            onClick={(e) => e.stopPropagation()}
+            onClick={handleLike}
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            <Heart className={`h-4 w-4 ${isLiked ? "fill-red-500 text-red-500" : ""}`} />
-            <span>{route.likes?.length || 0}</span>
+            <Heart
+              className={`h-4 w-4 transition-transform duration-150 ${likeAnimating ? "scale-110" : "scale-100"} ${optimisticLiked ? "fill-red-500 text-red-500" : ""}`}
+            />
+            <span className="font-medium">{optimisticCount}</span>
           </button>
           <button
-            onClick={(e) => e.stopPropagation()}
+            onClick={handleComment}
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <MessageCircle className="h-4 w-4" />
-            <span>{route.comments?.length || 0}</span>
+            <span className="font-medium">{route.comments?.length || 0}</span>
           </button>
         </div>
         <button
-          onClick={(e) => e.stopPropagation()}
+          onClick={handleBookmark}
           className="text-muted-foreground hover:text-foreground transition-colors"
         >
           <Bookmark className="h-4 w-4" />
