@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { NavLink } from "@/components/NavLink";
-import { Rss, MapPin, Plus, Bookmark, Settings } from "lucide-react";
+import { Rss, MapPin, Plus, Bookmark, User } from "lucide-react";
 import { CreateModeDrawer } from "@/components/route/CreateModeDrawer";
+import { useAuth } from "@/hooks/useAuth";
 
 const BottomNav = () => {
+  const { user } = useAuth();
   const [showCreateDrawer, setShowCreateDrawer] = useState(false);
 
   return (
@@ -64,14 +66,14 @@ const BottomNav = () => {
           </NavLink>
           
           <NavLink
-            to="/settings"
+            to={user ? `/profile/${user.id}` : "/auth"}
             className="flex flex-col items-center justify-center gap-1 text-background/60 relative"
             activeClassName="text-background"
           >
             {({ isActive }) => (
               <>
-                <Settings className="h-5 w-5" />
-                <span className="text-xs">Ustawienia</span>
+                <User className="h-5 w-5" />
+                <span className="text-xs">Profil</span>
                 {isActive && <div className="absolute bottom-1 w-1 h-1 bg-background rounded-full" />}
               </>
             )}
