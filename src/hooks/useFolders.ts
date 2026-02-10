@@ -107,13 +107,24 @@ export const useFolders = () => {
 
       if (error) throw error;
     },
+    onMutate: async (folderId) => {
+      await queryClient.cancelQueries({ queryKey: ["my-folders", user?.id] });
+      const prevFolders = queryClient.getQueryData<RouteFolder[]>(["my-folders", user?.id]);
+      queryClient.setQueryData<RouteFolder[]>(["my-folders", user?.id], (old) =>
+        old?.filter((f) => f.id !== folderId) ?? []
+      );
+      return { prevFolders };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-folders"] });
       queryClient.invalidateQueries({ queryKey: ["my-routes-published"] });
       queryClient.invalidateQueries({ queryKey: ["my-routes-draft"] });
       toast({ title: "Folder usunięty" });
     },
-    onError: () => {
+    onError: (_err, _folderId, context) => {
+      if (context?.prevFolders) {
+        queryClient.setQueryData(["my-folders", user?.id], context.prevFolders);
+      }
       toast({ variant: "destructive", title: "Błąd", description: "Nie udało się usunąć folderu" });
     },
   });

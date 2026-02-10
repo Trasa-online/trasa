@@ -94,12 +94,34 @@ const MyRoutes = () => {
       const { error } = await supabase.from("routes").delete().eq("id", routeId);
       if (error) throw error;
     },
+    onMutate: async (routeId) => {
+      await queryClient.cancelQueries({ queryKey: ["my-routes-published"] });
+      await queryClient.cancelQueries({ queryKey: ["my-routes-draft"] });
+
+      const prevPublished = queryClient.getQueryData<any[]>(["my-routes-published", user?.id]);
+      const prevDraft = queryClient.getQueryData<any[]>(["my-routes-draft", user?.id]);
+
+      queryClient.setQueryData<any[]>(["my-routes-published", user?.id], (old) =>
+        old?.filter((r) => r.id !== routeId) ?? []
+      );
+      queryClient.setQueryData<any[]>(["my-routes-draft", user?.id], (old) =>
+        old?.filter((r) => r.id !== routeId) ?? []
+      );
+
+      return { prevPublished, prevDraft };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-routes-published"] });
       queryClient.invalidateQueries({ queryKey: ["my-routes-draft"] });
       toast({ title: "Trasa została usunięta" });
     },
-    onError: () => {
+    onError: (_err, _routeId, context) => {
+      if (context?.prevPublished) {
+        queryClient.setQueryData(["my-routes-published", user?.id], context.prevPublished);
+      }
+      if (context?.prevDraft) {
+        queryClient.setQueryData(["my-routes-draft", user?.id], context.prevDraft);
+      }
       toast({ variant: "destructive", title: "Błąd", description: "Nie udało się usunąć trasy" });
     },
   });
