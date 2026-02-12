@@ -52,7 +52,7 @@ export const PageHeader = ({
               <ArrowLeft className="h-5 w-5" />
             </Button>
           )}
-          <h1 className="text-xl font-bold">{title}</h1>
+          <h1 className={`text-xl font-bold ${title === "TRASA" ? "text-red-600" : ""}`}>{title}</h1>
         </div>
 
         {/* Right side */}
