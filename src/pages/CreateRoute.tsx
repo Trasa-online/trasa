@@ -1627,7 +1627,52 @@ const CreateRoute = () => {
                     />
                   </div>
 
-                  {/* Experience Panel - appears after place is selected */}
+                  {/* Category chips - manual selection */}
+                  {pins[currentPinIndex]?.address && (
+                    <div>
+                      <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block mb-2">
+                        Kategoria
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {([
+                          { value: 'accommodation' as PlaceCategory, label: 'Nocleg', emoji: '🏨' },
+                          { value: 'transport' as PlaceCategory, label: 'Transport', emoji: '🚆' },
+                          { value: 'attraction' as PlaceCategory, label: 'Rozrywka', emoji: '🎭' },
+                          { value: 'food' as PlaceCategory, label: 'Gastronomia', emoji: '🍽️' },
+                          { value: 'shopping' as PlaceCategory, label: 'Zakupy', emoji: '🛍️' },
+                        ]).map((cat) => {
+                          const isSelected = pins[currentPinIndex]?.place_type === cat.value;
+                          return (
+                            <button
+                              key={cat.value}
+                              type="button"
+                              onClick={() => {
+                                const newType = isSelected ? null : cat.value;
+                                updatePin(currentPinIndex, "place_type", newType);
+                                if (!newType || newType !== pins[currentPinIndex]?.place_type) {
+                                  updatePin(currentPinIndex, "core_decision", null);
+                                  updatePin(currentPinIndex, "selected_tags", []);
+                                  updatePin(currentPinIndex, "timing_tag", null);
+                                  updatePin(currentPinIndex, "optional_note", "");
+                                }
+                              }}
+                              className={cn(
+                                "px-3 py-1.5 rounded-full text-[13px] font-medium transition-all duration-150 flex items-center gap-1.5",
+                                isSelected
+                                  ? "bg-foreground text-background"
+                                  : "bg-muted text-foreground hover:bg-muted/80"
+                              )}
+                            >
+                              <span>{cat.emoji}</span>
+                              {cat.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Experience Panel - appears after category is selected */}
                   {pins[currentPinIndex]?.address && pins[currentPinIndex]?.place_type && pins[currentPinIndex]?.place_type !== 'other' && (
                     <ExperiencePanel
                       placeType={pins[currentPinIndex].place_type!}
