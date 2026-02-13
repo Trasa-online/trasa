@@ -58,7 +58,7 @@ const MapContent = ({ pins, onPinAdd, onMapClick }: {
       }
     });
 
-    map.fitBounds(bounds, { padding: 40 });
+    map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
     // Limit max zoom
     const listener = google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
       const currentZoom = map.getZoom();
@@ -254,7 +254,7 @@ const InteractiveRouteMap = ({ pins, className = "", onPinAdd }: InteractiveRout
     return 12;
   }, [validPins.length]);
 
-  const handleMapClick = async (e: google.maps.MapMouseEvent) => {
+  const handleMapClick = async (e: any) => {
     // Map click is handled inside MapContent
   };
 
