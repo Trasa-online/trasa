@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, memo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { forwardGeocodeWithTypes, type PlaceCategory } from "@/lib/googleMaps";
+import { APIProvider, useMapsLibrary } from "@vis.gl/react-google-maps";
+import { GOOGLE_MAPS_API_KEY, detectPlaceType, type PlaceCategory } from "@/lib/googleMaps";
 
 interface Coordinates {
   latitude: number;
@@ -26,19 +27,24 @@ interface AddressAutocompleteProps {
 interface Suggestion {
   name: string;
   full_address: string;
-  coordinates: {
-    latitude: number;
-    longitude: number;
-  };
-  placeId: string | null;
+  placeId: string;
   placeType: PlaceCategory;
 }
 
+const PLACE_TYPE_ICONS: Record<PlaceCategory, string> = {
+  transport: '🚆',
+  accommodation: '🏨',
+  attraction: '🎭',
+  food: '🍽️',
+  shopping: '🛍️',
+  other: '📍',
+};
+
 /**
- * Memoized address autocomplete with debounced input handling.
- * Uses Google Places Text Search API for place type detection.
+ * Inner component that uses the Google Maps Places JS library.
+ * Must be rendered inside an APIProvider.
  */
-const AddressAutocomplete = memo(function AddressAutocomplete({
+const AddressAutocompleteInner = memo(function AddressAutocompleteInner({
   value,
   onChange,
   placeholder = "Wpisz adres",
@@ -54,7 +60,27 @@ const AddressAutocomplete = memo(function AddressAutocomplete({
   const isTypingRef = useRef(false);
   const lastExternalValueRef = useRef(value);
 
-  // Sync from parent only when value genuinely changes externally (e.g., switching pins)
+  // Load the Places library via the Maps JS API
+  const places = useMapsLibrary("places");
+  const geocoding = useMapsLibrary("geocoding");
+
+  const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+
+  // Initialize services when libraries are loaded
+  useEffect(() => {
+    if (places && !autocompleteServiceRef.current) {
+      autocompleteServiceRef.current = new places.AutocompleteService();
+    }
+  }, [places]);
+
+  useEffect(() => {
+    if (geocoding && !geocoderRef.current) {
+      geocoderRef.current = new geocoding.Geocoder();
+    }
+  }, [geocoding]);
+
+  // Sync from parent only when value genuinely changes externally
   useEffect(() => {
     if (!isTypingRef.current && value !== lastExternalValueRef.current) {
       setLocalQuery(value);
@@ -84,97 +110,116 @@ const AddressAutocomplete = memo(function AddressAutocomplete({
   }, []);
 
   const fetchSuggestions = useCallback(async (searchQuery: string) => {
-    if (!searchQuery || searchQuery.length < 2) {
+    if (!autocompleteServiceRef.current || !searchQuery || searchQuery.length < 2) {
       setSuggestions([]);
       return;
     }
 
     setLoading(true);
     try {
-      const results = await forwardGeocodeWithTypes(searchQuery);
+      const request: google.maps.places.AutocompletionRequest = {
+        input: searchQuery,
+        language: "pl",
+      };
 
-      if (results && results.length > 0) {
-        const mapped: Suggestion[] = results.map((result: any) => ({
-          name: result.name || result.full_address.split(',')[0],
-          full_address: result.full_address,
-          coordinates: result.coordinates,
-          placeId: result.placeId,
-          placeType: result.placeType,
-        }));
-        setSuggestions(mapped);
-        setIsOpen(true);
-      } else {
-        setSuggestions([]);
-      }
+      autocompleteServiceRef.current.getPlacePredictions(
+        request,
+        (predictions, status) => {
+          if (
+            status === google.maps.places.PlacesServiceStatus.OK &&
+            predictions &&
+            predictions.length > 0
+          ) {
+            const mapped: Suggestion[] = predictions.slice(0, 8).map((p) => ({
+              name: p.structured_formatting?.main_text || p.description.split(",")[0],
+              full_address: p.description,
+              placeId: p.place_id,
+              placeType: detectPlaceType(p.types || []),
+            }));
+            setSuggestions(mapped);
+            setIsOpen(true);
+          } else {
+            setSuggestions([]);
+          }
+          setLoading(false);
+        }
+      );
     } catch (error) {
       console.error("Error fetching suggestions:", error);
       setSuggestions([]);
-    } finally {
       setLoading(false);
     }
   }, []);
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    isTypingRef.current = true;
-    setLocalQuery(newValue);
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      isTypingRef.current = true;
+      setLocalQuery(newValue);
 
-    // Clear existing debounce
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
 
-    // Debounce API call (300ms for suggestions)
-    debounceRef.current = setTimeout(() => {
-      fetchSuggestions(newValue);
-      isTypingRef.current = false;
-    }, 300);
-  }, [fetchSuggestions]);
+      debounceRef.current = setTimeout(() => {
+        fetchSuggestions(newValue);
+        isTypingRef.current = false;
+      }, 300);
+    },
+    [fetchSuggestions]
+  );
 
-  const handleSuggestionClick = useCallback((suggestion: Suggestion) => {
-    // Check if there's a distinct place name (not just first part of address)
-    const isPlaceName = suggestion.name &&
-      suggestion.name !== suggestion.full_address;
+  const handleSuggestionClick = useCallback(
+    (suggestion: Suggestion) => {
+      // Use Geocoder to get coordinates from placeId
+      if (geocoderRef.current && suggestion.placeId) {
+        geocoderRef.current.geocode(
+          { placeId: suggestion.placeId },
+          (results, status) => {
+            if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+              const location = results[0].geometry.location;
+              const coords: Coordinates = {
+                latitude: location.lat(),
+                longitude: location.lng(),
+              };
 
-    // Build full address that includes the place name if it exists
-    const fullAddressWithName = isPlaceName && !suggestion.full_address.startsWith(suggestion.name)
-      ? `${suggestion.name}, ${suggestion.full_address}`
-      : suggestion.full_address;
+              const isPlaceName =
+                suggestion.name && suggestion.name !== suggestion.full_address;
+              const fullAddressWithName =
+                isPlaceName && !suggestion.full_address.startsWith(suggestion.name)
+                  ? `${suggestion.name}, ${suggestion.full_address}`
+                  : suggestion.full_address;
 
-    // Display value is the combined address
-    const displayValue = fullAddressWithName;
+              const displayValue = fullAddressWithName;
 
-    setLocalQuery(displayValue);
-    lastExternalValueRef.current = displayValue;
-    isTypingRef.current = false;
+              setLocalQuery(displayValue);
+              lastExternalValueRef.current = displayValue;
+              isTypingRef.current = false;
 
-    // Pass: displayValue, coordinates, fullAddress, placeName, placeType, placeId
-    onChange(
-      displayValue,
-      suggestion.coordinates,
-      fullAddressWithName,
-      isPlaceName ? suggestion.name : undefined,
-      suggestion.placeType,
-      suggestion.placeId || undefined
-    );
-    setIsOpen(false);
-    setSuggestions([]);
-  }, [onChange]);
+              onChange(
+                displayValue,
+                coords,
+                fullAddressWithName,
+                isPlaceName ? suggestion.name : undefined,
+                suggestion.placeType,
+                suggestion.placeId
+              );
+            }
+          }
+        );
+      }
+
+      setIsOpen(false);
+      setSuggestions([]);
+    },
+    [onChange]
+  );
 
   const handleFocus = useCallback(() => {
     if (suggestions.length > 0) {
       setIsOpen(true);
     }
   }, [suggestions.length]);
-
-  const PLACE_TYPE_ICONS: Record<PlaceCategory, string> = {
-    transport: '🚆',
-    accommodation: '🏨',
-    attraction: '🎭',
-    food: '🍽️',
-    shopping: '🛍️',
-    other: '📍',
-  };
 
   return (
     <div ref={containerRef} className="relative">
@@ -191,7 +236,7 @@ const AddressAutocomplete = memo(function AddressAutocomplete({
         <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-auto">
           {suggestions.map((suggestion, index) => (
             <button
-              key={`${suggestion.coordinates.latitude}-${suggestion.coordinates.longitude}-${index}`}
+              key={`${suggestion.placeId}-${index}`}
               type="button"
               className={cn(
                 "w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors",
@@ -200,7 +245,9 @@ const AddressAutocomplete = memo(function AddressAutocomplete({
               onClick={() => handleSuggestionClick(suggestion)}
             >
               <div className="flex items-center gap-2">
-                <span className="text-base flex-shrink-0">{PLACE_TYPE_ICONS[suggestion.placeType]}</span>
+                <span className="text-base flex-shrink-0">
+                  {PLACE_TYPE_ICONS[suggestion.placeType]}
+                </span>
                 <div className="min-w-0 flex-1">
                   <div className="font-medium truncate">{suggestion.name}</div>
                   <div className="text-xs text-muted-foreground truncate">
@@ -219,6 +266,19 @@ const AddressAutocomplete = memo(function AddressAutocomplete({
         </div>
       )}
     </div>
+  );
+});
+
+/**
+ * Outer wrapper that provides the Google Maps API context.
+ */
+const AddressAutocomplete = memo(function AddressAutocomplete(
+  props: AddressAutocompleteProps
+) {
+  return (
+    <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+      <AddressAutocompleteInner {...props} />
+    </APIProvider>
   );
 });
 
