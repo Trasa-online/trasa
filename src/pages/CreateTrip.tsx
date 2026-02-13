@@ -406,7 +406,7 @@ const CreateTrip = () => {
     if (step > 1 && !id) {
       setStep(step - 1);
     } else {
-      navigate(-1);
+      navigate("/feed");
     }
   };
 
