@@ -1,6 +1,5 @@
-import { useState, useCallback } from "react";
-import { Check, Plus, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useCallback } from "react";
+import { Check } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { PlaceCategory } from "@/lib/googleMaps";
@@ -47,9 +46,9 @@ const TYPE_CONFIGS: Record<Exclude<PlaceCategory, 'other'>, TypeConfig> = {
     icon: "🏨",
     section1Label: "Czy to dobra baza na tę podróż?",
     coreOptions: [
-      { value: "IDEAL_BASE", label: "Idealna baza", emoji: "🏠", selectedClasses: "bg-green-100 border-green-500 dark:bg-green-900/30" },
-      { value: "OK_BASE", label: "OK baza", emoji: "👌", selectedClasses: "bg-amber-100 border-amber-500 dark:bg-amber-900/30" },
-      { value: "LOGISTICS_PROBLEM", label: "Problem logistyczny", emoji: "⚠️", selectedClasses: "bg-red-100 border-red-500 dark:bg-red-900/30" },
+      { value: "IDEAL_BASE", label: "Idealna baza", emoji: "🏠", selectedClasses: "bg-green-50 border-green-400 dark:bg-green-900/20 dark:border-green-600" },
+      { value: "OK_BASE", label: "OK baza", emoji: "👌", selectedClasses: "bg-amber-50 border-amber-400 dark:bg-amber-900/20 dark:border-amber-600" },
+      { value: "LOGISTICS_PROBLEM", label: "Problem logistyczny", emoji: "⚠️", selectedClasses: "bg-red-50 border-red-400 dark:bg-red-900/20 dark:border-red-600" },
     ],
     section2Label: "Kluczowe czynniki",
     tagOptions: [
@@ -66,9 +65,9 @@ const TYPE_CONFIGS: Record<Exclude<PlaceCategory, 'other'>, TypeConfig> = {
     icon: "🎭",
     section1Label: "Czy warto poświęcić czas?",
     coreOptions: [
-      { value: "MUST_VISIT", label: "Must visit", emoji: "⭐", selectedClasses: "bg-green-100 border-green-500 dark:bg-green-900/30" },
-      { value: "WORTH_IF_TIME", label: "Warto jeśli czas", emoji: "👍", selectedClasses: "bg-amber-100 border-amber-500 dark:bg-amber-900/30" },
-      { value: "CAN_SKIP", label: "Można pominąć", emoji: "⏭️", selectedClasses: "bg-red-100 border-red-500 dark:bg-red-900/30" },
+      { value: "MUST_VISIT", label: "Must visit", emoji: "⭐", selectedClasses: "bg-green-50 border-green-400 dark:bg-green-900/20 dark:border-green-600" },
+      { value: "WORTH_IF_TIME", label: "Warto jeśli czas", emoji: "👍", selectedClasses: "bg-amber-50 border-amber-400 dark:bg-amber-900/20 dark:border-amber-600" },
+      { value: "CAN_SKIP", label: "Można pominąć", emoji: "⏭️", selectedClasses: "bg-red-50 border-red-400 dark:bg-red-900/20 dark:border-red-600" },
     ],
     section2Label: "Doświadczenie",
     tagOptions: [
@@ -90,9 +89,9 @@ const TYPE_CONFIGS: Record<Exclude<PlaceCategory, 'other'>, TypeConfig> = {
     icon: "🍽️",
     section1Label: "Czy wpasowało się w trasę?",
     coreOptions: [
-      { value: "PERFECT_FIT", label: "Idealne", emoji: "✨", selectedClasses: "bg-green-100 border-green-500 dark:bg-green-900/30" },
-      { value: "OK_FIT", label: "OK", emoji: "👌", selectedClasses: "bg-amber-100 border-amber-500 dark:bg-amber-900/30" },
-      { value: "DISRUPTED_PLAN", label: "Zaburzyło plan", emoji: "😤", selectedClasses: "bg-red-100 border-red-500 dark:bg-red-900/30" },
+      { value: "PERFECT_FIT", label: "Idealne", emoji: "✨", selectedClasses: "bg-green-50 border-green-400 dark:bg-green-900/20 dark:border-green-600" },
+      { value: "OK_FIT", label: "OK", emoji: "👌", selectedClasses: "bg-amber-50 border-amber-400 dark:bg-amber-900/20 dark:border-amber-600" },
+      { value: "DISRUPTED_PLAN", label: "Zaburzyło plan", emoji: "😤", selectedClasses: "bg-red-50 border-red-400 dark:bg-red-900/20 dark:border-red-600" },
     ],
     section2Label: "Charakter i logistyka",
     tagOptions: [
@@ -114,9 +113,9 @@ const TYPE_CONFIGS: Record<Exclude<PlaceCategory, 'other'>, TypeConfig> = {
     icon: "🛍️",
     section1Label: "Planowane czy spontaniczne?",
     coreOptions: [
-      { value: "PLANNED", label: "Planowane", emoji: "📋", selectedClasses: "bg-blue-100 border-blue-500 dark:bg-blue-900/30" },
-      { value: "SPONTANEOUS", label: "Spontaniczne", emoji: "✨", selectedClasses: "bg-amber-100 border-amber-500 dark:bg-amber-900/30" },
-      { value: "NECESSITY", label: "Konieczność", emoji: "🛒", selectedClasses: "bg-muted border-muted-foreground/50" },
+      { value: "PLANNED", label: "Planowane", emoji: "📋", selectedClasses: "bg-blue-50 border-blue-400 dark:bg-blue-900/20 dark:border-blue-600" },
+      { value: "SPONTANEOUS", label: "Spontaniczne", emoji: "✨", selectedClasses: "bg-amber-50 border-amber-400 dark:bg-amber-900/20 dark:border-amber-600" },
+      { value: "NECESSITY", label: "Konieczność", emoji: "🛒", selectedClasses: "bg-muted border-muted-foreground/40" },
     ],
     section2Label: "Typ zakupów",
     tagOptions: [
@@ -135,9 +134,9 @@ const TYPE_CONFIGS: Record<Exclude<PlaceCategory, 'other'>, TypeConfig> = {
     icon: "🚆",
     section1Label: "Czy było sprawnie?",
     coreOptions: [
-      { value: "VERY_SMOOTH", label: "Bardzo sprawnie", emoji: "✅", selectedClasses: "bg-green-100 border-green-500 dark:bg-green-900/30" },
-      { value: "OK", label: "OK", emoji: "👌", selectedClasses: "bg-amber-100 border-amber-500 dark:bg-amber-900/30" },
-      { value: "PROBLEMATIC", label: "Problematyczne", emoji: "⚠️", selectedClasses: "bg-red-100 border-red-500 dark:bg-red-900/30" },
+      { value: "VERY_SMOOTH", label: "Bardzo sprawnie", emoji: "✅", selectedClasses: "bg-green-50 border-green-400 dark:bg-green-900/20 dark:border-green-600" },
+      { value: "OK", label: "OK", emoji: "👌", selectedClasses: "bg-amber-50 border-amber-400 dark:bg-amber-900/20 dark:border-amber-600" },
+      { value: "PROBLEMATIC", label: "Problematyczne", emoji: "⚠️", selectedClasses: "bg-red-50 border-red-400 dark:bg-red-900/20 dark:border-red-600" },
     ],
     section2Label: "Wskaźniki tarcia",
     tagOptions: [
@@ -149,49 +148,6 @@ const TYPE_CONFIGS: Record<Exclude<PlaceCategory, 'other'>, TypeConfig> = {
     section3Placeholder: "Co powinni wiedzieć inni?",
   },
 };
-
-// ─── Reusable UI Components ───
-
-const SectionLabel = ({ children, required = false }: { children: React.ReactNode; required?: boolean }) => (
-  <div className="flex items-center gap-2">
-    <h3 className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase">
-      {children}
-    </h3>
-    {required && <span className="text-[11px] text-destructive font-medium">*</span>}
-  </div>
-);
-
-const ChipSelector = ({
-  options,
-  selected,
-  onToggle,
-}: {
-  options: string[];
-  selected: string[];
-  onToggle: (value: string) => void;
-}) => (
-  <div className="flex flex-wrap gap-1.5">
-    {options.map((option) => {
-      const isSelected = selected.includes(option);
-      return (
-        <button
-          key={option}
-          type="button"
-          onClick={() => onToggle(option)}
-          className={cn(
-            "px-3 py-1.5 rounded-full text-[13px] font-medium transition-all duration-150",
-            isSelected
-              ? "bg-foreground text-background"
-              : "bg-muted text-foreground hover:bg-muted/80"
-          )}
-        >
-          {isSelected && <Check className="inline h-3 w-3 mr-1 -mt-0.5" />}
-          {option}
-        </button>
-      );
-    })}
-  </div>
-);
 
 // ─── Main Component ───
 
@@ -219,19 +175,13 @@ const ExperiencePanel = ({
   }, [selectedTags, onTagsChange]);
 
   return (
-    <div className="space-y-6 pb-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <span className="text-3xl">{config.icon}</span>
-        <h2 className="text-lg font-semibold">{config.title}</h2>
-      </div>
-
-      <div className="h-px bg-border" />
-
-      {/* Section 1: Core Decision (Required) */}
-      <section className="space-y-2.5">
-        <SectionLabel required>{config.section1Label}</SectionLabel>
-        <div className="flex gap-2">
+    <div className="space-y-8 pb-6">
+      {/* Section 1: Core Decision */}
+      <section className="space-y-3">
+        <p className="text-[15px] font-medium text-foreground">
+          {config.section1Label}
+        </p>
+        <div className="grid grid-cols-3 gap-3">
           {config.coreOptions.map((opt) => {
             const isSelected = coreDecision === opt.value;
             return (
@@ -240,33 +190,53 @@ const ExperiencePanel = ({
                 type="button"
                 onClick={() => onCoreDecisionChange(isSelected ? null : opt.value)}
                 className={cn(
-                  "flex-1 py-3 rounded-lg border-2 flex flex-col items-center gap-0.5 transition-all duration-150",
+                  "py-4 rounded-xl border-[1.5px] flex flex-col items-center gap-1.5 transition-all duration-150",
                   isSelected
                     ? opt.selectedClasses
-                    : "border-border bg-background hover:border-muted-foreground/30"
+                    : "border-border bg-background hover:bg-muted/50"
                 )}
               >
-                <span className="text-lg">{opt.emoji}</span>
-                <span className="text-[11px] font-medium text-center leading-tight">{opt.label}</span>
+                <span className="text-2xl">{opt.emoji}</span>
+                <span className="text-[12px] font-medium text-center leading-tight px-1">{opt.label}</span>
               </button>
             );
           })}
         </div>
       </section>
 
-      {/* Section 2: Tags (Multi-select) */}
-      <section className="space-y-2.5">
-        <SectionLabel>{config.section2Label}</SectionLabel>
-        <ChipSelector
-          options={config.tagOptions}
-          selected={selectedTags}
-          onToggle={handleTagToggle}
-        />
+      {/* Section 2: Tags */}
+      <section className="space-y-3">
+        <p className="text-[15px] font-medium text-foreground">
+          {config.section2Label}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {config.tagOptions.map((option) => {
+            const isSelected = selectedTags.includes(option);
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => handleTagToggle(option)}
+                className={cn(
+                  "h-9 px-4 rounded-lg text-[14px] font-medium transition-all duration-150 flex items-center gap-1.5",
+                  isSelected
+                    ? "bg-foreground text-background"
+                    : "bg-muted/60 text-foreground hover:bg-muted"
+                )}
+              >
+                {isSelected && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
+                {option}
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       {/* Section 3: Timing or Free Text */}
-      <section className="space-y-2.5">
-        <SectionLabel>{config.section3Label}</SectionLabel>
+      <section className="space-y-3">
+        <p className="text-[15px] font-medium text-foreground">
+          {config.section3Label}
+        </p>
 
         {config.section3Type === 'single' && config.section3Options && (
           <div className="flex flex-wrap gap-2">
@@ -278,10 +248,10 @@ const ExperiencePanel = ({
                   type="button"
                   onClick={() => onTimingTagChange(isSelected ? null : opt.value)}
                   className={cn(
-                    "px-4 py-2 rounded-lg border flex items-center gap-2 transition-all duration-150 text-sm",
+                    "h-9 px-4 rounded-lg border-[1.5px] flex items-center gap-2 transition-all duration-150 text-[14px] font-medium",
                     isSelected
-                      ? "border-foreground bg-muted/50 font-medium"
-                      : "border-border bg-background hover:border-muted-foreground/30"
+                      ? "border-foreground bg-muted/50"
+                      : "border-border bg-background hover:bg-muted/50"
                   )}
                 >
                   {isSelected && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
@@ -302,10 +272,10 @@ const ExperiencePanel = ({
                 }
               }}
               placeholder={config.section3Placeholder}
-              className="resize-none min-h-[52px] text-sm border-muted-foreground/20 focus:border-foreground"
-              rows={2}
+              className="resize-none min-h-[80px] text-[14px] rounded-xl border-border/60 focus:border-foreground/40 bg-muted/30 placeholder:text-muted-foreground/50"
+              rows={3}
             />
-            <p className="text-[10px] text-muted-foreground text-right mt-0.5">
+            <p className="text-[11px] text-muted-foreground/60 text-right mt-1">
               {optionalNote.length}/300
             </p>
           </div>

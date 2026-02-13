@@ -1558,29 +1558,33 @@ const CreateRoute = () => {
               )
             ) : (
               <>
-                <div className="space-y-5">
+                <div className="space-y-8 pb-32">
+                  {/* Header */}
                   <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-medium text-muted-foreground tracking-wide uppercase">
-                      Pinezka {currentPinIndex + 1}/{pins.length}
-                    </h2>
-                    <div className="flex gap-2">
-                      {pins.length > 1 && (
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => removePin(currentPinIndex)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
+                    <div>
+                      <h2 className="text-[22px] font-semibold tracking-tight text-foreground">
+                        Dodaj miejsce
+                      </h2>
+                      <p className="text-[14px] text-muted-foreground/70 mt-0.5">
+                        Punkt {currentPinIndex + 1} z {pins.length}
+                      </p>
                     </div>
+                    {pins.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removePin(currentPinIndex)}
+                        className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
 
-                  {/* Address input - primary action */}
-                  <div>
-                    <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block mb-1.5">
-                      Nazwa lub adres miejsca <span className="text-destructive">*</span>
-                    </label>
+                  {/* Address input */}
+                  <div className="space-y-2">
+                    <p className="text-[15px] font-medium text-foreground">
+                      Gdzie byłeś?
+                    </p>
                     <AddressAutocomplete
                       value={pins[currentPinIndex]?.address || ""}
                       onChange={async (value, coordinates, fullAddress, placeName, placeType, placeId) => {
@@ -1623,22 +1627,22 @@ const CreateRoute = () => {
                           }));
                         }
                       }}
-                      placeholder="np. KFC Warszawa, Hilton Kraków..."
+                      placeholder="Wyszukaj miejsce..."
                     />
                   </div>
 
-                  {/* Category chips - manual selection */}
+                  {/* Category selection */}
                   {pins[currentPinIndex]?.address && (
-                    <div>
-                      <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block mb-2">
-                        Kategoria
-                      </label>
-                      <div className="flex flex-wrap gap-2">
+                    <div className="space-y-3">
+                      <p className="text-[15px] font-medium text-foreground">
+                        Co to za miejsce?
+                      </p>
+                      <div className="grid grid-cols-5 gap-2">
                         {([
                           { value: 'accommodation' as PlaceCategory, label: 'Nocleg', emoji: '🏨' },
                           { value: 'transport' as PlaceCategory, label: 'Transport', emoji: '🚆' },
                           { value: 'attraction' as PlaceCategory, label: 'Rozrywka', emoji: '🎭' },
-                          { value: 'food' as PlaceCategory, label: 'Gastronomia', emoji: '🍽️' },
+                          { value: 'food' as PlaceCategory, label: 'Jedzenie', emoji: '🍽️' },
                           { value: 'shopping' as PlaceCategory, label: 'Zakupy', emoji: '🛍️' },
                         ]).map((cat) => {
                           const isSelected = pins[currentPinIndex]?.place_type === cat.value;
@@ -1657,14 +1661,14 @@ const CreateRoute = () => {
                                 }
                               }}
                               className={cn(
-                                "px-3 py-1.5 rounded-full text-[13px] font-medium transition-all duration-150 flex items-center gap-1.5",
+                                "flex flex-col items-center gap-1.5 py-3 rounded-xl border-[1.5px] transition-all duration-150",
                                 isSelected
-                                  ? "bg-foreground text-background"
-                                  : "bg-muted text-foreground hover:bg-muted/80"
+                                  ? "border-foreground bg-muted/60"
+                                  : "border-border bg-background hover:bg-muted/40"
                               )}
                             >
-                              <span>{cat.emoji}</span>
-                              {cat.label}
+                              <span className="text-2xl">{cat.emoji}</span>
+                              <span className="text-[11px] font-medium leading-tight">{cat.label}</span>
                             </button>
                           );
                         })}
@@ -1672,38 +1676,38 @@ const CreateRoute = () => {
                     </div>
                   )}
 
-                  {/* Experience Panel - appears after category is selected */}
+                  {/* Experience Panel */}
                   {pins[currentPinIndex]?.address && pins[currentPinIndex]?.place_type && pins[currentPinIndex]?.place_type !== 'other' && (
-                    <ExperiencePanel
-                      placeType={pins[currentPinIndex].place_type!}
-                      coreDecision={pins[currentPinIndex]?.core_decision || null}
-                      selectedTags={pins[currentPinIndex]?.selected_tags || []}
-                      timingTag={pins[currentPinIndex]?.timing_tag || null}
-                      optionalNote={pins[currentPinIndex]?.optional_note || ""}
-                      onCoreDecisionChange={(value) => updatePin(currentPinIndex, "core_decision", value)}
-                      onTagsChange={(tags) => updatePin(currentPinIndex, "selected_tags", tags)}
-                      onTimingTagChange={(value) => updatePin(currentPinIndex, "timing_tag", value)}
-                      onNoteChange={(note) => updatePin(currentPinIndex, "optional_note", note)}
-                    />
+                    <>
+                      <div className="h-px bg-border/60" />
+                      <ExperiencePanel
+                        placeType={pins[currentPinIndex].place_type!}
+                        coreDecision={pins[currentPinIndex]?.core_decision || null}
+                        selectedTags={pins[currentPinIndex]?.selected_tags || []}
+                        timingTag={pins[currentPinIndex]?.timing_tag || null}
+                        optionalNote={pins[currentPinIndex]?.optional_note || ""}
+                        onCoreDecisionChange={(value) => updatePin(currentPinIndex, "core_decision", value)}
+                        onTagsChange={(tags) => updatePin(currentPinIndex, "selected_tags", tags)}
+                        onTimingTagChange={(value) => updatePin(currentPinIndex, "timing_tag", value)}
+                        onNoteChange={(note) => updatePin(currentPinIndex, "optional_note", note)}
+                      />
+                    </>
                   )}
                 </div>
 
                 {/* Bottom actions */}
-                <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border/50 p-4 max-w-lg mx-auto">
-                  <div className="flex gap-2">
+                <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border/40 p-4 max-w-lg mx-auto">
+                  <div className="flex gap-3">
                     <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        // Skip - go to pin list without validation
-                        setShowPinsList(true);
-                      }}
+                      variant="ghost"
+                      className="flex-1 h-12 text-[14px] text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowPinsList(true)}
                     >
                       Pomiń
                     </Button>
                     <Button
                       variant="default"
-                      className="flex-1"
+                      className="flex-[2] h-12 text-[14px] rounded-xl"
                       onClick={() => {
                         const currentPin = pins[currentPinIndex];
                         if (!currentPin?.address) {
