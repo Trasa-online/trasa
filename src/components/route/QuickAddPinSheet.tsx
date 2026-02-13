@@ -7,8 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { compressImage } from "@/lib/imageCompression";
 import { cn } from "@/lib/utils";
-
-const MAPBOX_TOKEN = "pk.eyJ1IjoibWFjaWFzMzQiLCJhIjoiY21pbmgxeWUzMjI0czNqc2Y0ZGl4Nnp6diJ9.iYtSuDlTEsCGTfuyNJzpmg";
+import { reverseGeocode } from "@/lib/googleMaps";
 
 interface QuickAddPinSheetProps {
   open: boolean;
@@ -71,19 +70,15 @@ export const QuickAddPinSheet = ({
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
 
-      // Reverse geocode to get address
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&language=pl`
-      );
-      const data = await response.json();
-      
-      if (data.features && data.features.length > 0) {
-        const place = data.features[0];
+      // Reverse geocode to get address using Google Maps
+      const result = await reverseGeocode(lat, lng);
+
+      if (result) {
         setLocation({
           latitude: lat,
           longitude: lng,
-          address: place.place_name,
-          place_name: place.text || place.place_name.split(',')[0]
+          address: result.fullAddress,
+          place_name: result.placeName || result.fullAddress.split(',')[0]
         });
       } else {
         setLocation({

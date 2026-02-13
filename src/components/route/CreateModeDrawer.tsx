@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { compressImage } from "@/lib/imageCompression";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
+import { reverseGeocode } from "@/lib/googleMaps";
 
 interface CreateModeDrawerProps {
   open: boolean;
@@ -50,8 +51,6 @@ interface QuickPin {
 }
 
 type DrawerMode = 'select' | 'quick-capture';
-
-const MAPBOX_TOKEN = "pk.eyJ1IjoibWFjaWFzMzQiLCJhIjoiY21pbmgxeWUzMjI0czNqc2Y0ZGl4Nnp6diJ9.iYtSuDlTEsCGTfuyNJzpmg";
 
 export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) => {
   const navigate = useNavigate();
@@ -124,21 +123,17 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        
+
         try {
-          // Reverse geocode to get place name
-          const response = await fetch(
-            `https://api.mapbox.com/search/geocode/v6/reverse?longitude=${longitude}&latitude=${latitude}&access_token=${MAPBOX_TOKEN}&language=pl`
-          );
-          const data = await response.json();
-          
-          if (data.features && data.features.length > 0) {
-            const feature = data.features[0];
+          // Reverse geocode to get place name using Google Maps
+          const result = await reverseGeocode(latitude, longitude);
+
+          if (result) {
             setLocation({
               latitude,
               longitude,
-              place_name: feature.properties.name || feature.properties.full_address?.split(',')[0] || 'Nieznane miejsce',
-              address: feature.properties.full_address || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+              place_name: result.placeName || result.fullAddress.split(',')[0] || 'Nieznane miejsce',
+              address: result.fullAddress
             });
           } else {
             setLocation({

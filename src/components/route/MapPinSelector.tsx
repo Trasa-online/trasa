@@ -3,6 +3,7 @@ import { MapPin, Search } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import InteractiveRouteMap from '@/components/InteractiveRouteMap';
+import { forwardGeocode } from '@/lib/googleMaps';
 
 interface Pin {
   latitude?: number;
@@ -23,8 +24,6 @@ interface MapPinSelectorProps {
   existingPins: Pin[];
   onPinSelect: (pinData: NewPinData) => void;
 }
-
-const MAPBOX_TOKEN = "pk.eyJ1IjoibWFjaWFzMzQiLCJhIjoiY21pbmgxeWUzMjI0czNqc2Y0ZGl4Nnp6diJ9.iYtSuDlTEsCGTfuyNJzpmg";
 
 const MapPinSelector = ({ existingPins, onPinSelect }: MapPinSelectorProps) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -55,11 +54,8 @@ const MapPinSelector = ({ existingPins, onPinSelect }: MapPinSelectorProps) => {
     debounceRef.current = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const response = await fetch(
-          `https://api.mapbox.com/search/searchbox/v1/forward?q=${encodeURIComponent(searchQuery)}&access_token=${MAPBOX_TOKEN}&language=pl&types=address,place,locality,neighborhood,street,poi`
-        );
-        const data = await response.json();
-        setSuggestions(data.features || []);
+        const results = await forwardGeocode(searchQuery);
+        setSuggestions(results || []);
       } catch (error) {
         console.error('Search error:', error);
         setSuggestions([]);
@@ -76,15 +72,15 @@ const MapPinSelector = ({ existingPins, onPinSelect }: MapPinSelectorProps) => {
   }, [searchQuery]);
 
   const handleSuggestionSelect = (suggestion: any) => {
-    const coords = suggestion.geometry?.coordinates;
-    const placeName = suggestion.properties?.name || '';
-    const fullAddress = suggestion.properties?.full_address || suggestion.properties?.place_formatted || placeName;
+    const coords = suggestion.coordinates;
+    const placeName = suggestion.name || '';
+    const fullAddress = suggestion.full_address || placeName;
 
     if (coords) {
       // Select this as the pin
       handlePinAdd({
-        latitude: coords[1],
-        longitude: coords[0],
+        latitude: coords.latitude,
+        longitude: coords.longitude,
         place_name: placeName,
         address: fullAddress,
       });
@@ -140,19 +136,17 @@ const MapPinSelector = ({ existingPins, onPinSelect }: MapPinSelectorProps) => {
                   <div className="bg-background border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {suggestions.map((suggestion, index) => (
                       <button
-                        key={suggestion.properties?.mapbox_id || index}
+                        key={`${suggestion.coordinates?.latitude}-${suggestion.coordinates?.longitude}-${index}`}
                         type="button"
                         className="w-full text-left px-4 py-3 hover:bg-muted transition-colors border-b border-border last:border-b-0"
                         onClick={() => handleSuggestionSelect(suggestion)}
                       >
                         <p className="font-medium text-sm truncate">
-                          {suggestion.properties?.name || suggestion.properties?.place_formatted}
+                          {suggestion.name}
                         </p>
-                        {suggestion.properties?.full_address && (
-                          <p className="text-xs text-muted-foreground truncate">
-                            {suggestion.properties.full_address}
-                          </p>
-                        )}
+                        <p className="text-xs text-muted-foreground truncate">
+                          {suggestion.full_address}
+                        </p>
                       </button>
                     ))}
                   </div>

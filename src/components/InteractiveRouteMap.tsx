@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { MapPin, Plus, Loader2 } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Plus, Loader2 } from 'lucide-react';
+import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { Button } from '@/components/ui/button';
-
-const MAPBOX_ACCESS_TOKEN = "pk.eyJ1IjoibWFjaWFzMzQiLCJhIjoiY21pbmgxeWUzMjI0czNqc2Y0ZGl4Nnp6diJ9.iYtSuDlTEsCGTfuyNJzpmg";
+import { GOOGLE_MAPS_API_KEY, reverseGeocode } from '@/lib/googleMaps';
 
 interface Pin {
   latitude?: number;
@@ -27,287 +25,254 @@ interface InteractiveRouteMapProps {
   onPinAdd: (pinData: NewPinData) => void;
 }
 
-const InteractiveRouteMap = ({ pins, className = "", onPinAdd }: InteractiveRouteMapProps) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
-  const tempMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const popupRef = useRef<mapboxgl.Popup | null>(null);
-  
+interface PendingPin {
+  latitude: number;
+  longitude: number;
+  place_name: string;
+  address: string;
+}
+
+const MapContent = ({ pins, onPinAdd, onMapClick }: {
+  pins: Pin[];
+  onPinAdd: (pinData: NewPinData) => void;
+  onMapClick?: (e: google.maps.MapMouseEvent) => void;
+}) => {
+  const map = useMap();
   const [isLoading, setIsLoading] = useState(false);
-  const [pendingPin, setPendingPin] = useState<NewPinData | null>(null);
+  const [pendingPin, setPendingPin] = useState<PendingPin | null>(null);
+  const [selectedPin, setSelectedPin] = useState<number | null>(null);
 
-  const reverseGeocode = async (lng: number, lat: number): Promise<{ placeName: string; fullAddress: string } | null> => {
-    try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_ACCESS_TOKEN}&types=poi,address,place,locality&limit=1`
-      );
-      const data = await response.json();
-      
-      if (data.features && data.features.length > 0) {
-        const feature = data.features[0];
-        const placeName = feature.text || '';
-        const fullAddress = feature.place_name || '';
-        return { placeName, fullAddress };
-      }
-      return null;
-    } catch (error) {
-      console.error('Reverse geocoding error:', error);
-      return null;
-    }
-  };
+  const validPins = useMemo(() =>
+    pins.filter(pin => pin.latitude && pin.longitude),
+    [pins]
+  );
 
-  const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
-    const { lng, lat } = e.lngLat;
-    
-    // Remove previous temp marker and popup
-    tempMarkerRef.current?.remove();
-    popupRef.current?.remove();
-    
-    setIsLoading(true);
-    setPendingPin(null);
-    
-    // Add temporary marker
-    const tempEl = document.createElement('div');
-    tempEl.style.cssText = `
-      width: 32px;
-      height: 32px;
-      background: hsl(var(--primary));
-      border: 3px solid white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-      animation: pulse 1.5s infinite;
-    `;
-    tempEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
-    
-    tempMarkerRef.current = new mapboxgl.Marker(tempEl)
-      .setLngLat([lng, lat])
-      .addTo(map.current!);
-    
-    // Reverse geocode
-    const result = await reverseGeocode(lng, lat);
-    setIsLoading(false);
-    
-    if (result) {
-      const pinData: NewPinData = {
-        latitude: lat,
-        longitude: lng,
-        place_name: result.placeName,
-        address: result.fullAddress,
-      };
-      setPendingPin(pinData);
-      
-      // Create popup with add button
-      const popupContent = document.createElement('div');
-      popupContent.style.cssText = 'padding: 8px; min-width: 200px;';
-      popupContent.innerHTML = `
-        <p style="font-weight: 600; margin: 0 0 4px 0; font-size: 14px;">${result.placeName || 'Nowa lokalizacja'}</p>
-        <p style="color: #666; margin: 0 0 12px 0; font-size: 12px; line-height: 1.4;">${result.fullAddress}</p>
-        <button id="add-pin-btn" style="
-          width: 100%;
-          padding: 8px 16px;
-          background: #000;
-          color: white;
-          border: none;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-        ">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-          Dodaj pin
-        </button>
-      `;
-      
-      popupRef.current = new mapboxgl.Popup({ offset: 25, closeButton: true })
-        .setLngLat([lng, lat])
-        .setDOMContent(popupContent)
-        .addTo(map.current!);
-      
-      // Handle add button click
-      const addBtn = popupContent.querySelector('#add-pin-btn');
-      addBtn?.addEventListener('click', () => {
-        onPinAdd(pinData);
-        tempMarkerRef.current?.remove();
-        popupRef.current?.remove();
-        setPendingPin(null);
-      });
-      
-      popupRef.current.on('close', () => {
-        tempMarkerRef.current?.remove();
-        setPendingPin(null);
-      });
-    } else {
-      // No geocoding result - still allow adding with coordinates only
-      const pinData: NewPinData = {
-        latitude: lat,
-        longitude: lng,
-        place_name: '',
-        address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-      };
-      setPendingPin(pinData);
-      
-      const popupContent = document.createElement('div');
-      popupContent.style.cssText = 'padding: 8px; min-width: 180px;';
-      popupContent.innerHTML = `
-        <p style="font-weight: 600; margin: 0 0 4px 0; font-size: 14px;">Nowa lokalizacja</p>
-        <p style="color: #666; margin: 0 0 12px 0; font-size: 12px;">${lat.toFixed(6)}, ${lng.toFixed(6)}</p>
-        <button id="add-pin-btn" style="
-          width: 100%;
-          padding: 8px 16px;
-          background: #000;
-          color: white;
-          border: none;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-        ">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-          Dodaj pin
-        </button>
-      `;
-      
-      popupRef.current = new mapboxgl.Popup({ offset: 25, closeButton: true })
-        .setLngLat([lng, lat])
-        .setDOMContent(popupContent)
-        .addTo(map.current!);
-      
-      const addBtn = popupContent.querySelector('#add-pin-btn');
-      addBtn?.addEventListener('click', () => {
-        onPinAdd(pinData);
-        tempMarkerRef.current?.remove();
-        popupRef.current?.remove();
-        setPendingPin(null);
-      });
-      
-      popupRef.current.on('close', () => {
-        tempMarkerRef.current?.remove();
-        setPendingPin(null);
-      });
-    }
-  };
-
+  // Fit bounds when multiple pins
   useEffect(() => {
-    if (!mapContainer.current) return;
+    if (!map || validPins.length <= 1) return;
 
-    mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
-
-    const validPins = pins.filter(pin => pin.latitude && pin.longitude);
-    const defaultCenter: [number, number] = [21.0122, 52.2297];
-    
-    let center: [number, number] = defaultCenter;
-    if (validPins.length > 0) {
-      const avgLng = validPins.reduce((sum, pin) => sum + (pin.longitude || 0), 0) / validPins.length;
-      const avgLat = validPins.reduce((sum, pin) => sum + (pin.latitude || 0), 0) / validPins.length;
-      center = [avgLng, avgLat];
-    }
-
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: center,
-      zoom: validPins.length === 1 ? 15 : validPins.length > 1 ? 12 : 5,
+    const bounds = new google.maps.LatLngBounds();
+    validPins.forEach(pin => {
+      if (pin.latitude && pin.longitude) {
+        bounds.extend({ lat: pin.latitude, lng: pin.longitude });
+      }
     });
 
-    map.current.addControl(
-      new mapboxgl.NavigationControl({ visualizePitch: false }),
-      'top-right'
-    );
-
-    // Add click handler
-    map.current.on('click', handleMapClick);
-
-    // Add markers for existing pins
-    validPins.forEach((pin, index) => {
-      if (!pin.latitude || !pin.longitude || !map.current) return;
-
-      const el = document.createElement('div');
-      el.style.cssText = `
-        width: 28px;
-        height: 28px;
-        background: #000;
-        border: 2px solid white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 12px;
-        font-weight: 600;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        cursor: pointer;
-      `;
-      el.textContent = String(index + 1);
-
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat([pin.longitude, pin.latitude])
-        .setPopup(
-          new mapboxgl.Popup({ offset: 25 })
-            .setHTML(`<p style="font-weight: 500; margin: 0;">${pin.place_name || pin.address || `Punkt ${index + 1}`}</p>`)
-        )
-        .addTo(map.current);
-
-      markersRef.current.push(marker);
+    map.fitBounds(bounds, { padding: 40 });
+    // Limit max zoom
+    const listener = google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+      const currentZoom = map.getZoom();
+      if (currentZoom && currentZoom > 14) {
+        map.setZoom(14);
+      }
     });
-
-    if (validPins.length > 1 && map.current) {
-      const bounds = new mapboxgl.LngLatBounds();
-      validPins.forEach(pin => {
-        if (pin.latitude && pin.longitude) {
-          bounds.extend([pin.longitude, pin.latitude]);
-        }
-      });
-      map.current.fitBounds(bounds, { padding: 40, maxZoom: 14 });
-    }
 
     return () => {
-      markersRef.current.forEach(marker => marker.remove());
-      markersRef.current = [];
-      tempMarkerRef.current?.remove();
-      popupRef.current?.remove();
-      map.current?.remove();
+      google.maps.event.removeListener(listener);
     };
-  }, [pins]);
+  }, [map, validPins]);
+
+  const handleMapClick = async (e: google.maps.MapMouseEvent) => {
+    if (!e.latLng) return;
+
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+
+    // Remove previous pending pin
+    setPendingPin(null);
+    setIsLoading(true);
+
+    try {
+      // Reverse geocode
+      const result = await reverseGeocode(lat, lng);
+
+      if (result) {
+        setPendingPin({
+          latitude: lat,
+          longitude: lng,
+          place_name: result.placeName || result.fullAddress.split(',')[0],
+          address: result.fullAddress
+        });
+      } else {
+        setPendingPin({
+          latitude: lat,
+          longitude: lng,
+          place_name: 'Nowe miejsce',
+          address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+        });
+      }
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+      setPendingPin({
+        latitude: lat,
+        longitude: lng,
+        place_name: 'Nowe miejsce',
+        address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddPin = () => {
+    if (!pendingPin) return;
+
+    onPinAdd({
+      latitude: pendingPin.latitude,
+      longitude: pendingPin.longitude,
+      place_name: pendingPin.place_name,
+      address: pendingPin.address
+    });
+
+    setPendingPin(null);
+  };
+
+  const handleCancelPin = () => {
+    setPendingPin(null);
+  };
 
   return (
-    <div className={`relative rounded-lg overflow-hidden border border-border ${className}`}>
-      <div ref={mapContainer} className="w-full h-full min-h-[200px]" />
-      
-      {/* Instruction overlay */}
-      <div className="absolute bottom-2 left-2 right-2 pointer-events-none">
-        <div className="bg-background/90 backdrop-blur-sm rounded-md px-3 py-2 text-xs text-muted-foreground flex items-center gap-2 shadow-sm border border-border">
-          <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-          <span>Kliknij na mapie, aby dodać pin</span>
-        </div>
-      </div>
-      
-      {/* Loading indicator */}
-      {isLoading && (
-        <div className="absolute top-2 left-2 bg-background/90 backdrop-blur-sm rounded-md px-3 py-2 text-xs flex items-center gap-2 shadow-sm border border-border">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          <span>Szukam miejsca...</span>
-        </div>
+    <>
+      {/* Existing pins */}
+      {validPins.map((pin, index) => {
+        if (!pin.latitude || !pin.longitude) return null;
+
+        const pinNumber = pin.pin_order !== undefined ? pin.pin_order + 1 : index + 1;
+
+        return (
+          <AdvancedMarker
+            key={`${pin.latitude}-${pin.longitude}-${index}`}
+            position={{ lat: pin.latitude, lng: pin.longitude }}
+            onClick={() => setSelectedPin(index)}
+          >
+            <div style={{
+              width: '28px',
+              height: '28px',
+              background: '#000',
+              border: '2px solid white',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: '600',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              cursor: 'pointer'
+            }}>
+              {pinNumber}
+            </div>
+          </AdvancedMarker>
+        );
+      })}
+
+      {/* Selected pin info window */}
+      {selectedPin !== null && validPins[selectedPin] && (
+        <InfoWindow
+          position={{
+            lat: validPins[selectedPin].latitude!,
+            lng: validPins[selectedPin].longitude!
+          }}
+          onCloseClick={() => setSelectedPin(null)}
+        >
+          <p style={{ fontWeight: 500, margin: 0 }}>
+            {validPins[selectedPin].place_name || validPins[selectedPin].address || `Punkt ${selectedPin + 1}`}
+          </p>
+        </InfoWindow>
       )}
-      
-      {/* CSS for pulse animation */}
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.1); opacity: 0.8; }
-        }
-      `}</style>
+
+      {/* Pending pin (temporary marker) */}
+      {pendingPin && (
+        <>
+          <AdvancedMarker
+            position={{ lat: pendingPin.latitude, lng: pendingPin.longitude }}
+          >
+            <div style={{
+              width: '32px',
+              height: '32px',
+              background: 'hsl(var(--primary))',
+              border: '3px solid white',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '16px',
+              fontWeight: '700',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+              animation: isLoading ? 'pulse 1s infinite' : 'none'
+            }}>
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            </div>
+          </AdvancedMarker>
+
+          {!isLoading && (
+            <InfoWindow
+              position={{ lat: pendingPin.latitude, lng: pendingPin.longitude }}
+              onCloseClick={handleCancelPin}
+            >
+              <div style={{ padding: '8px' }}>
+                <p style={{ fontWeight: 600, marginBottom: '4px' }}>{pendingPin.place_name}</p>
+                <p style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>
+                  {pendingPin.address}
+                </p>
+                <Button
+                  onClick={handleAddPin}
+                  size="sm"
+                  className="w-full"
+                >
+                  Dodaj pin
+                </Button>
+              </div>
+            </InfoWindow>
+          )}
+        </>
+      )}
+    </>
+  );
+};
+
+const InteractiveRouteMap = ({ pins, className = "", onPinAdd }: InteractiveRouteMapProps) => {
+  const validPins = useMemo(() =>
+    pins.filter(pin => pin.latitude && pin.longitude),
+    [pins]
+  );
+
+  // Calculate center from pins
+  const center = useMemo(() => {
+    if (validPins.length === 0) {
+      return { lat: 52.2297, lng: 21.0122 }; // Warsaw
+    }
+    const avgLat = validPins.reduce((sum, pin) => sum + (pin.latitude || 0), 0) / validPins.length;
+    const avgLng = validPins.reduce((sum, pin) => sum + (pin.longitude || 0), 0) / validPins.length;
+    return { lat: avgLat, lng: avgLng };
+  }, [validPins]);
+
+  const zoom = useMemo(() => {
+    if (validPins.length === 0) return 3;
+    if (validPins.length === 1) return 15;
+    return 12;
+  }, [validPins.length]);
+
+  const handleMapClick = async (e: google.maps.MapMouseEvent) => {
+    // Map click is handled inside MapContent
+  };
+
+  return (
+    <div className={`relative w-full h-full ${className}`}>
+      <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+        <Map
+          defaultCenter={center}
+          defaultZoom={zoom}
+          gestureHandling="greedy"
+          disableDefaultUI
+          zoomControl
+          mapId="roadmap"
+          onClick={handleMapClick}
+        >
+          <MapContent pins={pins} onPinAdd={onPinAdd} />
+        </Map>
+      </APIProvider>
     </div>
   );
 };
