@@ -88,7 +88,9 @@ const CreateRoute = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { folders } = useFolders();
-  const [folderId, setFolderId] = useState<string | null>(searchParams.get("folder"));
+  const tripId = searchParams.get("trip");
+  const dayNumber = searchParams.get("day") ? parseInt(searchParams.get("day")!) : null;
+  const [folderId, setFolderId] = useState<string | null>(tripId || searchParams.get("folder"));
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [pins, setPins] = useState<Pin[]>([
@@ -292,13 +294,14 @@ const CreateRoute = () => {
         const currentStatus = existingRoute?.status === "published" ? "published" : "draft";
         await supabase
           .from("routes")
-          .update({ 
-            title, 
-            description: routeDescription || description, 
-            status: currentStatus, 
-            rating: routeRating, 
+          .update({
+            title,
+            description: routeDescription || description,
+            status: currentStatus,
+            rating: routeRating,
             trip_type: tripType || 'completed',
-            folder_id: folderId || null
+            folder_id: folderId || null,
+            day_number: dayNumber
           })
           .eq("id", routeIdRef.current);
 
@@ -378,15 +381,16 @@ const CreateRoute = () => {
         // Create new route
         const { data: route, error: routeError } = await supabase
           .from("routes")
-          .insert({ 
-            user_id: user.id, 
-            title, 
-            description: routeDescription || description, 
-            status: "draft", 
-            rating: routeRating, 
+          .insert({
+            user_id: user.id,
+            title,
+            description: routeDescription || description,
+            status: "draft",
+            rating: routeRating,
             trip_type: tripType || 'completed',
             folder_id: folderId || null,
-            folder_order: autoSaveFolderOrder
+            folder_order: autoSaveFolderOrder,
+            day_number: dayNumber
           })
           .select()
           .single();
@@ -1124,7 +1128,7 @@ const CreateRoute = () => {
       if (existingRouteId) {
         const { error: routeError } = await supabase
           .from("routes")
-          .update({ title, description: routeDescription || description, status, rating: routeRating, trip_type: tripType || 'completed', folder_id: folderId || null })
+          .update({ title, description: routeDescription || description, status, rating: routeRating, trip_type: tripType || 'completed', folder_id: folderId || null, day_number: dayNumber })
           .eq("id", existingRouteId);
 
         if (routeError) throw routeError;
@@ -1211,7 +1215,7 @@ const CreateRoute = () => {
       } else {
         const { data: route, error: routeError } = await supabase
           .from("routes")
-          .insert({ user_id: user.id, title, description: routeDescription || description, status, rating: routeRating, trip_type: tripType || 'completed', folder_id: folderId || null, folder_order: folderOrder })
+          .insert({ user_id: user.id, title, description: routeDescription || description, status, rating: routeRating, trip_type: tripType || 'completed', folder_id: folderId || null, folder_order: folderOrder, day_number: dayNumber })
           .select()
           .single();
 
@@ -1309,7 +1313,11 @@ const CreateRoute = () => {
       }
       
       toast({ title: toastMessage });
-      navigate("/my-routes");
+      if (tripId) {
+        navigate(`/create-trip/${tripId}`);
+      } else {
+        navigate("/my-routes");
+      }
     } catch (error: any) {
       toast({ variant: "destructive", title: "Błąd", description: error.message });
     } finally {

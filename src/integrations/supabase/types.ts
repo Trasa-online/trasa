@@ -643,7 +643,9 @@ export type Database = {
           description: string | null
           folder_order: number
           id: string
+          is_trip: boolean | null
           name: string
+          num_days: number | null
           updated_at: string | null
           user_id: string
         }
@@ -653,7 +655,9 @@ export type Database = {
           description?: string | null
           folder_order?: number
           id?: string
+          is_trip?: boolean | null
           name: string
+          num_days?: number | null
           updated_at?: string | null
           user_id: string
         }
@@ -663,7 +667,9 @@ export type Database = {
           description?: string | null
           folder_order?: number
           id?: string
+          is_trip?: boolean | null
           name?: string
+          num_days?: number | null
           updated_at?: string | null
           user_id?: string
         }
@@ -735,6 +741,7 @@ export type Database = {
       routes: {
         Row: {
           created_at: string | null
+          day_number: number | null
           description: string | null
           folder_id: string | null
           folder_order: number | null
@@ -749,6 +756,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          day_number?: number | null
           description?: string | null
           folder_id?: string | null
           folder_order?: number | null
@@ -763,6 +771,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          day_number?: number | null
           description?: string | null
           folder_id?: string | null
           folder_order?: number | null

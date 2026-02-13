@@ -23,6 +23,7 @@ import PinDetails from "./pages/PinDetails";
 import QRCodePage from "./pages/QRCode";
 import FolderDetails from "./pages/FolderDetails";
 import CreateFolder from "./pages/CreateFolder";
+import CreateTrip from "./pages/CreateTrip";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,8 @@ const App = () => (
           <Route path="/profile/:userId" element={<AppLayout><Profile /></AppLayout>} />
           <Route path="/friends/:userId" element={<AppLayout><Friends /></AppLayout>} />
           <Route path="/folder/:id" element={<AppLayout><FolderDetails /></AppLayout>} />
+          <Route path="/create-trip" element={<CreateTrip />} />
+          <Route path="/create-trip/:id" element={<CreateTrip />} />
           <Route path="/create-folder" element={<CreateFolder />} />
           <Route path="/edit-folder/:id" element={<CreateFolder />} />
           <Route path="*" element={<NotFound />} />

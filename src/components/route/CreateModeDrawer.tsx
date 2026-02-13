@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Zap, Edit, Check, MapPin, Camera, Loader2, RefreshCw, X } from "lucide-react";
+import { Zap, Plane, Check, MapPin, Camera, Loader2, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -59,7 +59,6 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
   
   // Mode state
   const [mode, setMode] = useState<DrawerMode>('select');
-  const [selectedMode, setSelectedMode] = useState<'quick' | 'detailed' | null>(null);
   
   // Quick capture state
   const [drafts, setDrafts] = useState<DraftRoute[]>([]);
@@ -316,10 +315,12 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
     detectLocation();
   };
 
-  const handleDetailedContinue = () => {
-    navigate("/create");
+  const handleNewTrip = () => {
     onOpenChange(false);
-    resetState();
+    setTimeout(() => {
+      resetState();
+      navigate("/create-trip");
+    }, 300);
   };
 
   const handleClose = () => {
@@ -330,7 +331,6 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
 
   const resetState = () => {
     setMode('select');
-    setSelectedMode(null);
     setSelectedRouteId(null);
     setCustomRouteTitle('');
     setShowTitleInput(false);
@@ -356,14 +356,38 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
           // MODE SELECTION VIEW
           <>
             <DrawerHeader className="text-left pb-2">
-              <DrawerTitle className="text-xl">Jak chcesz tworzyć trasę?</DrawerTitle>
+              <DrawerTitle className="text-xl">Co chcesz dodać?</DrawerTitle>
               <DrawerDescription>
-                Wybierz tryb dodawania miejsc do trasy
+                Wybierz sposób dodawania
               </DrawerDescription>
             </DrawerHeader>
 
             <div className="px-4 pb-6 space-y-4">
-              {/* Quick Capture Mode - clicks immediately go to quick-capture */}
+              {/* New Trip */}
+              <button
+                type="button"
+                onClick={handleNewTrip}
+                className={cn(
+                  "w-full p-5 rounded-xl border-2 transition-all text-left",
+                  "border-border hover:border-primary/50 hover:shadow-sm hover:bg-primary/5"
+                )}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="text-4xl">✈️</div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-base mb-1">Nowa podróż</div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Zaplanuj podróż dzień po dniu. Dodawaj trasy i miejsca do każdego dnia.
+                    </p>
+                    <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-primary">
+                      <Plane className="h-3 w-3" />
+                      <span>Organizuj po dniach</span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              {/* Quick Add Point */}
               <button
                 type="button"
                 onClick={handleQuickModeSelect}
@@ -375,9 +399,9 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
                 <div className="flex items-start gap-3">
                   <div className="text-4xl">⚡</div>
                   <div className="flex-1">
-                    <div className="font-semibold text-base mb-1">Szybki tryb</div>
+                    <div className="font-semibold text-base mb-1">Szybkie dodanie punktu</div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Dodawaj miejsca w 10 sekund podczas wycieczki. Lokalizacja i zdjęcie - gotowe!
+                      Dodaj miejsce w 10 sekund. Lokalizacja i zdjęcie - gotowe!
                     </p>
                     <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-primary">
                       <Zap className="h-3 w-3" />
@@ -386,78 +410,6 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
                   </div>
                 </div>
               </button>
-
-              {/* Detailed Mode */}
-              <button
-                type="button"
-                onClick={() => setSelectedMode('detailed')}
-                className={cn(
-                  "w-full p-5 rounded-xl border-2 transition-all text-left",
-                  selectedMode === 'detailed'
-                    ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md"
-                    : "border-border hover:border-primary/50 hover:shadow-sm"
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="text-4xl">✍️</div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-base mb-1">Szczegółowy tryb</div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Pełna kontrola. Dodawaj opisy, oceny, kategorie i notatki od razu.
-                    </p>
-                    <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-primary">
-                      <Edit className="h-3 w-3" />
-                      <span>Idealny po podróży</span>
-                    </div>
-                  </div>
-                  {selectedMode === 'detailed' && (
-                    <Check className="h-5 w-5 text-primary flex-shrink-0" />
-                  )}
-                </div>
-              </button>
-
-              {/* New Folder Option */}
-              <button
-                type="button"
-                onClick={() => {
-                  onOpenChange(false);
-                  setTimeout(() => {
-                    resetState();
-                    navigate("/create-folder");
-                  }, 300);
-                }}
-                className={cn(
-                  "w-full p-4 rounded-xl border-2 transition-all text-left",
-                  "border-border hover:border-primary/50 hover:shadow-sm hover:bg-primary/5"
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="text-3xl">📁</div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-sm mb-0.5">Nowy folder</div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Grupuj trasy w foldery, np. każdy dzień podróży osobno
-                    </p>
-                  </div>
-                </div>
-              </button>
-
-              {/* Helpful hint */}
-              <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  💡 <strong>Wskazówka:</strong> Nie martw się! Niezależnie od wybranego trybu, zawsze możesz dodać szczegóły później.
-                </p>
-              </div>
-
-              {/* Continue button - only for detailed mode */}
-              {selectedMode === 'detailed' && (
-                <Button
-                  onClick={handleDetailedContinue}
-                  className="w-full h-12 text-base font-semibold"
-                >
-                  Kontynuuj
-                </Button>
-              )}
             </div>
           </>
         ) : (
