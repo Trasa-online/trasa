@@ -1,5 +1,5 @@
 // Google Maps API Key
-export const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+export const GOOGLE_MAPS_API_KEY = 'AIzaSyCdZ-on1_mKr1Q9OTDYkqkk4OzB7SwR32M';
 
 // Reverse Geocoding (Coordinates → Address)
 export const reverseGeocode = async (lat: number, lng: number) => {

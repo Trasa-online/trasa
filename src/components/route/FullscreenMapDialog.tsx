@@ -40,7 +40,7 @@ const MapContent = ({ pins }: { pins: Pin[] }) => {
       }
     });
 
-    map.fitBounds(bounds, { padding: 60 });
+    map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
     // Limit max zoom
     const listener = google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
       const currentZoom = map.getZoom();
