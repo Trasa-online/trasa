@@ -1564,24 +1564,6 @@ const CreateRoute = () => {
                       Pinezka {currentPinIndex + 1}/{pins.length}
                     </h2>
                     <div className="flex gap-2">
-                      {currentPinIndex > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPinIndex(currentPinIndex - 1)}
-                        >
-                          ←
-                        </Button>
-                      )}
-                      {currentPinIndex < pins.length - 1 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPinIndex(currentPinIndex + 1)}
-                        >
-                          →
-                        </Button>
-                      )}
                       {pins.length > 1 && (
                         <Button
                           variant="outline"
@@ -1591,95 +1573,31 @@ const CreateRoute = () => {
                           <X className="h-4 w-4" />
                         </Button>
                       )}
-                      <Button variant="default" size="icon" onClick={addPin}>
-                        <Plus className="h-4 w-4" />
-                      </Button>
                     </div>
                   </div>
 
-                  {/* Map preview - shows existing pins */}
-                  {pins.some(p => p.latitude && p.longitude) && (
-                    <div className="space-y-1.5">
-                      <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase">Podgląd mapy</label>
-                      <RouteMap 
-                        pins={pins.filter(p => p.latitude && p.longitude)}
-                        className="h-32 rounded-lg"
-                      />
-                    </div>
-                  )}
-
-                  {/* Address - moved to top */}
+                  {/* Address input - primary action */}
                   <div>
                     <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block mb-1.5">
-                      Adres <span className="text-destructive">*</span>
+                      Nazwa lub adres miejsca <span className="text-destructive">*</span>
                     </label>
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <AddressAutocomplete
-                          value={pins[currentPinIndex]?.address || ""}
-                          onChange={async (value, coordinates, fullAddress, placeName, placeType, placeId) => {
-                            // Get full canonical pin info
-                            let canonicalInfo: CanonicalPinInfo = { isExisting: false };
-                            if (coordinates?.latitude && coordinates?.longitude) {
-                              canonicalInfo = await getCanonicalPinInfo(coordinates.latitude, coordinates.longitude);
-                            }
+                    <AddressAutocomplete
+                      value={pins[currentPinIndex]?.address || ""}
+                      onChange={async (value, coordinates, fullAddress, placeName, placeType, placeId) => {
+                        let canonicalInfo: CanonicalPinInfo = { isExisting: false };
+                        if (coordinates?.latitude && coordinates?.longitude) {
+                          canonicalInfo = await getCanonicalPinInfo(coordinates.latitude, coordinates.longitude);
+                        }
 
-                            setPins(prevPins => {
-                              const newPins = [...prevPins];
-                              if (newPins[currentPinIndex]) {
-                                newPins[currentPinIndex] = {
-                                  ...newPins[currentPinIndex],
-                                  address: fullAddress || value,
-                                  place_name: placeName || fullAddress || value,
-                                  latitude: coordinates?.latitude,
-                                  longitude: coordinates?.longitude,
-                                  // Canonical pin data
-                                  canonical_pin_id: canonicalInfo.canonicalPinId,
-                                  original_creator_id: canonicalInfo.discoveredByUserId,
-                                  original_creator_username: canonicalInfo.discoveredByUsername,
-                                  canonical_discoverer_avatar: canonicalInfo.discoveredByAvatar,
-                                  canonical_discovered_at: canonicalInfo.discoveredAt,
-                                  canonical_total_visits: canonicalInfo.totalVisits,
-                                  canonical_average_rating: canonicalInfo.averageRating,
-                                  // Experience panel data
-                                  place_type: placeType || null,
-                                  place_id: placeId || null,
-                                  // Reset experience fields when place changes
-                                  core_decision: null,
-                                  selected_tags: [],
-                                  timing_tag: null,
-                                  optional_note: "",
-                                };
-                              }
-                              return newPins;
-                            });
-
-                            // Update discovery status
-                            if (coordinates?.latitude && coordinates?.longitude) {
-                              setIsNewDiscovery(prev => ({
-                                ...prev,
-                                [currentPinIndex]: !canonicalInfo.isExisting
-                              }));
-                            }
-                          }}
-                          placeholder="Wpisz adres miejsca"
-                        />
-                      </div>
-                      <MapPinSelector
-                        existingPins={pins.filter(p => p.latitude && p.longitude)}
-                        onPinSelect={async (pinData) => {
-                          // Get full canonical pin info
-                          const canonicalInfo = await getCanonicalPinInfo(pinData.latitude, pinData.longitude);
-                          
-                          setPins(prevPins => {
-                            const newPins = [...prevPins];
+                        setPins(prevPins => {
+                          const newPins = [...prevPins];
+                          if (newPins[currentPinIndex]) {
                             newPins[currentPinIndex] = {
                               ...newPins[currentPinIndex],
-                              address: pinData.address,
-                              place_name: pinData.place_name || pinData.address,
-                              latitude: pinData.latitude,
-                              longitude: pinData.longitude,
-                              // Canonical pin data
+                              address: fullAddress || value,
+                              place_name: placeName || fullAddress || value,
+                              latitude: coordinates?.latitude,
+                              longitude: coordinates?.longitude,
                               canonical_pin_id: canonicalInfo.canonicalPinId,
                               original_creator_id: canonicalInfo.discoveredByUserId,
                               original_creator_username: canonicalInfo.discoveredByUsername,
@@ -1687,108 +1605,30 @@ const CreateRoute = () => {
                               canonical_discovered_at: canonicalInfo.discoveredAt,
                               canonical_total_visits: canonicalInfo.totalVisits,
                               canonical_average_rating: canonicalInfo.averageRating,
+                              place_type: placeType || null,
+                              place_id: placeId || null,
+                              core_decision: null,
+                              selected_tags: [],
+                              timing_tag: null,
+                              optional_note: "",
                             };
-                            return newPins;
-                          });
-                          
-                          // Update discovery status
+                          }
+                          return newPins;
+                        });
+
+                        if (coordinates?.latitude && coordinates?.longitude) {
                           setIsNewDiscovery(prev => ({
                             ...prev,
                             [currentPinIndex]: !canonicalInfo.isExisting
                           }));
-                          
-                          toast({ title: "Lokalizacja wybrana", description: pinData.place_name || pinData.address });
-                        }}
-                      />
-                    </div>
-                    
-                    {/* New Discovery Badge - Clean */}
-                    {pins[currentPinIndex]?.latitude && 
-                     pins[currentPinIndex]?.longitude && 
-                     isNewDiscovery[currentPinIndex] && (
-                      <div className="mt-4 bg-muted/50 rounded-xl p-4 border border-border">
-                        <p className="text-sm text-foreground font-medium mb-1">
-                          Nowe miejsce na mapie
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Jesteś pierwszą osobą, która dodaje to miejsce. Zostaniesz zapisany jako odkrywca.
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Existing Place Info Card - Single Source of Truth */}
-                    {pins[currentPinIndex]?.canonical_pin_id && 
-                     !isNewDiscovery[currentPinIndex] &&
-                     pins[currentPinIndex]?.original_creator_id && (
-                      <div className="mt-3 bg-muted/50 rounded-xl p-4 space-y-3 border border-border">
-                        {/* Discoverer info */}
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 border-2 border-primary/20">
-                            <AvatarImage src={pins[currentPinIndex]?.canonical_discoverer_avatar} />
-                            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                              {pins[currentPinIndex]?.original_creator_username?.[0]?.toUpperCase() || '?'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 text-sm">
-                              <Trophy className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                              <span className="text-muted-foreground">Odkryte przez</span>
-                              <Link 
-                                to={`/profile/${pins[currentPinIndex]?.original_creator_id}`}
-                                className="font-semibold text-foreground hover:text-primary truncate"
-                              >
-                                @{pins[currentPinIndex]?.original_creator_username}
-                              </Link>
-                            </div>
-                            {pins[currentPinIndex]?.canonical_discovered_at && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {new Date(pins[currentPinIndex]?.canonical_discovered_at!).toLocaleDateString('pl-PL', {
-                                  day: 'numeric',
-                                  month: 'long',
-                                  year: 'numeric'
-                                })}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Stats row */}
-                        <div className="flex items-center gap-4 text-sm border-t border-border pt-3">
-                          <div className="flex items-center gap-1.5">
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{pins[currentPinIndex]?.canonical_total_visits || 1}</span>
-                            <span className="text-muted-foreground">
-                              {(pins[currentPinIndex]?.canonical_total_visits || 1) === 1 ? 'wizyta' : 'wizyt'}
-                            </span>
-                          </div>
-                          {(pins[currentPinIndex]?.canonical_average_rating || 0) > 0 && (
-                            <div className="flex items-center gap-1.5">
-                              <Star className="h-4 w-4 fill-star text-star" />
-                              <span className="font-medium">
-                                {pins[currentPinIndex]?.canonical_average_rating?.toFixed(1)}
-                              </span>
-                              <span className="text-muted-foreground">średnia</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Place name - editable */}
-                  <div>
-                    <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block mb-1.5">Nazwa miejsca</label>
-                    <Input
-                      value={pins[currentPinIndex]?.place_name || ""}
-                      onChange={(e) => updatePin(currentPinIndex, "place_name", e.target.value)}
-                      placeholder="np. Pałac Kultury"
-                      className="border-muted-foreground/20 focus:border-foreground"
+                        }
+                      }}
+                      placeholder="np. KFC Warszawa, Hilton Kraków..."
                     />
                   </div>
 
-
-                  {/* Experience Panel or PlaceReviewCard based on place type */}
-                  {pins[currentPinIndex]?.place_type && pins[currentPinIndex]?.place_type !== 'other' ? (
+                  {/* Experience Panel - appears after place is selected */}
+                  {pins[currentPinIndex]?.address && pins[currentPinIndex]?.place_type && pins[currentPinIndex]?.place_type !== 'other' && (
                     <ExperiencePanel
                       placeType={pins[currentPinIndex].place_type!}
                       coreDecision={pins[currentPinIndex]?.core_decision || null}
@@ -1800,97 +1640,49 @@ const CreateRoute = () => {
                       onTimingTagChange={(value) => updatePin(currentPinIndex, "timing_tag", value)}
                       onNoteChange={(note) => updatePin(currentPinIndex, "optional_note", note)}
                     />
-                  ) : (
-                    <PlaceReviewCard
-                      pin={pins[currentPinIndex]}
-                      pinIndex={currentPinIndex}
-                      totalPins={pins.length}
-                      onUpdate={(field, value) => updatePin(currentPinIndex, field, value)}
-                      tripType={tripType}
-                    />
                   )}
-
-                  {/* Image upload - minimal */}
-                  <div>
-                    <label className="text-[13px] font-medium text-muted-foreground tracking-wide uppercase block mb-1.5">Zdjęcie</label>
-                    {pins[currentPinIndex]?.image_url ? (
-                      <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
-                        <img
-                          src={pins[currentPinIndex]?.image_url}
-                          alt="Podgląd"
-                          className="w-full h-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            updatePin(currentPinIndex, "image_url", "");
-                            updatePin(currentPinIndex, "images", []);
-                          }}
-                          className="absolute top-2 right-2 bg-background/80 hover:bg-background p-1.5 rounded-full transition-colors"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="flex flex-col items-center justify-center h-32 border border-dashed border-muted-foreground/30 rounded-lg cursor-pointer hover:border-muted-foreground/50 hover:bg-muted/30 transition-all">
-                        <Camera className="h-8 w-8 text-muted-foreground/50 mb-1.5" />
-                        <p className="text-[13px] text-muted-foreground">
-                          Dodaj zdjęcie
-                        </p>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            if (e.target.files && e.target.files.length > 0) {
-                              handleImageUpload(e.target.files, currentPinIndex);
-                              e.target.value = '';
-                            }
-                          }}
-                        />
-                      </label>
-                    )}
-                  </div>
                 </div>
 
+                {/* Bottom actions */}
                 <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border/50 p-4 max-w-lg mx-auto">
-                  <Button
-                    variant="default"
-                    className="w-full"
-                    onClick={() => {
-                      const currentPin = pins[currentPinIndex];
-                      if (!currentPin?.address) {
-                        toast({
-                          variant: "destructive",
-                          title: "Uzupełnij wymagane pola",
-                          description: "Adres jest wymagany"
-                        });
-                        return;
-                      }
-                      // Validate experience panel: core_decision required when place_type is set
-                      if (currentPin?.place_type && currentPin.place_type !== 'other' && !currentPin?.core_decision) {
-                        toast({
-                          variant: "destructive",
-                          title: "Uzupełnij wymagane pola",
-                          description: "Odpowiedz na główne pytanie o to miejsce"
-                        });
-                        return;
-                      }
-                      // Validate old review card: recommended_for required when no place_type
-                      if ((!currentPin?.place_type || currentPin.place_type === 'other') &&
-                          (!currentPin?.recommended_for || currentPin.recommended_for.length === 0)) {
-                        toast({
-                          variant: "destructive",
-                          title: "Uzupełnij wymagane pola",
-                          description: "Wybierz dla kogo polecasz to miejsce"
-                        });
-                        return;
-                      }
-                      setShowPinsList(true);
-                    }}
-                  >
-                    Gotowe
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        // Skip - go to pin list without validation
+                        setShowPinsList(true);
+                      }}
+                    >
+                      Pomiń
+                    </Button>
+                    <Button
+                      variant="default"
+                      className="flex-1"
+                      onClick={() => {
+                        const currentPin = pins[currentPinIndex];
+                        if (!currentPin?.address) {
+                          toast({
+                            variant: "destructive",
+                            title: "Uzupełnij wymagane pola",
+                            description: "Wpisz nazwę lub adres miejsca"
+                          });
+                          return;
+                        }
+                        if (currentPin?.place_type && currentPin.place_type !== 'other' && !currentPin?.core_decision) {
+                          toast({
+                            variant: "destructive",
+                            title: "Uzupełnij wymagane pola",
+                            description: "Odpowiedz na główne pytanie o to miejsce"
+                          });
+                          return;
+                        }
+                        setShowPinsList(true);
+                      }}
+                    >
+                      Zapisz
+                    </Button>
+                  </div>
                 </div>
               </>
             )}
