@@ -23,7 +23,66 @@ export const reverseGeocode = async (lat: number, lng: number) => {
   }
 };
 
-// Forward Geocoding (Address → Coordinates)
+// Place type detection from Google types array
+export type PlaceCategory = 'transport' | 'accommodation' | 'attraction' | 'food' | 'shopping' | 'other';
+
+const PLACE_TYPE_MAP: Record<string, PlaceCategory> = {
+  // Transport
+  airport: 'transport', train_station: 'transport', bus_station: 'transport',
+  transit_station: 'transport', subway_station: 'transport', ferry_terminal: 'transport',
+  light_rail_station: 'transport',
+  // Accommodation
+  lodging: 'accommodation', hotel: 'accommodation', motel: 'accommodation',
+  campground: 'accommodation',
+  // Attraction
+  museum: 'attraction', amusement_park: 'attraction', tourist_attraction: 'attraction',
+  park: 'attraction', zoo: 'attraction', aquarium: 'attraction', art_gallery: 'attraction',
+  church: 'attraction', stadium: 'attraction', movie_theater: 'attraction',
+  // Food
+  restaurant: 'food', cafe: 'food', bakery: 'food', bar: 'food',
+  meal_delivery: 'food', meal_takeaway: 'food', food: 'food',
+  // Shopping
+  shopping_mall: 'shopping', store: 'shopping', clothing_store: 'shopping',
+  book_store: 'shopping', convenience_store: 'shopping', supermarket: 'shopping',
+  department_store: 'shopping', jewelry_store: 'shopping',
+};
+
+export const detectPlaceType = (types: string[]): PlaceCategory => {
+  for (const type of types) {
+    if (PLACE_TYPE_MAP[type]) return PLACE_TYPE_MAP[type];
+  }
+  return 'other';
+};
+
+// Forward Geocoding with Place Types (via Places Text Search API)
+export const forwardGeocodeWithTypes = async (query: string) => {
+  try {
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}&language=pl`
+    );
+    const data = await response.json();
+
+    if (data.status === 'OK' && data.results.length > 0) {
+      return data.results.slice(0, 8).map((result: any) => ({
+        name: result.name || '',
+        full_address: result.formatted_address,
+        coordinates: {
+          latitude: result.geometry.location.lat,
+          longitude: result.geometry.location.lng
+        },
+        placeId: result.place_id || null,
+        types: result.types || [],
+        placeType: detectPlaceType(result.types || []),
+      }));
+    }
+    return [];
+  } catch (error) {
+    console.error('Forward geocode with types error:', error);
+    return [];
+  }
+};
+
+// Legacy forward geocoding (kept for backward compatibility)
 export const forwardGeocode = async (query: string) => {
   try {
     const response = await fetch(

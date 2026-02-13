@@ -370,6 +370,7 @@ export type Database = {
           address: string
           canonical_pin_id: string | null
           cons: string[] | null
+          core_decision: string | null
           created_at: string | null
           description: string | null
           expectation_met: string | null
@@ -382,14 +383,19 @@ export type Database = {
           mentioned_users: string[] | null
           name_translations: Json | null
           one_liner: string | null
+          optional_note: string | null
           original_creator_id: string | null
           pin_order: number
+          place_id: string | null
           place_name: string
+          place_type: string | null
           pros: string[] | null
           rating: number | null
           recommended_for: string[] | null
           route_id: string
+          selected_tags: string[] | null
           tags: string[] | null
+          timing_tag: string | null
           transport_end: string | null
           transport_type: string | null
           trip_role: string | null
@@ -399,6 +405,7 @@ export type Database = {
           address: string
           canonical_pin_id?: string | null
           cons?: string[] | null
+          core_decision?: string | null
           created_at?: string | null
           description?: string | null
           expectation_met?: string | null
@@ -411,14 +418,19 @@ export type Database = {
           mentioned_users?: string[] | null
           name_translations?: Json | null
           one_liner?: string | null
+          optional_note?: string | null
           original_creator_id?: string | null
           pin_order: number
+          place_id?: string | null
           place_name: string
+          place_type?: string | null
           pros?: string[] | null
           rating?: number | null
           recommended_for?: string[] | null
           route_id: string
+          selected_tags?: string[] | null
           tags?: string[] | null
+          timing_tag?: string | null
           transport_end?: string | null
           transport_type?: string | null
           trip_role?: string | null
@@ -428,6 +440,7 @@ export type Database = {
           address?: string
           canonical_pin_id?: string | null
           cons?: string[] | null
+          core_decision?: string | null
           created_at?: string | null
           description?: string | null
           expectation_met?: string | null
@@ -440,14 +453,19 @@ export type Database = {
           mentioned_users?: string[] | null
           name_translations?: Json | null
           one_liner?: string | null
+          optional_note?: string | null
           original_creator_id?: string | null
           pin_order?: number
+          place_id?: string | null
           place_name?: string
+          place_type?: string | null
           pros?: string[] | null
           rating?: number | null
           recommended_for?: string[] | null
           route_id?: string
+          selected_tags?: string[] | null
           tags?: string[] | null
+          timing_tag?: string | null
           transport_end?: string | null
           transport_type?: string | null
           trip_role?: string | null

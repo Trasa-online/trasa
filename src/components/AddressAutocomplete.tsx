@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, memo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { forwardGeocode } from "@/lib/googleMaps";
+import { forwardGeocodeWithTypes, type PlaceCategory } from "@/lib/googleMaps";
 
 interface Coordinates {
   latitude: number;
@@ -10,7 +10,14 @@ interface Coordinates {
 
 interface AddressAutocompleteProps {
   value: string;
-  onChange: (value: string, coordinates?: Coordinates, fullAddress?: string, placeName?: string) => void;
+  onChange: (
+    value: string,
+    coordinates?: Coordinates,
+    fullAddress?: string,
+    placeName?: string,
+    placeType?: PlaceCategory,
+    placeId?: string
+  ) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -23,11 +30,13 @@ interface Suggestion {
     latitude: number;
     longitude: number;
   };
+  placeId: string | null;
+  placeType: PlaceCategory;
 }
 
 /**
  * Memoized address autocomplete with debounced input handling.
- * Uses local state for immediate UI feedback, syncs to parent only on selection.
+ * Uses Google Places Text Search API for place type detection.
  */
 const AddressAutocomplete = memo(function AddressAutocomplete({
   value,
@@ -82,13 +91,15 @@ const AddressAutocomplete = memo(function AddressAutocomplete({
 
     setLoading(true);
     try {
-      const results = await forwardGeocode(searchQuery);
+      const results = await forwardGeocodeWithTypes(searchQuery);
 
       if (results && results.length > 0) {
-        const mapped = results.slice(0, 8).map((result: any) => ({
+        const mapped: Suggestion[] = results.map((result: any) => ({
           name: result.name || result.full_address.split(',')[0],
           full_address: result.full_address,
-          coordinates: result.coordinates
+          coordinates: result.coordinates,
+          placeId: result.placeId,
+          placeType: result.placeType,
         }));
         setSuggestions(mapped);
         setIsOpen(true);
@@ -137,8 +148,15 @@ const AddressAutocomplete = memo(function AddressAutocomplete({
     lastExternalValueRef.current = displayValue;
     isTypingRef.current = false;
 
-    // Pass: displayValue (combined), coordinates, fullAddressWithName (for address field), suggestion.name (for place_name)
-    onChange(displayValue, suggestion.coordinates, fullAddressWithName, isPlaceName ? suggestion.name : undefined);
+    // Pass: displayValue, coordinates, fullAddress, placeName, placeType, placeId
+    onChange(
+      displayValue,
+      suggestion.coordinates,
+      fullAddressWithName,
+      isPlaceName ? suggestion.name : undefined,
+      suggestion.placeType,
+      suggestion.placeId || undefined
+    );
     setIsOpen(false);
     setSuggestions([]);
   }, [onChange]);
@@ -148,6 +166,15 @@ const AddressAutocomplete = memo(function AddressAutocomplete({
       setIsOpen(true);
     }
   }, [suggestions.length]);
+
+  const PLACE_TYPE_ICONS: Record<PlaceCategory, string> = {
+    transport: '🚆',
+    accommodation: '🏨',
+    attraction: '🎭',
+    food: '🍽️',
+    shopping: '🛍️',
+    other: '📍',
+  };
 
   return (
     <div ref={containerRef} className="relative">
@@ -159,7 +186,7 @@ const AddressAutocomplete = memo(function AddressAutocomplete({
         disabled={disabled}
         className={className}
       />
-      
+
       {isOpen && suggestions.length > 0 && (
         <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-auto">
           {suggestions.map((suggestion, index) => (
@@ -172,15 +199,20 @@ const AddressAutocomplete = memo(function AddressAutocomplete({
               )}
               onClick={() => handleSuggestionClick(suggestion)}
             >
-              <div className="font-medium">{suggestion.name}</div>
-              <div className="text-xs text-muted-foreground truncate">
-                {suggestion.full_address}
+              <div className="flex items-center gap-2">
+                <span className="text-base flex-shrink-0">{PLACE_TYPE_ICONS[suggestion.placeType]}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium truncate">{suggestion.name}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {suggestion.full_address}
+                  </div>
+                </div>
               </div>
             </button>
           ))}
         </div>
       )}
-      
+
       {loading && (
         <div className="absolute right-3 top-1/2 -translate-y-1/2">
           <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />

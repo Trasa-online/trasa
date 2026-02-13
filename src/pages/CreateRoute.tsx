@@ -11,7 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { ArrowLeft, Plus, X, Camera, Pencil, Sparkles, Trophy, Check, MapPin, Star, Users } from "lucide-react";
 import PlaceReviewCard from "@/components/route/PlaceReviewCard";
+import ExperiencePanel from "@/components/route/ExperiencePanel";
 import { useToast } from "@/hooks/use-toast";
+import type { PlaceCategory } from "@/lib/googleMaps";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -79,6 +81,13 @@ interface Pin {
   trip_role: "must_see" | "nice_addition" | "skippable" | null;
   one_liner: string;
   recommended_for: string[];
+  // Experience panel fields
+  place_type: PlaceCategory | null;
+  place_id: string | null;
+  core_decision: string | null;
+  selected_tags: string[];
+  timing_tag: string | null;
+  optional_note: string;
 }
 
 const CreateRoute = () => {
@@ -90,18 +99,19 @@ const CreateRoute = () => {
   const { folders } = useFolders();
   const tripId = searchParams.get("trip");
   const dayNumber = searchParams.get("day") ? parseInt(searchParams.get("day")!) : null;
+  const isTripMode = !!tripId;
   const [folderId, setFolderId] = useState<string | null>(tripId || searchParams.get("folder"));
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(isTripMode && dayNumber ? `Dzień ${dayNumber}` : "");
   const [description, setDescription] = useState("");
   const [pins, setPins] = useState<Pin[]>([
-    { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: 0, tags: [], latitude: undefined, longitude: undefined, notes: [], expectation_met: null, pros: [], cons: [], trip_role: null, one_liner: "", recommended_for: [] },
+    { place_name: "", address: "", description: "", image_url: "", images: [], rating: 0, pin_order: 0, tags: [], latitude: undefined, longitude: undefined, notes: [], expectation_met: null, pros: [], cons: [], trip_role: null, one_liner: "", recommended_for: [], place_type: null, place_id: null, core_decision: null, selected_tags: [], timing_tag: null, optional_note: "" },
   ]);
   const [routeMentionedUsers, setRouteMentionedUsers] = useState<string[]>([]);
   // routeNotes state removed - notes are now stored per-pin
   const [currentPinIndex, setCurrentPinIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [tripType, setTripType] = useState<"planning" | "ongoing" | "completed">("completed");
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(isTripMode ? 2 : 1);
   const [routeDescription, setRouteDescription] = useState("");
   const [routeRating, setRouteRating] = useState(0);
   
@@ -148,6 +158,9 @@ const CreateRoute = () => {
       if (hasAddedPins) {
         // Show confirmation dialog before losing work
         setShowExitConfirm(true);
+      } else if (isTripMode) {
+        // In trip mode, go back to trip page
+        navigate(`/create-trip/${tripId}`);
       } else {
         // No work to lose, go back to step 1
         setStep(1);
@@ -165,22 +178,23 @@ const CreateRoute = () => {
   };
 
   const resetFormState = () => {
-    setTitle("");
+    setTitle(isTripMode && dayNumber ? `Dzień ${dayNumber}` : "");
     setDescription("");
     setRouteDescription("");
-    setPins([{ 
-      place_name: "", address: "", description: "", image_url: "", 
-      images: [], rating: 0, pin_order: 0, tags: [], 
+    setPins([{
+      place_name: "", address: "", description: "", image_url: "",
+      images: [], rating: 0, pin_order: 0, tags: [],
       latitude: undefined, longitude: undefined,
       notes: [],
-      expectation_met: null, pros: [], cons: [], trip_role: null, one_liner: "", recommended_for: []
+      expectation_met: null, pros: [], cons: [], trip_role: null, one_liner: "", recommended_for: [],
+      place_type: null, place_id: null, core_decision: null, selected_tags: [], timing_tag: null, optional_note: ""
     }]);
     setRouteMentionedUsers([]);
     setCurrentPinIndex(0);
-    setStep(1);
+    setStep(isTripMode ? 2 : 1);
     setTripType("completed");
     setShowPinsList(false);
-    
+
     setRouteRating(0);
     routeIdRef.current = null; // Reset so new draft is created
   };
@@ -201,7 +215,7 @@ const CreateRoute = () => {
   const confirmExit = () => {
     setShowExitConfirm(false);
     resetFormState();
-    navigate("/");
+    navigate(isTripMode ? `/create-trip/${tripId}` : "/");
   };
 
   // Auto-save function (silent, doesn't navigate)
@@ -264,8 +278,8 @@ const CreateRoute = () => {
           images: pin.images || [],
           rating: pin.expectation_met === "yes" ? 5 : pin.expectation_met === "average" ? 3 : pin.expectation_met === "no" ? 1 : (pin.rating || 0),
           pin_order: pin.pin_order,
-          tags: [...(pin.pros || []), ...(pin.recommended_for || [])].length > 0 
-            ? [...(pin.pros || []), ...(pin.recommended_for || [])] 
+          tags: [...(pin.pros || []), ...(pin.recommended_for || [])].length > 0
+            ? [...(pin.pros || []), ...(pin.recommended_for || [])]
             : (pin.tags || []),
           is_transport: false,
           latitude: pin.latitude,
@@ -278,6 +292,12 @@ const CreateRoute = () => {
           trip_role: pin.trip_role || null,
           one_liner: pin.one_liner || "",
           recommended_for: pin.recommended_for || [],
+          place_type: pin.place_type || null,
+          place_id: pin.place_id || null,
+          core_decision: pin.core_decision || null,
+          selected_tags: pin.selected_tags || [],
+          timing_tag: pin.timing_tag || null,
+          optional_note: pin.optional_note || "",
         };
       }));
 
@@ -332,6 +352,12 @@ const CreateRoute = () => {
             trip_role: p.trip_role,
             one_liner: p.one_liner,
             recommended_for: p.recommended_for,
+            place_type: p.place_type,
+            place_id: p.place_id,
+            core_decision: p.core_decision,
+            selected_tags: p.selected_tags,
+            timing_tag: p.timing_tag,
+            optional_note: p.optional_note,
           })))
           .select();
 
@@ -421,6 +447,12 @@ const CreateRoute = () => {
             trip_role: p.trip_role,
             one_liner: p.one_liner,
             recommended_for: p.recommended_for,
+            place_type: p.place_type,
+            place_id: p.place_id,
+            core_decision: p.core_decision,
+            selected_tags: p.selected_tags,
+            timing_tag: p.timing_tag,
+            optional_note: p.optional_note,
           })))
           .select();
 
@@ -654,6 +686,12 @@ const CreateRoute = () => {
             trip_role: pin.trip_role || null,
             one_liner: pin.one_liner || "",
             recommended_for: pin.recommended_for || [],
+            place_type: pin.place_type || null,
+            place_id: pin.place_id || null,
+            core_decision: pin.core_decision || null,
+            selected_tags: pin.selected_tags || [],
+            timing_tag: pin.timing_tag || null,
+            optional_note: pin.optional_note || "",
             notes: pinNotes
               .filter((n: any) => n.pin_id === pin.id)
               .sort((a: any, b: any) => a.note_order - b.note_order)
@@ -730,6 +768,12 @@ const CreateRoute = () => {
               trip_role: pin.trip_role || null,
               one_liner: pin.one_liner || "",
               recommended_for: pin.recommended_for || [],
+              place_type: pin.place_type || null,
+              place_id: pin.place_id || null,
+              core_decision: pin.core_decision || null,
+              selected_tags: pin.selected_tags || [],
+              timing_tag: pin.timing_tag || null,
+              optional_note: pin.optional_note || "",
               notes: pinNotes
                 .filter((n: any) => n.pin_id === pin.id)
                 .sort((a: any, b: any) => a.note_order - b.note_order)
@@ -766,16 +810,16 @@ const CreateRoute = () => {
 
   const addPin = () => {
     setPins(prevPins => {
-      const newPin: Pin = { 
-        place_name: "", 
-        address: "", 
-        description: "", 
-        image_url: "", 
-        images: [], 
-        rating: 0, 
-        pin_order: prevPins.length, 
-        tags: [], 
-        latitude: undefined, 
+      const newPin: Pin = {
+        place_name: "",
+        address: "",
+        description: "",
+        image_url: "",
+        images: [],
+        rating: 0,
+        pin_order: prevPins.length,
+        tags: [],
+        latitude: undefined,
         longitude: undefined,
         notes: [],
         expectation_met: null,
@@ -783,7 +827,13 @@ const CreateRoute = () => {
         cons: [],
         trip_role: null,
         one_liner: "",
-        recommended_for: []
+        recommended_for: [],
+        place_type: null,
+        place_id: null,
+        core_decision: null,
+        selected_tags: [],
+        timing_tag: null,
+        optional_note: ""
       };
       const newPins = [...prevPins, newPin];
       setCurrentPinIndex(newPins.length - 1);
@@ -1089,8 +1139,8 @@ const CreateRoute = () => {
           images: pin.images || [],
           rating: pin.expectation_met === "yes" ? 5 : pin.expectation_met === "average" ? 3 : pin.expectation_met === "no" ? 1 : (pin.rating || 0),
           pin_order: pin.pin_order,
-          tags: [...(pin.pros || []), ...(pin.recommended_for || [])].length > 0 
-            ? [...(pin.pros || []), ...(pin.recommended_for || [])] 
+          tags: [...(pin.pros || []), ...(pin.recommended_for || [])].length > 0
+            ? [...(pin.pros || []), ...(pin.recommended_for || [])]
             : (pin.tags || []),
           is_transport: false,
           transport_type: "",
@@ -1107,6 +1157,12 @@ const CreateRoute = () => {
           trip_role: pin.trip_role || null,
           one_liner: pin.one_liner || "",
           recommended_for: pin.recommended_for || [],
+          place_type: pin.place_type || null,
+          place_id: pin.place_id || null,
+          core_decision: pin.core_decision || null,
+          selected_tags: pin.selected_tags || [],
+          timing_tag: pin.timing_tag || null,
+          optional_note: pin.optional_note || "",
         };
       }));
 
@@ -1164,6 +1220,12 @@ const CreateRoute = () => {
             trip_role: p.trip_role,
             one_liner: p.one_liner,
             recommended_for: p.recommended_for,
+            place_type: p.place_type,
+            place_id: p.place_id,
+            core_decision: p.core_decision,
+            selected_tags: p.selected_tags,
+            timing_tag: p.timing_tag,
+            optional_note: p.optional_note,
           })))
           .select();
 
@@ -1250,6 +1312,12 @@ const CreateRoute = () => {
             trip_role: p.trip_role,
             one_liner: p.one_liner,
             recommended_for: p.recommended_for,
+            place_type: p.place_type,
+            place_id: p.place_id,
+            core_decision: p.core_decision,
+            selected_tags: p.selected_tags,
+            timing_tag: p.timing_tag,
+            optional_note: p.optional_note,
           })))
           .select();
 
@@ -1258,16 +1326,16 @@ const CreateRoute = () => {
         // Fire translations and collect notes - map by pin_order to ensure correct matching
         if (insertedPins) {
           const allNotesToInsert: any[] = [];
-          
+
           // Create a map of pin_order -> inserted pin for reliable matching
           const insertedPinsByOrder = new Map(
             insertedPins.map(p => [p.pin_order, p])
           );
-          
+
           for (const pinData of pinsToInsert) {
             const insertedPin = insertedPinsByOrder.get(pinData.pin_order);
             if (!insertedPin) continue;
-            
+
             // Trigger async translation (fire-and-forget)
             if (pinData.place_name) {
               supabase.functions.invoke('translate-place', {
@@ -1360,12 +1428,11 @@ const CreateRoute = () => {
       <div className="sticky top-[49px] bg-background/95 backdrop-blur-sm border-b border-border/50 py-2.5 px-4 z-10">
         <div className="max-w-lg mx-auto">
           <StepIndicator
-            steps={[
-              { label: "Info" },
-              { label: "Pinezki" },
-              { label: "Gotowe" },
-            ]}
-            currentStep={step}
+            steps={isTripMode
+              ? [{ label: "Pinezki" }, { label: "Gotowe" }]
+              : [{ label: "Info" }, { label: "Pinezki" }, { label: "Gotowe" }]
+            }
+            currentStep={isTripMode ? step - 1 : step}
           />
         </div>
       </div>
@@ -1550,13 +1617,13 @@ const CreateRoute = () => {
                       <div className="flex-1">
                         <AddressAutocomplete
                           value={pins[currentPinIndex]?.address || ""}
-                          onChange={async (value, coordinates, fullAddress, placeName) => {
+                          onChange={async (value, coordinates, fullAddress, placeName, placeType, placeId) => {
                             // Get full canonical pin info
                             let canonicalInfo: CanonicalPinInfo = { isExisting: false };
                             if (coordinates?.latitude && coordinates?.longitude) {
                               canonicalInfo = await getCanonicalPinInfo(coordinates.latitude, coordinates.longitude);
                             }
-                            
+
                             setPins(prevPins => {
                               const newPins = [...prevPins];
                               if (newPins[currentPinIndex]) {
@@ -1574,11 +1641,19 @@ const CreateRoute = () => {
                                   canonical_discovered_at: canonicalInfo.discoveredAt,
                                   canonical_total_visits: canonicalInfo.totalVisits,
                                   canonical_average_rating: canonicalInfo.averageRating,
+                                  // Experience panel data
+                                  place_type: placeType || null,
+                                  place_id: placeId || null,
+                                  // Reset experience fields when place changes
+                                  core_decision: null,
+                                  selected_tags: [],
+                                  timing_tag: null,
+                                  optional_note: "",
                                 };
                               }
                               return newPins;
                             });
-                            
+
                             // Update discovery status
                             if (coordinates?.latitude && coordinates?.longitude) {
                               setIsNewDiscovery(prev => ({
@@ -1712,14 +1787,28 @@ const CreateRoute = () => {
                   </div>
 
 
-                  {/* PlaceReviewCard - replaces description, rating, and tags */}
-                  <PlaceReviewCard
-                    pin={pins[currentPinIndex]}
-                    pinIndex={currentPinIndex}
-                    totalPins={pins.length}
-                    onUpdate={(field, value) => updatePin(currentPinIndex, field, value)}
-                    tripType={tripType}
-                  />
+                  {/* Experience Panel or PlaceReviewCard based on place type */}
+                  {pins[currentPinIndex]?.place_type && pins[currentPinIndex]?.place_type !== 'other' ? (
+                    <ExperiencePanel
+                      placeType={pins[currentPinIndex].place_type!}
+                      coreDecision={pins[currentPinIndex]?.core_decision || null}
+                      selectedTags={pins[currentPinIndex]?.selected_tags || []}
+                      timingTag={pins[currentPinIndex]?.timing_tag || null}
+                      optionalNote={pins[currentPinIndex]?.optional_note || ""}
+                      onCoreDecisionChange={(value) => updatePin(currentPinIndex, "core_decision", value)}
+                      onTagsChange={(tags) => updatePin(currentPinIndex, "selected_tags", tags)}
+                      onTimingTagChange={(value) => updatePin(currentPinIndex, "timing_tag", value)}
+                      onNoteChange={(note) => updatePin(currentPinIndex, "optional_note", note)}
+                    />
+                  ) : (
+                    <PlaceReviewCard
+                      pin={pins[currentPinIndex]}
+                      pinIndex={currentPinIndex}
+                      totalPins={pins.length}
+                      onUpdate={(field, value) => updatePin(currentPinIndex, field, value)}
+                      tripType={tripType}
+                    />
+                  )}
 
                   {/* Image upload - minimal */}
                   <div>
@@ -1771,16 +1860,27 @@ const CreateRoute = () => {
                     onClick={() => {
                       const currentPin = pins[currentPinIndex];
                       if (!currentPin?.address) {
-                        toast({ 
-                          variant: "destructive", 
+                        toast({
+                          variant: "destructive",
                           title: "Uzupełnij wymagane pola",
                           description: "Adres jest wymagany"
                         });
                         return;
                       }
-                      if (!currentPin?.recommended_for || currentPin.recommended_for.length === 0) {
-                        toast({ 
-                          variant: "destructive", 
+                      // Validate experience panel: core_decision required when place_type is set
+                      if (currentPin?.place_type && currentPin.place_type !== 'other' && !currentPin?.core_decision) {
+                        toast({
+                          variant: "destructive",
+                          title: "Uzupełnij wymagane pola",
+                          description: "Odpowiedz na główne pytanie o to miejsce"
+                        });
+                        return;
+                      }
+                      // Validate old review card: recommended_for required when no place_type
+                      if ((!currentPin?.place_type || currentPin.place_type === 'other') &&
+                          (!currentPin?.recommended_for || currentPin.recommended_for.length === 0)) {
+                        toast({
+                          variant: "destructive",
                           title: "Uzupełnij wymagane pola",
                           description: "Wybierz dla kogo polecasz to miejsce"
                         });
