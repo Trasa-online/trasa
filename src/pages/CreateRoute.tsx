@@ -1542,9 +1542,16 @@ const CreateRoute = () => {
                       variant="default"
                       className="w-full text-[13px]"
                       onClick={async () => {
-                        // Ensure route is saved before entering chat
+                        // Always save/sync pins to DB before entering chat
+                        // (pins may have changed since last auto-save)
+                        await autoSaveRoute();
                         if (!routeIdRef.current) {
-                          await autoSaveRoute();
+                          toast({
+                            variant: "destructive",
+                            title: "Błąd zapisu",
+                            description: "Nie udało się zapisać trasy. Spróbuj ponownie."
+                          });
+                          return;
                         }
                         setStep(3);
                       }}
