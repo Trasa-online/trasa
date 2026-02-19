@@ -1,0 +1,395 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+function buildSystemPrompt(pinsContext: string, internalContext: string, pinCount: number): string {
+  return `Jesteś asystentem podróżniczym w aplikacji TRASA.
+User właśnie dodał ${pinCount} miejsc do swojego dnia. Twoim zadaniem jest
+przeprowadzić naturalną, krótką rozmowę (max 7 wymian), żeby zrozumieć
+KONTEKST i SEKWENCJĘ tego dnia.
+
+## PINY USERA (kolejność w jakiej je dodał)
+${pinsContext}
+${internalContext}
+
+## FAZY ROZMOWY
+Prowadź rozmowę naturalnie. Łącz pytania gdy flow na to pozwala.
+Jedno pytanie na raz. Max 7 wymian (Ty pytasz, user odpowiada = 1 wymiana).
+
+### Pytanie 1 — INTENT + GRUPA
+Zapytaj z kim był i jaki to miał być dzień.
+Wyciągnij: day_type (romantic/foodie/cultural/budget/family/adventure),
+group (solo/couple/family/friends), pace (slow/moderate/intense)
+
+### Pytanie 2 — PLAN vs REALITY
+Powiedz co widzisz w jego liście i zapytaj: czy tak to planował?
+Co się zmieniło? Czy coś dodał spontanicznie albo pominął?
+Wyciągnij: planned_order, realized_order, was_spontaneous, was_skipped
+
+### Pytanie 3 — DLACZEGO ZMIANY
+Jeśli były odchylenia, dopytaj o powody.
+Wyciągnij: deviation triggers (crowd/weather/fatigue/mood/time/spontaneous)
+
+### Pytanie 4 — OCENA KOLEJNOŚCI
+Zapytaj czy kolejność miejsc miała sens.
+Co było idealne po poprzednim? Co za wcześnie/za późno?
+Wyciągnij: sequence_rating i sequence_note per pin
+WAŻNE: to ocena POZYCJI w dniu, nie samego miejsca.
+
+### Pytanie 5 — ODRZUCONE MIEJSCA
+Zapytaj czy rozważał miejsca których nie odwiedził.
+Wyciągnij: place_name + rejection_reason
+
+### Pytanie 6 — KONTEKST
+Zapytaj o pogodę, porę roku, eventy, tłumy — cokolwiek wpłynęło na dzień.
+Wyciągnij: weather_impact i dodatkowe deviation triggers
+
+### Pytanie 7 — HIGHLIGHT + TIP
+Zapytaj o najlepszy moment i co by zmienił gdyby jechał ponownie.
+Wyciągnij: highlight, tip
+
+## ZASADY
+- Po polsku, naturalnie, krótko (2-3 zdania max na wiadomość)
+- Odnoś się do KONKRETNYCH pinów usera PO NAZWIE
+- Nie sugeruj odpowiedzi na otwarte pytania
+- Jeśli user daje bogatą odpowiedź, przeskocz fazę która już jest pokryta
+- Jeśli user jest lakoniczny, dopytaj RAZ, potem idź dalej
+- Możesz połączyć 2 powiązane fazy w jedno pytanie
+- PIERWSZĄ wiadomość zacznij od powitania i od razu zadaj pytanie 1
+
+## ZAKOŃCZENIE
+Gdy masz dane z minimum 5 faz, wygeneruj podsumowanie.
+Napisz krótką wiadomość podsumowującą (1-2 zdania), a PO NIEJ dodaj blok:
+
+<route_summary>
+{
+  "city": "...",
+  "intent": {
+    "day_type": "romantic_slow",
+    "group": "couple",
+    "pace": "slow",
+    "mood": "relax"
+  },
+  "pins": [
+    {
+      "place_name": "...",
+      "planned_order": 1,
+      "realized_order": 1,
+      "was_spontaneous": false,
+      "was_skipped": false,
+      "skip_reason": null,
+      "sequence_rating": "perfect_after_previous",
+      "sequence_note": "...",
+      "sentiment": "positive",
+      "experience_note": "...",
+      "tags": ["tag1", "tag2"],
+      "time_spent": "2h"
+    }
+  ],
+  "deviations": [
+    { "type": "plan_b", "description": "...", "trigger": "crowd" }
+  ],
+  "considerations": [
+    { "place_name": "...", "rejection_reason": "..." }
+  ],
+  "weather_impact": null,
+  "highlight": "...",
+  "tip": "...",
+  "summary_text": "Romantyczny dzień: Wawel → kawa → Kazimierz"
+}
+</route_summary>
+
+WAŻNE: Każdy pin z listy usera MUSI pojawić się w tablicy "pins" w summary.
+Jeśli user wspomni nowe miejsca (spontaniczne), dodaj je też z was_spontaneous=true.
+sequence_rating może być: "good_start", "perfect_after_previous", "too_early", "too_late", "ideal_ending", "wrong_order", "neutral".
+sentiment może być: "positive", "neutral", "negative".
+deviation type może być: "order_change", "place_added", "place_skipped", "time_shift", "plan_b".
+deviation trigger może być: "crowd", "weather", "fatigue", "mood", "time", "spontaneous".`;
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { route_id, messages: userMessages } = await req.json();
+
+    if (!route_id || !userMessages) {
+      return new Response(
+        JSON.stringify({ error: "route_id and messages required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Auth
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Load route + pins
+    const { data: route } = await supabase
+      .from("routes")
+      .select("id, title, day_number, folder_id")
+      .eq("id", route_id)
+      .single();
+
+    if (!route) {
+      return new Response(
+        JSON.stringify({ error: "Route not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: pins } = await supabase
+      .from("pins")
+      .select("id, place_name, address, pin_order, place_type, google_place_id")
+      .eq("route_id", route_id)
+      .order("pin_order");
+
+    if (!pins?.length) {
+      return new Response(
+        JSON.stringify({ error: "No pins found for this route" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check internal DB for known places
+    const enrichment: string[] = [];
+    for (const pin of pins) {
+      const { data: canonical } = await supabase
+        .from("canonical_pins")
+        .select("total_visits, average_rating")
+        .ilike("place_name", `%${pin.place_name}%`)
+        .limit(1)
+        .maybeSingle();
+
+      if (canonical?.total_visits && canonical.total_visits > 1) {
+        enrichment.push(
+          `- ${pin.place_name}: ${canonical.total_visits} wizyt w bazie, średnia ${canonical.average_rating ?? "brak"}`
+        );
+      }
+    }
+
+    // Build context
+    const pinsContext = pins
+      .map((p: any, i: number) => `${i + 1}. ${p.place_name} (${p.address || "brak adresu"})`)
+      .join("\n");
+
+    const internalContext = enrichment.length > 0
+      ? `\n\nDANE Z NASZEJ BAZY O TYCH MIEJSCACH:\n${enrichment.join("\n")}`
+      : "";
+
+    const systemPrompt = buildSystemPrompt(pinsContext, internalContext, pins.length);
+
+    // Call AI via Lovable gateway
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "AI API key not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const aiMessages = [
+      { role: "system", content: systemPrompt },
+      ...userMessages,
+    ];
+
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: aiMessages,
+        max_tokens: 800,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      const errText = await aiResponse.text();
+      console.error("AI Gateway error:", errText);
+      return new Response(
+        JSON.stringify({ error: "AI service error" }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const aiData = await aiResponse.json();
+    const assistantText = aiData.choices?.[0]?.message?.content ?? "";
+
+    if (!assistantText) {
+      return new Response(
+        JSON.stringify({ error: "Empty AI response" }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if conversation complete
+    const summaryMatch = assistantText.match(
+      /<route_summary>([\s\S]*?)<\/route_summary>/
+    );
+
+    if (summaryMatch) {
+      try {
+        const summary = JSON.parse(summaryMatch[1]);
+
+        // Save to DB
+        await saveToDatabase(supabase, route_id, user.id, summary, pins, userMessages, assistantText);
+
+        const cleanMessage = assistantText
+          .replace(/<route_summary>[\s\S]*?<\/route_summary>/, "")
+          .trim();
+
+        return new Response(
+          JSON.stringify({ done: true, message: cleanMessage, summary }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (parseErr) {
+        console.error("Failed to parse route_summary:", parseErr);
+        // Fall through — treat as non-complete
+      }
+    }
+
+    // Conversation continues — save progress
+    const allMessages = [
+      ...userMessages,
+      { role: "assistant", content: assistantText },
+    ];
+
+    await supabase.from("chat_sessions").upsert(
+      {
+        route_id,
+        user_id: user.id,
+        messages: allMessages,
+        current_phase: Math.min(Math.ceil(userMessages.filter((m: any) => m.role === "user").length / 1) + 1, 7),
+      },
+      { onConflict: "route_id" }
+    );
+
+    // Update route status
+    await supabase
+      .from("routes")
+      .update({ chat_status: "started" })
+      .eq("id", route_id)
+      .eq("chat_status", "none");
+
+    return new Response(
+      JSON.stringify({ done: false, message: assistantText }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("chat-route error:", error);
+    return new Response(
+      JSON.stringify({ error: error.message || "Internal error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
+
+async function saveToDatabase(
+  supabase: any,
+  routeId: string,
+  userId: string,
+  summary: any,
+  pins: any[],
+  messages: any[],
+  lastAssistant: string
+) {
+  // 1. Update route
+  await supabase.from("routes").update({
+    chat_status: "completed",
+    city: summary.city ?? null,
+    intent: summary.intent ?? null,
+    ai_summary: summary.summary_text ?? null,
+    ai_highlight: summary.highlight ?? null,
+    ai_tip: summary.tip ?? null,
+    weather_impact: summary.weather_impact ?? null,
+  }).eq("id", routeId);
+
+  // 2. Update pins with behavioral data
+  if (summary.pins?.length) {
+    for (const sp of summary.pins) {
+      const matchedPin = pins.find(
+        (p: any) => p.place_name.toLowerCase().trim() === sp.place_name.toLowerCase().trim()
+      );
+      if (!matchedPin) continue;
+
+      await supabase.from("pins").update({
+        planned_order: sp.planned_order ?? null,
+        realized_order: sp.realized_order ?? null,
+        was_spontaneous: sp.was_spontaneous ?? false,
+        was_skipped: sp.was_skipped ?? false,
+        skip_reason: sp.skip_reason ?? null,
+        sequence_rating: sp.sequence_rating ?? null,
+        sequence_note: sp.sequence_note ?? null,
+        sentiment: sp.sentiment ?? null,
+        experience_note: sp.experience_note ?? null,
+        time_spent: sp.time_spent ?? null,
+        selected_tags: sp.tags ?? [],
+      }).eq("id", matchedPin.id);
+    }
+  }
+
+  // 3. Insert deviations
+  if (summary.deviations?.length) {
+    await supabase.from("day_deviations").insert(
+      summary.deviations.map((d: any) => ({
+        route_id: routeId,
+        deviation_type: d.type,
+        description: d.description ?? null,
+        trigger: d.trigger ?? null,
+      }))
+    );
+  }
+
+  // 4. Insert considerations
+  if (summary.considerations?.length) {
+    await supabase.from("day_considerations").insert(
+      summary.considerations.map((c: any) => ({
+        route_id: routeId,
+        place_name: c.place_name,
+        rejection_reason: c.rejection_reason ?? null,
+      }))
+    );
+  }
+
+  // 5. Save chat log
+  await supabase.from("chat_sessions").upsert(
+    {
+      route_id: routeId,
+      user_id: userId,
+      messages: [...messages, { role: "assistant", content: lastAssistant }],
+      current_phase: 7,
+      ai_extracted: summary,
+      completed_at: new Date().toISOString(),
+    },
+    { onConflict: "route_id" }
+  );
+}

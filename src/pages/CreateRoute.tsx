@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Plus, X, Camera, Pencil, Sparkles, Trophy, Check, MapPin, Star, Users } from "lucide-react";
 import PlaceReviewCard from "@/components/route/PlaceReviewCard";
 import ExperiencePanel from "@/components/route/ExperiencePanel";
+import ChatExperience from "@/components/route/ChatExperience";
+import RouteSummaryCard from "@/components/route/RouteSummaryCard";
 import { useToast } from "@/hooks/use-toast";
 import type { PlaceCategory } from "@/lib/googleMaps";
 import { useQuery } from "@tanstack/react-query";
@@ -116,6 +118,7 @@ const CreateRoute = () => {
   const [routeRating, setRouteRating] = useState(0);
   
   const [showPinsList, setShowPinsList] = useState(false);
+  const [chatSummary, setChatSummary] = useState<any>(null);
   const [isNewDiscovery, setIsNewDiscovery] = useState<{ [key: number]: boolean }>({});
   
   // Undo deletion state
@@ -146,9 +149,14 @@ const CreateRoute = () => {
 
   const handleBackClick = () => {
     // If on step 3 (summary), go back to step 2
+    if (step === 4) {
+      setStep(3);
+      return;
+    }
+
     if (step === 3) {
       setStep(2);
-      setShowPinsList(true);  // Always show list when going back to step 2
+      setShowPinsList(true);
       return;
     }
     
@@ -1403,7 +1411,7 @@ const CreateRoute = () => {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-base font-medium flex-1 text-foreground">
-          {step === 1 ? "Nowa trasa" : step === 2 ? "Pinezki" : "Podsumowanie"}
+          {step === 1 ? "Nowa trasa" : step === 2 ? "Pinezki" : step === 3 ? "Rozmowa" : "Podsumowanie"}
         </h1>
         {step >= 2 && hasAddedPins && (
           <div className="text-[11px] text-muted-foreground text-right">
@@ -1429,8 +1437,8 @@ const CreateRoute = () => {
         <div className="max-w-lg mx-auto">
           <StepIndicator
             steps={isTripMode
-              ? [{ label: "Pinezki" }, { label: "Gotowe" }]
-              : [{ label: "Info" }, { label: "Pinezki" }, { label: "Gotowe" }]
+              ? [{ label: "Pinezki" }, { label: "Chat" }, { label: "Gotowe" }]
+              : [{ label: "Info" }, { label: "Pinezki" }, { label: "Chat" }, { label: "Gotowe" }]
             }
             currentStep={isTripMode ? step - 1 : step}
           />
@@ -1533,7 +1541,13 @@ const CreateRoute = () => {
                     <Button
                       variant="default"
                       className="w-full text-[13px]"
-                      onClick={() => setStep(3)}
+                      onClick={async () => {
+                        // Ensure route is saved before entering chat
+                        if (!routeIdRef.current) {
+                          await autoSaveRoute();
+                        }
+                        setStep(3);
+                      }}
                       disabled={pins.filter(p => p.address).length === 0}
                     >
                       Dalej
@@ -1737,6 +1751,25 @@ const CreateRoute = () => {
             )}
           </>
         ) : step === 3 ? (
+          routeIdRef.current ? (
+            <ChatExperience
+              routeId={routeIdRef.current}
+              pins={pins.filter(p => p.address).map(p => ({ place_name: p.place_name, address: p.address }))}
+              onComplete={(summary) => {
+                setChatSummary(summary);
+                setStep(4);
+              }}
+              onSkip={() => setStep(4)}
+            />
+          ) : (
+            <div className="py-12 text-center text-muted-foreground text-sm">
+              <p>Najpierw zapisz trasę jako roboczą.</p>
+              <Button variant="outline" className="mt-4" onClick={() => setStep(2)}>
+                Wróć do pinezek
+              </Button>
+            </div>
+          )
+        ) : step === 4 ? (
           <>
             <div className="space-y-5 pb-24">
               {/* Header with editable title */}
@@ -1771,6 +1804,11 @@ const CreateRoute = () => {
               />
               {/* Review summary stats */}
               <RouteReviewSummary pins={pins} />
+
+              {/* AI Chat Summary Card */}
+              {chatSummary && (
+                <RouteSummaryCard summary={chatSummary} />
+              )}
 
               {/* Pins list - read-only summary */}
               <div>

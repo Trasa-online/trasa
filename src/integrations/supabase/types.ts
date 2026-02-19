@@ -374,6 +374,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           expectation_met: string | null
+          experience_note: string | null
           id: string
           image_url: string | null
           images: string[] | null
@@ -389,17 +390,26 @@ export type Database = {
           place_id: string | null
           place_name: string
           place_type: string | null
+          planned_order: number | null
           pros: string[] | null
           rating: number | null
+          realized_order: number | null
           recommended_for: string[] | null
           route_id: string
           selected_tags: string[] | null
+          sentiment: string | null
+          sequence_note: string | null
+          sequence_rating: string | null
+          skip_reason: string | null
           tags: string[] | null
+          time_spent: string | null
           timing_tag: string | null
           transport_end: string | null
           transport_type: string | null
           trip_role: string | null
           visited_at: string | null
+          was_skipped: boolean | null
+          was_spontaneous: boolean | null
         }
         Insert: {
           address: string
@@ -409,6 +419,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           expectation_met?: string | null
+          experience_note?: string | null
           id?: string
           image_url?: string | null
           images?: string[] | null
@@ -424,17 +435,26 @@ export type Database = {
           place_id?: string | null
           place_name: string
           place_type?: string | null
+          planned_order?: number | null
           pros?: string[] | null
           rating?: number | null
+          realized_order?: number | null
           recommended_for?: string[] | null
           route_id: string
           selected_tags?: string[] | null
+          sentiment?: string | null
+          sequence_note?: string | null
+          sequence_rating?: string | null
+          skip_reason?: string | null
           tags?: string[] | null
+          time_spent?: string | null
           timing_tag?: string | null
           transport_end?: string | null
           transport_type?: string | null
           trip_role?: string | null
           visited_at?: string | null
+          was_skipped?: boolean | null
+          was_spontaneous?: boolean | null
         }
         Update: {
           address?: string
@@ -444,6 +464,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           expectation_met?: string | null
+          experience_note?: string | null
           id?: string
           image_url?: string | null
           images?: string[] | null
@@ -459,17 +480,26 @@ export type Database = {
           place_id?: string | null
           place_name?: string
           place_type?: string | null
+          planned_order?: number | null
           pros?: string[] | null
           rating?: number | null
+          realized_order?: number | null
           recommended_for?: string[] | null
           route_id?: string
           selected_tags?: string[] | null
+          sentiment?: string | null
+          sequence_note?: string | null
+          sequence_rating?: string | null
+          skip_reason?: string | null
           tags?: string[] | null
+          time_spent?: string | null
           timing_tag?: string | null
           transport_end?: string | null
           transport_type?: string | null
           trip_role?: string | null
           visited_at?: string | null
+          was_skipped?: boolean | null
+          was_spontaneous?: boolean | null
         }
         Relationships: [
           {
@@ -758,12 +788,18 @@ export type Database = {
       }
       routes: {
         Row: {
+          ai_highlight: string | null
+          ai_summary: string | null
+          ai_tip: string | null
+          chat_status: string | null
+          city: string | null
           created_at: string | null
           day_number: number | null
           description: string | null
           folder_id: string | null
           folder_order: number | null
           id: string
+          intent: Json | null
           rating: number | null
           status: string
           title: string
@@ -771,14 +807,21 @@ export type Database = {
           updated_at: string | null
           user_id: string
           views: number
+          weather_impact: string | null
         }
         Insert: {
+          ai_highlight?: string | null
+          ai_summary?: string | null
+          ai_tip?: string | null
+          chat_status?: string | null
+          city?: string | null
           created_at?: string | null
           day_number?: number | null
           description?: string | null
           folder_id?: string | null
           folder_order?: number | null
           id?: string
+          intent?: Json | null
           rating?: number | null
           status?: string
           title: string
@@ -786,14 +829,21 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           views?: number
+          weather_impact?: string | null
         }
         Update: {
+          ai_highlight?: string | null
+          ai_summary?: string | null
+          ai_tip?: string | null
+          chat_status?: string | null
+          city?: string | null
           created_at?: string | null
           day_number?: number | null
           description?: string | null
           folder_id?: string | null
           folder_order?: number | null
           id?: string
+          intent?: Json | null
           rating?: number | null
           status?: string
           title?: string
@@ -801,6 +851,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           views?: number
+          weather_impact?: string | null
         }
         Relationships: [
           {
@@ -822,6 +873,127 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_sessions: {
+        Row: {
+          id: string
+          route_id: string
+          user_id: string
+          messages: Json
+          current_phase: number | null
+          ai_extracted: Json | null
+          completed_at: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          route_id: string
+          user_id: string
+          messages?: Json
+          current_phase?: number | null
+          ai_extracted?: Json | null
+          completed_at?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          route_id?: string
+          user_id?: string
+          messages?: Json
+          current_phase?: number | null
+          ai_extracted?: Json | null
+          completed_at?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_sessions_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: true
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      day_deviations: {
+        Row: {
+          id: string
+          route_id: string
+          pin_id: string | null
+          deviation_type: string
+          description: string | null
+          trigger: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          route_id: string
+          pin_id?: string | null
+          deviation_type: string
+          description?: string | null
+          trigger?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          route_id?: string
+          pin_id?: string | null
+          deviation_type?: string
+          description?: string | null
+          trigger?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "day_deviations_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      day_considerations: {
+        Row: {
+          id: string
+          route_id: string
+          place_name: string
+          google_place_id: string | null
+          rejection_reason: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          route_id: string
+          place_name: string
+          google_place_id?: string | null
+          rejection_reason?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          route_id?: string
+          place_name?: string
+          google_place_id?: string | null
+          rejection_reason?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "day_considerations_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
             referencedColumns: ["id"]
           },
         ]
