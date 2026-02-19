@@ -1510,9 +1510,9 @@ const CreateRoute = () => {
 
 
                   <div className="space-y-3">
-                    <DraggablePinList
+                  <DraggablePinList
                       pins={pins}
-                      onReorder={setPins}
+                      onReorder={(reordered) => setPins(reordered as Pin[])}
                       onPinClick={(index) => {
                         setCurrentPinIndex(index);
                         setShowPinsList(false);
@@ -1814,7 +1814,7 @@ const CreateRoute = () => {
               <div>
                 <DraggablePinList
                   pins={pins}
-                  onReorder={setPins}
+                  onReorder={(reordered) => setPins(reordered as Pin[])}
                   showRemoveButton={false}
                   showNotesEditor={false}
                   showNameEditor={false}
