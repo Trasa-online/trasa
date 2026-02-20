@@ -504,6 +504,7 @@ export type Database = {
         Row: {
           address: string
           canonical_pin_id: string | null
+          category: string | null
           cons: string[] | null
           core_decision: string | null
           created_at: string | null
@@ -536,6 +537,7 @@ export type Database = {
           sequence_note: string | null
           sequence_rating: string | null
           skip_reason: string | null
+          suggested_time: string | null
           tags: string[] | null
           time_spent: string | null
           timing_tag: string | null
@@ -549,6 +551,7 @@ export type Database = {
         Insert: {
           address: string
           canonical_pin_id?: string | null
+          category?: string | null
           cons?: string[] | null
           core_decision?: string | null
           created_at?: string | null
@@ -581,6 +584,7 @@ export type Database = {
           sequence_note?: string | null
           sequence_rating?: string | null
           skip_reason?: string | null
+          suggested_time?: string | null
           tags?: string[] | null
           time_spent?: string | null
           timing_tag?: string | null
@@ -594,6 +598,7 @@ export type Database = {
         Update: {
           address?: string
           canonical_pin_id?: string | null
+          category?: string | null
           cons?: string[] | null
           core_decision?: string | null
           created_at?: string | null
@@ -626,6 +631,7 @@ export type Database = {
           sequence_note?: string | null
           sequence_rating?: string | null
           skip_reason?: string | null
+          suggested_time?: string | null
           tags?: string[] | null
           time_spent?: string | null
           timing_tag?: string | null
@@ -931,11 +937,15 @@ export type Database = {
           created_at: string | null
           day_number: number | null
           description: string | null
+          end_date: string | null
           folder_id: string | null
           folder_order: number | null
           id: string
           intent: Json | null
+          pace: string | null
+          priorities: string[] | null
           rating: number | null
+          start_date: string | null
           status: string
           title: string
           trip_type: Database["public"]["Enums"]["trip_type"] | null
@@ -953,11 +963,15 @@ export type Database = {
           created_at?: string | null
           day_number?: number | null
           description?: string | null
+          end_date?: string | null
           folder_id?: string | null
           folder_order?: number | null
           id?: string
           intent?: Json | null
+          pace?: string | null
+          priorities?: string[] | null
           rating?: number | null
+          start_date?: string | null
           status?: string
           title: string
           trip_type?: Database["public"]["Enums"]["trip_type"] | null
@@ -975,11 +989,15 @@ export type Database = {
           created_at?: string | null
           day_number?: number | null
           description?: string | null
+          end_date?: string | null
           folder_id?: string | null
           folder_order?: number | null
           id?: string
           intent?: Json | null
+          pace?: string | null
+          priorities?: string[] | null
           rating?: number | null
+          start_date?: string | null
           status?: string
           title?: string
           trip_type?: Database["public"]["Enums"]["trip_type"] | null

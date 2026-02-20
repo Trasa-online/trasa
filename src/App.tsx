@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AppLayout from "./components/layout/AppLayout";
+import Home from "./pages/Home";
 import Feed from "./pages/Feed";
 import Auth from "./pages/Auth";
 import Waitlist from "./pages/Waitlist";
@@ -37,7 +38,8 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/qr" element={<QRCodePage />} />
           <Route path="/waitlist" element={<Waitlist />} />
-          <Route path="/" element={<AppLayout><Feed /></AppLayout>} />
+          <Route path="/" element={<AppLayout><Home /></AppLayout>} />
+          <Route path="/feed" element={<AppLayout><Feed /></AppLayout>} />
           <Route path="/my-routes" element={<AppLayout><MyRoutes /></AppLayout>} />
           <Route path="/create" element={<CreateRoute />} />
           
