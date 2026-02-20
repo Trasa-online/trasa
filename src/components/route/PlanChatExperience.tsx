@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import DayPinList, { type PlanPin } from "./DayPinList";
+import PlaceDetailDrawer from "./PlaceDetailDrawer";
+import AddPinSheet from "./AddPinSheet";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -43,6 +45,8 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
   const [listening, setListening] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [editCount, setEditCount] = useState(0);
+  const [selectedPin, setSelectedPin] = useState<PlanPin | null>(null);
+  const [addPinDay, setAddPinDay] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -160,7 +164,6 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
         .join("");
       setInput(transcript);
       
-      // Auto-send when voice recognition ends with final result
       if (event.results[event.results.length - 1].isFinal) {
         setTimeout(() => sendMessage(transcript), 300);
       }
@@ -183,15 +186,37 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
 
   const handleRemovePin = (dayNumber: number, pinIndex: number) => {
     if (!plan) return;
-    const updated = {
+    setPlan({
       ...plan,
       days: plan.days.map(d =>
         d.day_number === dayNumber
           ? { ...d, pins: d.pins.filter((_, i) => i !== pinIndex) }
           : d
       ),
-    };
-    setPlan(updated);
+    });
+  };
+
+  const handleReorderPins = (dayNumber: number, newPins: PlanPin[]) => {
+    if (!plan) return;
+    setPlan({
+      ...plan,
+      days: plan.days.map(d =>
+        d.day_number === dayNumber ? { ...d, pins: newPins } : d
+      ),
+    });
+  };
+
+  const handleAddPinToDay = (pin: PlanPin) => {
+    if (!plan || addPinDay === null) return;
+    setPlan({
+      ...plan,
+      days: plan.days.map(d =>
+        d.day_number === addPinDay
+          ? { ...d, pins: [...d.pins, { ...pin, day_number: addPinDay }] }
+          : d
+      ),
+    });
+    setAddPinDay(null);
   };
 
   const handleConfirm = () => {
@@ -249,17 +274,6 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
         {/* Generated Plan */}
         {plan && (
           <div className="space-y-4 pt-2">
-            <div className="flex items-center justify-between px-1">
-              <h2 className="text-base font-semibold">
-                📍 Plan: {plan.city}
-              </h2>
-              {editCount > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  Edycje: {editCount}/3
-                </span>
-              )}
-            </div>
-            
             {plan.days.map((day) => (
               <DayPinList
                 key={day.day_number}
@@ -267,8 +281,16 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
                 totalDays={plan.days.length}
                 pins={day.pins}
                 onRemovePin={handleRemovePin}
+                onReorderPins={handleReorderPins}
+                onPinClick={(pin) => setSelectedPin(pin)}
+                onAddPin={(dayNum) => setAddPinDay(dayNum)}
               />
             ))}
+
+            <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
+              <span>Ilość zmian</span>
+              <span>Pozostało {Math.max(0, 3 - editCount)}/3</span>
+            </div>
           </div>
         )}
       </div>
@@ -325,6 +347,26 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
           </Button>
         </div>
       </div>
+
+      {/* Place Detail Drawer */}
+      {selectedPin && (
+        <PlaceDetailDrawer
+          open={!!selectedPin}
+          onOpenChange={(open) => !open && setSelectedPin(null)}
+          placeName={selectedPin.place_name}
+          address={selectedPin.address}
+          latitude={selectedPin.latitude}
+          longitude={selectedPin.longitude}
+        />
+      )}
+
+      {/* Add Pin Sheet */}
+      <AddPinSheet
+        open={addPinDay !== null}
+        onOpenChange={(open) => !open && setAddPinDay(null)}
+        onPinAdd={handleAddPinToDay}
+        cityContext={plan?.city || ""}
+      />
     </div>
   );
 };
