@@ -1,4 +1,5 @@
-import { X, GripVertical, Clock } from "lucide-react";
+import { useState } from "react";
+import { Trash2, GripVertical, Clock, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface PlanPin {
@@ -17,69 +18,152 @@ interface DayPinListProps {
   totalDays: number;
   pins: PlanPin[];
   onRemovePin: (dayNumber: number, pinIndex: number) => void;
+  onReorderPins?: (dayNumber: number, pins: PlanPin[]) => void;
+  onPinClick?: (pin: PlanPin) => void;
+  onAddPin?: (dayNumber: number) => void;
 }
 
-const categoryIcons: Record<string, string> = {
-  restaurant: "🍽️",
-  cafe: "☕",
-  museum: "🏛️",
-  park: "🌳",
-  viewpoint: "👀",
-  shopping: "🛍️",
-  nightlife: "🌙",
-  monument: "🏛️",
-  church: "⛪",
-  market: "🏪",
-  bar: "🍺",
-  gallery: "🎨",
+const categoryLabels: Record<string, string> = {
+  restaurant: "restauracja",
+  cafe: "kawiarnia",
+  museum: "muzeum",
+  park: "park",
+  viewpoint: "punkt widokowy",
+  shopping: "zakupy",
+  nightlife: "życie nocne",
+  monument: "zabytek",
+  church: "kościół",
+  market: "targ",
+  bar: "bar",
+  gallery: "galeria",
 };
 
-const DayPinList = ({ dayNumber, totalDays, pins, onRemovePin }: DayPinListProps) => {
+const DayPinList = ({
+  dayNumber,
+  totalDays,
+  pins,
+  onRemovePin,
+  onReorderPins,
+  onPinClick,
+  onAddPin,
+}: DayPinListProps) => {
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", index.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverIndex(index);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex || !onReorderPins) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newPins = [...pins];
+    const [dragged] = newPins.splice(draggedIndex, 1);
+    newPins.splice(dropIndex, 0, dragged);
+    onReorderPins(dayNumber, newPins);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-foreground px-1">
-        Dzień {dayNumber} z {totalDays}
-      </h3>
-      <div className="space-y-1.5">
-        {pins.map((pin, index) => (
-          <div
-            key={index}
-            className="flex items-start gap-2 bg-muted/50 rounded-xl p-3 group"
+      <div className="flex items-center justify-between px-1">
+        <h3 className="text-sm font-semibold text-foreground">
+          Dzień #{dayNumber} z {totalDays}
+        </h3>
+        {onAddPin && (
+          <button
+            onClick={() => onAddPin(dayNumber)}
+            className="h-7 w-7 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
           >
-            <div className="flex-shrink-0 mt-0.5 text-muted-foreground/40">
-              <GripVertical className="h-4 w-4" />
-            </div>
-            
-            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-semibold">
-              {index + 1}
-            </div>
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm">{categoryIcons[pin.category] || "📍"}</span>
-                <span className="text-sm font-medium text-foreground truncate">
+      <div className="space-y-1.5">
+        {pins.map((pin, index) => {
+          const isDragging = draggedIndex === index;
+          const isDragOver = dragOverIndex === index;
+
+          return (
+            <div
+              key={index}
+              draggable={!!onReorderPins}
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={() => setDragOverIndex(null)}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              className={cn(
+                "flex items-center gap-2 bg-muted/50 rounded-xl p-3 transition-all",
+                isDragging && "opacity-40 scale-[0.97]",
+                isDragOver && "ring-2 ring-foreground/20",
+                onPinClick && "cursor-pointer active:scale-[0.98]"
+              )}
+              onClick={() => onPinClick?.(pin)}
+            >
+              {/* Drag handle */}
+              <div
+                className="flex-shrink-0 cursor-grab active:cursor-grabbing touch-none text-muted-foreground/40"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <GripVertical className="h-4 w-4" />
+              </div>
+
+              {/* Number badge */}
+              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-semibold">
+                {index + 1}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-medium text-foreground truncate block">
                   {pin.place_name}
                 </span>
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                  {categoryLabels[pin.category]
+                    ? `Kategoria (${categoryLabels[pin.category]})`
+                    : pin.description}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                {pin.description}
-              </p>
-            </div>
 
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                {pin.suggested_time}
+              {/* Time */}
+              <div className="flex items-center gap-0.5 text-xs text-muted-foreground flex-shrink-0">
+                {pin.suggested_time || "00:00"}
               </div>
+
+              {/* Delete */}
               <button
-                onClick={() => onRemovePin(dayNumber, index)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 rounded-full flex items-center justify-center hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemovePin(dayNumber, index);
+                }}
+                className="flex-shrink-0 h-7 w-7 rounded flex items-center justify-center text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
               >
-                <X className="h-3.5 w-3.5" />
+                <Trash2 className="h-4 w-4" />
               </button>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
