@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Loader2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -162,6 +163,9 @@ const RouteSummaryDialog = ({
   return (
     <Dialog open={open} onOpenChange={() => handleClose()}>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto p-0 gap-0 [&>button]:hidden">
+        <VisuallyHidden>
+          <DialogTitle>{dateTitle}</DialogTitle>
+        </VisuallyHidden>
         {/* Header */}
         <div className="flex items-start justify-between p-5 pb-0">
           <h2 className="text-xl font-bold leading-tight pr-4">{dateTitle}</h2>
