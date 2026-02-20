@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Clock } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Loader2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { format, addDays } from "date-fns";
 import type { PlanPin } from "./DayPinList";
+import RoutePlanTimeline from "./RoutePlanTimeline";
 
 interface RoutePlan {
   city: string;
@@ -49,14 +50,22 @@ const RouteSummaryDialog = ({
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const totalPins = plan.days.reduce((sum, d) => sum + d.pins.length, 0);
+  const startDate = preferences.startDate ? new Date(preferences.startDate) : null;
+  const endDate = startDate && preferences.numDays > 1
+    ? addDays(startDate, preferences.numDays - 1)
+    : startDate;
 
-  const handleSave = async () => {
-    if (!user) return;
+  const dateTitle = startDate
+    ? endDate && endDate.getTime() !== startDate.getTime()
+      ? `Twoja trasa ${format(startDate, "dd")}-${format(endDate, "dd.MM.yyyy")}`
+      : `Twoja trasa ${format(startDate, "dd.MM.yyyy")}`
+    : `Twoja trasa — ${plan.city}`;
+
+  const saveRoute = useCallback(async () => {
+    if (!user || saving) return;
     setSaving(true);
 
     try {
-      // Create folder for multi-day trips
       let folderId: string | null = null;
 
       if (plan.days.length > 1) {
@@ -75,15 +84,9 @@ const RouteSummaryDialog = ({
         folderId = folder.id;
       }
 
-      // Create routes + pins per day
       for (const day of plan.days) {
-        const startDate = preferences.startDate
-          ? new Date(preferences.startDate)
-          : null;
         const dayDate = startDate
-          ? new Date(startDate.getTime() + (day.day_number - 1) * 86400000)
-              .toISOString()
-              .split("T")[0]
+          ? format(addDays(startDate, day.day_number - 1), "yyyy-MM-dd")
           : null;
 
         const { data: route, error: routeError } = await supabase
@@ -100,6 +103,7 @@ const RouteSummaryDialog = ({
             folder_order: day.day_number - 1,
             day_number: day.day_number,
             start_date: dayDate,
+            end_date: plan.days.length === 1 && endDate ? format(endDate, "yyyy-MM-dd") : dayDate,
             pace: preferences.pace,
             priorities: preferences.priorities,
           })
@@ -108,7 +112,6 @@ const RouteSummaryDialog = ({
 
         if (routeError) throw routeError;
 
-        // Insert pins
         if (day.pins.length > 0) {
           const { error: pinsError } = await supabase.from("pins").insert(
             day.pins.map((pin, idx) => ({
@@ -124,11 +127,9 @@ const RouteSummaryDialog = ({
               original_creator_id: user.id,
             }))
           );
-
           if (pinsError) throw pinsError;
         }
 
-        // Save chat session
         await supabase.from("chat_sessions").insert([{
           route_id: route.id,
           user_id: user.id,
@@ -138,7 +139,7 @@ const RouteSummaryDialog = ({
         }]);
       }
 
-      toast({ title: "Trasa zapisana! 🎉", description: `${plan.city} — ${totalPins} miejsc` });
+      toast({ title: "Trasa zapisana! 🎉", description: `${plan.city}` });
       onOpenChange(false);
       navigate("/");
     } catch (error) {
@@ -151,79 +152,41 @@ const RouteSummaryDialog = ({
     } finally {
       setSaving(false);
     }
+  }, [user, saving, plan, preferences, messages, startDate, endDate, navigate, onOpenChange, toast]);
+
+  // Auto-save when closing
+  const handleClose = () => {
+    saveRoute();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl">
-            📍 {plan.city}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 mt-2">
-          {/* Stats */}
-          <div className="flex gap-3">
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              {totalPins} miejsc
-            </div>
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              {plan.days.length} {plan.days.length === 1 ? "dzień" : "dni"}
-            </div>
-          </div>
-
-          {/* Timeline per day */}
-          {plan.days.map((day) => (
-            <div key={day.day_number} className="space-y-2">
-              {plan.days.length > 1 && (
-                <h3 className="text-sm font-semibold">Dzień {day.day_number}</h3>
-              )}
-              <div className="relative pl-6 space-y-3">
-                {/* Vertical line */}
-                <div className="absolute left-[9px] top-2 bottom-2 w-px bg-border" />
-                
-                {day.pins.map((pin, idx) => (
-                  <div key={idx} className="relative flex items-start gap-3">
-                    {/* Dot */}
-                    <div className="absolute left-[-15px] top-1.5 w-2.5 h-2.5 rounded-full bg-foreground border-2 border-background" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {pin.suggested_time}
-                        </span>
-                        <span className="text-sm font-medium truncate">
-                          {pin.place_name}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {pin.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+    <Dialog open={open} onOpenChange={() => handleClose()}>
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto p-0 gap-0 [&>button]:hidden">
+        {/* Header */}
+        <div className="flex items-start justify-between p-5 pb-0">
+          <h2 className="text-xl font-bold leading-tight pr-4">{dateTitle}</h2>
+          <button
+            onClick={handleClose}
+            disabled={saving}
+            className="shrink-0 mt-0.5"
+          >
+            {saving ? (
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            ) : (
+              <X className="h-6 w-6 text-muted-foreground hover:text-foreground transition-colors" />
+            )}
+          </button>
         </div>
 
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full mt-4"
-          size="lg"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Zapisuję...
-            </>
-          ) : (
-            "Dodaj trasę"
-          )}
-        </Button>
+        <div className="h-px bg-border mx-5 mt-3" />
+
+        {/* Map placeholder */}
+        <div className="mx-5 mt-4 rounded-xl overflow-hidden bg-muted aspect-[16/9] flex items-center justify-center">
+          <span className="text-muted-foreground text-sm">Mapa</span>
+        </div>
+
+        {/* Timeline */}
+        <RoutePlanTimeline days={plan.days} totalDays={plan.days.length} />
       </DialogContent>
     </Dialog>
   );
