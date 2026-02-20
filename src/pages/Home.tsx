@@ -274,7 +274,7 @@ const Home = () => {
             className="w-full bg-background text-foreground border-border rounded-full text-base font-medium"
           >
             <PlusCircle className="h-5 w-5 mr-2" />
-            Dodaj trasę
+            Zaplanuj swoją podróż
           </Button>
         </div>
       </div>
