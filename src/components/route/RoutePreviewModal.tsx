@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { X } from "lucide-react";
 import { format } from "date-fns";
 import RoutePlanTimeline from "./RoutePlanTimeline";
+import RouteMap from "@/components/RouteMap";
 
 interface RoutePin {
   place_name: string;
@@ -56,6 +58,22 @@ const RoutePreviewModal = ({
     })),
   }));
 
+  // Collect all pins with coordinates for map
+  const mapPins = useMemo(() => {
+    let idx = 0;
+    return days.flatMap(d =>
+      d.pins
+        .filter(p => p.latitude && p.longitude)
+        .map(p => ({
+          latitude: p.latitude!,
+          longitude: p.longitude!,
+          place_name: p.place_name,
+          address: p.address || "",
+          pin_order: idx++,
+        }))
+    );
+  }, [days]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto p-0 gap-0 [&>button]:hidden">
@@ -71,9 +89,11 @@ const RoutePreviewModal = ({
 
         <div className="h-px bg-border mx-5 mt-3" />
 
-        <div className="mx-5 mt-4 rounded-xl overflow-hidden bg-muted aspect-[16/9] flex items-center justify-center">
-          <span className="text-muted-foreground text-sm">Mapa</span>
-        </div>
+        {mapPins.length > 0 && (
+          <div className="mx-5 mt-4">
+            <RouteMap pins={mapPins} className="aspect-[16/9] rounded-xl" />
+          </div>
+        )}
 
         <RoutePlanTimeline days={timelineDays} totalDays={days.length} />
       </DialogContent>
