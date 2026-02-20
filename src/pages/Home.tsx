@@ -156,6 +156,15 @@ const Home = () => {
 
   const trips = getActiveTrips();
 
+  // Check if any active trip has passed its first day (today > start_date)
+  const hasTripInProgress = trips.some(trip => {
+    if (!trip.startDate) return false;
+    const tripStart = new Date(trip.startDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today >= tripStart;
+  });
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header bar */}
@@ -264,20 +273,28 @@ const Home = () => {
         </section>
       </div>
 
-      {/* Sticky bottom CTA */}
-      <div className="fixed bottom-0 left-0 right-0 bg-foreground px-4 py-4">
-        <div className="max-w-lg mx-auto">
-          <Button
-            onClick={() => navigate("/create")}
-            variant="outline"
-            size="lg"
-            className="w-full bg-background text-foreground border-border rounded-full text-base font-medium"
-          >
-            <PlusCircle className="h-5 w-5 mr-2" />
-            Zaplanuj swoją podróż
-          </Button>
+      {hasTripInProgress ? (
+        <button
+          onClick={() => navigate("/create")}
+          className="fixed bottom-6 right-5 bg-muted text-foreground px-6 py-3 rounded-full text-base font-medium shadow-lg hover:bg-muted/80 transition-colors"
+        >
+          Jak Twój dzień?
+        </button>
+      ) : (
+        <div className="fixed bottom-0 left-0 right-0 bg-foreground px-4 py-4">
+          <div className="max-w-lg mx-auto">
+            <Button
+              onClick={() => navigate("/create")}
+              variant="outline"
+              size="lg"
+              className="w-full bg-background text-foreground border-border rounded-full text-base font-medium"
+            >
+              <PlusCircle className="h-5 w-5 mr-2" />
+              Zaplanuj swoją podróż
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Route preview modal */}
       {previewRoute && (
