@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, Mic, MessageSquare } from "lucide-react";
+import { ArrowLeft, Mic, MessageSquare, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import PlanChatExperience from "@/components/route/PlanChatExperience";
 import RouteSummaryDialog from "@/components/route/RouteSummaryDialog";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface TripPreferences {
   numDays: 1 | 2 | 3;
@@ -30,6 +34,7 @@ const CreateRoute = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
+  const [customPriority, setCustomPriority] = useState("");
   const [preferences, setPreferences] = useState<TripPreferences>({
     numDays: 1,
     pace: "mixed",
@@ -37,6 +42,7 @@ const CreateRoute = () => {
     startDate: null,
     planningMode: "text",
   });
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [showSummary, setShowSummary] = useState(false);
   const [finalPlan, setFinalPlan] = useState<any>(null);
   const [finalMessages, setFinalMessages] = useState<any[]>([]);
@@ -53,6 +59,25 @@ const CreateRoute = () => {
       priorities: prev.priorities.includes(id)
         ? prev.priorities.filter(p => p !== id)
         : [...prev.priorities, id],
+    }));
+  };
+
+  const addCustomPriority = () => {
+    const trimmed = customPriority.trim();
+    if (trimmed && !preferences.priorities.includes(trimmed)) {
+      setPreferences(prev => ({
+        ...prev,
+        priorities: [...prev.priorities, trimmed],
+      }));
+      setCustomPriority("");
+    }
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    setPreferences(prev => ({
+      ...prev,
+      startDate: date ? format(date, "yyyy-MM-dd") : null,
     }));
   };
 
@@ -139,7 +164,62 @@ const CreateRoute = () => {
                   {option.emoji} {option.label}
                 </button>
               ))}
+              {/* Custom priorities */}
+              {preferences.priorities
+                .filter(p => !PRIORITY_OPTIONS.some(o => o.id === p))
+                .map(custom => (
+                  <button
+                    key={custom}
+                    onClick={() => togglePriority(custom)}
+                    className="px-3 py-2 rounded-full text-sm transition-colors border bg-foreground text-background border-foreground"
+                  >
+                    {custom}
+                  </button>
+                ))}
             </div>
+            {/* Custom priority input */}
+            <div className="flex gap-2 mt-2">
+              <Input
+                placeholder="Inne..."
+                value={customPriority}
+                onChange={e => setCustomPriority(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addCustomPriority())}
+                className="flex-1"
+              />
+              <Button variant="outline" size="sm" onClick={addCustomPriority} disabled={!customPriority.trim()}>
+                Dodaj
+              </Button>
+            </div>
+          </div>
+
+          {/* Date picker */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Wybierz datę</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? format(selectedDate, "PPP") : "Wybierz datę"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={handleDateSelect}
+                  disabled={(date) => date < new Date()}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            <p className="text-xs text-muted-foreground">Data wpływa na Twój plan podróży</p>
           </div>
 
           {/* Planning mode */}
