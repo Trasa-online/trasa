@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, addDays } from "date-fns";
 import type { PlanPin } from "./DayPinList";
 import RoutePlanTimeline from "./RoutePlanTimeline";
+import RouteMap from "@/components/RouteMap";
 
 interface RoutePlan {
   city: string;
@@ -184,10 +185,22 @@ const RouteSummaryDialog = ({
 
         <div className="h-px bg-border mx-5 mt-3" />
 
-        {/* Map placeholder */}
-        <div className="mx-5 mt-4 rounded-xl overflow-hidden bg-muted aspect-[16/9] flex items-center justify-center">
-          <span className="text-muted-foreground text-sm">Mapa</span>
-        </div>
+        {(() => {
+          const allPins = plan.days.flatMap((d, di) =>
+            d.pins.filter(p => p.latitude && p.longitude).map((p, pi) => ({
+              latitude: p.latitude,
+              longitude: p.longitude,
+              place_name: p.place_name,
+              address: p.address,
+              pin_order: plan.days.slice(0, di).reduce((s, dd) => s + dd.pins.length, 0) + pi,
+            }))
+          );
+          return allPins.length > 0 ? (
+            <div className="mx-5 mt-4">
+              <RouteMap pins={allPins} className="aspect-[16/9] rounded-xl" />
+            </div>
+          ) : null;
+        })()}
 
         {/* Timeline */}
         <RoutePlanTimeline days={plan.days} totalDays={plan.days.length} />
