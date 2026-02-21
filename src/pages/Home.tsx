@@ -323,28 +323,28 @@ const Home = () => {
         </section>
       </div>
 
-      {hasTripInProgress && currentDayRoute ? (
+      {hasTripInProgress && currentDayRoute && (
         <button
           onClick={() => navigate(`/day-review?route=${currentDayRoute.id}`)}
-          className="fixed bottom-6 right-5 bg-cta-accent text-cta-accent-foreground px-6 py-3 rounded-full text-base font-bold shadow-lg hover:brightness-95 transition-all animate-[subtle-bounce_2.5s_ease-in-out_infinite]"
+          className="fixed bottom-24 right-5 bg-cta-accent text-cta-accent-foreground px-6 py-3 rounded-full text-base font-bold shadow-lg hover:brightness-95 transition-all animate-[subtle-bounce_2.5s_ease-in-out_infinite] z-10"
         >
           Jak Twój dzień?
         </button>
-      ) : (
-        <div className="fixed bottom-0 left-0 right-0 bg-foreground px-4 py-4">
-          <div className="max-w-lg mx-auto">
-            <Button
-              onClick={() => navigate("/create")}
-              variant="outline"
-              size="lg"
-              className="w-full bg-background text-foreground border-border rounded-full text-base font-medium"
-            >
-              <PlusCircle className="h-5 w-5 mr-2" />
-              Zaplanuj swoją podróż
-            </Button>
-          </div>
-        </div>
       )}
+
+      <div className="fixed bottom-0 left-0 right-0 bg-foreground px-4 py-4">
+        <div className="max-w-lg mx-auto">
+          <Button
+            onClick={() => navigate("/create")}
+            variant="outline"
+            size="lg"
+            className="w-full bg-background text-foreground border-border rounded-full text-base font-medium"
+          >
+            <PlusCircle className="h-5 w-5 mr-2" />
+            Zaplanuj swoją podróż
+          </Button>
+        </div>
+      </div>
 
       {/* Route preview modal */}
       {previewRoute && (
