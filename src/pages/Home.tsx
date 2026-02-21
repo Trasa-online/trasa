@@ -2,19 +2,23 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, PlusCircle, Compass, Settings } from "lucide-react";
+import { ChevronRight, PlusCircle, Compass, Settings, Trash2 } from "lucide-react";
 import EmptyState from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import RoutePreviewModal from "@/components/route/RoutePreviewModal";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 const Home = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [previewRoute, setPreviewRoute] = useState<any>(null);
+  const [deletingTrip, setDeletingTrip] = useState<any>(null);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -120,6 +124,25 @@ const Home = () => {
     });
   };
 
+  const handleDeleteTrip = async (trip: any) => {
+    try {
+      // Delete all pins first, then routes
+      for (const route of trip.routes) {
+        await supabase.from("pins").delete().eq("route_id", route.id);
+        await supabase.from("routes").delete().eq("id", route.id);
+      }
+      // Delete folder if exists
+      if (trip.routes[0]?.folder_id) {
+        await supabase.from("route_folders").delete().eq("id", trip.routes[0].folder_id);
+      }
+      queryClient.invalidateQueries({ queryKey: ["active-routes"] });
+      toast.success("Podróż została usunięta");
+    } catch (err) {
+      console.error("Delete trip error:", err);
+      toast.error("Nie udało się usunąć podróży");
+    }
+    setDeletingTrip(null);
+  };
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -225,30 +248,37 @@ const Home = () => {
                 const priorityLabels = (trip.priorities as string[]).slice(0, 4).join(" / ");
 
                 return (
-                  <button
-                    key={trip.id}
-                    onClick={() => handleTripClick(trip)}
-                    className="w-full text-left rounded-xl border border-border p-4 hover:bg-muted/30 transition-colors"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="min-w-0">
-                        <p className="text-base font-bold">{trip.city}</p>
-                        {priorityLabels && (
-                          <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                            {priorityLabels}
+                  <div key={trip.id} className="relative rounded-xl border border-border hover:bg-muted/30 transition-colors">
+                    <button
+                      onClick={() => handleTripClick(trip)}
+                      className="w-full text-left p-4 pr-12"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="min-w-0">
+                          <p className="text-base font-bold">{trip.city}</p>
+                          {priorityLabels && (
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                              {priorityLabels}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0 ml-3">
+                          {dateStr && (
+                            <p className="text-sm font-medium">{dateStr}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Punkty na trasie: {trip.pinCount}
                           </p>
-                        )}
+                        </div>
                       </div>
-                      <div className="text-right shrink-0 ml-3">
-                        {dateStr && (
-                          <p className="text-sm font-medium">{dateStr}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Punkty na trasie: {trip.pinCount}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeletingTrip(trip); }}
+                      className="absolute top-4 right-3 p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -322,6 +352,27 @@ const Home = () => {
           endDate={previewRoute.endDate}
         />
       )}
+
+      {/* Delete trip confirmation */}
+      <AlertDialog open={!!deletingTrip} onOpenChange={(open) => !open && setDeletingTrip(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Usunąć podróż?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz usunąć podróż{deletingTrip ? ` „${deletingTrip.city}"` : ""}? Wszystkie trasy i pinezki zostaną trwale usunięte.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingTrip && handleDeleteTrip(deletingTrip)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Usuń
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
