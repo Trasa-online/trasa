@@ -1,33 +1,56 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Loader2, X, ArrowLeft } from "lucide-react";
+import { Settings, Loader2, X, ArrowLeft, Send, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import ChatExperience from "@/components/route/ChatExperience";
+import { cn } from "@/lib/utils";
 import RoutePlanTimeline from "@/components/route/RoutePlanTimeline";
 
-type Phase = "reminder" | "chat" | "saving" | "done";
-
-interface RouteSummary {
-  city?: string;
-  intent?: Record<string, string>;
-  pins?: any[];
-  deviations?: any[];
-  considerations?: any[];
-  weather_impact?: string | null;
-  highlight?: string;
-  tip?: string;
-  summary_text?: string;
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
 }
+
+const QUESTIONS_POSITIVE = [
+  "Który moment był najbardziej \"wow\"?",
+  "Czy ta kolejność (przebieg trasy) miała sens?",
+  "Czy poleciłbyś znajomym podobny układ dnia?",
+];
+
+const QUESTIONS_NEGATIVE = [
+  "Co sprawiło, że zmieniliście plan?",
+  "Czy ta kolejność (przebieg trasy) miała sens?",
+  "Czy poleciłbyś znajomym podobny układ dnia?",
+  "Czy rozważaliście inne miejsca, których nie odwiedziliście ostatecznie?",
+  "Czy jakieś czynniki zewnętrzne wpłynęły na Waszą podróż? (Np. pogoda)?",
+  "Gdybyś miał zaplanować ten dzień jeszcze raz, co byś zmienił?",
+  "Który moment był najbardziej \"wow\"?",
+];
+
+const hasVoiceSupport =
+  typeof window !== "undefined" &&
+  ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
 
 const DayReview = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const routeId = searchParams.get("route");
-  const [phase, setPhase] = useState<Phase>("reminder");
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [questionQueue, setQuestionQueue] = useState<string[]>([]);
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [input, setInput] = useState("");
+  const [listening, setListening] = useState(false);
+  const [chatStarted, setChatStarted] = useState(false);
+  const [isDone, setIsDone] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   const { data: route, isLoading } = useQuery({
     queryKey: ["review-route", routeId],
@@ -43,7 +66,6 @@ const DayReview = () => {
     enabled: !!routeId && !!user,
   });
 
-  // Get folder info for total days
   const { data: folderRoutes } = useQuery({
     queryKey: ["folder-routes", route?.folder_id],
     queryFn: async () => {
@@ -78,18 +100,126 @@ const DayReview = () => {
     pins: sortedPins,
   }], [dayNumber, sortedPins]);
 
-  const handleChatComplete = (_summary: RouteSummary) => {
-    setPhase("saving");
-    // The chat-route edge function already saves everything
-    setTimeout(() => setPhase("done"), 1500);
+  // Auto-scroll
+  useEffect(() => {
+    if (scrollRef.current) {
+      setTimeout(() => {
+        scrollRef.current!.scrollTop = scrollRef.current!.scrollHeight;
+      }, 50);
+    }
+  }, [messages, isDone]);
+
+  // Ask next question from queue
+  const askNextQuestion = useCallback((queue: string[], index: number) => {
+    if (index < queue.length) {
+      setTimeout(() => {
+        setMessages(prev => [...prev, { role: "assistant", content: queue[index] }]);
+        setQuestionIndex(index + 1);
+      }, 600);
+    } else {
+      // All questions asked — finish
+      setTimeout(() => {
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: "Dziękuję za odpowiedzi! Zapisuję podsumowanie Twojego dnia. 🙏",
+        }]);
+        setSaving(true);
+        // Save chat session
+        saveChatSession();
+      }, 600);
+    }
+  }, []);
+
+  const saveChatSession = async () => {
+    if (!routeId || !user) {
+      setIsDone(true);
+      setSaving(false);
+      return;
+    }
+    try {
+      await supabase.from("chat_sessions").upsert({
+        route_id: routeId,
+        user_id: user.id,
+        messages: messages as any,
+        completed_at: new Date().toISOString(),
+      }, { onConflict: "route_id" });
+    } catch (err) {
+      console.error("Failed to save chat session:", err);
+    }
+    setSaving(false);
+    setIsDone(true);
   };
 
-  const handleViewRoute = () => {
-    if (routeId) {
-      navigate(`/route/${routeId}`);
-    } else {
-      navigate("/");
+  // Handle initial yes/no choice
+  const handleInitialChoice = (positive: boolean) => {
+    const userMsg = positive ? "Tak, wszystko poszło zgodnie z planem!" : "Nie do końca.";
+    const queue = positive ? QUESTIONS_POSITIVE : QUESTIONS_NEGATIVE;
+
+    setMessages(prev => [...prev, { role: "user", content: userMsg }]);
+    setQuestionQueue(queue);
+    setQuestionIndex(0);
+    setChatStarted(true);
+    askNextQuestion(queue, 0);
+  };
+
+  // Send a free-text answer
+  const sendMessage = useCallback(() => {
+    const text = input.trim();
+    if (!text || isDone) return;
+
+    const newMessages: ChatMessage[] = [...messages, { role: "user", content: text }];
+    setMessages(newMessages);
+    setInput("");
+
+    // Reset textarea height
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto";
     }
+
+    askNextQuestion(questionQueue, questionIndex);
+  }, [input, messages, questionQueue, questionIndex, isDone, askNextQuestion]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const toggleVoice = () => {
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const SpeechRecognition =
+      (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "pl-PL";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((r: any) => r[0].transcript)
+        .join("");
+      setInput(transcript);
+    };
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
+
+    recognition.start();
+    recognitionRef.current = recognition;
+    setListening(true);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    const el = e.target;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
   };
 
   if (isLoading || !route) {
@@ -115,13 +245,7 @@ const DayReview = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="bg-muted px-4 py-4 flex items-center justify-between">
-        <button 
-          onClick={() => {
-            if (phase === "chat") setPhase("reminder");
-            else navigate("/");
-          }} 
-          className="p-1 text-foreground/70"
-        >
+        <button onClick={() => navigate("/")} className="p-1 text-foreground/70">
           <ArrowLeft className="h-6 w-6" />
         </button>
         <h1 className="text-2xl font-black tracking-tight">TRASA</h1>
@@ -130,85 +254,122 @@ const DayReview = () => {
         </button>
       </header>
 
-      {/* Phase: Reminder */}
-      {phase === "reminder" && (
-        <div className="flex-1 flex flex-col">
-          <div className="flex-1 overflow-y-auto">
-            {/* AI intro message */}
-            <div className="px-5 pt-6 pb-2">
-              <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3 max-w-[85%] text-[14px] leading-relaxed">
-                Czy Twój dzień przebiegł zgodnie z planem?
-              </div>
-            </div>
-
-            {/* Day timeline */}
-            <div className="px-1">
-              <RoutePlanTimeline days={timelineDays} totalDays={totalDays} />
-            </div>
-          </div>
-
-          {/* Input area placeholder - starts the chat */}
-          <div className="border-t border-border/40 bg-background p-3">
-            <div className="flex items-end gap-2 max-w-lg mx-auto">
-              <div className="flex-1">
-                <button
-                  onClick={() => setPhase("chat")}
-                  className="w-full text-left rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-[14px] text-muted-foreground/50"
-                >
-                  Napisz odpowiedź...
-                </button>
-              </div>
-            </div>
+      {/* Scrollable content */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        {/* AI intro + timeline */}
+        <div className="px-5 pt-6 pb-2">
+          <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3 max-w-[85%] text-[14px] leading-relaxed">
+            Czy Twój dzień przebiegł zgodnie z planem?
           </div>
         </div>
-      )}
 
-      {/* Phase: Chat */}
-      {phase === "chat" && (
-        <ChatExperience
-          routeId={routeId!}
-          pins={sortedPins}
-          onComplete={handleChatComplete}
-          onSkip={() => navigate("/")}
-        />
-      )}
-
-      {/* Phase: Saving */}
-      {phase === "saving" && (
-        <div className="flex-1 flex flex-col items-center justify-center px-6">
-          <Loader2 className="h-10 w-10 animate-spin text-muted-foreground mb-4" />
-          <p className="text-sm text-muted-foreground">Zapisuję podsumowanie...</p>
+        <div className="px-1">
+          <RoutePlanTimeline days={timelineDays} totalDays={totalDays} />
         </div>
-      )}
 
-      {/* Phase: Done */}
-      {phase === "done" && (
-        <div className="flex-1 flex flex-col">
-          {/* Close button */}
-          <div className="flex justify-end p-4">
-            <button onClick={() => navigate("/")} className="text-foreground/60 hover:text-foreground">
-              <X className="h-7 w-7" />
+        {/* Quick choice buttons (before chat starts) */}
+        {!chatStarted && (
+          <div className="px-5 pb-4 flex gap-2">
+            <button
+              onClick={() => handleInitialChoice(true)}
+              className="flex-1 rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-[14px] font-medium hover:bg-muted transition-colors"
+            >
+              Tak ✅
+            </button>
+            <button
+              onClick={() => handleInitialChoice(false)}
+              className="flex-1 rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-[14px] font-medium hover:bg-muted transition-colors"
+            >
+              Nie do końca 🤔
             </button>
           </div>
+        )}
 
-          {/* Thank you message */}
-          <div className="flex-1 flex flex-col items-center justify-center px-8 -mt-16">
-            <h2 className="text-2xl font-black text-center">Super!</h2>
-            <h2 className="text-2xl font-black text-center">Dziękuję za rozmowę.</h2>
-            <p className="text-muted-foreground text-center mt-4 text-base leading-relaxed">
-              Zapisałam Twoje odpowiedzi{"\n"}i zaktualizowałam trasę względem{"\n"}wcześniejszego planu.
-            </p>
+        {/* Chat messages */}
+        {chatStarted && messages.length > 0 && (
+          <div className="px-4 py-2 space-y-3">
+            {messages.map((msg, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "flex",
+                  msg.role === "user" ? "justify-end" : "justify-start"
+                )}
+              >
+                <div
+                  className={cn(
+                    "max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed",
+                    msg.role === "user"
+                      ? "bg-foreground text-background rounded-br-md"
+                      : "bg-muted text-foreground rounded-bl-md"
+                  )}
+                >
+                  {msg.content}
+                </div>
+              </div>
+            ))}
           </div>
+        )}
 
-          {/* View button */}
-          <div className="p-4 pb-8">
+        {/* Done state */}
+        {isDone && (
+          <div className="flex flex-col items-center px-8 py-8">
+            <h2 className="text-xl font-black text-center">Super! Dziękuję za rozmowę.</h2>
+            <p className="text-muted-foreground text-center mt-3 text-sm leading-relaxed">
+              Zapisałam Twoje odpowiedzi i zaktualizowałam trasę.
+            </p>
             <Button
-              onClick={handleViewRoute}
+              onClick={() => routeId ? navigate(`/route/${routeId}`) : navigate("/")}
               variant="outline"
               size="lg"
-              className="w-full rounded-full text-base font-medium"
+              className="w-full rounded-full text-base font-medium mt-6"
             >
-              Zobacz
+              Zobacz trasę
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Sticky input — only when chat is active and not done */}
+      {chatStarted && !isDone && (
+        <div className="sticky bottom-0 border-t border-border/40 bg-background p-3 z-10">
+          <div className="flex items-end gap-2 max-w-lg mx-auto">
+            {hasVoiceSupport && (
+              <button
+                type="button"
+                onClick={toggleVoice}
+                className={cn(
+                  "flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center transition-colors",
+                  listening
+                    ? "bg-destructive text-destructive-foreground animate-pulse"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </button>
+            )}
+
+            <div className="flex-1 relative">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Napisz odpowiedź..."
+                rows={1}
+                disabled={saving}
+                className="w-full resize-none rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-[14px] placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 disabled:opacity-50"
+                style={{ maxHeight: "120px" }}
+              />
+            </div>
+
+            <Button
+              size="icon"
+              onClick={sendMessage}
+              disabled={!input.trim() || saving}
+              className="flex-shrink-0 h-10 w-10 rounded-full"
+            >
+              <Send className="h-4 w-4" />
             </Button>
           </div>
         </div>
