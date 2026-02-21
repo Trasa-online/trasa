@@ -189,7 +189,7 @@ const ChatExperience = ({ routeId, pins, onComplete, onSkip }: ChatExperiencePro
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)]">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Pin context bar */}
       <div className="px-4 py-2.5 border-b border-border/40 bg-muted/30">
         <p className="text-[12px] text-muted-foreground">
@@ -252,7 +252,7 @@ const ChatExperience = ({ routeId, pins, onComplete, onSkip }: ChatExperiencePro
       </div>
 
       {/* Input area */}
-      <div className="border-t border-border/40 bg-background p-3">
+      <div className="sticky bottom-0 border-t border-border/40 bg-background p-3 z-10">
         <div className="flex items-end gap-2 max-w-lg mx-auto">
           {hasVoiceSupport && (
             <button
