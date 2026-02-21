@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Loader2, X } from "lucide-react";
+import { Settings, Loader2, X, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatExperience from "@/components/route/ChatExperience";
 import RoutePlanTimeline from "@/components/route/RoutePlanTimeline";
@@ -96,7 +96,9 @@ const DayReview = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <header className="bg-muted px-4 py-4 flex items-center justify-between">
-          <div className="w-8" />
+          <button onClick={() => navigate("/home")} className="p-1 text-foreground/70">
+            <ArrowLeft className="h-6 w-6" />
+          </button>
           <h1 className="text-2xl font-black tracking-tight">TRASA</h1>
           <button onClick={() => navigate("/settings")} className="p-1 text-foreground/70">
             <Settings className="h-6 w-6" />
@@ -113,7 +115,15 @@ const DayReview = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="bg-muted px-4 py-4 flex items-center justify-between">
-        <div className="w-8" />
+        <button 
+          onClick={() => {
+            if (phase === "chat") setPhase("reminder");
+            else navigate("/home");
+          }} 
+          className="p-1 text-foreground/70"
+        >
+          <ArrowLeft className="h-6 w-6" />
+        </button>
         <h1 className="text-2xl font-black tracking-tight">TRASA</h1>
         <button onClick={() => navigate("/settings")} className="p-1 text-foreground/70">
           <Settings className="h-6 w-6" />
