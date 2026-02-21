@@ -39,6 +39,9 @@ All colors MUST be HSL.
     --star: 45 100% 51%;
     --star-empty: 0 0% 85%;
 
+    --cta-accent: 45 100% 51%;
+    --cta-accent-foreground: 0 0% 0%;
+
     --radius: 0.75rem;
   }
 }
