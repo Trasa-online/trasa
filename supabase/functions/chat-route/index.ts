@@ -165,7 +165,7 @@ serve(async (req) => {
 
     const { data: pins } = await supabase
       .from("pins")
-      .select("id, place_name, address, pin_order, place_type, google_place_id")
+      .select("id, place_name, address, pin_order, place_type, place_id")
       .eq("route_id", route_id)
       .order("pin_order");
 
