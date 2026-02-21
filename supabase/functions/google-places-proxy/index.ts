@@ -45,9 +45,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Step 3: Place details
+    // Step 3: Place details (reviews_sort=newest for latest reviews)
     const detailRes = await fetch(
-      `${BASE}/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,price_level,types,formatted_address,photos,reviews,geometry&language=pl&key=${apiKey}`
+      `${BASE}/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,price_level,types,formatted_address,photos,reviews,geometry&reviews_sort=newest&language=pl&key=${apiKey}`
     );
     const detailData = await detailRes.json();
 

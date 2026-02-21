@@ -190,38 +190,45 @@ const PlaceDetailDrawer = ({
               {/* Reviews */}
               {detail.reviews && detail.reviews.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground mb-2">Opinie</h3>
-                  <div className="space-y-3">
+                  <h3 className="text-base font-bold text-foreground mb-3">Opinie</h3>
+                  <div className="space-y-4">
                     {detail.reviews.slice(0, 3).map((review, i) => (
-                      <div key={i} className="bg-muted/50 rounded-xl p-3 space-y-1.5">
-                        <div className="flex items-center gap-2">
+                      <div key={i} className="space-y-1.5">
+                        <div className="flex items-center gap-2.5">
                           <img
                             src={review.profile_photo_url}
                             alt={review.author_name}
-                            className="h-7 w-7 rounded-full object-cover"
+                            className="h-8 w-8 rounded-full object-cover"
                             onError={(e) => {
                               (e.target as HTMLImageElement).style.display = "none";
                             }}
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-foreground truncate">
+                            <p className="text-sm font-semibold text-foreground truncate">
                               {review.author_name}
                             </p>
-                            <p className="text-[10px] text-muted-foreground">
+                            <p className="text-xs text-muted-foreground">
                               Opinia z{" "}
-                              <span className="font-medium text-blue-600">Google</span>
+                              <span className="font-semibold text-foreground">G</span>{" "}
+                              <span className="text-blue-600 font-medium">Google</span>
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-semibold">{review.rating}/5</span>
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-sm font-bold">{review.rating}/5</span>
+                          <span className="text-xs text-muted-foreground">
                             · {review.relative_time_description}
                           </span>
                         </div>
-                        <p className="text-xs text-foreground leading-relaxed line-clamp-3">
+                        <p className="text-sm text-foreground leading-relaxed line-clamp-4">
                           {review.text}
+                          {review.text && review.text.length > 150 && (
+                            <span className="text-blue-600 font-medium cursor-pointer">...Więcej</span>
+                          )}
                         </p>
+                        {i < Math.min(detail.reviews.length, 3) - 1 && (
+                          <div className="pt-2" />
+                        )}
                       </div>
                     ))}
                   </div>
