@@ -156,14 +156,29 @@ const Home = () => {
 
   const trips = getActiveTrips();
 
-  // Check if any active trip has passed its first day (today > start_date)
-  const hasTripInProgress = trips.some(trip => {
-    if (!trip.startDate) return false;
-    const tripStart = new Date(trip.startDate);
+  // Find the current day's route for review
+  const getCurrentDayRoute = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return today >= tripStart;
-  });
+    for (const trip of trips) {
+      if (!trip.startDate) continue;
+      const tripStart = new Date(trip.startDate);
+      tripStart.setHours(0, 0, 0, 0);
+      if (today >= tripStart) {
+        // Find which day we're on
+        const dayDiff = Math.floor((today.getTime() - tripStart.getTime()) / (1000 * 60 * 60 * 24));
+        const targetDayNumber = dayDiff + 1;
+        const route = trip.routes.find((r: any) => (r.day_number || 1) === targetDayNumber);
+        if (route) return route;
+        // Fallback to last day
+        return trip.routes[trip.routes.length - 1];
+      }
+    }
+    return null;
+  };
+
+  const currentDayRoute = getCurrentDayRoute();
+  const hasTripInProgress = !!currentDayRoute;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -273,9 +288,9 @@ const Home = () => {
         </section>
       </div>
 
-      {hasTripInProgress ? (
+      {hasTripInProgress && currentDayRoute ? (
         <button
-          onClick={() => navigate("/create")}
+          onClick={() => navigate(`/day-review?route=${currentDayRoute.id}`)}
           className="fixed bottom-6 right-5 bg-muted text-foreground px-6 py-3 rounded-full text-base font-medium shadow-lg hover:bg-muted/80 transition-colors"
         >
           Jak Twój dzień?
