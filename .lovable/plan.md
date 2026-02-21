@@ -1,47 +1,44 @@
 
 
-# Naprawa widoku szczegółów miejsca (PlaceDetailDrawer)
+# Naprawa PlaceDetailDrawer - Google Places proxy
 
 ## Problem
-Komponent `PlaceDetailDrawer.tsx` wywołuje Google Places API bezpośrednio z przeglądarki (`fetch` do `maps.googleapis.com`). Google blokuje takie zapytania z poziomu frontendu (CORS). Edge function `google-places-proxy`, ktora miala to rozwiazac, nigdy nie zostala utworzona.
+Komponent `PlaceDetailDrawer.tsx` wywoluje Google Places API bezposrednio z przegladarki, co jest blokowane przez CORS. Edge function proxy nigdy nie zostala utworzona, a secret `GOOGLE_MAPS_API_KEY` nie istnieje w Supabase.
 
-## Rozwiazanie
-Stworzyc edge function jako proxy i zaktualizowac frontend.
+## Kroki implementacji
 
-## Kroki
-
-### 1. Dodanie secretu `GOOGLE_MAPS_API_KEY` do Supabase
-- Klucz: `AIzaSyCdZ-on1_mKr1Q9OTDYkqkk4OzB7SwR32M` (ten sam co w `src/lib/googleMaps.ts`)
-- Bedzie dostepny w edge function przez `Deno.env.get("GOOGLE_MAPS_API_KEY")`
+### 1. Dodanie secretu GOOGLE_MAPS_API_KEY
+- Wartość: `AIzaSyCdZ-on1_mKr1Q9OTDYkqkk4OzB7SwR32M` (ten sam klucz co w `src/lib/googleMaps.ts`)
+- Będzie dostępny w edge function przez `Deno.env.get("GOOGLE_MAPS_API_KEY")`
 
 ### 2. Nowa edge function `google-places-proxy`
 Plik: `supabase/functions/google-places-proxy/index.ts`
-- Endpoint POST przyjmujacy JSON: `{ placeName, latitude, longitude }`
-- Obsluga CORS (preflight OPTIONS + naglowki)
-- Krok 1: Find Place from Text (szukanie `place_id` po nazwie + lokalizacji)
-- Krok 2 (fallback): Nearby Search jesli krok 1 nie zwroci wynikow
-- Krok 3: Place Details (pobranie pelnych danych: rating, zdjecia, opinie, adres, geometria)
-- Zwraca dane miejsca jako JSON lub blad
+- POST endpoint przyjmujący `{ placeName, latitude, longitude }`
+- Obsługa CORS (OPTIONS preflight + nagłówki)
+- Krok 1: Find Place from Text (szukanie place_id)
+- Krok 2 (fallback): Nearby Search jeśli brak wyników
+- Krok 3: Place Details (rating, zdjęcia, opinie, adres, geometria)
+- Zwraca dane jako JSON
 
 ### 3. Konfiguracja w `supabase/config.toml`
-- Dodanie sekcji `[functions.google-places-proxy]` z `verify_jwt = false`
+- Dodanie `[functions.google-places-proxy]` z `verify_jwt = false`
 
 ### 4. Aktualizacja `PlaceDetailDrawer.tsx`
-- Usuniecie bezposrednich wywolan `fetch` do Google
-- Zastapienie jednym wywolaniem `supabase.functions.invoke("google-places-proxy", { body: { placeName, latitude, longitude } })`
-- Reszta logiki wyswietlania (zdjecia, opinie, mapa) pozostaje bez zmian
-- Zdjecia i mapa statyczna nadal beda ladowane bezposrednio z Google (to sa publiczne URL-e obrazkow, nie API calls, wiec CORS ich nie blokuje)
+- Usunięcie bezpośrednich fetch do Google
+- Zastąpienie wywołaniem `supabase.functions.invoke("google-places-proxy", { body: { placeName, latitude, longitude } })`
+- Zdjęcia i mapa statyczna nadal ładowane bezpośrednio (publiczne URL-e obrazków, CORS nie blokuje)
 
-## Szczegoly techniczne
+## Szczegóły techniczne
 
-**Edge function** wykona te same zapytania co dotychczasowy frontend:
-1. `findplacefromtext` -- szukanie place_id
-2. `nearbysearch` -- fallback
-3. `place/details` -- pobranie szczegolowych danych
+Edge function wykonuje te same zapytania co dotychczasowy frontend, ale po stronie serwera:
+1. `findplacefromtext` -- szukanie place_id po nazwie + lokalizacji
+2. `nearbysearch` -- fallback jeśli brak wyników
+3. `place/details` -- pobranie szczegółów (fields: name, rating, user_ratings_total, price_level, types, formatted_address, photos, reviews, geometry)
 
-**Frontend** zamieni ~15 linii kodu fetch na:
-```typescript
+Frontend zmieni ~15 linii kodu fetch na jedno wywołanie:
+```
 const { data, error } = await supabase.functions.invoke("google-places-proxy", {
   body: { placeName, latitude, longitude }
 });
 ```
+
