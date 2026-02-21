@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { X, Star, MapPin, Loader2, ExternalLink } from "lucide-react";
+import { X, Star, MapPin, Loader2 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PlaceDetail {
   name: string;
@@ -78,39 +79,16 @@ const PlaceDetailDrawer = ({
       setError(false);
 
       try {
-        // Step 1: Find place by name + location
-        const findRes = await fetch(
-          `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(placeName)}&inputtype=textquery&locationbias=point:${latitude},${longitude}&fields=place_id&key=${GOOGLE_MAPS_API_KEY}`
+        const { data, error: fnError } = await supabase.functions.invoke(
+          "google-places-proxy",
+          { body: { placeName, latitude, longitude } }
         );
-        const findData = await findRes.json();
 
-        let placeId = findData.candidates?.[0]?.place_id;
-
-        if (!placeId) {
-          // Fallback: nearby search
-          const nearbyRes = await fetch(
-            `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=100&keyword=${encodeURIComponent(placeName)}&key=${GOOGLE_MAPS_API_KEY}&language=pl`
-          );
-          const nearbyData = await nearbyRes.json();
-          placeId = nearbyData.results?.[0]?.place_id;
-        }
-
-        if (!placeId) {
+        if (fnError || !data?.result) {
+          console.error("Place details proxy error:", fnError || data?.error);
           setError(true);
-          setLoading(false);
-          return;
-        }
-
-        // Step 2: Get place details
-        const detailRes = await fetch(
-          `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,price_level,types,formatted_address,photos,reviews,geometry&language=pl&key=${GOOGLE_MAPS_API_KEY}`
-        );
-        const detailData = await detailRes.json();
-
-        if (detailData.result) {
-          setDetail(detailData.result);
         } else {
-          setError(true);
+          setDetail(data.result);
         }
       } catch (err) {
         console.error("Place details fetch error:", err);
@@ -153,7 +131,6 @@ const PlaceDetailDrawer = ({
 
         {detail && !loading && (
           <div className="h-full overflow-y-auto">
-            {/* Close button */}
             <button
               onClick={() => onOpenChange(false)}
               className="absolute top-4 right-4 z-10 h-8 w-8 rounded-full bg-background/80 backdrop-blur flex items-center justify-center shadow-sm border border-border"
@@ -216,10 +193,7 @@ const PlaceDetailDrawer = ({
                   <h3 className="text-sm font-semibold text-foreground mb-2">Opinie</h3>
                   <div className="space-y-3">
                     {detail.reviews.slice(0, 3).map((review, i) => (
-                      <div
-                        key={i}
-                        className="bg-muted/50 rounded-xl p-3 space-y-1.5"
-                      >
+                      <div key={i} className="bg-muted/50 rounded-xl p-3 space-y-1.5">
                         <div className="flex items-center gap-2">
                           <img
                             src={review.profile_photo_url}
@@ -271,7 +245,6 @@ const PlaceDetailDrawer = ({
                 </p>
               </div>
 
-              {/* Bottom spacing */}
               <div className="h-6" />
             </div>
           </div>
