@@ -54,7 +54,7 @@ export const PageHeader = ({
           )}
           <h1 
             className={`text-xl font-bold ${title === "TRASA" ? "text-red-600 cursor-pointer" : ""}`}
-            onClick={title === "TRASA" ? () => navigate("/home") : undefined}
+            onClick={title === "TRASA" ? () => navigate("/") : undefined}
           >
             {title}
           </h1>
