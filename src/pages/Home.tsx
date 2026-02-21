@@ -230,6 +230,11 @@ const Home = () => {
           <h2 className="mt-4 text-2xl font-black tracking-tight uppercase">
             {profile?.username || "Podróżnik"}
           </h2>
+          {profile?.bio && (
+            <p className="mt-1 text-sm text-muted-foreground text-center max-w-[260px]">
+              {profile.bio}
+            </p>
+          )}
         </div>
 
         {/* Active trips */}
