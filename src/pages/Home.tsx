@@ -326,7 +326,7 @@ const Home = () => {
       {hasTripInProgress && currentDayRoute ? (
         <button
           onClick={() => navigate(`/day-review?route=${currentDayRoute.id}`)}
-          className="fixed bottom-6 right-5 bg-muted text-foreground px-6 py-3 rounded-full text-base font-medium shadow-lg hover:bg-muted/80 transition-colors"
+          className="fixed bottom-6 right-5 bg-cta-accent text-cta-accent-foreground px-6 py-3 rounded-full text-base font-bold shadow-lg hover:brightness-95 transition-all animate-[subtle-bounce_2.5s_ease-in-out_infinite]"
         >
           Jak Twój dzień?
         </button>
