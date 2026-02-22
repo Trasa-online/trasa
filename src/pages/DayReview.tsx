@@ -93,10 +93,17 @@ const DayReview = () => {
     }
   }, [messages, isDone]);
 
+  // Redirect to home after done
+  useEffect(() => {
+    if (!isDone) return;
+    const timer = setTimeout(() => navigate("/"), 2000);
+    return () => clearTimeout(timer);
+  }, [isDone, navigate]);
+
   // Send message to chat-route edge function
   const callChatRoute = useCallback(async (chatMessages: ChatMessage[]) => {
     if (!routeId || !session?.access_token) return;
-    
+
     setIsLoading(true);
     try {
       const response = await fetch(
@@ -301,16 +308,8 @@ const DayReview = () => {
           <div className="flex flex-col items-center px-8 py-8">
             <h2 className="text-xl font-black text-center">Super! Dziękuję za rozmowę.</h2>
             <p className="text-muted-foreground text-center mt-3 text-sm leading-relaxed">
-              Zapisałam Twoje odpowiedzi i zaktualizowałam trasę.
+              Zapisałam Twoje odpowiedzi. Za chwilę wrócisz na stronę główną.
             </p>
-            <Button
-              onClick={() => routeId ? navigate(`/route/${routeId}`) : navigate("/")}
-              variant="outline"
-              size="lg"
-              className="w-full rounded-full text-base font-medium mt-6"
-            >
-              Zobacz trasę
-            </Button>
           </div>
         )}
       </div>
