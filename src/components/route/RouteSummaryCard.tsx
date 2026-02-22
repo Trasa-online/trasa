@@ -85,51 +85,54 @@ const RouteSummaryCard = ({ summary }: RouteSummaryCardProps) => {
       {/* Sequence */}
       <div className="px-5 pb-3">
         <div className="space-y-0">
-          {sortedPins.map((pin, i) => (
-            <div key={i} className="flex items-start gap-3 relative">
-              {/* Timeline */}
-              <div className="flex flex-col items-center pt-1">
-                <div className={cn(
-                  "w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold flex-shrink-0",
-                  pin.sentiment === "positive" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                  pin.sentiment === "negative" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
-                  "bg-muted text-muted-foreground"
-                )}>
-                  {i + 1}
+          {sortedPins.map((pin, i) => {
+            const isLast = i === sortedPins.length - 1;
+            return (
+              <div key={i} className="flex items-start gap-3 py-2.5">
+                {/* Stepper: number circle + line */}
+                <div className="flex flex-col items-center shrink-0">
+                  <div className={cn(
+                    "h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold",
+                    pin.sentiment === "positive" ? "bg-foreground text-background" :
+                    pin.sentiment === "negative" ? "bg-transparent border-2 border-destructive text-destructive" :
+                    "bg-transparent border-2 border-border text-muted-foreground"
+                  )}>
+                    {i + 1}
+                  </div>
+                  {!isLast && (
+                    <div className="w-px flex-1 min-h-[20px] bg-border/60 my-1" />
+                  )}
                 </div>
-                {i < sortedPins.length - 1 && (
-                  <div className="w-px h-6 bg-border/60 mt-1" />
-                )}
-              </div>
 
-              {/* Content */}
-              <div className="flex-1 pb-3 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[14px] font-medium text-foreground truncate">
-                    {pin.place_name}
-                  </span>
-                  {pin.was_spontaneous && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 font-medium">
-                      spontan
+                {/* Content */}
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[13px] font-medium leading-tight truncate">
+                      {pin.place_name}
                     </span>
-                  )}
-                  {pin.sequence_rating && SEQUENCE_BADGES[pin.sequence_rating] && (
-                    <span className={cn(
-                      "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
-                      SEQUENCE_BADGES[pin.sequence_rating].className
-                    )}>
-                      {SEQUENCE_BADGES[pin.sequence_rating].label}
-                    </span>
+                    {pin.was_spontaneous && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium">
+                        spontan
+                      </span>
+                    )}
+                    {pin.sequence_rating && SEQUENCE_BADGES[pin.sequence_rating] && (
+                      <span className={cn(
+                        "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
+                        SEQUENCE_BADGES[pin.sequence_rating].className
+                      )}>
+                        {SEQUENCE_BADGES[pin.sequence_rating].label}
+                      </span>
+                    )}
+                  </div>
+                  {(pin.experience_note || pin.time_spent) && (
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                      {[pin.time_spent, pin.experience_note].filter(Boolean).join(" · ")}
+                    </p>
                   )}
                 </div>
-                {(pin.experience_note || pin.time_spent) && (
-                  <p className="text-[12px] text-muted-foreground mt-0.5 line-clamp-1">
-                    {[pin.time_spent, pin.experience_note].filter(Boolean).join(" · ")}
-                  </p>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

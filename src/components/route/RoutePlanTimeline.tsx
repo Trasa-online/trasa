@@ -24,31 +24,36 @@ const RoutePlanTimeline = ({ days, totalDays }: RoutePlanTimelineProps) => {
               Dzień #{day.day_number} z {totalDays}
             </h3>
           )}
-          <div className="relative pl-6 space-y-0">
-            {day.pins.map((pin, idx) => (
-              <div key={idx} className="relative flex items-start pb-4">
-                {/* Dot */}
-                <div className="absolute left-[-18px] top-2 w-3 h-3 rounded-full bg-muted-foreground/40" />
-                {/* Dashed line */}
-                {idx < day.pins.length - 1 && (
-                  <div className="absolute left-[-13px] top-5 bottom-0 w-px border-l border-dashed border-muted-foreground/30" />
-                )}
-                {/* Content */}
-                <div className="flex-1 flex items-start justify-between gap-3 min-w-0 border-b border-border/40 pb-4">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold">{pin.place_name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                      {pin.description || ""}
-                    </p>
+          <div className="space-y-0">
+            {day.pins.map((pin, idx) => {
+              const isLast = idx === day.pins.length - 1;
+              return (
+                <div key={idx} className="flex items-start gap-3 py-2.5">
+                  {/* Stepper: number circle + line */}
+                  <div className="flex flex-col items-center shrink-0">
+                    <div className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold bg-transparent border-2 border-border text-muted-foreground">
+                      {idx + 1}
+                    </div>
+                    {!isLast && (
+                      <div className="w-px flex-1 min-h-[20px] bg-border/60 my-1" />
+                    )}
                   </div>
-                  <span className="text-sm font-mono text-foreground shrink-0">
-                    {pin.suggested_time || "00:00"}
-                  </span>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 pt-0.5">
+                    <p className="text-[13px] font-medium leading-tight">{pin.place_name}</p>
+                    {pin.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{pin.description}</p>
+                    )}
+                  </div>
+                  {/* Time */}
+                  {pin.suggested_time && (
+                    <span className="text-xs text-muted-foreground shrink-0 pt-1">
+                      {pin.suggested_time}
+                    </span>
+                  )}
                 </div>
-              </div>
-            ))}
-            {/* End dot */}
-            <div className="absolute left-[-18px] bottom-0 w-3 h-3 rounded-full bg-muted-foreground/20" />
+              );
+            })}
           </div>
         </div>
       ))}
