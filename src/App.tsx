@@ -8,10 +8,7 @@ import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import CreateRoute from "./pages/CreateRoute";
 import Settings from "./pages/Settings";
-import RouteDetails from "./pages/RouteDetails";
-import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
-import CreateFolder from "./pages/CreateFolder";
 import CreateTrip from "./pages/CreateTrip";
 import DayReview from "./pages/DayReview";
 import Terms from "./pages/Terms";
@@ -31,12 +28,8 @@ const App = () => (
           <Route path="/create" element={<CreateRoute />} />
           <Route path="/edit/:id" element={<CreateRoute />} />
           <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
-          <Route path="/route/:id" element={<AppLayout><RouteDetails /></AppLayout>} />
-          <Route path="/admin" element={<AppLayout><Admin /></AppLayout>} />
           <Route path="/create-trip" element={<CreateTrip />} />
           <Route path="/create-trip/:id" element={<CreateTrip />} />
-          <Route path="/create-folder" element={<CreateFolder />} />
-          <Route path="/edit-folder/:id" element={<CreateFolder />} />
           <Route path="/day-review" element={<DayReview />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -99,21 +99,7 @@ const Feed = () => {
     enabled: !!user && activeTab === "Obserwowani",
   });
 
-  const { data: unreadCount = 0 } = useQuery({
-    queryKey: ["unread-notifications", user?.id],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("notifications")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user!.id)
-        .eq("read", false);
-
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!user,
-    refetchInterval: 30000,
-  });
+  // notifications removed
 
   const feedItems = useMemo(() => {
     if (!routes || feedFolders === undefined) return undefined;
@@ -188,9 +174,6 @@ const Feed = () => {
     <>
       <PageHeader
         title="TRASA"
-        showBell
-        showSearch
-        unreadCount={unreadCount}
       />
 
       {/* Tabs */}

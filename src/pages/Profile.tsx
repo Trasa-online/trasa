@@ -134,20 +134,7 @@ const Profile = () => {
     enabled: !!user && !!userId && user.id !== userId,
   });
 
-  const { data: unreadCount = 0 } = useQuery({
-    queryKey: ["unread-notifications", user?.id],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("notifications")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user!.id)
-        .eq("read", false);
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!user,
-    refetchInterval: 30000,
-  });
+  // notifications removed
 
   // Oblicz totalPlaces ze wszystkich tras
   const totalPlaces = routes?.reduce((sum, r) => sum + (r.pins?.length || 0), 0) || 0;
@@ -310,9 +297,6 @@ const Profile = () => {
       <PageHeader 
         title="Profil" 
         showBack 
-        showBell 
-        showSearch 
-        unreadCount={unreadCount}
         rightAction={
           user?.id === userId ? (
             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate("/settings")}>

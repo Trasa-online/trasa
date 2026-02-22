@@ -33,19 +33,7 @@ const MyRoutes = () => {
 
   const { folders, deleteFolder } = useFolders();
 
-  const { data: unreadCount = 0 } = useQuery({
-    queryKey: ["unread-notifications", user?.id],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("notifications")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user!.id)
-        .eq("read", false);
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!user,
-  });
+  // notifications removed
 
   useEffect(() => {
     if (!loading && !user) {
@@ -130,7 +118,7 @@ const MyRoutes = () => {
 
   return (
     <>
-      <PageHeader title="TRASA" showBell showSearch unreadCount={unreadCount} />
+      <PageHeader title="TRASA" />
 
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center justify-between">
