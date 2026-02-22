@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, PlusCircle, Trash2, Map as MapIcon, BookOpen, Sparkles, MessageSquare } from "lucide-react";
+import { PlusCircle, Trash2, Map as MapIcon, BookOpen, Sparkles, MessageSquare } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import RoutePreviewModal from "@/components/route/RoutePreviewModal";
@@ -67,21 +67,6 @@ const Home = () => {
     enabled: !!user,
   });
 
-  const { data: pastRoutes } = useQuery({
-    queryKey: ["past-routes", user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const { data } = await supabase
-        .from("routes")
-        .select("*, pins(count)")
-        .eq("user_id", user.id)
-        .eq("status", "published")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      return data || [];
-    },
-    enabled: !!user,
-  });
 
   // Group active routes by folder for multi-day trips
   const getActiveTrips = () => {
@@ -420,33 +405,6 @@ const Home = () => {
           </section>
         )}
 
-        {/* Past routes */}
-        <section>
-          <h3 className="text-lg font-bold mb-2">Twoje wcześniejsze trasy</h3>
-          {pastRoutes && pastRoutes.length > 0 ? (
-            <div className="space-y-2">
-              {pastRoutes.map((route: any) => (
-                <button
-                  key={route.id}
-                  onClick={() => navigate(`/route/${route.id}`)}
-                  className="w-full text-left bg-card rounded-xl p-3 flex items-center justify-between hover:bg-card/90 transition-colors border border-border"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{route.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {route.city || ""} • {route.pins?.[0]?.count || 0} miejsc
-                    </p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              Nie masz jeszcze pokonanych tras
-            </p>
-          )}
-        </section>
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-foreground px-4 py-4">
