@@ -296,8 +296,9 @@ const Home = () => {
                 const pendingRoute = getPendingReviewRoute(trip);
 
                 return (
-                  <div key={trip.id}>
-                    <div className="relative rounded-xl border border-border bg-card hover:bg-card/90 transition-colors">
+                  <div key={trip.id} className="rounded-xl border border-border bg-card overflow-hidden">
+                    {/* Trip header */}
+                    <div className="relative hover:bg-muted/30 transition-colors">
                       <button
                         onClick={() => handleTripClick(trip)}
                         className="w-full text-left p-4 pr-12"
@@ -330,29 +331,33 @@ const Home = () => {
                       </button>
                     </div>
 
-                    {/* Inline checkin for today's route (auto-triggered) */}
+                    {/* Inline checkin — separated by divider, visually part of the same card */}
                     {todayRoute && todayRoute.pins?.length > 0 && (
-                      <TripCheckinSection
-                        routeId={todayRoute.id}
-                        pins={(todayRoute.pins as any[]).map((p: any) => ({
-                          id: p.id,
-                          place_name: p.place_name,
-                          pin_order: p.pin_order,
-                          suggested_time: p.suggested_time,
-                        }))}
-                        onComplete={handleCheckinComplete}
-                      />
+                      <div className="border-t border-border">
+                        <TripCheckinSection
+                          routeId={todayRoute.id}
+                          pins={(todayRoute.pins as any[]).map((p: any) => ({
+                            id: p.id,
+                            place_name: p.place_name,
+                            pin_order: p.pin_order,
+                            suggested_time: p.suggested_time,
+                          }))}
+                          onComplete={handleCheckinComplete}
+                        />
+                      </div>
                     )}
 
-                    {/* Manual review button — when no auto-checkin but there's a pending route */}
+                    {/* Manual review button */}
                     {!todayRoute && pendingRoute && (
-                      <button
-                        onClick={() => navigate(`/day-review?route=${pendingRoute.id}`)}
-                        className="mt-2 w-full flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5 px-1"
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        Oceń dzień podróży
-                      </button>
+                      <div className="border-t border-border">
+                        <button
+                          onClick={() => navigate(`/day-review?route=${pendingRoute.id}`)}
+                          className="w-full flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors py-3 px-4"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          Oceń dzień podróży
+                        </button>
+                      </div>
                     )}
                   </div>
                 );

@@ -46,7 +46,7 @@ const TripCheckinSection = ({ routeId, pins, onComplete }: TripCheckinSectionPro
   };
 
   return (
-    <div className="mt-2 rounded-xl bg-muted/60 p-4">
+    <div className="bg-muted/40 p-4">
       <p className="text-sm font-medium mb-1">Które miejsca odwiedziłeś?</p>
       <p className="text-xs text-muted-foreground mb-3">
         {checkedCount}/{sortedPins.length} ukończone · Odznacz odwiedzone
