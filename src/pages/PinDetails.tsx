@@ -3,7 +3,7 @@ import { useGoBack } from "@/hooks/useGoBack";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Heart, Send, Trash2, Pencil, X, Check, Trophy, Users, Route } from "lucide-react";
+import { ArrowLeft, MapPin, Star, MessageSquare, ChevronLeft, ChevronRight, Eye, Heart, Send, Trash2, Pencil, X, Check, Users } from "lucide-react";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -351,92 +351,8 @@ const PinDetails = () => {
     enabled: !!pin?.routes?.id,
   });
 
-  // Get canonical pin data if it exists
-  const { data: canonicalPin, isLoading: canonicalPinLoading } = useQuery({
-    queryKey: ["canonical-pin", pin?.canonical_pin_id],
-    queryFn: async () => {
-      if (!pin?.canonical_pin_id) return null;
-      
-      const { data, error } = await supabase
-        .from("canonical_pins")
-        .select(`
-          *,
-          discovered_by:discovered_by_user_id (
-            id,
-            username,
-            avatar_url
-          )
-        `)
-        .eq("id", pin.canonical_pin_id)
-        .single();
 
-      if (error) {
-        console.error('Error fetching canonical pin:', error);
-        return null;
-      }
-      
-      return data;
-    },
-    enabled: !!pin?.canonical_pin_id
-  });
 
-  // Get all visits to this canonical pin (for aggregated stats)
-  const { data: allCanonicalVisits = [], isLoading: canonicalVisitsLoading } = useQuery({
-    queryKey: ["pin-all-visits", pin?.canonical_pin_id],
-    queryFn: async () => {
-      if (!pin?.canonical_pin_id) return [];
-      
-      const { data, error } = await supabase
-        .from("pins")
-        .select(`
-          *,
-          routes!inner (
-            id,
-            title,
-            user_id,
-            profiles:user_id (
-              id,
-              username,
-              avatar_url
-            )
-          )
-        `)
-        .eq("canonical_pin_id", pin.canonical_pin_id)
-        .order("visited_at", { ascending: false });
-
-      if (error) {
-        console.error('Error fetching canonical visits:', error);
-        return [];
-      }
-      
-      return data || [];
-    },
-    enabled: !!pin?.canonical_pin_id
-  });
-
-  // Calculate statistics from all canonical visits
-  const canonicalStats = useMemo(() => {
-    if (!allCanonicalVisits || allCanonicalVisits.length === 0) {
-      return {
-        totalVisits: 0,
-        averageRating: 0,
-        ratingsCount: 0,
-        uniqueRoutes: 0
-      };
-    }
-    
-    const validRatings = allCanonicalVisits.filter((v: any) => v.rating && v.rating > 0);
-    const uniqueRouteIds = new Set(allCanonicalVisits.map((v: any) => v.routes.id));
-    
-    return {
-      totalVisits: allCanonicalVisits.length,
-      averageRating: validRatings.length > 0 
-        ? validRatings.reduce((acc: number, v: any) => acc + v.rating, 0) / validRatings.length 
-        : 0,
-      ratingsCount: validRatings.length,
-      uniqueRoutes: uniqueRouteIds.size
-    };
-  }, [allCanonicalVisits]);
 
   // Fetch pin visits/ratings
   const { data: visits = [] } = useQuery({
@@ -454,52 +370,7 @@ const PinDetails = () => {
     enabled: !!pinId,
   });
 
-  // Combine all visitors: users who added pins to routes + users who left reviews
-  const allVisitors = useMemo(() => {
-    const visitorsMap = new Map<string, any>();
-    
-    // First, add all users who added this place to their routes (from allCanonicalVisits)
-    allCanonicalVisits.forEach((pinData: any) => {
-      const userId = pinData.routes?.user_id;
-      if (!userId) return;
-      
-      const profile = pinData.routes?.profiles;
-      visitorsMap.set(userId, {
-        user_id: userId,
-        pin_id: pinData.id,
-        profiles: profile,
-        rating: pinData.rating,
-        description: pinData.description,
-        image_url: pinData.image_url,
-        created_at: pinData.visited_at || pinData.created_at,
-        source: 'route' as const,
-        route_id: pinData.routes?.id,
-        route_title: pinData.routes?.title,
-      });
-    });
-    
-    // Then, override/merge with pin_visits data (opinions have priority)
-    visits.forEach((visit: any) => {
-      const existing = visitorsMap.get(visit.user_id);
-      visitorsMap.set(visit.user_id, {
-        user_id: visit.user_id,
-        pin_id: visit.pin_id,
-        profiles: visit.profiles,
-        rating: visit.rating || existing?.rating,
-        description: visit.description || existing?.description,
-        image_url: visit.image_url || existing?.image_url,
-        created_at: visit.created_at,
-        source: 'review' as const,
-        route_id: existing?.route_id,
-        route_title: existing?.route_title,
-      });
-    });
-    
-    // Convert to array and sort by created_at descending
-    return Array.from(visitorsMap.values()).sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-  }, [allCanonicalVisits, visits]);
+  const allVisitors = visits;
 
   // Fetch visit likes
   const { data: visitLikes = [] } = useQuery({
@@ -548,48 +419,6 @@ const PinDetails = () => {
     enabled: !!pinId,
   });
 
-  // Fetch pins from same location (other users who added this place)
-  // Using ~150m radius (0.0015 degrees) for better matching
-  const { data: sameLocationPins = [] } = useQuery({
-    queryKey: ["same-location-pins", pin?.latitude, pin?.longitude, pinId],
-    queryFn: async () => {
-      if (!pin?.latitude || !pin?.longitude) return [];
-      
-      const lat = Number(pin.latitude);
-      const lng = Number(pin.longitude);
-      
-      const { data, error } = await supabase
-        .from("pins")
-        .select(`
-          id,
-          place_name,
-          rating,
-          description,
-          image_url,
-          images,
-          created_at,
-          route_id,
-          routes!inner(
-            id, 
-            title, 
-            status, 
-            user_id,
-            profiles:user_id(id, username, avatar_url)
-          )
-        `)
-        .gte("latitude", lat - 0.0015)
-        .lte("latitude", lat + 0.0015)
-        .gte("longitude", lng - 0.0015)
-        .lte("longitude", lng + 0.0015)
-        .eq("routes.status", "published")
-        .neq("id", pinId)
-        .order("created_at", { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!pin?.latitude && !!pin?.longitude && !!pinId,
-  });
 
   // Like mutation
   const likeMutation = useMutation({
@@ -930,35 +759,6 @@ const PinDetails = () => {
             </div>
           )}
 
-          {/* Discoverer + stats - UNCHANGED */}
-          {canonicalPin?.discovered_by && (
-            <div className="flex items-center gap-2 text-sm">
-              <Trophy className="h-4 w-4 text-amber-500" />
-              <span className="text-muted-foreground">
-                Odkryte przez{" "}
-                <Link to={`/profile/${canonicalPin.discovered_by.id}`} className="font-medium text-foreground hover:text-primary">
-                  @{canonicalPin.discovered_by.username}
-                </Link>
-                {" "}· {format(new Date(canonicalPin.discovered_at), "d MMMM yyyy", { locale: pl })}
-              </span>
-            </div>
-          )}
-
-          {canonicalStats.totalVisits > 1 && (
-            <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Users className="h-4 w-4" />
-                {canonicalStats.totalVisits} {canonicalStats.totalVisits === 1 ? 'wizyta' : canonicalStats.totalVisits < 5 ? 'wizyty' : 'wizyt'}
-              </div>
-              {canonicalStats.uniqueRoutes > 1 && (
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  W {canonicalStats.uniqueRoutes} trasach
-                </div>
-              )}
-            </div>
-          )}
-
           {pin.created_at && (
             <p className="text-xs text-muted-foreground">
               Dodano: {format(new Date(pin.created_at), "d MMMM yyyy", { locale: pl })}
@@ -1136,92 +936,6 @@ const PinDetails = () => {
           )}
         </div>
 
-        {/* Routes Containing This Pin */}
-        {allCanonicalVisits.length > 0 && (
-          <>
-            <Separator />
-            
-            <div>
-              <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                <Route className="h-5 w-5" />
-                To miejsce w trasach
-                <span className="text-muted-foreground font-normal text-sm">
-                  ({canonicalStats.uniqueRoutes})
-                </span>
-              </h2>
-              
-              <div className="space-y-2">
-                {/* Group visits by route and show unique routes */}
-                {Array.from(
-                  new Map(
-                    allCanonicalVisits.map((visit: any) => [
-                      visit.routes.id,
-                      visit
-                    ])
-                  ).values()
-                ).map((visit: any) => {
-                  const route = visit.routes;
-                  const routeProfile = visit.routes?.profiles;
-                  const isCurrentRoute = route.id === pin.routes?.id;
-                  
-                  return (
-                    <Link
-                      key={route.id}
-                      to={`/route/${route.id}`}
-                      className={cn(
-                        "flex items-center gap-3 p-3 rounded-xl border transition-all hover:bg-muted/60",
-                        isCurrentRoute
-                          ? "bg-primary/5 border-primary/20"
-                          : "bg-muted/40 border-border/50 hover:border-border"
-                      )}
-                    >
-                      {/* Route author avatar */}
-                      <Avatar className="h-10 w-10 shrink-0">
-                        <AvatarImage src={routeProfile?.avatar_url || ""} />
-                        <AvatarFallback className="text-sm font-medium">
-                          {routeProfile?.username?.[0]?.toUpperCase() || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                      
-                      {/* Route info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm line-clamp-1">
-                            {route.title}
-                          </span>
-                          {isCurrentRoute && (
-                            <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium shrink-0">
-                              Aktualna trasa
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          by @{routeProfile?.username}
-                        </span>
-                      </div>
-                      
-                      {/* Arrow icon */}
-                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                    </Link>
-                  );
-                })}
-              </div>
-              
-              {/* Summary text */}
-              {canonicalStats.uniqueRoutes > 0 && (
-                <p className="text-xs text-muted-foreground text-center mt-4">
-                  To miejsce znajduje się w {canonicalStats.uniqueRoutes}{" "}
-                  {canonicalStats.uniqueRoutes === 1 
-                    ? 'trasie' 
-                    : canonicalStats.uniqueRoutes < 5 
-                      ? 'trasach' 
-                      : 'trasach'
-                  }
-                </p>
-              )}
-            </div>
-          </>
-        )}
 
       </div>
 

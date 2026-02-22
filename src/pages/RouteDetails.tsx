@@ -821,9 +821,9 @@ const RouteDetails = () => {
 
           {/* Folder breadcrumb */}
           {route.folder && (
-            <Link to={`/folder/${route.folder.id}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">
-              📁 {route.folder.name} ›
-            </Link>
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              📁 {route.folder.name}
+            </span>
           )}
 
         {/* Route Map */}

@@ -1,13 +1,12 @@
 import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Search } from "lucide-react";
+import { ArrowLeft, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface PageHeaderProps {
   title: string;
   showBack?: boolean;
   showBell?: boolean;
-  showSearch?: boolean;
   unreadCount?: number;
   rightAction?: ReactNode;
   onBackClick?: () => void;
@@ -17,7 +16,6 @@ export const PageHeader = ({
   title,
   showBack = false,
   showBell = false,
-  showSearch = false,
   unreadCount = 0,
   rightAction,
   onBackClick,
@@ -76,16 +74,6 @@ export const PageHeader = ({
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
-            </Button>
-          )}
-          {showSearch && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/search")}
-              className="h-9 w-9"
-            >
-              <Search className="h-5 w-5" />
             </Button>
           )}
         </div>

@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, PlusCircle, Compass, Settings, Trash2 } from "lucide-react";
+import { ChevronRight, PlusCircle, Compass, Trash2 } from "lucide-react";
 import EmptyState from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -205,18 +205,6 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header bar */}
-      <header className="bg-muted px-4 py-4 flex items-center justify-between">
-        <div className="w-8" />
-        <h1 className="text-2xl font-black tracking-tight">TRASA</h1>
-        <button
-          onClick={() => navigate("/settings")}
-          className="p-1 text-foreground/70 hover:text-foreground transition-colors"
-        >
-          <Settings className="h-6 w-6" />
-        </button>
-      </header>
-
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-5 pb-24 max-w-lg mx-auto w-full">
         {/* Avatar + Name */}

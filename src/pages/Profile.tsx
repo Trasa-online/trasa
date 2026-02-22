@@ -351,13 +351,10 @@ const Profile = () => {
 
               {/* Statystyki w jednej linii */}
               <div className="flex gap-4 text-sm">
-                <button 
-                  onClick={() => navigate(`/friends/${userId}`)}
-                  className="hover:opacity-70 transition-opacity"
-                >
+                <div>
                   <span className="font-semibold">{friendsCount}</span>
-                  <span className="text-muted-foreground ml-1">obserwujących</span>
-                </button>
+                  <span className="text-muted-foreground ml-1">podróży</span>
+                </div>
                 <div className="hover:opacity-70 transition-opacity">
                   <span className="font-semibold">{profileFeedItems.length || routesCount}</span>
                   <span className="text-muted-foreground ml-1">podróży</span>

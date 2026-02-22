@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-function buildSystemPrompt(pinsContext: string, internalContext: string, pinCount: number): string {
+function buildSystemPrompt(pinsContext: string, pinCount: number): string {
   return `Jesteś asystentem podróżniczym w aplikacji TRASA.
 User właśnie dodał ${pinCount} miejsc do swojego dnia. Twoim zadaniem jest
 przeprowadzić naturalną, krótką rozmowę (max 7 wymian), żeby zrozumieć
@@ -15,7 +15,6 @@ KONTEKST i SEKWENCJĘ tego dnia.
 
 ## PINY USERA (kolejność w jakiej je dodał)
 ${pinsContext}
-${internalContext}
 
 ## FAZY ROZMOWY
 Prowadź rozmowę naturalnie. Łącz pytania gdy flow na to pozwala.
@@ -176,33 +175,12 @@ serve(async (req) => {
       );
     }
 
-    // Check internal DB for known places
-    const enrichment: string[] = [];
-    for (const pin of pins) {
-      const { data: canonical } = await supabase
-        .from("canonical_pins")
-        .select("total_visits, average_rating")
-        .ilike("place_name", `%${pin.place_name}%`)
-        .limit(1)
-        .maybeSingle();
-
-      if (canonical?.total_visits && canonical.total_visits > 1) {
-        enrichment.push(
-          `- ${pin.place_name}: ${canonical.total_visits} wizyt w bazie, średnia ${canonical.average_rating ?? "brak"}`
-        );
-      }
-    }
-
     // Build context
     const pinsContext = pins
       .map((p: any, i: number) => `${i + 1}. ${p.place_name} (${p.address || "brak adresu"})`)
       .join("\n");
 
-    const internalContext = enrichment.length > 0
-      ? `\n\nDANE Z NASZEJ BAZY O TYCH MIEJSCACH:\n${enrichment.join("\n")}`
-      : "";
-
-    const systemPrompt = buildSystemPrompt(pinsContext, internalContext, pins.length);
+    const systemPrompt = buildSystemPrompt(pinsContext, pins.length);
 
     // Call AI via Lovable gateway
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

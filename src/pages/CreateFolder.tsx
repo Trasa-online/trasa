@@ -98,14 +98,14 @@ const CreateFolder = () => {
           description: description.trim() || undefined,
           cover_image_url: coverUrl || undefined,
         });
-        navigate(`/folder/${id}`);
+        navigate("/");
       } else {
         const result = await createFolder.mutateAsync({
           name: name.trim(),
           description: description.trim() || undefined,
           cover_image_url: coverUrl || undefined,
         });
-        navigate(`/folder/${result.id}`);
+        navigate("/");
       }
     } catch {
       // Error handled in hook

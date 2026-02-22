@@ -281,7 +281,7 @@ export const CreateModeDrawer = ({ open, onOpenChange }: CreateModeDrawerProps) 
       
       // Close drawer and navigate to feed
       handleClose();
-      navigate('/feed');
+      navigate('/');
       
     } catch (error) {
       console.error("Save error:", error);
