@@ -153,7 +153,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: aiMessages,
-        max_tokens: 2000,
+        max_tokens: 4096,
         temperature: 0.7,
       }),
     });
@@ -193,6 +193,34 @@ serve(async (req) => {
           .trim();
       } catch (parseErr) {
         console.error("Failed to parse route_plan:", parseErr);
+        // Remove the broken plan block from the message anyway
+        cleanMessage = assistantText
+          .replace(/<route_plan>[\s\S]*?<\/route_plan>/, "")
+          .trim();
+      }
+    } else if (assistantText.includes("<route_plan>")) {
+      // Truncated response - plan started but closing tag missing
+      console.warn("Truncated route_plan detected, attempting to fix...");
+      const startIdx = assistantText.indexOf("<route_plan>");
+      const jsonPart = assistantText.slice(startIdx + "<route_plan>".length).trim();
+      cleanMessage = assistantText.slice(0, startIdx).trim();
+
+      // Try to fix truncated JSON by closing open brackets
+      try {
+        let fixedJson = jsonPart
+          .replace(/<\/route_plan>.*$/, "")
+          .trim();
+        // Count unclosed brackets and close them
+        const openBraces = (fixedJson.match(/{/g) || []).length;
+        const closeBraces = (fixedJson.match(/}/g) || []).length;
+        const openBrackets = (fixedJson.match(/\[/g) || []).length;
+        const closeBrackets = (fixedJson.match(/\]/g) || []).length;
+        for (let i = 0; i < openBrackets - closeBrackets; i++) fixedJson += "]";
+        for (let i = 0; i < openBraces - closeBraces; i++) fixedJson += "}";
+        plan = JSON.parse(fixedJson);
+      } catch (fixErr) {
+        console.error("Could not fix truncated plan:", fixErr);
+        cleanMessage = cleanMessage || "Przepraszam, plan był zbyt długi. Spróbuję ponownie z krótszym planem.";
       }
     }
 
