@@ -206,62 +206,58 @@ const Home = () => {
   // ── Onboarding dla niezalogowanych ──
   if (!user) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <header className="px-5 py-4 flex items-center justify-center">
-          <h1 className="text-2xl font-black tracking-tight">TRASA</h1>
-        </header>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 max-w-sm mx-auto w-full">
+        <div className="text-center mb-8">
+          <p className="text-4xl mb-3">🗺️</p>
+          <h2 className="text-2xl font-black tracking-tight mb-2">Twój osobisty planer podróży</h2>
+          <p className="text-muted-foreground text-sm max-w-[300px] mx-auto leading-relaxed">
+            Planuj trasy z pomocą AI, odhaczaj miejsca w trakcie podróży i prowadź dziennik z każdego dnia.
+          </p>
+        </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-10">
-          <div className="text-center mb-10">
-            <p className="text-4xl mb-3">🗺️</p>
-            <h2 className="text-2xl font-black tracking-tight mb-2">Twój osobisty planer podróży</h2>
-            <p className="text-muted-foreground text-sm max-w-[300px] mx-auto leading-relaxed">
-              Planuj trasy z pomocą AI, odhaczaj miejsca w trakcie podróży i prowadź dziennik z każdego dnia.
-            </p>
-          </div>
-
-          <div className="w-full max-w-sm space-y-3 mb-10">
-            <div className="flex items-start gap-3 rounded-xl border border-border/60 p-4">
-              <Sparkles className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
-              <div>
-                <p className="text-sm font-semibold">Planer z AI</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Powiedz dokąd jedziesz — AI zaproponuje trasę z prawdziwymi miejscami i godzinami.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 rounded-xl border border-border/60 p-4">
-              <MapIcon className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
-              <div>
-                <p className="text-sm font-semibold">Trasa na mapie</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Zobacz wszystkie miejsca na mapie, odhaczaj odwiedzone i dostosowuj plan w locie.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 rounded-xl border border-border/60 p-4">
-              <BookOpen className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
-              <div>
-                <p className="text-sm font-semibold">Dziennik podróży</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Po każdym dniu porozmawiaj z AI o tym, co przeżyłeś. Zapisujemy to jako Twoje wspomnienie.</p>
-              </div>
+        <div className="w-full space-y-3 mb-8">
+          <div className="flex items-start gap-3 rounded-xl border border-border/60 p-4">
+            <Sparkles className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
+            <div>
+              <p className="text-sm font-semibold">Planer z AI</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Powiedz dokąd jedziesz — AI zaproponuje trasę z prawdziwymi miejscami i godzinami.</p>
             </div>
           </div>
-
-          <div className="w-full max-w-sm space-y-2">
-            <Button
-              onClick={() => navigate("/auth")}
-              size="lg"
-              className="w-full rounded-full text-base font-medium"
-            >
-              Zacznij planować
-            </Button>
-            <button
-              onClick={() => navigate("/auth")}
-              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
-            >
-              Mam już konto — zaloguj się
-            </button>
+          <div className="flex items-start gap-3 rounded-xl border border-border/60 p-4">
+            <MapIcon className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
+            <div>
+              <p className="text-sm font-semibold">Trasa na mapie</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Zobacz wszystkie miejsca na mapie, odhaczaj odwiedzone i dostosowuj plan w locie.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 rounded-xl border border-border/60 p-4">
+            <BookOpen className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
+            <div>
+              <p className="text-sm font-semibold">Dziennik podróży</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Po każdym dniu porozmawiaj z AI o tym, co przeżyłeś. Zapisujemy to jako Twoje wspomnienie.</p>
+            </div>
           </div>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground pb-5">
+        <div className="w-full space-y-2">
+          <Button
+            onClick={() => navigate("/auth?tab=register")}
+            size="lg"
+            className="w-full rounded-full text-base font-medium"
+          >
+            Zarejestruj się — to bezpłatne
+          </Button>
+          <Button
+            onClick={() => navigate("/auth")}
+            variant="outline"
+            size="lg"
+            className="w-full rounded-full text-base font-medium"
+          >
+            Mam już konto — zaloguj się
+          </Button>
+        </div>
+
+        <p className="text-center text-xs text-muted-foreground mt-6">
           <Link to="/terms" className="underline">Regulamin i Polityka Prywatności</Link>
         </p>
       </div>
