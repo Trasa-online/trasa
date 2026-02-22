@@ -291,15 +291,15 @@ const Home = () => {
                     ? `${format(new Date(trip.startDate), "dd")}-${format(new Date(trip.endDate), "dd/MM/yyyy")}`
                     : format(new Date(trip.startDate), "dd/MM/yyyy")
                   : "";
-                const PRIORITY_EMOJI: Record<string, string> = {
-                  good_food: "🍽️", nice_views: "🌅", long_walks: "🚶",
-                  museums: "🏛️", nightlife: "🌙", shopping: "🛍️",
-                  local_vibes: "🎭", photography: "📸",
+                const PRIORITY_LABEL: Record<string, string> = {
+                  good_food: "Jedzenie", nice_views: "Widoki", long_walks: "Spacery",
+                  museums: "Muzea", nightlife: "Nocne życie", shopping: "Zakupy",
+                  local_vibes: "Klimaty", photography: "Foto",
                 };
-                const priorityEmojis = (trip.priorities as string[])
-                  .slice(0, 6)
-                  .map(p => PRIORITY_EMOJI[p] ?? p)
-                  .join("  ");
+                const priorityLabels = (trip.priorities as string[])
+                  .slice(0, 4)
+                  .map(p => PRIORITY_LABEL[p] ?? p)
+                  .join(" · ");
                 const todayRoute = getTodayRoute(trip);
                 const pendingRoute = getPendingReviewRoute(trip);
 
@@ -314,9 +314,9 @@ const Home = () => {
                         <div className="flex items-start justify-between">
                           <div className="min-w-0">
                             <p className="text-base font-bold">{trip.city}</p>
-                            {priorityEmojis && (
-                              <p className="text-base mt-0.5 tracking-wide">
-                                {priorityEmojis}
+                            {priorityLabels && (
+                              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                                {priorityLabels}
                               </p>
                             )}
                           </div>
