@@ -112,7 +112,7 @@ const CreateRoute = () => {
                     "flex-1 py-3 rounded-xl text-sm font-medium transition-colors border",
                     preferences.numDays === n
                       ? "bg-foreground text-background border-foreground"
-                      : "bg-background text-foreground border-border hover:bg-muted"
+                      : "bg-card text-foreground border-border hover:bg-muted"
                   )}
                 >
                   {n} {n === 1 ? "dzień" : "dni"}
@@ -137,7 +137,7 @@ const CreateRoute = () => {
                     "flex-1 py-3 rounded-xl text-sm font-medium transition-colors border",
                     preferences.pace === option.id
                       ? "bg-foreground text-background border-foreground"
-                      : "bg-background text-foreground border-border hover:bg-muted"
+                      : "bg-card text-foreground border-border hover:bg-muted"
                   )}
                 >
                   {option.emoji} {option.label}
@@ -158,7 +158,7 @@ const CreateRoute = () => {
                     "px-3 py-2 rounded-full text-sm transition-colors border",
                     preferences.priorities.includes(option.id)
                       ? "bg-foreground text-background border-foreground"
-                      : "bg-background text-foreground border-border hover:bg-muted"
+                      : "bg-card text-foreground border-border hover:bg-muted"
                   )}
                 >
                   {option.emoji} {option.label}
@@ -232,7 +232,7 @@ const CreateRoute = () => {
                   "flex-1 py-3 rounded-xl text-sm font-medium transition-colors border flex items-center justify-center gap-2",
                   preferences.planningMode === "text"
                     ? "bg-foreground text-background border-foreground"
-                    : "bg-background text-foreground border-border hover:bg-muted"
+                    : "bg-card text-foreground border-border hover:bg-muted"
                 )}
               >
                 <MessageSquare className="h-4 w-4" />
@@ -244,7 +244,7 @@ const CreateRoute = () => {
                   "flex-1 py-3 rounded-xl text-sm font-medium transition-colors border flex items-center justify-center gap-2",
                   preferences.planningMode === "voice"
                     ? "bg-foreground text-background border-foreground"
-                    : "bg-background text-foreground border-border hover:bg-muted"
+                    : "bg-card text-foreground border-border hover:bg-muted"
                 )}
               >
                 <Mic className="h-4 w-4" />
