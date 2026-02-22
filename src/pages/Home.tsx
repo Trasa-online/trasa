@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, PlusCircle, Compass, Trash2 } from "lucide-react";
-import EmptyState from "@/components/ui/empty-state";
+import { ChevronRight, PlusCircle, Trash2, Map as MapIcon, BookOpen, Sparkles, MessageSquare } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import RoutePreviewModal from "@/components/route/RoutePreviewModal";
@@ -51,6 +50,23 @@ const Home = () => {
     enabled: !!user,
   });
 
+  const { data: journalRoutes } = useQuery({
+    queryKey: ["journal-routes", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("routes")
+        .select("id, title, city, start_date, ai_summary, ai_highlight, ai_tip, chat_status")
+        .eq("user_id", user.id)
+        .eq("chat_status", "completed")
+        .not("ai_summary", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
   const { data: pastRoutes } = useQuery({
     queryKey: ["past-routes", user?.id],
     queryFn: async () => {
@@ -70,7 +86,7 @@ const Home = () => {
   // Group active routes by folder for multi-day trips
   const getActiveTrips = () => {
     if (!activeRoutes) return [];
-    
+
     const folderMap = new Map<string | null, any[]>();
     activeRoutes.forEach((route: any) => {
       const key = route.folder_id || route.id;
@@ -83,7 +99,7 @@ const Home = () => {
       const first = routes[0];
       const allPins = routes.flatMap((r: any) => r.pins || []);
       const priorities = first.priorities || [];
-      
+
       const dates = routes.map((r: any) => r.start_date).filter(Boolean).sort();
       const startDate = dates[0] || null;
       const endDate = dates[dates.length - 1] || startDate;
@@ -117,6 +133,11 @@ const Home = () => {
       return candidate;
     }
     return null;
+  };
+
+  // Find any route with pending review (for manual entry)
+  const getPendingReviewRoute = (trip: any) => {
+    return trip.routes.find((r: any) => r.chat_status !== "completed" && (r.pins || []).length > 0) || null;
   };
 
   const handleTripClick = (trip: any) => {
@@ -182,21 +203,67 @@ const Home = () => {
     );
   }
 
+  // ── Onboarding dla niezalogowanych ──
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        <header className="bg-muted px-4 py-4 flex items-center justify-center">
+        <header className="px-5 py-4 flex items-center justify-center">
           <h1 className="text-2xl font-black tracking-tight">TRASA</h1>
         </header>
-        <div className="flex-1 flex items-center justify-center p-4">
-          <EmptyState
-            icon={Compass}
-            title="Zaplanuj swoją podróż"
-            description="Zaloguj się, żeby zacząć planować"
-            actionLabel="Zaloguj się"
-            onAction={() => navigate("/auth")}
-          />
+
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-10">
+          <div className="text-center mb-10">
+            <p className="text-4xl mb-3">🗺️</p>
+            <h2 className="text-2xl font-black tracking-tight mb-2">Twój osobisty planer podróży</h2>
+            <p className="text-muted-foreground text-sm max-w-[300px] mx-auto leading-relaxed">
+              Planuj trasy z pomocą AI, odhaczaj miejsca w trakcie podróży i prowadź dziennik z każdego dnia.
+            </p>
+          </div>
+
+          <div className="w-full max-w-sm space-y-3 mb-10">
+            <div className="flex items-start gap-3 rounded-xl border border-border/60 p-4">
+              <Sparkles className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
+              <div>
+                <p className="text-sm font-semibold">Planer z AI</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Powiedz dokąd jedziesz — AI zaproponuje trasę z prawdziwymi miejscami i godzinami.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-xl border border-border/60 p-4">
+              <MapIcon className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
+              <div>
+                <p className="text-sm font-semibold">Trasa na mapie</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Zobacz wszystkie miejsca na mapie, odhaczaj odwiedzone i dostosowuj plan w locie.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-xl border border-border/60 p-4">
+              <BookOpen className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
+              <div>
+                <p className="text-sm font-semibold">Dziennik podróży</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Po każdym dniu porozmawiaj z AI o tym, co przeżyłeś. Zapisujemy to jako Twoje wspomnienie.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full max-w-sm space-y-2">
+            <Button
+              onClick={() => navigate("/auth")}
+              size="lg"
+              className="w-full rounded-full text-base font-medium"
+            >
+              Zacznij planować
+            </Button>
+            <button
+              onClick={() => navigate("/auth")}
+              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+            >
+              Mam już konto — zaloguj się
+            </button>
+          </div>
         </div>
+
+        <p className="text-center text-xs text-muted-foreground pb-5">
+          <Link to="/terms" className="underline">Regulamin i Polityka Prywatności</Link>
+        </p>
       </div>
     );
   }
@@ -239,6 +306,7 @@ const Home = () => {
                   : "";
                 const priorityLabels = (trip.priorities as string[]).slice(0, 4).join(" / ");
                 const todayRoute = getTodayRoute(trip);
+                const pendingRoute = getPendingReviewRoute(trip);
 
                 return (
                   <div key={trip.id}>
@@ -269,12 +337,13 @@ const Home = () => {
                       <button
                         onClick={(e) => { e.stopPropagation(); setDeletingTrip(trip); }}
                         className="absolute top-4 right-3 p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        aria-label="Usuń podróż"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
 
-                    {/* Inline checkin for today's route */}
+                    {/* Inline checkin for today's route (auto-triggered) */}
                     {todayRoute && todayRoute.pins?.length > 0 && (
                       <TripCheckinSection
                         routeId={todayRoute.id}
@@ -287,6 +356,17 @@ const Home = () => {
                         onComplete={handleCheckinComplete}
                       />
                     )}
+
+                    {/* Manual review button — when no auto-checkin but there's a pending route */}
+                    {!todayRoute && pendingRoute && (
+                      <button
+                        onClick={() => navigate(`/day-review?route=${pendingRoute.id}`)}
+                        className="mt-2 w-full flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5 px-1"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        Oceń dzień podróży
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -297,6 +377,46 @@ const Home = () => {
             </p>
           )}
         </section>
+
+        {/* Journal — completed day reviews */}
+        {journalRoutes && journalRoutes.length > 0 && (
+          <section className="mb-8">
+            <h3 className="text-lg font-bold mb-3">Dziennik podróży</h3>
+            <div className="space-y-3">
+              {journalRoutes.map((route: any) => (
+                <div key={route.id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-bold">{route.city || route.title}</p>
+                      {route.start_date && (
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(route.start_date), "dd.MM.yyyy")}
+                        </p>
+                      )}
+                    </div>
+                    <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </div>
+                  {route.ai_summary && (
+                    <p className="text-xs text-muted-foreground leading-relaxed mb-2">
+                      {route.ai_summary}
+                    </p>
+                  )}
+                  {route.ai_highlight && (
+                    <div className="bg-muted/50 rounded-lg px-3 py-2 text-xs">
+                      <span className="font-medium">Najlepszy moment: </span>
+                      <span className="text-muted-foreground">{route.ai_highlight}</span>
+                    </div>
+                  )}
+                  {route.ai_tip && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      <span className="font-medium">Tip: </span>{route.ai_tip}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Past routes */}
         <section>
