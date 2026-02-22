@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,7 @@ const Home = () => {
   const queryClient = useQueryClient();
   const [previewRoute, setPreviewRoute] = useState<any>(null);
   const [deletingTrip, setDeletingTrip] = useState<any>(null);
+  const [dayReviewModal, setDayReviewModal] = useState<{ route: any; city: string } | null>(null);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -103,6 +104,8 @@ const Home = () => {
   const handleTripClick = (trip: any) => {
     const days = trip.routes.map((r: any) => ({
       day_number: r.day_number || 1,
+      route_id: r.id,
+      chat_status: r.chat_status || "none",
       title: r.title,
       start_date: r.start_date,
       pins: (r.pins || []).sort((a: any, b: any) => a.pin_order - b.pin_order).map((p: any) => ({
@@ -179,8 +182,8 @@ const Home = () => {
 
   const trips = getActiveTrips();
 
-  // Find the current day's route for review
-  const getCurrentDayRoute = () => {
+  // Find the current day's route needing review (chat_status !== 'completed')
+  const getCurrentPendingReview = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     for (const trip of trips) {
@@ -188,20 +191,28 @@ const Home = () => {
       const tripStart = new Date(trip.startDate);
       tripStart.setHours(0, 0, 0, 0);
       if (today >= tripStart) {
-        // Find which day we're on
         const dayDiff = Math.floor((today.getTime() - tripStart.getTime()) / (1000 * 60 * 60 * 24));
         const targetDayNumber = dayDiff + 1;
         const route = trip.routes.find((r: any) => (r.day_number || 1) === targetDayNumber);
-        if (route) return route;
-        // Fallback to last day
-        return trip.routes[trip.routes.length - 1];
+        const candidate = route || trip.routes[trip.routes.length - 1];
+        if (candidate && candidate.chat_status !== "completed") {
+          return { route: candidate, city: trip.city };
+        }
       }
     }
     return null;
   };
 
-  const currentDayRoute = getCurrentDayRoute();
-  const hasTripInProgress = !!currentDayRoute;
+  const pendingReview = getCurrentPendingReview();
+
+  // Show day review modal once per session when there's a pending review
+  useEffect(() => {
+    if (!pendingReview) return;
+    const key = `day-review-shown-${pendingReview.route.id}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    setDayReviewModal(pendingReview);
+  }, [activeRoutes]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -311,13 +322,26 @@ const Home = () => {
         </section>
       </div>
 
-      {hasTripInProgress && currentDayRoute && (
-        <button
-          onClick={() => navigate(`/day-review?route=${currentDayRoute.id}`)}
-          className="fixed bottom-24 right-5 bg-cta-accent text-cta-accent-foreground px-6 py-3 rounded-full text-base font-bold shadow-lg hover:brightness-95 transition-all animate-[subtle-bounce_2.5s_ease-in-out_infinite] z-10"
-        >
-          Jak Twój dzień?
-        </button>
+      {/* Day review modal — shown once per session when review is pending */}
+      {dayReviewModal && (
+        <AlertDialog open={!!dayReviewModal} onOpenChange={(open) => !open && setDayReviewModal(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Jak minął dzień w {dayReviewModal.city}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Opowiedz nam o swojej podróży — zajmie to tylko chwilę.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setDayReviewModal(null)}>
+                Wróć później
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={() => { setDayReviewModal(null); navigate(`/day-review?route=${dayReviewModal.route.id}`); }}>
+                Podziel się
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
 
       <div className="fixed bottom-0 left-0 right-0 bg-foreground px-4 py-4">

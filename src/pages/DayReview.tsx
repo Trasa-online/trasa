@@ -13,20 +13,9 @@ interface ChatMessage {
   content: string;
 }
 
-const QUESTIONS_POSITIVE = [
-  "Który moment był najbardziej \"wow\"?",
-  "Czy ta kolejność (przebieg trasy) miała sens?",
-  "Czy poleciłbyś znajomym podobny układ dnia?",
-];
-
-const QUESTIONS_NEGATIVE = [
-  "Co sprawiło, że zmieniliście plan?",
-  "Czy ta kolejność (przebieg trasy) miała sens?",
-  "Czy poleciłbyś znajomym podobny układ dnia?",
-  "Czy rozważaliście inne miejsca, których nie odwiedziliście ostatecznie?",
-  "Czy jakieś czynniki zewnętrzne wpłynęły na Waszą podróż? (Np. pogoda)?",
-  "Gdybyś miał zaplanować ten dzień jeszcze raz, co byś zmienił?",
-  "Który moment był najbardziej \"wow\"?",
+const QUESTIONS = [
+  "Z kim byłeś i jaki nastrój planowałeś na ten dzień?",
+  "Co zapamiętasz najbardziej? Co byś zmienił następnym razem?",
 ];
 
 const hasVoiceSupport =
@@ -137,12 +126,15 @@ const DayReview = () => {
       return;
     }
     try {
-      await supabase.from("chat_sessions").upsert({
-        route_id: routeId,
-        user_id: user.id,
-        messages: messages as any,
-        completed_at: new Date().toISOString(),
-      }, { onConflict: "route_id" });
+      await Promise.all([
+        supabase.from("chat_sessions").upsert({
+          route_id: routeId,
+          user_id: user.id,
+          messages: messages as any,
+          completed_at: new Date().toISOString(),
+        }, { onConflict: "route_id" }),
+        supabase.from("routes").update({ chat_status: "completed" }).eq("id", routeId),
+      ]);
     } catch (err) {
       console.error("Failed to save chat session:", err);
     }
@@ -153,13 +145,12 @@ const DayReview = () => {
   // Handle initial yes/no choice
   const handleInitialChoice = (positive: boolean) => {
     const userMsg = positive ? "Tak, wszystko poszło zgodnie z planem!" : "Nie do końca.";
-    const queue = positive ? QUESTIONS_POSITIVE : QUESTIONS_NEGATIVE;
 
     setMessages(prev => [...prev, { role: "user", content: userMsg }]);
-    setQuestionQueue(queue);
+    setQuestionQueue(QUESTIONS);
     setQuestionIndex(0);
     setChatStarted(true);
-    askNextQuestion(queue, 0);
+    askNextQuestion(QUESTIONS, 0);
   };
 
   // Send a free-text answer
@@ -269,18 +260,26 @@ const DayReview = () => {
 
         {/* Quick choice buttons (before chat starts) */}
         {!chatStarted && (
-          <div className="px-5 pb-4 flex gap-2">
+          <div className="px-5 pb-4 space-y-2">
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleInitialChoice(true)}
+                className="flex-1 rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-[14px] font-medium hover:bg-muted transition-colors"
+              >
+                Tak ✅
+              </button>
+              <button
+                onClick={() => handleInitialChoice(false)}
+                className="flex-1 rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-[14px] font-medium hover:bg-muted transition-colors"
+              >
+                Nie do końca 🤔
+              </button>
+            </div>
             <button
-              onClick={() => handleInitialChoice(true)}
-              className="flex-1 rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-[14px] font-medium hover:bg-muted transition-colors"
+              onClick={() => navigate("/")}
+              className="w-full text-center text-[13px] text-muted-foreground hover:text-foreground transition-colors py-1"
             >
-              Tak ✅
-            </button>
-            <button
-              onClick={() => handleInitialChoice(false)}
-              className="flex-1 rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-[14px] font-medium hover:bg-muted transition-colors"
-            >
-              Nie do końca 🤔
+              Wróć później
             </button>
           </div>
         )}
