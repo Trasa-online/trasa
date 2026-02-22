@@ -4,6 +4,7 @@ import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Pin {
   id: string;
@@ -34,7 +35,18 @@ const TripCheckinSection = ({ routeId, pins, onComplete, date, dayNumber }: Trip
   const checkedCount = sortedPins.filter(p => isVisited(p.id)).length;
   const allChecked = sortedPins.length > 0 && checkedCount === sortedPins.length;
 
+  const [confirmEmpty, setConfirmEmpty] = useState(false);
+
+  const handleContinueClick = () => {
+    if (checkedCount === 0) {
+      setConfirmEmpty(true);
+      return;
+    }
+    handleContinue();
+  };
+
   const handleContinue = async () => {
+    setConfirmEmpty(false);
     setSaving(true);
     try {
       await Promise.all(
@@ -144,7 +156,7 @@ const TripCheckinSection = ({ routeId, pins, onComplete, date, dayNumber }: Trip
           </div>
 
           <Button
-            onClick={handleContinue}
+            onClick={handleContinueClick}
             disabled={saving}
             size="sm"
             className="w-full rounded-full text-sm font-medium mt-3"
@@ -157,6 +169,21 @@ const TripCheckinSection = ({ routeId, pins, onComplete, date, dayNumber }: Trip
           </Button>
         </>
       )}
+
+      <AlertDialog open={confirmEmpty} onOpenChange={setConfirmEmpty}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Nie zaznaczyłeś żadnego miejsca</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz kontynuować? Wszystkie miejsca zostaną oznaczone jako pominięte.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Wróć</AlertDialogCancel>
+            <AlertDialogAction onClick={handleContinue}>Kontynuuj</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
