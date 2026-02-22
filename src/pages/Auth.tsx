@@ -58,8 +58,14 @@ const Auth = () => {
           username: username.trim(),
         });
       }
-      toast.success("Konto założone! Sprawdź email w celu weryfikacji.");
-      setMode("login");
+      if (data.session) {
+        // Email confirmation disabled — user is logged in immediately
+        navigate("/");
+      } else {
+        // Email confirmation enabled — user must verify email first
+        toast.success("Konto założone! Sprawdź email w celu weryfikacji, a następnie zaloguj się.");
+        setMode("login");
+      }
     } catch (error: any) {
       toast.error(error.message || "Błąd rejestracji");
     } finally {
