@@ -7,6 +7,7 @@ interface PageHeaderProps {
   title: string;
   showBack?: boolean;
   showBell?: boolean;
+  showSearch?: boolean;
   unreadCount?: number;
   rightAction?: ReactNode;
   onBackClick?: () => void;
