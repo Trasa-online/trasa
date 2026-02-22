@@ -291,7 +291,15 @@ const Home = () => {
                     ? `${format(new Date(trip.startDate), "dd")}-${format(new Date(trip.endDate), "dd/MM/yyyy")}`
                     : format(new Date(trip.startDate), "dd/MM/yyyy")
                   : "";
-                const priorityLabels = (trip.priorities as string[]).slice(0, 4).join(" / ");
+                const PRIORITY_EMOJI: Record<string, string> = {
+                  good_food: "🍽️", nice_views: "🌅", long_walks: "🚶",
+                  museums: "🏛️", nightlife: "🌙", shopping: "🛍️",
+                  local_vibes: "🎭", photography: "📸",
+                };
+                const priorityEmojis = (trip.priorities as string[])
+                  .slice(0, 6)
+                  .map(p => PRIORITY_EMOJI[p] ?? p)
+                  .join("  ");
                 const todayRoute = getTodayRoute(trip);
                 const pendingRoute = getPendingReviewRoute(trip);
 
@@ -306,9 +314,9 @@ const Home = () => {
                         <div className="flex items-start justify-between">
                           <div className="min-w-0">
                             <p className="text-base font-bold">{trip.city}</p>
-                            {priorityLabels && (
-                              <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                                {priorityLabels}
+                            {priorityEmojis && (
+                              <p className="text-base mt-0.5 tracking-wide">
+                                {priorityEmojis}
                               </p>
                             )}
                           </div>
@@ -343,6 +351,8 @@ const Home = () => {
                             suggested_time: p.suggested_time,
                           }))}
                           onComplete={handleCheckinComplete}
+                          date={todayRoute.start_date}
+                          dayNumber={todayRoute.day_number}
                         />
                       </div>
                     )}
