@@ -13,7 +13,7 @@ interface ChatMessage {
   content: string;
 }
 
-const QUESTIONS = [
+const BASE_QUESTIONS = [
   "Gdzie byłeś i jakie było tempo dnia?",
   "Które miejsca z planu odwiedziłeś? Coś pominąłeś lub dodałeś spontanicznie?",
   "Co było najlepsze? Co byś zmienił następnym razem?",
@@ -90,6 +90,21 @@ const DayReview = () => {
     pins: sortedPins,
   }], [dayNumber, sortedPins]);
 
+  const skippedPinNames = useMemo(() => {
+    if (!route?.pins) return [];
+    return (route.pins as any[])
+      .filter(p => p.was_skipped)
+      .sort((a, b) => a.pin_order - b.pin_order)
+      .map(p => p.place_name);
+  }, [route]);
+
+  const questions = useMemo(() => {
+    const q2 = skippedPinNames.length > 0
+      ? `Widzę, że pominąłeś: ${skippedPinNames.join(", ")}. Co się stało? Coś może dodałeś spontanicznie?`
+      : BASE_QUESTIONS[1];
+    return [BASE_QUESTIONS[0], q2, BASE_QUESTIONS[2]];
+  }, [skippedPinNames]);
+
   // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
@@ -148,10 +163,10 @@ const DayReview = () => {
     const userMsg = positive ? "Tak, wszystko poszło zgodnie z planem!" : "Nie do końca.";
 
     setMessages(prev => [...prev, { role: "user", content: userMsg }]);
-    setQuestionQueue(QUESTIONS);
+    setQuestionQueue(questions);
     setQuestionIndex(0);
     setChatStarted(true);
-    askNextQuestion(QUESTIONS, 0);
+    askNextQuestion(questions, 0);
   };
 
   // Send a free-text answer

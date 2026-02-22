@@ -210,28 +210,6 @@ const Home = () => {
 
   const trips = getActiveTrips();
 
-  // Find the current day's route needing review (chat_status !== 'completed')
-  const getCurrentPendingReview = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    for (const trip of trips) {
-      if (!trip.startDate) continue;
-      const tripStart = new Date(trip.startDate);
-      tripStart.setHours(0, 0, 0, 0);
-      if (today >= tripStart) {
-        const dayDiff = Math.floor((today.getTime() - tripStart.getTime()) / (1000 * 60 * 60 * 24));
-        const targetDayNumber = dayDiff + 1;
-        const route = trip.routes.find((r: any) => (r.day_number || 1) === targetDayNumber);
-        const candidate = route || trip.routes[trip.routes.length - 1];
-        if (candidate && candidate.chat_status !== "completed") {
-          return { route: candidate, city: trip.city };
-        }
-      }
-    }
-    return null;
-  };
-
-  const pendingReview = getCurrentPendingReview();
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -355,7 +333,7 @@ const Home = () => {
               <AlertDialogCancel onClick={() => setDayReviewModal(null)}>
                 Wróć później
               </AlertDialogCancel>
-              <AlertDialogAction onClick={() => { setDayReviewModal(null); navigate(`/day-review?route=${dayReviewModal.route.id}`); }}>
+              <AlertDialogAction onClick={() => { setDayReviewModal(null); navigate(`/day-checkin?route=${dayReviewModal.route.id}`); }}>
                 Podziel się
               </AlertDialogAction>
             </AlertDialogFooter>

@@ -20,6 +20,7 @@ import QRCodePage from "./pages/QRCode";
 import CreateFolder from "./pages/CreateFolder";
 import CreateTrip from "./pages/CreateTrip";
 import DayReview from "./pages/DayReview";
+import DayCheckin from "./pages/DayCheckin";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/create-trip/:id" element={<CreateTrip />} />
           <Route path="/create-folder" element={<CreateFolder />} />
           <Route path="/edit-folder/:id" element={<CreateFolder />} />
+          <Route path="/day-checkin" element={<DayCheckin />} />
           <Route path="/day-review" element={<DayReview />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
