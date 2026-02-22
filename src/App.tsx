@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import CreateTrip from "./pages/CreateTrip";
 import DayReview from "./pages/DayReview";
 import Terms from "./pages/Terms";
+import MyRoutes from "./pages/MyRoutes";
 
 const queryClient = new QueryClient();
 
@@ -26,10 +27,9 @@ const App = () => (
           <Route path="/terms" element={<Terms />} />
           <Route path="/" element={<AppLayout><Home /></AppLayout>} />
           <Route path="/create" element={<CreateRoute />} />
-          <Route path="/edit/:id" element={<CreateRoute />} />
+          <Route path="/my-routes" element={<AppLayout><MyRoutes /></AppLayout>} />
           <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
           <Route path="/create-trip" element={<CreateTrip />} />
-          <Route path="/create-trip/:id" element={<CreateTrip />} />
           <Route path="/day-review" element={<DayReview />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
