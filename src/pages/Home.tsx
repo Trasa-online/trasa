@@ -146,6 +146,34 @@ const Home = () => {
     }
     setDeletingTrip(null);
   };
+
+  // Show day review modal once per session when there's a pending review
+  useEffect(() => {
+    if (!user || authLoading || !activeRoutes) return;
+    const trips = getActiveTrips();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (const trip of trips) {
+      if (!trip.startDate) continue;
+      const tripStart = new Date(trip.startDate);
+      tripStart.setHours(0, 0, 0, 0);
+      if (today >= tripStart) {
+        const dayDiff = Math.floor((today.getTime() - tripStart.getTime()) / (1000 * 60 * 60 * 24));
+        const targetDayNumber = dayDiff + 1;
+        const route = trip.routes.find((r: any) => (r.day_number || 1) === targetDayNumber);
+        const candidate = route || trip.routes[trip.routes.length - 1];
+        if (candidate && candidate.chat_status !== "completed") {
+          const key = `day-review-shown-${candidate.id}`;
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, "1");
+            setDayReviewModal({ route: candidate, city: trip.city });
+          }
+          break;
+        }
+      }
+    }
+  }, [activeRoutes]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -204,15 +232,6 @@ const Home = () => {
   };
 
   const pendingReview = getCurrentPendingReview();
-
-  // Show day review modal once per session when there's a pending review
-  useEffect(() => {
-    if (!pendingReview) return;
-    const key = `day-review-shown-${pendingReview.route.id}`;
-    if (sessionStorage.getItem(key)) return;
-    sessionStorage.setItem(key, "1");
-    setDayReviewModal(pendingReview);
-  }, [activeRoutes]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
