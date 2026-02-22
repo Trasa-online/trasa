@@ -213,7 +213,7 @@ const CreateRoute = () => {
                   mode="single"
                   selected={selectedDate}
                   onSelect={handleDateSelect}
-                  disabled={(date) => { const today = new Date(); today.setHours(0, 0, 0, 0); return date < today; }}
+                  disabled={(date) => { const today = new Date(); today.setHours(0, 0, 0, 0); const d = new Date(date); d.setHours(0, 0, 0, 0); return d.getTime() < today.getTime(); }}
                   initialFocus
                   className={cn("p-3 pointer-events-auto")}
                 />
