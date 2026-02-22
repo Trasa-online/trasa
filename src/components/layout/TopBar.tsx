@@ -8,7 +8,7 @@ const TopBar = () => {
     <header className="sticky top-0 z-50 bg-background border-b border-border/40 px-4 py-3 flex items-center justify-between">
       <div className="w-8" />
       <button
-        onClick={() => navigate("/settings")}
+        onClick={() => navigate("/")}
         className="text-xl font-black tracking-tight"
       >
         TRASA
