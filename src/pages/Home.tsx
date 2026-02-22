@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import RoutePreviewModal from "@/components/route/RoutePreviewModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import TripCheckinSection from "@/components/home/TripCheckinSection";
 
 const Home = () => {
   const { user, loading: authLoading } = useAuth();
@@ -19,7 +20,6 @@ const Home = () => {
   const queryClient = useQueryClient();
   const [previewRoute, setPreviewRoute] = useState<any>(null);
   const [deletingTrip, setDeletingTrip] = useState<any>(null);
-  const [dayReviewModal, setDayReviewModal] = useState<{ route: any; city: string } | null>(null);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -84,7 +84,6 @@ const Home = () => {
       const allPins = routes.flatMap((r: any) => r.pins || []);
       const priorities = first.priorities || [];
       
-      // Calculate date range
       const dates = routes.map((r: any) => r.start_date).filter(Boolean).sort();
       const startDate = dates[0] || null;
       const endDate = dates[dates.length - 1] || startDate;
@@ -99,6 +98,25 @@ const Home = () => {
         routes,
       };
     });
+  };
+
+  // Find today's route for a trip that needs checkin
+  const getTodayRoute = (trip: any) => {
+    if (!trip.startDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tripStart = new Date(trip.startDate);
+    tripStart.setHours(0, 0, 0, 0);
+    if (today < tripStart) return null;
+
+    const dayDiff = Math.floor((today.getTime() - tripStart.getTime()) / (1000 * 60 * 60 * 24));
+    const targetDayNumber = dayDiff + 1;
+    const route = trip.routes.find((r: any) => (r.day_number || 1) === targetDayNumber);
+    const candidate = route || trip.routes[trip.routes.length - 1];
+    if (candidate && candidate.chat_status !== "completed") {
+      return candidate;
+    }
+    return null;
   };
 
   const handleTripClick = (trip: any) => {
@@ -129,12 +147,10 @@ const Home = () => {
 
   const handleDeleteTrip = async (trip: any) => {
     try {
-      // Delete all pins first, then routes
       for (const route of trip.routes) {
         await supabase.from("pins").delete().eq("route_id", route.id);
         await supabase.from("routes").delete().eq("id", route.id);
       }
-      // Delete folder if exists
       if (trip.routes[0]?.folder_id) {
         await supabase.from("route_folders").delete().eq("id", trip.routes[0].folder_id);
       }
@@ -147,32 +163,9 @@ const Home = () => {
     setDeletingTrip(null);
   };
 
-  // Show day review modal once per session when there's a pending review
-  useEffect(() => {
-    if (!user || authLoading || !activeRoutes) return;
-    const trips = getActiveTrips();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    for (const trip of trips) {
-      if (!trip.startDate) continue;
-      const tripStart = new Date(trip.startDate);
-      tripStart.setHours(0, 0, 0, 0);
-      if (today >= tripStart) {
-        const dayDiff = Math.floor((today.getTime() - tripStart.getTime()) / (1000 * 60 * 60 * 24));
-        const targetDayNumber = dayDiff + 1;
-        const route = trip.routes.find((r: any) => (r.day_number || 1) === targetDayNumber);
-        const candidate = route || trip.routes[trip.routes.length - 1];
-        if (candidate && candidate.chat_status !== "completed") {
-          const key = `day-review-shown-${candidate.id}`;
-          if (!sessionStorage.getItem(key)) {
-            sessionStorage.setItem(key, "1");
-            setDayReviewModal({ route: candidate, city: trip.city });
-          }
-          break;
-        }
-      }
-    }
-  }, [activeRoutes]);
+  const handleCheckinComplete = (routeId: string) => {
+    navigate(`/day-review?route=${routeId}`);
+  };
 
   if (authLoading) {
     return (
@@ -210,10 +203,8 @@ const Home = () => {
 
   const trips = getActiveTrips();
 
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Content */}
       <div className="flex-1 overflow-y-auto px-5 pb-24 max-w-lg mx-auto w-full">
         {/* Avatar + Name */}
         <div className="flex flex-col items-center pt-10 pb-8">
@@ -247,38 +238,55 @@ const Home = () => {
                     : format(new Date(trip.startDate), "dd/MM/yyyy")
                   : "";
                 const priorityLabels = (trip.priorities as string[]).slice(0, 4).join(" / ");
+                const todayRoute = getTodayRoute(trip);
 
                 return (
-                  <div key={trip.id} className="relative rounded-xl border border-border hover:bg-muted/30 transition-colors">
-                    <button
-                      onClick={() => handleTripClick(trip)}
-                      className="w-full text-left p-4 pr-12"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="min-w-0">
-                          <p className="text-base font-bold">{trip.city}</p>
-                          {priorityLabels && (
-                            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                              {priorityLabels}
+                  <div key={trip.id}>
+                    <div className="relative rounded-xl border border-border hover:bg-muted/30 transition-colors">
+                      <button
+                        onClick={() => handleTripClick(trip)}
+                        className="w-full text-left p-4 pr-12"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="min-w-0">
+                            <p className="text-base font-bold">{trip.city}</p>
+                            {priorityLabels && (
+                              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                                {priorityLabels}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right shrink-0 ml-3">
+                            {dateStr && (
+                              <p className="text-sm font-medium">{dateStr}</p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Punkty na trasie: {trip.pinCount}
                             </p>
-                          )}
+                          </div>
                         </div>
-                        <div className="text-right shrink-0 ml-3">
-                          {dateStr && (
-                            <p className="text-sm font-medium">{dateStr}</p>
-                          )}
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            Punkty na trasie: {trip.pinCount}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDeletingTrip(trip); }}
-                      className="absolute top-4 right-3 p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeletingTrip(trip); }}
+                        className="absolute top-4 right-3 p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    {/* Inline checkin for today's route */}
+                    {todayRoute && todayRoute.pins?.length > 0 && (
+                      <TripCheckinSection
+                        routeId={todayRoute.id}
+                        pins={(todayRoute.pins as any[]).map((p: any) => ({
+                          id: p.id,
+                          place_name: p.place_name,
+                          pin_order: p.pin_order,
+                          suggested_time: p.suggested_time,
+                        }))}
+                        onComplete={handleCheckinComplete}
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -318,28 +326,6 @@ const Home = () => {
           )}
         </section>
       </div>
-
-      {/* Day review modal — shown once per session when review is pending */}
-      {dayReviewModal && (
-        <AlertDialog open={!!dayReviewModal} onOpenChange={(open) => !open && setDayReviewModal(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Jak minął dzień w {dayReviewModal.city}?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Opowiedz nam o swojej podróży — zajmie to tylko chwilę.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setDayReviewModal(null)}>
-                Wróć później
-              </AlertDialogCancel>
-              <AlertDialogAction onClick={() => { setDayReviewModal(null); navigate(`/day-checkin?route=${dayReviewModal.route.id}`); }}>
-                Podziel się
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
 
       <div className="fixed bottom-0 left-0 right-0 bg-foreground px-4 py-4">
         <div className="max-w-lg mx-auto">

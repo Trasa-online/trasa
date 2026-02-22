@@ -3,46 +3,40 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Loader2, X, ArrowLeft, Send, Mic, MicOff } from "lucide-react";
+import { Settings, Loader2, ArrowLeft, Send, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import RoutePlanTimeline from "@/components/route/RoutePlanTimeline";
+import { toast } from "sonner";
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
 
-const BASE_QUESTIONS = [
-  "Gdzie byłeś i jakie było tempo dnia?",
-  "Które miejsca z planu odwiedziłeś? Coś pominąłeś lub dodałeś spontanicznie?",
-  "Co było najlepsze? Co byś zmienił następnym razem?",
-];
-
 const hasVoiceSupport =
   typeof window !== "undefined" &&
   ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
 
 const DayReview = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const routeId = searchParams.get("route");
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [questionQueue, setQuestionQueue] = useState<string[]>([]);
-  const [questionIndex, setQuestionIndex] = useState(0);
   const [input, setInput] = useState("");
   const [listening, setListening] = useState(false);
-  const [chatStarted, setChatStarted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isDone, setIsDone] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [summary, setSummary] = useState<any>(null);
+  const [initialSent, setInitialSent] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  const { data: route, isLoading } = useQuery({
+  const { data: route, isLoading: routeLoading } = useQuery({
     queryKey: ["review-route", routeId],
     queryFn: async () => {
       if (!routeId || !user) return null;
@@ -90,21 +84,6 @@ const DayReview = () => {
     pins: sortedPins,
   }], [dayNumber, sortedPins]);
 
-  const skippedPinNames = useMemo(() => {
-    if (!route?.pins) return [];
-    return (route.pins as any[])
-      .filter(p => p.was_skipped)
-      .sort((a, b) => a.pin_order - b.pin_order)
-      .map(p => p.place_name);
-  }, [route]);
-
-  const questions = useMemo(() => {
-    const q2 = skippedPinNames.length > 0
-      ? `Widzę, że pominąłeś: ${skippedPinNames.join(", ")}. Co się stało? Coś może dodałeś spontanicznie?`
-      : BASE_QUESTIONS[1];
-    return [BASE_QUESTIONS[0], q2, BASE_QUESTIONS[2]];
-  }, [skippedPinNames]);
-
   // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
@@ -114,77 +93,91 @@ const DayReview = () => {
     }
   }, [messages, isDone]);
 
-  // Ask next question from queue
-  const askNextQuestion = useCallback((queue: string[], index: number) => {
-    if (index < queue.length) {
-      setTimeout(() => {
-        setMessages(prev => [...prev, { role: "assistant", content: queue[index] }]);
-        setQuestionIndex(index + 1);
-      }, 600);
-    } else {
-      // All questions asked — finish
-      setTimeout(() => {
-        setMessages(prev => [...prev, {
-          role: "assistant",
-          content: "Dziękuję za odpowiedzi! Zapisuję podsumowanie Twojego dnia. 🙏",
-        }]);
-        setSaving(true);
-        // Save chat session
-        saveChatSession();
-      }, 600);
-    }
-  }, []);
-
-  const saveChatSession = async () => {
-    if (!routeId || !user) {
-      setIsDone(true);
-      setSaving(false);
-      return;
-    }
+  // Send message to chat-route edge function
+  const callChatRoute = useCallback(async (chatMessages: ChatMessage[]) => {
+    if (!routeId || !session?.access_token) return;
+    
+    setIsLoading(true);
     try {
-      await Promise.all([
-        supabase.from("chat_sessions").upsert({
-          route_id: routeId,
-          user_id: user.id,
-          messages: messages as any,
-          completed_at: new Date().toISOString(),
-        }, { onConflict: "route_id" }),
-        supabase.from("routes").update({ chat_status: "completed" }).eq("id", routeId),
-      ]);
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-route`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            route_id: routeId,
+            messages: chatMessages,
+          }),
+        }
+      );
+
+      if (response.status === 429) {
+        toast.error("Zbyt wiele zapytań. Spróbuj ponownie za chwilę.");
+        setIsLoading(false);
+        return;
+      }
+      if (response.status === 402) {
+        toast.error("Brak kredytów AI. Doładuj konto.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        console.error("chat-route error:", errData);
+        toast.error("Błąd AI. Spróbuj ponownie.");
+        setIsLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data.done) {
+        setMessages(prev => [...prev, { role: "assistant", content: data.message }]);
+        setSummary(data.summary);
+        setIsDone(true);
+      } else {
+        setMessages(prev => [...prev, { role: "assistant", content: data.message }]);
+      }
     } catch (err) {
-      console.error("Failed to save chat session:", err);
+      console.error("Failed to call chat-route:", err);
+      toast.error("Błąd połączenia. Spróbuj ponownie.");
     }
-    setSaving(false);
-    setIsDone(true);
-  };
+    setIsLoading(false);
+  }, [routeId, session?.access_token]);
 
-  // Handle initial yes/no choice
-  const handleInitialChoice = (positive: boolean) => {
-    const userMsg = positive ? "Tak, wszystko poszło zgodnie z planem!" : "Nie do końca.";
-
-    setMessages(prev => [...prev, { role: "user", content: userMsg }]);
-    setQuestionQueue(questions);
-    setQuestionIndex(0);
-    setChatStarted(true);
-    askNextQuestion(questions, 0);
-  };
+  // Trigger initial AI message when route loads
+  useEffect(() => {
+    if (route && !initialSent && !routeLoading) {
+      setInitialSent(true);
+      // Send empty user greeting to get AI's first message
+      const initialMessages: ChatMessage[] = [
+        { role: "user", content: "Cześć! Opowiem Ci o moim dniu." },
+      ];
+      setMessages([{ role: "user", content: "Cześć! Opowiem Ci o moim dniu." }]);
+      callChatRoute(initialMessages);
+    }
+  }, [route, initialSent, routeLoading, callChatRoute]);
 
   // Send a free-text answer
   const sendMessage = useCallback(() => {
     const text = input.trim();
-    if (!text || isDone) return;
+    if (!text || isDone || isLoading) return;
 
-    const newMessages: ChatMessage[] = [...messages, { role: "user", content: text }];
+    const userMsg: ChatMessage = { role: "user", content: text };
+    const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
 
-    // Reset textarea height
     if (inputRef.current) {
       inputRef.current.style.height = "auto";
     }
 
-    askNextQuestion(questionQueue, questionIndex);
-  }, [input, messages, questionQueue, questionIndex, isDone, askNextQuestion]);
+    callChatRoute(newMessages);
+  }, [input, messages, isDone, isLoading, callChatRoute]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -229,7 +222,7 @@ const DayReview = () => {
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
   };
 
-  if (isLoading || !route) {
+  if (routeLoading || !route) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <header className="bg-muted px-4 py-4 flex items-center justify-between">
@@ -263,45 +256,13 @@ const DayReview = () => {
 
       {/* Scrollable content */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        {/* AI intro + timeline */}
-        <div className="px-5 pt-6 pb-2">
-          <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3 max-w-[85%] text-[14px] leading-relaxed">
-            Czy Twój dzień przebiegł zgodnie z planem?
-          </div>
-        </div>
-
+        {/* Timeline */}
         <div className="px-1">
           <RoutePlanTimeline days={timelineDays} totalDays={totalDays} />
         </div>
 
-        {/* Quick choice buttons (before chat starts) */}
-        {!chatStarted && (
-          <div className="px-5 pb-4 space-y-2">
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleInitialChoice(true)}
-                className="flex-1 rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-[14px] font-medium hover:bg-muted transition-colors"
-              >
-                Tak ✅
-              </button>
-              <button
-                onClick={() => handleInitialChoice(false)}
-                className="flex-1 rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-[14px] font-medium hover:bg-muted transition-colors"
-              >
-                Nie do końca 🤔
-              </button>
-            </div>
-            <button
-              onClick={() => navigate("/")}
-              className="w-full text-center text-[13px] text-muted-foreground hover:text-foreground transition-colors py-1"
-            >
-              Wróć później
-            </button>
-          </div>
-        )}
-
         {/* Chat messages */}
-        {chatStarted && messages.length > 0 && (
+        {messages.length > 0 && (
           <div className="px-4 py-2 space-y-3">
             {messages.map((msg, i) => (
               <div
@@ -323,6 +284,15 @@ const DayReview = () => {
                 </div>
               </div>
             ))}
+
+            {/* Loading indicator */}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-2.5">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -346,7 +316,7 @@ const DayReview = () => {
       </div>
 
       {/* Sticky input — only when chat is active and not done */}
-      {chatStarted && !isDone && (
+      {!isDone && (
         <div className="sticky bottom-0 border-t border-border/40 bg-background p-3 z-10">
           <div className="flex items-end gap-2 max-w-lg mx-auto">
             {hasVoiceSupport && (
@@ -372,7 +342,7 @@ const DayReview = () => {
                 onKeyDown={handleKeyDown}
                 placeholder="Napisz odpowiedź..."
                 rows={1}
-                disabled={saving}
+                disabled={isLoading}
                 className="w-full resize-none rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-[14px] placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 disabled:opacity-50"
                 style={{ maxHeight: "120px" }}
               />
@@ -381,7 +351,7 @@ const DayReview = () => {
             <Button
               size="icon"
               onClick={sendMessage}
-              disabled={!input.trim() || saving}
+              disabled={!input.trim() || isLoading}
               className="flex-shrink-0 h-10 w-10 rounded-full"
             >
               <Send className="h-4 w-4" />
