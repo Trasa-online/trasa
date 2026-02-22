@@ -14,8 +14,9 @@ interface ChatMessage {
 }
 
 const QUESTIONS = [
-  "Z kim byłeś i jaki nastrój planowałeś na ten dzień?",
-  "Co zapamiętasz najbardziej? Co byś zmienił następnym razem?",
+  "Gdzie byłeś i jakie było tempo dnia?",
+  "Które miejsca z planu odwiedziłeś? Coś pominąłeś lub dodałeś spontanicznie?",
+  "Co było najlepsze? Co byś zmienił następnym razem?",
 ];
 
 const hasVoiceSupport =

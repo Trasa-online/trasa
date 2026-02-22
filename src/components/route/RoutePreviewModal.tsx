@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { X, Lock } from "lucide-react";
+import { X } from "lucide-react";
 import { format } from "date-fns";
 import RoutePlanTimeline from "./RoutePlanTimeline";
 import RouteMap from "@/components/RouteMap";
@@ -51,15 +51,6 @@ const RoutePreviewModal = ({
       : `Twoja trasa ${format(start, "dd.MM.yyyy")}`
     : `Twoja trasa — ${city}`;
 
-  // A day is locked if any previous day hasn't had its review completed
-  const isDayLocked = (index: number) => {
-    if (index === 0) return false;
-    for (let i = 0; i < index; i++) {
-      if (days[i].chat_status !== "completed") return true;
-    }
-    return false;
-  };
-
   const timelineDays = days.map(d => ({
     day_number: d.day_number,
     pins: d.pins.map(p => ({
@@ -106,29 +97,7 @@ const RoutePreviewModal = ({
           </div>
         )}
 
-        {days.length > 1 ? (
-          days.map((day, idx) =>
-            isDayLocked(idx) ? (
-              <div
-                key={day.day_number}
-                className="mx-5 my-4 rounded-xl border border-dashed border-border/60 bg-muted/20 flex items-center gap-3 px-4 py-4"
-              >
-                <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
-                <p className="text-[13px] text-muted-foreground">
-                  Dzień {day.day_number} odblokuje się po uzupełnieniu dziennika dnia {idx}.
-                </p>
-              </div>
-            ) : (
-              <RoutePlanTimeline
-                key={day.day_number}
-                days={[timelineDays[idx]]}
-                totalDays={days.length}
-              />
-            )
-          )
-        ) : (
-          <RoutePlanTimeline days={timelineDays} totalDays={days.length} />
-        )}
+        <RoutePlanTimeline days={timelineDays} totalDays={days.length} />
       </DialogContent>
     </Dialog>
   );
