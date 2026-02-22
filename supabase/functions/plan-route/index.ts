@@ -135,6 +135,8 @@ serve(async (req) => {
       );
     }
 
+    const MAX_MESSAGES = 10;
+
     const systemPrompt = buildSystemPrompt(preferences, current_plan);
 
     // Call AI
@@ -146,8 +148,14 @@ serve(async (req) => {
       );
     }
 
+    // If message limit reached, force plan generation
+    const forceFinish = userMessages.length >= MAX_MESSAGES;
+    const finishInstruction = forceFinish
+      ? "\n\nUWAGA: Osiągnięto limit wiadomości. Wygeneruj TERAZ plan w bloku <route_plan>...</route_plan> na podstawie zebranych informacji. Nie zadawaj więcej pytań."
+      : "";
+
     const aiMessages = [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: systemPrompt + finishInstruction },
       ...userMessages,
     ];
 

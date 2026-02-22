@@ -163,6 +163,8 @@ serve(async (req) => {
       })
       .join("\n");
 
+    const MAX_MESSAGES = 8;
+
     const systemPrompt = buildSystemPrompt(pinsContext, pins.length);
 
     // Call AI via Lovable gateway
@@ -174,8 +176,14 @@ serve(async (req) => {
       );
     }
 
+    // If message limit reached, force summary generation
+    const forceFinish = userMessages.length >= MAX_MESSAGES;
+    const finishInstruction = forceFinish
+      ? "\n\nUWAGA: Osiągnięto limit wiadomości. Wygeneruj TERAZ podsumowanie w bloku <route_summary>...</route_summary> na podstawie zebranych informacji."
+      : "";
+
     const aiMessages = [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: systemPrompt + finishInstruction },
       ...userMessages,
     ];
 
