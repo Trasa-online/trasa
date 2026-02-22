@@ -22,11 +22,13 @@ const TripCheckinSection = ({ routeId, pins, onComplete }: TripCheckinSectionPro
   const [saving, setSaving] = useState(false);
 
   const sortedPins = [...pins].sort((a, b) => a.pin_order - b.pin_order);
-  const isVisited = (pinId: string) => visited[pinId] !== false;
+  const isVisited = (pinId: string) => !!visited[pinId];
 
   const togglePin = (pinId: string) => {
     setVisited(prev => ({ ...prev, [pinId]: !isVisited(pinId) }));
   };
+
+  const checkedCount = sortedPins.filter(p => isVisited(p.id)).length;
 
   const handleContinue = async () => {
     setSaving(true);
@@ -44,49 +46,67 @@ const TripCheckinSection = ({ routeId, pins, onComplete }: TripCheckinSectionPro
   };
 
   return (
-    <div className="mt-2 rounded-xl border border-border/40 bg-muted/10 p-4">
+    <div className="mt-2 rounded-xl bg-muted/60 p-4">
       <p className="text-sm font-medium mb-1">Które miejsca odwiedziłeś?</p>
       <p className="text-xs text-muted-foreground mb-3">
-        Odznacz pominięte — zapytamy o nie w rozmowie.
+        {checkedCount}/{sortedPins.length} ukończone · Odznacz odwiedzone
       </p>
 
-      <div className="space-y-2">
+      <div className="space-y-0">
         {sortedPins.map((pin, idx) => {
           const checked = isVisited(pin.id);
+          const isLast = idx === sortedPins.length - 1;
           return (
             <button
               key={pin.id}
               onClick={() => togglePin(pin.id)}
-              className={cn(
-                "w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-all",
-                checked
-                  ? "border-border/20 bg-background"
-                  : "border-dashed border-border/30 bg-muted/10 opacity-50"
-              )}
+              className="w-full flex items-start gap-3 text-left py-2.5"
             >
-              <div
-                className={cn(
-                  "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                  checked
-                    ? "border-foreground bg-foreground"
-                    : "border-border/50 bg-transparent"
+              {/* Stepper: number circle + line */}
+              <div className="flex flex-col items-center shrink-0">
+                <div
+                  className={cn(
+                    "h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors",
+                    checked
+                      ? "bg-foreground text-background"
+                      : "bg-transparent border-2 border-border text-muted-foreground"
+                  )}
+                >
+                  {checked ? <Check className="h-3.5 w-3.5" /> : idx + 1}
+                </div>
+                {!isLast && (
+                  <div className="w-px flex-1 min-h-[20px] bg-border/60 my-1" />
                 )}
-              >
-                {checked && <Check className="h-3 w-3 text-background" />}
               </div>
-              <div className="min-w-0 flex-1">
+
+              {/* Place name */}
+              <div className="min-w-0 flex-1 pt-0.5">
                 <p className={cn(
-                  "text-[13px] font-medium",
-                  !checked && "line-through text-muted-foreground"
+                  "text-[13px] font-medium leading-tight",
+                  checked && "line-through text-muted-foreground"
                 )}>
-                  {idx + 1}. {pin.place_name}
+                  {pin.place_name}
                 </p>
               </div>
-              {pin.suggested_time && (
-                <span className="text-[11px] text-muted-foreground shrink-0">
-                  {pin.suggested_time}
-                </span>
-              )}
+
+              {/* Checkbox + time on right */}
+              <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
+                <div
+                  className={cn(
+                    "h-5 w-5 rounded border-2 flex items-center justify-center transition-colors",
+                    checked
+                      ? "border-foreground bg-foreground"
+                      : "border-border bg-card"
+                  )}
+                >
+                  {checked && <Check className="h-3 w-3 text-background" />}
+                </div>
+                {pin.suggested_time && (
+                  <span className="text-[10px] text-muted-foreground">
+                    {pin.suggested_time}
+                  </span>
+                )}
+              </div>
             </button>
           );
         })}
