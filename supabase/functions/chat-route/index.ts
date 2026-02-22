@@ -36,6 +36,7 @@ Wyciągnij: highlight, tip
 - Odnoś się do KONKRETNYCH pinów usera PO NAZWIE
 - Nie sugeruj odpowiedzi na otwarte pytania
 - PIERWSZĄ wiadomość zacznij od ciepłego powitania i od razu zadaj pytanie 1
+- Jeśli user pominął jakieś miejsca (oznaczone [POMINIĘTY]), zapytaj dlaczego — może coś lepszego znalazł, może nie miał czasu. Bądź ciekawy, nie oceniaj.
 
 ## ZAKOŃCZENIE
 Po 3 wymianach (lub wcześniej jeśli masz wystarczające dane) wygeneruj podsumowanie.
@@ -140,7 +141,7 @@ serve(async (req) => {
 
     const { data: pins } = await supabase
       .from("pins")
-      .select("id, place_name, address, pin_order, place_type, place_id")
+      .select("id, place_name, address, pin_order, place_type, place_id, was_skipped, skip_reason, category, suggested_time")
       .eq("route_id", route_id)
       .order("pin_order");
 
@@ -153,7 +154,13 @@ serve(async (req) => {
 
     // Build context
     const pinsContext = pins
-      .map((p: any, i: number) => `${i + 1}. ${p.place_name} (${p.address || "brak adresu"})`)
+      .map((p: any, i: number) => {
+        let line = `${i + 1}. ${p.place_name} (${p.address || "brak adresu"})`;
+        if (p.suggested_time) line += ` [${p.suggested_time}]`;
+        if (p.category) line += ` [${p.category}]`;
+        if (p.was_skipped) line += ` [POMINIĘTY]`;
+        return line;
+      })
       .join("\n");
 
     const systemPrompt = buildSystemPrompt(pinsContext, pins.length);
