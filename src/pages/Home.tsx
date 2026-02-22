@@ -135,8 +135,14 @@ const Home = () => {
     return null;
   };
 
-  // Find any route with pending review (for manual entry)
+  // Find a route with pending review (for manual entry) — only if trip has already started
   const getPendingReviewRoute = (trip: any) => {
+    if (!trip.startDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tripStart = new Date(trip.startDate);
+    tripStart.setHours(0, 0, 0, 0);
+    if (today < tripStart) return null;
     return trip.routes.find((r: any) => r.chat_status !== "completed" && (r.pins || []).length > 0) || null;
   };
 
