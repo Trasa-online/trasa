@@ -242,7 +242,7 @@ const Home = () => {
 
                 return (
                   <div key={trip.id}>
-                    <div className="relative rounded-xl border border-border hover:bg-muted/30 transition-colors">
+                    <div className="relative rounded-xl border border-border bg-card hover:bg-card/90 transition-colors">
                       <button
                         onClick={() => handleTripClick(trip)}
                         className="w-full text-left p-4 pr-12"
@@ -307,7 +307,7 @@ const Home = () => {
                 <button
                   key={route.id}
                   onClick={() => navigate(`/route/${route.id}`)}
-                  className="w-full text-left bg-muted/30 rounded-xl p-3 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                  className="w-full text-left bg-card rounded-xl p-3 flex items-center justify-between hover:bg-card/90 transition-colors border border-border"
                 >
                   <div>
                     <p className="text-sm font-medium">{route.title}</p>
