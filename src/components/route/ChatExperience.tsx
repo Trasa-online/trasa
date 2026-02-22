@@ -55,7 +55,10 @@ const ChatExperience = ({ routeId, pins, onComplete, onSkip }: ChatExperiencePro
       setInitializing(true);
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
+        if (!session) {
+          setInitializing(false);
+          return;
+        }
 
         const response = await supabase.functions.invoke("chat-route", {
           body: { route_id: routeId, messages: [] },

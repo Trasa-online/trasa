@@ -227,7 +227,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: aiMessages,
-        max_tokens: 800,
+        max_tokens: 2000,
         temperature: 0.7,
       }),
     });
@@ -288,7 +288,7 @@ serve(async (req) => {
         route_id,
         user_id: user.id,
         messages: allMessages,
-        current_phase: Math.min(Math.ceil(userMessages.filter((m: any) => m.role === "user").length / 1) + 1, 7),
+        current_phase: Math.min(userMessages.filter((m: any) => m.role === "user").length + 1, 7),
       },
       { onConflict: "route_id" }
     );
@@ -357,7 +357,8 @@ async function saveToDatabase(
     }
   }
 
-  // 3. Insert deviations
+  // 3. Insert deviations (delete first to avoid duplicates on retry)
+  await supabase.from("day_deviations").delete().eq("route_id", routeId);
   if (summary.deviations?.length) {
     await supabase.from("day_deviations").insert(
       summary.deviations.map((d: any) => ({
@@ -369,7 +370,8 @@ async function saveToDatabase(
     );
   }
 
-  // 4. Insert considerations
+  // 4. Insert considerations (delete first to avoid duplicates on retry)
+  await supabase.from("day_considerations").delete().eq("route_id", routeId);
   if (summary.considerations?.length) {
     await supabase.from("day_considerations").insert(
       summary.considerations.map((c: any) => ({
