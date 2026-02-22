@@ -14,7 +14,7 @@ interface ChatMessage {
 }
 
 const QUESTIONS = [
-  "Gdzie byłeś i jakie było tempo dnia? O której przyjechałeś i gdzie wysiadłeś? Jak wyglądał powrót?",
+  "Gdzie byłeś i jakie było tempo dnia?",
   "Które miejsca z planu odwiedziłeś? Coś pominąłeś lub dodałeś spontanicznie?",
   "Co było najlepsze? Co byś zmienił następnym razem?",
 ];

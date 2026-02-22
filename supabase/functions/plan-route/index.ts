@@ -34,9 +34,13 @@ ${currentPlanContext}
 
 ## FAZY ROZMOWY (max 3 wymiany przed generowaniem planu)
 
-### Faza 1 — DESTYNACJA + KONTEKST
-Zapytaj dokąd jedzie i czy ma już jakieś plany (nocleg, konkretne miejsca do odwiedzenia).
-Bądź ciepły i przyjazny. Jedno pytanie.
+### Faza 1 — DESTYNACJA + LOGISTYKA
+Zapytaj dokąd jedzie i zbierz kluczowe dane logistyczne w jednym ciepłym pytaniu:
+- Destynacja (miasto / okolica)
+- Godzina przyjazdu i skąd wysiada (np. dworzec, lotnisko, przystanek)
+- Nocleg — czy ma zarezerwowany i w której części miasta
+- Godzina odjazdu / ostatni pociąg lub kiedy musi wracać
+Te dane pozwolą ułożyć plan z realistycznym startem i zakończeniem trasy.
 
 ### Faza 2 — DOPRECYZOWANIE
 Na podstawie priorytetów i odpowiedzi dopytaj o szczegóły.
@@ -87,6 +91,9 @@ Gdy generujesz lub aktualizujesz plan, napisz KRÓTKI komentarz (1-2 zdania), a 
 - Dla tempo "calm": 3-5 miejsc/dzień  
 - Dla tempo "mixed": 5-6 miejsc/dzień
 - Uwzględniaj logiczną kolejność (bliskość geograficzna, pory posiłków)
+- Jeśli znasz godzinę przyjazdu i punkt wysiadania — zacznij trasę od tej okolicy o tej godzinie
+- Jeśli znasz nocleg — uwzględnij jego lokalizację przy planowaniu końca dnia
+- Jeśli znasz godzinę odjazdu — zakończ trasę w pobliżu punktu odjazdu z odpowiednim buforem
 - suggested_time powinien być realistyczny (nie 2 muzea pod rząd)
 - PIERWSZĄ wiadomość zacznij od ciepłego powitania i od razu pytanie o destynację`;
 }
