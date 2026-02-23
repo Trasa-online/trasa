@@ -19,8 +19,14 @@ const Auth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate("/");
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("onboarding_completed")
+        .eq("id", session.user.id)
+        .single();
+      navigate(profile?.onboarding_completed ? "/" : "/onboarding");
     });
   }, [navigate]);
 
@@ -28,9 +34,14 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      navigate("/");
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("onboarding_completed")
+        .eq("id", data.user!.id)
+        .single();
+      navigate(profile?.onboarding_completed ? "/" : "/onboarding");
     } catch (error: any) {
       toast.error(error.message || "Błąd logowania");
     } finally {
@@ -60,7 +71,7 @@ const Auth = () => {
       }
       if (data.session) {
         // Email confirmation disabled — user is logged in immediately
-        navigate("/");
+        navigate("/onboarding");
       } else {
         // Email confirmation enabled — user must verify email first
         toast.success("Konto założone! Sprawdź email w celu weryfikacji, a następnie zaloguj się.");

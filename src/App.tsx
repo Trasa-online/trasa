@@ -13,6 +13,7 @@ import CreateTrip from "./pages/CreateTrip";
 import DayReview from "./pages/DayReview";
 import Terms from "./pages/Terms";
 import MyRoutes from "./pages/MyRoutes";
+import Onboarding from "./pages/Onboarding";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
           <Route path="/create-trip" element={<CreateTrip />} />
           <Route path="/day-review" element={<DayReview />} />
+          <Route path="/onboarding" element={<Onboarding />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

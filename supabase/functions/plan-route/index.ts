@@ -11,7 +11,40 @@ interface TripPreferences {
   planningMode: string;
 }
 
-function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any): string {
+interface UserProfile {
+  dietary_prefs?: string[];
+  travel_interests?: string[];
+}
+
+const DIETARY_LABEL: Record<string, string> = {
+  vege: "wegetarianin",
+  vegan: "vegan",
+  coffee: "coffee snob (zależy mu na jakości kawy)",
+  local_food: "preferuje kuchnię lokalną",
+  street_food: "lubi street food",
+  fine_dining: "ceni fine dining",
+  lactose_free: "bez laktozy",
+  gluten_free: "bezglutenowo",
+};
+
+const INTERESTS_LABEL: Record<string, string> = {
+  history: "historia i zabytki",
+  art: "sztuka i kultura",
+  nature: "natura i parki",
+  shopping: "zakupy",
+  nightlife: "nocne życie",
+  photography: "fotografia",
+  architecture: "architektura",
+  music: "muzyka",
+  intensive: "styl intensywny (chce zobaczyć jak najwięcej)",
+  relaxed: "styl spokojny (woli nie spieszyć się)",
+  family: "podróżuje z rodziną",
+  romantic: "wycieczka romantyczna",
+  budget: "ograniczony budżet",
+  luxury: "lubi luksusowe miejsca",
+};
+
+function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile): string {
   const dateInfo = preferences.startDate
     ? `- Data podróży: ${preferences.startDate}`
     : "";
@@ -20,12 +53,22 @@ function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any): str
     ? `\n\n## AKTUALNY PLAN (do edycji)\n${JSON.stringify(currentPlan, null, 2)}`
     : "";
 
+  const dietaryLabels = (userProfile?.dietary_prefs ?? [])
+    .map(k => DIETARY_LABEL[k] ?? k).filter(Boolean);
+  const interestLabels = (userProfile?.travel_interests ?? [])
+    .map(k => INTERESTS_LABEL[k] ?? k).filter(Boolean);
+
+  const userProfileContext = (dietaryLabels.length > 0 || interestLabels.length > 0)
+    ? `\n## PROFIL UŻYTKOWNIKA\n${dietaryLabels.length > 0 ? `- Dieta/jedzenie: ${dietaryLabels.join(", ")}\n` : ""}${interestLabels.length > 0 ? `- Zainteresowania i styl: ${interestLabels.join(", ")}\n` : ""}Uwzględnij te preferencje przy doborze miejsc, restauracji i kolejności trasy.`
+    : "";
+
   return `Jesteś planistą podróży w aplikacji TRASA.
 User chce zaplanować podróż. Oto jego preferencje:
 - Liczba dni: ${preferences.numDays}
 - Tempo: ${preferences.pace === "active" ? "aktywne (dużo zwiedzania)" : preferences.pace === "calm" ? "spokojne (mniej miejsc, więcej czasu)" : "mieszane"}
 - Priorytety: ${preferences.priorities.length > 0 ? preferences.priorities.join(", ") : "brak konkretnych"}
 ${dateInfo}
+${userProfileContext}
 ${currentPlanContext}
 
 ## FAZY ROZMOWY (max 3 wymiany przed generowaniem planu)
@@ -146,7 +189,14 @@ serve(async (req) => {
 
     const MAX_MESSAGES = 10;
 
-    const systemPrompt = buildSystemPrompt(preferences, current_plan);
+    // Fetch user profile preferences
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("dietary_prefs, travel_interests")
+      .eq("id", user.id)
+      .single();
+
+    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined);
 
     // Call AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
