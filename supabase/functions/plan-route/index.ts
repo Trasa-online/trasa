@@ -45,54 +45,48 @@ const INTERESTS_LABEL: Record<string, string> = {
   luxury: "lubi luksusowe miejsca",
 };
 
-function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile): string {
-  const dateInfo = preferences.startDate
-    ? `- Data podróży: ${preferences.startDate}`
-    : "";
+const PRIORITY_LABEL_PL: Record<string, string> = {
+  good_food: "dobre jedzenie",
+  nice_views: "ładne widoki",
+  long_walks: "długie spacery",
+  museums: "muzea i kultura",
+  nightlife: "życie nocne",
+  shopping: "zakupy",
+  local_vibes: "lokalne klimaty",
+  photography: "fotografia",
+};
 
-  const cityInfo = preferences.city?.trim()
-    ? `- Destynacja: ${preferences.city.trim()}`
-    : "";
+function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile): string {
+  const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}` : "";
+  const cityInfo = preferences.city?.trim() ? `- Destynacja: ${preferences.city.trim()}` : "";
+  const cityKnown = !!preferences.city?.trim();
+  const cityName = preferences.city?.trim() ?? "";
 
   const currentPlanContext = currentPlan
     ? `\n\n## AKTUALNY PLAN (do edycji)\n${JSON.stringify(currentPlan, null, 2)}`
     : "";
 
-  const dietaryLabels = (userProfile?.dietary_prefs ?? [])
-    .map(k => DIETARY_LABEL[k] ?? k).filter(Boolean);
-  const interestLabels = (userProfile?.travel_interests ?? [])
-    .map(k => INTERESTS_LABEL[k] ?? k).filter(Boolean);
+  const dietaryLabels = (userProfile?.dietary_prefs ?? []).map(k => DIETARY_LABEL[k] ?? k).filter(Boolean);
+  const interestLabels = (userProfile?.travel_interests ?? []).map(k => INTERESTS_LABEL[k] ?? k).filter(Boolean);
 
   const userProfileContext = (dietaryLabels.length > 0 || interestLabels.length > 0)
     ? `\n## PROFIL UŻYTKOWNIKA\n${dietaryLabels.length > 0 ? `- Dieta/jedzenie: ${dietaryLabels.join(", ")}\n` : ""}${interestLabels.length > 0 ? `- Zainteresowania i styl: ${interestLabels.join(", ")}\n` : ""}Uwzględnij te preferencje przy doborze miejsc, restauracji i kolejności trasy.`
     : "";
 
-  const cityKnown = !!preferences.city?.trim();
-  const cityName = preferences.city?.trim() ?? "";
+  const isRomantic = (userProfile?.travel_interests ?? []).includes("romantic");
+  const isFamily = (userProfile?.travel_interests ?? []).includes("family");
 
-  // Build a human-readable summary of what the user already filled in
-  const paceLabel = preferences.pace === "active" ? "aktywne" : preferences.pace === "calm" ? "spokojne" : "mieszane";
-
-  const PRIORITY_LABEL_PL: Record<string, string> = {
-    good_food: "dobre jedzenie", nice_views: "ładne widoki", long_walks: "długie spacery",
-    museums: "muzea i kultura", nightlife: "życie nocne", shopping: "zakupy",
-    local_vibes: "lokalne klimaty", photography: "fotografia",
-  };
   const prioritiesPL = preferences.priorities.length > 0
     ? preferences.priorities.map(p => PRIORITY_LABEL_PL[p] ?? p).join(", ")
     : null;
 
-  const summaryParts = [
-    `${preferences.numDays} ${preferences.numDays === 1 ? "dzień" : "dni"}`,
-    `tempo: ${paceLabel}`,
-    ...(prioritiesPL ? [`priorytety: ${prioritiesPL}`] : []),
-    ...(preferences.startDate ? [`data: ${preferences.startDate}`] : []),
-  ];
-  const preferenceSummary = summaryParts.join(", ");
+  const maxPins = preferences.pace === "active" ? "7–8" : preferences.pace === "calm" ? "3–5" : isRomantic ? "4–5" : "5–6";
+  const maxMuseums = isRomantic ? "0 lub 1" : "1";
+  const dinnerEarliest = isRomantic ? "19:00" : "18:30";
 
-  return `Jesteś planistą podróży w aplikacji TRASA.
+  return `Jesteś planistą podróży w aplikacji TRASA. Twoje plany muszą być realistyczne, przestrzennie spójne i emocjonalnie satysfakcjonujące.
 
-## PREFERENCJE USERA (wypełnione przed rozmową)
+## PREFERENCJE USERA
 - Liczba dni: ${preferences.numDays}
 - Tempo: ${preferences.pace === "active" ? "aktywne (dużo zwiedzania)" : preferences.pace === "calm" ? "spokojne (mniej miejsc, więcej czasu)" : "mieszane"}
 - Priorytety: ${prioritiesPL ?? "brak konkretnych"}
@@ -100,45 +94,119 @@ ${dateInfo}
 ${cityInfo}
 ${userProfileContext}
 ${currentPlanContext}
-${cityKnown ? `\n## ⚠️ KLUCZOWA ZASADA\nUser WPISAŁ już destynację: „${cityName}". ABSOLUTNIE NIE pytaj o to gdzie jedzie — już to wiesz. Zacznij od potwierdzenia tej destynacji.\n` : ""}
-## STYL ODPOWIEDZI
+${cityKnown ? `\n## ⚠️ KLUCZOWA ZASADA\nUser wpisał już destynację: „${cityName}". NIE pytaj gdzie jedzie — to już wiesz.\n` : ""}
+## STYL ROZMOWY
 - Pisz krótko i naturalnie — jak znajomy, nie jak asystent.
-- Rozdzielaj myśli na OSOBNE AKAPITY (oddzielone pustą linią \\n\\n). Każdy akapit = 1-2 zdania.
-- Nigdy nie pisz długich bloków tekstu bez przerw.
-- Używaj **pogrubień** dla kluczowych miejsc, nazw i ważnych fraz — format: **tekst**.
-- Dodawaj emoji co jakiś czas (nie do każdego zdania), żeby wiadomość była ciepła i żywa. Np. 🗺️ 🍜 ☕ 🏛️ 🌇 🎯 🚶 przy omawianiu miejsc lub planów.
-- Gdy masz wystarczająco informacji do wygenerowania planu — generuj go NATYCHMIAST w bloku <route_plan>. Możesz napisać jedno krótkie zdanie przed planem, ale NIE pisz "zaraz przygotuję", "daj mi chwilę", "generuję" itp. — po prostu wygeneruj.
+- Rozdzielaj myśli na OSOBNE AKAPITY (\\n\\n). Każdy akapit = 1–2 zdania.
+- Używaj **pogrubień** dla nazw miejsc i kluczowych fraz.
+- Dodawaj emoji kontekstowo: 🗺️ 🍜 ☕ 🏛️ 🌇 🎯 🚶 🌙.
+- Gdy masz wystarczająco info — generuj plan NATYCHMIAST. Nie zapowiadaj generowania.
 
-## FAZY ROZMOWY (max 3 wymiany przed generowaniem planu)
+## FAZY ROZMOWY (max 2–3 wymiany)
 
 ### Faza 1 — START
 ${cityKnown
-  ? `Miasto jest już znane (${cityName}) — pierwsze powitanie zostało już wysłane przez system. Jesteś teraz w trakcie rozmowy. Odpowiadaj na pytania usera i zmierzaj do generowania planu.`
-  : `Zadaj TYLKO te pytania w jednej krótkiej, przyjaznej wiadomości:
-1. Gdzie jedziesz? (miasto / miejsce)
-2. O której chcesz zacząć swoją podróż?
-${preferences.numDays > 1 ? "3. W której części miasta masz nocleg? (wpłynie na planowanie końca każdego dnia)" : "NIE pytaj o nocleg — to jednodniowa wycieczka."}
-Wiadomość ma być krótka i przyjazna — max 2 zdania + pytania jako lista.`}
-Nie pytaj o godzinę powrotu w tej fazie.
+  ? `Destynacja znana (${cityName}). System wysłał już powitanie. Odpowiadaj na pytania usera i zmierzaj do generowania planu.`
+  : `Zapytaj w jednej krótkiej wiadomości:\n1. Gdzie jedziesz?\n2. O której chcesz zacząć?\n${preferences.numDays > 1 ? "3. W której części miasta masz nocleg?" : ""}\nMax 2 zdania wstępu + pytania jako lista.`}
 
-### Faza 2 — DOPRECYZOWANIE
-Na podstawie priorytetów i odpowiedzi dopytaj o szczegóły.
-Np. jaki typ kuchni preferuje, czy chce muzea, jak daleko od centrum.
-Jeśli user dał wystarczająco info w fazie 1, przeskocz do generowania.
+### Faza 2 — DOPRECYZOWANIE (opcjonalna)
+Jeśli brakuje godziny startu lub kluczowego kontekstu — dopytaj JEDNYM pytaniem.
+Jeśli masz wszystko — przejdź bezpośrednio do generowania planu.
 
-### Faza 3 — GENEROWANIE PLANU
-Wygeneruj plan dnia/dni z prawdziwymi miejscami.
-Każde miejsce MUSI zawierać prawdziwą nazwę i adres.
+---
 
-## EDYCJA PLANU
-Gdy user prosi o zmianę:
-- "Zamień X na coś innego" → zaproponuj alternatywę
-- "Dodaj Y" → wstaw w optymalne miejsce
-- "Usuń Z" → usuń i zaproponuj zamiennik
-- Max 3 edycje per dzień
+## HEURYSTYKI PLANOWANIA — OBOWIĄZKOWE
 
-## FORMAT ODPOWIEDZI Z PLANEM
-Gdy generujesz lub aktualizujesz plan, napisz KRÓTKI komentarz (1-2 zdania), a PO NIM dodaj blok:
+### H1. STRUKTURA ENERGETYCZNA DNIA
+Każdy dzień MUSI respektować ten rytm (dostosuj godziny do podanego startu):
+
+Faza START (+0h od startu): Landmark / spacer / zabytek
+Faza LUNCH (+2.5h): Restauracja
+Faza ODKRYWANIE (+4h): Dzielnica / kultura / park
+Faza RESET (+7h): Kawiarnia / chill / odpoczynek
+Faza KULMINACJA (+9h od startu): Kolacja + widok / wieczorny spacer
+
+### H2. LIMITY PUNKTÓW (jakość > ilość)
+- Łącznie na dzień: max ${maxPins} punktów
+- Muzea: max ${maxMuseums} dziennie
+- Nie przepełniaj planu — każde miejsce musi mieć czas na oddychanie
+
+### H3. KULMINACJA EMOCJONALNA (OBOWIĄZKOWA)
+Każdy dzień MUSI kończyć się JEDNYM z:
+- kolacją w klimatycznym miejscu (atmosfera, widok, wino — nie fast food)
+- punktem widokowym o zachodzie słońca
+- wieczornym spacerem nad rzeką / przez park / klimatyczną dzielnicą
+Brak kulminacji = słaby plan. Zawsze sprawdź czy ostatni punkt spełnia to kryterium.
+
+### H4. KLASTER DZIELNICOWY
+- Grupuj miejsca w promieniu 1–1.5 km od siebie
+- Max 1 większy przeskok (>2 km) dziennie — tylko jeśli jest logiczne uzasadnienie
+- ZŁY przykład: Wawel → Nowa Huta → Kazimierz → Podgórze (skakanie po mapie)
+- DOBRY przykład: Wawel → Kazimierz → Podgórze (naturalna ciągłość)
+
+### H5. KOLACJA BLISKO OSTATNIEJ ATRAKCJI
+- Restauracja na kolację: max 800 m od poprzedniego punktu dnia
+- Kolacja nie może wymagać 25-minutowego marszu przez miasto
+
+### H6. LOGIKA PRZEJŚĆ
+- Każde przejście między punktami: < 20 min pieszo (ok. 1.4 km)
+- Wyjątek: max 1 dłuższe przejście dziennie (transport, wyjazd z centrum)
+- Przejścia muszą mieć sens geograficzny — nie skaczemy po mapie
+
+### H7. SYMULACJA CZASU — BLOKI CZASOWE
+Obliczaj suggested_time realistycznie na podstawie tych bloków:
+- Landmark / zabytek / kościół: 60–90 min wizyty
+- Muzeum: 120–180 min wizyty
+- Lunch: 60–90 min
+- Kawiarnia / reset: 45–60 min
+- Park / spacer dzielnicy: 45–90 min
+- Kolacja: 90–120 min
+- Punkt widokowy: 30–45 min
+
+suggested_time to GODZINA PRZYBYCIA. Następne miejsce = poprzednie suggested_time + duration_minutes + czas dojścia.
+
+### H8. GODZINY OTWARCIA
+- Muzea: zwykle 10:00–18:00; nie planuj wizyty po 16:00 jeśli trwa 2h+
+- Kolacja: najwcześniej ${dinnerEarliest}
+- Poniedziałki: wiele muzeów zamkniętych — sprawdź przed wstawieniem
+${isRomantic ? `
+### H9–H11. TRYB ROMANTYCZNY ✓ (aktywny na podstawie profilu)
+
+H9. OGRANICZONA INTENSYWNOŚĆ
+- Max 8–10 km spaceru dziennie
+- Minimum 1 „moment bez celu" w planie: kawiarnia bez pośpiechu, ławka z widokiem, bulwar
+- Brak ekstremalnych tras — chodzi o bycie razem, nie o zaliczanie
+
+H10. KLIMAT > POPULARNOŚĆ
+- Gdy dwa miejsca mają podobny rating — wybierz kameralniejsze
+- Unikaj zatłoczonych, głośnych, fast-paced lokali
+- Preferuj: wine bary, tarasy z widokiem, klimatyczne podwórka, boczne zaułki, kameralne kawiarnie
+
+H11. MOMENT PRYWATNOŚCI (obowiązkowy)
+- Każdy dzień: minimum 1 mniej zatłoczone miejsce (ogród, bulwar, boczna uliczka, mniej centralna kawiarnia)
+- Romantyczny dzień ≠ lista top-10 TripAdvisor — balans między ikonicznymi miejscami a intymnością
+` : ""}${isFamily ? `
+### TRYB RODZINNY ✓
+- Planuj przerwy co 1.5–2h
+- Priorytet: parki, place zabaw, muzea interaktywne
+- Unikaj długich marszów bez punktu docelowego
+- Lunch obowiązkowo; kolacja wcześniej (17:30–19:00)
+` : ""}
+### H12. ADAPTACJA POGODOWA
+Jeśli user wspomni o pogodzie lub możesz wnioskować z daty/miejsca:
+- Deszcz: zamień spacery outdoor → muzeum / galeria / kryty market
+- Upał: więcej miejsc z cieniem/klimatyzacją, spacer późnym popołudniem (po 17:00)
+
+### H13. WEEKENDOWA LOGIKA TŁUMÓW
+Jeśli data to sobota lub niedziela:
+- Główne atrakcje (Rynek, Wawel, Stare Miasto itp.): planuj na 10:00–11:30 lub po 16:00
+- Unikaj flagowych turystycznych miejsc między 12:00–15:00 — zaproponuj alternatywę
+
+---
+
+## FORMAT PLANU
+
+Napisz JEDNO krótkie zdanie komentarza (opcjonalnie), a PO NIM blok planu:
 
 <route_plan>
 {
@@ -149,12 +217,27 @@ Gdy generujesz lub aktualizujesz plan, napisz KRÓTKI komentarz (1-2 zdania), a 
       "pins": [
         {
           "place_name": "Prawdziwa nazwa miejsca",
-          "address": "Pełny adres",
-          "description": "1 zdanie dlaczego warto",
+          "address": "Pełna nazwa ulicy, numer, miasto",
+          "description": "1 zdanie: co tu zrobisz i dlaczego warto",
           "suggested_time": "10:00",
+          "duration_minutes": 90,
           "category": "museum",
-          "latitude": 52.2479,
-          "longitude": 21.0147
+          "latitude": 52.2297,
+          "longitude": 21.0122,
+          "walking_time_from_prev": null,
+          "distance_from_prev": null
+        },
+        {
+          "place_name": "Kolejne miejsce",
+          "address": "...",
+          "description": "...",
+          "suggested_time": "11:45",
+          "duration_minutes": 75,
+          "category": "restaurant",
+          "latitude": 52.2310,
+          "longitude": 21.0145,
+          "walking_time_from_prev": "12 min",
+          "distance_from_prev": "900 m"
         }
       ]
     }
@@ -162,26 +245,24 @@ Gdy generujesz lub aktualizujesz plan, napisz KRÓTKI komentarz (1-2 zdania), a 
 }
 </route_plan>
 
-## ZASADY OGÓLNE
-- Po polsku, naturalnie, krótko (2-3 zdania max na wiadomość przed planem)
-- category może być: restaurant, cafe, museum, park, viewpoint, shopping, nightlife, monument, church, market, bar, gallery
-- Dla tempo "active": 6-8 miejsc/dzień
-- Dla tempo "calm": 3-5 miejsc/dzień
-- Dla tempo "mixed": 5-6 miejsc/dzień
-- Uwzględniaj logiczną kolejność (bliskość geograficzna, pory posiłków)
-- Jeśli znasz godzinę przyjazdu i punkt wysiadania — zacznij trasę od tej okolicy o tej godzinie
-- Jeśli znasz nocleg — uwzględnij jego lokalizację przy planowaniu końca dnia
-- Jeśli znasz godzinę odjazdu — zakończ trasę w pobliżu punktu odjazdu z odpowiednim buforem
-- suggested_time powinien być realistyczny (nie 2 muzea pod rząd)
-- PIERWSZĄ wiadomość zacznij od krótkiego, ciepłego powitania (1 zdanie), a potem od razu lista pytań z Fazy 1 — ŻADNYCH długich wstępów
+ZASADY FORMATU:
+- Pierwszy pin każdego dnia: walking_time_from_prev = null, distance_from_prev = null
+- Każdy kolejny pin: szacuj walking_time_from_prev i distance_from_prev na podstawie znajomości miasta (tempo piesze ~75 m/min = ~1.2 km w 15 min)
+- duration_minutes: czas spędzony w miejscu (bez dojścia), zgodnie z H7
+- suggested_time: godzina PRZYBYCIA = poprzedni suggested_time + poprzedni duration_minutes + czas dojścia
+- category: restaurant | cafe | museum | park | viewpoint | shopping | nightlife | monument | church | market | bar | gallery | walk
 
-## ZASADY DOTYCZĄCE MIEJSC (KRYTYCZNE)
-- Używaj WYŁĄCZNIE miejsc które możesz zweryfikować jako istniejące w Google Maps
-- Koordynaty MUSZĄ być precyzyjne (min. 4 miejsca po przecinku) dla konkretnej lokalizacji
-- Dla zabytków, muzeów, kościołów, parków, pomników: podaj dokładną oficjalną nazwę (np. "Muzeum Narodowe w Krakowie", nie "Muzeum Historyczne")
-- Dla restauracji i kawiarni: używaj TYLKO lokali z rozpoznawalną, weryfikowalną nazwą (znana marka, wieloletni lokal z recenzjami). Jeśli nie jesteś w 100% pewien że lokal istnieje pod tą nazwą — NIE umieszczaj go w planie. Zamiast tego wpisz kategorię miejsca np. "Restauracja w Kazimierzu" i powiedz userowi że może sam wybrać
-- NIE WYMYŚLAJ nazw restauracji, kawiarni ani sklepów — to jest najczęstszy błąd który psuje plan
-- Jeśli nie znasz konkretnej restauracji w danej okolicy, napisz w polu place_name "Kolacja w [dzielnica]" lub "Lunch w pobliżu [landmark]" i w description zaproponuj typ kuchni`;
+## ZASADY MIEJSC (KRYTYCZNE)
+- WYŁĄCZNIE miejsca możliwe do zweryfikowania jako istniejące
+- Koordynaty precyzyjne (min. 4 miejsca po przecinku)
+- Oficjalne nazwy zabytków (np. "Muzeum Narodowe w Krakowie", nie "Muzeum Historyczne")
+- Restauracje/kawiarnie: TYLKO lokale z rozpoznawalną nazwą i recenzjami online. Jeśli nie jesteś pewien istnienia — wpisz "Kolacja w [dzielnica]" i opisz typ kuchni
+- NIE WYMYŚLAJ nazw restauracji — to najczęstszy błąd który niszczy zaufanie do planu
+
+## EDYCJA PLANU
+- "Zamień X" → zaproponuj alternatywę w tej samej okolicy, przelicz czasy
+- "Dodaj Y" → wstaw w logiczne miejsce, zaktualizuj suggested_time kolejnych punktów
+- "Usuń Z" → usuń, sprawdź czy kulminacja emocjonalna (H3) nadal jest zachowana`;
 }
 
 serve(async (req) => {
@@ -230,26 +311,16 @@ serve(async (req) => {
     const MAX_MESSAGES = 10;
 
     // ── Deterministic first message when city is already known ──
-    // Skip AI entirely to guarantee no "where are you going?" question.
     if (userMessages.length === 0 && preferences.city?.trim()) {
       const cityName = preferences.city.trim();
       const nDays = Number(preferences.numDays) || 1;
       const paceLabel = preferences.pace === "active" ? "aktywnym" : preferences.pace === "calm" ? "spokojnym" : "mieszanym";
 
-      const PRIORITY_LABEL_PL: Record<string, string> = {
-        good_food: "dobre jedzenie", nice_views: "ładne widoki", long_walks: "długie spacery",
-        museums: "muzea i kultura", nightlife: "życie nocne", shopping: "zakupy",
-        local_vibes: "lokalne klimaty", photography: "fotografia",
-      };
       const prioritiesPL = Array.isArray(preferences.priorities) && preferences.priorities.length > 0
         ? (preferences.priorities as string[]).map(p => PRIORITY_LABEL_PL[p] ?? p).join(", ")
         : null;
 
       const daysLabel = nDays === 1 ? "1 dzień" : `${nDays} dni`;
-      const prefsLine = [
-        `tempo: ${paceLabel}`,
-        ...(prioritiesPL ? [`priorytety: ${prioritiesPL}`] : []),
-      ].join(", ");
 
       const messageParts = [
         `Świetny wybór — **${cityName}**! 🗺️`,
@@ -292,9 +363,9 @@ serve(async (req) => {
     // If message limit reached or force_plan flag set, force plan generation
     const forceFinish = userMessages.length >= MAX_MESSAGES;
     const finishInstruction = forceFinish
-      ? "\n\nUWAGA: Osiągnięto limit wiadomości. Wygeneruj TERAZ plan w bloku <route_plan>...</route_plan> na podstawie zebranych informacji. Nie zadawaj więcej pytań."
+      ? "\n\nUWAGA: Osiągnięto limit wiadomości. Wygeneruj TERAZ plan w bloku <route_plan>...</route_plan>. Nie zadawaj więcej pytań."
       : force_plan
-      ? "\n\nWYGENERUJ TERAZ PLAN w bloku <route_plan>...</route_plan>. Nie pisz żadnego wstępu ani komentarza przed planem — zacznij bezpośrednio od krótkiego (1 zdanie) komentarza i natychmiast plan."
+      ? "\n\nWYGENERUJ TERAZ PLAN w bloku <route_plan>...</route_plan>. Napisz 1 krótkie zdanie komentarza i natychmiast wygeneruj plan zgodnie ze wszystkimi heurystykami H1–H13."
       : "";
 
     const aiMessages = [
@@ -311,7 +382,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: aiMessages,
-        max_tokens: 4096,
+        max_tokens: 6000,
         temperature: 0.7,
       }),
     });
@@ -336,9 +407,7 @@ serve(async (req) => {
     }
 
     // Check for route plan
-    const planMatch = assistantText.match(
-      /<route_plan>([\s\S]*?)<\/route_plan>/
-    );
+    const planMatch = assistantText.match(/<route_plan>([\s\S]*?)<\/route_plan>/);
 
     let plan = null;
     let cleanMessage = assistantText;
@@ -346,29 +415,20 @@ serve(async (req) => {
     if (planMatch) {
       try {
         plan = JSON.parse(planMatch[1]);
-        cleanMessage = assistantText
-          .replace(/<route_plan>[\s\S]*?<\/route_plan>/, "")
-          .trim();
+        cleanMessage = assistantText.replace(/<route_plan>[\s\S]*?<\/route_plan>/, "").trim();
       } catch (parseErr) {
         console.error("Failed to parse route_plan:", parseErr);
-        // Remove the broken plan block from the message anyway
-        cleanMessage = assistantText
-          .replace(/<route_plan>[\s\S]*?<\/route_plan>/, "")
-          .trim();
+        cleanMessage = assistantText.replace(/<route_plan>[\s\S]*?<\/route_plan>/, "").trim();
       }
     } else if (assistantText.includes("<route_plan>")) {
-      // Truncated response - plan started but closing tag missing
+      // Truncated response — try to fix
       console.warn("Truncated route_plan detected, attempting to fix...");
       const startIdx = assistantText.indexOf("<route_plan>");
       const jsonPart = assistantText.slice(startIdx + "<route_plan>".length).trim();
       cleanMessage = assistantText.slice(0, startIdx).trim();
 
-      // Try to fix truncated JSON by closing open brackets
       try {
-        let fixedJson = jsonPart
-          .replace(/<\/route_plan>.*$/, "")
-          .trim();
-        // Count unclosed brackets and close them
+        let fixedJson = jsonPart.replace(/<\/route_plan>.*$/, "").trim();
         const openBraces = (fixedJson.match(/{/g) || []).length;
         const closeBraces = (fixedJson.match(/}/g) || []).length;
         const openBrackets = (fixedJson.match(/\[/g) || []).length;
