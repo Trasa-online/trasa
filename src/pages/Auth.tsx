@@ -21,12 +21,13 @@ const Auth = () => {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) return;
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from("profiles")
         .select("onboarding_completed")
         .eq("id", session.user.id)
         .single();
-      navigate(profile?.onboarding_completed ? "/" : "/onboarding");
+      // If column doesn't exist yet (migration pending), go to home directly
+      navigate(!error && profile?.onboarding_completed === false ? "/onboarding" : "/");
     });
   }, [navigate]);
 
@@ -36,12 +37,12 @@ const Auth = () => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("onboarding_completed")
         .eq("id", data.user!.id)
         .single();
-      navigate(profile?.onboarding_completed ? "/" : "/onboarding");
+      navigate(!profileError && profile?.onboarding_completed === false ? "/onboarding" : "/");
     } catch (error: any) {
       toast.error(error.message || "Błąd logowania");
     } finally {

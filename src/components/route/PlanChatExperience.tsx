@@ -63,17 +63,24 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
       setInitializing(true);
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
+        if (!session) {
+          setInitializing(false);
+          return;
+        }
 
         const response = await supabase.functions.invoke("plan-route", {
           body: { preferences, messages: [] },
         });
+
+        if (response.error) throw new Error(response.error.message);
 
         if (response.data?.message) {
           setMessages([{ role: "assistant", content: response.data.message }]);
           if (response.data.plan) {
             setPlan(response.data.plan);
           }
+        } else {
+          throw new Error("Empty response");
         }
       } catch (err) {
         console.error("Failed to start plan chat:", err);

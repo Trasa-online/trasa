@@ -189,12 +189,18 @@ serve(async (req) => {
 
     const MAX_MESSAGES = 10;
 
-    // Fetch user profile preferences
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("dietary_prefs, travel_interests")
-      .eq("id", user.id)
-      .single();
+    // Fetch user profile preferences (non-blocking — columns may not exist in older DBs)
+    let profileData: UserProfile | null = null;
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("dietary_prefs, travel_interests")
+        .eq("id", user.id)
+        .single();
+      profileData = data as UserProfile | null;
+    } catch {
+      // ignore — columns may not be migrated yet
+    }
 
     const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined);
 
