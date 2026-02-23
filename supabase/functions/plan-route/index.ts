@@ -105,6 +105,8 @@ ${cityKnown ? `\n## ⚠️ KLUCZOWA ZASADA\nUser WPISAŁ już destynację: „${
 - Pisz krótko i naturalnie — jak znajomy, nie jak asystent.
 - Rozdzielaj myśli na OSOBNE AKAPITY (oddzielone pustą linią \\n\\n). Każdy akapit = 1-2 zdania.
 - Nigdy nie pisz długich bloków tekstu bez przerw.
+- Używaj **pogrubień** dla kluczowych miejsc, nazw i ważnych fraz — format: **tekst**.
+- Dodawaj emoji co jakiś czas (nie do każdego zdania), żeby wiadomość była ciepła i żywa. Np. 🗺️ 🍜 ☕ 🏛️ 🌇 🎯 🚶 przy omawianiu miejsc lub planów.
 
 ## FAZY ROZMOWY (max 3 wymiany przed generowaniem planu)
 
@@ -249,11 +251,11 @@ serve(async (req) => {
       ].join(", ");
 
       const messageParts = [
-        `Świetny wybór — ${cityName}!`,
-        `Planujesz ${daysLabel}, ${prefsLine}. Wszystko mam — zacznijmy!`,
+        `Świetny wybór — **${cityName}**! 🗺️`,
+        `Planujesz **${daysLabel}**, tempo ${paceLabel}${prioritiesPL ? `, z fokusem na **${prioritiesPL}**` : ""}. Mam wszystko czego potrzebuję — zacznijmy! 🎯`,
         nDays > 1
-          ? `O której godzinie chcesz zacząć pierwszego dnia?\n\nI jeszcze — w której części miasta masz nocleg? To pomoże mi dobrze zaplanować końce kolejnych dni.`
-          : `O której godzinie chcesz zacząć?`,
+          ? `O której godzinie chcesz zacząć **pierwszego dnia**?\n\nI jeszcze — w której części miasta masz **nocleg**? To pomoże mi dobrze zaplanować końce kolejnych dni.`
+          : `O której godzinie chcesz **zacząć**? ⏰`,
       ];
 
       return new Response(

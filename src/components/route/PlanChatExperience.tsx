@@ -34,6 +34,20 @@ interface PlanChatExperienceProps {
   onPlanReady: (plan: RoutePlan, messages: ChatMessage[]) => void;
 }
 
+// Render a single bubble with **bold** markdown support
+function renderBubble(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.startsWith("**") && part.endsWith("**")
+          ? <strong key={i}>{part.slice(2, -2)}</strong>
+          : part
+      )}
+    </>
+  );
+}
+
 const hasVoiceSupport =
   typeof window !== "undefined" &&
   ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
@@ -245,7 +259,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
   return (
     <div className="flex flex-col h-full">
       {/* Messages + Plan */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 pb-24 space-y-4">
         {messages.map((msg, i) => {
           const bubbles = msg.role === "assistant"
             ? msg.content.split(/\n\n+/).map(s => s.trim()).filter(Boolean)
@@ -259,10 +273,10 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
                     "max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed",
                     msg.role === "user"
                       ? "bg-foreground text-background rounded-br-md"
-                      : "bg-muted text-foreground rounded-bl-md"
+                      : "bg-card text-foreground rounded-bl-md shadow-sm"
                   )}
                 >
-                  {bubble}
+                  {msg.role === "assistant" ? renderBubble(bubble) : bubble}
                 </div>
               ))}
             </div>
@@ -271,7 +285,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
 
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
+            <div className="bg-card rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
               <div className="flex gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
                 <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -309,14 +323,14 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
       {plan && (
         <button
           onClick={handleConfirm}
-          className="fixed bottom-24 right-4 z-50 h-14 w-14 rounded-full bg-foreground text-background shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
+          className="fixed bottom-20 right-4 z-50 h-14 w-14 rounded-full bg-foreground text-background shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
         >
           <Check className="h-6 w-6" />
         </button>
       )}
 
-      {/* Input area */}
-      <div className="border-t border-border/40 bg-background p-3">
+      {/* Input area — fixed to bottom so it follows the user on scroll */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border/40 bg-background p-3">
         <div className="flex items-end gap-2 max-w-lg mx-auto">
           {hasVoiceSupport && (
             <button
