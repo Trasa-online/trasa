@@ -79,19 +79,26 @@ Gdy generujesz lub aktualizujesz plan, napisz KRÓTKI komentarz (1-2 zdania), a 
 }
 </route_plan>
 
-## ZASADY
+## ZASADY OGÓLNE
 - Po polsku, naturalnie, krótko (2-3 zdania max na wiadomość przed planem)
-- Używaj PRAWDZIWYCH miejsc z prawdziwymi adresami i koordynatami
 - category może być: restaurant, cafe, museum, park, viewpoint, shopping, nightlife, monument, church, market, bar, gallery
 - Dla tempo "active": 6-8 miejsc/dzień
-- Dla tempo "calm": 3-5 miejsc/dzień  
+- Dla tempo "calm": 3-5 miejsc/dzień
 - Dla tempo "mixed": 5-6 miejsc/dzień
 - Uwzględniaj logiczną kolejność (bliskość geograficzna, pory posiłków)
 - Jeśli znasz godzinę przyjazdu i punkt wysiadania — zacznij trasę od tej okolicy o tej godzinie
 - Jeśli znasz nocleg — uwzględnij jego lokalizację przy planowaniu końca dnia
 - Jeśli znasz godzinę odjazdu — zakończ trasę w pobliżu punktu odjazdu z odpowiednim buforem
 - suggested_time powinien być realistyczny (nie 2 muzea pod rząd)
-- PIERWSZĄ wiadomość zacznij od ciepłego powitania i od razu pytanie o destynację`;
+- PIERWSZĄ wiadomość zacznij od ciepłego powitania i od razu pytanie o destynację
+
+## ZASADY DOTYCZĄCE MIEJSC (KRYTYCZNE)
+- Używaj WYŁĄCZNIE miejsc które możesz zweryfikować jako istniejące w Google Maps
+- Koordynaty MUSZĄ być precyzyjne (min. 4 miejsca po przecinku) dla konkretnej lokalizacji
+- Dla zabytków, muzeów, kościołów, parków, pomników: podaj dokładną oficjalną nazwę (np. "Muzeum Narodowe w Krakowie", nie "Muzeum Historyczne")
+- Dla restauracji i kawiarni: używaj TYLKO lokali z rozpoznawalną, weryfikowalną nazwą (znana marka, wieloletni lokal z recenzjami). Jeśli nie jesteś w 100% pewien że lokal istnieje pod tą nazwą — NIE umieszczaj go w planie. Zamiast tego wpisz kategorię miejsca np. "Restauracja w Kazimierzu" i powiedz userowi że może sam wybrać
+- NIE WYMYŚLAJ nazw restauracji, kawiarni ani sklepów — to jest najczęstszy błąd który psuje plan
+- Jeśli nie znasz konkretnej restauracji w danej okolicy, napisz w polu place_name "Kolacja w [dzielnica]" lub "Lunch w pobliżu [landmark]" i w description zaproponuj typ kuchni`;
 }
 
 serve(async (req) => {

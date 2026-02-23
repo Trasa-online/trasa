@@ -2,6 +2,31 @@ const ALLOWED_ORIGINS = ["https://trasa.lovable.app", "http://localhost:8080"];
 
 const BASE = "https://maps.googleapis.com/maps/api";
 
+/** Haversine distance in km between two lat/lng points */
+function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** Returns true if the two names share at least one meaningful token (len > 2) */
+function namesSimilar(a: string, b: string): boolean {
+  const tokenize = (s: string) =>
+    s.toLowerCase()
+      .replace(/[^a-z0-9ąćęłńóśźż\s]/g, " ")
+      .split(/\s+/)
+      .filter(w => w.length > 2);
+  const ta = tokenize(a);
+  const tb = tokenize(b);
+  if (ta.length === 0 || tb.length === 0) return true; // can't validate, allow
+  return ta.some(t => tb.some(t2 => t2.includes(t) || t.includes(t2)));
+}
+
 Deno.serve(async (req) => {
   const reqOrigin = req.headers.get("Origin") ?? "";
   const corsHeaders = {
@@ -52,6 +77,32 @@ Deno.serve(async (req) => {
       `${BASE}/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,price_level,types,formatted_address,photos,reviews,geometry&reviews_sort=newest&language=pl&key=${apiKey}`
     );
     const detailData = await detailRes.json();
+
+    const result = detailData.result;
+    if (result) {
+      // Validate: found place must be within 3 km of the AI-provided coordinates
+      const foundLat = result.geometry?.location?.lat;
+      const foundLng = result.geometry?.location?.lng;
+      if (foundLat !== undefined && foundLng !== undefined) {
+        const dist = distanceKm(latitude, longitude, foundLat, foundLng);
+        if (dist > 3) {
+          console.warn(`Place "${result.name}" found ${dist.toFixed(1)} km away from requested coords — rejecting`);
+          return new Response(JSON.stringify({ error: "Place not found near provided coordinates" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      // Validate: found place name should share at least one token with the requested name
+      if (!namesSimilar(placeName, result.name ?? "")) {
+        console.warn(`Name mismatch: requested "${placeName}", got "${result.name}" — rejecting`);
+        return new Response(JSON.stringify({ error: "Place name mismatch" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     return new Response(JSON.stringify(detailData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
