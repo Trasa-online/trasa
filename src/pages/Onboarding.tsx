@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
 
 const FOOD_PREFS = [
   { id: "vege", label: "Wegetarianin" },
@@ -63,34 +65,88 @@ const Section = ({
   items,
   selected,
   onToggle,
+  customItems,
+  onAddCustom,
+  onRemoveCustom,
 }: {
   title: string;
   items: { id: string; label: string }[];
   selected: Set<string>;
   onToggle: (id: string) => void;
-}) => (
-  <div className="mb-7">
-    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-      {title}
-    </p>
-    <div className="flex flex-wrap gap-2">
-      {items.map((item) => (
-        <Chip
-          key={item.id}
-          label={item.label}
-          selected={selected.has(item.id)}
-          onClick={() => onToggle(item.id)}
+  customItems: string[];
+  onAddCustom: (val: string) => void;
+  onRemoveCustom: (val: string) => void;
+}) => {
+  const [inputVal, setInputVal] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleAdd = () => {
+    const trimmed = inputVal.trim();
+    if (trimmed && !customItems.includes(trimmed)) {
+      onAddCustom(trimmed);
+    }
+    setInputVal("");
+    inputRef.current?.focus();
+  };
+
+  return (
+    <div className="mb-7">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+        {title}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {items.map((item) => (
+          <Chip
+            key={item.id}
+            label={item.label}
+            selected={selected.has(item.id)}
+            onClick={() => onToggle(item.id)}
+          />
+        ))}
+        {customItems.map((val) => (
+          <Chip
+            key={val}
+            label={val}
+            selected
+            onClick={() => onRemoveCustom(val)}
+          />
+        ))}
+      </div>
+      <div className="flex gap-2 mt-3">
+        <Input
+          ref={inputRef}
+          placeholder="Inne..."
+          value={inputVal}
+          onChange={(e) => setInputVal(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleAdd();
+            }
+          }}
+          className="flex-1 h-9 text-sm bg-card"
         />
-      ))}
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={!inputVal.trim()}
+          className="h-9 w-9 flex items-center justify-center rounded-lg border border-border bg-card text-foreground disabled:opacity-30 hover:bg-muted transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const Onboarding = () => {
   const navigate = useNavigate();
   const [foodSelected, setFoodSelected] = useState<Set<string>>(new Set());
   const [interestsSelected, setInterestsSelected] = useState<Set<string>>(new Set());
   const [styleSelected, setStyleSelected] = useState<Set<string>>(new Set());
+  const [foodCustom, setFoodCustom] = useState<string[]>([]);
+  const [interestsCustom, setInterestsCustom] = useState<string[]>([]);
+  const [styleCustom, setStyleCustom] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const toggle = (set: Set<string>, setFn: (s: Set<string>) => void, id: string) => {
@@ -107,8 +163,13 @@ const Onboarding = () => {
       if (!user) { navigate("/"); return; }
 
       await supabase.from("profiles").update({
-        dietary_prefs: skip ? [] : Array.from(foodSelected),
-        travel_interests: skip ? [] : [...Array.from(interestsSelected), ...Array.from(styleSelected)],
+        dietary_prefs: skip ? [] : [...Array.from(foodSelected), ...foodCustom],
+        travel_interests: skip ? [] : [
+          ...Array.from(interestsSelected),
+          ...interestsCustom,
+          ...Array.from(styleSelected),
+          ...styleCustom,
+        ],
         onboarding_completed: true,
       }).eq("id", user.id);
     } catch (err) {
@@ -130,6 +191,9 @@ const Onboarding = () => {
           items={FOOD_PREFS}
           selected={foodSelected}
           onToggle={(id) => toggle(foodSelected, setFoodSelected, id)}
+          customItems={foodCustom}
+          onAddCustom={(val) => setFoodCustom(prev => [...prev, val])}
+          onRemoveCustom={(val) => setFoodCustom(prev => prev.filter(v => v !== val))}
         />
 
         <Section
@@ -137,6 +201,9 @@ const Onboarding = () => {
           items={INTERESTS}
           selected={interestsSelected}
           onToggle={(id) => toggle(interestsSelected, setInterestsSelected, id)}
+          customItems={interestsCustom}
+          onAddCustom={(val) => setInterestsCustom(prev => [...prev, val])}
+          onRemoveCustom={(val) => setInterestsCustom(prev => prev.filter(v => v !== val))}
         />
 
         <Section
@@ -144,6 +211,9 @@ const Onboarding = () => {
           items={TRAVEL_STYLE}
           selected={styleSelected}
           onToggle={(id) => toggle(styleSelected, setStyleSelected, id)}
+          customItems={styleCustom}
+          onAddCustom={(val) => setStyleCustom(prev => [...prev, val])}
+          onRemoveCustom={(val) => setStyleCustom(prev => prev.filter(v => v !== val))}
         />
       </div>
 
