@@ -92,13 +92,9 @@ const Auth = () => {
         <p className="text-muted-foreground text-center text-sm max-w-[280px]">
           Planuj podróże z AI. Zapisuj wspomnienia. Wracaj do nich kiedy chcesz.
         </p>
-        <span className="mt-3 text-xs bg-card border border-border rounded-full px-3 py-1 text-muted-foreground">
-          Wersja beta
-        </span>
-
         {/* Feature pills */}
-        <div className="flex flex-wrap gap-2 justify-center mt-4 mb-8">
-          {["Planer tras z AI", "Dziennik podróży", "Mapa miejsc"].map((f) => (
+        <div className="flex flex-wrap gap-1.5 justify-center mt-4 mb-8">
+          {["Wersja beta", "Planer tras z AI", "Dziennik podróży", "Mapa miejsc"].map((f) => (
             <span key={f} className="text-xs bg-card border border-border rounded-full px-3 py-1 text-muted-foreground">
               {f}
             </span>
