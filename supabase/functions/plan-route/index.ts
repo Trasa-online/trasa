@@ -9,6 +9,7 @@ interface TripPreferences {
   priorities: string[];
   startDate: string | null;
   planningMode: string;
+  city?: string;
 }
 
 interface UserProfile {
@@ -49,6 +50,10 @@ function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, user
     ? `- Data podróży: ${preferences.startDate}`
     : "";
 
+  const cityInfo = preferences.city?.trim()
+    ? `- Destynacja: ${preferences.city.trim()}`
+    : "";
+
   const currentPlanContext = currentPlan
     ? `\n\n## AKTUALNY PLAN (do edycji)\n${JSON.stringify(currentPlan, null, 2)}`
     : "";
@@ -62,24 +67,50 @@ function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, user
     ? `\n## PROFIL UŻYTKOWNIKA\n${dietaryLabels.length > 0 ? `- Dieta/jedzenie: ${dietaryLabels.join(", ")}\n` : ""}${interestLabels.length > 0 ? `- Zainteresowania i styl: ${interestLabels.join(", ")}\n` : ""}Uwzględnij te preferencje przy doborze miejsc, restauracji i kolejności trasy.`
     : "";
 
+  const cityKnown = !!preferences.city?.trim();
+
+  // Build a short summary of what the user already filled in
+  const paceLabel = preferences.pace === "active" ? "aktywne" : preferences.pace === "calm" ? "spokojne" : "mieszane";
+  const prioritiesSummary = preferences.priorities.length > 0 ? preferences.priorities.join(", ") : null;
+  const summaryParts = [
+    `${preferences.numDays} ${preferences.numDays === 1 ? "dzień" : "dni"}`,
+    `tempo: ${paceLabel}`,
+    ...(prioritiesSummary ? [`priorytety: ${prioritiesSummary}`] : []),
+    ...(preferences.startDate ? [`data: ${preferences.startDate}`] : []),
+  ];
+  const preferenceSummary = summaryParts.join(", ");
+
   return `Jesteś planistą podróży w aplikacji TRASA.
 User chce zaplanować podróż. Oto jego preferencje:
 - Liczba dni: ${preferences.numDays}
 - Tempo: ${preferences.pace === "active" ? "aktywne (dużo zwiedzania)" : preferences.pace === "calm" ? "spokojne (mniej miejsc, więcej czasu)" : "mieszane"}
 - Priorytety: ${preferences.priorities.length > 0 ? preferences.priorities.join(", ") : "brak konkretnych"}
 ${dateInfo}
+${cityInfo}
 ${userProfileContext}
 ${currentPlanContext}
 
+## STYL ODPOWIEDZI
+- Pisz krótko i naturalnie — jak znajomy, nie jak asystent.
+- Rozdzielaj myśli na OSOBNE AKAPITY (oddzielone pustą linią \\n\\n). Każdy akapit = 1-2 zdania.
+- Nigdy nie pisz długich bloków tekstu bez przerw.
+
 ## FAZY ROZMOWY (max 3 wymiany przed generowaniem planu)
 
-### Faza 1 — DESTYNACJA + START
-Zadaj TYLKO te pytania w jednej krótkiej, przyjaznej wiadomości:
+### Faza 1 — START
+${cityKnown
+  ? `Miasto jest już znane (${preferences.city!.trim()}). W pierwszej wiadomości:
+1. Krótko powitaj i pochwal wybór (1 zdanie).
+2. Powiedz, że widzisz preferencje usera: ${preferenceSummary}.
+3. Zapytaj TYLKO o godzinę startu podróży.
+${preferences.numDays > 1 ? "4. Zapytaj w której części miasta jest nocleg." : "NIE pytaj o nocleg — to jednodniowa wycieczka."}
+NIE pytaj ponownie gdzie jedzie — to już wiesz.`
+  : `Zadaj TYLKO te pytania w jednej krótkiej, przyjaznej wiadomości:
 1. Gdzie jedziesz? (miasto / miejsce)
 2. O której chcesz zacząć swoją podróż?
 ${preferences.numDays > 1 ? "3. W której części miasta masz nocleg? (wpłynie na planowanie końca każdego dnia)" : "NIE pytaj o nocleg — to jednodniowa wycieczka."}
+Wiadomość ma być krótka i przyjazna — max 2 zdania + pytania jako lista.`}
 Nie pytaj o godzinę powrotu w tej fazie.
-Wiadomość ma być krótka i przyjazna — max 2 zdania + pytania jako lista.
 
 ### Faza 2 — DOPRECYZOWANIE
 Na podstawie priorytetów i odpowiedzi dopytaj o szczegóły.

@@ -140,7 +140,7 @@ const Onboarding = () => {
         />
 
         <Section
-          title="Styl podróżowania"
+          title="Jak zwykle podróżujesz?"
           items={TRAVEL_STYLE}
           selected={styleSelected}
           onToggle={(id) => toggle(styleSelected, setStyleSelected, id)}

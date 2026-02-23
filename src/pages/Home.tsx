@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +51,13 @@ const Home = () => {
     },
     enabled: !!user,
   });
+
+  // Redirect to onboarding if user hasn't completed it yet (handles email confirmation flow)
+  useEffect(() => {
+    if (!authLoading && user && profile !== undefined && (profile as any)?.onboarding_completed === false) {
+      navigate("/onboarding");
+    }
+  }, [authLoading, user, profile, navigate]);
 
   const { data: activeRoutes, isLoading: routesLoading } = useQuery({
     queryKey: ["active-routes", user?.id],

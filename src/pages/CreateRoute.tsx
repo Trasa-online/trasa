@@ -17,6 +17,7 @@ interface TripPreferences {
   priorities: string[];
   startDate: string | null;
   planningMode: "voice" | "text";
+  city: string;
 }
 
 const PRIORITY_OPTIONS = [
@@ -41,6 +42,7 @@ const CreateRoute = () => {
     priorities: [],
     startDate: null,
     planningMode: "text",
+    city: "",
   });
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [showSummary, setShowSummary] = useState(false);
@@ -100,6 +102,17 @@ const CreateRoute = () => {
         </div>
 
         <div className="p-4 space-y-6 max-w-lg mx-auto">
+          {/* City */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Dokąd jedziesz?</label>
+            <Input
+              placeholder="np. Kraków, Warszawa, Rzym..."
+              value={preferences.city}
+              onChange={e => setPreferences(prev => ({ ...prev, city: e.target.value }))}
+              className="bg-card"
+            />
+          </div>
+
           {/* Days */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Ile dni?</label>

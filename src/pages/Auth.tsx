@@ -68,6 +68,7 @@ const Auth = () => {
         await supabase.from("profiles").upsert({
           id: data.user.id,
           username: username.trim(),
+          onboarding_completed: false,
         });
       }
       if (data.session) {

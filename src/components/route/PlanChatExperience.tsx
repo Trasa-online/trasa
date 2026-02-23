@@ -26,6 +26,7 @@ interface TripPreferences {
   priorities: string[];
   startDate: string | null;
   planningMode: string;
+  city: string;
 }
 
 interface PlanChatExperienceProps {
@@ -245,26 +246,28 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
     <div className="flex flex-col h-full">
       {/* Messages + Plan */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={cn(
-              "flex",
-              msg.role === "user" ? "justify-end" : "justify-start"
-            )}
-          >
-            <div
-              className={cn(
-                "max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed",
-                msg.role === "user"
-                  ? "bg-foreground text-background rounded-br-md"
-                  : "bg-muted text-foreground rounded-bl-md"
-              )}
-            >
-              {msg.content}
+        {messages.map((msg, i) => {
+          const bubbles = msg.role === "assistant"
+            ? msg.content.split(/\n\n+/).map(s => s.trim()).filter(Boolean)
+            : [msg.content];
+          return (
+            <div key={i} className={cn("flex flex-col gap-1", msg.role === "user" ? "items-end" : "items-start")}>
+              {bubbles.map((bubble, j) => (
+                <div
+                  key={j}
+                  className={cn(
+                    "max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed",
+                    msg.role === "user"
+                      ? "bg-foreground text-background rounded-br-md"
+                      : "bg-muted text-foreground rounded-bl-md"
+                  )}
+                >
+                  {bubble}
+                </div>
+              ))}
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {loading && (
           <div className="flex justify-start">
