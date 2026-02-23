@@ -110,13 +110,7 @@ ${cityKnown ? `\n## ⚠️ KLUCZOWA ZASADA\nUser WPISAŁ już destynację: „${
 
 ### Faza 1 — START
 ${cityKnown
-  ? `Destynacja jest ZNANA: „${cityName}". User wypełnił też: ${preferenceSummary}.
-Twoja pierwsza wiadomość powinna:
-1. Krótko powitać i powiedzieć np. "Świetny wybór! Planujesz ${preferences.numDays === 1 ? "jeden dzień" : `${preferences.numDays} dni`} w ${cityName} — super!"
-2. Skrótowo podsumować co user wybrał (tempo, priorytety), żeby wiedział że uwzględniasz jego preferencje.
-3. Zapytać TYLKO o godzinę startu.
-${preferences.numDays > 1 ? "4. Zapytać w której części miasta/okolicy jest nocleg." : ""}
-Nie pytaj o destynację — to już WIESZ. Nie pytaj o godzinę powrotu.`
+  ? `Miasto jest już znane (${cityName}) — pierwsze powitanie zostało już wysłane przez system. Jesteś teraz w trakcie rozmowy. Odpowiadaj na pytania usera i zmierzaj do generowania planu.`
   : `Zadaj TYLKO te pytania w jednej krótkiej, przyjaznej wiadomości:
 1. Gdzie jedziesz? (miasto / miejsce)
 2. O której chcesz zacząć swoją podróż?
@@ -231,6 +225,42 @@ serve(async (req) => {
     }
 
     const MAX_MESSAGES = 10;
+
+    // ── Deterministic first message when city is already known ──
+    // Skip AI entirely to guarantee no "where are you going?" question.
+    if (userMessages.length === 0 && preferences.city?.trim()) {
+      const cityName = preferences.city.trim();
+      const nDays = Number(preferences.numDays) || 1;
+      const paceLabel = preferences.pace === "active" ? "aktywnym" : preferences.pace === "calm" ? "spokojnym" : "mieszanym";
+
+      const PRIORITY_LABEL_PL: Record<string, string> = {
+        good_food: "dobre jedzenie", nice_views: "ładne widoki", long_walks: "długie spacery",
+        museums: "muzea i kultura", nightlife: "życie nocne", shopping: "zakupy",
+        local_vibes: "lokalne klimaty", photography: "fotografia",
+      };
+      const prioritiesPL = Array.isArray(preferences.priorities) && preferences.priorities.length > 0
+        ? (preferences.priorities as string[]).map(p => PRIORITY_LABEL_PL[p] ?? p).join(", ")
+        : null;
+
+      const daysLabel = nDays === 1 ? "1 dzień" : `${nDays} dni`;
+      const prefsLine = [
+        `tempo: ${paceLabel}`,
+        ...(prioritiesPL ? [`priorytety: ${prioritiesPL}`] : []),
+      ].join(", ");
+
+      const messageParts = [
+        `Świetny wybór — ${cityName}!`,
+        `Planujesz ${daysLabel}, ${prefsLine}. Wszystko mam — zacznijmy!`,
+        nDays > 1
+          ? `O której godzinie chcesz zacząć pierwszego dnia?\n\nI jeszcze — w której części miasta masz nocleg? To pomoże mi dobrze zaplanować końce kolejnych dni.`
+          : `O której godzinie chcesz zacząć?`,
+      ];
+
+      return new Response(
+        JSON.stringify({ message: messageParts.join("\n\n"), plan: null }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Fetch user profile preferences (non-blocking — columns may not exist in older DBs)
     let profileData: UserProfile | null = null;
