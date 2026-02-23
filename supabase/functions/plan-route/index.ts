@@ -68,28 +68,39 @@ function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, user
     : "";
 
   const cityKnown = !!preferences.city?.trim();
+  const cityName = preferences.city?.trim() ?? "";
 
-  // Build a short summary of what the user already filled in
+  // Build a human-readable summary of what the user already filled in
   const paceLabel = preferences.pace === "active" ? "aktywne" : preferences.pace === "calm" ? "spokojne" : "mieszane";
-  const prioritiesSummary = preferences.priorities.length > 0 ? preferences.priorities.join(", ") : null;
+
+  const PRIORITY_LABEL_PL: Record<string, string> = {
+    good_food: "dobre jedzenie", nice_views: "ładne widoki", long_walks: "długie spacery",
+    museums: "muzea i kultura", nightlife: "życie nocne", shopping: "zakupy",
+    local_vibes: "lokalne klimaty", photography: "fotografia",
+  };
+  const prioritiesPL = preferences.priorities.length > 0
+    ? preferences.priorities.map(p => PRIORITY_LABEL_PL[p] ?? p).join(", ")
+    : null;
+
   const summaryParts = [
     `${preferences.numDays} ${preferences.numDays === 1 ? "dzień" : "dni"}`,
     `tempo: ${paceLabel}`,
-    ...(prioritiesSummary ? [`priorytety: ${prioritiesSummary}`] : []),
+    ...(prioritiesPL ? [`priorytety: ${prioritiesPL}`] : []),
     ...(preferences.startDate ? [`data: ${preferences.startDate}`] : []),
   ];
   const preferenceSummary = summaryParts.join(", ");
 
   return `Jesteś planistą podróży w aplikacji TRASA.
-User chce zaplanować podróż. Oto jego preferencje:
+
+## PREFERENCJE USERA (wypełnione przed rozmową)
 - Liczba dni: ${preferences.numDays}
 - Tempo: ${preferences.pace === "active" ? "aktywne (dużo zwiedzania)" : preferences.pace === "calm" ? "spokojne (mniej miejsc, więcej czasu)" : "mieszane"}
-- Priorytety: ${preferences.priorities.length > 0 ? preferences.priorities.join(", ") : "brak konkretnych"}
+- Priorytety: ${prioritiesPL ?? "brak konkretnych"}
 ${dateInfo}
 ${cityInfo}
 ${userProfileContext}
 ${currentPlanContext}
-
+${cityKnown ? `\n## ⚠️ KLUCZOWA ZASADA\nUser WPISAŁ już destynację: „${cityName}". ABSOLUTNIE NIE pytaj o to gdzie jedzie — już to wiesz. Zacznij od potwierdzenia tej destynacji.\n` : ""}
 ## STYL ODPOWIEDZI
 - Pisz krótko i naturalnie — jak znajomy, nie jak asystent.
 - Rozdzielaj myśli na OSOBNE AKAPITY (oddzielone pustą linią \\n\\n). Każdy akapit = 1-2 zdania.
@@ -99,12 +110,13 @@ ${currentPlanContext}
 
 ### Faza 1 — START
 ${cityKnown
-  ? `Miasto jest już znane (${preferences.city!.trim()}). W pierwszej wiadomości:
-1. Krótko powitaj i pochwal wybór (1 zdanie).
-2. Powiedz, że widzisz preferencje usera: ${preferenceSummary}.
-3. Zapytaj TYLKO o godzinę startu podróży.
-${preferences.numDays > 1 ? "4. Zapytaj w której części miasta jest nocleg." : "NIE pytaj o nocleg — to jednodniowa wycieczka."}
-NIE pytaj ponownie gdzie jedzie — to już wiesz.`
+  ? `Destynacja jest ZNANA: „${cityName}". User wypełnił też: ${preferenceSummary}.
+Twoja pierwsza wiadomość powinna:
+1. Krótko powitać i powiedzieć np. "Świetny wybór! Planujesz ${preferences.numDays === 1 ? "jeden dzień" : `${preferences.numDays} dni`} w ${cityName} — super!"
+2. Skrótowo podsumować co user wybrał (tempo, priorytety), żeby wiedział że uwzględniasz jego preferencje.
+3. Zapytać TYLKO o godzinę startu.
+${preferences.numDays > 1 ? "4. Zapytać w której części miasta/okolicy jest nocleg." : ""}
+Nie pytaj o destynację — to już WIESZ. Nie pytaj o godzinę powrotu.`
   : `Zadaj TYLKO te pytania w jednej krótkiej, przyjaznej wiadomości:
 1. Gdzie jedziesz? (miasto / miejsce)
 2. O której chcesz zacząć swoją podróż?
