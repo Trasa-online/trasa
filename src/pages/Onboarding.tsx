@@ -114,7 +114,7 @@ const Onboarding = () => {
     } catch (err) {
       console.error("Failed to save preferences:", err);
     }
-    navigate("/");
+    navigate(skip ? "/" : "/?tour=1");
   };
 
   return (

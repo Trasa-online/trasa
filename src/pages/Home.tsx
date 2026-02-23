@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,13 +12,31 @@ import RoutePreviewModal from "@/components/route/RoutePreviewModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import TripCheckinSection from "@/components/home/TripCheckinSection";
+import HomeTour from "@/components/home/HomeTour";
+
+const PREF_LABEL: Record<string, string> = {
+  vege: "Wegetarianin", vegan: "Vegan", coffee: "Coffee snob",
+  local_food: "Kuchnia lokalna", street_food: "Street food",
+  fine_dining: "Fine dining", lactose_free: "Bez laktozy", gluten_free: "Bezglutenowo",
+  history: "Historia", art: "Sztuka", nature: "Natura", shopping: "Zakupy",
+  nightlife: "Nocne życie", photography: "Fotografia", architecture: "Architektura", music: "Muzyka",
+  intensive: "Intensywny", relaxed: "Spokojny", family: "Rodzinny",
+  romantic: "Romantyczny", budget: "Budżetowy", luxury: "Luksusowy",
+};
 
 const Home = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [previewRoute, setPreviewRoute] = useState<any>(null);
   const [deletingTrip, setDeletingTrip] = useState<any>(null);
+  const [showTour, setShowTour] = useState(searchParams.get("tour") === "1");
+
+  const handleTourDone = () => {
+    setShowTour(false);
+    setSearchParams({}, { replace: true });
+  };
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -261,25 +279,35 @@ const Home = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 overflow-y-auto px-5 pb-24 max-w-lg mx-auto w-full">
         {/* Avatar + Name */}
-        <div className="flex flex-col items-center pt-10 pb-8">
-          <Avatar className="h-28 w-28 border-2 border-muted">
+        <div className="flex flex-col items-center pt-7 pb-6">
+          <Avatar className="h-16 w-16 border-2 border-muted">
             <AvatarImage src={profile?.avatar_url || ""} />
-            <AvatarFallback className="bg-muted text-foreground text-2xl">
+            <AvatarFallback className="bg-muted text-foreground text-xl">
               {profile?.username?.charAt(0)?.toUpperCase() || "U"}
             </AvatarFallback>
           </Avatar>
-          <h2 className="mt-4 text-2xl font-black tracking-tight uppercase">
+          <h2 className="mt-3 text-lg font-bold tracking-tight uppercase">
             {profile?.username || "Podróżnik"}
           </h2>
-          {profile?.bio && (
-            <p className="mt-1 text-sm text-muted-foreground text-center max-w-[260px]">
-              {profile.bio}
-            </p>
-          )}
+          {(() => {
+            const tags = [
+              ...((profile as any)?.dietary_prefs ?? []),
+              ...((profile as any)?.travel_interests ?? []),
+            ].map((id: string) => PREF_LABEL[id] ?? id).filter(Boolean);
+            return tags.length > 0 ? (
+              <div className="flex flex-wrap gap-1 justify-center mt-2 max-w-[280px]">
+                {tags.map(tag => (
+                  <span key={tag} className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null;
+          })()}
         </div>
 
         {/* Active trips */}
-        <section className="mb-8">
+        <section className="mb-8" data-tour="trips">
           <h3 className="text-lg font-bold mb-3">Aktywna podróż</h3>
           {routesLoading ? (
             <Skeleton className="h-20 w-full rounded-xl" />
@@ -382,7 +410,7 @@ const Home = () => {
 
         {/* Journal — completed day reviews */}
         {journalRoutes && journalRoutes.length > 0 && (
-          <section className="mb-8">
+          <section className="mb-8" data-tour="journal">
             <h3 className="text-lg font-bold mb-3">Dziennik podróży</h3>
             <div className="space-y-3">
               {journalRoutes.map((route: any) => (
@@ -422,7 +450,7 @@ const Home = () => {
 
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-foreground px-4 py-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-foreground px-4 py-4" data-tour="cta">
         <div className="max-w-lg mx-auto">
           <Button
             onClick={() => navigate("/create")}
@@ -447,6 +475,8 @@ const Home = () => {
           endDate={previewRoute.endDate}
         />
       )}
+
+      {showTour && <HomeTour onDone={handleTourDone} />}
 
       {/* Delete trip confirmation */}
       <AlertDialog open={!!deletingTrip} onOpenChange={(open) => !open && setDeletingTrip(null)}>
