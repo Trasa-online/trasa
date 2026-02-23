@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Mic, MicOff, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import DayPinList, { type PlanPin } from "./DayPinList";
@@ -34,6 +35,29 @@ interface PlanChatExperienceProps {
   onPlanReady: (plan: RoutePlan, messages: ChatMessage[]) => void;
 }
 
+// Skeleton shown while the plan is being generated
+function PlanSkeleton({ numDays }: { numDays: number }) {
+  return (
+    <div className="space-y-3 pt-2">
+      {Array.from({ length: numDays }).map((_, di) => (
+        <div key={di} className="rounded-2xl border border-border bg-card p-4 space-y-3">
+          <Skeleton className="h-4 w-28 rounded-full" />
+          {Array.from({ length: 4 }).map((_, pi) => (
+            <div key={pi} className="flex items-center gap-3">
+              <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-3/4 rounded-full" />
+                <Skeleton className="h-3 w-1/2 rounded-full" />
+              </div>
+              <Skeleton className="h-3 w-10 rounded-full shrink-0" />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Render a single bubble with **bold** markdown support
 function renderBubble(text: string) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
@@ -60,6 +84,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
   const [listening, setListening] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [editCount, setEditCount] = useState(0);
+  const [preparingPlan, setPreparingPlan] = useState(false);
   const [selectedPin, setSelectedPin] = useState<PlanPin | null>(null);
   const [addPinDay, setAddPinDay] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -124,27 +149,46 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
 
     try {
       const response = await supabase.functions.invoke("plan-route", {
-        body: {
-          preferences,
-          messages: newMessages,
-          current_plan: plan,
-        },
+        body: { preferences, messages: newMessages, current_plan: plan },
       });
 
       if (response.error) throw new Error(response.error.message);
 
       const data = response.data;
 
-      if (data.message) {
-        setMessages([
-          ...newMessages,
-          { role: "assistant", content: data.message },
-        ]);
-      }
+      // Always add the assistant message to chat
+      const withAssistant: ChatMessage[] = data.message
+        ? [...newMessages, { role: "assistant" as const, content: data.message }]
+        : newMessages;
+
+      if (data.message) setMessages(withAssistant);
 
       if (data.plan) {
         setPlan(data.plan);
         if (plan) setEditCount(prev => prev + 1);
+        setLoading(false);
+      } else if (data.preparing_plan) {
+        // AI signalled it's about to generate — show skeleton and force-generate
+        setLoading(false);
+        setPreparingPlan(true);
+        try {
+          const planResponse = await supabase.functions.invoke("plan-route", {
+            body: { preferences, messages: withAssistant, current_plan: plan, force_plan: true },
+          });
+          if (!planResponse.error && planResponse.data?.plan) {
+            setPlan(planResponse.data.plan);
+            if (plan) setEditCount(prev => prev + 1);
+            // Append the plan message if any
+            if (planResponse.data.message) {
+              setMessages(prev => [...prev, { role: "assistant", content: planResponse.data.message }]);
+            }
+          }
+        } catch (planErr) {
+          console.error("Force plan error:", planErr);
+        }
+        setPreparingPlan(false);
+      } else {
+        setLoading(false);
       }
     } catch (err) {
       console.error("Chat error:", err);
@@ -152,9 +196,8 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
         ...newMessages,
         { role: "assistant", content: "Przepraszam, coś poszło nie tak. Spróbuj ponownie." },
       ]);
+      setLoading(false);
     }
-
-    setLoading(false);
   }, [input, messages, loading, preferences, plan]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -283,7 +326,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
           );
         })}
 
-        {loading && (
+        {loading && !preparingPlan && (
           <div className="flex justify-start">
             <div className="bg-card rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
               <div className="flex gap-1.5">
@@ -293,6 +336,10 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
               </div>
             </div>
           </div>
+        )}
+
+        {preparingPlan && !plan && (
+          <PlanSkeleton numDays={preferences.numDays} />
         )}
 
         {/* Generated Plan */}

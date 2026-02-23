@@ -107,6 +107,7 @@ ${cityKnown ? `\n## ⚠️ KLUCZOWA ZASADA\nUser WPISAŁ już destynację: „${
 - Nigdy nie pisz długich bloków tekstu bez przerw.
 - Używaj **pogrubień** dla kluczowych miejsc, nazw i ważnych fraz — format: **tekst**.
 - Dodawaj emoji co jakiś czas (nie do każdego zdania), żeby wiadomość była ciepła i żywa. Np. 🗺️ 🍜 ☕ 🏛️ 🌇 🎯 🚶 przy omawianiu miejsc lub planów.
+- Gdy masz wystarczająco informacji do wygenerowania planu — generuj go NATYCHMIAST w bloku <route_plan>. Możesz napisać jedno krótkie zdanie przed planem, ale NIE pisz "zaraz przygotuję", "daj mi chwilę", "generuję" itp. — po prostu wygeneruj.
 
 ## FAZY ROZMOWY (max 3 wymiany przed generowaniem planu)
 
@@ -195,7 +196,7 @@ serve(async (req) => {
   }
 
   try {
-    const { preferences, messages: userMessages, current_plan } = await req.json();
+    const { preferences, messages: userMessages, current_plan, force_plan } = await req.json();
 
     if (!preferences || !userMessages) {
       return new Response(
@@ -288,10 +289,12 @@ serve(async (req) => {
       );
     }
 
-    // If message limit reached, force plan generation
+    // If message limit reached or force_plan flag set, force plan generation
     const forceFinish = userMessages.length >= MAX_MESSAGES;
     const finishInstruction = forceFinish
       ? "\n\nUWAGA: Osiągnięto limit wiadomości. Wygeneruj TERAZ plan w bloku <route_plan>...</route_plan> na podstawie zebranych informacji. Nie zadawaj więcej pytań."
+      : force_plan
+      ? "\n\nWYGENERUJ TERAZ PLAN w bloku <route_plan>...</route_plan>. Nie pisz żadnego wstępu ani komentarza przed planem — zacznij bezpośrednio od krótkiego (1 zdanie) komentarza i natychmiast plan."
       : "";
 
     const aiMessages = [
@@ -379,8 +382,19 @@ serve(async (req) => {
       }
     }
 
+    // Detect when AI is about to prepare a plan but hasn't generated one yet
+    const PREPARING_PHRASES = [
+      "przygotuję", "przygotowuję", "zaraz generuję", "daj mi chwilę",
+      "moment", "zaraz wygeneruję", "teraz wygeneruję", "przygotowuję plan",
+      "teraz przygotuje", "generuję plan", "tworzę plan", "układam plan",
+      "zaraz przygotuję", "przygotuje plan", "teraz stworzę",
+    ];
+    const isPreparing = !plan && PREPARING_PHRASES.some(p =>
+      cleanMessage.toLowerCase().includes(p)
+    );
+
     return new Response(
-      JSON.stringify({ message: cleanMessage, plan }),
+      JSON.stringify({ message: cleanMessage, plan, preparing_plan: isPreparing }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
