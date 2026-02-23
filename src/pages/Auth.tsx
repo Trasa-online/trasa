@@ -92,11 +92,14 @@ const Auth = () => {
         <p className="text-muted-foreground text-center text-sm max-w-[280px]">
           Planuj podróże z AI. Zapisuj wspomnienia. Wracaj do nich kiedy chcesz.
         </p>
+        <span className="mt-3 text-xs bg-card border border-border rounded-full px-3 py-1 text-muted-foreground">
+          Wersja beta
+        </span>
 
         {/* Feature pills */}
-        <div className="flex flex-wrap gap-2 justify-center mt-5 mb-8">
+        <div className="flex flex-wrap gap-2 justify-center mt-4 mb-8">
           {["Planer tras z AI", "Dziennik podróży", "Mapa miejsc"].map((f) => (
-            <span key={f} className="text-xs border border-border rounded-full px-3 py-1 text-muted-foreground">
+            <span key={f} className="text-xs bg-card border border-border rounded-full px-3 py-1 text-muted-foreground">
               {f}
             </span>
           ))}
@@ -108,7 +111,7 @@ const Auth = () => {
             <button
               onClick={() => setMode("login")}
               className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                mode === "login" ? "bg-foreground text-background" : "bg-background text-muted-foreground hover:text-foreground"
+                mode === "login" ? "bg-foreground text-background" : "bg-card text-muted-foreground hover:text-foreground"
               }`}
             >
               Zaloguj się
@@ -116,7 +119,7 @@ const Auth = () => {
             <button
               onClick={() => setMode("register")}
               className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                mode === "register" ? "bg-foreground text-background" : "bg-background text-muted-foreground hover:text-foreground"
+                mode === "register" ? "bg-foreground text-background" : "bg-card text-muted-foreground hover:text-foreground"
               }`}
             >
               Zarejestruj się
@@ -134,6 +137,7 @@ const Auth = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="twoj@email.com"
+                  className="bg-card"
                 />
               </div>
               <div className="space-y-1.5">
@@ -145,6 +149,7 @@ const Auth = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder="••••••••"
+                  className="bg-card"
                 />
               </div>
               <Button type="submit" className="w-full rounded-full" disabled={loading}>
@@ -163,6 +168,7 @@ const Auth = () => {
                   required
                   placeholder="twoja_nazwa"
                   minLength={2}
+                  className="bg-card"
                 />
               </div>
               <div className="space-y-1.5">
@@ -174,6 +180,7 @@ const Auth = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="twoj@email.com"
+                  className="bg-card"
                 />
               </div>
               <div className="space-y-1.5">
@@ -186,6 +193,7 @@ const Auth = () => {
                   required
                   placeholder="Min. 6 znaków"
                   minLength={6}
+                  className="bg-card"
                 />
               </div>
               <label className="flex items-start gap-2.5 cursor-pointer">

@@ -184,7 +184,7 @@ const CreateRoute = () => {
                 value={customPriority}
                 onChange={e => setCustomPriority(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addCustomPriority())}
-                className="flex-1"
+                className="flex-1 bg-card"
               />
               <Button variant="outline" size="sm" onClick={addCustomPriority} disabled={!customPriority.trim()}>
                 Dodaj
@@ -200,7 +200,7 @@ const CreateRoute = () => {
                 <Button
                   variant="outline"
                   className={cn(
-                    "w-full justify-start text-left font-normal",
+                    "w-full justify-start text-left font-normal bg-card",
                     !selectedDate && "text-muted-foreground"
                   )}
                 >

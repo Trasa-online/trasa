@@ -200,28 +200,28 @@ const Home = () => {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 max-w-sm mx-auto w-full">
         <div className="text-center mb-8">
           <p className="text-4xl mb-3">🗺️</p>
-          <h2 className="text-2xl font-black tracking-tight mb-2">Twój osobisty planer podróży</h2>
+          <h2 className="text-2xl font-black tracking-tight mb-2">Twój osobisty przewodnik podróży</h2>
           <p className="text-muted-foreground text-sm max-w-[300px] mx-auto leading-relaxed">
             Planuj trasy z pomocą AI, odhaczaj miejsca w trakcie podróży i prowadź dziennik z każdego dnia.
           </p>
         </div>
 
         <div className="w-full space-y-3 mb-8">
-          <div className="flex items-start gap-3 rounded-xl border border-border/60 p-4">
+          <div className="flex items-start gap-3 rounded-xl bg-card border border-border/60 p-4">
             <Sparkles className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
             <div>
               <p className="text-sm font-semibold">Planer z AI</p>
               <p className="text-xs text-muted-foreground mt-0.5">Powiedz dokąd jedziesz — AI zaproponuje trasę z prawdziwymi miejscami i godzinami.</p>
             </div>
           </div>
-          <div className="flex items-start gap-3 rounded-xl border border-border/60 p-4">
+          <div className="flex items-start gap-3 rounded-xl bg-card border border-border/60 p-4">
             <MapIcon className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
             <div>
               <p className="text-sm font-semibold">Trasa na mapie</p>
               <p className="text-xs text-muted-foreground mt-0.5">Zobacz wszystkie miejsca na mapie, odhaczaj odwiedzone i dostosowuj plan w locie.</p>
             </div>
           </div>
-          <div className="flex items-start gap-3 rounded-xl border border-border/60 p-4">
+          <div className="flex items-start gap-3 rounded-xl bg-card border border-border/60 p-4">
             <BookOpen className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
             <div>
               <p className="text-sm font-semibold">Dziennik podróży</p>
