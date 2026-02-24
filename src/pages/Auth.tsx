@@ -66,7 +66,7 @@ const Auth = () => {
     try {
       const { error } = await supabase.from("waitlist").insert({
         email: email.trim().toLowerCase(),
-        username: username.trim(),
+        source: "website",
       });
       if (error) {
         if (error.code === "23505") {
