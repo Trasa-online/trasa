@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,6 +142,7 @@ const Section = ({
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [foodSelected, setFoodSelected] = useState<Set<string>>(new Set());
   const [interestsSelected, setInterestsSelected] = useState<Set<string>>(new Set());
   const [styleSelected, setStyleSelected] = useState<Set<string>>(new Set());
@@ -174,6 +176,12 @@ const Onboarding = () => {
         ],
         onboarding_completed: true,
       }).eq("id", user.id);
+
+      // Update React Query cache immediately so Home doesn't see stale
+      // onboarding_completed=false and redirect back here
+      queryClient.setQueryData(["profile", user.id], (old: any) =>
+        old ? { ...old, onboarding_completed: true } : old
+      );
     } catch (err) {
       console.error("Failed to save preferences:", err);
     }
