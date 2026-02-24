@@ -316,7 +316,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
   return (
     <div className="flex flex-col h-full">
       {/* Messages + Plan */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 pb-24 space-y-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 pb-20 space-y-4">
         {messages.map((msg, i) => {
           const bubbles = msg.role === "assistant"
             ? msg.content.split(/\n\n+/).map(s => s.trim()).filter(Boolean)
@@ -391,31 +391,34 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
             ))}
 
             {preparingPlan && <PlanSkeleton numDays={preferences.numDays} />}
-
-            <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
-              <span>Ilość zmian</span>
-              <span>Pozostało {Math.max(0, 3 - editCount)}/3</span>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex gap-2 pb-2">
-              <button
-                onClick={handleConfirm}
-                className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
-              >
-                Wybieram ten plan!
-              </button>
-              <button
-                onClick={handleEditRequest}
-                disabled={loading}
-                className="flex-1 py-3 rounded-xl border border-border text-sm font-medium text-foreground bg-card disabled:opacity-50"
-              >
-                Wprowadź zmiany
-              </button>
-            </div>
           </div>
         )}
       </div>
+
+      {/* Action buttons — sticky above input when plan exists */}
+      {plan && (
+        <div className="sticky bottom-0 z-10 bg-background border-t border-border/40 px-4 pt-3 pb-1">
+          <div className="flex items-center justify-between px-1 text-xs text-muted-foreground mb-2">
+            <span>Ilość zmian</span>
+            <span>Pozostało {Math.max(0, 3 - editCount)}/3</span>
+          </div>
+          <div className="flex gap-2 pb-2">
+            <button
+              onClick={handleConfirm}
+              className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
+            >
+              Wybieram ten plan!
+            </button>
+            <button
+              onClick={handleEditRequest}
+              disabled={loading}
+              className="flex-1 py-3 rounded-xl border border-border text-sm font-medium text-foreground bg-card disabled:opacity-50"
+            >
+              Wprowadź zmiany
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Input area — fixed to bottom so it follows the user on scroll */}
       <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border/40 bg-background p-3">
