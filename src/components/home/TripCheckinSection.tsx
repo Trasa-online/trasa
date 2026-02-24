@@ -64,6 +64,21 @@ const TripCheckinSection = ({ routeId, pins, onComplete, date, dayNumber }: Trip
   const dayLabel = dayNumber ? `Dzień ${dayNumber}` : "Dzisiaj";
   const dateLabel = date ? format(new Date(date), "dd.MM.yyyy") : null;
 
+  // Gate: active only 1 hour after last pin's suggested_time
+  const lastPin = sortedPins[sortedPins.length - 1];
+  const unlockTime = (() => {
+    if (!lastPin?.suggested_time || !date) return null;
+    const [h, m] = lastPin.suggested_time.split(":").map(Number);
+    if (isNaN(h) || isNaN(m)) return null;
+    const t = new Date(date + "T00:00:00");
+    t.setHours(h + 1, m, 0, 0);
+    return t;
+  })();
+  const isUnlocked = !unlockTime || new Date() >= unlockTime;
+  const unlockLabel = unlockTime
+    ? `${String(unlockTime.getHours()).padStart(2, "0")}:${String(unlockTime.getMinutes()).padStart(2, "0")}`
+    : null;
+
   return (
     <div className="bg-muted/40 p-4">
       {/* Header */}
@@ -80,12 +95,14 @@ const TripCheckinSection = ({ routeId, pins, onComplete, date, dayNumber }: Trip
           <p className="text-xs text-muted-foreground mt-1">Chcesz o nich opowiedzieć?</p>
           <Button
             onClick={handleContinue}
-            disabled={saving}
+            disabled={saving || !isUnlocked}
             size="sm"
             className="w-full rounded-full text-sm font-medium mt-4"
           >
             {saving ? (
               <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Zapisuję...</>
+            ) : !isUnlocked ? (
+              `Dostępne od ${unlockLabel}`
             ) : (
               "Opowiadam o dniu!"
             )}
@@ -157,12 +174,14 @@ const TripCheckinSection = ({ routeId, pins, onComplete, date, dayNumber }: Trip
 
           <Button
             onClick={handleContinueClick}
-            disabled={saving}
+            disabled={saving || !isUnlocked}
             size="sm"
             className="w-full rounded-full text-sm font-medium mt-3"
           >
             {saving ? (
               <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Zapisuję...</>
+            ) : !isUnlocked ? (
+              `Dostępne od ${unlockLabel}`
             ) : (
               "Dalej — opowiedz o dniu"
             )}

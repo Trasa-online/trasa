@@ -357,11 +357,11 @@ const SLIDES: Slide[] = [
     visual: <Visual2 />,
     title: "Zacznij od podstawowych informacji",
     description:
-      "Miasto, liczba dni, tempo podróży i priorytety — im więcej wypełnisz, tym lepiej AI dopasuje plan do Twoich oczekiwań.",
+      "Miasto, liczba dni, tempo podróży i priorytety - im więcej wypełnisz, tym lepiej Twój przewodnik dopasuje plan do Twoich oczekiwań.",
   },
   {
     visual: <Visual3 />,
-    title: "Hej! Tu Twój przewodnik!",
+    title: '„Hej! Tu Twój przewodnik!"',
     description:
       "O nic się nie martw — opowiedz o swojej wymarzonej podróży i plan gotowy.",
   },
@@ -385,7 +385,7 @@ const SLIDES: Slide[] = [
   },
   {
     visual: <Visual7 />,
-    title: "Czy wszystko poszło zgodnie z planem?",
+    title: '„Czy wszystko poszło zgodnie z planem?"',
     description:
       "Opowiedz o przebiegu zaplanowanego dnia — to pomoże Twojemu przewodnikowi tworzyć coraz lepsze trasy!",
   },
