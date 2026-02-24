@@ -14,20 +14,46 @@ const SetPassword = () => {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Listen for the PASSWORD_RECOVERY or SIGNED_IN event from the invite/recovery link
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
         setReady(true);
       }
     });
 
-    // Also check if user is already signed in (link already processed)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true);
-    });
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
 
-    return () => subscription.unsubscribe();
-  }, []);
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          console.error("Code exchange failed:", error);
+          toast.error("Weryfikacja nie powiodła się. Spróbuj ponownie.");
+          navigate("/auth");
+        } else {
+          setReady(true);
+        }
+      });
+    } else {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) setReady(true);
+      });
+    }
+
+    const timeout = setTimeout(() => {
+      setReady((prev) => {
+        if (!prev) {
+          toast.error("Weryfikacja linku przekroczyła czas. Spróbuj ponownie.");
+          navigate("/auth");
+        }
+        return prev;
+      });
+    }, 10000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
