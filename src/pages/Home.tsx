@@ -267,7 +267,7 @@ const Home = () => {
             onClick={() => navigate("/auth")}
             variant="outline"
             size="lg"
-            className="w-full rounded-full text-base font-medium"
+            className="w-full rounded-full text-base font-medium bg-card"
           >
             Mam już konto — zaloguj się
           </Button>

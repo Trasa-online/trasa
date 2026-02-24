@@ -5,6 +5,7 @@ import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { supabase } from "@/integrations/supabase/client";
 
 interface PlaceDetail {
+  place_id?: string;
   name: string;
   rating: number;
   user_ratings_total: number;
@@ -106,7 +107,7 @@ const PlaceDetailDrawer = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl p-0 overflow-hidden">
+      <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl p-0 overflow-hidden flex flex-col">
         {loading && (
           <div className="flex flex-col items-center justify-center h-full gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -130,21 +131,24 @@ const PlaceDetailDrawer = ({
         )}
 
         {detail && !loading && (
-          <div className="h-full overflow-y-auto">
-            <button
-              onClick={() => onOpenChange(false)}
-              className="absolute top-4 right-4 z-10 h-8 w-8 rounded-full bg-background/80 backdrop-blur flex items-center justify-center shadow-sm border border-border"
-            >
-              <X className="h-4 w-4" />
-            </button>
+          <>
+            {/* Sticky header with X button */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-2 flex-shrink-0">
+              <h2 className="text-xl font-bold text-foreground pr-4 leading-tight">
+                {detail.name}
+              </h2>
+              <button
+                onClick={() => onOpenChange(false)}
+                className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-            <div className="p-5 pt-6 space-y-5">
-              {/* Header */}
-              <div>
-                <h2 className="text-xl font-bold text-foreground pr-8">
-                  {detail.name}
-                </h2>
-                <div className="flex items-center gap-2 mt-1.5 text-sm text-muted-foreground flex-wrap">
+            <div className="flex-1 overflow-y-auto">
+            <div className="px-5 pb-5 space-y-5">
+              {/* Rating / price / type */}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap -mt-1">
                   {detail.rating && (
                     <span className="flex items-center gap-1 font-medium text-foreground">
                       {detail.rating}
@@ -166,7 +170,6 @@ const PlaceDetailDrawer = ({
                       <span>{categoryLabels[mainType]}</span>
                     </>
                   )}
-                </div>
               </div>
 
               {/* Photos */}
@@ -232,6 +235,21 @@ const PlaceDetailDrawer = ({
                       </div>
                     ))}
                   </div>
+
+                  {/* More reviews on Google */}
+                  <a
+                    href={
+                      detail.place_id
+                        ? `https://www.google.com/maps/place/?q=place_id:${detail.place_id}`
+                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeName)}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-border text-sm text-foreground hover:bg-muted transition-colors"
+                  >
+                    <span className="font-black text-[#4285F4]">G</span>
+                    Pokaż więcej opinii
+                  </a>
                 </div>
               )}
 
@@ -254,7 +272,8 @@ const PlaceDetailDrawer = ({
 
               <div className="h-6" />
             </div>
-          </div>
+            </div>
+          </>
         )}
       </SheetContent>
     </Sheet>

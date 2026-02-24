@@ -156,13 +156,12 @@ const RouteSummaryDialog = ({
     }
   }, [user, saving, plan, preferences, messages, startDate, endDate, navigate, onOpenChange, toast]);
 
-  // Auto-save when closing
-  const handleClose = () => {
-    saveRoute();
+  const handleGoBack = () => {
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={() => handleClose()}>
+    <Dialog open={open} onOpenChange={() => onOpenChange(false)}>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto p-0 gap-0 [&>button]:hidden">
         <VisuallyHidden>
           <DialogTitle>{dateTitle}</DialogTitle>
@@ -171,15 +170,10 @@ const RouteSummaryDialog = ({
         <div className="flex items-start justify-between p-5 pb-0">
           <h2 className="text-xl font-bold leading-tight pr-4">{dateTitle}</h2>
           <button
-            onClick={handleClose}
-            disabled={saving}
+            onClick={handleGoBack}
             className="shrink-0 mt-0.5"
           >
-            {saving ? (
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            ) : (
-              <X className="h-6 w-6 text-muted-foreground hover:text-foreground transition-colors" />
-            )}
+            <X className="h-6 w-6 text-muted-foreground hover:text-foreground transition-colors" />
           </button>
         </div>
 
@@ -204,6 +198,31 @@ const RouteSummaryDialog = ({
 
         {/* Timeline */}
         <RoutePlanTimeline days={plan.days} totalDays={plan.days.length} />
+
+        {/* Action buttons */}
+        <div className="flex flex-col gap-2 px-5 pb-6 pt-2">
+          <button
+            onClick={saveRoute}
+            disabled={saving}
+            className="w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Zapisuję...
+              </>
+            ) : (
+              "Przechodzę dalej"
+            )}
+          </button>
+          <button
+            onClick={handleGoBack}
+            disabled={saving}
+            className="w-full py-3 rounded-xl border border-border text-sm font-medium text-foreground bg-card disabled:opacity-50"
+          >
+            Cofnij do edycji
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   );

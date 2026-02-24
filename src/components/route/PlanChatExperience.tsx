@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Loader2, Check } from "lucide-react";
+import { Send, Mic, MicOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -85,6 +85,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
   const [initializing, setInitializing] = useState(true);
   const [editCount, setEditCount] = useState(0);
   const [preparingPlan, setPreparingPlan] = useState(false);
+  const [planHistory, setPlanHistory] = useState<RoutePlan[]>([]);
   const [selectedPin, setSelectedPin] = useState<PlanPin | null>(null);
   const [addPinDay, setAddPinDay] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -164,8 +165,11 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
       if (data.message) setMessages(withAssistant);
 
       if (data.plan) {
+        if (plan) {
+          setPlanHistory(prev => [...prev, plan]);
+          setEditCount(prev => prev + 1);
+        }
         setPlan(data.plan);
-        if (plan) setEditCount(prev => prev + 1);
         setLoading(false);
       } else if (data.preparing_plan) {
         // AI signalled it's about to generate — show skeleton and force-generate
@@ -176,8 +180,11 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
             body: { preferences, messages: withAssistant, current_plan: plan, force_plan: true },
           });
           if (!planResponse.error && planResponse.data?.plan) {
+            if (plan) {
+              setPlanHistory(prev => [...prev, plan]);
+              setEditCount(prev => prev + 1);
+            }
             setPlan(planResponse.data.plan);
-            if (plan) setEditCount(prev => prev + 1);
             // Append the plan message if any
             if (planResponse.data.message) {
               setMessages(prev => [...prev, { role: "assistant", content: planResponse.data.message }]);
@@ -290,6 +297,13 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
     }
   };
 
+  const handleEditRequest = () => {
+    setMessages(prev => [
+      ...prev,
+      { role: "assistant" as const, content: "Okej, co konkretnie chciałbyś poprawić? 🤔" },
+    ]);
+  };
+
   if (initializing) {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-4">
@@ -342,7 +356,25 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
           <PlanSkeleton numDays={preferences.numDays} />
         )}
 
-        {/* Generated Plan */}
+        {/* Historical Plans */}
+        {planHistory.map((histPlan, idx) => (
+          <div key={idx} className="space-y-3 pt-2 opacity-40 pointer-events-none">
+            <p className="text-[11px] text-muted-foreground px-1 font-medium uppercase tracking-wider">
+              Plan #{idx + 1}
+            </p>
+            {histPlan.days.map((day) => (
+              <DayPinList
+                key={day.day_number}
+                dayNumber={day.day_number}
+                totalDays={histPlan.days.length}
+                pins={day.pins}
+                onRemovePin={() => {}}
+              />
+            ))}
+          </div>
+        ))}
+
+        {/* Current Plan */}
         {plan && (
           <div className="space-y-4 pt-2">
             {plan.days.map((day) => (
@@ -358,23 +390,32 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
               />
             ))}
 
+            {preparingPlan && <PlanSkeleton numDays={preferences.numDays} />}
+
             <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
               <span>Ilość zmian</span>
               <span>Pozostało {Math.max(0, 3 - editCount)}/3</span>
             </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2 pb-2">
+              <button
+                onClick={handleConfirm}
+                className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
+              >
+                Wybieram ten plan!
+              </button>
+              <button
+                onClick={handleEditRequest}
+                disabled={loading}
+                className="flex-1 py-3 rounded-xl border border-border text-sm font-medium text-foreground bg-card disabled:opacity-50"
+              >
+                Wprowadź zmiany
+              </button>
+            </div>
           </div>
         )}
       </div>
-
-      {/* Confirm FAB */}
-      {plan && (
-        <button
-          onClick={handleConfirm}
-          className="fixed bottom-20 right-4 z-50 h-14 w-14 rounded-full bg-foreground text-background shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
-        >
-          <Check className="h-6 w-6" />
-        </button>
-      )}
 
       {/* Input area — fixed to bottom so it follows the user on scroll */}
       <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border/40 bg-background p-3">
@@ -403,7 +444,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
               placeholder={plan ? "Chcesz coś zmienić?" : "Napisz odpowiedź..."}
               rows={1}
               disabled={loading}
-              className="w-full resize-none rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-[14px] placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 disabled:opacity-50"
+              className="w-full resize-none rounded-xl border border-border/60 bg-card px-4 py-2.5 text-[14px] placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 disabled:opacity-50"
               style={{ maxHeight: "120px" }}
             />
           </div>
