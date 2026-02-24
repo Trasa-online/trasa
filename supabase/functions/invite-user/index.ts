@@ -39,14 +39,15 @@ serve(async (req) => {
       });
     }
 
-    // Verify caller is admin
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
+    // Verify caller is admin via user_roles table
+    const { data: roleData } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
 
-    if (!profile?.is_admin) {
+    if (!roleData) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

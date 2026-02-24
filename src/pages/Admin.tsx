@@ -10,10 +10,9 @@ import { format } from "date-fns";
 interface WaitlistEntry {
   id: string;
   email: string;
-  username: string;
   created_at: string;
-  invited_at: string | null;
-  status: "pending" | "invited";
+  notified_at: string | null;
+  source: string | null;
 }
 
 const Admin = () => {
@@ -31,12 +30,13 @@ const Admin = () => {
     if (!user) { navigate("/auth"); return; }
 
     supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single()
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle()
       .then(({ data }) => {
-        if (!data?.is_admin) { navigate("/"); return; }
+        if (!data) { navigate("/"); return; }
         setIsAdmin(true);
         loadWaitlist();
       });
@@ -55,11 +55,10 @@ const Admin = () => {
   const handleInvite = async (entry: WaitlistEntry) => {
     setInviting(entry.id);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const response = await supabase.functions.invoke("invite-user", {
         body: {
           email: entry.email,
-          username: entry.username,
+          username: entry.email.split("@")[0],
           waitlist_id: entry.id,
         },
       });
@@ -71,7 +70,7 @@ const Admin = () => {
       const link = response.data.link as string;
       setGeneratedLinks(prev => ({ ...prev, [entry.id]: link }));
       setWaitlist(prev =>
-        prev.map(e => e.id === entry.id ? { ...e, status: "invited", invited_at: new Date().toISOString() } : e)
+        prev.map(e => e.id === entry.id ? { ...e, notified_at: new Date().toISOString() } : e)
       );
       toast.success(`Link dla ${entry.email} gotowy — skopiuj i wyślij!`);
     } catch (err: any) {
@@ -116,21 +115,20 @@ const Admin = () => {
                 <div key={entry.id} className="border border-border rounded-xl p-4 bg-card space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-sm">{entry.username}</p>
-                      <p className="text-sm text-muted-foreground">{entry.email}</p>
+                      <p className="font-semibold text-sm">{entry.email}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         Zgłoszono: {format(new Date(entry.created_at), "dd.MM.yyyy HH:mm")}
-                        {entry.invited_at && (
-                          <> · Zaproszono: {format(new Date(entry.invited_at), "dd.MM.yyyy HH:mm")}</>
+                        {entry.notified_at && (
+                          <> · Zaproszono: {format(new Date(entry.notified_at), "dd.MM.yyyy HH:mm")}</>
                         )}
                       </p>
                     </div>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
-                      entry.status === "invited"
+                      entry.notified_at
                         ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                         : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
                     }`}>
-                      {entry.status === "invited" ? "Zaproszono" : "Oczekuje"}
+                      {entry.notified_at ? "Zaproszono" : "Oczekuje"}
                     </span>
                   </div>
 
@@ -151,14 +149,14 @@ const Admin = () => {
                   ) : (
                     <Button
                       size="sm"
-                      variant={entry.status === "invited" ? "outline" : "default"}
+                      variant={entry.notified_at ? "outline" : "default"}
                       onClick={() => handleInvite(entry)}
                       disabled={inviting === entry.id}
                       className="w-full rounded-lg"
                     >
                       {inviting === entry.id ? (
                         <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Generuję link...</>
-                      ) : entry.status === "invited" ? (
+                      ) : entry.notified_at ? (
                         "Wygeneruj nowy link"
                       ) : (
                         "Generuj link aktywacyjny"
