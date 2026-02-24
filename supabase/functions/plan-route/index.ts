@@ -107,10 +107,10 @@ ${cityKnown ? `\n## ⚠️ KLUCZOWA ZASADA\nUser wpisał już destynację: „${
 ### Faza 1 — START
 ${cityKnown
   ? `Destynacja znana (${cityName}). System wysłał już powitanie. Odpowiadaj na pytania usera i zmierzaj do generowania planu.`
-  : `Zapytaj w jednej krótkiej wiadomości:\n1. Gdzie jedziesz?\n2. O której chcesz zacząć?\n${preferences.numDays > 1 ? "3. W której części miasta masz nocleg?" : ""}\nMax 2 zdania wstępu + pytania jako lista.`}
+  : `Zapytaj w jednej krótkiej wiadomości:\n1. Gdzie jedziesz?\n2. Czy masz już jakieś plany lub są miejsca, które koniecznie chcesz odwiedzić?\n3. Od której do której godziny mam zaplanować Twój dzień?\n${preferences.numDays > 1 ? "4. W której części miasta masz nocleg?" : ""}\nMax 2 zdania wstępu + pytania jako lista.`}
 
 ### Faza 2 — DOPRECYZOWANIE (opcjonalna)
-Jeśli brakuje godziny startu lub kluczowego kontekstu — dopytaj JEDNYM pytaniem.
+Jeśli brakuje przedziału godzinowego dnia lub kluczowego kontekstu — dopytaj JEDNYM pytaniem.
 Jeśli masz wszystko — przejdź bezpośrednio do generowania planu.
 
 ---
@@ -324,10 +324,10 @@ serve(async (req) => {
 
       const messageParts = [
         `Świetny wybór — **${cityName}**! 🗺️`,
-        `Planujesz **${daysLabel}**, tempo ${paceLabel}${prioritiesPL ? `, z fokusem na **${prioritiesPL}**` : ""}. Mam wszystko czego potrzebuję — zacznijmy! 🎯`,
+        `Planujesz **${daysLabel}**, tempo ${paceLabel}${prioritiesPL ? `, z fokusem na **${prioritiesPL}**` : ""}. Chętnie przygotuję plan! 🎯`,
         nDays > 1
-          ? `O której godzinie chcesz zacząć **pierwszego dnia**?\n\nI jeszcze — w której części miasta masz **nocleg**? To pomoże mi dobrze zaplanować końce kolejnych dni.`
-          : `O której godzinie chcesz **zacząć**? ⏰`,
+          ? `Czy masz już jakieś plany lub są miejsca, które koniecznie chcesz odwiedzić? 📍\n\nOd której do której godziny mam zaplanować **pierwszy dzień**?\n\nI jeszcze — w której części miasta masz **nocleg**? To pomoże mi dobrze zaplanować końce kolejnych dni.`
+          : `Czy masz już jakieś plany lub są miejsca, które koniecznie chcesz odwiedzić? 📍\n\nOd której do której godziny mam zaplanować Twój dzień? ⏰`,
       ];
 
       return new Response(
