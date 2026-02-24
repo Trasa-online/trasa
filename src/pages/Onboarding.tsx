@@ -149,11 +149,13 @@ const Onboarding = () => {
   const [styleCustom, setStyleCustom] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const toggle = (set: Set<string>, setFn: (s: Set<string>) => void, id: string) => {
-    const next = new Set(set);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setFn(next);
+  const toggle = (setFn: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) => {
+    setFn(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleSave = async (skip = false) => {
@@ -190,7 +192,7 @@ const Onboarding = () => {
           title="Jedzenie i napoje"
           items={FOOD_PREFS}
           selected={foodSelected}
-          onToggle={(id) => toggle(foodSelected, setFoodSelected, id)}
+          onToggle={(id) => toggle(setFoodSelected, id)}
           customItems={foodCustom}
           onAddCustom={(val) => setFoodCustom(prev => [...prev, val])}
           onRemoveCustom={(val) => setFoodCustom(prev => prev.filter(v => v !== val))}
@@ -200,7 +202,7 @@ const Onboarding = () => {
           title="Co lubisz zwiedzać"
           items={INTERESTS}
           selected={interestsSelected}
-          onToggle={(id) => toggle(interestsSelected, setInterestsSelected, id)}
+          onToggle={(id) => toggle(setInterestsSelected, id)}
           customItems={interestsCustom}
           onAddCustom={(val) => setInterestsCustom(prev => [...prev, val])}
           onRemoveCustom={(val) => setInterestsCustom(prev => prev.filter(v => v !== val))}
@@ -210,7 +212,7 @@ const Onboarding = () => {
           title="Jak zwykle podróżujesz?"
           items={TRAVEL_STYLE}
           selected={styleSelected}
-          onToggle={(id) => toggle(styleSelected, setStyleSelected, id)}
+          onToggle={(id) => toggle(setStyleSelected, id)}
           customItems={styleCustom}
           onAddCustom={(val) => setStyleCustom(prev => [...prev, val])}
           onRemoveCustom={(val) => setStyleCustom(prev => prev.filter(v => v !== val))}

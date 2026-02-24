@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, MapPin, PlusCircle, Send } from "lucide-react";
+import { Check, MapPin, PlusCircle, Send, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +11,6 @@ interface HomeTourProps {
 
 const PhoneFrame = ({ children }: { children: React.ReactNode }) => (
   <div className="w-[240px] h-[420px] rounded-[32px] border-2 border-foreground/10 bg-background shadow-2xl overflow-hidden flex flex-col shrink-0">
-    {/* status bar notch */}
     <div className="h-5 shrink-0 flex items-end justify-center pb-1">
       <div className="w-10 h-1 bg-foreground/10 rounded-full" />
     </div>
@@ -28,7 +27,6 @@ const Visual1 = () => (
   <PhoneFrame>
     <div className="h-full flex flex-col bg-background">
       <div className="flex-1 px-3 pt-1 overflow-hidden">
-        {/* Avatar */}
         <div className="flex flex-col items-center pt-2 pb-3">
           <div className="h-9 w-9 rounded-full bg-muted" />
           <div className="h-2 w-14 bg-muted rounded-full mt-1.5" />
@@ -37,9 +35,7 @@ const Visual1 = () => (
             <div className="h-1.5 w-10 bg-muted/70 rounded-full" />
           </div>
         </div>
-        {/* Section label */}
         <div className="h-2.5 w-24 bg-foreground rounded-full mb-2" />
-        {/* Trip card placeholder */}
         <div className="rounded-xl border border-border bg-card p-2.5 space-y-1.5">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
@@ -53,8 +49,6 @@ const Visual1 = () => (
           </div>
         </div>
       </div>
-
-      {/* CTA bar — highlighted with ring */}
       <div className="relative bg-foreground px-3 py-2.5 shrink-0">
         <div className="absolute inset-0 ring-2 ring-yellow-400 ring-inset rounded-none" />
         <div className="bg-card rounded-lg px-2 py-1.5 flex items-center justify-center gap-1.5">
@@ -70,71 +64,42 @@ const Visual1 = () => (
 const Visual2 = () => (
   <PhoneFrame>
     <div className="h-full px-3 pt-2 pb-3 overflow-hidden bg-background space-y-2">
-      {/* City */}
       <div>
         <div className="h-1.5 w-16 bg-muted rounded-full mb-1.5" />
         <div className="border border-border rounded-lg px-2.5 py-1.5 bg-card">
           <span className="text-[9px] text-foreground/70">Kraków</span>
         </div>
       </div>
-      {/* Days */}
       <div>
         <div className="h-1.5 w-10 bg-muted rounded-full mb-1.5" />
         <div className="flex gap-1">
           {(["1 dzień", "2 dni", "3 dni"] as const).map((d, i) => (
-            <div
-              key={d}
-              className={cn(
-                "flex-1 rounded-lg py-1.5 text-center text-[8px] font-medium border",
-                i === 1
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-card border-border text-foreground"
-              )}
-            >
+            <div key={d} className={cn("flex-1 rounded-lg py-1.5 text-center text-[8px] font-medium border", i === 1 ? "bg-foreground text-background border-foreground" : "bg-card border-border text-foreground")}>
               {d}
             </div>
           ))}
         </div>
       </div>
-      {/* Pace */}
       <div>
         <div className="h-1.5 w-14 bg-muted rounded-full mb-1.5" />
         <div className="flex gap-1">
           {(["⚡ Aktywne", "⚖️ Mieszane", "☕ Spokojne"] as const).map((p, i) => (
-            <div
-              key={p}
-              className={cn(
-                "flex-1 rounded-lg py-1.5 text-center text-[8px] font-medium border",
-                i === 1
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-card border-border text-foreground"
-              )}
-            >
+            <div key={p} className={cn("flex-1 rounded-lg py-1.5 text-center text-[8px] font-medium border", i === 1 ? "bg-foreground text-background border-foreground" : "bg-card border-border text-foreground")}>
               {p}
             </div>
           ))}
         </div>
       </div>
-      {/* Priorities */}
       <div>
         <div className="h-1.5 w-24 bg-muted rounded-full mb-1.5" />
         <div className="flex flex-wrap gap-1">
           {(["🍽️ Jedzenie", "🌅 Widoki", "🏛️ Muzea", "🎭 Klimaty"] as const).map((p, i) => (
-            <div
-              key={p}
-              className={cn(
-                "rounded-full px-1.5 py-0.5 text-[7px] font-medium border",
-                i < 2
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-card border-border text-foreground"
-              )}
-            >
+            <div key={p} className={cn("rounded-full px-1.5 py-0.5 text-[7px] font-medium border", i < 2 ? "bg-foreground text-background border-foreground" : "bg-card border-border text-foreground")}>
               {p}
             </div>
           ))}
         </div>
       </div>
-      {/* Date */}
       <div>
         <div className="h-1.5 w-14 bg-muted rounded-full mb-1.5" />
         <div className="border border-border rounded-lg px-2 py-1.5 bg-card flex items-center gap-1.5">
@@ -142,7 +107,6 @@ const Visual2 = () => (
           <span className="text-[9px] text-muted-foreground/60">01.03.2025</span>
         </div>
       </div>
-      {/* Button */}
       <div className="bg-foreground rounded-lg py-1.5 text-center text-[9px] text-background font-semibold">
         Dalej
       </div>
@@ -155,31 +119,22 @@ const Visual3 = () => (
   <PhoneFrame>
     <div className="h-full flex flex-col bg-background">
       <div className="flex-1 px-2.5 pt-2 overflow-hidden space-y-1.5">
-        {/* AI bubble */}
         <div className="flex justify-start">
           <div className="bg-card rounded-2xl rounded-bl-sm px-2.5 py-1.5 max-w-[85%] shadow-sm">
             <p className="text-[8px] text-foreground leading-relaxed">
-              Cześć! Przygotowałem plan dla Ciebie — **Kraków 2 dni** z kulturą i smakami 🎉
+              Cześć! Przygotowałem plan dla Ciebie — Kraków 2 dni z kulturą i smakami 🎉
             </p>
           </div>
         </div>
-        {/* User bubble */}
         <div className="flex justify-end">
           <div className="bg-foreground rounded-2xl rounded-br-sm px-2.5 py-1.5 max-w-[65%]">
             <p className="text-[8px] text-background">Brzmi świetnie!</p>
           </div>
         </div>
-        {/* Plan card */}
         <div className="border border-border rounded-xl bg-card p-2 space-y-1">
-          <div className="flex items-center justify-between px-0.5">
-            <div className="h-1.5 w-14 bg-foreground/80 rounded-full" />
-          </div>
-          {[
-            ["1", "Sukiennice", "9:00"],
-            ["2", "Wawel", "11:30"],
-            ["3", "Kazimierz", "14:00"],
-          ].map(([num, name, time]) => (
-            <div key={name} className="flex items-center gap-1.5 px-0.5">
+          <div className="h-1.5 w-14 bg-foreground/80 rounded-full" />
+          {[["1","9:00"],["2","11:30"],["3","14:00"]].map(([num, time]) => (
+            <div key={num} className="flex items-center gap-1.5 px-0.5">
               <div className="h-4 w-4 rounded-full bg-foreground flex items-center justify-center shrink-0">
                 <span className="text-[6px] text-background font-bold">{num}</span>
               </div>
@@ -188,7 +143,6 @@ const Visual3 = () => (
             </div>
           ))}
         </div>
-        {/* Decision buttons */}
         <div className="flex gap-1.5">
           <div className="flex-1 bg-foreground rounded-lg py-1.5 text-center text-[7px] text-background font-semibold">
             Wybieram ten plan!
@@ -198,7 +152,6 @@ const Visual3 = () => (
           </div>
         </div>
       </div>
-      {/* Input bar */}
       <div className="border-t border-border/40 px-2.5 py-2 flex gap-1.5 items-center shrink-0">
         <div className="flex-1 bg-card border border-border/60 rounded-lg px-2 py-1">
           <div className="h-1.5 w-16 bg-muted rounded-full" />
@@ -215,39 +168,25 @@ const Visual3 = () => (
 const Visual4 = () => (
   <PhoneFrame>
     <div className="relative h-full bg-background">
-      {/* Blurred screen behind */}
       <div className="absolute inset-0 bg-background/40" />
-      {/* Modal */}
       <div className="absolute inset-x-2 top-3 bottom-3 bg-card rounded-2xl shadow-2xl border border-border overflow-hidden flex flex-col">
         <div className="px-3 pt-3 pb-2 flex items-start justify-between shrink-0">
           <div className="h-2.5 w-28 bg-foreground rounded-full" />
           <div className="h-4 w-4 rounded bg-muted" />
         </div>
         <div className="h-px bg-border mx-3 shrink-0" />
-        {/* Map */}
         <div className="mx-3 mt-2 h-16 rounded-xl bg-muted/50 border border-border flex items-center justify-center shrink-0">
           <MapPin className="h-4 w-4 text-muted-foreground/40" />
         </div>
-        {/* Timeline */}
         <div className="flex-1 px-3 pt-2.5 space-y-2 overflow-hidden">
-          {[
-            ["9:00", "Sukiennice", true],
-            ["11:30", "Wawel", false],
-            ["14:00", "Kazimierz", false],
-          ].map(([t, n, filled]) => (
-            <div key={n as string} className="flex items-center gap-1.5">
-              <div
-                className={cn(
-                  "h-2.5 w-2.5 rounded-full border shrink-0",
-                  filled ? "bg-foreground border-foreground" : "bg-background border-border"
-                )}
-              />
+          {[true, false, false].map((filled, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <div className={cn("h-2.5 w-2.5 rounded-full border shrink-0", filled ? "bg-foreground border-foreground" : "bg-background border-border")} />
               <div className="h-1.5 w-6 bg-muted rounded-full shrink-0" />
               <div className="h-1.5 flex-1 bg-foreground/50 rounded-full" />
             </div>
           ))}
         </div>
-        {/* Buttons */}
         <div className="px-3 pb-3 space-y-1.5 shrink-0">
           <div className="bg-foreground rounded-lg py-1.5 text-center text-[8px] text-background font-semibold">
             Przechodzę dalej
@@ -265,14 +204,11 @@ const Visual4 = () => (
 const Visual5 = () => (
   <PhoneFrame>
     <div className="h-full flex flex-col bg-background px-3 pt-2">
-      {/* Avatar */}
       <div className="flex flex-col items-center pt-1 pb-2">
         <div className="h-7 w-7 rounded-full bg-muted" />
         <div className="h-1.5 w-12 bg-muted rounded-full mt-1" />
       </div>
-      {/* Section label */}
       <div className="h-2.5 w-24 bg-foreground rounded-full mb-2" />
-      {/* Trip card */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="p-2.5">
           <div className="flex items-start justify-between">
@@ -283,36 +219,114 @@ const Visual5 = () => (
             <div className="h-2 w-10 bg-muted rounded-full" />
           </div>
         </div>
-        {/* Check-in section */}
         <div className="border-t border-border px-2.5 py-2 space-y-1.5">
           <div className="h-1.5 w-16 bg-muted/70 rounded-full mb-1" />
-          {[
-            { name: "Sukiennice", checked: true },
-            { name: "Wawel", checked: false },
-            { name: "Kazimierz", checked: false },
-          ].map(({ name, checked }) => (
-            <div key={name} className="flex items-center gap-1.5">
-              <div
-                className={cn(
-                  "h-4 w-4 rounded border flex items-center justify-center shrink-0",
-                  checked
-                    ? "bg-foreground border-foreground"
-                    : "border-border bg-background"
-                )}
-              >
+          {[true, false, false].map((checked, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <div className={cn("h-4 w-4 rounded border flex items-center justify-center shrink-0", checked ? "bg-foreground border-foreground" : "border-border bg-background")}>
                 {checked && <Check className="h-2.5 w-2.5 text-background" />}
               </div>
-              <div
-                className={cn(
-                  "h-1.5 rounded-full",
-                  checked ? "w-12 bg-muted" : "w-16 bg-foreground/60"
-                )}
-              />
+              <div className={cn("h-1.5 rounded-full", checked ? "w-12 bg-muted" : "w-16 bg-foreground/60")} />
             </div>
           ))}
           <div className="bg-foreground rounded-lg py-1 mt-1 text-center text-[8px] text-background font-medium">
             Zakończ dzień i podsumuj z AI
           </div>
+        </div>
+      </div>
+    </div>
+  </PhoneFrame>
+);
+
+/** Slide 6 — Home after completed day: "Opowiadam o dniu!" CTA */
+const Visual6 = () => (
+  <PhoneFrame>
+    <div className="h-full flex flex-col bg-background px-3 pt-2">
+      <div className="flex flex-col items-center pt-1 pb-2">
+        <div className="h-7 w-7 rounded-full bg-muted" />
+        <div className="h-1.5 w-12 bg-muted rounded-full mt-1" />
+      </div>
+      <div className="h-2.5 w-24 bg-foreground rounded-full mb-2" />
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="p-2.5">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <div className="h-2.5 w-14 bg-foreground rounded-full" />
+              <div className="h-1.5 w-20 bg-muted rounded-full" />
+            </div>
+            <div className="h-2 w-10 bg-muted rounded-full" />
+          </div>
+        </div>
+        {/* All pins checked */}
+        <div className="border-t border-border px-2.5 py-2 space-y-1.5">
+          {[true, true, true].map((_, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <div className="h-4 w-4 rounded border bg-foreground border-foreground flex items-center justify-center shrink-0">
+                <Check className="h-2.5 w-2.5 text-background" />
+              </div>
+              <div className="h-1.5 rounded-full w-12 bg-muted" />
+            </div>
+          ))}
+        </div>
+        {/* "Opowiadam o dniu!" button highlighted */}
+        <div className="border-t border-border px-2.5 py-2">
+          <div className="relative bg-foreground rounded-lg py-1.5 flex items-center justify-center gap-1.5">
+            <div className="absolute inset-0 ring-2 ring-yellow-400 ring-inset rounded-lg" />
+            <MessageSquare className="h-2.5 w-2.5 text-background" />
+            <span className="text-[8px] text-background font-semibold">Opowiadam o dniu!</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </PhoneFrame>
+);
+
+/** Slide 7 — AI guide chat about the day */
+const Visual7 = () => (
+  <PhoneFrame>
+    <div className="h-full flex flex-col bg-background">
+      <div className="flex-1 px-2.5 pt-2 overflow-hidden space-y-1.5">
+        <div className="flex justify-start">
+          <div className="bg-card rounded-2xl rounded-bl-sm px-2.5 py-1.5 max-w-[85%] shadow-sm">
+            <p className="text-[8px] text-foreground leading-relaxed">
+              Cześć! Jak minął Twoj dzien w Krakowie? Wszystko zgodnie z planem? 😊
+            </p>
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <div className="bg-foreground rounded-2xl rounded-br-sm px-2.5 py-1.5 max-w-[70%]">
+            <p className="text-[8px] text-background">Tak, bylo super!</p>
+          </div>
+        </div>
+        <div className="flex justify-start">
+          <div className="bg-card rounded-2xl rounded-bl-sm px-2.5 py-1.5 max-w-[85%] shadow-sm">
+            <p className="text-[8px] text-foreground leading-relaxed">
+              Swietnie! Co bylo najlepszym momentem dnia? 🌟
+            </p>
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <div className="bg-foreground rounded-2xl rounded-br-sm px-2.5 py-1.5 max-w-[65%]">
+            <p className="text-[8px] text-background">Wawel byl niesamowity!</p>
+          </div>
+        </div>
+        {/* Typing indicator */}
+        <div className="flex justify-start">
+          <div className="bg-card rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm">
+            <div className="flex gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
+              <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
+              <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="border-t border-border/40 px-2.5 py-2 flex gap-1.5 items-center shrink-0">
+        <div className="flex-1 bg-card border border-border/60 rounded-lg px-2 py-1">
+          <div className="h-1.5 w-16 bg-muted rounded-full" />
+        </div>
+        <div className="h-6 w-6 bg-foreground rounded-full flex items-center justify-center shrink-0">
+          <Send className="h-2.5 w-2.5 text-background" />
         </div>
       </div>
     </div>
@@ -325,39 +339,55 @@ interface Slide {
   visual?: React.ReactNode;
   isClosing?: boolean;
   title: string;
-  description: string;
+  description: React.ReactNode;
 }
 
 const SLIDES: Slide[] = [
   {
     visual: <Visual1 />,
     title: "Twoja podróż zaczyna się tutaj",
-    description:
-      "Guzik na dole ekranu to centrum Trasy. Jedno kliknięcie uruchamia AI, które zaproponuje gotowy plan z prawdziwymi miejscami i godzinami.",
+    description: (
+      <>
+        Guzik na dole ekranu to centrum Trasy. Kliknij i{" "}
+        <strong>zaplanuj swoją podróż w mniej niż 10 minut!</strong>
+      </>
+    ),
   },
   {
     visual: <Visual2 />,
-    title: "Powiedz AI czego szukasz",
+    title: "Zacznij od podstawowych informacji",
     description:
       "Miasto, liczba dni, tempo podróży i priorytety — im więcej wypełnisz, tym lepiej AI dopasuje plan do Twoich oczekiwań.",
   },
   {
     visual: <Visual3 />,
-    title: "AI planuje, Ty decydujesz",
+    title: "Hej! Tu Twój przewodnik!",
     description:
-      "Rozmawiasz z AI, które poznaje Twoje upodobania i generuje spersonalizowany plan. Możesz zaakceptować trasę albo poprosić o poprawki.",
+      "O nic się nie martw — opowiedz o swojej wymarzonej podróży i plan gotowy.",
   },
   {
     visual: <Visual4 />,
-    title: "Trasa gotowa do zapisania",
+    title: "...i cyk! Plan gotowy",
     description:
-      "Widzisz wszystkie miejsca na mapie i osi czasu. Kliknij Przechodzę dalej — trasa zapisuje się do Twoich aktywnych podróży.",
+      "Widzisz wszystkie miejsca na mapie oraz szacunkowy czas, którego będziesz potrzebować. Gotowy plan znajdziesz w swoich aktywnych podróżach.",
   },
   {
     visual: <Visual5 />,
-    title: "Odhaczaj miejsca w trakcie",
+    title: "Odhaczaj odwiedzone miejsca",
     description:
-      "W dniu wyjazdu Twoja trasa pojawi się na ekranie głównym. Odhaczaj odwiedzone miejsca na bieżąco i podsumuj dzień z AI.",
+      "W dniu wyjazdu Twoja trasa pojawi się na ekranie głównym. Odhaczaj odwiedzone miejsca, aby mieć nad wszystkim kontrolę.",
+  },
+  {
+    visual: <Visual6 />,
+    title: "Oceń swój dzień",
+    description:
+      "Dzień się kończy, wiele się wydarzyło — to dobry moment by go podsumować!",
+  },
+  {
+    visual: <Visual7 />,
+    title: "Czy wszystko poszło zgodnie z planem?",
+    description:
+      "Opowiedz o przebiegu zaplanowanego dnia — to pomoże Twojemu przewodnikowi tworzyć coraz lepsze trasy!",
   },
   {
     isClosing: true,
