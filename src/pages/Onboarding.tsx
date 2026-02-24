@@ -30,12 +30,12 @@ const INTERESTS = [
 ];
 
 const TRAVEL_STYLE = [
-  { id: "intensive", label: "Intensywny" },
-  { id: "relaxed", label: "Spokojny" },
-  { id: "family", label: "Rodzinny" },
-  { id: "romantic", label: "Romantyczny" },
-  { id: "budget", label: "Budżetowy" },
-  { id: "luxury", label: "Luksusowy" },
+  { id: "intensive", label: "Intensywnie" },
+  { id: "relaxed", label: "Spokojnie" },
+  { id: "family", label: "Rodzinnie" },
+  { id: "romantic", label: "Romantycznie" },
+  { id: "budget", label: "Budżetowo" },
+  { id: "luxury", label: "Luksusowo" },
 ];
 
 const Chip = ({
