@@ -48,6 +48,7 @@ const CreateRoute = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [finalPlan, setFinalPlan] = useState<any>(null);
   const [finalMessages, setFinalMessages] = useState<any[]>([]);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   if (loading) return null;
   if (!user) {
@@ -108,9 +109,13 @@ const CreateRoute = () => {
             <Input
               placeholder="np. Kraków, Warszawa, Rzym..."
               value={preferences.city}
-              onChange={e => setPreferences(prev => ({ ...prev, city: e.target.value }))}
-              className="bg-card"
+              onChange={e => {
+                setPreferences(prev => ({ ...prev, city: e.target.value }));
+                if (e.target.value.trim()) setValidationErrors(prev => { const { city, ...rest } = prev; return rest; });
+              }}
+              className={cn("bg-card", validationErrors.city && "border-destructive")}
             />
+            {validationErrors.city && <p className="text-xs text-destructive">{validationErrors.city}</p>}
           </div>
 
           {/* Days */}
@@ -162,6 +167,7 @@ const CreateRoute = () => {
           {/* Priorities */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Co jest dla Ciebie ważne?</label>
+            {validationErrors.priorities && <p className="text-xs text-destructive">{validationErrors.priorities}</p>}
             <div className="flex flex-wrap gap-2">
               {PRIORITY_OPTIONS.map(option => (
                 <button
@@ -233,6 +239,7 @@ const CreateRoute = () => {
                 />
               </PopoverContent>
             </Popover>
+            {validationErrors.date && <p className="text-xs text-destructive">{validationErrors.date}</p>}
             <p className="text-xs text-muted-foreground">Data wpływa na Twój plan podróży</p>
           </div>
 
@@ -269,7 +276,14 @@ const CreateRoute = () => {
 
           {/* Next button */}
           <Button
-            onClick={() => setStep(2)}
+            onClick={() => {
+              const errors: Record<string, string> = {};
+              if (!preferences.city.trim()) errors.city = "Wpisz miasto docelowe";
+              if (preferences.priorities.length === 0) errors.priorities = "Wybierz przynajmniej jeden priorytet";
+              if (!selectedDate) errors.date = "Wybierz datę podróży";
+              setValidationErrors(errors);
+              if (Object.keys(errors).length === 0) setStep(2);
+            }}
             size="lg"
             className="w-full"
           >
