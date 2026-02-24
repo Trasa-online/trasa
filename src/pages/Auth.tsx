@@ -50,6 +50,8 @@ const Auth = () => {
     }
   };
 
+  const [waitlistDone, setWaitlistDone] = useState(false);
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreed) {
@@ -62,25 +64,21 @@ const Auth = () => {
     }
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
-      if (data.user) {
-        await supabase.from("profiles").upsert({
-          id: data.user.id,
-          username: username.trim(),
-          onboarding_completed: false,
-        });
+      const { error } = await supabase.from("waitlist").insert({
+        email: email.trim().toLowerCase(),
+        username: username.trim(),
+      });
+      if (error) {
+        if (error.code === "23505") {
+          toast.error("Ten email jest już na liście oczekujących.");
+        } else {
+          throw error;
+        }
+        return;
       }
-      if (data.session) {
-        // Email confirmation disabled — user is logged in immediately
-        navigate("/onboarding");
-      } else {
-        // Email confirmation enabled — user must verify email first
-        toast.success("Konto założone! Sprawdź email w celu weryfikacji, a następnie zaloguj się.");
-        setMode("login");
-      }
+      setWaitlistDone(true);
     } catch (error: any) {
-      toast.error(error.message || "Błąd rejestracji");
+      toast.error(error.message || "Błąd zgłoszenia");
     } finally {
       setLoading(false);
     }
@@ -154,6 +152,20 @@ const Auth = () => {
                 {loading ? "Logowanie..." : "Zaloguj się"}
               </Button>
             </form>
+          ) : waitlistDone ? (
+            <div className="text-center py-6 space-y-3">
+              <p className="text-3xl">✉️</p>
+              <p className="font-semibold">Zgłoszenie przyjęte!</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Wkrótce wyślemy Ci link aktywacyjny na adres <strong>{email}</strong>.
+              </p>
+              <button
+                onClick={() => { setWaitlistDone(false); setMode("login"); }}
+                className="text-sm text-muted-foreground underline pt-2"
+              >
+                Wróć do logowania
+              </button>
+            </div>
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-1.5">
@@ -181,19 +193,6 @@ const Auth = () => {
                   className="bg-card"
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="reg-password">Hasło</Label>
-                <Input
-                  id="reg-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="Min. 6 znaków"
-                  minLength={6}
-                  className="bg-card"
-                />
-              </div>
               <label className="flex items-start gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
@@ -210,8 +209,11 @@ const Auth = () => {
                 </span>
               </label>
               <Button type="submit" className="w-full rounded-full" disabled={loading}>
-                {loading ? "Tworzę konto..." : "Zarejestruj się"}
+                {loading ? "Zgłaszam..." : "Dołącz do listy oczekujących"}
               </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                TRASA jest w wersji beta. Po zgłoszeniu wyślemy Ci zaproszenie.
+              </p>
             </form>
           )}
         </div>

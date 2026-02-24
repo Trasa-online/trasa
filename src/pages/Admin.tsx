@@ -1,0 +1,178 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { Copy, Check, Loader2, ArrowLeft } from "lucide-react";
+import { format } from "date-fns";
+
+interface WaitlistEntry {
+  id: string;
+  email: string;
+  username: string;
+  created_at: string;
+  invited_at: string | null;
+  status: "pending" | "invited";
+}
+
+const Admin = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
+  const [fetchingList, setFetchingList] = useState(true);
+  const [inviting, setInviting] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [generatedLinks, setGeneratedLinks] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) { navigate("/auth"); return; }
+
+    supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (!data?.is_admin) { navigate("/"); return; }
+        setIsAdmin(true);
+        loadWaitlist();
+      });
+  }, [user, loading, navigate]);
+
+  const loadWaitlist = async () => {
+    setFetchingList(true);
+    const { data } = await supabase
+      .from("waitlist")
+      .select("*")
+      .order("created_at", { ascending: false });
+    setWaitlist((data as WaitlistEntry[]) ?? []);
+    setFetchingList(false);
+  };
+
+  const handleInvite = async (entry: WaitlistEntry) => {
+    setInviting(entry.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke("invite-user", {
+        body: {
+          email: entry.email,
+          username: entry.username,
+          waitlist_id: entry.id,
+        },
+      });
+
+      if (response.error || !response.data?.link) {
+        throw new Error(response.error?.message ?? "Błąd generowania linku");
+      }
+
+      const link = response.data.link as string;
+      setGeneratedLinks(prev => ({ ...prev, [entry.id]: link }));
+      setWaitlist(prev =>
+        prev.map(e => e.id === entry.id ? { ...e, status: "invited", invited_at: new Date().toISOString() } : e)
+      );
+      toast.success(`Link dla ${entry.email} gotowy — skopiuj i wyślij!`);
+    } catch (err: any) {
+      toast.error(err.message ?? "Nie udało się wygenerować linku");
+    } finally {
+      setInviting(null);
+    }
+  };
+
+  const copyLink = (id: string, link: string) => {
+    navigator.clipboard.writeText(link);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+    toast.success("Link skopiowany!");
+  };
+
+  if (loading || isAdmin === null) return null;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="flex items-center gap-3 p-4 border-b border-border/40">
+        <button onClick={() => navigate("/")} className="p-1">
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h1 className="text-lg font-semibold">Panel admina — Lista oczekujących</h1>
+      </div>
+
+      <div className="p-4 max-w-2xl mx-auto">
+        {fetchingList ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : waitlist.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-12">
+            Brak zgłoszeń na liście oczekujących.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {waitlist.map(entry => {
+              const link = generatedLinks[entry.id];
+              return (
+                <div key={entry.id} className="border border-border rounded-xl p-4 bg-card space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-sm">{entry.username}</p>
+                      <p className="text-sm text-muted-foreground">{entry.email}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Zgłoszono: {format(new Date(entry.created_at), "dd.MM.yyyy HH:mm")}
+                        {entry.invited_at && (
+                          <> · Zaproszono: {format(new Date(entry.invited_at), "dd.MM.yyyy HH:mm")}</>
+                        )}
+                      </p>
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                      entry.status === "invited"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                    }`}>
+                      {entry.status === "invited" ? "Zaproszono" : "Oczekuje"}
+                    </span>
+                  </div>
+
+                  {link ? (
+                    <div className="flex gap-2">
+                      <div className="flex-1 bg-muted rounded-lg px-3 py-2 text-xs text-muted-foreground font-mono truncate">
+                        {link}
+                      </div>
+                      <button
+                        onClick={() => copyLink(entry.id, link)}
+                        className="shrink-0 h-9 w-9 flex items-center justify-center rounded-lg border border-border bg-card hover:bg-muted transition-colors"
+                      >
+                        {copiedId === entry.id
+                          ? <Check className="h-4 w-4 text-green-600" />
+                          : <Copy className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant={entry.status === "invited" ? "outline" : "default"}
+                      onClick={() => handleInvite(entry)}
+                      disabled={inviting === entry.id}
+                      className="w-full rounded-lg"
+                    >
+                      {inviting === entry.id ? (
+                        <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Generuję link...</>
+                      ) : entry.status === "invited" ? (
+                        "Wygeneruj nowy link"
+                      ) : (
+                        "Generuj link aktywacyjny"
+                      )}
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Admin;
