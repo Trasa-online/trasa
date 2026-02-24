@@ -13,6 +13,7 @@ interface WaitlistEntry {
   created_at: string;
   notified_at: string | null;
   source: string | null;
+  has_account?: boolean;
 }
 
 const Admin = () => {
@@ -44,13 +45,25 @@ const Admin = () => {
 
   const loadWaitlist = async () => {
     setFetchingList(true);
-    const { data } = await supabase
-      .from("waitlist")
-      .select("*")
-      .order("created_at", { ascending: false });
-    setWaitlist((data as WaitlistEntry[]) ?? []);
+    try {
+      const response = await supabase.functions.invoke("check-waitlist-status");
+      if (response.data?.entries) {
+        setWaitlist(response.data.entries as WaitlistEntry[]);
+      }
+    } catch (err) {
+      console.error("Failed to load waitlist:", err);
+    }
     setFetchingList(false);
   };
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    if (!isAdmin) return;
+    const interval = setInterval(() => {
+      loadWaitlist();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [isAdmin]);
 
   const handleInvite = async (entry: WaitlistEntry) => {
     setInviting(entry.id);
@@ -124,11 +137,13 @@ const Admin = () => {
                       </p>
                     </div>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
-                      entry.notified_at
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                      entry.has_account
+                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                        : entry.notified_at
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
                     }`}>
-                      {entry.notified_at ? "Zaproszono" : "Oczekuje"}
+                      {entry.has_account ? "Konto stworzone" : entry.notified_at ? "Zaproszono" : "Oczekuje"}
                     </span>
                   </div>
 
