@@ -10,7 +10,7 @@ interface HomeTourProps {
 // ── Phone frame wrapper ───────────────────────────────────────────────────────
 
 const PhoneFrame = ({ children }: { children: React.ReactNode }) => (
-  <div className="w-[240px] h-[420px] rounded-[32px] border-2 border-foreground/10 bg-background shadow-2xl overflow-hidden flex flex-col shrink-0">
+  <div className="w-[220px] h-[380px] sm:w-[240px] sm:h-[420px] rounded-[32px] border-2 border-foreground/10 bg-background shadow-2xl overflow-hidden flex flex-col shrink-0">
     <div className="h-5 shrink-0 flex items-end justify-center pb-1">
       <div className="w-10 h-1 bg-foreground/10 rounded-full" />
     </div>
@@ -454,7 +454,7 @@ const HomeTour = ({ onDone }: HomeTourProps) => {
       </div>
 
       {/* Visual mockup */}
-      <div className="flex-1 flex items-center justify-center px-6 min-h-0">
+      <div className="flex-1 flex items-center justify-center px-6 min-h-0 overflow-hidden">
         {slide.visual}
       </div>
 

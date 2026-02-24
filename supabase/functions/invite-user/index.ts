@@ -67,7 +67,10 @@ serve(async (req) => {
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "invite",
       email,
-      options: { data: { username } },
+      options: {
+        data: { username },
+        redirectTo: "https://trasa.lovable.app/set-password",
+      },
     });
 
     if (linkError || !linkData?.properties?.action_link) {
