@@ -14,6 +14,7 @@ export interface PlanPin {
   day_number: number;
   walking_time_from_prev?: string | null;
   distance_from_prev?: string | null;
+  place_id?: string | null;
 }
 
 interface DayPinListProps {

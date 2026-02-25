@@ -127,6 +127,7 @@ const RouteSummaryDialog = ({
               suggested_time: pin.suggested_time,
               category: pin.category,
               original_creator_id: user.id,
+              place_id: pin.place_id ?? null,
             }))
           );
           if (pinsError) throw pinsError;

@@ -442,6 +442,18 @@ serve(async (req) => {
       }
     }
 
+    // Ground plan with real Google Places data to eliminate hallucinations
+    if (plan) {
+      const GOOGLE_API_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
+      if (GOOGLE_API_KEY) {
+        try {
+          plan = await verifyAndGroundPlan(plan, GOOGLE_API_KEY);
+        } catch (err) {
+          console.error("Places grounding failed, using AI data:", err);
+        }
+      }
+    }
+
     // Detect when AI is about to prepare a plan but hasn't generated one yet
     const PREPARING_PHRASES = [
       "przygotuję", "przygotowuję", "zaraz generuję", "daj mi chwilę",
@@ -465,3 +477,63 @@ serve(async (req) => {
     );
   }
 });
+
+// ── Google Places grounding ────────────────────────────────────────────────────
+
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+async function verifyPin(pin: any, city: string, apiKey: string): Promise<any> {
+  try {
+    // Search by AI-suggested name + city
+    const query = `${pin.place_name} ${city}`;
+    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&language=pl&key=${apiKey}`;
+
+    const response = await fetch(url);
+    if (!response.ok) return pin;
+
+    const data = await response.json();
+    if (data.status !== "OK" || !data.results?.length) return pin;
+
+    const place = data.results[0];
+    const lat = place.geometry?.location?.lat;
+    const lng = place.geometry?.location?.lng;
+
+    // Sanity check: result must be within 60 km of AI-suggested location
+    if (pin.latitude && pin.longitude && lat && lng) {
+      if (getDistanceKm(pin.latitude, pin.longitude, lat, lng) > 60) {
+        return pin; // Wrong location — keep AI data
+      }
+    }
+
+    return {
+      ...pin,
+      place_name: place.name ?? pin.place_name,
+      address: place.formatted_address ?? pin.address,
+      latitude: lat ?? pin.latitude,
+      longitude: lng ?? pin.longitude,
+      place_id: place.place_id ?? null,
+    };
+  } catch {
+    return pin; // On any error keep AI data
+  }
+}
+
+async function verifyAndGroundPlan(plan: any, apiKey: string): Promise<any> {
+  const verifiedDays = await Promise.all(
+    (plan.days ?? []).map(async (day: any) => ({
+      ...day,
+      pins: await Promise.all(
+        (day.pins ?? []).map((pin: any) => verifyPin(pin, plan.city ?? "", apiKey))
+      ),
+    }))
+  );
+  return { ...plan, days: verifiedDays };
+}
