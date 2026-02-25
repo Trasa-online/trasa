@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Copy, Check, Loader2, ArrowLeft } from "lucide-react";
+import { Copy, Check, Loader2, ArrowLeft, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface WaitlistEntry {
@@ -25,6 +25,7 @@ const Admin = () => {
   const [inviting, setInviting] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [generatedLinks, setGeneratedLinks] = useState<Record<string, string>>({});
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -100,6 +101,21 @@ const Admin = () => {
     toast.success("Link skopiowany!");
   };
 
+  const handleDelete = async (entry: WaitlistEntry) => {
+    if (!confirm(`Usunąć ${entry.email} z listy oczekujących?`)) return;
+    setDeleting(entry.id);
+    try {
+      const { error } = await supabase.from("waitlist").delete().eq("id", entry.id);
+      if (error) throw error;
+      setWaitlist(prev => prev.filter(e => e.id !== entry.id));
+      toast.success(`${entry.email} usunięto z listy`);
+    } catch (err: any) {
+      toast.error(err.message ?? "Nie udało się usunąć");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   if (loading || isAdmin === null) return null;
 
   return (
@@ -127,7 +143,7 @@ const Admin = () => {
               return (
                 <div key={entry.id} className="border border-border rounded-xl p-4 bg-card space-y-3">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm">{entry.email}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         Zgłoszono: {format(new Date(entry.created_at), "dd.MM.yyyy HH:mm")}
@@ -136,15 +152,25 @@ const Admin = () => {
                         )}
                       </p>
                     </div>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                       entry.has_account
                         ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                         : entry.notified_at
                           ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                           : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
                     }`}>
-                      {entry.has_account ? "Konto stworzone" : entry.notified_at ? "Zaproszono" : "Oczekuje"}
-                    </span>
+                        {entry.has_account ? "Konto stworzone" : entry.notified_at ? "Zaproszono" : "Oczekuje"}
+                      </span>
+                      <button
+                        onClick={() => handleDelete(entry)}
+                        disabled={deleting === entry.id}
+                        className="h-7 w-7 flex items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                        title="Usuń z listy"
+                      >
+                        {deleting === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
                   </div>
 
                   {link ? (
