@@ -109,7 +109,7 @@ const Settings = () => {
     <>
       <PageHeader title="Ustawienia profilu" showBack />
       <div className="p-4 space-y-6">
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4 bg-card rounded-xl p-4">
           <div className="relative">
             <Avatar className="h-24 w-24">
               <AvatarImage src={avatarUrl} />
@@ -130,13 +130,14 @@ const Settings = () => {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 bg-card rounded-xl p-4">
           <div>
             <Label htmlFor="username">Nazwa użytkownika</Label>
             <Input
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              className="bg-background"
             />
           </div>
 
@@ -148,6 +149,7 @@ const Settings = () => {
               onChange={(e) => setBio(e.target.value)}
               placeholder="Opowiedz coś o sobie..."
               rows={3}
+              className="bg-background"
             />
           </div>
 
@@ -160,7 +162,7 @@ const Settings = () => {
           </Button>
         </div>
 
-        <div className="space-y-2 pt-4 border-t border-border">
+        <div className="space-y-2 bg-card rounded-xl p-4">
           {isAdmin && (
             <Button
               variant="outline"
