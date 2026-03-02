@@ -3,12 +3,11 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Loader2, ArrowLeft, Send, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { Settings, Loader2, ArrowLeft, Send, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import RoutePlanTimeline from "@/components/route/RoutePlanTimeline";
 import { toast } from "sonner";
-import { useTTS } from "@/hooks/useTTS";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -36,8 +35,6 @@ const DayReview = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
-  const prevMsgCount = useRef(0);
-  const { speak, stop, muted, toggleMute } = useTTS();
 
   const { data: route, isLoading: routeLoading } = useQuery({
     queryKey: ["review-route", routeId],
@@ -95,18 +92,6 @@ const DayReview = () => {
       }, 50);
     }
   }, [messages, isDone]);
-
-  // Speak new assistant messages
-  useEffect(() => {
-    const lastMsg = messages[messages.length - 1];
-    if (messages.length > prevMsgCount.current && lastMsg?.role === "assistant") {
-      speak(lastMsg.content);
-    }
-    prevMsgCount.current = messages.length;
-  }, [messages, speak]);
-
-  // Stop audio on unmount
-  useEffect(() => () => stop(), [stop]);
 
   // Redirect to home after done
   useEffect(() => {
@@ -271,18 +256,9 @@ const DayReview = () => {
           <ArrowLeft className="h-6 w-6" />
         </button>
         <h1 className="text-2xl font-black tracking-tight">TRASA</h1>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={toggleMute}
-            className="p-1 text-foreground/70"
-            title={muted ? "Włącz głos" : "Wycisz głos"}
-          >
-            {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-          </button>
-          <button onClick={() => navigate("/settings")} className="p-1 text-foreground/70">
-            <Settings className="h-6 w-6" />
-          </button>
-        </div>
+        <button onClick={() => navigate("/settings")} className="p-1 text-foreground/70">
+          <Settings className="h-6 w-6" />
+        </button>
       </header>
 
       {/* Scrollable content */}

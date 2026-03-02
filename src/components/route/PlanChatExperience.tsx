@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Loader2, Volume2, VolumeX } from "lucide-react";
+import { Send, Mic, MicOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import DayPinList, { type PlanPin } from "./DayPinList";
 import PlaceDetailDrawer from "./PlaceDetailDrawer";
 import AddPinSheet from "./AddPinSheet";
-import { useTTS } from "@/hooks/useTTS";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -92,26 +91,12 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
-  const prevMsgCount = useRef(0);
-  const { speak, stop, muted, toggleMute } = useTTS();
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, plan]);
-
-  // Speak new assistant messages
-  useEffect(() => {
-    const lastMsg = messages[messages.length - 1];
-    if (messages.length > prevMsgCount.current && lastMsg?.role === "assistant") {
-      speak(lastMsg.content);
-    }
-    prevMsgCount.current = messages.length;
-  }, [messages, speak]);
-
-  // Stop audio when component unmounts
-  useEffect(() => () => stop(), [stop]);
 
   // Start conversation
   useEffect(() => {
@@ -438,14 +423,6 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
       {/* Input area — fixed to bottom so it follows the user on scroll */}
       <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border/40 bg-background p-3">
         <div className="flex items-end gap-2 max-w-lg mx-auto">
-          <button
-            type="button"
-            onClick={toggleMute}
-            className="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center transition-colors bg-muted text-muted-foreground hover:text-foreground"
-            title={muted ? "Włącz głos" : "Wycisz głos"}
-          >
-            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-          </button>
           {hasVoiceSupport && (
             <button
               type="button"
