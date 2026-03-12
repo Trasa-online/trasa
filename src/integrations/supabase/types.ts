@@ -357,6 +357,60 @@ export type Database = {
           },
         ]
       }
+      memory_embeddings: {
+        Row: {
+          content: string
+          created_at: string
+          embedding: string | null
+          id: string
+          memory_type: string
+          metadata: Json | null
+          pin_id: string | null
+          route_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          memory_type?: string
+          metadata?: Json | null
+          pin_id?: string | null
+          route_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          memory_type?: string
+          metadata?: Json | null
+          pin_id?: string | null
+          route_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_embeddings_pin_id_fkey"
+            columns: ["pin_id"]
+            isOneToOne: false
+            referencedRelation: "pins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memory_embeddings_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           actor_id: string
@@ -1214,6 +1268,23 @@ export type Database = {
         Returns: boolean
       }
       increment_route_views: { Args: { route_id: string }; Returns: undefined }
+      match_memories: {
+        Args: {
+          filter_user_id?: string
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          content: string
+          id: string
+          memory_type: string
+          metadata: Json
+          pin_id: string
+          route_id: string
+          similarity: number
+        }[]
+      }
       restore_pins_from_backup: {
         Args: { p_backup_ids: string[]; p_target_route_id?: string }
         Returns: {
