@@ -68,7 +68,7 @@ const MapContent = ({ pins, onPinAdd, onMapClick }: {
     });
 
     return () => {
-      google.maps.event.removeListener(listener);
+      (window as any).google.maps.event.removeListener(listener);
     };
   }, [map, validPins]);
 
