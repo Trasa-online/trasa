@@ -35,7 +35,7 @@ interface PendingPin {
 const MapContent = ({ pins, onPinAdd, onMapClick }: {
   pins: Pin[];
   onPinAdd: (pinData: NewPinData) => void;
-  onMapClick?: (e: google.maps.MapMouseEvent) => void;
+  onMapClick?: (e: any) => void;
 }) => {
   const map = useMap();
   const [isLoading, setIsLoading] = useState(false);
