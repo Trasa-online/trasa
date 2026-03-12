@@ -126,7 +126,7 @@ const AddressAutocompleteInner = memo(function AddressAutocompleteInner({
         request,
         (predictions, status) => {
           if (
-            status === google.maps.places.PlacesServiceStatus.OK &&
+            status === "OK" &&
             predictions &&
             predictions.length > 0
           ) {
