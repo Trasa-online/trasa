@@ -40,7 +40,7 @@ const MapContent = ({ validPins }: { validPins: Pin[] }) => {
   useEffect(() => {
     if (!map || validPins.length <= 1) return;
 
-    const bounds = new google.maps.LatLngBounds();
+    const bounds = new (window as any).google.maps.LatLngBounds();
     validPins.forEach(pin => {
       if (pin.latitude && pin.longitude) {
         bounds.extend({ lat: pin.latitude, lng: pin.longitude });
