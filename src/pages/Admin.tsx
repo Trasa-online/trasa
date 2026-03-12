@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Copy, Check, Loader2, ArrowLeft, Trash2, Plus, ToggleLeft, ToggleRight } from "lucide-react";
+import { Copy, Check, Loader2, ArrowLeft, Trash2, Plus, ToggleLeft, ToggleRight, Link as LinkIcon, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 
 interface WaitlistEntry {
@@ -63,6 +63,8 @@ const Admin = () => {
   const [savingPlace, setSavingPlace] = useState(false);
   const [togglingPlace, setTogglingPlace] = useState<string | null>(null);
   const [deletingPlace, setDeletingPlace] = useState<string | null>(null);
+  const [extractUrl, setExtractUrl] = useState("");
+  const [extracting, setExtracting] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -150,6 +152,35 @@ const Admin = () => {
     } finally {
       setDeleting(null);
     }
+  };
+
+  const handleExtractUrl = async () => {
+    const url = extractUrl.trim();
+    if (!url) return;
+    setExtracting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("extract-creator-place", {
+        body: { url },
+      });
+      if (error || !data) throw new Error(error?.message ?? "Błąd ekstrakcji");
+      if (data.error) throw new Error(data.error);
+
+      setPlaceForm(prev => ({
+        ...prev,
+        place_name: data.place_name ?? prev.place_name,
+        city: data.city ?? prev.city,
+        category: data.category ?? prev.category,
+        description: data.description ?? prev.description,
+        creator_handle: data.creator_handle ?? prev.creator_handle,
+        photo_url: data.photo_url ?? prev.photo_url,
+        instagram_reel_url: data.instagram_reel_url ?? prev.instagram_reel_url,
+      }));
+      toast.success("Dane wyciągnięte — sprawdź i uzupełnij formularz");
+      setExtractUrl("");
+    } catch (err: any) {
+      toast.error(err.message ?? "Nie udało się przetworzyć URL");
+    }
+    setExtracting(false);
   };
 
   const handleSavePlace = async () => {
@@ -313,6 +344,36 @@ const Admin = () => {
             {/* Add form */}
             <div className="border border-border rounded-xl p-4 bg-card space-y-3">
               <p className="font-semibold text-sm">Dodaj miejsce</p>
+
+              {/* URL auto-fill */}
+              <div className="bg-muted/40 rounded-xl p-3 space-y-2">
+                <p className="text-xs font-medium flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Auto-wypełnij z URL (YouTube / TikTok)
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    value={extractUrl}
+                    onChange={e => setExtractUrl(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && (e.preventDefault(), handleExtractUrl())}
+                    className="flex-1 bg-background text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExtractUrl}
+                    disabled={!extractUrl.trim() || extracting}
+                    className="shrink-0"
+                  >
+                    {extracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Wklej link → AI wyciągnie nazwę, miasto, kategorię i opis. Instagram wklej ręcznie niżej.
+                </p>
+              </div>
+
               {[
                 { key: "creator_handle", label: "Kreator (np. @krakowhello)", required: true },
                 { key: "city", label: "Miasto (małe litery, np. krakow)", required: true },
