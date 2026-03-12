@@ -117,7 +117,7 @@ const AddressAutocompleteInner = memo(function AddressAutocompleteInner({
 
     setLoading(true);
     try {
-      const request: google.maps.places.AutocompletionRequest = {
+      const request: any = {
         input: searchQuery,
         language: "pl",
       };
