@@ -190,6 +190,48 @@ export type Database = {
           },
         ]
       }
+      creator_places: {
+        Row: {
+          category: string | null
+          city: string
+          created_at: string
+          creator_handle: string
+          description: string | null
+          google_maps_url: string | null
+          id: string
+          instagram_reel_url: string | null
+          is_active: boolean
+          photo_url: string | null
+          place_name: string
+        }
+        Insert: {
+          category?: string | null
+          city: string
+          created_at?: string
+          creator_handle: string
+          description?: string | null
+          google_maps_url?: string | null
+          id?: string
+          instagram_reel_url?: string | null
+          is_active?: boolean
+          photo_url?: string | null
+          place_name: string
+        }
+        Update: {
+          category?: string | null
+          city?: string
+          created_at?: string
+          creator_handle?: string
+          description?: string | null
+          google_maps_url?: string | null
+          id?: string
+          instagram_reel_url?: string | null
+          is_active?: boolean
+          photo_url?: string | null
+          place_name?: string
+        }
+        Relationships: []
+      }
       day_considerations: {
         Row: {
           created_at: string | null
