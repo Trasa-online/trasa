@@ -60,7 +60,7 @@ const MapContent = ({ pins, onPinAdd, onMapClick }: {
 
     map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
     // Limit max zoom
-    const listener = google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+    const listener = (window as any).google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
       const currentZoom = map.getZoom();
       if (currentZoom && currentZoom > 14) {
         map.setZoom(14);
