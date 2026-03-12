@@ -30,7 +30,7 @@ const MapPinSelector = ({ existingPins, onPinSelect }: MapPinSelectorProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const mapRef = useRef<{ flyTo: (lng: number, lat: number) => void } | null>(null);
 
   const handlePinAdd = (pinData: NewPinData) => {

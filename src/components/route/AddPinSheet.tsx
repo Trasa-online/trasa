@@ -40,7 +40,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext }: AddPinSheetP
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   const searchPlaces = useCallback(async (searchQuery: string) => {
     if (searchQuery.length < 2) {

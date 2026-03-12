@@ -35,7 +35,7 @@ interface PendingPin {
 const MapContent = ({ pins, onPinAdd, onMapClick }: {
   pins: Pin[];
   onPinAdd: (pinData: NewPinData) => void;
-  onMapClick?: (e: google.maps.MapMouseEvent) => void;
+  onMapClick?: (e: any) => void;
 }) => {
   const map = useMap();
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +51,7 @@ const MapContent = ({ pins, onPinAdd, onMapClick }: {
   useEffect(() => {
     if (!map || validPins.length <= 1) return;
 
-    const bounds = new google.maps.LatLngBounds();
+    const bounds = new (window as any).google.maps.LatLngBounds();
     validPins.forEach(pin => {
       if (pin.latitude && pin.longitude) {
         bounds.extend({ lat: pin.latitude, lng: pin.longitude });
@@ -60,7 +60,7 @@ const MapContent = ({ pins, onPinAdd, onMapClick }: {
 
     map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
     // Limit max zoom
-    const listener = google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+    const listener = (window as any).google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
       const currentZoom = map.getZoom();
       if (currentZoom && currentZoom > 14) {
         map.setZoom(14);
@@ -68,11 +68,11 @@ const MapContent = ({ pins, onPinAdd, onMapClick }: {
     });
 
     return () => {
-      google.maps.event.removeListener(listener);
+      (window as any).google.maps.event.removeListener(listener);
     };
   }, [map, validPins]);
 
-  const handleMapClick = async (e: google.maps.MapMouseEvent) => {
+  const handleMapClick = async (e: any) => {
     if (!e.latLng) return;
 
     const lat = e.latLng.lat();

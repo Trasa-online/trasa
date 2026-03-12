@@ -56,7 +56,7 @@ const AddressAutocompleteInner = memo(function AddressAutocompleteInner({
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const isTypingRef = useRef(false);
   const lastExternalValueRef = useRef(value);
 
@@ -64,8 +64,8 @@ const AddressAutocompleteInner = memo(function AddressAutocompleteInner({
   const places = useMapsLibrary("places");
   const geocoding = useMapsLibrary("geocoding");
 
-  const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
-  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+  const autocompleteServiceRef = useRef<any>(null);
+  const geocoderRef = useRef<any>(null);
 
   // Initialize services when libraries are loaded
   useEffect(() => {
@@ -117,7 +117,7 @@ const AddressAutocompleteInner = memo(function AddressAutocompleteInner({
 
     setLoading(true);
     try {
-      const request: google.maps.places.AutocompletionRequest = {
+      const request: any = {
         input: searchQuery,
         language: "pl",
       };
@@ -126,7 +126,7 @@ const AddressAutocompleteInner = memo(function AddressAutocompleteInner({
         request,
         (predictions, status) => {
           if (
-            status === google.maps.places.PlacesServiceStatus.OK &&
+            status === "OK" &&
             predictions &&
             predictions.length > 0
           ) {
@@ -176,7 +176,7 @@ const AddressAutocompleteInner = memo(function AddressAutocompleteInner({
         geocoderRef.current.geocode(
           { placeId: suggestion.placeId },
           (results, status) => {
-            if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+            if (status === "OK" && results && results[0]) {
               const location = results[0].geometry.location;
               const coords: Coordinates = {
                 latitude: location.lat(),

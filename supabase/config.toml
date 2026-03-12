@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.chat-route]
 verify_jwt = false
+
+[functions.embed-memory]
+verify_jwt = false
+
+[functions.get-alternatives]
+verify_jwt = false

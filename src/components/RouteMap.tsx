@@ -40,7 +40,7 @@ const MapContent = ({ validPins }: { validPins: Pin[] }) => {
   useEffect(() => {
     if (!map || validPins.length <= 1) return;
 
-    const bounds = new google.maps.LatLngBounds();
+    const bounds = new (window as any).google.maps.LatLngBounds();
     validPins.forEach(pin => {
       if (pin.latitude && pin.longitude) {
         bounds.extend({ lat: pin.latitude, lng: pin.longitude });
@@ -49,7 +49,7 @@ const MapContent = ({ validPins }: { validPins: Pin[] }) => {
 
     map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
     // Limit max zoom
-    const listener = google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+    const listener = (window as any).google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
       const currentZoom = map.getZoom();
       if (currentZoom && currentZoom > 14) {
         map.setZoom(14);
@@ -57,7 +57,7 @@ const MapContent = ({ validPins }: { validPins: Pin[] }) => {
     });
 
     return () => {
-      google.maps.event.removeListener(listener);
+      (window as any).google.maps.event.removeListener(listener);
     };
   }, [map, validPins]);
 
