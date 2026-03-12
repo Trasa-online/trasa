@@ -515,7 +515,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
       </div>
 
       {/* Input area — fixed to bottom so it follows the user on scroll */}
-      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border/40 bg-background p-3">
+      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border/40 bg-background px-3 pt-3 pb-safe">
         <div className="flex items-end gap-2 max-w-lg mx-auto">
           {hasVoiceSupport && (
             <button

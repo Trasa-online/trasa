@@ -239,7 +239,7 @@ const DayReview = () => {
   if (routeLoading || !route) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        <header className="bg-muted px-4 py-4 flex items-center justify-between">
+        <header className="bg-muted px-4 pt-safe-4 pb-4 flex items-center justify-between">
           <button onClick={() => navigate("/")} className="p-1 text-foreground/70">
             <ArrowLeft className="h-6 w-6" />
           </button>
@@ -323,7 +323,7 @@ const DayReview = () => {
 
       {/* Sticky input — only when chat is active and not done */}
       {!isDone && (
-        <div className="sticky bottom-0 border-t border-border/40 bg-background p-3 z-10">
+        <div className="sticky bottom-0 border-t border-border/40 bg-background px-3 pt-3 pb-safe z-10">
           <div className="flex items-end gap-2 max-w-lg mx-auto">
             {hasVoiceSupport && (
               <button

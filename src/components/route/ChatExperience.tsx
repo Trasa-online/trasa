@@ -255,7 +255,7 @@ const ChatExperience = ({ routeId, pins, onComplete, onSkip }: ChatExperiencePro
       </div>
 
       {/* Input area */}
-      <div className="sticky bottom-0 border-t border-border/40 bg-background p-3 z-10">
+      <div className="sticky bottom-0 border-t border-border/40 bg-background px-3 pt-3 pb-safe z-10">
         <div className="flex items-end gap-2 max-w-lg mx-auto">
           {hasVoiceSupport && (
             <button

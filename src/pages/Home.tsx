@@ -464,7 +464,7 @@ const Home = () => {
 
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-foreground px-4 py-4" data-tour="cta">
+      <div className="fixed bottom-0 left-0 right-0 bg-foreground px-4 pt-4 pb-safe-4" data-tour="cta">
         <div className="max-w-lg mx-auto">
           <Button
             onClick={() => navigate("/create")}

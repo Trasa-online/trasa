@@ -102,7 +102,7 @@ const CreateRoute = () => {
     return (
       <div className="min-h-screen bg-background">
         {/* Header */}
-        <div className="flex items-center gap-3 p-4 border-b border-border/40">
+        <div className="flex items-center gap-3 px-4 pt-safe-4 pb-4 border-b border-border/40">
           <button onClick={() => navigate("/")} className="p-1">
             <ArrowLeft className="h-5 w-5" />
           </button>

@@ -421,7 +421,7 @@ const CreateTrip = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b">
+      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b safe-top">
         <div className="flex items-center h-14 px-4">
           <Button variant="ghost" size="icon" onClick={handleBack}>
             <ArrowLeft className="h-5 w-5" />

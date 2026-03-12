@@ -6,7 +6,7 @@ const Terms = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="sticky top-0 z-50 bg-background border-b border-border/40 px-4 py-3 flex items-center gap-3">
+      <header className="sticky top-0 z-50 bg-background border-b border-border/40 px-4 pt-safe pb-3 flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="p-1 text-foreground/70 hover:text-foreground transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </button>

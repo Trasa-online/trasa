@@ -232,7 +232,7 @@ const DayPlan = () => {
   return (
     <div className="flex flex-col min-h-svh bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-background px-4 py-3 flex items-center gap-3">
+      <header className="sticky top-0 z-50 border-b border-border/40 bg-background px-4 pt-safe pb-3 flex items-center gap-3">
         <button onClick={() => navigate("/")} className="p-1 -ml-1">
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -288,7 +288,7 @@ const DayPlan = () => {
       </div>
 
       {/* Sticky bottom */}
-      <div className="sticky bottom-0 border-t border-border/40 bg-background p-3 space-y-2">
+      <div className="sticky bottom-0 border-t border-border/40 bg-background px-3 pt-3 pb-safe space-y-2">
         {editCount >= 3 && (
           <p className="text-xs text-center text-muted-foreground">
             Wykorzystano limit 3 zmian

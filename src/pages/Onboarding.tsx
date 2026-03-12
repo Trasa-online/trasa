@@ -228,7 +228,7 @@ const Onboarding = () => {
       </div>
 
       {/* Sticky bottom CTA */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-5 py-4 flex flex-col gap-2">
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-5 pt-4 pb-safe-4 flex flex-col gap-2">
         <Button
           onClick={() => handleSave(false)}
           disabled={saving}

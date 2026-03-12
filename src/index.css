@@ -57,6 +57,14 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
+  /* iOS safe area padding utilities */
+  .pt-safe   { padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem); }
+  .pt-safe-4 { padding-top: calc(env(safe-area-inset-top, 0px) + 1rem); }
+  /* For containers with a fixed inner height (adds only the inset, no base) */
+  .safe-top  { padding-top: env(safe-area-inset-top, 0px); }
+  .pb-safe   { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem); }
+  .pb-safe-4 { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem); }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
