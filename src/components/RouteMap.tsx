@@ -57,7 +57,7 @@ const MapContent = ({ validPins }: { validPins: Pin[] }) => {
     });
 
     return () => {
-      google.maps.event.removeListener(listener);
+      (window as any).google.maps.event.removeListener(listener);
     };
   }, [map, validPins]);
 

@@ -176,7 +176,7 @@ const AddressAutocompleteInner = memo(function AddressAutocompleteInner({
         geocoderRef.current.geocode(
           { placeId: suggestion.placeId },
           (results, status) => {
-            if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+            if (status === "OK" && results && results[0]) {
               const location = results[0].geometry.location;
               const coords: Coordinates = {
                 latitude: location.lat(),

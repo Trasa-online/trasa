@@ -25,7 +25,7 @@ const DebouncedTextarea = memo(function DebouncedTextarea({
   debounceMs = 500,
 }: DebouncedTextareaProps) {
   const [localValue, setLocalValue] = useState(value);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Track if we're in the middle of user input to prevent external overwrites
   const isTypingRef = useRef(false);
   // Track the last value we sent to parent to avoid unnecessary syncs

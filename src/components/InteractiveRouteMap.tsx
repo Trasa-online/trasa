@@ -72,7 +72,7 @@ const MapContent = ({ pins, onPinAdd, onMapClick }: {
     };
   }, [map, validPins]);
 
-  const handleMapClick = async (e: google.maps.MapMouseEvent) => {
+  const handleMapClick = async (e: any) => {
     if (!e.latLng) return;
 
     const lat = e.latLng.lat();
