@@ -145,7 +145,7 @@ const Home = () => {
     return null;
   };
 
-  // Find a route with pending review (for manual entry) — only if trip has already started
+  // Find a route with pending review — only for days whose date has already arrived
   const getPendingReviewRoute = (trip: any) => {
     if (!trip.startDate) return null;
     const today = new Date();
@@ -153,7 +153,14 @@ const Home = () => {
     const tripStart = new Date(trip.startDate);
     tripStart.setHours(0, 0, 0, 0);
     if (today < tripStart) return null;
-    return trip.routes.find((r: any) => r.chat_status !== "completed" && (r.pins || []).length > 0) || null;
+    return trip.routes.find((r: any) => {
+      if (r.chat_status === "completed") return false;
+      if (!(r.pins || []).length) return false;
+      // Only show for days that have already started (not future days)
+      const routeDate = r.start_date ? new Date(r.start_date) : tripStart;
+      routeDate.setHours(0, 0, 0, 0);
+      return routeDate <= today;
+    }) || null;
   };
 
   const handleTripClick = (trip: any) => {
