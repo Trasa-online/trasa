@@ -190,39 +190,6 @@ export type Database = {
           },
         ]
       }
-      creator_plans: {
-        Row: {
-          city: string
-          created_at: string
-          creator_handle: string
-          id: string
-          is_active: boolean
-          thumbnail_url: string | null
-          title: string
-          video_url: string | null
-        }
-        Insert: {
-          city: string
-          created_at?: string
-          creator_handle: string
-          id?: string
-          is_active?: boolean
-          thumbnail_url?: string | null
-          title: string
-          video_url?: string | null
-        }
-        Update: {
-          city?: string
-          created_at?: string
-          creator_handle?: string
-          id?: string
-          is_active?: boolean
-          thumbnail_url?: string | null
-          title?: string
-          video_url?: string | null
-        }
-        Relationships: []
-      }
       creator_places: {
         Row: {
           category: string | null
@@ -236,7 +203,6 @@ export type Database = {
           is_active: boolean
           photo_url: string | null
           place_name: string
-          plan_id: string | null
         }
         Insert: {
           category?: string | null
@@ -250,7 +216,6 @@ export type Database = {
           is_active?: boolean
           photo_url?: string | null
           place_name: string
-          plan_id?: string | null
         }
         Update: {
           category?: string | null
@@ -264,16 +229,8 @@ export type Database = {
           is_active?: boolean
           photo_url?: string | null
           place_name?: string
-          plan_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "creator_places_plan_id_fkey"
-            columns: ["plan_id"]
-            referencedRelation: "creator_plans"
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
       }
       day_considerations: {
         Row: {
