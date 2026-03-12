@@ -16,7 +16,10 @@ export default function SwipeDiscovery({ city, onDone }: SwipeDiscoveryProps) {
 
   useEffect(() => {
     const fetch = async () => {
-      const normalized = city.trim().toLowerCase();
+      const normalized = city.trim().toLowerCase()
+        .replace(/ó/g, "o").replace(/ą/g, "a").replace(/ę/g, "e")
+        .replace(/ś/g, "s").replace(/ź/g, "z").replace(/ż/g, "z")
+        .replace(/ć/g, "c").replace(/ń/g, "n").replace(/ł/g, "l");
       const { data } = await supabase
         .from("creator_places")
         .select("id, place_name, category, description, instagram_reel_url, creator_handle, photo_url")

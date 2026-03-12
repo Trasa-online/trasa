@@ -8,6 +8,45 @@ interface OEmbedData {
   thumbnail_url?: string;
 }
 
+interface ExtractedPlace {
+  place_name: string;
+  city: string | null;
+  category: string | null;
+  creator_handle: string | null;
+}
+
+function extractYouTubeId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtu.be")) return u.pathname.slice(1).split("?")[0];
+    return u.searchParams.get("v");
+  } catch {
+    return null;
+  }
+}
+
+async function fetchYouTubeSnippet(
+  videoId: string,
+  apiKey: string
+): Promise<{ title: string; description: string; channelTitle: string } | null> {
+  try {
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${apiKey}`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const snippet = data.items?.[0]?.snippet;
+    if (!snippet) return null;
+    return {
+      title: snippet.title ?? "",
+      description: (snippet.description ?? "").slice(0, 3000),
+      channelTitle: snippet.channelTitle ?? "",
+    };
+  } catch {
+    return null;
+  }
+}
+
 serve(async (req) => {
   const reqOrigin = req.headers.get("Origin") ?? "";
   const corsHeaders = {
@@ -28,32 +67,6 @@ serve(async (req) => {
       );
     }
 
-    // ── 1. Fetch oEmbed metadata ──────────────────────────────────────────────
-    let oembedData: OEmbedData | null = null;
-    let platform = "unknown";
-
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      platform = "youtube";
-      try {
-        const res = await fetch(
-          `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`
-        );
-        if (res.ok) oembedData = await res.json();
-      } catch { /* ignore */ }
-    } else if (url.includes("tiktok.com")) {
-      platform = "tiktok";
-      try {
-        const res = await fetch(
-          `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`
-        );
-        if (res.ok) oembedData = await res.json();
-      } catch { /* ignore */ }
-    } else if (url.includes("instagram.com")) {
-      platform = "instagram";
-      // Instagram oEmbed requires FB token — skip, just pass URL through
-    }
-
-    // ── 2. Build AI prompt ────────────────────────────────────────────────────
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(
@@ -62,30 +75,75 @@ serve(async (req) => {
       );
     }
 
+    // ── 1. Fetch metadata ─────────────────────────────────────────────────────
+    let oembedData: OEmbedData | null = null;
+    let platform = "unknown";
+    let richDescription: string | null = null;
+
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      platform = "youtube";
+
+      // Try YouTube Data API for full description
+      const GOOGLE_API_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
+      const videoId = extractYouTubeId(url);
+      if (GOOGLE_API_KEY && videoId) {
+        const snippet = await fetchYouTubeSnippet(videoId, GOOGLE_API_KEY);
+        if (snippet) {
+          oembedData = { title: snippet.title, author_name: snippet.channelTitle };
+          richDescription = snippet.description;
+        }
+      }
+
+      // Fallback: oEmbed (title + author only)
+      if (!oembedData) {
+        try {
+          const res = await fetch(
+            `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`
+          );
+          if (res.ok) oembedData = await res.json();
+        } catch { /* ignore */ }
+      }
+    } else if (url.includes("tiktok.com")) {
+      platform = "tiktok";
+      try {
+        const res = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
+        if (res.ok) oembedData = await res.json();
+      } catch { /* ignore */ }
+    } else if (url.includes("instagram.com")) {
+      platform = "instagram";
+    }
+
+    // ── 2. Build context ──────────────────────────────────────────────────────
     const contextLines: string[] = [`Platforma: ${platform}`, `URL: ${url}`];
     if (oembedData?.title) contextLines.push(`Tytuł materiału: ${oembedData.title}`);
     if (oembedData?.author_name) contextLines.push(`Autor/kanał: ${oembedData.author_name}`);
+    if (richDescription) contextLines.push(`\nOpis materiału:\n${richDescription}`);
     const context = contextLines.join("\n");
 
+    // ── 3. AI extraction (returns ARRAY of places) ────────────────────────────
     const aiPrompt = `Jesteś asystentem który analizuje materiały wideo z mediów społecznościowych i wyciąga z nich informacje o polecanych miejscach (restauracje, kawiarnie, bary, widoki, muzea, parki itp.).
 
-Na podstawie poniższych metadanych z materiału:
+Na podstawie poniższych danych z materiału:
 
 ${context}
 
-Wyodrębnij informacje o poleconym miejscu i zwróć WYŁĄCZNIE obiekt JSON (bez markdown, bez \`\`\`):
-{
-  "place_name": "oficjalna nazwa miejsca lub null",
-  "city": "miasto małymi literami bez polskich znaków (np. krakow, warszawa, gdansk) lub null",
-  "category": "jedna z: bar/cafe/restaurant/viewpoint/museum/park/shopping/gallery/monument/nightlife lub null",
-  "description": "1-2 zdania czym jest to miejsce i dlaczego warto lub null",
-  "creator_handle": "@handle twórcy (z małą @) lub null"
-}
+Wyodrębnij WSZYSTKIE wspomniane miejsca i zwróć WYŁĄCZNIE tablicę JSON (bez markdown, bez \`\`\`):
+[
+  {
+    "place_name": "oficjalna nazwa miejsca",
+    "city": "miasto małymi literami bez polskich znaków (np. krakow, warszawa, gdansk)",
+    "category": "jedna z: bar/cafe/restaurant/viewpoint/museum/park/shopping/gallery/monument/nightlife",
+    "creator_handle": "@handle twórcy (z @)"
+  }
+]
 
 Zasady:
-- Jeśli tytuł nie dotyczy konkretnego miejsca (np. ogólny vlog), zwróć wszystkie pola jako null
+- Zwróć PUSTĄ tablicę [] jeśli materiał nie dotyczy konkretnych miejsc
+- Każde miejsce = osobny obiekt w tablicy
 - city ZAWSZE małymi literami, bez polskich znaków (ó→o, ą→a, ę→e, ś→s, ź→z, ż→z, ć→c, ń→n, ł→l)
-- Nie wymyślaj nazw — tylko to co jasno wynika z tytułu/autora`;
+- Nie wymyślaj nazw — tylko to co jasno wynika z tytułu lub opisu
+- Max 10 miejsc
+- Jeśli jakieś pole jest nieznane, użyj null`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -96,7 +154,7 @@ Zasady:
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [{ role: "user", content: aiPrompt }],
-        max_tokens: 400,
+        max_tokens: 1500,
         temperature: 0.2,
       }),
     });
@@ -111,11 +169,11 @@ Zasady:
     const aiData = await aiRes.json();
     const rawContent = (aiData.choices?.[0]?.message?.content ?? "").trim();
 
-    let extracted: Record<string, string | null> = {};
+    let places: ExtractedPlace[] = [];
     try {
-      // Strip possible markdown code fences
       const jsonStr = rawContent.replace(/^```json?\n?/, "").replace(/\n?```$/, "").trim();
-      extracted = JSON.parse(jsonStr);
+      const parsed = JSON.parse(jsonStr);
+      places = Array.isArray(parsed) ? parsed : [];
     } catch {
       return new Response(
         JSON.stringify({ error: "Could not parse AI response", raw: rawContent }),
@@ -125,13 +183,9 @@ Zasady:
 
     return new Response(
       JSON.stringify({
-        place_name: extracted.place_name ?? null,
-        city: extracted.city ?? null,
-        category: extracted.category ?? null,
-        description: extracted.description ?? null,
-        creator_handle: extracted.creator_handle ?? null,
+        places,
         photo_url: oembedData?.thumbnail_url ?? null,
-        instagram_reel_url: url,
+        source_url: url,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

@@ -65,6 +65,11 @@ const Admin = () => {
   const [deletingPlace, setDeletingPlace] = useState<string | null>(null);
   const [extractUrl, setExtractUrl] = useState("");
   const [extracting, setExtracting] = useState(false);
+  const [extractedPlaces, setExtractedPlaces] = useState<Array<{
+    place_name: string; city: string | null; category: string | null; creator_handle: string | null;
+  }>>([]);
+  const [extractedSourceUrl, setExtractedSourceUrl] = useState<string | null>(null);
+  const [savingBulk, setSavingBulk] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -158,6 +163,7 @@ const Admin = () => {
     const url = extractUrl.trim();
     if (!url) return;
     setExtracting(true);
+    setExtractedPlaces([]);
     try {
       const { data, error } = await supabase.functions.invoke("extract-creator-place", {
         body: { url },
@@ -165,22 +171,59 @@ const Admin = () => {
       if (error || !data) throw new Error(error?.message ?? "Błąd ekstrakcji");
       if (data.error) throw new Error(data.error);
 
-      setPlaceForm(prev => ({
-        ...prev,
-        place_name: data.place_name ?? prev.place_name,
-        city: data.city ?? prev.city,
-        category: data.category ?? prev.category,
-        description: data.description ?? prev.description,
-        creator_handle: data.creator_handle ?? prev.creator_handle,
-        photo_url: data.photo_url ?? prev.photo_url,
-        instagram_reel_url: data.instagram_reel_url ?? prev.instagram_reel_url,
-      }));
-      toast.success("Dane wyciągnięte — sprawdź i uzupełnij formularz");
-      setExtractUrl("");
+      const places = data.places ?? [];
+      if (places.length === 0) {
+        toast.error("AI nie znalazło konkretnych miejsc w tym materiale — wpisz ręcznie");
+      } else {
+        setExtractedPlaces(places);
+        setExtractedSourceUrl(url);
+        toast.success(`Znaleziono ${places.length} ${places.length === 1 ? "miejsce" : "miejsca/miejsc"} — zatwierdź i dodaj`);
+        setExtractUrl("");
+      }
     } catch (err: any) {
       toast.error(err.message ?? "Nie udało się przetworzyć URL");
     }
     setExtracting(false);
+  };
+
+  const handleAddExtractedPlace = async (idx: number) => {
+    const p = extractedPlaces[idx];
+    if (!p.place_name || !p.city) { toast.error("Brak nazwy lub miasta"); return; }
+    const { error } = await supabase.from("creator_places").insert({
+      place_name: p.place_name,
+      city: p.city,
+      category: p.category || null,
+      creator_handle: p.creator_handle || "@nieznany",
+      instagram_reel_url: extractedSourceUrl || null,
+    });
+    if (error) { toast.error("Błąd zapisu: " + error.message); return; }
+    setExtractedPlaces(prev => prev.filter((_, i) => i !== idx));
+    loadPlaces();
+    toast.success(`Dodano: ${p.place_name}`);
+  };
+
+  const handleAddAllExtracted = async () => {
+    if (extractedPlaces.length === 0) return;
+    setSavingBulk(true);
+    const toInsert = extractedPlaces
+      .filter(p => p.place_name && p.city)
+      .map(p => ({
+        place_name: p.place_name,
+        city: p.city!,
+        category: p.category || null,
+        creator_handle: p.creator_handle || "@nieznany",
+        instagram_reel_url: extractedSourceUrl || null,
+      }));
+    const { error } = await supabase.from("creator_places").insert(toInsert);
+    if (error) {
+      toast.error("Błąd zapisu: " + error.message);
+    } else {
+      toast.success(`Dodano ${toInsert.length} miejsc!`);
+      setExtractedPlaces([]);
+      setExtractedSourceUrl(null);
+      loadPlaces();
+    }
+    setSavingBulk(false);
   };
 
   const handleSavePlace = async () => {
@@ -370,9 +413,45 @@ const Admin = () => {
                   </Button>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Wklej link → AI wyciągnie nazwę, miasto, kategorię i opis. Instagram wklej ręcznie niżej.
+                  Wklej link → AI przeczyta opis i wyciągnie wszystkie wymienione miejsca.
                 </p>
               </div>
+
+              {/* Extracted places preview */}
+              {extractedPlaces.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Znalezione miejsca ({extractedPlaces.length})
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={handleAddAllExtracted}
+                      disabled={savingBulk}
+                      className="h-7 text-xs px-3"
+                    >
+                      {savingBulk ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
+                      Dodaj wszystkie
+                    </Button>
+                  </div>
+                  {extractedPlaces.map((p, idx) => (
+                    <div key={idx} className="flex items-center justify-between gap-2 bg-muted/40 rounded-lg px-3 py-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{p.place_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {[p.city, p.category, p.creator_handle].filter(Boolean).join(" · ")}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleAddExtractedPlace(idx)}
+                        className="shrink-0 h-7 w-7 flex items-center justify-center rounded-lg bg-foreground text-background hover:opacity-80 transition-opacity"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {[
                 { key: "creator_handle", label: "Kreator (np. @krakowhello)", required: true },
