@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, Mic, MessageSquare, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ interface TripPreferences {
   startDate: string | null;
   planningMode: "voice" | "text";
   city: string;
+  folderId?: string;
+  dayNumber?: number;
 }
 
 const PRIORITY_OPTIONS = [
@@ -34,6 +36,9 @@ const PRIORITY_OPTIONS = [
 const CreateRoute = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const folderId = searchParams.get("trip") ?? undefined;
+  const dayNumber = searchParams.get("day") ? parseInt(searchParams.get("day")!) : undefined;
   const [step, setStep] = useState(1);
   const [customPriority, setCustomPriority] = useState("");
   const [preferences, setPreferences] = useState<TripPreferences>({
@@ -43,6 +48,8 @@ const CreateRoute = () => {
     startDate: null,
     planningMode: "text",
     city: "",
+    folderId,
+    dayNumber,
   });
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [showSummary, setShowSummary] = useState(false);

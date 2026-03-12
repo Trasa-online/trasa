@@ -28,6 +28,8 @@ interface TripPreferences {
   startDate: string | null;
   planningMode: string;
   city: string;
+  folderId?: string;
+  dayNumber?: number;
 }
 
 interface PlanChatExperienceProps {

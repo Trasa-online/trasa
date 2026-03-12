@@ -10,6 +10,8 @@ interface TripPreferences {
   startDate: string | null;
   planningMode: string;
   city?: string;
+  folderId?: string;
+  dayNumber?: number;
 }
 
 interface UserProfile {
@@ -56,9 +58,22 @@ const PRIORITY_LABEL_PL: Record<string, string> = {
   photography: "fotografia",
 };
 
-function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile): string {
+function buildPreviousDaysBlock(routes: { day_number: number; ai_summary: string | null; ai_highlight: string | null; ai_tip: string | null }[]): string {
+  if (!routes.length) return "";
+  const lines = routes.map(r => {
+    const parts = [`Dzień ${r.day_number}:`];
+    if (r.ai_summary) parts.push(r.ai_summary);
+    if (r.ai_highlight) parts.push(`Najlepszy moment: ${r.ai_highlight}`);
+    if (r.ai_tip) parts.push(`Wniosek AI: ${r.ai_tip}`);
+    return parts.join("\n");
+  });
+  return lines.join("\n\n");
+}
+
+function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string): string {
   const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}` : "";
   const cityInfo = preferences.city?.trim() ? `- Destynacja: ${preferences.city.trim()}` : "";
+  const dayInfo = preferences.dayNumber ? `- Planowany dzień: Dzień ${preferences.dayNumber}` : "";
   const cityKnown = !!preferences.city?.trim();
   const cityName = preferences.city?.trim() ?? "";
 
@@ -92,8 +107,10 @@ function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, user
 - Priorytety: ${prioritiesPL ?? "brak konkretnych"}
 ${dateInfo}
 ${cityInfo}
+${dayInfo}
 ${userProfileContext}
 ${currentPlanContext}
+${previousDaysContext ? `\n## 🧠 PAMIĘĆ — POPRZEDNIE DNI PODRÓŻY\nPoniżej feedback użytkownika po poprzednich dniach tej samej podróży. MUSISZ uwzględnić te wnioski przy planowaniu:\n\n${previousDaysContext}\n\nPO WYGENEROWANIU PLANU napisz krótki akapit (2-3 zdania) zaczynający się od "Na podstawie Twojego feedbacku:" wyjaśniający co zmieniłeś względem standardowego planu i dlaczego.\n` : ""}
 ${cityKnown ? `\n## ⚠️ KLUCZOWA ZASADA\nUser wpisał już destynację: „${cityName}". NIE pytaj gdzie jedzie — to już wiesz.\n` : ""}
 ## STYL ROZMOWY
 - Pisz krótko i naturalnie — jak znajomy, nie jak asystent.
@@ -349,7 +366,26 @@ serve(async (req) => {
       // ignore — columns may not be migrated yet
     }
 
-    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined);
+    // Fetch previous days' AAR summaries for multi-day trips
+    let previousDaysContext = "";
+    if (preferences.folderId && preferences.dayNumber && preferences.dayNumber > 1) {
+      try {
+        const { data: prevRoutes } = await supabase
+          .from("routes")
+          .select("day_number, ai_summary, ai_highlight, ai_tip")
+          .eq("folder_id", preferences.folderId)
+          .lt("day_number", preferences.dayNumber)
+          .not("ai_summary", "is", null)
+          .order("day_number", { ascending: true });
+        if (prevRoutes?.length) {
+          previousDaysContext = buildPreviousDaysBlock(prevRoutes as any);
+        }
+      } catch (err) {
+        console.error("Failed to fetch previous days AAR:", err);
+      }
+    }
+
+    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined);
 
     // Call AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
