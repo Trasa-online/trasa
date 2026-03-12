@@ -344,7 +344,7 @@ const DayReview = () => {
                 placeholder="Napisz odpowiedź..."
                 rows={1}
                 disabled={isLoading}
-                className="w-full resize-none rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-[14px] placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 disabled:opacity-50"
+                className="w-full resize-none rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-base placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 disabled:opacity-50"
                 style={{ maxHeight: "120px" }}
               />
             </div>

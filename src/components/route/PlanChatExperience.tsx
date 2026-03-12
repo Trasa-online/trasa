@@ -541,7 +541,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
               placeholder={plan ? "Chcesz coś zmienić?" : "Napisz odpowiedź..."}
               rows={1}
               disabled={loading}
-              className="w-full resize-none rounded-xl border border-border/60 bg-card px-4 py-2.5 text-[14px] placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 disabled:opacity-50"
+              className="w-full resize-none rounded-xl border border-border/60 bg-card px-4 py-2.5 text-base placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 disabled:opacity-50"
               style={{ maxHeight: "120px" }}
             />
           </div>
