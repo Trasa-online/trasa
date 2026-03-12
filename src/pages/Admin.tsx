@@ -379,7 +379,6 @@ const Admin = () => {
                 { key: "city", label: "Miasto (małe litery, np. krakow)", required: true },
                 { key: "place_name", label: "Nazwa miejsca", required: true },
                 { key: "category", label: "Kategoria (bar/cafe/restaurant/viewpoint…)" },
-                { key: "description", label: "Opis (krótki)" },
                 { key: "instagram_reel_url", label: "Link do Instagram Reel" },
                 { key: "google_maps_url", label: "Link do Google Maps" },
                 { key: "photo_url", label: "URL zdjęcia" },
