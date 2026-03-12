@@ -29,7 +29,6 @@ const DayReview = () => {
   const [listening, setListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isDone, setIsDone] = useState(false);
-  const [summary, setSummary] = useState<any>(null);
   const [initialSent, setInitialSent] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -93,12 +92,19 @@ const DayReview = () => {
     }
   }, [messages, isDone]);
 
-  // Redirect to home after done
+  // Redirect after done: go to next day plan if exists, otherwise home
   useEffect(() => {
     if (!isDone) return;
-    const timer = setTimeout(() => navigate("/"), 2000);
+    const nextDay = folderRoutes?.find(r => r.day_number === dayNumber + 1);
+    const timer = setTimeout(() => {
+      if (nextDay) {
+        navigate(`/day-plan?route=${nextDay.id}&reviewed=${routeId}`);
+      } else {
+        navigate("/");
+      }
+    }, 2000);
     return () => clearTimeout(timer);
-  }, [isDone, navigate]);
+  }, [isDone, navigate, folderRoutes, dayNumber, routeId]);
 
   // Send message to chat-route edge function
   const callChatRoute = useCallback(async (chatMessages: ChatMessage[]) => {
@@ -144,7 +150,6 @@ const DayReview = () => {
 
       if (data.done) {
         setMessages(prev => [...prev, { role: "assistant", content: data.message }]);
-        setSummary(data.summary);
         setIsDone(true);
         // Fire-and-forget: embed AAR into user memory for cross-trip recall
         supabase.functions.invoke("embed-memory", { body: { route_id: routeId } }).catch(() => {});
