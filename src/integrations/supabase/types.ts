@@ -14,48 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      creator_places: {
-        Row: {
-          id: string
-          creator_handle: string
-          city: string
-          place_name: string
-          category: string | null
-          description: string | null
-          instagram_reel_url: string | null
-          google_maps_url: string | null
-          photo_url: string | null
-          is_active: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          creator_handle: string
-          city: string
-          place_name: string
-          category?: string | null
-          description?: string | null
-          instagram_reel_url?: string | null
-          google_maps_url?: string | null
-          photo_url?: string | null
-          is_active?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          creator_handle?: string
-          city?: string
-          place_name?: string
-          category?: string | null
-          description?: string | null
-          instagram_reel_url?: string | null
-          google_maps_url?: string | null
-          photo_url?: string | null
-          is_active?: boolean
-          created_at?: string
-        }
-        Relationships: []
-      }
       canonical_pins: {
         Row: {
           address: string | null
@@ -231,6 +189,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      creator_places: {
+        Row: {
+          category: string | null
+          city: string
+          created_at: string
+          creator_handle: string
+          description: string | null
+          google_maps_url: string | null
+          id: string
+          instagram_reel_url: string | null
+          is_active: boolean
+          photo_url: string | null
+          place_name: string
+        }
+        Insert: {
+          category?: string | null
+          city: string
+          created_at?: string
+          creator_handle: string
+          description?: string | null
+          google_maps_url?: string | null
+          id?: string
+          instagram_reel_url?: string | null
+          is_active?: boolean
+          photo_url?: string | null
+          place_name: string
+        }
+        Update: {
+          category?: string | null
+          city?: string
+          created_at?: string
+          creator_handle?: string
+          description?: string | null
+          google_maps_url?: string | null
+          id?: string
+          instagram_reel_url?: string | null
+          is_active?: boolean
+          photo_url?: string | null
+          place_name?: string
+        }
+        Relationships: []
       }
       day_considerations: {
         Row: {
