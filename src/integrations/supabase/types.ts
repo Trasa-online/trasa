@@ -190,39 +190,6 @@ export type Database = {
           },
         ]
       }
-      creator_plans: {
-        Row: {
-          city: string
-          created_at: string
-          creator_handle: string
-          id: string
-          is_active: boolean
-          thumbnail_url: string | null
-          title: string
-          video_url: string | null
-        }
-        Insert: {
-          city: string
-          created_at?: string
-          creator_handle: string
-          id?: string
-          is_active?: boolean
-          thumbnail_url?: string | null
-          title: string
-          video_url?: string | null
-        }
-        Update: {
-          city?: string
-          created_at?: string
-          creator_handle?: string
-          id?: string
-          is_active?: boolean
-          thumbnail_url?: string | null
-          title?: string
-          video_url?: string | null
-        }
-        Relationships: []
-      }
       creator_places: {
         Row: {
           category: string | null
@@ -270,10 +237,44 @@ export type Database = {
           {
             foreignKeyName: "creator_places_plan_id_fkey"
             columns: ["plan_id"]
+            isOneToOne: false
             referencedRelation: "creator_plans"
             referencedColumns: ["id"]
-          }
+          },
         ]
+      }
+      creator_plans: {
+        Row: {
+          city: string
+          created_at: string
+          creator_handle: string
+          id: string
+          is_active: boolean
+          thumbnail_url: string | null
+          title: string
+          video_url: string | null
+        }
+        Insert: {
+          city?: string
+          created_at?: string
+          creator_handle: string
+          id?: string
+          is_active?: boolean
+          thumbnail_url?: string | null
+          title: string
+          video_url?: string | null
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          creator_handle?: string
+          id?: string
+          is_active?: boolean
+          thumbnail_url?: string | null
+          title?: string
+          video_url?: string | null
+        }
+        Relationships: []
       }
       day_considerations: {
         Row: {
