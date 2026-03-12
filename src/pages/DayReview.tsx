@@ -146,6 +146,8 @@ const DayReview = () => {
         setMessages(prev => [...prev, { role: "assistant", content: data.message }]);
         setSummary(data.summary);
         setIsDone(true);
+        // Fire-and-forget: embed AAR into user memory for cross-trip recall
+        supabase.functions.invoke("embed-memory", { body: { route_id: routeId } }).catch(() => {});
       } else {
         setMessages(prev => [...prev, { role: "assistant", content: data.message }]);
       }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, GripVertical, Plus, Footprints } from "lucide-react";
+import { Trash2, GripVertical, Plus, Footprints, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface PlanPin {
@@ -25,6 +25,7 @@ interface DayPinListProps {
   onReorderPins?: (dayNumber: number, pins: PlanPin[]) => void;
   onPinClick?: (pin: PlanPin) => void;
   onAddPin?: (dayNumber: number) => void;
+  onAlternatives?: (pin: PlanPin, pinIndex: number) => void;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -51,6 +52,7 @@ const DayPinList = ({
   onReorderPins,
   onPinClick,
   onAddPin,
+  onAlternatives,
 }: DayPinListProps) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -180,6 +182,20 @@ const DayPinList = ({
                     </span>
                   )}
                 </div>
+
+                {/* Alternatives */}
+                {onAlternatives && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAlternatives(pin, index);
+                    }}
+                    className="flex-shrink-0 h-7 w-7 rounded flex items-center justify-center text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-colors"
+                    title="Pokaż alternatywy"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  </button>
+                )}
 
                 {/* Delete */}
                 <button

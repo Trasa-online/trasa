@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Loader2 } from "lucide-react";
+import { Send, Mic, MicOff, Loader2, Brain, Zap, Users, Footprints } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import DayPinList, { type PlanPin } from "./DayPinList";
@@ -13,10 +14,17 @@ interface ChatMessage {
   content: string;
 }
 
+interface DayMetrics {
+  total_walking_km?: number;
+  crowd_level?: "low" | "medium" | "high";
+  energy_cost?: "low" | "medium" | "high";
+}
+
 interface RoutePlan {
   city: string;
   days: {
     day_number: number;
+    day_metrics?: DayMetrics;
     pins: PlanPin[];
   }[];
 }
@@ -90,6 +98,10 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
   const [planHistory, setPlanHistory] = useState<RoutePlan[]>([]);
   const [selectedPin, setSelectedPin] = useState<PlanPin | null>(null);
   const [addPinDay, setAddPinDay] = useState<number | null>(null);
+  const [memoryUsed, setMemoryUsed] = useState(false);
+  const [alternativesFor, setAlternativesFor] = useState<{ pin: PlanPin; dayNumber: number; pinIndex: number } | null>(null);
+  const [alternatives, setAlternatives] = useState<PlanPin[]>([]);
+  const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -166,6 +178,8 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
 
       if (data.message) setMessages(withAssistant);
 
+      if (data.memory_used) setMemoryUsed(true);
+
       if (data.plan) {
         if (plan) {
           setPlanHistory(prev => [...prev, plan]);
@@ -182,6 +196,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
             body: { preferences, messages: withAssistant, current_plan: plan, force_plan: true },
           });
           if (!planResponse.error && planResponse.data?.plan) {
+            if (planResponse.data.memory_used) setMemoryUsed(true);
             if (plan) {
               setPlanHistory(prev => [...prev, plan]);
               setEditCount(prev => prev + 1);
@@ -306,6 +321,50 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
     ]);
   };
 
+  const handleGetAlternatives = useCallback(async (pin: PlanPin, dayNumber: number, pinIndex: number) => {
+    setAlternativesFor({ pin, dayNumber, pinIndex });
+    setAlternatives([]);
+    setLoadingAlternatives(true);
+    try {
+      const response = await supabase.functions.invoke("get-alternatives", {
+        body: {
+          place_name: pin.place_name,
+          category: pin.category,
+          city: plan?.city ?? "",
+          latitude: pin.latitude,
+          longitude: pin.longitude,
+        },
+      });
+      if (!response.error && response.data?.alternatives) {
+        setAlternatives(response.data.alternatives);
+      }
+    } catch {
+      // ignore
+    }
+    setLoadingAlternatives(false);
+  }, [plan]);
+
+  const handleSelectAlternative = useCallback((altPin: PlanPin) => {
+    if (!alternativesFor || !plan) return;
+    const { dayNumber, pinIndex, pin: original } = alternativesFor;
+    setPlan({
+      ...plan,
+      days: plan.days.map(d =>
+        d.day_number === dayNumber
+          ? {
+              ...d,
+              pins: d.pins.map((p, i) =>
+                i === pinIndex
+                  ? { ...altPin, suggested_time: original.suggested_time, duration_minutes: original.duration_minutes, day_number: dayNumber }
+                  : p
+              ),
+            }
+          : d
+      ),
+    });
+    setAlternativesFor(null);
+  }, [alternativesFor, plan]);
+
   if (initializing) {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-4">
@@ -379,17 +438,50 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
         {/* Current Plan */}
         {plan && (
           <div className="space-y-4 pt-2">
+            {/* Memory receipt banner */}
+            {memoryUsed && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/60 border border-border/40">
+                <Brain className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <span className="text-[12px] text-muted-foreground">Plan uwzględnia Twoje wcześniejsze preferencje</span>
+              </div>
+            )}
+
             {plan.days.map((day) => (
-              <DayPinList
-                key={day.day_number}
-                dayNumber={day.day_number}
-                totalDays={plan.days.length}
-                pins={day.pins}
-                onRemovePin={handleRemovePin}
-                onReorderPins={handleReorderPins}
-                onPinClick={(pin) => setSelectedPin(pin)}
-                onAddPin={(dayNum) => setAddPinDay(dayNum)}
-              />
+              <div key={day.day_number} className="space-y-2">
+                {/* Day metrics bar */}
+                {day.day_metrics && (
+                  <div className="flex items-center gap-3 px-1 text-[11px] text-muted-foreground">
+                    {day.day_metrics.total_walking_km != null && (
+                      <span className="flex items-center gap-1">
+                        <Footprints className="h-3 w-3" />
+                        {day.day_metrics.total_walking_km} km
+                      </span>
+                    )}
+                    {day.day_metrics.crowd_level && (
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {day.day_metrics.crowd_level === "low" ? "spokojnie" : day.day_metrics.crowd_level === "medium" ? "umiarkowanie" : "tłoczno"}
+                      </span>
+                    )}
+                    {day.day_metrics.energy_cost && (
+                      <span className="flex items-center gap-1">
+                        <Zap className="h-3 w-3" />
+                        {day.day_metrics.energy_cost === "low" ? "relaks" : day.day_metrics.energy_cost === "medium" ? "aktywnie" : "intensywnie"}
+                      </span>
+                    )}
+                  </div>
+                )}
+                <DayPinList
+                  dayNumber={day.day_number}
+                  totalDays={plan.days.length}
+                  pins={day.pins}
+                  onRemovePin={handleRemovePin}
+                  onReorderPins={handleReorderPins}
+                  onPinClick={(pin) => setSelectedPin(pin)}
+                  onAddPin={(dayNum) => setAddPinDay(dayNum)}
+                  onAlternatives={(pin, idx) => handleGetAlternatives(pin, day.day_number, idx)}
+                />
+              </div>
             ))}
 
             {preparingPlan && <PlanSkeleton numDays={preferences.numDays} />}
@@ -484,6 +576,37 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
         onPinAdd={handleAddPinToDay}
         cityContext={plan?.city || ""}
       />
+
+      {/* Alternatives Sheet */}
+      <Sheet open={!!alternativesFor} onOpenChange={(open) => !open && setAlternativesFor(null)}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader className="pb-2">
+            <SheetTitle className="text-base">
+              Alternatywy dla: {alternativesFor?.pin.place_name}
+            </SheetTitle>
+          </SheetHeader>
+          {loadingAlternatives ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : alternatives.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">Nie znaleziono alternatyw w tej okolicy.</p>
+          ) : (
+            <div className="space-y-2 pb-4">
+              {alternatives.map((alt, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleSelectAlternative(alt)}
+                  className="w-full text-left p-3 rounded-xl border border-border/60 bg-card hover:bg-muted/60 transition-colors"
+                >
+                  <p className="text-sm font-medium">{alt.place_name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{alt.address}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

@@ -70,7 +70,7 @@ function buildPreviousDaysBlock(routes: { day_number: number; ai_summary: string
   return lines.join("\n\n");
 }
 
-function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string): string {
+function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string): string {
   const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}` : "";
   const cityInfo = preferences.city?.trim() ? `- Destynacja: ${preferences.city.trim()}` : "";
   const dayInfo = preferences.dayNumber ? `- Planowany dzień: Dzień ${preferences.dayNumber}` : "";
@@ -110,7 +110,7 @@ ${cityInfo}
 ${dayInfo}
 ${userProfileContext}
 ${currentPlanContext}
-${previousDaysContext ? `\n## 🧠 PAMIĘĆ — POPRZEDNIE DNI PODRÓŻY\nPoniżej feedback użytkownika z poprzednich dni tej samej podróży.\n\n${previousDaysContext}\n\nJAK UŻYWAĆ TEGO FEEDBACKU:\n- NIE modyfikuj planu automatycznie bez zgody usera.\n- Jeśli user jeszcze nie odpowiedział na Twoje sugestie z otwarcia rozmowy — poczekaj na jego odpowiedź zanim wygenerujesz plan.\n- Gdy user potwierdzi zmiany lub poda preferencje — uwzględnij feedback przy generowaniu planu.\n- Gdy generujesz plan, dodaj 1 zdanie wyjaśniające co uwzględniłeś z poprzedniego dnia (np. "Unikam zatłoczonych miejsc przed 12, jak prosiłeś").\n` : ""}
+${previousDaysContext ? `\n## 🧠 PAMIĘĆ — POPRZEDNIE DNI TEJ PODRÓŻY\nPoniżej feedback z poprzednich dni tej samej podróży.\n\n${previousDaysContext}\n\nJAK UŻYWAĆ:\n- NIE modyfikuj planu automatycznie bez zgody usera.\n- Gdy user potwierdzi zmiany — uwzględnij feedback przy generowaniu planu.\n- Gdy generujesz plan, dodaj 1 zdanie co uwzględniłeś (np. "Unikam zatłoczonych miejsc przed 12").\n` : ""}${memoryContext ? `\n## 💡 DŁUGOTERMINOWE PREFERENCJE UŻYTKOWNIKA\nZ poprzednich podróży wiem o tym userze:\n\n${memoryContext}\n\nUwzględnij te preferencje przy wyborze miejsc i stylu planu. Nie wspominaj wprost że "pamiętasz" — po prostu planuj zgodnie z nimi.\n` : ""}
 ${cityKnown ? `\n## ⚠️ KLUCZOWA ZASADA\nUser wpisał już destynację: „${cityName}". NIE pytaj gdzie jedzie — to już wiesz.\n` : ""}
 ## STYL ROZMOWY
 - Pisz krótko i naturalnie — jak znajomy, nie jak asystent.
@@ -231,6 +231,11 @@ Napisz JEDNO krótkie zdanie komentarza (opcjonalnie), a PO NIM blok planu:
   "days": [
     {
       "day_number": 1,
+      "day_metrics": {
+        "total_walking_km": 8.5,
+        "crowd_level": "medium",
+        "energy_cost": "high"
+      },
       "pins": [
         {
           "place_name": "Prawdziwa nazwa miejsca",
@@ -263,6 +268,9 @@ Napisz JEDNO krótkie zdanie komentarza (opcjonalnie), a PO NIM blok planu:
 </route_plan>
 
 ZASADY FORMATU:
+- day_metrics.total_walking_km: szacunkowa łączna odległość pieszego (suma distance_from_prev + wizyty) w km
+- day_metrics.crowd_level: "low" | "medium" | "high" — na podstawie dat, popularności i heurystyk H13
+- day_metrics.energy_cost: "low" | "medium" | "high" — na podstawie liczby punktów, tempa i długości dnia
 - Pierwszy pin każdego dnia: walking_time_from_prev = null, distance_from_prev = null
 - Każdy kolejny pin: szacuj walking_time_from_prev i distance_from_prev na podstawie znajomości miasta (tempo piesze ~75 m/min = ~1.2 km w 15 min)
 - duration_minutes: czas spędzony w miejscu (bez dojścia), zgodnie z H7
@@ -431,7 +439,81 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       // ignore — columns may not be migrated yet
     }
 
-    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined);
+    // ── Vector memory search + preference graph ──
+    let memoryContext = "";
+    let memoryUsed = false;
+    const LOVABLE_API_KEY_FOR_EMBED = Deno.env.get("LOVABLE_API_KEY");
+    if (LOVABLE_API_KEY_FOR_EMBED) {
+      try {
+        // Build query text from current trip preferences
+        const queryText = [
+          preferences.city?.trim() ?? "",
+          preferences.priorities?.join(" ") ?? "",
+          preferences.pace ?? "",
+        ].filter(Boolean).join(" ");
+
+        // Get embedding for the query
+        const embedRes = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${LOVABLE_API_KEY_FOR_EMBED}`,
+          },
+          body: JSON.stringify({ model: "text-embedding-ada-002", input: queryText }),
+        });
+
+        if (embedRes.ok) {
+          const embedData = await embedRes.json();
+          const queryEmbedding = embedData.data?.[0]?.embedding;
+
+          if (queryEmbedding) {
+            const { data: memories } = await supabase.rpc("match_memories", {
+              query_embedding: queryEmbedding,
+              match_user_id: user.id,
+              match_threshold: 0.6,
+              match_count: 3,
+            });
+
+            if (memories?.length) {
+              const memoryLines = (memories as any[]).map((m) => {
+                const city = m.city ? ` (${m.city})` : "";
+                return `- ${m.content}${city}`;
+              });
+              memoryContext += `Wspomnienia z podobnych podróży:\n${memoryLines.join("\n")}`;
+              memoryUsed = true;
+            }
+          }
+        }
+      } catch {
+        // Non-blocking — proceed without memory
+      }
+
+      // Fetch top preference signals
+      try {
+        const { data: prefGraph } = await supabase
+          .from("user_preference_graph")
+          .select("preference_key, preference_value, confidence")
+          .eq("user_id", user.id)
+          .gte("confidence", 0.5)
+          .order("evidence_count", { ascending: false })
+          .limit(8);
+
+        if (prefGraph?.length) {
+          const prefLines = (prefGraph as any[]).map(
+            (p) => `- ${p.preference_key}: ${p.preference_value}`
+          );
+          const prefSection = `Stałe preferencje podróżnicze:\n${prefLines.join("\n")}`;
+          memoryContext = memoryContext
+            ? `${memoryContext}\n\n${prefSection}`
+            : prefSection;
+          memoryUsed = true;
+        }
+      } catch {
+        // Non-blocking
+      }
+    }
+
+    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined);
 
     // Call AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -548,7 +630,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     );
 
     return new Response(
-      JSON.stringify({ message: cleanMessage, plan, preparing_plan: isPreparing }),
+      JSON.stringify({ message: cleanMessage, plan, preparing_plan: isPreparing, memory_used: memoryUsed }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
