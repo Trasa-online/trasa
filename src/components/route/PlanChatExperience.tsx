@@ -377,7 +377,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
   return (
     <div className="flex flex-col h-full">
       {/* Messages + Plan */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 pb-20 space-y-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {messages.map((msg, i) => {
           const bubbles = msg.role === "assistant"
             ? msg.content.split(/\n\n+/).map(s => s.trim()).filter(Boolean)
@@ -515,7 +515,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
       </div>
 
       {/* Input area — fixed to bottom so it follows the user on scroll */}
-      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border/40 bg-background px-3 pt-3 pb-safe">
+      <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-3 pb-safe">
         <div className="flex items-end gap-2 max-w-lg mx-auto">
           {hasVoiceSupport && (
             <button

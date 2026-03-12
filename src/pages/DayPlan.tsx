@@ -230,7 +230,7 @@ const DayPlan = () => {
     : [];
 
   return (
-    <div className="flex flex-col min-h-svh bg-background">
+    <div className="flex flex-col h-[100dvh] bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/40 bg-background px-4 pt-safe pb-3 flex items-center gap-3">
         <button onClick={() => navigate("/")} className="p-1 -ml-1">
@@ -247,7 +247,7 @@ const DayPlan = () => {
         )}
       </header>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto pb-40">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto pb-4">
         {/* Read-only plan timeline */}
         {plan && timelineDays.length > 0 && (
           <div className="border-b border-border/40">
@@ -288,7 +288,7 @@ const DayPlan = () => {
       </div>
 
       {/* Sticky bottom */}
-      <div className="sticky bottom-0 border-t border-border/40 bg-background px-3 pt-3 pb-safe space-y-2">
+      <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-3 pb-safe space-y-2">
         {editCount >= 3 && (
           <p className="text-xs text-center text-muted-foreground">
             Wykorzystano limit 3 zmian

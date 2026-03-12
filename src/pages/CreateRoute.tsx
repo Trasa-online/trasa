@@ -303,9 +303,9 @@ const CreateRoute = () => {
 
   // Step 2: Chat
   return (
-    <div className="h-screen bg-background flex flex-col">
+    <div className="h-[100dvh] bg-background flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-border/40 flex-shrink-0">
+      <div className="flex items-center gap-3 px-4 pt-safe-4 pb-4 border-b border-border/40 flex-shrink-0">
         <button onClick={() => setStep(1)} className="p-1">
           <ArrowLeft className="h-5 w-5" />
         </button>
