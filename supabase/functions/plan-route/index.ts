@@ -110,7 +110,7 @@ ${cityInfo}
 ${dayInfo}
 ${userProfileContext}
 ${currentPlanContext}
-${previousDaysContext ? `\n## 🧠 PAMIĘĆ — POPRZEDNIE DNI PODRÓŻY\nPoniżej feedback użytkownika po poprzednich dniach tej samej podróży. MUSISZ uwzględnić te wnioski przy planowaniu:\n\n${previousDaysContext}\n\nPO WYGENEROWANIU PLANU napisz krótki akapit (2-3 zdania) zaczynający się od "Na podstawie Twojego feedbacku:" wyjaśniający co zmieniłeś względem standardowego planu i dlaczego.\n` : ""}
+${previousDaysContext ? `\n## 🧠 PAMIĘĆ — POPRZEDNIE DNI PODRÓŻY\nPoniżej feedback użytkownika z poprzednich dni tej samej podróży.\n\n${previousDaysContext}\n\nJAK UŻYWAĆ TEGO FEEDBACKU:\n- NIE modyfikuj planu automatycznie bez zgody usera.\n- Jeśli user jeszcze nie odpowiedział na Twoje sugestie z otwarcia rozmowy — poczekaj na jego odpowiedź zanim wygenerujesz plan.\n- Gdy user potwierdzi zmiany lub poda preferencje — uwzględnij feedback przy generowaniu planu.\n- Gdy generujesz plan, dodaj 1 zdanie wyjaśniające co uwzględniłeś z poprzedniego dnia (np. "Unikam zatłoczonych miejsc przed 12, jak prosiłeś").\n` : ""}
 ${cityKnown ? `\n## ⚠️ KLUCZOWA ZASADA\nUser wpisał już destynację: „${cityName}". NIE pytaj gdzie jedzie — to już wiesz.\n` : ""}
 ## STYL ROZMOWY
 - Pisz krótko i naturalnie — jak znajomy, nie jak asystent.
@@ -327,46 +327,7 @@ serve(async (req) => {
 
     const MAX_MESSAGES = 10;
 
-    // ── Deterministic first message when city is already known ──
-    if (userMessages.length === 0 && preferences.city?.trim()) {
-      const cityName = preferences.city.trim();
-      const nDays = Number(preferences.numDays) || 1;
-      const paceLabel = preferences.pace === "active" ? "aktywnym" : preferences.pace === "calm" ? "spokojnym" : "mieszanym";
-
-      const prioritiesPL = Array.isArray(preferences.priorities) && preferences.priorities.length > 0
-        ? (preferences.priorities as string[]).map(p => PRIORITY_LABEL_PL[p] ?? p).join(", ")
-        : null;
-
-      const daysLabel = nDays === 1 ? "1 dzień" : `${nDays} dni`;
-
-      const messageParts = [
-        `Świetny wybór — **${cityName}**! 🗺️`,
-        `Planujesz **${daysLabel}**, tempo ${paceLabel}${prioritiesPL ? `, z fokusem na **${prioritiesPL}**` : ""}. Chętnie przygotuję plan! 🎯`,
-        nDays > 1
-          ? `Czy masz już jakieś plany lub są miejsca, które koniecznie chcesz odwiedzić? 📍\n\nOd której do której godziny mam zaplanować **pierwszy dzień**?\n\nI jeszcze — w której części miasta masz **nocleg**? To pomoże mi dobrze zaplanować końce kolejnych dni.`
-          : `Czy masz już jakieś plany lub są miejsca, które koniecznie chcesz odwiedzić? 📍\n\nOd której do której godziny mam zaplanować Twój dzień? ⏰`,
-      ];
-
-      return new Response(
-        JSON.stringify({ message: messageParts.join("\n\n"), plan: null }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Fetch user profile preferences (non-blocking — columns may not exist in older DBs)
-    let profileData: UserProfile | null = null;
-    try {
-      const { data } = await supabase
-        .from("profiles")
-        .select("dietary_prefs, travel_interests")
-        .eq("id", user.id)
-        .single();
-      profileData = data as UserProfile | null;
-    } catch {
-      // ignore — columns may not be migrated yet
-    }
-
-    // Fetch previous days' AAR summaries for multi-day trips
+    // ── Fetch AAR from previous days (needed for first message too) ──
     let previousDaysContext = "";
     if (preferences.folderId && preferences.dayNumber && preferences.dayNumber > 1) {
       try {
@@ -383,6 +344,91 @@ serve(async (req) => {
       } catch (err) {
         console.error("Failed to fetch previous days AAR:", err);
       }
+    }
+
+    // ── First message ──
+    if (userMessages.length === 0 && preferences.city?.trim()) {
+      const cityName = preferences.city.trim();
+      const nDays = Number(preferences.numDays) || 1;
+      const paceLabel = preferences.pace === "active" ? "aktywnym" : preferences.pace === "calm" ? "spokojnym" : "mieszanym";
+      const prioritiesPL = Array.isArray(preferences.priorities) && preferences.priorities.length > 0
+        ? (preferences.priorities as string[]).map(p => PRIORITY_LABEL_PL[p] ?? p).join(", ")
+        : null;
+
+      // Day 2+ with AAR: AI generates a personalized opening with suggestions
+      if (previousDaysContext) {
+        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+        if (LOVABLE_API_KEY) {
+          const openingPrompt = `Jesteś przyjaznym przewodnikiem podróży w aplikacji TRASA. Użytkownik planuje teraz Dzień ${preferences.dayNumber} podróży do ${cityName}.
+
+Masz do dyspozycji podsumowanie poprzednich dni:
+${previousDaysContext}
+
+Napisz krótką, naturalną wiadomość powitalną (max 3 zdania) w której:
+1. Nawiążesz do 1-2 konkretnych spostrzeżeń z poprzedniego dnia (np. że ominął jakieś miejsce bo było tłoczno, albo że coś mu się szczególnie podobało)
+2. Zaproponujesz konkretną zmianę podejścia na dzisiejszy dzień wynikającą z tych wniosków
+3. Zapytasz czy user chce tę zmianę albo czy ma inne życzenia na dziś
+
+Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu.`;
+
+          try {
+            const openingRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
+              body: JSON.stringify({
+                model: "google/gemini-2.5-flash",
+                messages: [{ role: "user", content: openingPrompt }],
+                max_tokens: 300,
+                temperature: 0.7,
+              }),
+            });
+            if (openingRes.ok) {
+              const openingData = await openingRes.json();
+              const openingMessage = openingData.choices?.[0]?.message?.content ?? "";
+              if (openingMessage) {
+                return new Response(
+                  JSON.stringify({ message: openingMessage, plan: null }),
+                  { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+              }
+            }
+          } catch (err) {
+            console.error("Opening message AI error:", err);
+          }
+        }
+        // Fallback if AI call fails
+        return new Response(
+          JSON.stringify({ message: `Cześć! Czas na Dzień ${preferences.dayNumber} w **${cityName}**! 🗺️\n\nNa podstawie wczoraj — mam kilka sugestii co poprawić. Chcesz żebym uwzględniła wnioski z poprzedniego dnia, czy wolisz świeży start?`, plan: null }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Standard first message (Day 1 or no AAR available)
+      const daysLabel = nDays === 1 ? "1 dzień" : `${nDays} dni`;
+      const messageParts = [
+        `Świetny wybór — **${cityName}**! 🗺️`,
+        `Planujesz **${daysLabel}**, tempo ${paceLabel}${prioritiesPL ? `, z fokusem na **${prioritiesPL}**` : ""}. Chętnie przygotuję plan! 🎯`,
+        nDays > 1
+          ? `Czy masz już jakieś plany lub są miejsca, które koniecznie chcesz odwiedzić? 📍\n\nOd której do której godziny mam zaplanować **pierwszy dzień**?\n\nI jeszcze — w której części miasta masz **nocleg**? To pomoże mi dobrze zaplanować końce kolejnych dni.`
+          : `Czy masz już jakieś plany lub są miejsca, które koniecznie chcesz odwiedzić? 📍\n\nOd której do której godziny mam zaplanować Twój dzień? ⏰`,
+      ];
+      return new Response(
+        JSON.stringify({ message: messageParts.join("\n\n"), plan: null }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch user profile preferences (non-blocking)
+    let profileData: UserProfile | null = null;
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("dietary_prefs, travel_interests")
+        .eq("id", user.id)
+        .single();
+      profileData = data as UserProfile | null;
+    } catch {
+      // ignore — columns may not be migrated yet
     }
 
     const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined);
