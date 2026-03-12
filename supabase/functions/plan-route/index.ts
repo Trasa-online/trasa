@@ -70,7 +70,7 @@ function buildPreviousDaysBlock(routes: { day_number: number; ai_summary: string
   return lines.join("\n\n");
 }
 
-function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string): string {
+function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[]): string {
   const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}` : "";
   const cityInfo = preferences.city?.trim() ? `- Destynacja: ${preferences.city.trim()}` : "";
   const dayInfo = preferences.dayNumber ? `- Planowany dzień: Dzień ${preferences.dayNumber}` : "";
@@ -287,7 +287,7 @@ ZASADY FORMATU:
 ## EDYCJA PLANU
 - "Zamień X" → zaproponuj alternatywę w tej samej okolicy, przelicz czasy
 - "Dodaj Y" → wstaw w logiczne miejsce, zaktualizuj suggested_time kolejnych punktów
-- "Usuń Z" → usuń, sprawdź czy kulminacja emocjonalna (H3) nadal jest zachowana`;
+- "Usuń Z" → usuń, sprawdź czy kulminacja emocjonalna (H3) nadal jest zachowana${likedPlaces?.length ? `\n\n## 🎯 MIEJSCA ZAPROPONOWANE PRZEZ TWÓRCÓW\nUżytkownik wyraził zainteresowanie tymi miejscami — postaraj się je uwzględnić w planie jeśli pasują:\n${likedPlaces.map(p => `- ${p}`).join("\n")}` : ""}`;
 }
 
 serve(async (req) => {
@@ -302,7 +302,7 @@ serve(async (req) => {
   }
 
   try {
-    const { preferences, messages: userMessages, current_plan, force_plan } = await req.json();
+    const { preferences, messages: userMessages, current_plan, force_plan, liked_places } = await req.json();
 
     if (!preferences || !userMessages) {
       return new Response(
@@ -513,7 +513,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       }
     }
 
-    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined);
+    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined);
 
     // Call AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

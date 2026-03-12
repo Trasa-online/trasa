@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      creator_places: {
+        Row: {
+          id: string
+          creator_handle: string
+          city: string
+          place_name: string
+          category: string | null
+          description: string | null
+          instagram_reel_url: string | null
+          google_maps_url: string | null
+          photo_url: string | null
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          creator_handle: string
+          city: string
+          place_name: string
+          category?: string | null
+          description?: string | null
+          instagram_reel_url?: string | null
+          google_maps_url?: string | null
+          photo_url?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          creator_handle?: string
+          city?: string
+          place_name?: string
+          category?: string | null
+          description?: string | null
+          instagram_reel_url?: string | null
+          google_maps_url?: string | null
+          photo_url?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
       canonical_pins: {
         Row: {
           address: string | null

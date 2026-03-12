@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import TripCheckinSection from "@/components/home/TripCheckinSection";
 import HomeTour from "@/components/home/HomeTour";
+import DiscoveryBanner from "@/components/home/DiscoveryBanner";
 
 const PREF_LABEL: Record<string, string> = {
   vege: "Wegetarianin", vegan: "Vegan", coffee: "Coffee snob",
@@ -319,6 +320,8 @@ const Home = () => {
             ) : null;
           })()}
         </div>
+
+        <DiscoveryBanner />
 
         {/* Active trips */}
         <section className="mb-8" data-tour="trips">

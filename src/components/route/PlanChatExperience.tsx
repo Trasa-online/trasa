@@ -43,6 +43,7 @@ interface TripPreferences {
 interface PlanChatExperienceProps {
   preferences: TripPreferences;
   onPlanReady: (plan: RoutePlan, messages: ChatMessage[]) => void;
+  likedPlaces?: string[];
 }
 
 // Skeleton shown while the plan is being generated
@@ -86,7 +87,7 @@ const hasVoiceSupport =
   typeof window !== "undefined" &&
   ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
 
-const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProps) => {
+const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatExperienceProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
   const [input, setInput] = useState("");
@@ -124,7 +125,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
         }
 
         const response = await supabase.functions.invoke("plan-route", {
-          body: { preferences, messages: [] },
+          body: { preferences, messages: [], liked_places: likedPlaces },
         });
 
         if (response.error) throw new Error(response.error.message);
@@ -164,7 +165,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
 
     try {
       const response = await supabase.functions.invoke("plan-route", {
-        body: { preferences, messages: newMessages, current_plan: plan },
+        body: { preferences, messages: newMessages, current_plan: plan, liked_places: likedPlaces },
       });
 
       if (response.error) throw new Error(response.error.message);
@@ -193,7 +194,7 @@ const PlanChatExperience = ({ preferences, onPlanReady }: PlanChatExperienceProp
         setPreparingPlan(true);
         try {
           const planResponse = await supabase.functions.invoke("plan-route", {
-            body: { preferences, messages: withAssistant, current_plan: plan, force_plan: true },
+            body: { preferences, messages: withAssistant, current_plan: plan, force_plan: true, liked_places: likedPlaces },
           });
           if (!planResponse.error && planResponse.data?.plan) {
             if (planResponse.data.memory_used) setMemoryUsed(true);
