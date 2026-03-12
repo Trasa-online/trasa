@@ -13,7 +13,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import TripCheckinSection from "@/components/home/TripCheckinSection";
 import HomeTour from "@/components/home/HomeTour";
-import DiscoveryBanner from "@/components/home/DiscoveryBanner";
+import CreatorPlanCard from "@/components/home/CreatorPlanCard";
+import CreatorPlanSheet from "@/components/home/CreatorPlanSheet";
+import type { CreatorPlan, CreatorPlaceItem } from "@/components/home/CreatorPlanCard";
 
 const PREF_LABEL: Record<string, string> = {
   vege: "Wegetarianin", vegan: "Vegan", coffee: "Coffee snob",
@@ -33,6 +35,7 @@ const Home = () => {
   const [previewRoute, setPreviewRoute] = useState<any>(null);
   const [deletingTrip, setDeletingTrip] = useState<any>(null);
   const [showTour, setShowTour] = useState(searchParams.get("tour") === "1");
+  const [selectedPlan, setSelectedPlan] = useState<(CreatorPlan & { places: CreatorPlaceItem[] }) | null>(null);
 
   const handleTourDone = () => {
     setShowTour(false);
@@ -74,6 +77,28 @@ const Home = () => {
       return data || [];
     },
     enabled: !!user,
+  });
+
+  const { data: creatorPlans = [] } = useQuery({
+    queryKey: ["creator-plans"],
+    queryFn: async () => {
+      const { data: plans } = await supabase
+        .from("creator_plans")
+        .select("id, creator_handle, city, title, video_url, thumbnail_url")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (!plans?.length) return [];
+      const { data: places } = await supabase
+        .from("creator_places")
+        .select("id, place_name, category, plan_id")
+        .in("plan_id", plans.map(p => p.id))
+        .eq("is_active", true);
+      return plans.map(plan => ({
+        ...plan,
+        places: (places ?? []).filter(pl => pl.plan_id === plan.id),
+      })) as (CreatorPlan & { places: CreatorPlaceItem[] })[];
+    },
   });
 
   const { data: journalRoutes } = useQuery({
@@ -321,7 +346,28 @@ const Home = () => {
           })()}
         </div>
 
-        <DiscoveryBanner />
+        {/* Creator Plans */}
+        {creatorPlans.length > 0 && (
+          <section className="mb-6 -mx-5">
+            <div className="flex items-center justify-between px-5 mb-3">
+              <h3 className="text-base font-semibold">Plany twórców</h3>
+            </div>
+            <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x snap-mandatory scrollbar-none">
+              {creatorPlans.map(plan => (
+                <CreatorPlanCard
+                  key={plan.id}
+                  plan={plan}
+                  onClick={() => setSelectedPlan(plan)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+        <CreatorPlanSheet
+          plan={selectedPlan}
+          open={!!selectedPlan}
+          onOpenChange={open => { if (!open) setSelectedPlan(null); }}
+        />
 
         {/* Active trips */}
         <section className="mb-8" data-tour="trips">

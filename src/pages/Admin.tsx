@@ -17,30 +17,17 @@ interface WaitlistEntry {
   has_account?: boolean;
 }
 
-interface CreatorPlace {
+interface CreatorPlan {
   id: string;
   creator_handle: string;
   city: string;
-  place_name: string;
-  category: string | null;
-  description: string | null;
-  instagram_reel_url: string | null;
-  google_maps_url: string | null;
-  photo_url: string | null;
+  title: string;
+  video_url: string | null;
+  thumbnail_url: string | null;
   is_active: boolean;
   created_at: string;
+  places?: { id: string; place_name: string; category: string | null }[];
 }
-
-const emptyPlaceForm = {
-  creator_handle: "",
-  city: "",
-  place_name: "",
-  category: "",
-  description: "",
-  instagram_reel_url: "",
-  google_maps_url: "",
-  photo_url: "",
-};
 
 const Admin = () => {
   const { user, loading } = useAuth();
@@ -56,20 +43,20 @@ const Admin = () => {
   const [generatedLinks, setGeneratedLinks] = useState<Record<string, string>>({});
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  // Creator places state
-  const [places, setPlaces] = useState<CreatorPlace[]>([]);
+  // Creator plans state
+  const [plans, setPlans] = useState<CreatorPlan[]>([]);
   const [fetchingPlaces, setFetchingPlaces] = useState(false);
-  const [placeForm, setPlaceForm] = useState(emptyPlaceForm);
-  const [savingPlace, setSavingPlace] = useState(false);
-  const [togglingPlace, setTogglingPlace] = useState<string | null>(null);
-  const [deletingPlace, setDeletingPlace] = useState<string | null>(null);
+  const [togglingPlan, setTogglingPlan] = useState<string | null>(null);
+  const [deletingPlan, setDeletingPlan] = useState<string | null>(null);
   const [extractUrl, setExtractUrl] = useState("");
   const [extracting, setExtracting] = useState(false);
   const [extractedPlaces, setExtractedPlaces] = useState<Array<{
     place_name: string; city: string | null; category: string | null; creator_handle: string | null;
   }>>([]);
   const [extractedSourceUrl, setExtractedSourceUrl] = useState<string | null>(null);
-  const [savingBulk, setSavingBulk] = useState(false);
+  const [extractedThumbnail, setExtractedThumbnail] = useState<string | null>(null);
+  const [planTitle, setPlanTitle] = useState("");
+  const [savingPlan, setSavingPlan] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -85,7 +72,7 @@ const Admin = () => {
         if (!data) { navigate("/"); return; }
         setIsAdmin(true);
         loadWaitlist();
-        loadPlaces();
+        loadPlans();
       });
   }, [user, loading, navigate]);
 
@@ -109,13 +96,24 @@ const Admin = () => {
     setFetchingList(false);
   };
 
-  const loadPlaces = async () => {
+  const loadPlans = async () => {
     setFetchingPlaces(true);
-    const { data } = await supabase
-      .from("creator_places")
-      .select("*")
+    const { data: planData } = await supabase
+      .from("creator_plans")
+      .select("id, creator_handle, city, title, video_url, thumbnail_url, is_active, created_at")
       .order("created_at", { ascending: false });
-    setPlaces((data as CreatorPlace[]) || []);
+    if (planData?.length) {
+      const { data: placeData } = await supabase
+        .from("creator_places")
+        .select("id, place_name, category, plan_id")
+        .in("plan_id", planData.map(p => p.id));
+      setPlans(planData.map(plan => ({
+        ...plan,
+        places: (placeData ?? []).filter(pl => pl.plan_id === plan.id),
+      })));
+    } else {
+      setPlans([]);
+    }
     setFetchingPlaces(false);
   };
 
@@ -173,11 +171,14 @@ const Admin = () => {
 
       const places = data.places ?? [];
       if (places.length === 0) {
-        toast.error("AI nie znalazło konkretnych miejsc w tym materiale — wpisz ręcznie");
+        toast.error("AI nie znalazło konkretnych miejsc w tym materiale");
       } else {
         setExtractedPlaces(places);
         setExtractedSourceUrl(url);
-        toast.success(`Znaleziono ${places.length} ${places.length === 1 ? "miejsce" : "miejsca/miejsc"} — zatwierdź i dodaj`);
+        setExtractedThumbnail(data.photo_url ?? null);
+        const handle = places[0]?.creator_handle ?? "";
+        if (handle) setPlanTitle(`Plan od ${handle}`);
+        toast.success(`Znaleziono ${places.length} miejsc — nadaj tytuł i zapisz plan`);
         setExtractUrl("");
       }
     } catch (err: any) {
@@ -186,97 +187,50 @@ const Admin = () => {
     setExtracting(false);
   };
 
-  const handleAddExtractedPlace = async (idx: number) => {
-    const p = extractedPlaces[idx];
-    if (!p.place_name || !p.city) { toast.error("Brak nazwy lub miasta"); return; }
-    const { error } = await supabase.from("creator_places").insert({
-      place_name: p.place_name,
-      city: p.city,
-      category: p.category || null,
-      creator_handle: p.creator_handle || "@nieznany",
-      instagram_reel_url: extractedSourceUrl || null,
-    });
-    if (error) { toast.error("Błąd zapisu: " + error.message); return; }
-    setExtractedPlaces(prev => prev.filter((_, i) => i !== idx));
-    loadPlaces();
-    toast.success(`Dodano: ${p.place_name}`);
+  const handleSavePlan = async () => {
+    if (!planTitle.trim()) { toast.error("Wpisz tytuł planu"); return; }
+    const valid = extractedPlaces.filter(p => p.place_name && p.city);
+    if (valid.length === 0) { toast.error("Brak miejsc do zapisania"); return; }
+    setSavingPlan(true);
+    const creatorHandle = extractedPlaces[0]?.creator_handle || "@nieznany";
+    const city = extractedPlaces[0]?.city || "";
+    const { data: plan, error: planErr } = await supabase
+      .from("creator_plans")
+      .insert({ title: planTitle.trim(), creator_handle: creatorHandle, city, video_url: extractedSourceUrl, thumbnail_url: extractedThumbnail })
+      .select("id")
+      .single();
+    if (planErr || !plan) { toast.error("Błąd zapisu planu: " + planErr?.message); setSavingPlan(false); return; }
+    const { error: placesErr } = await supabase.from("creator_places").insert(
+      valid.map(p => ({ plan_id: plan.id, place_name: p.place_name, city: p.city!, category: p.category || null, creator_handle: creatorHandle, instagram_reel_url: extractedSourceUrl || null }))
+    );
+    if (placesErr) { toast.error("Błąd zapisu miejsc: " + placesErr.message); setSavingPlan(false); return; }
+    toast.success(`Plan „${planTitle}" zapisany z ${valid.length} miejscami!`);
+    setExtractedPlaces([]);
+    setExtractedSourceUrl(null);
+    setExtractedThumbnail(null);
+    setPlanTitle("");
+    loadPlans();
+    setSavingPlan(false);
   };
 
-  const handleAddAllExtracted = async () => {
-    if (extractedPlaces.length === 0) return;
-    setSavingBulk(true);
-    const toInsert = extractedPlaces
-      .filter(p => p.place_name && p.city)
-      .map(p => ({
-        place_name: p.place_name,
-        city: p.city!,
-        category: p.category || null,
-        creator_handle: p.creator_handle || "@nieznany",
-        instagram_reel_url: extractedSourceUrl || null,
-      }));
-    const { error } = await supabase.from("creator_places").insert(toInsert);
-    if (error) {
-      toast.error("Błąd zapisu: " + error.message);
-    } else {
-      toast.success(`Dodano ${toInsert.length} miejsc!`);
-      setExtractedPlaces([]);
-      setExtractedSourceUrl(null);
-      loadPlaces();
+  const handleTogglePlan = async (plan: CreatorPlan) => {
+    setTogglingPlan(plan.id);
+    const { error } = await supabase.from("creator_plans").update({ is_active: !plan.is_active }).eq("id", plan.id);
+    if (error) { toast.error("Błąd aktualizacji"); } else {
+      setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, is_active: !p.is_active } : p));
     }
-    setSavingBulk(false);
+    setTogglingPlan(null);
   };
 
-  const handleSavePlace = async () => {
-    if (!placeForm.creator_handle.trim() || !placeForm.city.trim() || !placeForm.place_name.trim()) {
-      toast.error("Wypełnij: kreator, miasto i nazwa miejsca");
-      return;
+  const handleDeletePlan = async (plan: CreatorPlan) => {
+    if (!confirm(`Usunąć plan „${plan.title}"? Usunie też wszystkie powiązane miejsca.`)) return;
+    setDeletingPlan(plan.id);
+    const { error } = await supabase.from("creator_plans").delete().eq("id", plan.id);
+    if (error) { toast.error("Błąd usuwania"); } else {
+      setPlans(prev => prev.filter(p => p.id !== plan.id));
+      toast.success("Plan usunięty");
     }
-    setSavingPlace(true);
-    const { error } = await supabase.from("creator_places").insert({
-      creator_handle: placeForm.creator_handle.trim(),
-      city: placeForm.city.trim().toLowerCase(),
-      place_name: placeForm.place_name.trim(),
-      category: placeForm.category.trim() || null,
-      description: placeForm.description.trim() || null,
-      instagram_reel_url: placeForm.instagram_reel_url.trim() || null,
-      google_maps_url: placeForm.google_maps_url.trim() || null,
-      photo_url: placeForm.photo_url.trim() || null,
-    });
-    if (error) {
-      toast.error("Błąd zapisu: " + error.message);
-    } else {
-      toast.success("Miejsce dodane!");
-      setPlaceForm(emptyPlaceForm);
-      loadPlaces();
-    }
-    setSavingPlace(false);
-  };
-
-  const handleTogglePlace = async (place: CreatorPlace) => {
-    setTogglingPlace(place.id);
-    const { error } = await supabase
-      .from("creator_places")
-      .update({ is_active: !place.is_active })
-      .eq("id", place.id);
-    if (error) {
-      toast.error("Błąd aktualizacji");
-    } else {
-      setPlaces(prev => prev.map(p => p.id === place.id ? { ...p, is_active: !p.is_active } : p));
-    }
-    setTogglingPlace(null);
-  };
-
-  const handleDeletePlace = async (place: CreatorPlace) => {
-    if (!confirm(`Usunąć „${place.place_name}"?`)) return;
-    setDeletingPlace(place.id);
-    const { error } = await supabase.from("creator_places").delete().eq("id", place.id);
-    if (error) {
-      toast.error("Błąd usuwania");
-    } else {
-      setPlaces(prev => prev.filter(p => p.id !== place.id));
-      toast.success("Miejsce usunięte");
-    }
-    setDeletingPlace(null);
+    setDeletingPlan(null);
   };
 
   if (loading || isAdmin === null) return null;
@@ -417,122 +371,90 @@ const Admin = () => {
                 </p>
               </div>
 
-              {/* Extracted places preview */}
+              {/* Extracted places → save as plan */}
               {extractedPlaces.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      Znalezione miejsca ({extractedPlaces.length})
-                    </p>
-                    <Button
-                      size="sm"
-                      onClick={handleAddAllExtracted}
-                      disabled={savingBulk}
-                      className="h-7 text-xs px-3"
-                    >
-                      {savingBulk ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
-                      Dodaj wszystkie
-                    </Button>
+                <div className="space-y-3 border border-border rounded-xl p-3 bg-background">
+                  {extractedThumbnail && (
+                    <img src={extractedThumbnail} alt="miniaturka" className="w-full h-32 object-cover rounded-lg" />
+                  )}
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Znaleziono {extractedPlaces.length} miejsc — nadaj tytuł i zapisz jako plan
+                  </p>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Tytuł planu</label>
+                    <Input
+                      placeholder="np. 10 kawiarni w Krakowie"
+                      value={planTitle}
+                      onChange={e => setPlanTitle(e.target.value)}
+                      className="bg-card text-sm"
+                    />
                   </div>
-                  {extractedPlaces.map((p, idx) => (
-                    <div key={idx} className="flex items-center justify-between gap-2 bg-muted/40 rounded-lg px-3 py-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{p.place_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {[p.city, p.category, p.creator_handle].filter(Boolean).join(" · ")}
-                        </p>
+                  <div className="space-y-1.5">
+                    {extractedPlaces.map((p, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground text-xs w-4">{idx + 1}.</span>
+                        <span className="font-medium truncate">{p.place_name}</span>
+                        <span className="text-xs text-muted-foreground ml-auto shrink-0">{p.category}</span>
                       </div>
-                      <button
-                        onClick={() => handleAddExtractedPlace(idx)}
-                        className="shrink-0 h-7 w-7 flex items-center justify-center rounded-lg bg-foreground text-background hover:opacity-80 transition-opacity"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  <Button onClick={handleSavePlan} disabled={savingPlan || !planTitle.trim()} className="w-full">
+                    {savingPlan ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Zapisywanie...</> : "Zapisz plan"}
+                  </Button>
                 </div>
               )}
-
-              {[
-                { key: "creator_handle", label: "Kreator (np. @krakowhello)", required: true },
-                { key: "city", label: "Miasto (małe litery, np. krakow)", required: true },
-                { key: "place_name", label: "Nazwa miejsca", required: true },
-                { key: "category", label: "Kategoria (bar/cafe/restaurant/viewpoint…)" },
-                { key: "instagram_reel_url", label: "Link do Instagram Reel" },
-                { key: "google_maps_url", label: "Link do Google Maps" },
-                { key: "photo_url", label: "URL zdjęcia" },
-              ].map(field => (
-                <div key={field.key}>
-                  <label className="text-xs text-muted-foreground mb-1 block">{field.label}</label>
-                  <Input
-                    value={(placeForm as any)[field.key]}
-                    onChange={e => setPlaceForm(prev => ({ ...prev, [field.key]: e.target.value }))}
-                    className="bg-background text-sm"
-                  />
-                </div>
-              ))}
-              <Button
-                onClick={handleSavePlace}
-                disabled={savingPlace}
-                className="w-full"
-              >
-                {savingPlace ? (
-                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Zapisywanie...</>
-                ) : (
-                  <><Plus className="h-4 w-4 mr-2" /> Dodaj miejsce</>
-                )}
-              </Button>
             </div>
 
-            {/* List */}
+            {/* Plans list */}
             {fetchingPlaces ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ) : places.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Brak miejsc twórców.</p>
+            ) : plans.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Brak planów twórców.</p>
             ) : (
               <div className="space-y-3">
-                {places.map(place => (
-                  <div key={place.id} className="border border-border rounded-xl p-4 bg-card">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm">{place.place_name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {place.creator_handle} · {place.city}
-                          {place.category && ` · ${place.category}`}
-                        </p>
-                        {place.description && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{place.description}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => handleTogglePlace(place)}
-                          disabled={togglingPlace === place.id}
-                          className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-                          title={place.is_active ? "Dezaktywuj" : "Aktywuj"}
-                        >
-                          {togglingPlace === place.id ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                          ) : place.is_active ? (
-                            <ToggleRight className="h-5 w-5 text-green-600" />
-                          ) : (
-                            <ToggleLeft className="h-5 w-5" />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleDeletePlace(place)}
-                          disabled={deletingPlace === place.id}
-                          className="h-7 w-7 flex items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                        >
-                          {deletingPlace === place.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-                    {!place.is_active && (
-                      <span className="inline-block mt-2 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Nieaktywne</span>
+                {plans.map(plan => (
+                  <div key={plan.id} className="border border-border rounded-xl bg-card overflow-hidden">
+                    {plan.thumbnail_url && (
+                      <img src={plan.thumbnail_url} alt={plan.title} className="w-full h-24 object-cover" />
                     )}
+                    <div className="p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm">{plan.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {plan.creator_handle} · {plan.city} · {plan.places?.length ?? 0} miejsc
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => handleTogglePlan(plan)}
+                            disabled={togglingPlan === plan.id}
+                            className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                            title={plan.is_active ? "Dezaktywuj" : "Aktywuj"}
+                          >
+                            {togglingPlan === plan.id ? (
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : plan.is_active ? (
+                              <ToggleRight className="h-5 w-5 text-green-600" />
+                            ) : (
+                              <ToggleLeft className="h-5 w-5" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleDeletePlan(plan)}
+                            disabled={deletingPlan === plan.id}
+                            className="h-7 w-7 flex items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                          >
+                            {deletingPlan === plan.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                      {!plan.is_active && (
+                        <span className="inline-block mt-2 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Nieaktywne</span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Mic, MessageSquare, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,8 +41,21 @@ const CreateRoute = () => {
   const [searchParams] = useSearchParams();
   const folderId = searchParams.get("trip") ?? undefined;
   const dayNumber = searchParams.get("day") ? parseInt(searchParams.get("day")!) : undefined;
-  const [step, setStep] = useState(1);
+  const creatorPlanId = searchParams.get("creatorPlan") ?? undefined;
+  const [step, setStep] = useState(creatorPlanId ? 3 : 1);
   const [likedPlaces, setLikedPlaces] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!creatorPlanId) return;
+    supabase
+      .from("creator_places")
+      .select("place_name")
+      .eq("plan_id", creatorPlanId)
+      .eq("is_active", true)
+      .then(({ data }) => {
+        if (data?.length) setLikedPlaces(data.map(p => p.place_name));
+      });
+  }, [creatorPlanId]);
   const [customPriority, setCustomPriority] = useState("");
   const [preferences, setPreferences] = useState<TripPreferences>({
     numDays: 1,
