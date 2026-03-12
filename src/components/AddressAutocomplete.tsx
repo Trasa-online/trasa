@@ -64,8 +64,8 @@ const AddressAutocompleteInner = memo(function AddressAutocompleteInner({
   const places = useMapsLibrary("places");
   const geocoding = useMapsLibrary("geocoding");
 
-  const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
-  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+  const autocompleteServiceRef = useRef<any>(null);
+  const geocoderRef = useRef<any>(null);
 
   // Initialize services when libraries are loaded
   useEffect(() => {
