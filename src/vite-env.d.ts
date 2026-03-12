@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
+/// <reference types="google.maps" />
 
-// NodeJS.Timeout compatibility for setTimeout/setInterval
 declare namespace NodeJS {
+  // eslint-disable-next-line @typescript-eslint/no-empty-interface
   interface Timeout {}
 }
