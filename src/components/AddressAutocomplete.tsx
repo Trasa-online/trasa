@@ -56,7 +56,7 @@ const AddressAutocompleteInner = memo(function AddressAutocompleteInner({
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const isTypingRef = useRef(false);
   const lastExternalValueRef = useRef(value);
 
