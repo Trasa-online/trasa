@@ -9,10 +9,19 @@ import DayPinList, { type PlanPin } from "./DayPinList";
 import PlaceDetailDrawer from "./PlaceDetailDrawer";
 import AddPinSheet from "./AddPinSheet";
 
-interface ChatMessage {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface TextMessage {
   role: "user" | "assistant";
   content: string;
 }
+
+interface PlanEntry {
+  role: "plan";
+  plan: RoutePlan;
+}
+
+type ChatEntry = TextMessage | PlanEntry;
 
 interface DayMetrics {
   total_walking_km?: number;
@@ -42,11 +51,11 @@ interface TripPreferences {
 
 interface PlanChatExperienceProps {
   preferences: TripPreferences;
-  onPlanReady: (plan: RoutePlan, messages: ChatMessage[]) => void;
+  onPlanReady: (plan: RoutePlan, messages: TextMessage[]) => void;
   likedPlaces?: string[];
 }
 
-// ── Mock plan data for Kraków ────────────────────────────────────────────────
+// ─── Mock plan data for Kraków ────────────────────────────────────────────────
 
 type MockPin = Omit<PlanPin, "day_number">;
 
@@ -103,7 +112,8 @@ function parseSuggestions(message: string): { cleanMessage: string; suggestions:
   }
 }
 
-// ── Skeleton shown while the plan is being generated ────────────────────────
+// ─── Helper components ────────────────────────────────────────────────────────
+
 function PlanSkeleton({ numDays }: { numDays: number }) {
   return (
     <div className="space-y-3 pt-2">
@@ -120,6 +130,31 @@ function PlanSkeleton({ numDays }: { numDays: number }) {
               <Skeleton className="h-3 w-10 rounded-full shrink-0" />
             </div>
           ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Compact read-only snapshot shown for historical plan versions
+function CompactPlanSnapshot({ plan }: { plan: RoutePlan }) {
+  return (
+    <div className="opacity-35 pointer-events-none space-y-2 my-1">
+      {plan.days.map(day => (
+        <div key={day.day_number} className="rounded-2xl border border-border/40 bg-card/50 p-3">
+          <p className="text-[11px] font-medium text-muted-foreground/70 mb-1.5">
+            {plan.days.length > 1 ? `Dzień ${day.day_number}` : "Plan dnia"}
+            <span className="ml-1.5">· {day.pins.length} miejsc</span>
+          </p>
+          <div className="space-y-1">
+            {day.pins.map((pin, idx) => (
+              <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground/60">
+                <span className="w-3 text-right flex-shrink-0">{idx + 1}.</span>
+                <span className="flex-1 truncate">{pin.place_name}</span>
+                <span className="text-[10px] flex-shrink-0">{pin.suggested_time}</span>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
     </div>
@@ -144,17 +179,16 @@ const hasVoiceSupport =
   typeof window !== "undefined" &&
   ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
 
+// ─── Main component ───────────────────────────────────────────────────────────
+
 const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatExperienceProps) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [plan, setPlan] = useState<RoutePlan | null>(null);
+  const [entries, setEntries] = useState<ChatEntry[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [suggestions, setSuggestions] = useState<string[]>(INITIAL_SUGGESTIONS);
-  const [editCount, setEditCount] = useState(0);
   const [preparingPlan, setPreparingPlan] = useState(false);
-  const [planHistory, setPlanHistory] = useState<RoutePlan[]>([]);
   const [selectedPin, setSelectedPin] = useState<PlanPin | null>(null);
   const [addPinDay, setAddPinDay] = useState<number | null>(null);
   const [memoryUsed, setMemoryUsed] = useState(false);
@@ -165,86 +199,99 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
 
+  // Derived state
+  const lastPlanIdx = entries.reduce((acc, e, i) => e.role === "plan" ? i : acc, -1);
+  const plan = lastPlanIdx >= 0 ? (entries[lastPlanIdx] as PlanEntry).plan : null;
+  const editCount = Math.max(0, entries.filter(e => e.role === "plan").length - 1);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, plan]);
+  }, [entries]);
 
-  // Start conversation — show mock plan immediately (no API call)
+  // Initialize with mock plan (no API call)
   useEffect(() => {
     const nDays = preferences.numDays;
     const mock = buildMockPlan(nDays);
     const daysLabel = nDays === 1 ? "1 dzień" : `${nDays} dni`;
     const intro = `Hej! Mam już wstępny plan dla Ciebie na **${daysLabel} w Krakowie** 🗺️\n\nTo tylko punkt startowy — powiedz co zmienić!`;
-    setMessages([{ role: "assistant", content: intro }]);
-    setPlan(mock);
+    setEntries([
+      { role: "assistant", content: intro },
+      { role: "plan", plan: mock },
+    ]);
     setSuggestions(INITIAL_SUGGESTIONS);
     setInitializing(false);
+  }, []);
+
+  // Helper to mutate the latest plan in-place
+  const updateLatestPlan = useCallback((updater: (p: RoutePlan) => RoutePlan) => {
+    setEntries(prev => {
+      const idx = prev.reduce((acc, e, i) => e.role === "plan" ? i : acc, -1);
+      if (idx < 0) return prev;
+      const latest = prev[idx] as PlanEntry;
+      return [
+        ...prev.slice(0, idx),
+        { role: "plan" as const, plan: updater(latest.plan) },
+        ...prev.slice(idx + 1),
+      ];
+    });
   }, []);
 
   const sendMessage = useCallback(async (text?: string) => {
     const msgText = text || input.trim();
     if (!msgText || loading) return;
 
-    const newMessages: ChatMessage[] = [
-      ...messages,
-      { role: "user", content: msgText },
-    ];
-    setMessages(newMessages);
+    // Snapshot text-only messages for API (exclude plan entries)
+    const textMessages = entries.filter((e): e is TextMessage => e.role !== "plan");
+    const newUserMsg: TextMessage = { role: "user", content: msgText };
+    const apiMessages: TextMessage[] = [...textMessages, newUserMsg];
+
+    setEntries(prev => [...prev, newUserMsg]);
     setInput("");
     setLoading(true);
 
     try {
       const response = await supabase.functions.invoke("plan-route", {
-        body: { preferences, messages: newMessages, current_plan: plan, liked_places: likedPlaces },
+        body: { preferences, messages: apiMessages, current_plan: plan, liked_places: likedPlaces },
       });
 
       if (response.error) throw new Error(response.error.message);
-
       const data = response.data;
 
-      // Parse suggestions out of message
       const { cleanMessage: parsedMsg, suggestions: newSuggestions } = parseSuggestions(data.message ?? "");
       if (newSuggestions.length) setSuggestions(newSuggestions);
-
-      // Always add the assistant message to chat
-      const withAssistant: ChatMessage[] = parsedMsg
-        ? [...newMessages, { role: "assistant" as const, content: parsedMsg }]
-        : newMessages;
-
-      if (parsedMsg) setMessages(withAssistant);
-
       if (data.memory_used) setMemoryUsed(true);
 
+      // Add AI text + plan entries atomically
+      const toAdd: ChatEntry[] = [];
+      if (parsedMsg) toAdd.push({ role: "assistant", content: parsedMsg });
+      if (data.plan) toAdd.push({ role: "plan", plan: data.plan });
+      if (toAdd.length) setEntries(prev => [...prev, ...toAdd]);
+
       if (data.plan) {
-        if (plan) {
-          setPlanHistory(prev => [...prev, plan]);
-          setEditCount(prev => prev + 1);
-        }
-        setPlan(data.plan);
         setLoading(false);
       } else if (data.preparing_plan) {
-        // AI signalled it's about to generate — show skeleton and force-generate
         setLoading(false);
         setPreparingPlan(true);
+
+        // Second call to force plan generation
+        const apiMessages2: TextMessage[] = parsedMsg
+          ? [...apiMessages, { role: "assistant", content: parsedMsg }]
+          : apiMessages;
+
         try {
           const planResponse = await supabase.functions.invoke("plan-route", {
-            body: { preferences, messages: withAssistant, current_plan: plan, force_plan: true, liked_places: likedPlaces },
+            body: { preferences, messages: apiMessages2, current_plan: plan, force_plan: true, liked_places: likedPlaces },
           });
           if (!planResponse.error && planResponse.data?.plan) {
             if (planResponse.data.memory_used) setMemoryUsed(true);
-            if (plan) {
-              setPlanHistory(prev => [...prev, plan]);
-              setEditCount(prev => prev + 1);
-            }
-            setPlan(planResponse.data.plan);
-            if (planResponse.data.message) {
-              const { cleanMessage: cm, suggestions: s } = parseSuggestions(planResponse.data.message);
-              if (s.length) setSuggestions(s);
-              if (cm) setMessages(prev => [...prev, { role: "assistant", content: cm }]);
-            }
-            if (planResponse.data.suggestions?.length) setSuggestions(planResponse.data.suggestions);
+            const { cleanMessage: cm, suggestions: s } = parseSuggestions(planResponse.data.message ?? "");
+            if (s.length) setSuggestions(s);
+            const toAdd2: ChatEntry[] = [];
+            if (cm) toAdd2.push({ role: "assistant", content: cm });
+            toAdd2.push({ role: "plan", plan: planResponse.data.plan });
+            setEntries(prev => [...prev, ...toAdd2]);
           }
         } catch (planErr) {
           console.error("Force plan error:", planErr);
@@ -255,13 +302,10 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
       }
     } catch (err) {
       console.error("Chat error:", err);
-      setMessages([
-        ...newMessages,
-        { role: "assistant", content: "Przepraszam, coś poszło nie tak. Spróbuj ponownie." },
-      ]);
+      setEntries(prev => [...prev, { role: "assistant", content: "Przepraszam, coś poszło nie tak. Spróbuj ponownie." }]);
       setLoading(false);
     }
-  }, [input, messages, loading, preferences, plan]);
+  }, [input, entries, loading, preferences, plan]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -276,30 +320,21 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
       setListening(false);
       return;
     }
-
-    const SpeechRecognition =
-      (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SpeechRecognition) return;
-
     const recognition = new SpeechRecognition();
     recognition.lang = "pl-PL";
     recognition.continuous = false;
     recognition.interimResults = true;
-
     recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results)
-        .map((r: any) => r[0].transcript)
-        .join("");
+      const transcript = Array.from(event.results).map((r: any) => r[0].transcript).join("");
       setInput(transcript);
-      
       if (event.results[event.results.length - 1].isFinal) {
         setTimeout(() => sendMessage(transcript), 300);
       }
     };
-
     recognition.onend = () => setListening(false);
     recognition.onerror = () => setListening(false);
-
     recognition.start();
     recognitionRef.current = recognition;
     setListening(true);
@@ -313,51 +348,45 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
   };
 
   const handleRemovePin = (dayNumber: number, pinIndex: number) => {
-    if (!plan) return;
-    setPlan({
-      ...plan,
-      days: plan.days.map(d =>
+    updateLatestPlan(p => ({
+      ...p,
+      days: p.days.map(d =>
         d.day_number === dayNumber
           ? { ...d, pins: d.pins.filter((_, i) => i !== pinIndex) }
           : d
       ),
-    });
+    }));
   };
 
   const handleReorderPins = (dayNumber: number, newPins: PlanPin[]) => {
-    if (!plan) return;
-    setPlan({
-      ...plan,
-      days: plan.days.map(d =>
-        d.day_number === dayNumber ? { ...d, pins: newPins } : d
-      ),
-    });
+    updateLatestPlan(p => ({
+      ...p,
+      days: p.days.map(d => d.day_number === dayNumber ? { ...d, pins: newPins } : d),
+    }));
   };
 
   const handleAddPinToDay = (pin: PlanPin) => {
-    if (!plan || addPinDay === null) return;
-    setPlan({
-      ...plan,
-      days: plan.days.map(d =>
+    if (addPinDay === null) return;
+    updateLatestPlan(p => ({
+      ...p,
+      days: p.days.map(d =>
         d.day_number === addPinDay
           ? { ...d, pins: [...d.pins, { ...pin, day_number: addPinDay }] }
           : d
       ),
-    });
+    }));
     setAddPinDay(null);
   };
 
   const handleConfirm = () => {
     if (plan) {
-      onPlanReady(plan, messages);
+      const textMessages = entries.filter((e): e is TextMessage => e.role !== "plan");
+      onPlanReady(plan, textMessages);
     }
   };
 
   const handleEditRequest = () => {
-    setMessages(prev => [
-      ...prev,
-      { role: "assistant" as const, content: "Okej, co konkretnie chciałbyś poprawić? 🤔" },
-    ]);
+    setEntries(prev => [...prev, { role: "assistant" as const, content: "Okej, co konkretnie chciałbyś poprawić? 🤔" }]);
   };
 
   const handleGetAlternatives = useCallback(async (pin: PlanPin, dayNumber: number, pinIndex: number) => {
@@ -384,25 +413,25 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
   }, [plan]);
 
   const handleSelectAlternative = useCallback((altPin: PlanPin) => {
-    if (!alternativesFor || !plan) return;
+    if (!alternativesFor) return;
     const { dayNumber, pinIndex, pin: original } = alternativesFor;
-    setPlan({
-      ...plan,
-      days: plan.days.map(d =>
+    updateLatestPlan(p => ({
+      ...p,
+      days: p.days.map(d =>
         d.day_number === dayNumber
           ? {
               ...d,
-              pins: d.pins.map((p, i) =>
+              pins: d.pins.map((pin, i) =>
                 i === pinIndex
                   ? { ...altPin, suggested_time: original.suggested_time, duration_minutes: original.duration_minutes, day_number: dayNumber }
-                  : p
+                  : pin
               ),
             }
           : d
       ),
-    });
+    }));
     setAlternativesFor(null);
-  }, [alternativesFor, plan]);
+  }, [alternativesFor, updateLatestPlan]);
 
   if (initializing) {
     return (
@@ -428,31 +457,119 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
         </div>
       )}
 
-      {/* Messages + Plan */}
+      {/* Unified entries timeline */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {messages.map((msg, i) => {
-          const bubbles = msg.role === "assistant"
-            ? msg.content.split(/\n\n+/).map(s => s.trim()).filter(Boolean)
-            : [msg.content];
+        {entries.map((entry, i) => {
+          // ── Plan entry ──────────────────────────────────────────────────────
+          if (entry.role === "plan") {
+            const isLatest = i === lastPlanIdx;
+
+            if (!isLatest) {
+              return <CompactPlanSnapshot key={i} plan={entry.plan} />;
+            }
+
+            // Latest plan: full interactive view
+            return (
+              <div key={i} className="space-y-4 pt-2">
+                {memoryUsed && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/60 border border-border/40">
+                    <Brain className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-[12px] text-muted-foreground">Plan uwzględnia Twoje wcześniejsze preferencje</span>
+                  </div>
+                )}
+
+                {entry.plan.days.map((day) => (
+                  <div key={day.day_number} className="space-y-2">
+                    {day.day_metrics && (
+                      <div className="flex items-center gap-3 px-1 text-[11px] text-muted-foreground">
+                        {day.day_metrics.total_walking_km != null && (
+                          <span className="flex items-center gap-1">
+                            <Footprints className="h-3 w-3" />
+                            {day.day_metrics.total_walking_km} km
+                          </span>
+                        )}
+                        {day.day_metrics.crowd_level && (
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {day.day_metrics.crowd_level === "low" ? "spokojnie" : day.day_metrics.crowd_level === "medium" ? "umiarkowanie" : "tłoczno"}
+                          </span>
+                        )}
+                        {day.day_metrics.energy_cost && (
+                          <span className="flex items-center gap-1">
+                            <Zap className="h-3 w-3" />
+                            {day.day_metrics.energy_cost === "low" ? "relaks" : day.day_metrics.energy_cost === "medium" ? "aktywnie" : "intensywnie"}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <DayPinList
+                      dayNumber={day.day_number}
+                      totalDays={entry.plan.days.length}
+                      pins={day.pins}
+                      onRemovePin={handleRemovePin}
+                      onReorderPins={handleReorderPins}
+                      onPinClick={(pin) => setSelectedPin(pin)}
+                      onAddPin={(dayNum) => setAddPinDay(dayNum)}
+                      onAlternatives={(pin, idx) => handleGetAlternatives(pin, day.day_number, idx)}
+                    />
+                  </div>
+                ))}
+
+                {/* Skeleton while next plan is loading */}
+                {preparingPlan && <PlanSkeleton numDays={preferences.numDays} />}
+
+                {!preparingPlan && (
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
+                      <span>Ilość zmian</span>
+                      <span>Pozostało {Math.max(0, 3 - editCount)}/3</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleConfirm}
+                        className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
+                      >
+                        Wybieram ten plan!
+                      </button>
+                      <button
+                        onClick={handleEditRequest}
+                        disabled={loading}
+                        className="flex-1 py-3 rounded-xl border border-border text-sm font-medium text-foreground bg-card disabled:opacity-50"
+                      >
+                        Wprowadź zmiany
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // ── Text message bubble ────────────────────────────────────────────
+          const bubbles = entry.role === "assistant"
+            ? entry.content.split(/\n\n+/).map(s => s.trim()).filter(Boolean)
+            : [entry.content];
+
           return (
-            <div key={i} className={cn("flex flex-col gap-1", msg.role === "user" ? "items-end" : "items-start")}>
+            <div key={i} className={cn("flex flex-col gap-1", entry.role === "user" ? "items-end" : "items-start")}>
               {bubbles.map((bubble, j) => (
                 <div
                   key={j}
                   className={cn(
                     "max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed",
-                    msg.role === "user"
+                    entry.role === "user"
                       ? "bg-foreground text-background rounded-br-md"
                       : "bg-card text-foreground rounded-bl-md shadow-sm"
                   )}
                 >
-                  {msg.role === "assistant" ? renderBubble(bubble) : bubble}
+                  {entry.role === "assistant" ? renderBubble(bubble) : bubble}
                 </div>
               ))}
             </div>
           );
         })}
 
+        {/* Typing indicator */}
         {loading && !preparingPlan && (
           <div className="flex justify-start">
             <div className="bg-card rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
@@ -464,109 +581,9 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
             </div>
           </div>
         )}
-
-        {preparingPlan && !plan && (
-          <PlanSkeleton numDays={preferences.numDays} />
-        )}
-
-        {/* Historical Plans */}
-        {planHistory.map((histPlan, idx) => (
-          <div key={idx} className="space-y-3 pt-2 opacity-40 pointer-events-none">
-            <p className="text-[11px] text-muted-foreground px-1 font-medium uppercase tracking-wider">
-              Plan #{idx + 1}
-            </p>
-            {histPlan.days.map((day) => (
-              <DayPinList
-                key={day.day_number}
-                dayNumber={day.day_number}
-                totalDays={histPlan.days.length}
-                pins={day.pins}
-                onRemovePin={() => {}}
-              />
-            ))}
-          </div>
-        ))}
-
-        {/* Current Plan */}
-        {plan && (
-          <div className="space-y-4 pt-2">
-            {/* Memory receipt banner */}
-            {memoryUsed && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/60 border border-border/40">
-                <Brain className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <span className="text-[12px] text-muted-foreground">Plan uwzględnia Twoje wcześniejsze preferencje</span>
-              </div>
-            )}
-
-            {plan.days.map((day) => (
-              <div key={day.day_number} className="space-y-2">
-                {/* Day metrics bar */}
-                {day.day_metrics && (
-                  <div className="flex items-center gap-3 px-1 text-[11px] text-muted-foreground">
-                    {day.day_metrics.total_walking_km != null && (
-                      <span className="flex items-center gap-1">
-                        <Footprints className="h-3 w-3" />
-                        {day.day_metrics.total_walking_km} km
-                      </span>
-                    )}
-                    {day.day_metrics.crowd_level && (
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {day.day_metrics.crowd_level === "low" ? "spokojnie" : day.day_metrics.crowd_level === "medium" ? "umiarkowanie" : "tłoczno"}
-                      </span>
-                    )}
-                    {day.day_metrics.energy_cost && (
-                      <span className="flex items-center gap-1">
-                        <Zap className="h-3 w-3" />
-                        {day.day_metrics.energy_cost === "low" ? "relaks" : day.day_metrics.energy_cost === "medium" ? "aktywnie" : "intensywnie"}
-                      </span>
-                    )}
-                  </div>
-                )}
-                <DayPinList
-                  dayNumber={day.day_number}
-                  totalDays={plan.days.length}
-                  pins={day.pins}
-                  onRemovePin={handleRemovePin}
-                  onReorderPins={handleReorderPins}
-                  onPinClick={(pin) => setSelectedPin(pin)}
-                  onAddPin={(dayNum) => setAddPinDay(dayNum)}
-                  onAlternatives={(pin, idx) => handleGetAlternatives(pin, day.day_number, idx)}
-                />
-              </div>
-            ))}
-
-            {preparingPlan && <PlanSkeleton numDays={preferences.numDays} />}
-
-            {/* Action buttons — inside scroll area so they're always reachable */}
-            {!preparingPlan && (
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
-                  <span>Ilość zmian</span>
-                  <span>Pozostało {Math.max(0, 3 - editCount)}/3</span>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleConfirm}
-                    className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
-                  >
-                    Wybieram ten plan!
-                  </button>
-                  <button
-                    onClick={handleEditRequest}
-                    disabled={loading}
-                    className="flex-1 py-3 rounded-xl border border-border text-sm font-medium text-foreground bg-card disabled:opacity-50"
-                  >
-                    Wprowadź zmiany
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Input area — sticky bottom */}
+      {/* Sticky input area */}
       <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-2 pb-safe">
         {/* Suggestion chips */}
         {suggestions.length > 0 && !loading && (
