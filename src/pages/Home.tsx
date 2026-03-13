@@ -336,8 +336,8 @@ const Home = () => {
       <div className="flex-1 overflow-y-auto px-5 pb-28 max-w-lg mx-auto w-full">
 
         {/* Avatar + Name */}
-        <button
-          onClick={() => navigate("/moj-profil")}
+        <Link
+          to="/moj-profil"
           className="flex flex-col items-center pt-8 pb-6 w-full"
         >
           <Avatar className="h-20 w-20">
@@ -372,7 +372,7 @@ const Home = () => {
               </div>
             );
           })()}
-        </button>
+        </Link>
 
         {/* Creator Plans */}
         {creatorPlans.length > 0 && (
