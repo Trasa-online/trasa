@@ -1219,6 +1219,83 @@ export type Database = {
           },
         ]
       }
+      user_memory: {
+        Row: {
+          city: string | null
+          content: string
+          created_at: string
+          day_number: number | null
+          embedding: string | null
+          id: string
+          metadata: Json | null
+          route_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          content: string
+          created_at?: string
+          day_number?: number | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          route_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          content?: string
+          created_at?: string
+          day_number?: number | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          route_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_memory_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_preference_graph: {
+        Row: {
+          confidence: number
+          evidence_count: number
+          id: string
+          last_updated: string
+          preference_key: string
+          preference_value: string
+          user_id: string
+        }
+        Insert: {
+          confidence?: number
+          evidence_count?: number
+          id?: string
+          last_updated?: string
+          preference_key: string
+          preference_value: string
+          user_id: string
+        }
+        Update: {
+          confidence?: number
+          evidence_count?: number
+          id?: string
+          last_updated?: string
+          preference_key?: string
+          preference_value?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null

@@ -74,13 +74,19 @@ const TravelerProfile = () => {
     queryKey: ["preference_graph", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("user_preference_graph")
+        .from("user_preference_graph" as any)
         .select("preference_key, preference_value, confidence, evidence_count, last_updated")
         .eq("user_id", user!.id)
         .order("evidence_count", { ascending: false })
         .limit(20);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as unknown as Array<{
+        preference_key: string;
+        preference_value: string;
+        confidence: number;
+        evidence_count: number;
+        last_updated: string;
+      }>;
     },
     enabled: !!user,
   });
@@ -89,13 +95,18 @@ const TravelerProfile = () => {
     queryKey: ["user_memory", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("user_memory")
+        .from("user_memory" as any)
         .select("city, content, metadata, created_at")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false })
         .limit(5);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as unknown as Array<{
+        city: string | null;
+        content: string | null;
+        metadata: any;
+        created_at: string | null;
+      }>;
     },
     enabled: !!user,
   });
