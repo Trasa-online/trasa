@@ -573,7 +573,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
                         "max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed",
                         msg.role === "user"
                           ? "bg-foreground text-background rounded-br-md"
-                          : "bg-card text-foreground rounded-bl-md shadow-sm"
+                          : "bg-card text-foreground rounded-bl-md"
                       )}
                     >
                       {msg.role === "assistant" ? renderBubble(bubble) : bubble}
@@ -586,7 +586,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
             {/* Typing indicator */}
             {loading && !preparingPlan && (
               <div className="flex justify-start">
-                <div className="bg-card rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                <div className="bg-card rounded-2xl rounded-bl-md px-4 py-3">
                   <div className="flex gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
                     <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -604,7 +604,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
             height: `${sheetHeight}px`,
             transition: dragH !== null ? "none" : "height 0.3s cubic-bezier(0.32, 0.72, 0, 1)",
           }}
-          className="absolute bottom-0 left-0 right-0 bg-background border-t border-border/30 rounded-t-3xl shadow-2xl flex flex-col overflow-hidden z-10"
+          className="absolute bottom-0 left-0 right-0 bg-background border-t border-border/30 rounded-t-3xl flex flex-col overflow-hidden z-10"
         >
           {/* Drag handle */}
           <div

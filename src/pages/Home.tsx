@@ -145,7 +145,12 @@ const Home = () => {
 
   // Find today's route for a trip that needs checkin
   const getTodayRoute = (trip: any) => {
-    if (!trip.startDate) return null;
+    if (!trip.startDate) {
+      // No date: show the first uncompleted route with pins
+      return trip.routes.find((r: any) =>
+        r.chat_status !== "completed" && (r.pins || []).length > 0
+      ) || null;
+    }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tripStart = new Date(trip.startDate);
@@ -162,22 +167,11 @@ const Home = () => {
     return null;
   };
 
-  // Find a route with pending review — only for days whose date has already arrived
+  // Find any uncompleted route with pins (no date gate)
   const getPendingReviewRoute = (trip: any) => {
-    if (!trip.startDate) return null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tripStart = new Date(trip.startDate);
-    tripStart.setHours(0, 0, 0, 0);
-    if (today < tripStart) return null;
-    return trip.routes.find((r: any) => {
-      if (r.chat_status === "completed") return false;
-      if (!(r.pins || []).length) return false;
-      // Only show for days that have already started (not future days)
-      const routeDate = r.start_date ? new Date(r.start_date) : tripStart;
-      routeDate.setHours(0, 0, 0, 0);
-      return routeDate <= today;
-    }) || null;
+    return trip.routes.find((r: any) =>
+      r.chat_status !== "completed" && (r.pins || []).length > 0
+    ) || null;
   };
 
   const handleTripClick = (trip: any) => {
