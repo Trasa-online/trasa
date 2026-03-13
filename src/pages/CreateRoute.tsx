@@ -6,7 +6,6 @@ import { ArrowLeft, Mic, MessageSquare, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PlanChatExperience from "@/components/route/PlanChatExperience";
-import SwipeDiscovery from "@/components/discover/SwipeDiscovery";
 import RouteSummaryDialog from "@/components/route/RouteSummaryDialog";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -42,7 +41,7 @@ const CreateRoute = () => {
   const folderId = searchParams.get("trip") ?? undefined;
   const dayNumber = searchParams.get("day") ? parseInt(searchParams.get("day")!) : undefined;
   const creatorPlanId = searchParams.get("creatorPlan") ?? undefined;
-  const [step, setStep] = useState(creatorPlanId ? 3 : 1);
+  const [step, setStep] = useState(creatorPlanId ? 2 : 1);
   const [likedPlaces, setLikedPlaces] = useState<string[]>([]);
 
   useEffect(() => {
@@ -305,7 +304,7 @@ const CreateRoute = () => {
               if (preferences.priorities.length === 0) errors.priorities = "Wybierz przynajmniej jeden priorytet";
               if (!selectedDate) errors.date = "Wybierz datę podróży";
               setValidationErrors(errors);
-              if (Object.keys(errors).length === 0) setStep(2);  // → SwipeDiscovery
+              if (Object.keys(errors).length === 0) setStep(2);
             }}
             size="lg"
             className="w-full"
@@ -317,25 +316,12 @@ const CreateRoute = () => {
     );
   }
 
-  // Step 2: SwipeDiscovery
-  if (step === 2) {
-    return (
-      <SwipeDiscovery
-        city={preferences.city}
-        onDone={(liked) => {
-          setLikedPlaces(liked);
-          setStep(3);
-        }}
-      />
-    );
-  }
-
-  // Step 3: Chat
+  // Step 2: Chat
   return (
     <div className="h-[100dvh] bg-background flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-safe-4 pb-4 border-b border-border/40 flex-shrink-0">
-        <button onClick={() => setStep(2)} className="p-1">
+        <button onClick={() => setStep(1)} className="p-1">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-semibold">Planowanie trasy</h1>
