@@ -309,31 +309,43 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
     }
   }, [messages]);
 
-  // Initialize with real AI plan based on preferences
+  // Initialize: Day 1 → immediate real plan; Day 2+ → greeting referencing previous day
   useEffect(() => {
     const initialize = async () => {
       const nDays = preferences.numDays;
       const daysLabel = nDays === 1 ? "1 dzień" : `${nDays} dni`;
       const fallbackIntro = `Oto wstępny plan na **${daysLabel} w ${preferences.city}** 🗺️\n\nPowiedz co zmienić!`;
 
+      // Day 2+: send empty messages so server generates personalized greeting
+      // referencing previous day's AAR feedback before producing the plan.
+      // Day 1: force plan immediately.
+      const isSubsequentDay = (preferences.dayNumber ?? 1) > 1;
+
       try {
         const response = await supabase.functions.invoke("plan-route", {
           body: {
             preferences,
-            messages: [{ role: "user", content: "Generuj plan" }],
-            force_plan: true,
+            messages: isSubsequentDay ? [] : [{ role: "user", content: "Generuj plan" }],
+            force_plan: isSubsequentDay ? false : true,
             liked_places: likedPlaces,
           },
         });
 
-        if (!response.error && response.data?.plan) {
-          const { cleanMessage, suggestions: newSuggestions } = parseSuggestions(response.data.message ?? "");
-          setPlan(response.data.plan);
-          setMessages([{ role: "assistant", content: cleanMessage || fallbackIntro }]);
+        if (!response.error) {
+          const data = response.data;
+          const { cleanMessage, suggestions: newSuggestions } = parseSuggestions(data?.message ?? "");
           if (newSuggestions.length) setSuggestions(newSuggestions);
-          if (response.data.memory_used) setMemoryUsed(true);
+          if (data?.memory_used) setMemoryUsed(true);
+
+          if (data?.plan) {
+            setPlan(data.plan);
+            setMessages([{ role: "assistant", content: cleanMessage || fallbackIntro }]);
+          } else {
+            // Day 2+: only greeting returned, no plan yet — show greeting + skeleton
+            setMessages([{ role: "assistant", content: cleanMessage || fallbackIntro }]);
+            setPlan(buildMockPlan(nDays)); // placeholder until user confirms
+          }
         } else {
-          // Fallback to mock on API error
           setPlan(buildMockPlan(nDays));
           setMessages([{ role: "assistant", content: fallbackIntro }]);
           setSuggestions(INITIAL_SUGGESTIONS);
