@@ -336,7 +336,10 @@ const Home = () => {
       <div className="flex-1 overflow-y-auto px-5 pb-28 max-w-lg mx-auto w-full">
 
         {/* Avatar + Name */}
-        <div className="flex flex-col items-center pt-8 pb-6">
+        <button
+          onClick={() => navigate("/moj-profil")}
+          className="flex flex-col items-center pt-8 pb-6 w-full"
+        >
           <Avatar className="h-20 w-20">
             <AvatarImage src={profile?.avatar_url || ""} />
             <AvatarFallback className="bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 text-2xl font-bold">
@@ -351,17 +354,25 @@ const Home = () => {
               ...((profile as any)?.dietary_prefs ?? []),
               ...((profile as any)?.travel_interests ?? []),
             ].map((id: string) => PREF_LABEL[id] ?? id).filter(Boolean);
-            return tags.length > 0 ? (
+            if (tags.length === 0) return null;
+            const visible = tags.slice(0, 3);
+            const overflow = tags.length - 3;
+            return (
               <div className="flex flex-wrap gap-1.5 justify-center mt-2 max-w-[280px]">
-                {tags.map(tag => (
+                {visible.map(tag => (
                   <span key={tag} className="text-[11px] bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full">
                     {tag}
                   </span>
                 ))}
+                {overflow > 0 && (
+                  <span className="text-[11px] bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full">
+                    +{overflow}
+                  </span>
+                )}
               </div>
-            ) : null;
+            );
           })()}
-        </div>
+        </button>
 
         {/* Creator Plans */}
         {creatorPlans.length > 0 && (

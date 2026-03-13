@@ -7,7 +7,6 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Camera, Shield, ChevronRight, Compass } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +18,6 @@ const Settings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [username, setUsername] = useState("");
-  const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
 
   useEffect(() => {
@@ -61,7 +59,6 @@ const Settings = () => {
   useEffect(() => {
     if (profile) {
       setUsername(profile.username || "");
-      setBio(profile.bio || "");
       setAvatarUrl(profile.avatar_url || "");
     }
   }, [profile]);
@@ -70,7 +67,7 @@ const Settings = () => {
     mutationFn: async () => {
       const { error } = await supabase
         .from("profiles")
-        .update({ username, bio, avatar_url: avatarUrl })
+        .update({ username, avatar_url: avatarUrl })
         .eq("id", user?.id);
 
       if (error) throw error;
@@ -137,18 +134,6 @@ const Settings = () => {
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="bg-background"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea
-              id="bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Opowiedz coś o sobie..."
-              rows={3}
               className="bg-background"
             />
           </div>
