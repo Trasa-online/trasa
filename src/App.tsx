@@ -17,6 +17,7 @@ import MyRoutes from "./pages/MyRoutes";
 import Onboarding from "./pages/Onboarding";
 import SetPassword from "./pages/SetPassword";
 import Admin from "./pages/Admin";
+import TravelerProfile from "./pages/TravelerProfile";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/moj-profil" element={<AppLayout><TravelerProfile /></AppLayout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

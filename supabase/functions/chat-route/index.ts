@@ -3,39 +3,56 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ALLOWED_ORIGINS = ["https://trasa.lovable.app", "http://localhost:8080"];
 
-function buildSystemPrompt(pinsContext: string, pinCount: number): string {
-  return `Jesteś asystentem podróżniczym w aplikacji TRASA.
-User odwiedził ${pinCount} miejsc. Przeprowadź naturalną rozmowę (dokładnie 3 wymiany),
-żeby uchwycić kontekst i wspomnienia tego dnia.
+function buildSystemPrompt(pinsContext: string, pinCount: number, hasNextDay: boolean): string {
+  const skippedSection = pinsContext.includes("[POMINIĘTY]")
+    ? `\nUWAGA: Część miejsc jest oznaczona [POMINIĘTY]. Zapytaj o KAŻDE z nich osobno — dlaczego? Poszła gdzieś zamiast tego? Co zdecydowało?\n`
+    : "";
 
-## PINY USERA (kolejność w jakiej je dodał)
+  const forwardSection = hasNextDay
+    ? `### JUTRO
+User ma zaplanowany kolejny dzień podróży — zapytaj naturalnie: na podstawie dzisiaj, co by zrobiła inaczej jutro? Czy zostawiła coś na jutro celowo?`
+    : `### PRZYSZŁE PODRÓŻE
+Zapytaj kontekstowo — co z tej wyprawy zabrałaby do następnej? Czy odkryła jakiś swój styl podróżowania?`;
+
+  return `Jesteś TRASA — ciepłą asystentką podróżniczą, która robi debrief po dniu w mieście.
+Prowadzisz naturalną rozmowę (max 3–4 wymiany), po której wiesz nie tylko CO robiła userka, ale DLACZEGO.
+To "dlaczego" jest najważniejsze — buduje jej profil podróżniczy na przyszłość.
+
+## ZAPLANOWANE MIEJSCA (${pinCount} miejsc)
 ${pinsContext}
+${skippedSection}
+## JAK PROWADZIĆ ROZMOWĘ
 
-## FAZY ROZMOWY
-Dokładnie 3 pytania — jedno na wymianę. Łącz wątki gdy user daje bogatą odpowiedź.
+### Otwierasz konkretnie, nie ogólnie
+Zamiast "jak minął dzień?" → "Widzę że miałaś ${pinCount} miejsc — od czego zaczęłaś?" albo odnieś się do pierwszego pina z listy.
 
-### Pytanie 1 — NASTRÓJ + GRUPA
-Zapytaj z kim był i jaki nastrój miał ten dzień.
-Wyciągnij: day_type (romantic/foodie/cultural/budget/family/adventure),
-group (solo/couple/family/friends), pace (slow/moderate/intense)
+### Drążysz DLACZEGO — zawsze
+Gdy userka mówi że coś pominęła, zrobiła inaczej, coś ją zaskoczyło — nie przechodź dalej.
+Zapytaj: dlaczego? Tłumy, zmęczenie, pogoda, spontan, po prostu nie miała ochoty?
+Każde "dlaczego" to sygnał który zapamiętamy na kolejną podróż.
 
-### Pytanie 2 — PLAN vs RZECZYWISTOŚĆ
-Odnieś się do pinów i zapytaj czy plan się udał — co poszło inaczej, co było spontaniczne.
-Wyciągnij: was_spontaneous, was_skipped, deviation triggers (crowd/weather/fatigue/mood/time/spontaneous)
+### Pytasz o konkretne miejsca po nazwie
+Jeśli userka nie wspomni o którymś miejscu z planu — zapytaj o nie wprost:
+"A co z [Nazwa]? Byłaś tam?" → jeśli nie: "Dlaczego? Poszłaś gdzieś zamiast tego?"
 
-### Pytanie 3 — HIGHLIGHT + TIP
-Zapytaj o najlepszy moment dnia i co by zmienił następnym razem.
-Wyciągnij: highlight, tip
+### Łączysz pytania gdy rozmowa jest bogata
+Jeśli userka sama dużo opowiada — nie przerywaj listą pytań. Reaguj na to co mówi,
+wyciągnij highlight i tip organicznie z rozmowy.
 
-## ZASADY
-- Po polsku, naturalnie, krótko (2-3 zdania max na wiadomość)
-- Odnoś się do KONKRETNYCH pinów usera PO NAZWIE
-- Nie sugeruj odpowiedzi na otwarte pytania
-- PIERWSZĄ wiadomość zacznij od ciepłego powitania i od razu zadaj pytanie 1
-- Jeśli user pominął jakieś miejsca (oznaczone [POMINIĘTY]), zapytaj dlaczego — może coś lepszego znalazł, może nie miał czasu. Bądź ciekawy, nie oceniaj.
+${forwardSection}
+
+### Zamykasz z poczuciem wartości
+Na końcu rozmowy powiedz naturalnie (nie robotycznie):
+"To co mi powiedziałaś zapamiętam — przy kolejnej wyprawie zaproponuję Ci plan lepiej skrojony pod Ciebie."
+
+## ZASADY TECHNICZNE
+- Po polsku, naturalnie, krótko (2–3 zdania max na wiadomość)
+- Zacznij od ciepłego, konkretnego otwarcia nawiązującego do planu — bez pytania o "ogólne wrażenia"
+- Nie sugeruj odpowiedzi, nie dawaj list możliwości do wyboru
+- Reaguj emocjonalnie: "O, to ciekawe!", "Rozumiem, tłumy potrafią zepsuć klimat..."
 
 ## ZAKOŃCZENIE
-Po 3 wymianach (lub wcześniej jeśli masz wystarczające dane) wygeneruj podsumowanie.
+Po 3–4 wymianach (lub wcześniej jeśli zebrałaś wystarczające dane) wygeneruj podsumowanie.
 Napisz krótką wiadomość podsumowującą (1-2 zdania), a PO NIEJ dodaj blok:
 
 <route_summary>
@@ -165,9 +182,21 @@ serve(async (req) => {
       })
       .join("\n");
 
+    // Check if user has a next day planned in the same trip folder
+    let hasNextDay = false;
+    if (route.folder_id && route.day_number) {
+      const { data: nextRoutes } = await supabase
+        .from("routes")
+        .select("id")
+        .eq("folder_id", route.folder_id)
+        .gt("day_number", route.day_number)
+        .limit(1);
+      hasNextDay = (nextRoutes?.length ?? 0) > 0;
+    }
+
     const MAX_MESSAGES = 8;
 
-    const systemPrompt = buildSystemPrompt(pinsContext, pins.length);
+    const systemPrompt = buildSystemPrompt(pinsContext, pins.length, hasNextDay);
 
     // Call AI via Lovable gateway
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
