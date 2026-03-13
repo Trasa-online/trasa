@@ -80,7 +80,7 @@ const TravelerProfile = () => {
         .order("evidence_count", { ascending: false })
         .limit(20);
       if (error) throw error;
-      return (data ?? []) as Array<{
+      return (data ?? []) as unknown as Array<{
         preference_key: string;
         preference_value: string;
         confidence: number;
