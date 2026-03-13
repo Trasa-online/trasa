@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { type PlanPin } from "./DayPinList";
 import AddPinSheet from "./AddPinSheet";
 
@@ -273,6 +274,7 @@ const hasVoiceSupport =
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatExperienceProps) => {
+  const { toast } = useToast();
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
   const [input, setInput] = useState("");
@@ -346,11 +348,15 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
             setPlan(buildMockPlan(nDays)); // placeholder until user confirms
           }
         } else {
+          console.error("plan-route error:", response.error);
+          toast({ title: "Błąd generowania planu", description: String(response.error), variant: "destructive" });
           setPlan(buildMockPlan(nDays));
           setMessages([{ role: "assistant", content: fallbackIntro }]);
           setSuggestions(INITIAL_SUGGESTIONS);
         }
-      } catch {
+      } catch (err) {
+        console.error("plan-route init failed:", err);
+        toast({ title: "Błąd inicjalizacji", description: String(err), variant: "destructive" });
         setPlan(buildMockPlan(nDays));
         setMessages([{ role: "assistant", content: fallbackIntro }]);
         setSuggestions(INITIAL_SUGGESTIONS);

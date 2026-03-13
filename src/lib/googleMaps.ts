@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 // Google Maps API Key
 export const GOOGLE_MAPS_API_KEY = 'AIzaSyCdZ-on1_mKr1Q9OTDYkqkk4OzB7SwR32M';
 
@@ -54,28 +56,14 @@ export const detectPlaceType = (types: string[]): PlaceCategory => {
   return 'other';
 };
 
-// Forward Geocoding with Place Types (via Places Text Search API)
+// Forward Geocoding with Place Types (via server-side proxy to avoid CORS)
 export const forwardGeocodeWithTypes = async (query: string) => {
   try {
-    const response = await fetch(
-      `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}&language=pl`
-    );
-    const data = await response.json();
-
-    if (data.status === 'OK' && data.results.length > 0) {
-      return data.results.slice(0, 8).map((result: any) => ({
-        name: result.name || '',
-        full_address: result.formatted_address,
-        coordinates: {
-          latitude: result.geometry.location.lat,
-          longitude: result.geometry.location.lng
-        },
-        placeId: result.place_id || null,
-        types: result.types || [],
-        placeType: detectPlaceType(result.types || []),
-      }));
-    }
-    return [];
+    const { data, error } = await supabase.functions.invoke("google-places-proxy", {
+      body: { action: "textsearch", query },
+    });
+    if (error || !data?.results) return [];
+    return (data.results as { name: string; full_address: string; latitude: number; longitude: number }[]);
   } catch (error) {
     console.error('Forward geocode with types error:', error);
     return [];

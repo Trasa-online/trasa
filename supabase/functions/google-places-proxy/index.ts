@@ -47,7 +47,27 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { placeName, latitude, longitude } = await req.json();
+    const body = await req.json();
+
+    // Text search for autocomplete (no coordinates needed)
+    if (body.action === "textsearch") {
+      const { query } = body;
+      const res = await fetch(
+        `${BASE}/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}&language=pl`
+      );
+      const data = await res.json();
+      const results = ((data.results ?? []) as any[]).slice(0, 6).map((r: any) => ({
+        name: r.name ?? "",
+        full_address: r.formatted_address ?? "",
+        latitude: r.geometry?.location?.lat,
+        longitude: r.geometry?.location?.lng,
+      }));
+      return new Response(JSON.stringify({ results }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { placeName, latitude, longitude } = body;
 
     // Step 1: Find place_id
     const findRes = await fetch(
