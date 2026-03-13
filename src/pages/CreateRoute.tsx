@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Mic, MessageSquare, CalendarIcon } from "lucide-react";
+import { ArrowLeft, Mic, MessageSquare, CalendarIcon, Search, X } from "lucide-react";
+import { forwardGeocodeWithTypes } from "@/lib/googleMaps";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PlanChatExperience from "@/components/route/PlanChatExperience";
@@ -67,6 +68,9 @@ const CreateRoute = () => {
         if (data?.length) setLikedPlaces(data.map(p => p.place_name));
       });
   }, [creatorPlanId]);
+  const [mustSearch, setMustSearch] = useState("");
+  const [mustSearchResults, setMustSearchResults] = useState<{ name: string; full_address: string }[]>([]);
+  const mustSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [customPriority, setCustomPriority] = useState("");
   const [preferences, setPreferences] = useState<TripPreferences>({
     numDays: 1,
@@ -97,6 +101,19 @@ const CreateRoute = () => {
         ? prev.priorities.filter(p => p !== id)
         : [...prev.priorities, id],
     }));
+  };
+
+  const handleMustSearchChange = (value: string) => {
+    setMustSearch(value);
+    setMustSearchResults([]);
+    if (mustSearchTimer.current) clearTimeout(mustSearchTimer.current);
+    if (value.length < 2) return;
+    mustSearchTimer.current = setTimeout(async () => {
+      try {
+        const results = await forwardGeocodeWithTypes(`${value} ${preferences.city}`);
+        setMustSearchResults(results.slice(0, 6));
+      } catch { /* ignore */ }
+    }, 400);
   };
 
   const addCustomPriority = () => {
@@ -242,7 +259,7 @@ const CreateRoute = () => {
           {/* Popular places */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Chcę koniecznie odwiedzić</label>
-            <p className="text-xs text-muted-foreground">Najczęściej odwiedzane przez trasowiczów:</p>
+            <p className="text-xs text-muted-foreground">Popularne:</p>
             <div className="flex flex-wrap gap-2">
               {POPULAR_PLACES.map(place => (
                 <button
@@ -260,6 +277,51 @@ const CreateRoute = () => {
                   {place.emoji} {place.label}
                 </button>
               ))}
+            </div>
+            {/* Custom places added via search */}
+            {mustVisitPlaces.filter(p => !POPULAR_PLACES.some(pl => pl.id === p)).length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {mustVisitPlaces
+                  .filter(p => !POPULAR_PLACES.some(pl => pl.id === p))
+                  .map(place => (
+                    <div key={place} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm bg-foreground text-background">
+                      <span>{place}</span>
+                      <button onClick={() => setMustVisitPlaces(prev => prev.filter(p => p !== place))}>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
+            {/* Search input */}
+            <div className="relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Szukaj miejsca..."
+                  value={mustSearch}
+                  onChange={e => handleMustSearchChange(e.target.value)}
+                  className="pl-9 bg-card"
+                />
+              </div>
+              {mustSearchResults.length > 0 && (
+                <div className="absolute z-10 top-full mt-1 left-0 right-0 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+                  {mustSearchResults.map((result, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setMustVisitPlaces(prev => prev.includes(result.name) ? prev : [...prev, result.name]);
+                        setMustSearch("");
+                        setMustSearchResults([]);
+                      }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-muted transition-colors border-b border-border/40 last:border-b-0"
+                    >
+                      <p className="text-sm font-medium">{result.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{result.full_address}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

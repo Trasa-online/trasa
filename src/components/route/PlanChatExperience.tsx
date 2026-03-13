@@ -1,12 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Loader2, Brain, Zap, Users, Footprints, Trash2, RefreshCw, Plus } from "lucide-react";
+import { Send, Mic, MicOff, Loader2, Brain, Zap, Users, Footprints, Trash2, RefreshCw, Plus, Video, Music, Camera, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { type PlanPin } from "./DayPinList";
-import PlaceDetailDrawer from "./PlaceDetailDrawer";
 import AddPinSheet from "./AddPinSheet";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -62,27 +61,27 @@ function getSnapPx(snap: SnapState): number {
 type MockPin = Omit<PlanPin, "day_number">;
 
 const MOCK_PINS_DAY1: MockPin[] = [
-  { place_name: "Wzgórze Wawelskie", address: "Wawel 5, 31-001 Kraków", description: "Symboliczne serce Krakowa — zamek, katedra i panorama Wisły.", suggested_time: "10:00", duration_minutes: 90, category: "monument", latitude: 50.0542, longitude: 19.9354, walking_time_from_prev: null, distance_from_prev: null },
-  { place_name: "Kazimierz", address: "ul. Szeroka, 31-053 Kraków", description: "Klimatyczna żydowska dzielnica pełna kawiarni i galerii.", suggested_time: "11:50", duration_minutes: 60, category: "walk", latitude: 50.0493, longitude: 19.9451, walking_time_from_prev: "20 min", distance_from_prev: "1.5 km" },
-  { place_name: "Mleczarnia", address: "ul. Meiselsa 20, 31-058 Kraków", description: "Kultowa knajpka na Kazimierzu — śledzie, bigos i wnętrze jak z PRL.", suggested_time: "13:00", duration_minutes: 75, category: "restaurant", latitude: 50.0500, longitude: 19.9462, walking_time_from_prev: "8 min", distance_from_prev: "600 m" },
-  { place_name: "Rynek Główny", address: "Rynek Główny, 31-042 Kraków", description: "Największy rynek Europy Środkowej — Sukiennice, Kościół Mariacki, hejnał.", suggested_time: "14:30", duration_minutes: 60, category: "monument", latitude: 50.0617, longitude: 19.9373, walking_time_from_prev: "20 min", distance_from_prev: "1.5 km" },
-  { place_name: "Cafe Camelot", address: "ul. Tomasza 17, 31-027 Kraków", description: "Legendarna krakowska kawiarnia — lody z bitą śmietaną i spokojna atmosfera.", suggested_time: "15:45", duration_minutes: 45, category: "cafe", latitude: 50.0639, longitude: 19.9357, walking_time_from_prev: "8 min", distance_from_prev: "600 m" },
-  { place_name: "Restauracja Miód Malina", address: "ul. Grodzka 40, 31-044 Kraków", description: "Polska kuchnia w sercu Starego Miasta — żurek, pierogi, bigos.", suggested_time: "19:00", duration_minutes: 90, category: "restaurant", latitude: 50.0579, longitude: 19.9386, walking_time_from_prev: "12 min", distance_from_prev: "900 m" },
+  { place_name: "Wzgórze Wawelskie", address: "Wawel 5, 31-001 Kraków", description: "Symboliczne serce Krakowa — zamek, katedra i panorama Wisły.", suggested_time: "10:00", duration_minutes: 90, category: "monument", latitude: 50.0542, longitude: 19.9354, walking_time_from_prev: null, distance_from_prev: null, photoUrl: "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?w=200&q=70", pros: ["Idź wcześnie rano — brak tłumów", "Wstęp na dziedziniec gratis"], cons: ["Muzea drogie w sezonie"], creator: { platform: "youtube", name: "Zwiedzamy Polskę", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Kazimierz", address: "ul. Szeroka, 31-053 Kraków", description: "Klimatyczna żydowska dzielnica pełna kawiarni i galerii.", suggested_time: "11:50", duration_minutes: 60, category: "walk", latitude: 50.0493, longitude: 19.9451, walking_time_from_prev: "20 min", distance_from_prev: "1.5 km", photoUrl: "https://images.unsplash.com/photo-1559521783-1d1599583485?w=200&q=70", pros: ["Klimatyczne uliczki", "Dużo street food"], cons: ["Ruchliwie w weekendy"], creator: { platform: "instagram", name: "krakow.travel", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Mleczarnia", address: "ul. Meiselsa 20, 31-058 Kraków", description: "Kultowa knajpka na Kazimierzu — śledzie, bigos i wnętrze jak z PRL.", suggested_time: "13:00", duration_minutes: 75, category: "restaurant", latitude: 50.0500, longitude: 19.9462, walking_time_from_prev: "8 min", distance_from_prev: "600 m", photoUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200&q=70", pros: ["Autentyczna atmosfera PRL", "Przystępne ceny"], cons: ["Może być kolejka"], creator: { platform: "tiktok", name: "jedzempolske", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Rynek Główny", address: "Rynek Główny, 31-042 Kraków", description: "Największy rynek Europy Środkowej — Sukiennice, Kościół Mariacki, hejnał.", suggested_time: "14:30", duration_minutes: 60, category: "monument", latitude: 50.0617, longitude: 19.9373, walking_time_from_prev: "20 min", distance_from_prev: "1.5 km", photoUrl: "https://images.unsplash.com/photo-1569880153113-76e33fc52d5f?w=200&q=70", pros: ["Obowiązkowy punkt w Krakowie", "Hejnał o każdej pełnej godzinie"], cons: ["Bardzo turystycznie — drogie restauracje dookoła"], creator: { platform: "youtube", name: "Poland Travel Guide", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Cafe Camelot", address: "ul. Tomasza 17, 31-027 Kraków", description: "Legendarna krakowska kawiarnia — lody z bitą śmietaną i spokojna atmosfera.", suggested_time: "15:45", duration_minutes: 45, category: "cafe", latitude: 50.0639, longitude: 19.9357, walking_time_from_prev: "8 min", distance_from_prev: "600 m", photoUrl: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=200&q=70", pros: ["Najlepsza kawa w Starym Mieście", "Klimatyczne wnętrza"], cons: ["Małe, łatwo brak miejsca"], creator: { platform: "instagram", name: "cafecrawl.pl", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Restauracja Miód Malina", address: "ul. Grodzka 40, 31-044 Kraków", description: "Polska kuchnia w sercu Starego Miasta — żurek, pierogi, bigos.", suggested_time: "19:00", duration_minutes: 90, category: "restaurant", latitude: 50.0579, longitude: 19.9386, walking_time_from_prev: "12 min", distance_from_prev: "900 m", photoUrl: "https://images.unsplash.com/photo-1466637574441-749b8f19452f?w=200&q=70", pros: ["Klasyczna polska kuchnia", "Dobra lokalizacja"], cons: ["Rezerwacja wskazana"], creator: { platform: "youtube", name: "Foodie w Polsce", thumbnailUrl: "", postUrl: "#" } },
 ];
 
 const MOCK_PINS_DAY2: MockPin[] = [
-  { place_name: "Fabryka Schindlera", address: "ul. Lipowa 4, 30-702 Kraków", description: "Muzeum historii Krakowa podczas II WŚ — zarezerwuj bilet wcześniej.", suggested_time: "10:00", duration_minutes: 120, category: "museum", latitude: 50.0447, longitude: 19.9440, walking_time_from_prev: null, distance_from_prev: null },
-  { place_name: "Plac Bohaterów Getta", address: "Plac Bohaterów Getta, 30-543 Kraków", description: "Puste krzesła upamiętniające krakowskie getto — chwila refleksji.", suggested_time: "12:30", duration_minutes: 30, category: "monument", latitude: 50.0468, longitude: 19.9467, walking_time_from_prev: "8 min", distance_from_prev: "600 m" },
-  { place_name: "Lunch w Podgórzu", address: "ul. Zabłocie, 30-701 Kraków", description: "Modna dzielnica z galeriami i świetnymi restauracjami na lunch.", suggested_time: "13:15", duration_minutes: 75, category: "restaurant", latitude: 50.0455, longitude: 19.9491, walking_time_from_prev: "5 min", distance_from_prev: "400 m" },
-  { place_name: "Muzeum Narodowe w Krakowie", address: "al. 3 Maja 1, 30-062 Kraków", description: "Najważniejsze muzeum sztuki polskiej — od średniowiecza po współczesność.", suggested_time: "15:00", duration_minutes: 120, category: "museum", latitude: 50.0591, longitude: 19.9248, walking_time_from_prev: "30 min", distance_from_prev: "2.2 km" },
-  { place_name: "Kolacja przy Plantach", address: "ul. Krupnicza 20, 31-123 Kraków", description: "Wieczór w modnej części miasta pełnej restauracji i barów.", suggested_time: "19:30", duration_minutes: 90, category: "restaurant", latitude: 50.0636, longitude: 19.9307, walking_time_from_prev: "15 min", distance_from_prev: "1.1 km" },
+  { place_name: "Fabryka Schindlera", address: "ul. Lipowa 4, 30-702 Kraków", description: "Muzeum historii Krakowa podczas II WŚ — zarezerwuj bilet wcześniej.", suggested_time: "10:00", duration_minutes: 120, category: "museum", latitude: 50.0447, longitude: 19.9440, walking_time_from_prev: null, distance_from_prev: null, photoUrl: "https://images.unsplash.com/photo-1569338389880-f154ef1d5e14?w=200&q=70", pros: ["Poruszające muzeum", "Oryginalne wnętrza fabryki"], cons: ["Kup bilet online — wyprzedane z tygodniowym wyprzedzeniem"], creator: { platform: "youtube", name: "Historia Polska", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Plac Bohaterów Getta", address: "Plac Bohaterów Getta, 30-543 Kraków", description: "Puste krzesła upamiętniające krakowskie getto — chwila refleksji.", suggested_time: "12:30", duration_minutes: 30, category: "monument", latitude: 50.0468, longitude: 19.9467, walking_time_from_prev: "8 min", distance_from_prev: "600 m", photoUrl: "https://images.unsplash.com/photo-1580974928064-f0aeef70895a?w=200&q=70", pros: ["Wzruszające miejsce pamięci", "Wstęp wolny"], cons: ["Emocjonalnie obciążające — zaplanuj czas na refleksję"] },
+  { place_name: "Lunch w Podgórzu", address: "ul. Zabłocie, 30-701 Kraków", description: "Modna dzielnica z galeriami i świetnymi restauracjami na lunch.", suggested_time: "13:15", duration_minutes: 75, category: "restaurant", latitude: 50.0455, longitude: 19.9491, walking_time_from_prev: "5 min", distance_from_prev: "400 m", photoUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=200&q=70", pros: ["Nieturystyczna dzielnica", "Świeże koncepty gastronomiczne"], cons: ["Mniej opcji niż w centrum"], creator: { platform: "instagram", name: "podgorze.eats", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Muzeum Narodowe w Krakowie", address: "al. 3 Maja 1, 30-062 Kraków", description: "Najważniejsze muzeum sztuki polskiej — od średniowiecza po współczesność.", suggested_time: "15:00", duration_minutes: 120, category: "museum", latitude: 50.0591, longitude: 19.9248, walking_time_from_prev: "30 min", distance_from_prev: "2.2 km", photoUrl: "https://images.unsplash.com/photo-1565060169194-19fabf63012c?w=200&q=70", pros: ["Bogata kolekcja sztuki", "Wtorek — wstęp bezpłatny"], cons: ["Duże — zaplanuj selektywne zwiedzanie"], creator: { platform: "youtube", name: "Art w Polsce", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Kolacja przy Plantach", address: "ul. Krupnicza 20, 31-123 Kraków", description: "Wieczór w modnej części miasta pełnej restauracji i barów.", suggested_time: "19:30", duration_minutes: 90, category: "restaurant", latitude: 50.0636, longitude: 19.9307, walking_time_from_prev: "15 min", distance_from_prev: "1.1 km", photoUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&q=70", pros: ["Duży wybór restauracji", "Spacer po Plantach gratis"], cons: ["Popularny obszar — możliwe kolejki"] },
 ];
 
 const MOCK_PINS_DAY3: MockPin[] = [
-  { place_name: "Nowa Huta", address: "al. Róż 1, 31-621 Kraków", description: "Zaplanowane miasto z epoki stalinizmu — architektura jak z ZSRR.", suggested_time: "10:00", duration_minutes: 120, category: "walk", latitude: 50.0681, longitude: 20.0487, walking_time_from_prev: null, distance_from_prev: null },
-  { place_name: "Lunch w Nowej Hucie", address: "os. Centrum A, 31-901 Kraków", description: "Nieturystyczna restauracja w sercu socjalistycznej dzielnicy.", suggested_time: "12:30", duration_minutes: 75, category: "restaurant", latitude: 50.0683, longitude: 20.0471, walking_time_from_prev: "5 min", distance_from_prev: "400 m" },
-  { place_name: "Bulwary Wiślane", address: "Bulwar Czerwieński, Kraków", description: "Spacer wzdłuż Wisły pod Wawelem — złota godzina i tratwy z barami.", suggested_time: "16:00", duration_minutes: 75, category: "walk", latitude: 50.0510, longitude: 19.9320, walking_time_from_prev: "30 min (tramwaj)", distance_from_prev: "8 km" },
-  { place_name: "Kolacja — pożegnanie z Krakowem", address: "ul. Poselska 24, 31-002 Kraków", description: "Ostatnia kolacja z widokiem na Wawel — wspomnienia do zabrania ze sobą.", suggested_time: "19:30", duration_minutes: 90, category: "restaurant", latitude: 50.0563, longitude: 19.9388, walking_time_from_prev: "12 min", distance_from_prev: "900 m" },
+  { place_name: "Nowa Huta", address: "al. Róż 1, 31-621 Kraków", description: "Zaplanowane miasto z epoki stalinizmu — architektura jak z ZSRR.", suggested_time: "10:00", duration_minutes: 120, category: "walk", latitude: 50.0681, longitude: 20.0487, walking_time_from_prev: null, distance_from_prev: null, photoUrl: "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=200&q=70", pros: ["Unikalne socrealistyczne klimaty", "Prawie brak turystów"], cons: ["Daleko od centrum — jedź tramwajem"], creator: { platform: "tiktok", name: "urbex.polska", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Lunch w Nowej Hucie", address: "os. Centrum A, 31-901 Kraków", description: "Nieturystyczna restauracja w sercu socjalistycznej dzielnicy.", suggested_time: "12:30", duration_minutes: 75, category: "restaurant", latitude: 50.0683, longitude: 20.0471, walking_time_from_prev: "5 min", distance_from_prev: "400 m", photoUrl: "https://images.unsplash.com/photo-1559304822-9eb2f8b9d7b5?w=200&q=70", pros: ["Autentyczna, nieturystyczna kuchnia", "Bardzo przystępne ceny"], cons: ["Ograniczony wybór opcji wegetariańskich"] },
+  { place_name: "Bulwary Wiślane", address: "Bulwar Czerwieński, Kraków", description: "Spacer wzdłuż Wisły pod Wawelem — złota godzina i tratwy z barami.", suggested_time: "16:00", duration_minutes: 75, category: "walk", latitude: 50.0510, longitude: 19.9320, walking_time_from_prev: "30 min (tramwaj)", distance_from_prev: "8 km", photoUrl: "https://images.unsplash.com/photo-1568555890773-b4a26c44b77c?w=200&q=70", pros: ["Najpiękniejszy widok na Wawel", "Tratwy z barami latem"], cons: ["Tłoczno w ciepłe weekendy"], creator: { platform: "instagram", name: "krakow.sunsets", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Kolacja — pożegnanie z Krakowem", address: "ul. Poselska 24, 31-002 Kraków", description: "Ostatnia kolacja z widokiem na Wawel — wspomnienia do zabrania ze sobą.", suggested_time: "19:30", duration_minutes: 90, category: "restaurant", latitude: 50.0563, longitude: 19.9388, walking_time_from_prev: "12 min", distance_from_prev: "900 m", photoUrl: "https://images.unsplash.com/photo-1424847651672-bf20a4b0982b?w=200&q=70", pros: ["Romantyczna atmosfera", "Widok na Wawel z tarasu"], cons: ["Wymagana rezerwacja z wyprzedzeniem"], creator: { platform: "youtube", name: "Kraków Vlog", thumbnailUrl: "", postUrl: "#" } },
 ];
 
 const ALL_MOCK_DAYS = [MOCK_PINS_DAY1, MOCK_PINS_DAY2, MOCK_PINS_DAY3];
@@ -146,61 +145,109 @@ function PlanSkeleton({ numDays }: { numDays: number }) {
   );
 }
 
-// Compact pin row for the bottom sheet
+function CreatorIcon({ platform }: { platform: "youtube" | "tiktok" | "instagram" }) {
+  if (platform === "youtube") return <Video className="h-3.5 w-3.5 text-red-500" />;
+  if (platform === "instagram") return <Camera className="h-3.5 w-3.5 text-pink-500" />;
+  return <Music className="h-3.5 w-3.5 text-foreground" />;
+}
+
+// Rich always-expanded pin card for the bottom sheet
 function PlanRow({
   pin,
   index,
   onRemove,
   onAlternatives,
-  onPinClick,
 }: {
   pin: PlanPin;
   index: number;
   onRemove: () => void;
   onAlternatives: () => void;
-  onPinClick: () => void;
 }) {
   const walkInfo = index > 0 && (pin.walking_time_from_prev || pin.distance_from_prev);
   return (
     <div>
       {walkInfo && (
-        <div className="flex items-center gap-1 pl-8 py-0.5 text-[10px] text-muted-foreground/40">
+        <div className="flex items-center gap-1 pl-4 py-1 text-[10px] text-muted-foreground/50">
           <Footprints className="h-2.5 w-2.5 flex-shrink-0" />
           {pin.walking_time_from_prev && <span>{pin.walking_time_from_prev}</span>}
           {pin.walking_time_from_prev && pin.distance_from_prev && <span>·</span>}
           {pin.distance_from_prev && <span>{pin.distance_from_prev}</span>}
         </div>
       )}
-      <div className="flex items-start gap-2.5 py-2">
-        <button onClick={onPinClick} className="flex-shrink-0 text-xl leading-none pt-0.5">
-          {CATEGORY_EMOJI[pin.category] ?? "📍"}
-        </button>
-        <button onClick={onPinClick} className="flex-1 min-w-0 text-left">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-muted-foreground tabular-nums flex-shrink-0">{pin.suggested_time}</span>
-            <span className="text-sm font-medium leading-tight">{pin.place_name}</span>
-            {pin.duration_minutes && (
-              <span className="text-[10px] text-muted-foreground/50 flex-shrink-0">{pin.duration_minutes}'</span>
-            )}
-          </div>
-          {pin.description && (
-            <p className="text-xs text-muted-foreground/60 truncate mt-0.5">{pin.description}</p>
+      <div className="py-3 space-y-2.5">
+        {/* Top row: photo + header + actions */}
+        <div className="flex gap-2.5">
+          {pin.photoUrl && (
+            <img
+              src={pin.photoUrl}
+              alt={pin.place_name}
+              className="flex-shrink-0 w-[72px] h-[72px] rounded-lg object-cover"
+            />
           )}
-        </button>
-        <div className="flex-shrink-0 flex items-center gap-0.5 pt-0.5">
-          <button
-            onClick={onAlternatives}
-            className="h-7 w-7 flex items-center justify-center text-muted-foreground/30 hover:text-foreground rounded transition-colors"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={onRemove}
-            className="h-7 w-7 flex items-center justify-center text-destructive/30 hover:text-destructive rounded transition-colors"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-1">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[11px] text-muted-foreground tabular-nums flex-shrink-0">{pin.suggested_time}</span>
+                  <span className="text-sm font-semibold leading-tight">{pin.place_name}</span>
+                  {pin.duration_minutes && (
+                    <span className="text-[10px] text-muted-foreground/60 flex-shrink-0">{pin.duration_minutes}'</span>
+                  )}
+                </div>
+                <span className="text-xl leading-none">{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>
+                {pin.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{pin.description}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                <button
+                  onClick={onAlternatives}
+                  className="h-7 w-7 flex items-center justify-center text-muted-foreground/40 hover:text-foreground rounded transition-colors"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={onRemove}
+                  className="h-7 w-7 flex items-center justify-center text-destructive/40 hover:text-destructive rounded transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* Pros & Cons */}
+        {((pin.pros && pin.pros.length > 0) || (pin.cons && pin.cons.length > 0)) && (
+          <div className="space-y-0.5 pl-1">
+            {pin.pros?.map((pro, i) => (
+              <div key={i} className="flex items-start gap-1.5 text-xs">
+                <span className="text-green-600 dark:text-green-400 flex-shrink-0 mt-px">✓</span>
+                <span className="text-muted-foreground">{pro}</span>
+              </div>
+            ))}
+            {pin.cons?.map((con, i) => (
+              <div key={i} className="flex items-start gap-1.5 text-xs">
+                <span className="text-red-500 flex-shrink-0 mt-px">✗</span>
+                <span className="text-muted-foreground">{con}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Creator link */}
+        {pin.creator && (
+          <a
+            href={pin.creator.postUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <CreatorIcon platform={pin.creator.platform} />
+            <span className="truncate">{pin.creator.name}</span>
+            <ExternalLink className="h-3 w-3 flex-shrink-0 ml-auto" />
+          </a>
+        )}
       </div>
     </div>
   );
@@ -234,10 +281,8 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
   const [initializing, setInitializing] = useState(true);
   const [suggestions, setSuggestions] = useState<string[]>(INITIAL_SUGGESTIONS);
   const [preparingPlan, setPreparingPlan] = useState(false);
-  const [selectedPin, setSelectedPin] = useState<PlanPin | null>(null);
   const [addPinDay, setAddPinDay] = useState<number | null>(null);
   const [memoryUsed, setMemoryUsed] = useState(false);
-  const [editCount, setEditCount] = useState(0);
   const [selectedDay, setSelectedDay] = useState(1);
 
   // Sheet snap state
@@ -328,7 +373,6 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
 
       if (data.plan) {
         setPlan(data.plan);
-        setEditCount(prev => prev + 1);
         setSelectedDay(prev => data.plan.days.some((d: any) => d.day_number === prev) ? prev : 1);
         setSnap("half"); // show updated plan
         setLoading(false);
@@ -348,8 +392,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
             if (s.length) setSuggestions(s);
             if (cm) setMessages(prev => [...prev, { role: "assistant", content: cm }]);
             setPlan(planResponse.data.plan);
-            setEditCount(prev => prev + 1);
-            setSelectedDay(1);
+                setSelectedDay(1);
             setSnap("half");
           }
         } catch (planErr) {
@@ -418,11 +461,6 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
 
   const handleConfirm = () => {
     if (plan) onPlanReady(plan, messages);
-  };
-
-  const handleEditRequest = () => {
-    setMessages(prev => [...prev, { role: "assistant", content: "Okej, co konkretnie chciałbyś poprawić? 🤔" }]);
-    setSnap("peek");
   };
 
   const handleGetAlternatives = useCallback(async (pin: PlanPin, dayNumber: number, pinIndex: number) => {
@@ -524,12 +562,18 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
         >
           {/* Drag handle */}
           <div
-            className="flex-shrink-0 flex justify-center items-center pt-2.5 pb-1 cursor-grab active:cursor-grabbing touch-none select-none"
+            className="flex-shrink-0 flex justify-center items-center py-4 cursor-grab active:cursor-grabbing select-none"
+            style={{ touchAction: "none" }}
             onPointerDown={handleDragStart}
             onPointerMove={handleDragMove}
             onPointerUp={handleDragEnd}
+            onPointerCancel={handleDragEnd}
+            onClick={() => {
+              if (dragH !== null) return;
+              setSnap(s => s === "peek" ? "half" : s === "half" ? "full" : "peek");
+            }}
           >
-            <div className="w-10 h-1 rounded-full bg-border" />
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/25" />
           </div>
 
           {/* Peek: summary pills */}
@@ -614,7 +658,6 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
                         index={idx}
                         onRemove={() => handleRemovePin(selectedDay, idx)}
                         onAlternatives={() => handleGetAlternatives(pin, selectedDay, idx)}
-                        onPinClick={() => setSelectedPin(pin)}
                       />
                     ))}
                   </div>
@@ -633,27 +676,13 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
 
                 {/* CTA — sticky at bottom of scroll area */}
                 {!preparingPlan && (
-                  <div className="sticky bottom-0 bg-background pt-2 pb-4 space-y-2">
-                    {editCount > 0 && (
-                      <p className="text-[11px] text-center text-muted-foreground">
-                        Pozostało {Math.max(0, 3 - editCount)}/3 zmian
-                      </p>
-                    )}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleConfirm}
-                        className="flex-1 py-2.5 rounded-xl bg-foreground text-background text-sm font-semibold"
-                      >
-                        Wybieram ten plan!
-                      </button>
-                      <button
-                        onClick={handleEditRequest}
-                        disabled={loading}
-                        className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground disabled:opacity-50"
-                      >
-                        Wprowadź zmiany
-                      </button>
-                    </div>
+                  <div className="sticky bottom-0 bg-background pt-2 pb-4">
+                    <button
+                      onClick={handleConfirm}
+                      className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold"
+                    >
+                      Wybieram ten plan!
+                    </button>
                   </div>
                 )}
               </div>
@@ -716,17 +745,6 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
       </div>
 
       {/* ── Drawers & Sheets ──────────────────────────────────────────────── */}
-      {selectedPin && (
-        <PlaceDetailDrawer
-          open={!!selectedPin}
-          onOpenChange={(open) => !open && setSelectedPin(null)}
-          placeName={selectedPin.place_name}
-          address={selectedPin.address}
-          latitude={selectedPin.latitude}
-          longitude={selectedPin.longitude}
-        />
-      )}
-
       <AddPinSheet
         open={addPinDay !== null}
         onOpenChange={(open) => !open && setAddPinDay(null)}

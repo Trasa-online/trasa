@@ -15,6 +15,15 @@ export interface PlanPin {
   walking_time_from_prev?: string | null;
   distance_from_prev?: string | null;
   place_id?: string | null;
+  pros?: string[];
+  cons?: string[];
+  photoUrl?: string;
+  creator?: {
+    platform: "youtube" | "tiktok" | "instagram";
+    name: string;
+    thumbnailUrl: string;
+    postUrl: string;
+  };
 }
 
 interface DayPinListProps {
