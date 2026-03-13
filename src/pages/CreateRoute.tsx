@@ -23,6 +23,17 @@ interface TripPreferences {
   dayNumber?: number;
 }
 
+const POPULAR_PLACES = [
+  { id: "Wawel", label: "Wawel", emoji: "🏰" },
+  { id: "Rynek Główny", label: "Rynek Główny", emoji: "⛪" },
+  { id: "Kazimierz", label: "Kazimierz", emoji: "🕍" },
+  { id: "Fabryka Schindlera", label: "Fabryka Schindlera", emoji: "🏭" },
+  { id: "Planty", label: "Planty", emoji: "🌿" },
+  { id: "Bulwary Wiślane", label: "Bulwary Wiślane", emoji: "🌊" },
+  { id: "Nowa Huta", label: "Nowa Huta", emoji: "🏗️" },
+  { id: "Muzeum Narodowe", label: "Muzeum Narodowe", emoji: "🖼️" },
+];
+
 const PRIORITY_OPTIONS = [
   { id: "good_food", label: "Dobre jedzenie", emoji: "🍽️" },
   { id: "nice_views", label: "Ładne widoki", emoji: "🌅" },
@@ -43,6 +54,7 @@ const CreateRoute = () => {
   const creatorPlanId = searchParams.get("creatorPlan") ?? undefined;
   const [step, setStep] = useState(creatorPlanId ? 2 : 1);
   const [likedPlaces, setLikedPlaces] = useState<string[]>([]);
+  const [mustVisitPlaces, setMustVisitPlaces] = useState<string[]>([]);
 
   useEffect(() => {
     if (!creatorPlanId) return;
@@ -62,7 +74,7 @@ const CreateRoute = () => {
     priorities: [],
     startDate: null,
     planningMode: "text",
-    city: "",
+    city: "Kraków",
     folderId,
     dayNumber,
   });
@@ -125,19 +137,13 @@ const CreateRoute = () => {
         </div>
 
         <div className="p-4 space-y-6 max-w-lg mx-auto">
-          {/* City */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Dokąd jedziesz?</label>
-            <Input
-              placeholder="np. Kraków, Warszawa, Rzym..."
-              value={preferences.city}
-              onChange={e => {
-                setPreferences(prev => ({ ...prev, city: e.target.value }));
-                if (e.target.value.trim()) setValidationErrors(prev => { const { city, ...rest } = prev; return rest; });
-              }}
-              className={cn("bg-card", validationErrors.city && "border-destructive")}
-            />
-            {validationErrors.city && <p className="text-xs text-destructive">{validationErrors.city}</p>}
+          {/* City badge */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border/50">
+            <span className="text-base">🗺️</span>
+            <div>
+              <p className="text-xs text-muted-foreground">Destynacja</p>
+              <p className="text-sm font-semibold">Kraków</p>
+            </div>
           </div>
 
           {/* Days */}
@@ -233,6 +239,30 @@ const CreateRoute = () => {
             </div>
           </div>
 
+          {/* Popular places */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Chcę koniecznie odwiedzić</label>
+            <p className="text-xs text-muted-foreground">Najczęściej odwiedzane przez trasowiczów:</p>
+            <div className="flex flex-wrap gap-2">
+              {POPULAR_PLACES.map(place => (
+                <button
+                  key={place.id}
+                  onClick={() => setMustVisitPlaces(prev =>
+                    prev.includes(place.id) ? prev.filter(p => p !== place.id) : [...prev, place.id]
+                  )}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-sm transition-colors border",
+                    mustVisitPlaces.includes(place.id)
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-card text-foreground border-border hover:bg-muted"
+                  )}
+                >
+                  {place.emoji} {place.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Date picker */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Wybierz datę</label>
@@ -300,7 +330,6 @@ const CreateRoute = () => {
           <Button
             onClick={() => {
               const errors: Record<string, string> = {};
-              if (!preferences.city.trim()) errors.city = "Wpisz miasto docelowe";
               if (preferences.priorities.length === 0) errors.priorities = "Wybierz przynajmniej jeden priorytet";
               if (!selectedDate) errors.date = "Wybierz datę podróży";
               setValidationErrors(errors);
@@ -331,7 +360,7 @@ const CreateRoute = () => {
         <PlanChatExperience
           preferences={preferences}
           onPlanReady={handlePlanReady}
-          likedPlaces={likedPlaces}
+          likedPlaces={[...likedPlaces, ...mustVisitPlaces]}
         />
       </div>
 

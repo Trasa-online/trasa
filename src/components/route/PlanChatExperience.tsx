@@ -46,7 +46,64 @@ interface PlanChatExperienceProps {
   likedPlaces?: string[];
 }
 
-// Skeleton shown while the plan is being generated
+// ── Mock plan data for Kraków ────────────────────────────────────────────────
+
+type MockPin = Omit<PlanPin, "day_number">;
+
+const MOCK_PINS_DAY1: MockPin[] = [
+  { place_name: "Wzgórze Wawelskie", address: "Wawel 5, 31-001 Kraków", description: "Symboliczne serce Krakowa — zamek, katedra i panorama Wisły.", suggested_time: "10:00", duration_minutes: 90, category: "monument", latitude: 50.0542, longitude: 19.9354, walking_time_from_prev: null, distance_from_prev: null },
+  { place_name: "Kazimierz", address: "ul. Szeroka, 31-053 Kraków", description: "Klimatyczna żydowska dzielnica pełna kawiarni i galerii.", suggested_time: "11:50", duration_minutes: 60, category: "walk", latitude: 50.0493, longitude: 19.9451, walking_time_from_prev: "20 min", distance_from_prev: "1.5 km" },
+  { place_name: "Mleczarnia", address: "ul. Meiselsa 20, 31-058 Kraków", description: "Kultowa knajpka na Kazimierzu — śledzie, bigos i wnętrze jak z PRL.", suggested_time: "13:00", duration_minutes: 75, category: "restaurant", latitude: 50.0500, longitude: 19.9462, walking_time_from_prev: "8 min", distance_from_prev: "600 m" },
+  { place_name: "Rynek Główny", address: "Rynek Główny, 31-042 Kraków", description: "Największy rynek Europy Środkowej — Sukiennice, Kościół Mariacki, hejnał.", suggested_time: "14:30", duration_minutes: 60, category: "monument", latitude: 50.0617, longitude: 19.9373, walking_time_from_prev: "20 min", distance_from_prev: "1.5 km" },
+  { place_name: "Cafe Camelot", address: "ul. Tomasza 17, 31-027 Kraków", description: "Legendarna krakowska kawiarnia — lody z bitą śmietaną i spokojna atmosfera.", suggested_time: "15:45", duration_minutes: 45, category: "cafe", latitude: 50.0639, longitude: 19.9357, walking_time_from_prev: "8 min", distance_from_prev: "600 m" },
+  { place_name: "Restauracja Miód Malina", address: "ul. Grodzka 40, 31-044 Kraków", description: "Polska kuchnia w sercu Starego Miasta — żurek, pierogi, bigos.", suggested_time: "19:00", duration_minutes: 90, category: "restaurant", latitude: 50.0579, longitude: 19.9386, walking_time_from_prev: "12 min", distance_from_prev: "900 m" },
+];
+
+const MOCK_PINS_DAY2: MockPin[] = [
+  { place_name: "Fabryka Schindlera", address: "ul. Lipowa 4, 30-702 Kraków", description: "Muzeum historii Krakowa podczas II WŚ — zarezerwuj bilet wcześniej.", suggested_time: "10:00", duration_minutes: 120, category: "museum", latitude: 50.0447, longitude: 19.9440, walking_time_from_prev: null, distance_from_prev: null },
+  { place_name: "Plac Bohaterów Getta", address: "Plac Bohaterów Getta, 30-543 Kraków", description: "Puste krzesła upamiętniające krakowskie getto — chwila refleksji.", suggested_time: "12:30", duration_minutes: 30, category: "monument", latitude: 50.0468, longitude: 19.9467, walking_time_from_prev: "8 min", distance_from_prev: "600 m" },
+  { place_name: "Lunch w Podgórzu", address: "ul. Zabłocie, 30-701 Kraków", description: "Modna dzielnica z galeriami i świetnymi restauracjami na lunch.", suggested_time: "13:15", duration_minutes: 75, category: "restaurant", latitude: 50.0455, longitude: 19.9491, walking_time_from_prev: "5 min", distance_from_prev: "400 m" },
+  { place_name: "Muzeum Narodowe w Krakowie", address: "al. 3 Maja 1, 30-062 Kraków", description: "Najważniejsze muzeum sztuki polskiej — od średniowiecza po współczesność.", suggested_time: "15:00", duration_minutes: 120, category: "museum", latitude: 50.0591, longitude: 19.9248, walking_time_from_prev: "30 min", distance_from_prev: "2.2 km" },
+  { place_name: "Kolacja przy Plantach", address: "ul. Krupnicza 20, 31-123 Kraków", description: "Wieczór w modnej części miasta pełnej restauracji i barów.", suggested_time: "19:30", duration_minutes: 90, category: "restaurant", latitude: 50.0636, longitude: 19.9307, walking_time_from_prev: "15 min", distance_from_prev: "1.1 km" },
+];
+
+const MOCK_PINS_DAY3: MockPin[] = [
+  { place_name: "Nowa Huta", address: "al. Róż 1, 31-621 Kraków", description: "Zaplanowane miasto z epoki stalinizmu — architektura jak z ZSRR.", suggested_time: "10:00", duration_minutes: 120, category: "walk", latitude: 50.0681, longitude: 20.0487, walking_time_from_prev: null, distance_from_prev: null },
+  { place_name: "Lunch w Nowej Hucie", address: "os. Centrum A, 31-901 Kraków", description: "Nieturystyczna restauracja w sercu socjalistycznej dzielnicy.", suggested_time: "12:30", duration_minutes: 75, category: "restaurant", latitude: 50.0683, longitude: 20.0471, walking_time_from_prev: "5 min", distance_from_prev: "400 m" },
+  { place_name: "Bulwary Wiślane", address: "Bulwar Czerwieński, Kraków", description: "Spacer wzdłuż Wisły pod Wawelem — złota godzina i tratwy z barami.", suggested_time: "16:00", duration_minutes: 75, category: "walk", latitude: 50.0510, longitude: 19.9320, walking_time_from_prev: "30 min (tramwaj)", distance_from_prev: "8 km" },
+  { place_name: "Kolacja — pożegnanie z Krakowem", address: "ul. Poselska 24, 31-002 Kraków", description: "Ostatnia kolacja z widokiem na Wawel — wspomnienia do zabrania ze sobą.", suggested_time: "19:30", duration_minutes: 90, category: "restaurant", latitude: 50.0563, longitude: 19.9388, walking_time_from_prev: "12 min", distance_from_prev: "900 m" },
+];
+
+const ALL_MOCK_DAYS = [MOCK_PINS_DAY1, MOCK_PINS_DAY2, MOCK_PINS_DAY3];
+
+function buildMockPlan(numDays: number): RoutePlan {
+  return {
+    city: "Kraków",
+    days: Array.from({ length: Math.min(numDays, 3) }, (_, i) => ({
+      day_number: i + 1,
+      day_metrics: { total_walking_km: 7 + i, crowd_level: "medium" as const, energy_cost: "medium" as const },
+      pins: (ALL_MOCK_DAYS[i] ?? MOCK_PINS_DAY1).map(p => ({ ...p, day_number: i + 1 })),
+    })),
+  };
+}
+
+const INITIAL_SUGGESTIONS = ["Wygląda świetnie! ✓", "Zmień restaurację", "Za dużo chodzenia", "Dodaj nocne życie"];
+
+function parseSuggestions(message: string): { cleanMessage: string; suggestions: string[] } {
+  const match = message.match(/<suggestions>([\s\S]*?)<\/suggestions>/);
+  if (!match) return { cleanMessage: message, suggestions: [] };
+  try {
+    const suggestions = JSON.parse(match[1]);
+    return {
+      cleanMessage: message.replace(/<suggestions>[\s\S]*?<\/suggestions>/, "").trim(),
+      suggestions: Array.isArray(suggestions) ? suggestions : [],
+    };
+  } catch {
+    return { cleanMessage: message.replace(/<suggestions>[\s\S]*?<\/suggestions>/, "").trim(), suggestions: [] };
+  }
+}
+
+// ── Skeleton shown while the plan is being generated ────────────────────────
 function PlanSkeleton({ numDays }: { numDays: number }) {
   return (
     <div className="space-y-3 pt-2">
@@ -94,6 +151,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
   const [initializing, setInitializing] = useState(true);
+  const [suggestions, setSuggestions] = useState<string[]>(INITIAL_SUGGESTIONS);
   const [editCount, setEditCount] = useState(0);
   const [preparingPlan, setPreparingPlan] = useState(false);
   const [planHistory, setPlanHistory] = useState<RoutePlan[]>([]);
@@ -113,43 +171,17 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
     }
   }, [messages, plan]);
 
-  // Start conversation
+  // Start conversation — show mock plan immediately (no API call)
   useEffect(() => {
-    const startChat = async () => {
-      setInitializing(true);
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          setInitializing(false);
-          return;
-        }
-
-        const response = await supabase.functions.invoke("plan-route", {
-          body: { preferences, messages: [], liked_places: likedPlaces },
-        });
-
-        if (response.error) throw new Error(response.error.message);
-
-        if (response.data?.message) {
-          setMessages([{ role: "assistant", content: response.data.message }]);
-          if (response.data.plan) {
-            setPlan(response.data.plan);
-          }
-        } else {
-          throw new Error("Empty response");
-        }
-      } catch (err) {
-        console.error("Failed to start plan chat:", err);
-        setMessages([{
-          role: "assistant",
-          content: "Cześć! Dokąd planujesz podróż? 🌍",
-        }]);
-      }
-      setInitializing(false);
-    };
-
-    startChat();
-  }, [preferences]);
+    const nDays = preferences.numDays;
+    const mock = buildMockPlan(nDays);
+    const daysLabel = nDays === 1 ? "1 dzień" : `${nDays} dni`;
+    const intro = `Hej! Mam już wstępny plan dla Ciebie na **${daysLabel} w Krakowie** 🗺️\n\nTo tylko punkt startowy — powiedz co zmienić!`;
+    setMessages([{ role: "assistant", content: intro }]);
+    setPlan(mock);
+    setSuggestions(INITIAL_SUGGESTIONS);
+    setInitializing(false);
+  }, []);
 
   const sendMessage = useCallback(async (text?: string) => {
     const msgText = text || input.trim();
@@ -172,12 +204,16 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
 
       const data = response.data;
 
+      // Parse suggestions out of message
+      const { cleanMessage: parsedMsg, suggestions: newSuggestions } = parseSuggestions(data.message ?? "");
+      if (newSuggestions.length) setSuggestions(newSuggestions);
+
       // Always add the assistant message to chat
-      const withAssistant: ChatMessage[] = data.message
-        ? [...newMessages, { role: "assistant" as const, content: data.message }]
+      const withAssistant: ChatMessage[] = parsedMsg
+        ? [...newMessages, { role: "assistant" as const, content: parsedMsg }]
         : newMessages;
 
-      if (data.message) setMessages(withAssistant);
+      if (parsedMsg) setMessages(withAssistant);
 
       if (data.memory_used) setMemoryUsed(true);
 
@@ -203,10 +239,12 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
               setEditCount(prev => prev + 1);
             }
             setPlan(planResponse.data.plan);
-            // Append the plan message if any
             if (planResponse.data.message) {
-              setMessages(prev => [...prev, { role: "assistant", content: planResponse.data.message }]);
+              const { cleanMessage: cm, suggestions: s } = parseSuggestions(planResponse.data.message);
+              if (s.length) setSuggestions(s);
+              if (cm) setMessages(prev => [...prev, { role: "assistant", content: cm }]);
             }
+            if (planResponse.data.suggestions?.length) setSuggestions(planResponse.data.suggestions);
           }
         } catch (planErr) {
           console.error("Force plan error:", planErr);
@@ -377,6 +415,19 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
 
   return (
     <div className="flex flex-col h-full">
+      {/* Plan overview bar */}
+      {plan && (
+        <div className="flex-shrink-0 flex gap-2 px-4 py-2 border-b border-border/20 bg-muted/30 overflow-x-auto scrollbar-none">
+          {plan.days.map(d => (
+            <div key={d.day_number} className="flex-shrink-0 flex items-center gap-1.5 text-xs text-muted-foreground bg-card border border-border/40 rounded-full px-3 py-1">
+              <span className="font-medium text-foreground">Dzień {d.day_number}</span>
+              <span>·</span>
+              <span>{d.pins.length} miejsc</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Messages + Plan */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {messages.map((msg, i) => {
@@ -515,8 +566,22 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
         )}
       </div>
 
-      {/* Input area — fixed to bottom so it follows the user on scroll */}
-      <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-3 pb-safe">
+      {/* Input area — sticky bottom */}
+      <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-2 pb-safe">
+        {/* Suggestion chips */}
+        {suggestions.length > 0 && !loading && (
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-2">
+            {suggestions.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => sendMessage(s)}
+                className="flex-shrink-0 text-xs px-3 py-1.5 rounded-full border border-border/60 bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex items-end gap-2 max-w-lg mx-auto">
           {hasVoiceSupport && (
             <button

@@ -284,10 +284,22 @@ ZASADY FORMATU:
 - Restauracje/kawiarnie: TYLKO lokale z rozpoznawalną nazwą i recenzjami online. Jeśli nie jesteś pewien istnienia — wpisz "Kolacja w [dzielnica]" i opisz typ kuchni
 - NIE WYMYŚLAJ nazw restauracji — to najczęstszy błąd który niszczy zaufanie do planu
 
-## EDYCJA PLANU
-- "Zamień X" → zaproponuj alternatywę w tej samej okolicy, przelicz czasy
+## EDYCJA PLANU (ZASADA KLUCZOWA: JEDNA ZMIANA)
+- Gdy user prosi o zmianę konkretnego elementu — modyfikuj TYLKO ten element. Reszta planu zostaje bez zmian.
+- "Zamień X" → zaproponuj alternatywę w tej samej okolicy, przelicz czasy TYLKO sąsiednich pinów
 - "Dodaj Y" → wstaw w logiczne miejsce, zaktualizuj suggested_time kolejnych punktów
-- "Usuń Z" → usuń, sprawdź czy kulminacja emocjonalna (H3) nadal jest zachowana${likedPlaces?.length ? `\n\n## 🎯 MIEJSCA ZAPROPONOWANE PRZEZ TWÓRCÓW\nUżytkownik wyraził zainteresowanie tymi miejscami — postaraj się je uwzględnić w planie jeśli pasują:\n${likedPlaces.map(p => `- ${p}`).join("\n")}` : ""}`;
+- "Usuń Z" → usuń, sprawdź czy kulminacja emocjonalna (H3) nadal jest zachowana
+- NIE regeneruj całego planu jeśli user pyta tylko o 1 zmianę${likedPlaces?.length ? `\n\n## 🎯 MIEJSCA DO UWZGLĘDNIENIA\nUżytkownik chce odwiedzić te miejsca — koniecznie wstaw je w plan:\n${likedPlaces.map(p => `- ${p}`).join("\n")}` : ""}
+
+## SZYBKIE ODPOWIEDZI (OBOWIĄZKOWE)
+Na końcu KAŻDEJ wiadomości dodaj dokładnie ten blok:
+<suggestions>["podpowiedź 1", "podpowiedź 2", "podpowiedź 3", "podpowiedź 4"]</suggestions>
+
+Zasady podpowiedzi:
+- Max 5 słów każda, po polsku, naturalne
+- Gdy plan jest gotowy: np. "Wygląda świetnie! ✓", "Zmień restaurację", "Za dużo chodzenia", "Dodaj nocne życie"
+- Gdy jeszcze rozmowa (brak planu): np. "9:00 - 22:00", "Centrum miasta", "Chcę zobaczyć Wawel", "Mam już restaurację"
+- Ostatnia podpowiedź zawsze: potwierdzenie lub zakończenie`;
 }
 
 serve(async (req) => {
@@ -570,26 +582,34 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       );
     }
 
+    // Extract suggestions
+    let suggestions: string[] = [];
+    const suggestionsMatch = assistantText.match(/<suggestions>([\s\S]*?)<\/suggestions>/);
+    if (suggestionsMatch) {
+      try { suggestions = JSON.parse(suggestionsMatch[1]); } catch { /* ignore */ }
+    }
+    const textWithoutSuggestions = assistantText.replace(/<suggestions>[\s\S]*?<\/suggestions>/, "").trim();
+
     // Check for route plan
-    const planMatch = assistantText.match(/<route_plan>([\s\S]*?)<\/route_plan>/);
+    const planMatch = textWithoutSuggestions.match(/<route_plan>([\s\S]*?)<\/route_plan>/);
 
     let plan = null;
-    let cleanMessage = assistantText;
+    let cleanMessage = textWithoutSuggestions;
 
     if (planMatch) {
       try {
         plan = JSON.parse(planMatch[1]);
-        cleanMessage = assistantText.replace(/<route_plan>[\s\S]*?<\/route_plan>/, "").trim();
+        cleanMessage = textWithoutSuggestions.replace(/<route_plan>[\s\S]*?<\/route_plan>/, "").trim();
       } catch (parseErr) {
         console.error("Failed to parse route_plan:", parseErr);
-        cleanMessage = assistantText.replace(/<route_plan>[\s\S]*?<\/route_plan>/, "").trim();
+        cleanMessage = textWithoutSuggestions.replace(/<route_plan>[\s\S]*?<\/route_plan>/, "").trim();
       }
-    } else if (assistantText.includes("<route_plan>")) {
+    } else if (textWithoutSuggestions.includes("<route_plan>")) {
       // Truncated response — try to fix
       console.warn("Truncated route_plan detected, attempting to fix...");
-      const startIdx = assistantText.indexOf("<route_plan>");
-      const jsonPart = assistantText.slice(startIdx + "<route_plan>".length).trim();
-      cleanMessage = assistantText.slice(0, startIdx).trim();
+      const startIdx = textWithoutSuggestions.indexOf("<route_plan>");
+      const jsonPart = textWithoutSuggestions.slice(startIdx + "<route_plan>".length).trim();
+      cleanMessage = textWithoutSuggestions.slice(0, startIdx).trim();
 
       try {
         let fixedJson = jsonPart.replace(/<\/route_plan>.*$/, "").trim();
@@ -630,7 +650,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     );
 
     return new Response(
-      JSON.stringify({ message: cleanMessage, plan, preparing_plan: isPreparing, memory_used: memoryUsed }),
+      JSON.stringify({ message: cleanMessage, plan, preparing_plan: isPreparing, memory_used: memoryUsed, suggestions }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
