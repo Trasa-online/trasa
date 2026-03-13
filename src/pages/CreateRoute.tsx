@@ -24,16 +24,6 @@ interface TripPreferences {
   dayNumber?: number;
 }
 
-const POPULAR_PLACES = [
-  { id: "Wawel", label: "Wawel", emoji: "🏰" },
-  { id: "Rynek Główny", label: "Rynek Główny", emoji: "⛪" },
-  { id: "Kazimierz", label: "Kazimierz", emoji: "🕍" },
-  { id: "Fabryka Schindlera", label: "Fabryka Schindlera", emoji: "🏭" },
-  { id: "Planty", label: "Planty", emoji: "🌿" },
-  { id: "Bulwary Wiślane", label: "Bulwary Wiślane", emoji: "🌊" },
-  { id: "Nowa Huta", label: "Nowa Huta", emoji: "🏗️" },
-  { id: "Muzeum Narodowe", label: "Muzeum Narodowe", emoji: "🖼️" },
-];
 
 const PRIORITY_OPTIONS = [
   { id: "good_food", label: "Dobre jedzenie", emoji: "🍽️" },
@@ -256,56 +246,19 @@ const CreateRoute = () => {
             </div>
           </div>
 
-          {/* Popular places */}
+          {/* Must-visit places */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Chcę koniecznie odwiedzić</label>
-            <p className="text-xs text-muted-foreground">Popularne:</p>
-            <div className="flex flex-wrap gap-2">
-              {POPULAR_PLACES.map(place => (
-                <button
-                  key={place.id}
-                  onClick={() => setMustVisitPlaces(prev =>
-                    prev.includes(place.id) ? prev.filter(p => p !== place.id) : [...prev, place.id]
-                  )}
-                  className={cn(
-                    "px-3 py-1.5 rounded-full text-sm transition-colors border",
-                    mustVisitPlaces.includes(place.id)
-                      ? "bg-foreground text-background border-foreground"
-                      : "bg-card text-foreground border-border hover:bg-muted"
-                  )}
-                >
-                  {place.emoji} {place.label}
-                </button>
-              ))}
-            </div>
-            {/* Custom places added via search */}
-            {mustVisitPlaces.filter(p => !POPULAR_PLACES.some(pl => pl.id === p)).length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {mustVisitPlaces
-                  .filter(p => !POPULAR_PLACES.some(pl => pl.id === p))
-                  .map(place => (
-                    <div key={place} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm bg-foreground text-background">
-                      <span>{place}</span>
-                      <button onClick={() => setMustVisitPlaces(prev => prev.filter(p => p !== place))}>
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-              </div>
-            )}
-            {/* Search input */}
             <div className="relative">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  placeholder="Szukaj miejsca..."
-                  value={mustSearch}
-                  onChange={e => handleMustSearchChange(e.target.value)}
-                  className="pl-9 bg-card"
-                />
-              </div>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Szukaj miejsca..."
+                value={mustSearch}
+                onChange={e => handleMustSearchChange(e.target.value)}
+                className="pl-9 bg-card"
+              />
               {mustSearchResults.length > 0 && (
-                <div className="absolute z-10 top-full mt-1 left-0 right-0 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+                <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
                   {mustSearchResults.map((result, i) => (
                     <button
                       key={i}
@@ -323,6 +276,18 @@ const CreateRoute = () => {
                 </div>
               )}
             </div>
+            {mustVisitPlaces.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {mustVisitPlaces.map(place => (
+                  <div key={place} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm bg-foreground text-background">
+                    <span>{place}</span>
+                    <button onClick={() => setMustVisitPlaces(prev => prev.filter(p => p !== place))}>
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Date picker */}

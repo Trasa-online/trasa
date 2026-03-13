@@ -71,6 +71,7 @@ function buildPreviousDaysBlock(routes: { day_number: number; ai_summary: string
 }
 
 function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[]): string {
+  const isNightlife = preferences.priorities.includes("nightlife") || (userProfile?.travel_interests ?? []).includes("nightlife");
   const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}` : "";
   const cityInfo = preferences.city?.trim() ? `- Destynacja: ${preferences.city.trim()}` : "";
   const dayInfo = preferences.dayNumber ? `- Planowany dzień: Dzień ${preferences.dayNumber}` : "";
@@ -95,9 +96,9 @@ function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, user
     ? preferences.priorities.map(p => PRIORITY_LABEL_PL[p] ?? p).join(", ")
     : null;
 
-  const maxPins = preferences.pace === "active" ? "7–8" : preferences.pace === "calm" ? "3–5" : isRomantic ? "4–5" : "5–6";
+  const maxPins = preferences.pace === "active" ? "7–8" : preferences.pace === "calm" ? "3–5" : isRomantic ? "4–5" : isNightlife ? "5–6 + 1–2 bary/kluby" : "5–6";
   const maxMuseums = isRomantic ? "0 lub 1" : "1";
-  const dinnerEarliest = isRomantic ? "19:00" : "18:30";
+  const dinnerEarliest = isRomantic ? "19:00" : isNightlife ? "18:00" : "18:30";
 
   return `Jesteś planistą podróży w aplikacji TRASA. Twoje plany muszą być realistyczne, przestrzennie spójne i emocjonalnie satysfakcjonujące.
 
@@ -153,6 +154,7 @@ Każdy dzień MUSI kończyć się JEDNYM z:
 - kolacją w klimatycznym miejscu (atmosfera, widok, wino — nie fast food)
 - punktem widokowym o zachodzie słońca
 - wieczornym spacerem nad rzeką / przez park / klimatyczną dzielnicą
+${isNightlife ? "- barem / pubem / klubem jako ostatni punkt (PREFEROWANE przy priorytecie nocnym)" : ""}
 Brak kulminacji = słaby plan. Zawsze sprawdź czy ostatni punkt spełnia to kryterium.
 
 ### H4. KLASTER DZIELNICOWY
@@ -209,7 +211,25 @@ H11. MOMENT PRYWATNOŚCI (obowiązkowy)
 - Unikaj długich marszów bez punktu docelowego
 - Lunch obowiązkowo; kolacja wcześniej (17:30–19:00)
 ` : ""}
-### H12. ADAPTACJA POGODOWA
+${isNightlife ? `### TRYB NOCNY ✓ (aktywny — priorytet: życie nocne)
+
+H_NL1. STRUKTURA DNIA NOCNEGO
+- Plan dzieli się na 2 fazy: DZIENNA (atrakcje, jedzenie) + NOCNA (bary, klimatyczne miejsca, klub)
+- Kolacja WCZEŚNIE: 18:00–19:00 — żeby mieć energię na noc
+- Po kolacji: minimum 2 nocne punkty (bar → klub LUB bar → bar → klub)
+- Ostatni punkt planu: klimatyczny bar lub klub — to jest kulminacja dnia
+
+H_NL2. DOBÓR MIEJSC NOCNYCH
+- Nie planuj standardowych restauracji na wieczór — szukaj: cocktail barów, pubów, wine barów, klubów muzycznych, jazz barów
+- Preferuj miejsca otwarte do 2:00+ (nie lokale zamykające się o 22:00)
+- W Krakowie: Kazimierz (klimatyczne bary), Stare Miasto okolice Floriańskiej / Szewskiej
+- Podaj KONKRETNE nazwy barów/klubów z rozpoznawalną marką online
+
+H_NL3. OGRANICZONE MUZEA
+- Max 1 muzeum w planie nocnym — dzień jest krótszy bo noc jest długa
+- Priorytet: spacery po mieście, kawiarnie, widoki, zabytkowe dzielnice — szybkie, wizualne, energetyczne
+
+` : ""}### H12. ADAPTACJA POGODOWA
 Jeśli user wspomni o pogodzie lub możesz wnioskować z daty/miejsca:
 - Deszcz: zamień spacery outdoor → muzeum / galeria / kryty market
 - Upał: więcej miejsc z cieniem/klimatyzacją, spacer późnym popołudniem (po 17:00)

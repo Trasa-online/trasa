@@ -1,8 +1,8 @@
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Brain, MapPin, Sparkles } from "lucide-react";
+import { Brain, MapPin, Sparkles } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -68,7 +68,6 @@ function evidenceLabel(count: number): string {
 
 const TravelerProfile = () => {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
 
   const { data: preferences, isLoading: prefLoading } = useQuery({
     queryKey: ["preference_graph", user?.id],
@@ -119,13 +118,7 @@ const TravelerProfile = () => {
 
   return (
     <div className="min-h-screen bg-background pb-10">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-safe-4 pb-4 border-b border-border/40">
-        <button onClick={() => navigate("/settings")} className="p-1">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-lg font-semibold">Mój profil podróżniczy</h1>
-      </div>
+      <PageHeader title="Mój profil podróżniczy" showBack />
 
       <div className="p-4 space-y-6 max-w-lg mx-auto">
 

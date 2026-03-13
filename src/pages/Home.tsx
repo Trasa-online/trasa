@@ -17,15 +17,6 @@ import CreatorPlanCard from "@/components/home/CreatorPlanCard";
 import CreatorPlanSheet from "@/components/home/CreatorPlanSheet";
 import type { CreatorPlan, CreatorPlaceItem } from "@/components/home/CreatorPlanCard";
 
-const PREF_LABEL: Record<string, string> = {
-  vege: "Wegetarianin", vegan: "Vegan", coffee: "Coffee snob",
-  local_food: "Kuchnia lokalna", street_food: "Street food",
-  fine_dining: "Fine dining", lactose_free: "Bez laktozy", gluten_free: "Bezglutenowo",
-  history: "Historia", art: "Sztuka", nature: "Natura", shopping: "Zakupy",
-  nightlife: "Nocne życie", photography: "Fotografia", architecture: "Architektura", music: "Muzyka",
-  intensive: "Intensywny", relaxed: "Spokojny", family: "Rodzinny",
-  romantic: "Romantyczny", budget: "Budżetowy", luxury: "Luksusowy",
-};
 
 const Home = () => {
   const { user, loading: authLoading } = useAuth();
@@ -349,29 +340,6 @@ const Home = () => {
           <h2 className="mt-3 text-xl font-bold tracking-tight">
             {profile?.username || "Podróżnik"}
           </h2>
-          {(() => {
-            const tags = [
-              ...((profile as any)?.dietary_prefs ?? []),
-              ...((profile as any)?.travel_interests ?? []),
-            ].map((id: string) => PREF_LABEL[id] ?? id).filter(Boolean);
-            if (tags.length === 0) return null;
-            const visible = tags.slice(0, 3);
-            const overflow = tags.length - 3;
-            return (
-              <div className="flex flex-wrap gap-1.5 justify-center mt-2 max-w-[280px]">
-                {visible.map(tag => (
-                  <span key={tag} className="text-[11px] bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full">
-                    {tag}
-                  </span>
-                ))}
-                {overflow > 0 && (
-                  <span className="text-[11px] bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full">
-                    +{overflow}
-                  </span>
-                )}
-              </div>
-            );
-          })()}
         </Link>
 
         {/* Creator Plans */}
