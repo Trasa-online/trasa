@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Trash2, Map as MapIcon, BookOpen, Sparkles, MessageSquare } from "lucide-react";
+import { Trash2, Map as MapIcon, BookOpen, Sparkles, MessageSquare } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import RoutePreviewModal from "@/components/route/RoutePreviewModal";
@@ -315,18 +315,35 @@ const Home = () => {
 
   const trips = getActiveTrips();
 
+  // Accent colors cycling per trip/journal entry
+  const ACCENTS = [
+    { bar: "bg-blue-500", dot: "bg-blue-400" },
+    { bar: "bg-violet-500", dot: "bg-violet-400" },
+    { bar: "bg-amber-400", dot: "bg-amber-400" },
+    { bar: "bg-emerald-500", dot: "bg-emerald-400" },
+    { bar: "bg-rose-500", dot: "bg-rose-400" },
+    { bar: "bg-cyan-500", dot: "bg-cyan-400" },
+  ];
+
+  const PRIORITY_LABEL: Record<string, string> = {
+    good_food: "Jedzenie", nice_views: "Widoki", long_walks: "Spacery",
+    museums: "Muzea", nightlife: "Nocne życie", shopping: "Zakupy",
+    local_vibes: "Klimaty", photography: "Foto",
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="flex-1 overflow-y-auto px-5 pb-24 max-w-lg mx-auto w-full">
+      <div className="flex-1 overflow-y-auto px-5 pb-28 max-w-lg mx-auto w-full">
+
         {/* Avatar + Name */}
-        <div className="flex flex-col items-center pt-7 pb-6">
-          <Avatar className="h-16 w-16 border-2 border-muted">
+        <div className="flex flex-col items-center pt-8 pb-6">
+          <Avatar className="h-20 w-20">
             <AvatarImage src={profile?.avatar_url || ""} />
-            <AvatarFallback className="bg-muted text-foreground text-xl">
+            <AvatarFallback className="bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 text-2xl font-bold">
               {profile?.username?.charAt(0)?.toUpperCase() || "U"}
             </AvatarFallback>
           </Avatar>
-          <h2 className="mt-3 text-lg font-bold tracking-tight uppercase">
+          <h2 className="mt-3 text-xl font-bold tracking-tight">
             {profile?.username || "Podróżnik"}
           </h2>
           {(() => {
@@ -335,9 +352,9 @@ const Home = () => {
               ...((profile as any)?.travel_interests ?? []),
             ].map((id: string) => PREF_LABEL[id] ?? id).filter(Boolean);
             return tags.length > 0 ? (
-              <div className="flex flex-wrap gap-1 justify-center mt-2 max-w-[280px]">
+              <div className="flex flex-wrap gap-1.5 justify-center mt-2 max-w-[280px]">
                 {tags.map(tag => (
-                  <span key={tag} className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                  <span key={tag} className="text-[11px] bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full">
                     {tag}
                   </span>
                 ))}
@@ -348,10 +365,8 @@ const Home = () => {
 
         {/* Creator Plans */}
         {creatorPlans.length > 0 && (
-          <section className="mb-6 -mx-5">
-            <div className="flex items-center justify-between px-5 mb-3">
-              <h3 className="text-base font-semibold">Plany twórców</h3>
-            </div>
+          <section className="mb-7 -mx-5">
+            <h3 className="text-base font-bold px-5 mb-3">Plany twórców</h3>
             <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x snap-mandatory scrollbar-none">
               {creatorPlans.map(plan => (
                 <CreatorPlanCard
@@ -371,158 +386,145 @@ const Home = () => {
 
         {/* Active trips */}
         <section className="mb-8" data-tour="trips">
-          <h3 className="text-lg font-bold mb-3">Aktywna podróż</h3>
+          <h3 className="text-base font-bold mb-3">Aktywne plany</h3>
           {routesLoading ? (
-            <Skeleton className="h-20 w-full rounded-xl" />
-          ) : trips.length > 0 ? (
             <div className="space-y-3">
-              {trips.map((trip) => {
+              <Skeleton className="h-16 w-full rounded-2xl" />
+              <Skeleton className="h-16 w-full rounded-2xl" />
+            </div>
+          ) : trips.length > 0 ? (
+            <div className="space-y-2.5">
+              {trips.map((trip, idx) => {
+                const accent = ACCENTS[idx % ACCENTS.length];
                 const dateStr = trip.startDate
                   ? trip.endDate && trip.endDate !== trip.startDate
-                    ? `${format(new Date(trip.startDate), "dd")}-${format(new Date(trip.endDate), "dd/MM/yyyy")}`
-                    : format(new Date(trip.startDate), "dd/MM/yyyy")
+                    ? `${format(new Date(trip.startDate), "dd")}-${format(new Date(trip.endDate), "dd/MM/yy")}`
+                    : format(new Date(trip.startDate), "dd/MM/yy")
                   : "";
-                const PRIORITY_LABEL: Record<string, string> = {
-                  good_food: "Jedzenie", nice_views: "Widoki", long_walks: "Spacery",
-                  museums: "Muzea", nightlife: "Nocne życie", shopping: "Zakupy",
-                  local_vibes: "Klimaty", photography: "Foto",
-                };
                 const priorityLabels = (trip.priorities as string[])
-                  .slice(0, 4)
+                  .slice(0, 3)
                   .map(p => PRIORITY_LABEL[p] ?? p)
                   .join(" · ");
                 const todayRoute = getTodayRoute(trip);
                 const pendingRoute = getPendingReviewRoute(trip);
 
                 return (
-                  <div key={trip.id} className="rounded-xl border border-border bg-card overflow-hidden">
-                    {/* Trip header */}
-                    <div className="relative hover:bg-muted/30 transition-colors">
-                      <button
-                        onClick={() => handleTripClick(trip)}
-                        className="w-full text-left p-4 pr-12"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="min-w-0">
-                            <p className="text-base font-bold">{trip.city}</p>
-                            {priorityLabels && (
-                              <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                                {priorityLabels}
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-right shrink-0 ml-3">
-                            {dateStr && (
-                              <p className="text-sm font-medium">{dateStr}</p>
-                            )}
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              Punkty na trasie: {trip.pinCount}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setDeletingTrip(trip); }}
-                        className="absolute top-4 right-3 p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                        aria-label="Usuń podróż"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+                  <div key={trip.id} className="rounded-2xl bg-card border border-border/50 overflow-hidden flex">
+                    {/* Colored accent bar */}
+                    <div className={`w-1 flex-shrink-0 ${accent.bar}`} />
 
-                    {/* Inline checkin — separated by divider, visually part of the same card */}
-                    {todayRoute && todayRoute.pins?.length > 0 && (
-                      <div className="border-t border-border">
-                        <TripCheckinSection
-                          routeId={todayRoute.id}
-                          pins={(todayRoute.pins as any[]).map((p: any) => ({
-                            id: p.id,
-                            place_name: p.place_name,
-                            pin_order: p.pin_order,
-                            suggested_time: p.suggested_time,
-                          }))}
-                          onComplete={handleCheckinComplete}
-                          date={todayRoute.start_date}
-                          dayNumber={todayRoute.day_number}
-                        />
-                      </div>
-                    )}
-
-                    {/* Manual review button */}
-                    {!todayRoute && pendingRoute && (
-                      <div className="border-t border-border">
+                    <div className="flex-1 min-w-0">
+                      {/* Trip header */}
+                      <div className="relative">
                         <button
-                          onClick={() => navigate(`/day-review?route=${pendingRoute.id}`)}
-                          className="w-full flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors py-3 px-4"
+                          onClick={() => handleTripClick(trip)}
+                          className="w-full text-left px-4 py-3 pr-10"
                         >
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          Oceń dzień podróży
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold leading-tight">{trip.city}</p>
+                              {priorityLabels && (
+                                <p className="text-xs text-muted-foreground mt-0.5 truncate">{priorityLabels}</p>
+                              )}
+                            </div>
+                            <div className="text-right shrink-0">
+                              {dateStr && <p className="text-xs font-medium tabular-nums">{dateStr}</p>}
+                              <p className="text-[11px] text-muted-foreground mt-0.5">
+                                Punkty na trasie: {trip.pinCount}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDeletingTrip(trip); }}
+                          className="absolute top-3 right-3 p-1 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          aria-label="Usuń podróż"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                    )}
+
+                      {todayRoute && todayRoute.pins?.length > 0 && (
+                        <div className="border-t border-border/50">
+                          <TripCheckinSection
+                            routeId={todayRoute.id}
+                            pins={(todayRoute.pins as any[]).map((p: any) => ({
+                              id: p.id,
+                              place_name: p.place_name,
+                              pin_order: p.pin_order,
+                              suggested_time: p.suggested_time,
+                            }))}
+                            onComplete={handleCheckinComplete}
+                            date={todayRoute.start_date}
+                            dayNumber={todayRoute.day_number}
+                          />
+                        </div>
+                      )}
+
+                      {!todayRoute && pendingRoute && (
+                        <div className="border-t border-border/50">
+                          <button
+                            onClick={() => navigate(`/day-review?route=${pendingRoute.id}`)}
+                            className="w-full flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors py-2.5 px-4"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            Oceń dzień podróży
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <p className="text-muted-foreground text-sm">
-              Brak aktywnych tras. Zaplanuj swoją podróż!
-            </p>
+            <p className="text-muted-foreground text-sm">Brak aktywnych tras. Zaplanuj swoją podróż!</p>
           )}
         </section>
 
-        {/* Journal — completed day reviews */}
+        {/* Journal — 2-column grid */}
         {journalRoutes && journalRoutes.length > 0 && (
           <section className="mb-8" data-tour="journal">
-            <h3 className="text-lg font-bold mb-3">Dziennik podróży</h3>
-            <div className="space-y-3">
-              {journalRoutes.map((route: any) => (
-                <div key={route.id} className="rounded-xl border border-border bg-card p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <p className="text-sm font-bold">{route.city || route.title}</p>
-                      {route.start_date && (
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(route.start_date), "dd.MM.yyyy")}
-                        </p>
-                      )}
+            <h3 className="text-base font-bold mb-3">Dziennik podróży</h3>
+            <div className="grid grid-cols-2 gap-2.5">
+              {journalRoutes.map((route: any, idx: number) => {
+                const accent = ACCENTS[idx % ACCENTS.length];
+                return (
+                  <div key={route.id} className="rounded-2xl bg-card border border-border/50 p-3.5">
+                    <div className="flex items-start justify-between mb-1.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold leading-tight truncate">{route.city || route.title}</p>
+                        {route.start_date && (
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {format(new Date(route.start_date), "dd/MM/yy")}
+                          </p>
+                        )}
+                      </div>
+                      <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 mt-1 ml-2 ${accent.dot}`} />
                     </div>
-                    <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                    {route.ai_summary && (
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4 mt-1">
+                        {route.ai_summary}
+                      </p>
+                    )}
                   </div>
-                  {route.ai_summary && (
-                    <p className="text-xs text-muted-foreground leading-relaxed mb-2">
-                      {route.ai_summary}
-                    </p>
-                  )}
-                  {route.ai_highlight && (
-                    <div className="bg-muted/50 rounded-lg px-3 py-2 text-xs">
-                      <span className="font-medium">Najlepszy moment: </span>
-                      <span className="text-muted-foreground">{route.ai_highlight}</span>
-                    </div>
-                  )}
-                  {route.ai_tip && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      <span className="font-medium">Tip: </span>{route.ai_tip}
-                    </p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
 
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-foreground px-4 pt-4 pb-safe-4" data-tour="cta">
+      {/* CTA — warm orange */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm border-t border-border/20 px-5 pt-3 pb-safe-4" data-tour="cta">
         <div className="max-w-lg mx-auto">
           <Button
             onClick={() => navigate("/create")}
-            variant="outline"
             size="lg"
-            className="w-full bg-card text-foreground border-border rounded-full text-base font-medium"
+            className="w-full rounded-full text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20"
           >
-            <PlusCircle className="h-5 w-5 mr-2" />
-            Zaplanuj swoją podróż
+            Dodaj plan podróży
           </Button>
         </div>
       </div>
