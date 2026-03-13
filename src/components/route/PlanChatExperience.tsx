@@ -54,7 +54,7 @@ function getSnapPx(snap: SnapState, containerH?: number): number {
   const h = containerH ?? window.innerHeight;
   if (snap === "peek") return 88;
   if (snap === "half") return Math.round(h * 0.52);
-  return Math.round(h * 0.90);
+  return Math.round(h * 0.80);
 }
 
 // ─── Mock plan data for Kraków ────────────────────────────────────────────────
