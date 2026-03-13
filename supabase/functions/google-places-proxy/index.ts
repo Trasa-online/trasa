@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
         full_address: r.formatted_address ?? "",
         latitude: r.geometry?.location?.lat,
         longitude: r.geometry?.location?.lng,
+        types: r.types ?? [],
       }));
       return new Response(JSON.stringify({ results }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

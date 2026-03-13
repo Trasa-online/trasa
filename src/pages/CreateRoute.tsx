@@ -36,6 +36,19 @@ const PRIORITY_OPTIONS = [
   { id: "photography", label: "Fotografia", emoji: "📸" },
 ];
 
+function getPlaceEmoji(types: string[]): string {
+  if (types.some(t => ["restaurant", "food", "meal_delivery", "meal_takeaway"].includes(t))) return "🍽️";
+  if (types.some(t => ["cafe", "bakery"].includes(t))) return "☕";
+  if (types.some(t => ["bar", "night_club"].includes(t))) return "🍸";
+  if (types.some(t => ["museum"].includes(t))) return "🏛️";
+  if (types.some(t => ["park", "natural_feature"].includes(t))) return "🌳";
+  if (types.some(t => ["church", "place_of_worship", "synagogue", "mosque"].includes(t))) return "⛪";
+  if (types.some(t => ["shopping_mall", "store", "clothing_store", "department_store"].includes(t))) return "🛍️";
+  if (types.some(t => ["lodging"].includes(t))) return "🏨";
+  if (types.some(t => ["tourist_attraction", "point_of_interest"].includes(t))) return "🏰";
+  return "📍";
+}
+
 const CreateRoute = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -45,7 +58,7 @@ const CreateRoute = () => {
   const creatorPlanId = searchParams.get("creatorPlan") ?? undefined;
   const [step, setStep] = useState(creatorPlanId ? 2 : 1);
   const [likedPlaces, setLikedPlaces] = useState<string[]>([]);
-  const [mustVisitPlaces, setMustVisitPlaces] = useState<string[]>([]);
+  const [mustVisitPlaces, setMustVisitPlaces] = useState<{ name: string; emoji: string }[]>([]);
 
   useEffect(() => {
     if (!creatorPlanId) return;
@@ -59,7 +72,7 @@ const CreateRoute = () => {
       });
   }, [creatorPlanId]);
   const [mustSearch, setMustSearch] = useState("");
-  const [mustSearchResults, setMustSearchResults] = useState<{ name: string; full_address: string }[]>([]);
+  const [mustSearchResults, setMustSearchResults] = useState<{ name: string; full_address: string; types: string[] }[]>([]);
   const mustSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [customPriority, setCustomPriority] = useState("");
   const [preferences, setPreferences] = useState<TripPreferences>({
@@ -248,7 +261,7 @@ const CreateRoute = () => {
 
           {/* Must-visit places */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Chcę koniecznie odwiedzić</label>
+            <label className="text-sm font-medium">Chętnie odwiedzę</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
@@ -263,7 +276,11 @@ const CreateRoute = () => {
                     <button
                       key={i}
                       onClick={() => {
-                        setMustVisitPlaces(prev => prev.includes(result.name) ? prev : [...prev, result.name]);
+                        setMustVisitPlaces(prev =>
+                          prev.some(p => p.name === result.name)
+                            ? prev
+                            : [...prev, { name: result.name, emoji: getPlaceEmoji(result.types) }]
+                        );
                         setMustSearch("");
                         setMustSearchResults([]);
                       }}
@@ -279,9 +296,10 @@ const CreateRoute = () => {
             {mustVisitPlaces.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {mustVisitPlaces.map(place => (
-                  <div key={place} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm bg-foreground text-background">
-                    <span>{place}</span>
-                    <button onClick={() => setMustVisitPlaces(prev => prev.filter(p => p !== place))}>
+                  <div key={place.name} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-foreground text-background">
+                    <span>{place.emoji}</span>
+                    <span>{place.name}</span>
+                    <button onClick={() => setMustVisitPlaces(prev => prev.filter(p => p.name !== place.name))}>
                       <X className="h-3 w-3" />
                     </button>
                   </div>
@@ -387,7 +405,7 @@ const CreateRoute = () => {
         <PlanChatExperience
           preferences={preferences}
           onPlanReady={handlePlanReady}
-          likedPlaces={[...likedPlaces, ...mustVisitPlaces]}
+          likedPlaces={[...likedPlaces, ...mustVisitPlaces.map(p => p.name)]}
         />
       </div>
 

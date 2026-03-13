@@ -50,11 +50,11 @@ interface PlanChatExperienceProps {
 
 type SnapState = "peek" | "half" | "full";
 
-function getSnapPx(snap: SnapState): number {
-  const vh = window.innerHeight;
+function getSnapPx(snap: SnapState, containerH?: number): number {
+  const h = containerH ?? window.innerHeight;
   if (snap === "peek") return 88;
-  if (snap === "half") return Math.round(vh * 0.50);
-  return Math.round(vh * 0.85);
+  if (snap === "half") return Math.round(h * 0.52);
+  return Math.round(h * 0.90);
 }
 
 // ─── Mock plan data for Kraków ────────────────────────────────────────────────
@@ -301,8 +301,20 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [containerH, setContainerH] = useState(0);
 
-  const sheetHeight = dragH ?? getSnapPx(snap);
+  // Measure the real height of the chat+sheet container so the sheet never overflows into the input
+  useEffect(() => {
+    const el = chatContainerRef.current;
+    if (!el) return;
+    setContainerH(el.offsetHeight);
+    const ro = new ResizeObserver(() => setContainerH(el.offsetHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const sheetHeight = dragH ?? getSnapPx(snap, containerH || undefined);
 
   // Scroll chat to bottom on new messages
   useEffect(() => {
@@ -378,14 +390,14 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
   const handleDragMove = (e: React.PointerEvent) => {
     if (!e.buttons) return;
     const delta = dragStartY.current - e.clientY;
-    const newH = Math.max(60, Math.min(getSnapPx("full") + 40, dragStartH.current + delta));
+    const newH = Math.max(60, Math.min(getSnapPx("full", containerH || undefined) + 40, dragStartH.current + delta));
     setDragH(newH);
   };
 
   const handleDragEnd = () => {
     const h = dragH ?? getSnapPx(snap);
     const nearest = (["peek", "half", "full"] as SnapState[])
-      .sort((a, b) => Math.abs(getSnapPx(a) - h) - Math.abs(getSnapPx(b) - h))[0];
+      .sort((a, b) => Math.abs(getSnapPx(a, containerH || undefined) - h) - Math.abs(getSnapPx(b, containerH || undefined) - h))[0];
     setSnap(nearest);
     setDragH(null);
   };
@@ -551,7 +563,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
     <div className="flex flex-col h-full">
 
       {/* ── Chat area + Bottom sheet ─────────────────────────────────────── */}
-      <div className="flex-1 relative min-h-0">
+      <div ref={chatContainerRef} className="flex-1 relative min-h-0">
 
         {/* Chat messages (absolute fill, padded bottom for sheet) */}
         <div

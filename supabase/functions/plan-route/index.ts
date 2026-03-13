@@ -578,7 +578,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: aiMessages,
-        max_tokens: 6000,
+        max_tokens: force_plan ? 3000 : 6000,
         temperature: 0.7,
       }),
     });
@@ -646,8 +646,8 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       }
     }
 
-    // Ground plan with real Google Places data to eliminate hallucinations
-    if (plan) {
+    // Ground plan with real Google Places data (skip on force_plan for faster initial load)
+    if (plan && !force_plan) {
       const GOOGLE_API_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
       if (GOOGLE_API_KEY) {
         try {

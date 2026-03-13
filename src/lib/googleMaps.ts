@@ -63,7 +63,7 @@ export const forwardGeocodeWithTypes = async (query: string) => {
       body: { action: "textsearch", query },
     });
     if (error || !data?.results) return [];
-    return (data.results as { name: string; full_address: string; latitude: number; longitude: number }[]);
+    return (data.results as { name: string; full_address: string; latitude: number; longitude: number; types: string[] }[]);
   } catch (error) {
     console.error('Forward geocode with types error:', error);
     return [];
