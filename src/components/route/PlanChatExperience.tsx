@@ -309,17 +309,45 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
     }
   }, [messages]);
 
-  // Initialize with mock plan (no API call)
+  // Initialize with real AI plan based on preferences
   useEffect(() => {
-    const nDays = preferences.numDays;
-    const mock = buildMockPlan(nDays);
-    const daysLabel = nDays === 1 ? "1 dzień" : `${nDays} dni`;
-    const intro = `Hej! Mam już wstępny plan dla Ciebie na **${daysLabel} w Krakowie** 🗺️\n\nTo tylko punkt startowy — powiedz co zmienić!`;
-    setMessages([{ role: "assistant", content: intro }]);
-    setPlan(mock);
-    setSuggestions(INITIAL_SUGGESTIONS);
-    setInitializing(false);
-  }, []);
+    const initialize = async () => {
+      const nDays = preferences.numDays;
+      const daysLabel = nDays === 1 ? "1 dzień" : `${nDays} dni`;
+      const fallbackIntro = `Oto wstępny plan na **${daysLabel} w ${preferences.city}** 🗺️\n\nPowiedz co zmienić!`;
+
+      try {
+        const response = await supabase.functions.invoke("plan-route", {
+          body: {
+            preferences,
+            messages: [{ role: "user", content: "Generuj plan" }],
+            force_plan: true,
+            liked_places: likedPlaces,
+          },
+        });
+
+        if (!response.error && response.data?.plan) {
+          const { cleanMessage, suggestions: newSuggestions } = parseSuggestions(response.data.message ?? "");
+          setPlan(response.data.plan);
+          setMessages([{ role: "assistant", content: cleanMessage || fallbackIntro }]);
+          if (newSuggestions.length) setSuggestions(newSuggestions);
+          if (response.data.memory_used) setMemoryUsed(true);
+        } else {
+          // Fallback to mock on API error
+          setPlan(buildMockPlan(nDays));
+          setMessages([{ role: "assistant", content: fallbackIntro }]);
+          setSuggestions(INITIAL_SUGGESTIONS);
+        }
+      } catch {
+        setPlan(buildMockPlan(nDays));
+        setMessages([{ role: "assistant", content: fallbackIntro }]);
+        setSuggestions(INITIAL_SUGGESTIONS);
+      } finally {
+        setInitializing(false);
+      }
+    };
+    initialize();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Drag handlers ──────────────────────────────────────────────────────────
 
