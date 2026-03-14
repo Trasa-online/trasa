@@ -267,6 +267,40 @@ const Home = () => {
     { bar: "bg-cyan-500", dot: "bg-cyan-400" },
   ];
 
+  const CATEGORY_DOT_COLORS: Record<string, string> = {
+    restaurant: "bg-orange-400",
+    cafe: "bg-amber-400",
+    museum: "bg-blue-500",
+    monument: "bg-violet-400",
+    walk: "bg-emerald-400",
+    viewpoint: "bg-sky-400",
+    nightlife: "bg-purple-500",
+    shopping: "bg-pink-400",
+    church: "bg-stone-400",
+    gallery: "bg-rose-400",
+    park: "bg-green-400",
+    bar: "bg-yellow-400",
+    market: "bg-lime-400",
+    transport: "bg-gray-400",
+  };
+
+  const CATEGORY_LABEL_PL: Record<string, string> = {
+    restaurant: "Restauracja",
+    cafe: "Kawiarnia",
+    museum: "Muzeum",
+    monument: "Zabytek",
+    walk: "Spacer",
+    viewpoint: "Widok",
+    nightlife: "Nocne życie",
+    shopping: "Zakupy",
+    church: "Kościół",
+    gallery: "Galeria",
+    park: "Park",
+    bar: "Bar",
+    market: "Targ",
+    transport: "Transport",
+  };
+
   const PRIORITY_LABEL: Record<string, string> = {
     good_food: "Jedzenie", nice_views: "Widoki", long_walks: "Spacery",
     museums: "Muzea", nightlife: "Nocne życie", shopping: "Zakupy",
@@ -366,7 +400,7 @@ const Home = () => {
                           </button>
                         </div>
                         {trip.routes
-                          .filter((r: any) => r.chat_status !== "completed" && (r.pins || []).length > 0)
+                          .filter((r: any) => (r.pins || []).length > 0)
                           .sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0))
                           .map((route: any) => (
                             <div key={route.id} className="border-t border-border/50">
@@ -406,16 +440,16 @@ const Home = () => {
               <Skeleton className="h-48 w-full rounded-2xl" />
             ) : upcomingTrips.length > 0 ? (
               <div className="space-y-6">
-                {upcomingTrips.map((trip, idx) => {
+                {upcomingTrips.map((trip) => {
                   const daysUntil = differenceInDays(new Date(trip.startDate!), todayMidnight);
-                  const CARD_GRADIENTS = [
-                    "from-blue-400 to-blue-600",
-                    "from-violet-400 to-violet-600",
-                    "from-amber-300 to-orange-500",
-                    "from-emerald-400 to-emerald-600",
-                    "from-rose-400 to-rose-600",
-                    "from-cyan-400 to-cyan-600",
-                  ];
+                  const isMultiDay = trip.routes.length > 1;
+                  const allPins = trip.routes
+                    .sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0))
+                    .flatMap((route: any) =>
+                      [...(route.pins || [])]
+                        .sort((a: any, b: any) => (a.pin_order || 0) - (b.pin_order || 0))
+                        .map((p: any) => ({ ...p, dayNumber: route.day_number || 1 }))
+                    );
                   return (
                     <div key={trip.id}>
                       {/* Trip header */}
@@ -435,52 +469,31 @@ const Home = () => {
                         </button>
                       </div>
 
-                      {/* Horizontal scrolling place cards */}
+                      {/* Per-pin cards horizontal scroll */}
                       <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 snap-x snap-mandatory scrollbar-none">
-                        {trip.routes
-                          .sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0))
-                          .map((route: any, rIdx: number) => {
-                            const pins = [...(route.pins || [])].sort((a: any, b: any) => (a.pin_order || 0) - (b.pin_order || 0));
-                            const gradient = CARD_GRADIENTS[(idx + rIdx) % CARD_GRADIENTS.length];
-                            const dayLabel = trip.routes.length > 1 ? `Dzień ${route.day_number || rIdx + 1}` : null;
-                            return (
-                              <div
-                                key={route.id}
-                                className="shrink-0 w-52 rounded-2xl bg-card border border-border/50 overflow-hidden snap-start shadow-sm"
-                              >
-                                {/* Gradient header */}
-                                <div className={`h-24 bg-gradient-to-br ${gradient} flex items-end p-3`}>
-                                  {dayLabel ? (
-                                    <span className="text-[11px] font-semibold text-white bg-black/25 rounded-full px-2.5 py-1">
-                                      {dayLabel}
-                                    </span>
-                                  ) : (
-                                    <span className="text-[11px] font-semibold text-white bg-black/25 rounded-full px-2.5 py-1">
-                                      {trip.city}
-                                    </span>
-                                  )}
-                                </div>
-                                {/* Pin list — tappable */}
-                                <div className="px-3 py-2.5 space-y-1.5">
-                                  {pins.slice(0, 5).map((pin: any, pIdx: number) => (
-                                    <button
-                                      key={pin.id}
-                                      onClick={() => setSelectedNextUpPin(pin)}
-                                      className="w-full text-left flex items-center gap-1.5 group"
-                                    >
-                                      <span className="text-[10px] text-muted-foreground w-3.5 shrink-0 font-medium">{pIdx + 1}</span>
-                                      <span className="text-[12px] leading-tight truncate text-foreground/80 group-hover:text-foreground transition-colors">
-                                        {pin.place_name}
-                                      </span>
-                                    </button>
-                                  ))}
-                                  {pins.length > 5 && (
-                                    <p className="text-[10px] text-muted-foreground pl-5">+{pins.length - 5} więcej</p>
-                                  )}
-                                </div>
+                        {allPins.map((pin: any, pIdx: number) => {
+                          const catColor = CATEGORY_DOT_COLORS[pin.category as string] ?? "bg-gray-400";
+                          const catLabel = CATEGORY_LABEL_PL[pin.category as string] ?? "Miejsce";
+                          return (
+                            <button
+                              key={pIdx}
+                              onClick={() => setSelectedNextUpPin(pin)}
+                              className="shrink-0 w-48 rounded-2xl bg-card border border-border/50 p-3.5 text-left shadow-sm snap-start"
+                            >
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <p className="text-sm font-bold leading-tight flex-1 line-clamp-2">{pin.place_name}</p>
+                                <div className={`h-5 w-5 rounded-full shrink-0 mt-0.5 ${catColor}`} />
                               </div>
-                            );
-                          })}
+                              <p className="text-[11px] text-muted-foreground">{catLabel}</p>
+                              {pin.description && (
+                                <p className="text-xs text-muted-foreground/70 mt-1.5 line-clamp-2 leading-relaxed">{pin.description}</p>
+                              )}
+                              {isMultiDay && (
+                                <p className="text-[10px] text-muted-foreground/50 mt-2">Dzień {pin.dayNumber}</p>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   );
