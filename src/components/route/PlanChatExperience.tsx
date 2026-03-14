@@ -167,7 +167,7 @@ function PlanRow({
   return (
     <div>
       {walkInfo && (
-        <div className="flex items-center gap-1 pl-4 py-1 text-[10px] text-muted-foreground/50">
+        <div className="flex items-center gap-1 pl-4 py-1 text-[10px] text-muted-foreground">
           <Footprints className="h-2.5 w-2.5 flex-shrink-0" />
           {pin.walking_time_from_prev && <span>{pin.walking_time_from_prev}</span>}
           {pin.walking_time_from_prev && pin.distance_from_prev && <span>·</span>}
@@ -191,7 +191,7 @@ function PlanRow({
                   <span className="text-[11px] text-muted-foreground tabular-nums flex-shrink-0">{pin.suggested_time}</span>
                   <span className="text-sm font-semibold leading-tight">{pin.place_name}</span>
                   {pin.duration_minutes && (
-                    <span className="text-[10px] text-muted-foreground/60 flex-shrink-0">{pin.duration_minutes}'</span>
+                    <span className="text-[10px] text-muted-foreground flex-shrink-0">{pin.duration_minutes}'</span>
                   )}
                 </div>
                 <span className="text-xl leading-none">{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>
@@ -202,13 +202,13 @@ function PlanRow({
               <div className="flex items-center gap-0.5 flex-shrink-0">
                 <button
                   onClick={onAlternatives}
-                  className="h-7 w-7 flex items-center justify-center text-muted-foreground/40 hover:text-foreground rounded transition-colors"
+                  className="h-7 w-7 flex items-center justify-center text-muted-foreground/70 hover:text-foreground rounded transition-colors"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={onRemove}
-                  className="h-7 w-7 flex items-center justify-center text-destructive/40 hover:text-destructive rounded transition-colors"
+                  className="h-7 w-7 flex items-center justify-center text-destructive/70 hover:text-destructive rounded transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -613,7 +613,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
             height: `${sheetHeight}px`,
             transition: dragH !== null ? "none" : "height 0.3s cubic-bezier(0.32, 0.72, 0, 1)",
           }}
-          className="absolute bottom-0 left-0 right-0 bg-background border-t border-border/30 rounded-t-3xl flex flex-col overflow-hidden z-10"
+          className="absolute bottom-0 left-0 right-0 bg-card border-t border-border/60 rounded-t-3xl flex flex-col overflow-hidden z-10"
         >
           {/* Drag handle */}
           <div
@@ -705,7 +705,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
                 {preparingPlan ? (
                   <PlanSkeleton numDays={1} />
                 ) : (
-                  <div className="divide-y divide-border/20">
+                  <div className="divide-y divide-border/50">
                     {(activeDay?.pins ?? []).map((pin, idx) => (
                       <PlanRow
                         key={idx}
@@ -722,7 +722,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
                 {!preparingPlan && (
                   <button
                     onClick={() => setAddPinDay(selectedDay)}
-                    className="flex items-center gap-2 py-3 text-sm text-muted-foreground/60 hover:text-foreground transition-colors"
+                    className="flex items-center gap-2 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Plus className="h-4 w-4" />
                     Dodaj miejsce
@@ -731,7 +731,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
 
                 {/* CTA — sticky at bottom of scroll area */}
                 {!preparingPlan && (
-                  <div className="sticky bottom-0 bg-background pt-2 pb-4">
+                  <div className="sticky bottom-0 bg-card pt-2 pb-4">
                     <button
                       onClick={handleConfirm}
                       className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold"
