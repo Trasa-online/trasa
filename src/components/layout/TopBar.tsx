@@ -47,8 +47,7 @@ const TopBar = () => {
         <button
           onClick={() => navigate("/create")}
           aria-label="Zaplanuj podróż"
-          className="h-8 w-8 rounded-full animate-orb-flow active:scale-90 transition-transform"
-          style={{ background: "linear-gradient(135deg, #F9662B 0%, #D45113 100%)" }}
+          className="h-8 w-8 rounded-full orb-gradient active:scale-90 transition-transform"
         />
         <button
           onClick={() => navigate("/settings")}

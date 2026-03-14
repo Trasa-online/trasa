@@ -56,6 +56,19 @@ All colors MUST be HSL.
   }
 }
 
+/* Orb flowing gradient animation */
+.orb-gradient {
+  background: linear-gradient(135deg, #F9662B, #FF8C42, #D45113, #F9662B);
+  background-size: 300% 300%;
+  animation: orb-flow 4s ease infinite;
+}
+
+@keyframes orb-flow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 @layer utilities {
   /* iOS safe area padding utilities */
   .pt-safe   { padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem); }
