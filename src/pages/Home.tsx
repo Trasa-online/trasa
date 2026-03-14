@@ -11,7 +11,7 @@ import { format } from "date-fns";
 import RoutePreviewModal from "@/components/route/RoutePreviewModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import RouteEditor from "@/components/home/RouteEditor";
+import TripDayView from "@/components/home/TripDayView";
 import HomeTour from "@/components/home/HomeTour";
 import CreatorPlanCard from "@/components/home/CreatorPlanCard";
 import CreatorPlanSheet from "@/components/home/CreatorPlanSheet";
@@ -385,17 +385,19 @@ const Home = () => {
                         .sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0))
                         .map((route: any) => (
                           <div key={route.id} className="border-t border-border/50">
-                            <RouteEditor
+                            <TripDayView
                               routeId={route.id}
-                              initialPins={(route.pins as any[]).map((p: any) => ({
+                              pins={(route.pins as any[]).map((p: any) => ({
                                 id: p.id,
                                 place_name: p.place_name,
                                 pin_order: p.pin_order,
                                 suggested_time: p.suggested_time,
+                                address: p.address,
+                                latitude: p.latitude,
+                                longitude: p.longitude,
                               }))}
                               dayLabel={trip.routes.length > 1 ? `Dzień ${route.day_number || 1}` : "Plan"}
                               dateLabel={route.start_date ? format(new Date(route.start_date), "dd.MM.yyyy") : null}
-                              canReview={true}
                               onStartReview={() => navigate(`/day-review?route=${route.id}`)}
                             />
                           </div>
