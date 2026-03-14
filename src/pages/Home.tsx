@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Trash2, Map as MapIcon, BookOpen, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import RoutePreviewModal from "@/components/route/RoutePreviewModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ const Home = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<"aktywne" | "next-up">("aktywne");
   const [previewRoute, setPreviewRoute] = useState<any>(null);
   const [deletingTrip, setDeletingTrip] = useState<any>(null);
   const [showTour, setShowTour] = useState(searchParams.get("tour") === "1");
@@ -265,6 +266,11 @@ const Home = () => {
 
   const trips = getActiveTrips();
 
+  const todayMidnight = new Date();
+  todayMidnight.setHours(0, 0, 0, 0);
+  const activeTrips = trips.filter(t => !t.startDate || new Date(t.startDate) <= todayMidnight);
+  const upcomingTrips = trips.filter(t => t.startDate && new Date(t.startDate) > todayMidnight);
+
   // Accent colors cycling per trip/journal entry
   const ACCENTS = [
     { bar: "bg-blue-500", dot: "bg-blue-400" },
@@ -322,125 +328,203 @@ const Home = () => {
           onOpenChange={open => { if (!open) setSelectedPlan(null); }}
         />
 
-        {/* Active trips */}
-        <section className="mb-8" data-tour="trips">
-          <h3 className="text-base font-bold mb-3">Aktywne plany</h3>
-          {routesLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-16 w-full rounded-2xl" />
-              <Skeleton className="h-16 w-full rounded-2xl" />
-            </div>
-          ) : trips.length > 0 ? (
-            <div className="space-y-2.5">
-              {trips.map((trip, idx) => {
-                const accent = ACCENTS[idx % ACCENTS.length];
-                const dateStr = trip.startDate
-                  ? trip.endDate && trip.endDate !== trip.startDate
-                    ? `${format(new Date(trip.startDate), "dd")}-${format(new Date(trip.endDate), "dd/MM/yy")}`
-                    : format(new Date(trip.startDate), "dd/MM/yy")
-                  : "";
-                const priorityLabels = (trip.priorities as string[])
-                  .slice(0, 3)
-                  .map(p => PRIORITY_LABEL[p] ?? p)
-                  .join(" · ");
-                return (
-                  <div key={trip.id} className="rounded-2xl bg-card border border-border/50 overflow-hidden flex">
-                    {/* Colored accent bar */}
-                    <div className={`w-1 flex-shrink-0 ${accent.bar}`} />
+        {/* Tabs */}
+        <div className="flex border-b border-border/40 mb-5" data-tour="trips">
+          {(["aktywne", "next-up"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "relative px-4 py-2.5 text-sm font-medium transition-colors",
+                activeTab === tab ? "text-foreground" : "text-muted-foreground"
+              )}
+            >
+              {tab === "aktywne" ? "Aktywne plany" : "Next up"}
+              {activeTab === tab && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-full" />
+              )}
+            </button>
+          ))}
+        </div>
 
-                    <div className="flex-1 min-w-0">
-                      {/* Trip header */}
-                      <div className="relative">
-                        <button
-                          onClick={() => handleTripClick(trip)}
-                          className="w-full text-left px-4 py-3 pr-10"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold leading-tight">{trip.city}</p>
-                              {priorityLabels && (
-                                <p className="text-xs text-muted-foreground mt-0.5 truncate">{priorityLabels}</p>
-                              )}
+        {/* Aktywne plany tab */}
+        {activeTab === "aktywne" && (
+          <section className="mb-8">
+            {routesLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-16 w-full rounded-2xl" />
+                <Skeleton className="h-16 w-full rounded-2xl" />
+              </div>
+            ) : activeTrips.length > 0 ? (
+              <div className="space-y-2.5">
+                {activeTrips.map((trip, idx) => {
+                  const accent = ACCENTS[idx % ACCENTS.length];
+                  const dateStr = trip.startDate
+                    ? trip.endDate && trip.endDate !== trip.startDate
+                      ? `${format(new Date(trip.startDate), "dd")}-${format(new Date(trip.endDate), "dd/MM/yy")}`
+                      : format(new Date(trip.startDate), "dd/MM/yy")
+                    : "";
+                  const priorityLabels = (trip.priorities as string[])
+                    .slice(0, 3)
+                    .map(p => PRIORITY_LABEL[p] ?? p)
+                    .join(" · ");
+                  return (
+                    <div key={trip.id} className="rounded-2xl bg-card border border-border/50 overflow-hidden flex">
+                      <div className={`w-1 flex-shrink-0 ${accent.bar}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="relative">
+                          <button onClick={() => handleTripClick(trip)} className="w-full text-left px-4 py-3 pr-10">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold leading-tight">{trip.city}</p>
+                                {priorityLabels && (
+                                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{priorityLabels}</p>
+                                )}
+                              </div>
+                              <div className="text-right shrink-0">
+                                {dateStr && <p className="text-xs font-medium tabular-nums">{dateStr}</p>}
+                                <p className="text-[11px] text-muted-foreground mt-0.5">Punkty na trasie: {trip.pinCount}</p>
+                              </div>
                             </div>
-                            <div className="text-right shrink-0">
-                              {dateStr && <p className="text-xs font-medium tabular-nums">{dateStr}</p>}
-                              <p className="text-[11px] text-muted-foreground mt-0.5">
-                                Punkty na trasie: {trip.pinCount}
-                              </p>
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setDeletingTrip(trip); }}
+                            className="absolute top-3 right-3 p-1 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            aria-label="Usuń podróż"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        {trip.routes
+                          .filter((r: any) => r.chat_status !== "completed" && (r.pins || []).length > 0)
+                          .sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0))
+                          .map((route: any) => (
+                            <div key={route.id} className="border-t border-border/50">
+                              <TripDayView
+                                routeId={route.id}
+                                pins={(route.pins as any[]).map((p: any) => ({
+                                  id: p.id,
+                                  place_name: p.place_name,
+                                  pin_order: p.pin_order,
+                                  suggested_time: p.suggested_time,
+                                  address: p.address,
+                                  latitude: p.latitude,
+                                  longitude: p.longitude,
+                                }))}
+                                dayLabel={trip.routes.length > 1 ? `Dzień ${route.day_number || 1}` : "Plan"}
+                                dateLabel={route.start_date ? format(new Date(route.start_date), "dd.MM.yyyy") : null}
+                                onStartReview={() => navigate(`/day-review?route=${route.id}`)}
+                              />
                             </div>
-                          </div>
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setDeletingTrip(trip); }}
-                          className="absolute top-3 right-3 p-1 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                          aria-label="Usuń podróż"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                          ))}
                       </div>
-
-                      {/* Route editors for all non-completed routes with pins */}
-                      {trip.routes
-                        .filter((r: any) => r.chat_status !== "completed" && (r.pins || []).length > 0)
-                        .sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0))
-                        .map((route: any) => (
-                          <div key={route.id} className="border-t border-border/50">
-                            <TripDayView
-                              routeId={route.id}
-                              pins={(route.pins as any[]).map((p: any) => ({
-                                id: p.id,
-                                place_name: p.place_name,
-                                pin_order: p.pin_order,
-                                suggested_time: p.suggested_time,
-                                address: p.address,
-                                latitude: p.latitude,
-                                longitude: p.longitude,
-                              }))}
-                              dayLabel={trip.routes.length > 1 ? `Dzień ${route.day_number || 1}` : "Plan"}
-                              dateLabel={route.start_date ? format(new Date(route.start_date), "dd.MM.yyyy") : null}
-                              onStartReview={() => navigate(`/day-review?route=${route.id}`)}
-                            />
-                          </div>
-                        ))}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-sm">Brak aktywnych tras. Zaplanuj swoją podróż!</p>
-          )}
-        </section>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">Brak aktywnych tras. Zaplanuj swoją podróż!</p>
+            )}
 
-        {/* Journal — 2-column grid */}
-        {journalRoutes && journalRoutes.length > 0 && (
-          <section className="mb-8" data-tour="journal">
-            <h3 className="text-base font-bold mb-3">Dziennik podróży</h3>
-            <div className="grid grid-cols-2 gap-2.5">
-              {journalRoutes.map((route: any, idx: number) => {
-                const accent = ACCENTS[idx % ACCENTS.length];
-                return (
-                  <div key={route.id} className="rounded-2xl bg-card border border-border/50 p-3.5">
-                    <div className="flex items-start justify-between mb-1.5">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold leading-tight truncate">{route.city || route.title}</p>
-                        {route.start_date && (
-                          <p className="text-[11px] text-muted-foreground mt-0.5">
-                            {format(new Date(route.start_date), "dd/MM/yy")}
+            {/* Journal — 2-column grid */}
+            {journalRoutes && journalRoutes.length > 0 && (
+              <div className="mt-8" data-tour="journal">
+                <h3 className="text-base font-bold mb-3">Dziennik podróży</h3>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {journalRoutes.map((route: any, idx: number) => {
+                    const accent = ACCENTS[idx % ACCENTS.length];
+                    return (
+                      <div key={route.id} className="rounded-2xl bg-card border border-border/50 p-3.5">
+                        <div className="flex items-start justify-between mb-1.5">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold leading-tight truncate">{route.city || route.title}</p>
+                            {route.start_date && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5">
+                                {format(new Date(route.start_date), "dd/MM/yy")}
+                              </p>
+                            )}
+                          </div>
+                          <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 mt-1 ml-2 ${accent.dot}`} />
+                        </div>
+                        {route.ai_summary && (
+                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4 mt-1">
+                            {route.ai_summary}
                           </p>
                         )}
                       </div>
-                      <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 mt-1 ml-2 ${accent.dot}`} />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Next Up tab */}
+        {activeTab === "next-up" && (
+          <section className="mb-8">
+            {routesLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-32 w-full rounded-2xl" />
+              </div>
+            ) : upcomingTrips.length > 0 ? (
+              <div className="space-y-4">
+                {upcomingTrips.map((trip, idx) => {
+                  const accent = ACCENTS[idx % ACCENTS.length];
+                  const daysUntil = differenceInDays(new Date(trip.startDate!), todayMidnight);
+                  const allPins = trip.routes
+                    .flatMap((r: any) => (r.pins || []) as any[])
+                    .sort((a: any, b: any) => (a.pin_order || 0) - (b.pin_order || 0));
+                  const visiblePins = allPins.slice(0, 6);
+                  const extra = allPins.length - visiblePins.length;
+                  return (
+                    <div key={trip.id} className="rounded-2xl bg-card border border-border/50 overflow-hidden">
+                      <div className="flex">
+                        <div className={`w-1 flex-shrink-0 ${accent.bar}`} />
+                        <div className="flex-1 min-w-0 px-4 pt-3 pb-4">
+                          <div className="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                              <p className="text-[11px] font-medium text-orange-500 mb-0.5">
+                                Za {daysUntil} {daysUntil === 1 ? "dzień" : "dni"}
+                              </p>
+                              <p className="text-sm font-bold leading-tight">{trip.city}</p>
+                            </div>
+                            <button
+                              onClick={() => setDeletingTrip(trip)}
+                              className="p-1 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors mt-0.5"
+                              aria-label="Usuń podróż"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          {/* Place chips */}
+                          <div className="flex flex-wrap gap-1.5">
+                            {visiblePins.map((pin: any) => (
+                              <span
+                                key={pin.id}
+                                className="text-[11px] bg-muted rounded-full px-2.5 py-1 text-foreground/70 leading-none"
+                              >
+                                {pin.place_name}
+                              </span>
+                            ))}
+                            {extra > 0 && (
+                              <span className="text-[11px] bg-muted rounded-full px-2.5 py-1 text-muted-foreground leading-none">
+                                +{extra} więcej
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    {route.ai_summary && (
-                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4 mt-1">
-                        {route.ai_summary}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center py-12 text-center gap-2">
+                <p className="text-sm font-medium">Brak nadchodzących podróży</p>
+                <p className="text-xs text-muted-foreground">Zaplanuj kolejną przygodę!</p>
+              </div>
+            )}
           </section>
         )}
 
