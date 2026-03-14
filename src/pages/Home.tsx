@@ -309,7 +309,7 @@ const Home = () => {
                 activeTab === tab ? "text-foreground" : "text-muted-foreground"
               )}
             >
-              {tab === "aktywne" ? "Aktywne podróże" : "Nadchodzące"}
+              {tab === "aktywne" ? "Aktywne podróże" : "Nadchodzące podróże"}
               {activeTab === tab && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-full" />
               )}
@@ -436,7 +436,7 @@ const Home = () => {
                       </div>
 
                       {/* Horizontal scrolling place cards */}
-                      <div className="flex gap-3 overflow-x-auto pb-1 -mx-5 px-5 snap-x snap-mandatory scrollbar-none">
+                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 snap-x snap-mandatory scrollbar-none">
                         {trip.routes
                           .sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0))
                           .map((route: any, rIdx: number) => {
@@ -446,29 +446,36 @@ const Home = () => {
                             return (
                               <div
                                 key={route.id}
-                                className="shrink-0 w-44 rounded-2xl bg-card border border-border/50 overflow-hidden snap-start"
+                                className="shrink-0 w-52 rounded-2xl bg-card border border-border/50 overflow-hidden snap-start shadow-sm"
                               >
-                                {/* Color block top */}
-                                <div className={`h-20 bg-gradient-to-br ${gradient} flex items-end p-2.5`}>
-                                  {dayLabel && (
-                                    <span className="text-[10px] font-semibold text-white/80 bg-black/20 rounded-full px-2 py-0.5">
+                                {/* Gradient header */}
+                                <div className={`h-24 bg-gradient-to-br ${gradient} flex items-end p-3`}>
+                                  {dayLabel ? (
+                                    <span className="text-[11px] font-semibold text-white bg-black/25 rounded-full px-2.5 py-1">
                                       {dayLabel}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[11px] font-semibold text-white bg-black/25 rounded-full px-2.5 py-1">
+                                      {trip.city}
                                     </span>
                                   )}
                                 </div>
                                 {/* Pin list — tappable */}
-                                <div className="p-2.5 space-y-1">
-                                  {pins.slice(0, 4).map((pin: any) => (
+                                <div className="px-3 py-2.5 space-y-1.5">
+                                  {pins.slice(0, 5).map((pin: any, pIdx: number) => (
                                     <button
                                       key={pin.id}
                                       onClick={() => setSelectedNextUpPin(pin)}
-                                      className="w-full text-left text-[11px] leading-tight truncate text-foreground/80 hover:text-foreground active:opacity-70 transition-colors py-0.5"
+                                      className="w-full text-left flex items-center gap-1.5 group"
                                     >
-                                      · {pin.place_name}
+                                      <span className="text-[10px] text-muted-foreground w-3.5 shrink-0 font-medium">{pIdx + 1}</span>
+                                      <span className="text-[12px] leading-tight truncate text-foreground/80 group-hover:text-foreground transition-colors">
+                                        {pin.place_name}
+                                      </span>
                                     </button>
                                   ))}
-                                  {pins.length > 4 && (
-                                    <p className="text-[10px] text-muted-foreground">+{pins.length - 4} więcej</p>
+                                  {pins.length > 5 && (
+                                    <p className="text-[10px] text-muted-foreground pl-5">+{pins.length - 5} więcej</p>
                                   )}
                                 </div>
                               </div>
