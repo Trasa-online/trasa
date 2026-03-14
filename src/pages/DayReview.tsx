@@ -34,6 +34,7 @@ const DayReview = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
+  const sendMessageRef = useRef<(text?: string) => void>(() => {});
 
   const { data: route, isLoading: routeLoading } = useQuery({
     queryKey: ["review-route", routeId],
@@ -62,6 +63,27 @@ const DayReview = () => {
     },
     enabled: !!route?.folder_id,
   });
+
+  const nextDayRouteRef = folderRoutes?.find(r => r.day_number === (route?.day_number || 1) + 1);
+
+  const { data: nextDayRoute } = useQuery({
+    queryKey: ["next-day-route", nextDayRouteRef?.id],
+    queryFn: async () => {
+      if (!nextDayRouteRef?.id) return null;
+      const { data } = await supabase
+        .from("routes")
+        .select("*, pins(*)")
+        .eq("id", nextDayRouteRef.id)
+        .single();
+      return data;
+    },
+    enabled: !!nextDayRouteRef?.id,
+  });
+
+  const nextDayPins = useMemo(() => {
+    if (!nextDayRoute?.pins) return [];
+    return [...(nextDayRoute.pins as any[])].sort((a, b) => a.pin_order - b.pin_order);
+  }, [nextDayRoute]);
 
   const totalDays = folderRoutes?.length || 1;
   const dayNumber = route?.day_number || 1;
@@ -176,8 +198,8 @@ const DayReview = () => {
   }, [route, initialSent, routeLoading, callChatRoute]);
 
   // Send a free-text answer
-  const sendMessage = useCallback(() => {
-    const text = input.trim();
+  const sendMessage = useCallback((voiceText?: string) => {
+    const text = voiceText || input.trim();
     if (!text || isDone || isLoading) return;
 
     // Stop voice recognition if still running
@@ -198,6 +220,8 @@ const DayReview = () => {
 
     callChatRoute(newMessages);
   }, [input, messages, isDone, isLoading, callChatRoute]);
+
+  sendMessageRef.current = sendMessage;
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -226,6 +250,9 @@ const DayReview = () => {
         .map((r: any) => r[0].transcript)
         .join("");
       setInput(transcript);
+      if (event.results[event.results.length - 1].isFinal) {
+        setTimeout(() => sendMessageRef.current(transcript), 300);
+      }
     };
     recognition.onend = () => setListening(false);
     recognition.onerror = () => {
@@ -287,6 +314,34 @@ const DayReview = () => {
         <div className="px-1">
           <RoutePlanTimeline days={timelineDays} totalDays={totalDays} />
         </div>
+
+        {/* Next day plan */}
+        {nextDayPins.length > 0 && (
+          <div className="mx-4 mb-3 rounded-2xl bg-card border border-border/50 overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-border/40 flex items-center justify-between">
+              <p className="text-xs font-semibold">Plan — Dzień {(route?.day_number || 1) + 1}</p>
+              <button
+                onClick={() => nextDayRouteRef && navigate(`/edit-plan?route=${nextDayRouteRef.id}`)}
+                className="text-[11px] text-primary font-medium"
+              >
+                Popraw
+              </button>
+            </div>
+            <div className="divide-y divide-border/30">
+              {nextDayPins.map((pin: any, i: number) => (
+                <div key={pin.id} className="flex items-center gap-3 px-4 py-2.5">
+                  <span className="text-xs text-muted-foreground w-4 text-center shrink-0">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-medium leading-tight truncate">{pin.place_name}</p>
+                  </div>
+                  {pin.suggested_time && (
+                    <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{pin.suggested_time}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Chat messages */}
         {messages.length > 0 && (
@@ -369,7 +424,7 @@ const DayReview = () => {
 
             <Button
               size="icon"
-              onClick={sendMessage}
+              onClick={() => sendMessage()}
               disabled={!input.trim() || isLoading}
               className="flex-shrink-0 h-10 w-10 rounded-full"
             >
