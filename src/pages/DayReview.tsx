@@ -222,11 +222,18 @@ const DayReview = () => {
       setInput(transcript);
     };
     recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
+    recognition.onerror = () => {
+      setListening(false);
+      recognitionRef.current = null;
+    };
 
-    recognition.start();
-    recognitionRef.current = recognition;
-    setListening(true);
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+      setListening(true);
+    } catch {
+      setListening(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
