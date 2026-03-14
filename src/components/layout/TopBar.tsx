@@ -43,12 +43,20 @@ const TopBar = () => {
       >
         TRASA
       </button>
-      <button
-        onClick={() => navigate("/settings")}
-        className="p-1 text-foreground/70 hover:text-foreground transition-colors"
-      >
-        <Settings className="h-5 w-5" />
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => navigate("/create")}
+          aria-label="Zaplanuj podróż"
+          className="h-8 w-8 rounded-full animate-orb-flow active:scale-90 transition-transform"
+          style={{ background: "linear-gradient(135deg, #F9662B 0%, #D45113 100%)" }}
+        />
+        <button
+          onClick={() => navigate("/settings")}
+          className="p-1 text-foreground/70 hover:text-foreground transition-colors"
+        >
+          <Settings className="h-5 w-5" />
+        </button>
+      </div>
     </header>
   );
 };
