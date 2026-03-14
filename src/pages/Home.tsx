@@ -5,13 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Trash2, Map as MapIcon, BookOpen, Sparkles, MessageSquare } from "lucide-react";
+import { Trash2, Map as MapIcon, BookOpen, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import RoutePreviewModal from "@/components/route/RoutePreviewModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import TripCheckinSection from "@/components/home/TripCheckinSection";
+import RouteEditor from "@/components/home/RouteEditor";
 import HomeTour from "@/components/home/HomeTour";
 import CreatorPlanCard from "@/components/home/CreatorPlanCard";
 import CreatorPlanSheet from "@/components/home/CreatorPlanSheet";
@@ -143,37 +143,6 @@ const Home = () => {
     });
   };
 
-  // Find today's route for a trip that needs checkin
-  const getTodayRoute = (trip: any) => {
-    if (!trip.startDate) {
-      // No date: show the first uncompleted route with pins
-      return trip.routes.find((r: any) =>
-        r.chat_status !== "completed" && (r.pins || []).length > 0
-      ) || null;
-    }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tripStart = new Date(trip.startDate);
-    tripStart.setHours(0, 0, 0, 0);
-    if (today < tripStart) return null;
-
-    const dayDiff = Math.floor((today.getTime() - tripStart.getTime()) / (1000 * 60 * 60 * 24));
-    const targetDayNumber = dayDiff + 1;
-    const route = trip.routes.find((r: any) => (r.day_number || 1) === targetDayNumber);
-    const candidate = route || trip.routes[trip.routes.length - 1];
-    if (candidate && candidate.chat_status !== "completed") {
-      return candidate;
-    }
-    return null;
-  };
-
-  // Find any uncompleted route with pins (no date gate)
-  const getPendingReviewRoute = (trip: any) => {
-    return trip.routes.find((r: any) =>
-      r.chat_status !== "completed" && (r.pins || []).length > 0
-    ) || null;
-  };
-
   const handleTripClick = (trip: any) => {
     const days = trip.routes.map((r: any) => ({
       day_number: r.day_number || 1,
@@ -216,10 +185,6 @@ const Home = () => {
       toast.error("Nie udało się usunąć podróży");
     }
     setDeletingTrip(null);
-  };
-
-  const handleCheckinComplete = (routeId: string) => {
-    navigate(`/day-review?route=${routeId}`);
   };
 
   if (authLoading) {
@@ -378,9 +343,6 @@ const Home = () => {
                   .slice(0, 3)
                   .map(p => PRIORITY_LABEL[p] ?? p)
                   .join(" · ");
-                const todayRoute = getTodayRoute(trip);
-                const pendingRoute = getPendingReviewRoute(trip);
-
                 return (
                   <div key={trip.id} className="rounded-2xl bg-card border border-border/50 overflow-hidden flex">
                     {/* Colored accent bar */}
@@ -417,34 +379,27 @@ const Home = () => {
                         </button>
                       </div>
 
-                      {todayRoute && todayRoute.pins?.length > 0 && (
-                        <div className="border-t border-border/50">
-                          <TripCheckinSection
-                            routeId={todayRoute.id}
-                            pins={(todayRoute.pins as any[]).map((p: any) => ({
-                              id: p.id,
-                              place_name: p.place_name,
-                              pin_order: p.pin_order,
-                              suggested_time: p.suggested_time,
-                            }))}
-                            onComplete={handleCheckinComplete}
-                            date={todayRoute.start_date}
-                            dayNumber={todayRoute.day_number}
-                          />
-                        </div>
-                      )}
-
-                      {!todayRoute && pendingRoute && (
-                        <div className="border-t border-border/50">
-                          <button
-                            onClick={() => navigate(`/day-review?route=${pendingRoute.id}`)}
-                            className="w-full flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors py-2.5 px-4"
-                          >
-                            <MessageSquare className="h-3.5 w-3.5" />
-                            Oceń dzień podróży
-                          </button>
-                        </div>
-                      )}
+                      {/* Route editors for all non-completed routes with pins */}
+                      {trip.routes
+                        .filter((r: any) => r.chat_status !== "completed" && (r.pins || []).length > 0)
+                        .sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0))
+                        .map((route: any) => (
+                          <div key={route.id} className="border-t border-border/50">
+                            <RouteEditor
+                              routeId={route.id}
+                              initialPins={(route.pins as any[]).map((p: any) => ({
+                                id: p.id,
+                                place_name: p.place_name,
+                                pin_order: p.pin_order,
+                                suggested_time: p.suggested_time,
+                              }))}
+                              dayLabel={trip.routes.length > 1 ? `Dzień ${route.day_number || 1}` : "Plan"}
+                              dateLabel={route.start_date ? format(new Date(route.start_date), "dd.MM.yyyy") : null}
+                              canReview={true}
+                              onStartReview={() => navigate(`/day-review?route=${route.id}`)}
+                            />
+                          </div>
+                        ))}
                     </div>
                   </div>
                 );
