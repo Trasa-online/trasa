@@ -45,16 +45,16 @@ const TopBar = () => {
       </button>
       <div className="flex items-center gap-1">
         <button
-          onClick={() => navigate("/create")}
-          aria-label="Zaplanuj podróż"
-          className="h-8 w-8 rounded-full orb-gradient active:scale-90 transition-transform"
-        />
-        <button
           onClick={() => navigate("/settings")}
           className="p-1 text-foreground/70 hover:text-foreground transition-colors"
         >
           <Settings className="h-5 w-5" />
         </button>
+        <button
+          onClick={() => navigate("/create")}
+          aria-label="Zaplanuj podróż"
+          className="h-8 w-8 rounded-full orb-gradient active:scale-90 transition-transform"
+        />
       </div>
     </header>
   );
