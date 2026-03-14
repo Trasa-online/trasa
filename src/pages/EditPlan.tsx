@@ -167,7 +167,7 @@ const EditPlan = () => {
       )}
 
       {/* Chat */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3 pb-28">
         {messages.map((msg, i) => (
           <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
             <div
@@ -209,7 +209,7 @@ const EditPlan = () => {
 
       {/* Input */}
       {!isDone && (
-        <div className="shrink-0 border-t border-border/40 bg-background px-3 pt-3 pb-safe z-10">
+        <div className="fixed bottom-0 left-0 right-0 border-t border-border/40 bg-background px-3 pt-3 z-20" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
           <div className="flex items-end gap-2 max-w-lg mx-auto">
             <div className="flex-1 relative">
               <textarea
