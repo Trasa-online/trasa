@@ -3,15 +3,20 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Send, Loader2, Check } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Check, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
+
+const hasVoiceSupport =
+  typeof window !== "undefined" &&
+  ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
 
 const EditPlan = () => {
   const { session } = useAuth();
@@ -24,9 +29,12 @@ const EditPlan = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDone, setIsDone] = useState(false);
   const [initialSent, setInitialSent] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [selectedPin, setSelectedPin] = useState<any>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   const { data: route } = useQuery({
     queryKey: ["edit-route", routeId],
@@ -91,13 +99,8 @@ const EditPlan = () => {
   useEffect(() => {
     if (route && !initialSent) {
       setInitialSent(true);
-      const pinList = ((route.pins as any[]) || [])
-        .sort((a: any, b: any) => a.pin_order - b.pin_order)
-        .map((p: any, i: number) => `${i + 1}. ${p.place_name}`)
-        .join(", ");
       const greeting = `Cześć! Chcę poprawić plan.`;
       const initial: ChatMessage[] = [{ role: "user", content: greeting }];
-      setMessages(initial);
       callEditPlan(initial);
     }
   }, [route, initialSent, callEditPlan]);
@@ -105,11 +108,21 @@ const EditPlan = () => {
   const sendMessage = useCallback(() => {
     const text = input.trim();
     if (!text || isDone || isLoading) return;
+
+    // Stop voice if still running
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+      setListening(false);
+    }
+
     const userMsg: ChatMessage = { role: "user", content: text };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
-    if (inputRef.current) inputRef.current.style.height = "auto";
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto";
+    }
     callEditPlan(newMessages);
   }, [input, messages, isDone, isLoading, callEditPlan]);
 
@@ -125,6 +138,42 @@ const EditPlan = () => {
     const el = e.target;
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  };
+
+  const toggleVoice = () => {
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const SpeechRecognition =
+      (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "pl-PL";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((r: any) => r[0].transcript)
+        .join("");
+      setInput(transcript);
+    };
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => {
+      setListening(false);
+      recognitionRef.current = null;
+    };
+
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+      setListening(true);
+    } catch {
+      setListening(false);
+    }
   };
 
   const sortedPins = route?.pins
@@ -147,20 +196,18 @@ const EditPlan = () => {
         <div className="w-8" />
       </header>
 
-      {/* Current plan — compact */}
+      {/* Plan pins — tappable */}
       {sortedPins.length > 0 && (
-        <div className="shrink-0 px-4 py-3 border-b border-border/40 bg-muted/20">
-          <p className="text-[11px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">
-            Aktualny plan
-          </p>
-          <div className="flex flex-wrap gap-1.5">
+        <div className="shrink-0 px-4 py-2 border-b border-border/40 bg-muted/20">
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
             {sortedPins.map((pin: any, i: number) => (
-              <span
+              <button
                 key={pin.id}
-                className="text-[11px] bg-background/60 border border-border/40 rounded-full px-2 py-0.5"
+                onClick={() => setSelectedPin(pin)}
+                className="text-[11px] bg-background/70 border border-border/40 rounded-full px-2.5 py-1 whitespace-nowrap hover:bg-background active:bg-background/50 transition-colors"
               >
                 {i + 1}. {pin.place_name}
-              </span>
+              </button>
             ))}
           </div>
         </div>
@@ -197,10 +244,7 @@ const EditPlan = () => {
               <Check className="h-6 w-6 text-background" />
             </div>
             <p className="text-sm text-muted-foreground text-center">Plan został zaktualizowany</p>
-            <Button
-              onClick={() => navigate("/")}
-              className="rounded-full px-6"
-            >
+            <Button onClick={() => navigate("/")} className="rounded-full px-6">
               Wróć do planu
             </Button>
           </div>
@@ -211,6 +255,20 @@ const EditPlan = () => {
       {!isDone && (
         <div className="shrink-0 border-t border-border/40 bg-background px-3 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
           <div className="flex items-end gap-2 max-w-lg mx-auto">
+            {hasVoiceSupport && (
+              <button
+                type="button"
+                onClick={toggleVoice}
+                className={cn(
+                  "flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center transition-colors",
+                  listening
+                    ? "bg-destructive text-destructive-foreground animate-pulse"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </button>
+            )}
             <div className="flex-1 relative">
               <textarea
                 ref={inputRef}
@@ -234,6 +292,14 @@ const EditPlan = () => {
             </Button>
           </div>
         </div>
+      )}
+
+      {selectedPin && (
+        <PlaceDetailSheet
+          pin={selectedPin}
+          open={!!selectedPin}
+          onOpenChange={(open) => !open && setSelectedPin(null)}
+        />
       )}
     </div>
   );

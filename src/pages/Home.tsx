@@ -3,7 +3,6 @@ import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Trash2, Map as MapIcon, BookOpen, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -94,22 +93,6 @@ const Home = () => {
     },
   });
 
-  const { data: journalRoutes } = useQuery({
-    queryKey: ["journal-routes", user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const { data } = await supabase
-        .from("routes")
-        .select("id, title, city, start_date, ai_summary, ai_highlight, ai_tip, chat_status")
-        .eq("user_id", user.id)
-        .eq("chat_status", "completed")
-        .not("ai_summary", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(5);
-      return data || [];
-    },
-    enabled: !!user,
-  });
 
 
   // Group active routes by folder for multi-day trips
@@ -292,22 +275,6 @@ const Home = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 overflow-y-auto px-5 pb-28 max-w-lg mx-auto w-full">
 
-        {/* Avatar + Name */}
-        <Link
-          to="/moj-profil"
-          className="flex flex-col items-center pt-8 pb-6 w-full"
-        >
-          <Avatar className="h-20 w-20">
-            <AvatarImage src={profile?.avatar_url || ""} />
-            <AvatarFallback className="bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 text-2xl font-bold">
-              {profile?.username?.charAt(0)?.toUpperCase() || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <h2 className="mt-3 text-xl font-bold tracking-tight">
-            {profile?.username || "Podróżnik"}
-          </h2>
-        </Link>
-
         {/* Creator Plans */}
         {creatorPlans.length > 0 && (
           <section className="mb-7 -mx-5">
@@ -427,37 +394,6 @@ const Home = () => {
               <p className="text-muted-foreground text-sm">Brak aktywnych tras. Zaplanuj swoją podróż!</p>
             )}
 
-            {/* Journal — 2-column grid */}
-            {journalRoutes && journalRoutes.length > 0 && (
-              <div className="mt-8" data-tour="journal">
-                <h3 className="text-base font-bold mb-3">Dziennik podróży</h3>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {journalRoutes.map((route: any, idx: number) => {
-                    const accent = ACCENTS[idx % ACCENTS.length];
-                    return (
-                      <div key={route.id} className="rounded-2xl bg-card border border-border/50 p-3.5">
-                        <div className="flex items-start justify-between mb-1.5">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold leading-tight truncate">{route.city || route.title}</p>
-                            {route.start_date && (
-                              <p className="text-[11px] text-muted-foreground mt-0.5">
-                                {format(new Date(route.start_date), "dd/MM/yy")}
-                              </p>
-                            )}
-                          </div>
-                          <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 mt-1 ml-2 ${accent.dot}`} />
-                        </div>
-                        {route.ai_summary && (
-                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4 mt-1">
-                            {route.ai_summary}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </section>
         )}
 
@@ -465,56 +401,73 @@ const Home = () => {
         {activeTab === "next-up" && (
           <section className="mb-8">
             {routesLoading ? (
-              <div className="space-y-3">
-                <Skeleton className="h-32 w-full rounded-2xl" />
-              </div>
+              <Skeleton className="h-48 w-full rounded-2xl" />
             ) : upcomingTrips.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {upcomingTrips.map((trip, idx) => {
-                  const accent = ACCENTS[idx % ACCENTS.length];
                   const daysUntil = differenceInDays(new Date(trip.startDate!), todayMidnight);
-                  const allPins = trip.routes
-                    .flatMap((r: any) => (r.pins || []) as any[])
-                    .sort((a: any, b: any) => (a.pin_order || 0) - (b.pin_order || 0));
-                  const visiblePins = allPins.slice(0, 6);
-                  const extra = allPins.length - visiblePins.length;
+                  const CARD_GRADIENTS = [
+                    "from-blue-400 to-blue-600",
+                    "from-violet-400 to-violet-600",
+                    "from-amber-300 to-orange-500",
+                    "from-emerald-400 to-emerald-600",
+                    "from-rose-400 to-rose-600",
+                    "from-cyan-400 to-cyan-600",
+                  ];
                   return (
-                    <div key={trip.id} className="rounded-2xl bg-card border border-border/50 overflow-hidden">
-                      <div className="flex">
-                        <div className={`w-1 flex-shrink-0 ${accent.bar}`} />
-                        <div className="flex-1 min-w-0 px-4 pt-3 pb-4">
-                          <div className="flex items-start justify-between gap-2 mb-3">
-                            <div>
-                              <p className="text-[11px] font-medium text-orange-500 mb-0.5">
-                                Za {daysUntil} {daysUntil === 1 ? "dzień" : "dni"}
-                              </p>
-                              <p className="text-sm font-bold leading-tight">{trip.city}</p>
-                            </div>
-                            <button
-                              onClick={() => setDeletingTrip(trip)}
-                              className="p-1 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors mt-0.5"
-                              aria-label="Usuń podróż"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                          {/* Place chips */}
-                          <div className="flex flex-wrap gap-1.5">
-                            {visiblePins.map((pin: any) => (
-                              <span
-                                key={pin.id}
-                                className="text-[11px] bg-muted rounded-full px-2.5 py-1 text-foreground/70 leading-none"
-                              >
-                                {pin.place_name}
-                              </span>
-                            ))}
-                            {extra > 0 && (
-                              <span className="text-[11px] bg-muted rounded-full px-2.5 py-1 text-muted-foreground leading-none">
-                                +{extra} więcej
-                              </span>
-                            )}
-                          </div>
+                    <div key={trip.id}>
+                      {/* Trip header */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <p className="text-[11px] font-medium text-orange-500">
+                            Za {daysUntil} {daysUntil === 1 ? "dzień" : "dni"}
+                          </p>
+                          <p className="text-lg font-bold leading-tight">{trip.city}</p>
                         </div>
+                        <button
+                          onClick={() => setDeletingTrip(trip)}
+                          className="p-1 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          aria-label="Usuń podróż"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Horizontal scrolling place cards */}
+                      <div className="flex gap-3 overflow-x-auto pb-1 -mx-5 px-5 snap-x snap-mandatory scrollbar-none">
+                        {trip.routes
+                          .sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0))
+                          .map((route: any, rIdx: number) => {
+                            const pins = [...(route.pins || [])].sort((a: any, b: any) => (a.pin_order || 0) - (b.pin_order || 0));
+                            const gradient = CARD_GRADIENTS[(idx + rIdx) % CARD_GRADIENTS.length];
+                            const dayLabel = trip.routes.length > 1 ? `Dzień ${route.day_number || rIdx + 1}` : null;
+                            return (
+                              <div
+                                key={route.id}
+                                className="shrink-0 w-44 rounded-2xl bg-card border border-border/50 overflow-hidden snap-start"
+                              >
+                                {/* Color block top */}
+                                <div className={`h-20 bg-gradient-to-br ${gradient} flex items-end p-2.5`}>
+                                  {dayLabel && (
+                                    <span className="text-[10px] font-semibold text-white/80 bg-black/20 rounded-full px-2 py-0.5">
+                                      {dayLabel}
+                                    </span>
+                                  )}
+                                </div>
+                                {/* Pin list */}
+                                <div className="p-2.5 space-y-1">
+                                  {pins.slice(0, 4).map((pin: any) => (
+                                    <p key={pin.id} className="text-[11px] leading-tight truncate text-foreground/80">
+                                      · {pin.place_name}
+                                    </p>
+                                  ))}
+                                  {pins.length > 4 && (
+                                    <p className="text-[10px] text-muted-foreground">+{pins.length - 4} więcej</p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                       </div>
                     </div>
                   );

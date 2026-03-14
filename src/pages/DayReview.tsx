@@ -163,15 +163,14 @@ const DayReview = () => {
     setIsLoading(false);
   }, [routeId, session?.access_token]);
 
-  // Trigger initial AI message when route loads
+  // Trigger initial AI message when route loads — AI speaks first, no user bubble
   useEffect(() => {
     if (route && !initialSent && !routeLoading) {
       setInitialSent(true);
-      // Send empty user greeting to get AI's first message
+      // Pass a hidden trigger message to the API but don't show it in the UI
       const initialMessages: ChatMessage[] = [
         { role: "user", content: "Cześć! Opowiem Ci o moim dniu." },
       ];
-      setMessages([{ role: "user", content: "Cześć! Opowiem Ci o moim dniu." }]);
       callChatRoute(initialMessages);
     }
   }, [route, initialSent, routeLoading, callChatRoute]);
@@ -180,6 +179,13 @@ const DayReview = () => {
   const sendMessage = useCallback(() => {
     const text = input.trim();
     if (!text || isDone || isLoading) return;
+
+    // Stop voice recognition if still running
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+      setListening(false);
+    }
 
     const userMsg: ChatMessage = { role: "user", content: text };
     const newMessages = [...messages, userMsg];

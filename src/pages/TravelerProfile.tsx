@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Brain, MapPin, Sparkles } from "lucide-react";
+import { Brain, MapPin, Sparkles, BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -106,6 +106,23 @@ const TravelerProfile = () => {
         metadata: any;
         created_at: string | null;
       }>;
+    },
+    enabled: !!user,
+  });
+
+  const { data: journalRoutes } = useQuery({
+    queryKey: ["journal-routes-profile", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("routes")
+        .select("id, title, city, start_date, ai_summary")
+        .eq("user_id", user.id)
+        .eq("chat_status", "completed")
+        .not("ai_summary", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      return data || [];
     },
     enabled: !!user,
   });
@@ -237,6 +254,40 @@ const TravelerProfile = () => {
             </div>
           )}
         </section>
+        {/* Journal section */}
+        {journalRoutes && journalRoutes.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold">Dziennik podróży</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              {journalRoutes.map((route: any, idx: number) => {
+                const DOTS = ["bg-blue-400", "bg-violet-400", "bg-amber-400", "bg-emerald-400", "bg-rose-400", "bg-cyan-400"];
+                return (
+                  <div key={route.id} className="rounded-2xl bg-card border border-border/40 p-3.5">
+                    <div className="flex items-start justify-between mb-1.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold leading-tight truncate">{route.city || route.title}</p>
+                        {route.start_date && (
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {format(new Date(route.start_date), "dd/MM/yy")}
+                          </p>
+                        )}
+                      </div>
+                      <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 mt-1 ml-2 ${DOTS[idx % DOTS.length]}`} />
+                    </div>
+                    {route.ai_summary && (
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4 mt-1">
+                        {route.ai_summary}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );
