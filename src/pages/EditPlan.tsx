@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
+import RouteMap from "@/components/RouteMap";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -196,20 +197,23 @@ const EditPlan = () => {
         <div className="w-8" />
       </header>
 
-      {/* Plan pins — tappable */}
+      {/* Route map */}
       {sortedPins.length > 0 && (
-        <div className="shrink-0 px-4 py-2 border-b border-border/40 bg-muted/20">
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-            {sortedPins.map((pin: any, i: number) => (
-              <button
-                key={pin.id}
-                onClick={() => setSelectedPin(pin)}
-                className="text-[11px] bg-background/70 border border-border/40 rounded-full px-2.5 py-1 whitespace-nowrap hover:bg-background active:bg-background/50 transition-colors"
-              >
-                {i + 1}. {pin.place_name}
-              </button>
-            ))}
-          </div>
+        <div className="shrink-0 border-b border-border/40">
+          <RouteMap
+            pins={sortedPins.map((p: any) => ({
+              place_name: p.place_name,
+              address: p.address,
+              latitude: p.latitude,
+              longitude: p.longitude,
+              pin_order: p.pin_order,
+            }))}
+            className="h-44 rounded-none border-0"
+            onPinClick={(pin) => {
+              const full = sortedPins.find((p: any) => p.place_name === pin.place_name);
+              if (full) setSelectedPin(full);
+            }}
+          />
         </div>
       )}
 

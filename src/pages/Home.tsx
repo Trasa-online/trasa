@@ -16,6 +16,7 @@ import HomeTour from "@/components/home/HomeTour";
 import CreatorPlanCard from "@/components/home/CreatorPlanCard";
 import CreatorPlanSheet from "@/components/home/CreatorPlanSheet";
 import type { CreatorPlan, CreatorPlaceItem } from "@/components/home/CreatorPlanCard";
+import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
 
 
 const Home = () => {
@@ -26,6 +27,7 @@ const Home = () => {
   const [activeTab, setActiveTab] = useState<"aktywne" | "next-up">("aktywne");
   const [previewRoute, setPreviewRoute] = useState<any>(null);
   const [deletingTrip, setDeletingTrip] = useState<any>(null);
+  const [selectedNextUpPin, setSelectedNextUpPin] = useState<any>(null);
   const [showTour, setShowTour] = useState(searchParams.get("tour") === "1");
   const [selectedPlan, setSelectedPlan] = useState<(CreatorPlan & { places: CreatorPlaceItem[] }) | null>(null);
 
@@ -307,7 +309,7 @@ const Home = () => {
                 activeTab === tab ? "text-foreground" : "text-muted-foreground"
               )}
             >
-              {tab === "aktywne" ? "Aktywne plany" : "Next up"}
+              {tab === "aktywne" ? "Aktywne podróże" : "Nadchodzące"}
               {activeTab === tab && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-full" />
               )}
@@ -454,12 +456,16 @@ const Home = () => {
                                     </span>
                                   )}
                                 </div>
-                                {/* Pin list */}
+                                {/* Pin list — tappable */}
                                 <div className="p-2.5 space-y-1">
                                   {pins.slice(0, 4).map((pin: any) => (
-                                    <p key={pin.id} className="text-[11px] leading-tight truncate text-foreground/80">
+                                    <button
+                                      key={pin.id}
+                                      onClick={() => setSelectedNextUpPin(pin)}
+                                      className="w-full text-left text-[11px] leading-tight truncate text-foreground/80 hover:text-foreground active:opacity-70 transition-colors py-0.5"
+                                    >
                                       · {pin.place_name}
-                                    </p>
+                                    </button>
                                   ))}
                                   {pins.length > 4 && (
                                     <p className="text-[10px] text-muted-foreground">+{pins.length - 4} więcej</p>
@@ -510,6 +516,14 @@ const Home = () => {
       )}
 
       {showTour && <HomeTour onDone={handleTourDone} />}
+
+      {selectedNextUpPin && (
+        <PlaceDetailSheet
+          pin={selectedNextUpPin}
+          open={!!selectedNextUpPin}
+          onOpenChange={(open) => !open && setSelectedNextUpPin(null)}
+        />
+      )}
 
       {/* Delete trip confirmation */}
       <AlertDialog open={!!deletingTrip} onOpenChange={(open) => !open && setDeletingTrip(null)}>

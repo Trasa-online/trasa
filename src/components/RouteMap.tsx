@@ -17,12 +17,13 @@ interface RouteMapProps {
   className?: string;
   onClick?: () => void;
   showExpandButton?: boolean;
+  onPinClick?: (pin: Pin) => void;
 }
 
 /**
  * Inner map component that uses Google Maps hooks
  */
-const MapContent = ({ validPins }: { validPins: Pin[] }) => {
+const MapContent = ({ validPins, onPinClick }: { validPins: Pin[]; onPinClick?: (pin: Pin) => void }) => {
   const map = useMap();
   const [selectedPin, setSelectedPin] = useState<number | null>(null);
 
@@ -72,7 +73,7 @@ const MapContent = ({ validPins }: { validPins: Pin[] }) => {
           <AdvancedMarker
             key={`${pin.latitude}-${pin.longitude}-${index}`}
             position={{ lat: pin.latitude, lng: pin.longitude }}
-            onClick={() => setSelectedPin(index)}
+            onClick={() => { setSelectedPin(index); onPinClick?.(pin); }}
           >
             <div style={{
               width: '28px',
@@ -122,7 +123,8 @@ const RouteMap = memo(function RouteMap({
   pins,
   className = "",
   onClick,
-  showExpandButton = false
+  showExpandButton = false,
+  onPinClick,
 }: RouteMapProps) {
   // Memoize valid pins to prevent unnecessary recalculations
   const validPins = useMemo(() =>
@@ -161,7 +163,7 @@ const RouteMap = memo(function RouteMap({
             zoomControl
             mapId="roadmap"
           >
-            <MapContent validPins={validPins} />
+            <MapContent validPins={validPins} onPinClick={onPinClick} />
           </Map>
         </APIProvider>
       </div>
