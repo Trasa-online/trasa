@@ -74,10 +74,15 @@ export default {
           "0%, 100%": { transform: "translateY(0)", boxShadow: "0 4px 14px -4px hsl(45 100% 51% / 0.4)" },
           "50%": { transform: "translateY(-3px)", boxShadow: "0 8px 20px -4px hsl(45 100% 51% / 0.5)" },
         },
+        "orb-flow": {
+          "0%, 100%": { transform: "scale(1)", boxShadow: "0 0 24px -4px rgba(212, 81, 19, 0.55)" },
+          "50%": { transform: "scale(1.05)", boxShadow: "0 0 36px -2px rgba(249, 102, 43, 0.75)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "orb-flow": "orb-flow 3.5s ease-in-out infinite",
       },
     },
   },

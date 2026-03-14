@@ -510,6 +510,14 @@ const Home = () => {
 
       </div>
 
+      {/* Orb assistant — floating right */}
+      <button
+        onClick={() => navigate("/create")}
+        aria-label="Zaplanuj podróż"
+        className="fixed bottom-24 right-5 h-14 w-14 rounded-full animate-orb-flow z-20 active:scale-95 transition-transform"
+        style={{ background: "linear-gradient(135deg, #F9662B 0%, #D45113 100%)" }}
+      />
+
       {/* CTA — warm orange */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm border-t border-border/20 px-5 pt-3 pb-safe-4" data-tour="cta">
         <div className="max-w-lg mx-auto">
