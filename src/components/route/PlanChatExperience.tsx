@@ -98,7 +98,6 @@ function buildMockPlan(numDays: number): RoutePlan {
   };
 }
 
-const INITIAL_SUGGESTIONS = ["Wygląda świetnie! ✓", "Zmień restaurację", "Za dużo chodzenia", "Dodaj nocne życie"];
 
 function parseSuggestions(message: string): { cleanMessage: string; suggestions: string[] } {
   const match = message.match(/<suggestions>([\s\S]*?)<\/suggestions>/);
@@ -281,7 +280,6 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
   const [initializing, setInitializing] = useState(true);
-  const [suggestions, setSuggestions] = useState<string[]>(INITIAL_SUGGESTIONS);
   const [preparingPlan, setPreparingPlan] = useState(false);
   const [addPinDay, setAddPinDay] = useState<number | null>(null);
   const [memoryUsed, setMemoryUsed] = useState(false);
@@ -301,6 +299,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
+  const sendMessageRef = useRef<(text?: string) => void>(() => {});
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [containerH, setContainerH] = useState(0);
 
@@ -347,8 +346,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
 
         if (!response.error) {
           const data = response.data;
-          const { cleanMessage, suggestions: newSuggestions } = parseSuggestions(data?.message ?? "");
-          if (newSuggestions.length) setSuggestions(newSuggestions);
+          const { cleanMessage } = parseSuggestions(data?.message ?? "");
           if (data?.memory_used) setMemoryUsed(true);
 
           if (data?.plan) {
@@ -364,14 +362,12 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
           toast({ title: "Błąd generowania planu", description: String(response.error), variant: "destructive" });
           setPlan(buildMockPlan(nDays));
           setMessages([{ role: "assistant", content: fallbackIntro }]);
-          setSuggestions(INITIAL_SUGGESTIONS);
         }
       } catch (err) {
         console.error("plan-route init failed:", err);
         toast({ title: "Błąd inicjalizacji", description: String(err), variant: "destructive" });
         setPlan(buildMockPlan(nDays));
         setMessages([{ role: "assistant", content: fallbackIntro }]);
-        setSuggestions(INITIAL_SUGGESTIONS);
       } finally {
         setInitializing(false);
       }
@@ -421,8 +417,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
       if (response.error) throw new Error(response.error.message);
       const data = response.data;
 
-      const { cleanMessage: parsedMsg, suggestions: newSuggestions } = parseSuggestions(data.message ?? "");
-      if (newSuggestions.length) setSuggestions(newSuggestions);
+      const { cleanMessage: parsedMsg } = parseSuggestions(data.message ?? "");
       if (data.memory_used) setMemoryUsed(true);
 
       if (parsedMsg) {
@@ -446,8 +441,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
           });
           if (!planResponse.error && planResponse.data?.plan) {
             if (planResponse.data.memory_used) setMemoryUsed(true);
-            const { cleanMessage: cm, suggestions: s } = parseSuggestions(planResponse.data.message ?? "");
-            if (s.length) setSuggestions(s);
+            const { cleanMessage: cm } = parseSuggestions(planResponse.data.message ?? "");
             if (cm) setMessages(prev => [...prev, { role: "assistant", content: cm }]);
             setPlan(planResponse.data.plan);
                 setSelectedDay(1);
@@ -470,6 +464,9 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
     }
   }, [input, messages, loading, preferences, plan]);
 
+  // Keep ref in sync so voice callbacks always call the latest sendMessage
+  sendMessageRef.current = sendMessage;
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -488,7 +485,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
     recognition.onresult = (event: any) => {
       const transcript = Array.from(event.results).map((r: any) => r[0].transcript).join("");
       setInput(transcript);
-      if (event.results[event.results.length - 1].isFinal) setTimeout(() => sendMessage(transcript), 300);
+      if (event.results[event.results.length - 1].isFinal) setTimeout(() => sendMessageRef.current(transcript), 300);
     };
     recognition.onend = () => setListening(false);
     recognition.onerror = () => setListening(false);
@@ -751,21 +748,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
 
       {/* ── Sticky input area ────────────────────────────────────────────── */}
       <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-2 pb-safe">
-        {/* Suggestion chips */}
-        {suggestions.length > 0 && !loading && (
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-2">
-            {suggestions.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => sendMessage(s)}
-                className="flex-shrink-0 text-xs px-3 py-1.5 rounded-full border border-border/60 bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="flex items-end gap-2 max-w-lg mx-auto">
+          <div className="flex items-end gap-2 max-w-lg mx-auto">
           {hasVoiceSupport && (
             <button
               type="button"
