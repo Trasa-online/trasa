@@ -470,7 +470,7 @@ const Home = () => {
                       </div>
 
                       {/* Per-pin cards horizontal scroll */}
-                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 snap-x snap-mandatory scrollbar-none">
+                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-4 snap-x snap-mandatory scrollbar-none">
                         {allPins.map((pin: any, pIdx: number) => {
                           const catColor = CATEGORY_DOT_COLORS[pin.category as string] ?? "bg-gray-400";
                           const catLabel = CATEGORY_LABEL_PL[pin.category as string] ?? "Miejsce";
