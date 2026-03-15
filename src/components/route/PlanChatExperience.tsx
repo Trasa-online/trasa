@@ -571,7 +571,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
           <div className="px-4 pt-4 space-y-4">
             {messages.map((msg, i) => {
               const bubbles = msg.role === "assistant"
-                ? msg.content.split(/\n\n+/).map(s => s.trim()).filter(Boolean)
+                ? msg.content.split(/\n\n+/).map(s => s.trim()).filter(s => s && !s.startsWith("<suggestions>"))
                 : [msg.content];
               return (
                 <div key={i} className={cn("flex flex-col gap-1", msg.role === "user" ? "items-end" : "items-start")}>
@@ -649,20 +649,20 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
           {(snap !== "peek" || dragH !== null) && plan && (
             <>
               {/* Day tabs */}
-              <div className="flex-shrink-0 flex gap-1.5 px-4 pb-2 pt-1">
+              <div className="flex-shrink-0 flex gap-2 px-4 pb-3 pt-1">
                 {plan.days.map(d => (
                   <button
                     key={d.day_number}
                     onClick={() => setSelectedDay(d.day_number)}
                     className={cn(
-                      "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                      "px-4 py-2 rounded-full text-sm font-medium transition-colors",
                       selectedDay === d.day_number
                         ? "bg-foreground text-background"
                         : "bg-muted text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {plan.days.length > 1 ? `Dzień ${d.day_number}` : "Plan dnia"}
-                    <span className="ml-1 opacity-60">· {d.pins.length}</span>
+                    <span className="ml-1.5 opacity-60">· {d.pins.length}</span>
                   </button>
                 ))}
               </div>

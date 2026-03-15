@@ -22,6 +22,8 @@ const TopBar = () => {
     enabled: !!user,
   });
 
+  if (!user) return null;
+
   return (
     <header className="sticky top-0 z-50 bg-background border-b border-border/40 px-4 pt-safe pb-3 flex items-center justify-between">
       {user ? (

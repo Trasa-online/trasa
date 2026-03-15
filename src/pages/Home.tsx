@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Trash2, Map as MapIcon, BookOpen, Sparkles } from "lucide-react";
+import { Trash2, BookOpen, Sparkles, Mic } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { format, differenceInDays } from "date-fns";
@@ -189,49 +189,53 @@ const Home = () => {
     );
   }
 
-  // ── Onboarding dla niezalogowanych ──
+  // ── Landing page dla niezalogowanych ──
   if (!user) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 max-w-sm mx-auto w-full">
-        <div className="text-center mb-8">
-          <p className="text-4xl mb-3">🗺️</p>
-          <h2 className="text-2xl font-black tracking-tight mb-2">Twój osobisty przewodnik podróży</h2>
-          <p className="text-muted-foreground text-sm max-w-[300px] mx-auto leading-relaxed">
-            Planuj trasy z pomocą AI, odhaczaj miejsca w trakcie podróży i prowadź dziennik z każdego dnia.
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 max-w-sm mx-auto w-full">
+        {/* Logo + headline */}
+        <div className="text-center mb-10">
+          <div className="h-16 w-16 rounded-full orb-gradient mx-auto mb-6" />
+          <h1 className="text-3xl font-black tracking-tight mb-3">TRASA</h1>
+          <p className="text-lg font-semibold mb-2">Twój AI asystent podróży</p>
+          <p className="text-muted-foreground text-sm max-w-[280px] mx-auto leading-relaxed">
+            Rozmawiasz — AI planuje. Podróżujesz — AI pamięta.
           </p>
         </div>
 
-        <div className="w-full space-y-3 mb-8">
-          <div className="flex items-start gap-3 rounded-xl bg-card border border-border/60 p-4">
-            <Sparkles className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
+        {/* Feature cards */}
+        <div className="w-full space-y-2.5 mb-10">
+          <div className="flex items-start gap-3 rounded-2xl bg-card border border-border/50 p-4">
+            <Sparkles className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
             <div>
-              <p className="text-sm font-semibold">Planer z AI</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Powiedz dokąd jedziesz — AI zaproponuje trasę z prawdziwymi miejscami i godzinami.</p>
+              <p className="text-sm font-semibold">Plan gotowy w minutę</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Napisz tylko miasto i dni — AI ułoży trasę z konkretnymi miejscami, godzinami i dystansami.</p>
             </div>
           </div>
-          <div className="flex items-start gap-3 rounded-xl bg-card border border-border/60 p-4">
-            <MapIcon className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
+          <div className="flex items-start gap-3 rounded-2xl bg-card border border-border/50 p-4">
+            <Mic className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
             <div>
-              <p className="text-sm font-semibold">Trasa na mapie</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Zobacz wszystkie miejsca na mapie, odhaczaj odwiedzone i dostosowuj plan w locie.</p>
+              <p className="text-sm font-semibold">Głosowy debrief po dniu</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Po powrocie do hotelu opowiedz głosowo jak minął dzień — AI zapyta, posłucha i zapisze wspomnienia.</p>
             </div>
           </div>
-          <div className="flex items-start gap-3 rounded-xl bg-card border border-border/60 p-4">
-            <BookOpen className="h-5 w-5 shrink-0 mt-0.5 text-foreground/70" />
+          <div className="flex items-start gap-3 rounded-2xl bg-card border border-border/50 p-4">
+            <BookOpen className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
             <div>
-              <p className="text-sm font-semibold">Dziennik podróży</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Po każdym dniu porozmawiaj z AI o tym, co przeżyłeś. Zapisujemy to jako Twoje wspomnienie.</p>
+              <p className="text-sm font-semibold">Pamięta Twoje preferencje</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Z każdą podróżą TRASA uczy się czego unikasz i co kochasz — kolejny plan będzie jeszcze lepszy.</p>
             </div>
           </div>
         </div>
 
+        {/* CTAs */}
         <div className="w-full space-y-2">
           <Button
             onClick={() => navigate("/auth?tab=register")}
             size="lg"
-            className="w-full rounded-full text-base font-medium"
+            className="w-full rounded-full text-base font-semibold"
           >
-            Zarejestruj się — to bezpłatne
+            Zacznij bezpłatnie
           </Button>
           <Button
             onClick={() => navigate("/auth")}
@@ -239,11 +243,11 @@ const Home = () => {
             size="lg"
             className="w-full rounded-full text-base font-medium bg-card"
           >
-            Mam już konto — zaloguj się
+            Zaloguj się
           </Button>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
+        <p className="text-center text-xs text-muted-foreground mt-8">
           <Link to="/terms" className="underline">Regulamin i Polityka Prywatności</Link>
         </p>
       </div>
