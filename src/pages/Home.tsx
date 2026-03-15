@@ -309,7 +309,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="flex-1 overflow-y-auto px-5 pb-28 max-w-lg mx-auto w-full">
+      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-28 max-w-lg mx-auto w-full">
 
         {/* Creator Plans */}
         {creatorPlans.length > 0 && (
@@ -333,7 +333,7 @@ const Home = () => {
         />
 
         {/* Tabs */}
-        <div className="flex border-b border-border/40 mb-5" data-tour="trips">
+        <div className="flex border-b border-border/40 mb-5 mt-3" data-tour="trips">
           {(["aktywne", "next-up"] as const).map((tab) => (
             <button
               key={tab}
@@ -443,13 +443,7 @@ const Home = () => {
                 {upcomingTrips.map((trip) => {
                   const daysUntil = differenceInDays(new Date(trip.startDate!), todayMidnight);
                   const isMultiDay = trip.routes.length > 1;
-                  const allPins = trip.routes
-                    .sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0))
-                    .flatMap((route: any) =>
-                      [...(route.pins || [])]
-                        .sort((a: any, b: any) => (a.pin_order || 0) - (b.pin_order || 0))
-                        .map((p: any) => ({ ...p, dayNumber: route.day_number || 1 }))
-                    );
+                  const sortedRoutes = [...trip.routes].sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0));
                   return (
                     <div key={trip.id}>
                       {/* Trip header */}
@@ -469,29 +463,41 @@ const Home = () => {
                         </button>
                       </div>
 
-                      {/* Per-pin cards horizontal scroll */}
-                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-4 snap-x snap-mandatory scrollbar-none">
-                        {allPins.map((pin: any, pIdx: number) => {
-                          const catColor = CATEGORY_DOT_COLORS[pin.category as string] ?? "bg-gray-400";
-                          const catLabel = CATEGORY_LABEL_PL[pin.category as string] ?? "Miejsce";
+                      {/* Per-day sections */}
+                      <div className="space-y-4">
+                        {sortedRoutes.map((route: any) => {
+                          const dayPins = [...(route.pins || [])].sort((a: any, b: any) => (a.pin_order || 0) - (b.pin_order || 0));
+                          if (dayPins.length === 0) return null;
                           return (
-                            <button
-                              key={pIdx}
-                              onClick={() => setSelectedNextUpPin(pin)}
-                              className="shrink-0 w-48 rounded-2xl bg-card border border-border/50 p-3.5 text-left shadow-sm snap-start"
-                            >
-                              <div className="flex items-start justify-between gap-2 mb-1">
-                                <p className="text-sm font-bold leading-tight flex-1 line-clamp-2">{pin.place_name}</p>
-                                <div className={`h-5 w-5 rounded-full shrink-0 mt-0.5 ${catColor}`} />
-                              </div>
-                              <p className="text-[11px] text-muted-foreground">{catLabel}</p>
-                              {pin.description && (
-                                <p className="text-xs text-muted-foreground/70 mt-1.5 line-clamp-2 leading-relaxed">{pin.description}</p>
-                              )}
+                            <div key={route.id}>
                               {isMultiDay && (
-                                <p className="text-[10px] text-muted-foreground/50 mt-2">Dzień {pin.dayNumber}</p>
+                                <p className="text-xs font-semibold text-muted-foreground mb-2 px-0.5">
+                                  Dzień {route.day_number || 1}
+                                </p>
                               )}
-                            </button>
+                              <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-4 snap-x snap-mandatory scrollbar-orange">
+                                {dayPins.map((pin: any, pIdx: number) => {
+                                  const catColor = CATEGORY_DOT_COLORS[pin.category as string] ?? "bg-gray-400";
+                                  const catLabel = CATEGORY_LABEL_PL[pin.category as string] ?? "Miejsce";
+                                  return (
+                                    <button
+                                      key={pIdx}
+                                      onClick={() => setSelectedNextUpPin(pin)}
+                                      className="shrink-0 w-48 rounded-2xl bg-card border border-border/50 p-3.5 text-left shadow-sm snap-start"
+                                    >
+                                      <div className="flex items-start justify-between gap-2 mb-1">
+                                        <p className="text-sm font-bold leading-tight flex-1 line-clamp-2">{pin.place_name}</p>
+                                        <div className={`h-5 w-5 rounded-full shrink-0 mt-0.5 ${catColor}`} />
+                                      </div>
+                                      <p className="text-[11px] text-muted-foreground">{catLabel}</p>
+                                      {pin.description && (
+                                        <p className="text-xs text-muted-foreground/70 mt-1.5 line-clamp-2 leading-relaxed">{pin.description}</p>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
                           );
                         })}
                       </div>

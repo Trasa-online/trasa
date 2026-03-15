@@ -69,6 +69,22 @@ All colors MUST be HSL.
   100% { background-position: 0% 50%; }
 }
 
+/* Orange scrollbar for horizontal pin sliders */
+.scrollbar-orange {
+  scrollbar-width: thin;
+  scrollbar-color: #F9662B transparent;
+}
+.scrollbar-orange::-webkit-scrollbar {
+  height: 3px;
+}
+.scrollbar-orange::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-orange::-webkit-scrollbar-thumb {
+  background: #F9662B;
+  border-radius: 9999px;
+}
+
 @layer utilities {
   /* iOS safe area padding utilities */
   .pt-safe   { padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem); }
