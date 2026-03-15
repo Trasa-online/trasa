@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,7 +12,6 @@ import RoutePreviewModal from "@/components/route/RoutePreviewModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import TripDayView from "@/components/home/TripDayView";
-import HomeTour from "@/components/home/HomeTour";
 import CreatorPlanCard from "@/components/home/CreatorPlanCard";
 import CreatorPlanSheet from "@/components/home/CreatorPlanSheet";
 import type { CreatorPlan, CreatorPlaceItem } from "@/components/home/CreatorPlanCard";
@@ -22,19 +21,12 @@ import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
 const Home = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"aktywne" | "next-up">("aktywne");
   const [previewRoute, setPreviewRoute] = useState<any>(null);
   const [deletingTrip, setDeletingTrip] = useState<any>(null);
   const [selectedNextUpPin, setSelectedNextUpPin] = useState<any>(null);
-  const [showTour, setShowTour] = useState(searchParams.get("tour") === "1");
   const [selectedPlan, setSelectedPlan] = useState<(CreatorPlan & { places: CreatorPlaceItem[] }) | null>(null);
-
-  const handleTourDone = () => {
-    setShowTour(false);
-    setSearchParams({}, { replace: true });
-  };
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -545,7 +537,6 @@ const Home = () => {
         />
       )}
 
-      {showTour && <HomeTour onDone={handleTourDone} />}
 
       {selectedNextUpPin && (
         <PlaceDetailSheet

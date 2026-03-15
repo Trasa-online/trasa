@@ -293,7 +293,7 @@ const Onboarding = () => {
     } catch (err) {
       console.error("Failed to save preferences:", err);
     }
-    navigate(skip ? "/" : "/?tour=1");
+    navigate("/");
   };
 
   // ── Intro screens (steps 0–2) ─────────────────────────────────────────────
