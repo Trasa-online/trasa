@@ -69,6 +69,31 @@ All colors MUST be HSL.
   100% { background-position: 0% 50%; }
 }
 
+/* Orb pulse when speaking */
+@keyframes orb-speak {
+  0%, 100% { transform: scale(1); }
+  40%       { transform: scale(1.07); }
+  70%       { transform: scale(1.11); }
+}
+
+.orb-speaking {
+  animation: orb-flow 4s ease infinite, orb-speak 0.9s ease-in-out infinite;
+}
+
+/* Ripple rings emanating from orb */
+@keyframes orb-ripple {
+  0%   { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+.orb-ripple {
+  animation: orb-ripple 1.8s ease-out infinite;
+}
+
+.orb-ripple-delay {
+  animation: orb-ripple 1.8s ease-out 0.6s infinite;
+}
+
 /* Orange scrollbar for horizontal pin sliders */
 .scrollbar-orange {
   scrollbar-width: thin;

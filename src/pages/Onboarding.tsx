@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +37,59 @@ const TRAVEL_STYLE = [
   { id: "budget", label: "Budżetowo" },
   { id: "luxury", label: "Luksusowo" },
 ];
+
+const INTRO_STEPS = [
+  {
+    title: "Cześć!",
+    subtitle: "Jestem Trasa — Twój osobisty asystent odkrywania Krakowa.",
+    speech: "Cześć! Jestem Trasa — Twój osobisty asystent odkrywania Krakowa.",
+  },
+  {
+    title: "Rozmawiasz — AI planuje",
+    subtitle: "Powiedz mi co chcesz zobaczyć. W kilka sekund ułożę plan dopasowany dokładnie do Ciebie.",
+    speech: "Rozmawiasz naturalnie, a ja planuję idealny dzień dla Ciebie.",
+  },
+  {
+    title: "Uczę się Twoich gustów",
+    subtitle: "Po każdej podróży poznaję Cię lepiej. Rekomendacje stają się coraz celniejsze.",
+    speech: "Po każdej podróży uczę się Twoich gustów i polecam coraz trafniej.",
+  },
+];
+
+const PREFS_SPEECH =
+  "Zanim zaczniemy — opowiedz mi trochę o sobie, a dopasujemy plan podróży specjalnie dla Ciebie!";
+
+// Orb with ripple rings when speaking; tap to re-speak
+const Orb = ({
+  isSpeaking,
+  className,
+  onTap,
+}: {
+  isSpeaking: boolean;
+  className?: string;
+  onTap?: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onTap}
+    className={cn("relative focus:outline-none", className)}
+    aria-label="Powtórz"
+  >
+    {isSpeaking && (
+      <>
+        <div
+          className="absolute inset-0 rounded-full orb-ripple"
+          style={{ background: "linear-gradient(135deg, #F9662B, #FF8C42, #D45113)", opacity: 0.3 }}
+        />
+        <div
+          className="absolute inset-0 rounded-full orb-ripple-delay"
+          style={{ background: "linear-gradient(135deg, #F9662B, #FF8C42, #D45113)", opacity: 0.15 }}
+        />
+      </>
+    )}
+    <div className={cn("w-full h-full rounded-full orb-gradient", isSpeaking && "orb-speaking")} />
+  </button>
+);
 
 const Chip = ({
   label,
@@ -143,6 +196,8 @@ const Section = ({
 const Onboarding = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [step, setStep] = useState(0);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [foodSelected, setFoodSelected] = useState<Set<string>>(new Set());
   const [interestsSelected, setInterestsSelected] = useState<Set<string>>(new Set());
   const [styleSelected, setStyleSelected] = useState<Set<string>>(new Set());
@@ -150,6 +205,33 @@ const Onboarding = () => {
   const [interestsCustom, setInterestsCustom] = useState<string[]>([]);
   const [styleCustom, setStyleCustom] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+
+  const speak = useCallback((text: string) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "pl-PL";
+    utterance.rate = 0.9;
+    utterance.pitch = 1.05;
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
+  const currentSpeech = step < INTRO_STEPS.length ? INTRO_STEPS[step].speech : PREFS_SPEECH;
+
+  // Best-effort auto-speak on desktop (iOS requires user gesture, handled in click handlers)
+  useEffect(() => {
+    const timer = setTimeout(() => speak(currentSpeech), 600);
+    return () => {
+      clearTimeout(timer);
+      window.speechSynthesis.cancel();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cancel on unmount
+  useEffect(() => () => { window.speechSynthesis.cancel(); }, []);
 
   const toggle = (setFn: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) => {
     setFn(prev => {
@@ -162,6 +244,7 @@ const Onboarding = () => {
 
   const handleSave = async (skip = false) => {
     setSaving(true);
+    window.speechSynthesis.cancel();
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate("/"); return; }
@@ -177,8 +260,6 @@ const Onboarding = () => {
         onboarding_completed: true,
       }).eq("id", user.id);
 
-      // Update React Query cache immediately so Home doesn't see stale
-      // onboarding_completed=false and redirect back here
       queryClient.setQueryData(["profile", user.id], (old: any) =>
         old ? { ...old, onboarding_completed: true } : old
       );
@@ -188,12 +269,74 @@ const Onboarding = () => {
     navigate(skip ? "/" : "/?tour=1");
   };
 
+  // ── Intro screens (steps 0–2) ─────────────────────────────────────────────
+  if (step < INTRO_STEPS.length) {
+    const screen = INTRO_STEPS[step];
+    const nextStep = step + 1;
+    const nextSpeech = nextStep < INTRO_STEPS.length ? INTRO_STEPS[nextStep].speech : PREFS_SPEECH;
+
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <div className="flex-1 flex flex-col items-center justify-center px-8 gap-12">
+          <Orb
+            isSpeaking={isSpeaking}
+            className="h-32 w-32"
+            onTap={() => speak(screen.speech)}
+          />
+          <div className="text-center">
+            <h1 className="text-3xl font-black tracking-tight mb-3">{screen.title}</h1>
+            <p className="text-muted-foreground text-base leading-relaxed max-w-xs mx-auto">
+              {screen.subtitle}
+            </p>
+          </div>
+        </div>
+
+        <div className="px-6 pb-safe-4 pt-4 flex flex-col items-center gap-5">
+          {/* Step dots */}
+          <div className="flex gap-2">
+            {INTRO_STEPS.map((_, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "h-2 rounded-full transition-all duration-300",
+                  i === step ? "w-6 bg-foreground" : "w-2 bg-muted-foreground/30"
+                )}
+              />
+            ))}
+          </div>
+
+          <Button
+            onClick={() => { setStep(nextStep); speak(nextSpeech); }}
+            className="w-full rounded-full font-semibold"
+          >
+            {step === INTRO_STEPS.length - 1 ? "Zacznijmy!" : "Dalej"}
+          </Button>
+
+          {step === 0 && (
+            <button
+              type="button"
+              onClick={() => { setStep(INTRO_STEPS.length); speak(PREFS_SPEECH); }}
+              className="text-sm text-muted-foreground py-1"
+            >
+              Pomiń
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Preferences screen ────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <div className="flex-1 overflow-y-auto px-5 pt-10 pb-32">
-        <h1 className="text-3xl font-black tracking-tight mb-1">Cześć!</h1>
+      <div className="flex justify-center pt-10 pb-2">
+        <Orb isSpeaking={isSpeaking} className="h-24 w-24" onTap={() => speak(PREFS_SPEECH)} />
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 pt-5 pb-32">
+        <h1 className="text-2xl font-black tracking-tight mb-1">Opowiedz o sobie</h1>
         <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
-          Opowiedz nam o sobie — AI dopasuje plan do Twoich upodobań.
+          Dopasujemy plan podróży do Twoich upodobań.
         </p>
 
         <Section
@@ -227,7 +370,6 @@ const Onboarding = () => {
         />
       </div>
 
-      {/* Sticky bottom CTA */}
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-5 pt-4 pb-safe-4 flex flex-col gap-2">
         <Button
           onClick={() => handleSave(false)}
