@@ -94,6 +94,23 @@ All colors MUST be HSL.
   animation: orb-ripple 1.8s ease-out 0.6s infinite;
 }
 
+/* Orb flying from top-right (TopBar position) to center */
+@keyframes orb-emerge {
+  0% {
+    transform: translate(calc(50vw - 38px), calc(-50vh + 48px)) scale(0.34);
+  }
+  70% {
+    transform: translate(0, 0) scale(1.05);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+.orb-emerge {
+  animation: orb-emerge 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
 /* Orange scrollbar for horizontal pin sliders */
 .scrollbar-orange {
   scrollbar-width: thin;

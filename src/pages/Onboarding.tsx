@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Plus } from "lucide-react";
+import { Plus, Mic, MicOff } from "lucide-react";
 
 const FOOD_PREFS = [
   { id: "vege", label: "Wegetarianin" },
@@ -59,7 +59,6 @@ const INTRO_STEPS = [
 const PREFS_SPEECH =
   "Zanim zaczniemy — opowiedz mi trochę o sobie, a dopasujemy plan podróży specjalnie dla Ciebie!";
 
-// Orb with ripple rings when speaking; tap to re-speak
 const Orb = ({
   isSpeaking,
   className,
@@ -198,6 +197,9 @@ const Onboarding = () => {
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [freeText, setFreeText] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const recogRef = useRef<any>(null);
   const [foodSelected, setFoodSelected] = useState<Set<string>>(new Set());
   const [interestsSelected, setInterestsSelected] = useState<Set<string>>(new Set());
   const [styleSelected, setStyleSelected] = useState<Set<string>>(new Set());
@@ -230,8 +232,31 @@ const Onboarding = () => {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cancel on unmount
   useEffect(() => () => { window.speechSynthesis.cancel(); }, []);
+
+  const handleToggleVoice = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
+
+    if (isListening) {
+      recogRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recog = new SR();
+    recog.lang = "pl-PL";
+    recog.continuous = false;
+    recog.interimResults = false;
+    recog.onresult = (e: any) => {
+      setFreeText(e.results[0][0].transcript);
+    };
+    recog.onend = () => setIsListening(false);
+    recog.onerror = () => setIsListening(false);
+    recog.start();
+    recogRef.current = recog;
+    setIsListening(true);
+  };
 
   const toggle = (setFn: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) => {
     setFn(prev => {
@@ -245,6 +270,7 @@ const Onboarding = () => {
   const handleSave = async (skip = false) => {
     setSaving(true);
     window.speechSynthesis.cancel();
+    recogRef.current?.stop();
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate("/"); return; }
@@ -256,6 +282,7 @@ const Onboarding = () => {
           ...interestsCustom,
           ...Array.from(styleSelected),
           ...styleCustom,
+          ...(freeText.trim() ? [freeText.trim()] : []),
         ],
         onboarding_completed: true,
       }).eq("id", user.id);
@@ -291,20 +318,7 @@ const Onboarding = () => {
           </div>
         </div>
 
-        <div className="px-6 pb-safe-4 pt-4 flex flex-col items-center gap-5">
-          {/* Step dots */}
-          <div className="flex gap-2">
-            {INTRO_STEPS.map((_, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "h-2 rounded-full transition-all duration-300",
-                  i === step ? "w-6 bg-foreground" : "w-2 bg-muted-foreground/30"
-                )}
-              />
-            ))}
-          </div>
-
+        <div className="px-6 pb-safe-4 pt-4 flex flex-col items-center gap-4">
           <Button
             onClick={() => { setStep(nextStep); speak(nextSpeech); }}
             className="w-full rounded-full font-semibold"
@@ -327,6 +341,10 @@ const Onboarding = () => {
   }
 
   // ── Preferences screen ────────────────────────────────────────────────────
+  const hasSR = !!(
+    (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+  );
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <div className="flex justify-center pt-10 pb-2">
@@ -335,9 +353,39 @@ const Onboarding = () => {
 
       <div className="flex-1 overflow-y-auto px-5 pt-5 pb-32">
         <h1 className="text-2xl font-black tracking-tight mb-1">Opowiedz o sobie</h1>
-        <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
+        <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
           Dopasujemy plan podróży do Twoich upodobań.
         </p>
+
+        {/* Free text / voice input */}
+        <div className="mb-7">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+            Opisz siebie własnymi słowami
+          </p>
+          <div className="relative">
+            <textarea
+              value={freeText}
+              onChange={(e) => setFreeText(e.target.value)}
+              placeholder="Np. lubię sztukę i dobrą kawę, podróżuję spokojnie i z aparatem..."
+              className="w-full rounded-xl border border-border bg-card px-3 py-2.5 pr-12 text-sm resize-none h-20 focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            {hasSR && (
+              <button
+                type="button"
+                onClick={handleToggleVoice}
+                className={cn(
+                  "absolute right-2.5 bottom-2.5 h-8 w-8 rounded-full flex items-center justify-center transition-colors",
+                  isListening
+                    ? "bg-orange-500 text-white"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                )}
+              >
+                {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">Lub wybierz tagi poniżej:</p>
+        </div>
 
         <Section
           title="Jedzenie i napoje"

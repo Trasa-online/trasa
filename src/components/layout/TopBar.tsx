@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const TopBar = () => {
+const TopBar = ({ onOrbClick }: { onOrbClick?: () => void }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -45,7 +45,7 @@ const TopBar = () => {
         TRASA
       </button>
       <button
-        onClick={() => navigate("/create")}
+        onClick={() => onOrbClick ? onOrbClick() : navigate("/create")}
         aria-label="Zaplanuj podróż"
         className="h-11 w-11 rounded-full orb-gradient active:scale-90 transition-transform"
       />
