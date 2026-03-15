@@ -561,7 +561,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     const finishInstruction = forceFinish
       ? "\n\nUWAGA: Osiągnięto limit wiadomości. Wygeneruj TERAZ plan w bloku <route_plan>...</route_plan>. Nie zadawaj więcej pytań."
       : force_plan
-      ? "\n\nWYGENERUJ TERAZ PLAN w bloku <route_plan>...</route_plan>. Napisz 1 krótkie zdanie komentarza i natychmiast wygeneruj plan zgodnie ze wszystkimi heurystykami H1–H13."
+      ? "\n\nWYGENERUJ TERAZ PLAN w bloku <route_plan>...</route_plan>. Napisz 1 krótkie zdanie komentarza i natychmiast wygeneruj plan zgodnie ze wszystkimi heurystykami H1–H13. WAŻNE: Dobierz miejsca ściśle pod PROFIL UŻYTKOWNIKA i jego priorytety — każdy plan powinien być inny, unikaj powtarzania tych samych zestawów atrakcji."
       : "";
 
     const aiMessages = [
@@ -578,7 +578,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: aiMessages,
-        max_tokens: force_plan ? 3000 : 6000,
+        max_tokens: 8000,
         temperature: 0.7,
       }),
     });
