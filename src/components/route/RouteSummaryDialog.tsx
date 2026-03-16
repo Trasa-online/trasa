@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { format, addDays } from "date-fns";
 import type { PlanPin } from "./DayPinList";
-import PlaceSwiper from "./PlaceSwiper";
+import RoutePlanTimeline from "./RoutePlanTimeline";
 import RouteMap from "@/components/RouteMap";
 
 interface RoutePlan {
@@ -63,14 +63,14 @@ const RouteSummaryDialog = ({
       : `Twoja trasa ${format(startDate, "dd.MM.yyyy")}`
     : `Twoja trasa — ${plan.city}`;
 
-  const saveRoute = useCallback(async (daysToSave: RoutePlan["days"]) => {
+  const saveRoute = useCallback(async () => {
     if (!user || saving) return;
     setSaving(true);
 
     try {
       let folderId: string | null = null;
 
-      if (daysToSave.length > 1) {
+      if (plan.days.length > 1) {
         const { data: folder, error: folderError } = await supabase
           .from("route_folders")
           .insert({
@@ -86,7 +86,7 @@ const RouteSummaryDialog = ({
         folderId = folder.id;
       }
 
-      for (const day of daysToSave) {
+      for (const day of plan.days) {
         const dayDate = startDate
           ? format(addDays(startDate, day.day_number - 1), "yyyy-MM-dd")
           : null;
@@ -95,7 +95,7 @@ const RouteSummaryDialog = ({
           .from("routes")
           .insert({
             user_id: user.id,
-            title: daysToSave.length > 1
+            title: plan.days.length > 1
               ? `${plan.city} — Dzień ${day.day_number}`
               : `${plan.city}`,
             city: plan.city,
@@ -105,7 +105,7 @@ const RouteSummaryDialog = ({
             folder_order: day.day_number - 1,
             day_number: day.day_number,
             start_date: dayDate,
-            end_date: daysToSave.length === 1 && endDate ? format(endDate, "yyyy-MM-dd") : dayDate,
+            end_date: plan.days.length === 1 && endDate ? format(endDate, "yyyy-MM-dd") : dayDate,
             pace: preferences.pace,
             priorities: preferences.priorities,
           })
@@ -197,19 +197,33 @@ const RouteSummaryDialog = ({
           ) : null;
         })()}
 
-        {/* Swiper */}
-        {saving ? (
-          <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span className="text-sm">Zapisuję trasę...</span>
-          </div>
-        ) : (
-          <PlaceSwiper
-            days={plan.days}
-            totalDays={plan.days.length}
-            onFinish={(keptDays) => saveRoute(keptDays)}
-          />
-        )}
+        {/* Timeline */}
+        <RoutePlanTimeline days={plan.days} totalDays={plan.days.length} />
+
+        {/* Action buttons */}
+        <div className="flex flex-col gap-2 px-5 pb-6 pt-2">
+          <button
+            onClick={saveRoute}
+            disabled={saving}
+            className="w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Zapisuję...
+              </>
+            ) : (
+              "Zapisz trasę"
+            )}
+          </button>
+          <button
+            onClick={handleGoBack}
+            disabled={saving}
+            className="w-full py-3 rounded-xl border border-border text-sm font-medium text-foreground bg-card disabled:opacity-50"
+          >
+            Cofnij do edycji
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   );
