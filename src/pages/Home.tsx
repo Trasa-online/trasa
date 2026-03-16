@@ -68,6 +68,24 @@ const Home = () => {
     enabled: !!user,
   });
 
+  // Auto-activate trips whose start_date has arrived (trip_type: planning → ongoing)
+  useEffect(() => {
+    if (!activeRoutes || !user) return;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const toActivate = (activeRoutes as any[]).filter(
+      r => r.trip_type === "planning" && r.start_date && r.start_date <= todayStr
+    );
+    if (toActivate.length === 0) return;
+    supabase
+      .from("routes")
+      .update({ trip_type: "ongoing" })
+      .in("id", toActivate.map(r => r.id))
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ["active-routes"] });
+        queryClient.invalidateQueries({ queryKey: ["active-routes-orb"] });
+      });
+  }, [activeRoutes, user, queryClient]);
+
   const { data: creatorPlans = [] } = useQuery({
     queryKey: ["creator-plans"],
     queryFn: async () => {
@@ -253,8 +271,9 @@ const Home = () => {
 
   const todayMidnight = new Date();
   todayMidnight.setHours(0, 0, 0, 0);
-  const activeTrips = trips.filter(tr => !tr.startDate || new Date(tr.startDate) <= todayMidnight);
-  const upcomingTrips = trips.filter(tr => tr.startDate && new Date(tr.startDate) > todayMidnight);
+  // Use differenceInDays to avoid UTC/local-timezone mismatch: daysUntil===0 → active today
+  const activeTrips = trips.filter(tr => !tr.startDate || differenceInDays(new Date(tr.startDate), todayMidnight) <= 0);
+  const upcomingTrips = trips.filter(tr => tr.startDate && differenceInDays(new Date(tr.startDate), todayMidnight) > 0);
 
   // Accent colors cycling per trip/journal entry
   const ACCENTS = [
