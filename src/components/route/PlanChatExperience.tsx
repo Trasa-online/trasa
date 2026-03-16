@@ -46,6 +46,7 @@ interface PlanChatExperienceProps {
   preferences: TripPreferences;
   onPlanReady: (plan: RoutePlan, messages: TextMessage[]) => void;
   likedPlaces?: string[];
+  initialUserMessage?: string;
 }
 
 type SnapState = "peek" | "half" | "full";
@@ -272,7 +273,7 @@ const hasVoiceSupport =
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatExperienceProps) => {
+const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUserMessage }: PlanChatExperienceProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
@@ -335,10 +336,11 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
       const isSubsequentDay = (preferences.dayNumber ?? 1) > 1;
 
       try {
+        const initMsg = initialUserMessage ?? "Generuj plan";
         const response = await supabase.functions.invoke("plan-route", {
           body: {
             preferences,
-            messages: isSubsequentDay ? [] : [{ role: "user", content: "Generuj plan" }],
+            messages: isSubsequentDay ? [] : [{ role: "user", content: initMsg }],
             force_plan: isSubsequentDay ? false : true,
             liked_places: likedPlaces,
           },
@@ -349,12 +351,18 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces }: PlanChatE
           const { cleanMessage } = parseSuggestions(data?.message ?? "");
           if (data?.memory_used) setMemoryUsed(true);
 
+          // If user came via orb overlay, show their message first in the chat
+          const userMsgEntry: TextMessage[] =
+            initialUserMessage && !isSubsequentDay
+              ? [{ role: "user", content: initialUserMessage }]
+              : [];
+
           if (data?.plan) {
             setPlan(data.plan);
-            setMessages([{ role: "assistant", content: cleanMessage || fallbackIntro }]);
+            setMessages([...userMsgEntry, { role: "assistant", content: cleanMessage || fallbackIntro }]);
           } else {
             // Day 2+: only greeting returned, no plan yet — show greeting + skeleton
-            setMessages([{ role: "assistant", content: cleanMessage || fallbackIntro }]);
+            setMessages([...userMsgEntry, { role: "assistant", content: cleanMessage || fallbackIntro }]);
             setPlan(buildMockPlan(nDays)); // placeholder until user confirms
           }
         } else {

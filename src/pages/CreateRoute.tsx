@@ -56,7 +56,8 @@ const CreateRoute = () => {
   const folderId = searchParams.get("trip") ?? undefined;
   const dayNumber = searchParams.get("day") ? parseInt(searchParams.get("day")!) : undefined;
   const creatorPlanId = searchParams.get("creatorPlan") ?? undefined;
-  const [step, setStep] = useState(creatorPlanId ? 2 : 1);
+  const initialUserMessage = searchParams.get("q") ?? undefined;
+  const [step, setStep] = useState(creatorPlanId || initialUserMessage ? 2 : 1);
   const [likedPlaces, setLikedPlaces] = useState<string[]>([]);
   const [mustVisitPlaces, setMustVisitPlaces] = useState<{ name: string; emoji: string }[]>([]);
 
@@ -406,6 +407,7 @@ const CreateRoute = () => {
           preferences={preferences}
           onPlanReady={handlePlanReady}
           likedPlaces={[...likedPlaces, ...mustVisitPlaces.map(p => p.name)]}
+          initialUserMessage={initialUserMessage}
         />
       </div>
 
