@@ -201,11 +201,9 @@ export type Database = {
           id: string
           instagram_reel_url: string | null
           is_active: boolean
-          order_index: number | null
           photo_url: string | null
           place_name: string
           plan_id: string | null
-          suggested_time: string | null
         }
         Insert: {
           category?: string | null
@@ -217,11 +215,9 @@ export type Database = {
           id?: string
           instagram_reel_url?: string | null
           is_active?: boolean
-          order_index?: number | null
           photo_url?: string | null
           place_name: string
           plan_id?: string | null
-          suggested_time?: string | null
         }
         Update: {
           category?: string | null
@@ -233,11 +229,9 @@ export type Database = {
           id?: string
           instagram_reel_url?: string | null
           is_active?: boolean
-          order_index?: number | null
           photo_url?: string | null
           place_name?: string
           plan_id?: string | null
-          suggested_time?: string | null
         }
         Relationships: [
           {
@@ -253,15 +247,9 @@ export type Database = {
         Row: {
           city: string
           created_at: string
-          creator_avatar_url: string | null
           creator_handle: string
-          creator_social_platform: string | null
-          creator_social_url: string | null
-          description: string | null
           id: string
           is_active: boolean
-          num_days: number | null
-          tags: string[] | null
           thumbnail_url: string | null
           title: string
           video_url: string | null
@@ -269,15 +257,9 @@ export type Database = {
         Insert: {
           city?: string
           created_at?: string
-          creator_avatar_url?: string | null
           creator_handle: string
-          creator_social_platform?: string | null
-          creator_social_url?: string | null
-          description?: string | null
           id?: string
           is_active?: boolean
-          num_days?: number | null
-          tags?: string[] | null
           thumbnail_url?: string | null
           title: string
           video_url?: string | null
@@ -285,15 +267,9 @@ export type Database = {
         Update: {
           city?: string
           created_at?: string
-          creator_avatar_url?: string | null
           creator_handle?: string
-          creator_social_platform?: string | null
-          creator_social_url?: string | null
-          description?: string | null
           id?: string
           is_active?: boolean
-          num_days?: number | null
-          tags?: string[] | null
           thumbnail_url?: string | null
           title?: string
           video_url?: string | null
