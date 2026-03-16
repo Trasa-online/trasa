@@ -17,7 +17,9 @@
     "add": "Add",
     "edit": "Edit",
     "confirm": "Confirm",
-    "back": "Back"
+    "back": "Back",
+    "start_recording": "Record voice",
+    "stop_recording": "Stop recording"
   },
   "errors": {
     "generic": "Something went wrong"

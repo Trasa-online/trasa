@@ -19,8 +19,25 @@ const AppLayout = ({ children }: AppLayoutProps) => {
     queryKey: ["profile-topbar", user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const { data } = await supabase.from("profiles").select("username").eq("id", user.id).single();
+      const { data } = await supabase.from("profiles").select("username, dietary_prefs, travel_interests").eq("id", user.id).single();
       return data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: activeRoutes } = useQuery({
+    queryKey: ["active-routes-orb", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("routes")
+        .select("id, city, folder_id, day_number")
+        .eq("user_id", user.id)
+        .in("trip_type", ["planning", "ongoing"])
+        .eq("status", "draft")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      return data || [];
     },
     enabled: !!user,
   });
@@ -87,7 +104,14 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       <main className="max-w-lg mx-auto">
         {children}
       </main>
-      {showOrbOverlay && <OrbOverlay isSpeaking={isSpeaking} onClose={handleClose} />}
+      {showOrbOverlay && (
+        <OrbOverlay
+          isSpeaking={isSpeaking}
+          onClose={handleClose}
+          activeRoutes={activeRoutes ?? []}
+          userInterests={[...(profile?.dietary_prefs ?? []), ...(profile?.travel_interests ?? [])]}
+        />
+      )}
     </div>
   );
 };

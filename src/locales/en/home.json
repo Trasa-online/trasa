@@ -1,6 +1,15 @@
 {
   "orb_question": "What can I help you with?",
   "orb_placeholder": "I want to explore Kraków for 2 days...",
+  "chip_edit_plan": "Edit plan {{city}}",
+  "chip_cafe": "Café",
+  "chip_cafe_query": "Recommend a café nearby?",
+  "chip_restaurant": "Restaurant",
+  "chip_restaurant_query": "Recommend a restaurant nearby?",
+  "chip_sightseeing": "What to see?",
+  "chip_sightseeing_query": "What are the top sights to see?",
+  "identify_place": "Identify place from photo",
+  "identifying_place": "Identifying place...",
   "greeting_with_name": "Hey {{name}}, what are we doing today?",
   "greeting": "Hey, what are we doing today?",
   "landing": {

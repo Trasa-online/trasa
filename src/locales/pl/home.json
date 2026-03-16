@@ -1,6 +1,15 @@
 {
   "orb_question": "W czym mogę Ci pomóc?",
   "orb_placeholder": "Chcę zwiedzić Kraków przez 2 dni...",
+  "chip_edit_plan": "Zmień plan {{city}}",
+  "chip_cafe": "Kawiarnia",
+  "chip_cafe_query": "Polecisz mi kawiarnie w pobliżu?",
+  "chip_restaurant": "Restauracja",
+  "chip_restaurant_query": "Polecisz mi restauracje w pobliżu?",
+  "chip_sightseeing": "Co warto zobaczyć?",
+  "chip_sightseeing_query": "Co warto zobaczyć i zwiedzić?",
+  "identify_place": "Zidentyfikuj miejsce ze zdjęcia",
+  "identifying_place": "Rozpoznaję miejsce...",
   "greeting_with_name": "Hej {{name}}, co dziś robimy?",
   "greeting": "Hej, co dziś robimy?",
   "landing": {

@@ -17,7 +17,9 @@
     "add": "Dodaj",
     "edit": "Edytuj",
     "confirm": "Potwierdź",
-    "back": "Wróć"
+    "back": "Wróć",
+    "start_recording": "Nagraj głos",
+    "stop_recording": "Zatrzymaj nagrywanie"
   },
   "errors": {
     "generic": "Coś poszło nie tak"
