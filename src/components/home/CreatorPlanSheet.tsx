@@ -26,9 +26,10 @@ interface CreatorPlanSheetProps {
   plan: (CreatorPlan & { places: CreatorPlaceItem[] }) | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onPersonalize?: (plan: CreatorPlan & { places: CreatorPlaceItem[] }) => void;
 }
 
-export default function CreatorPlanSheet({ plan, open, onOpenChange }: CreatorPlanSheetProps) {
+export default function CreatorPlanSheet({ plan, open, onOpenChange, onPersonalize }: CreatorPlanSheetProps) {
   const navigate = useNavigate();
 
   if (!plan) return null;
@@ -189,7 +190,11 @@ export default function CreatorPlanSheet({ plan, open, onOpenChange }: CreatorPl
             size="lg"
             onClick={() => {
               onOpenChange(false);
-              navigate(`/create?creatorPlan=${plan.id}`);
+              if (onPersonalize) {
+                onPersonalize(plan);
+              } else {
+                navigate(`/create?creatorPlan=${plan.id}`);
+              }
             }}
           >
             Personalizuj ten plan →

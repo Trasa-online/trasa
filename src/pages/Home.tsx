@@ -12,9 +12,6 @@ import RoutePreviewModal from "@/components/route/RoutePreviewModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import TripDayView from "@/components/home/TripDayView";
-import CreatorPlanCard from "@/components/home/CreatorPlanCard";
-import CreatorPlanSheet from "@/components/home/CreatorPlanSheet";
-import type { CreatorPlan, CreatorPlaceItem } from "@/components/home/CreatorPlanCard";
 import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
 import { useTranslation } from "react-i18next";
 
@@ -29,7 +26,6 @@ const Home = () => {
   const [previewRoute, setPreviewRoute] = useState<any>(null);
   const [deletingTrip, setDeletingTrip] = useState<any>(null);
   const [selectedNextUpPin, setSelectedNextUpPin] = useState<any>(null);
-  const [selectedPlan, setSelectedPlan] = useState<(CreatorPlan & { places: CreatorPlaceItem[] }) | null>(null);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -86,29 +82,6 @@ const Home = () => {
       });
   }, [activeRoutes, user, queryClient]);
 
-  const { data: creatorPlans = [] } = useQuery({
-    queryKey: ["creator-plans"],
-    queryFn: async () => {
-      const { data: plans } = await supabase
-        .from("creator_plans")
-        .select("id, creator_handle, creator_avatar_url, creator_social_url, creator_social_platform, city, title, description, tags, num_days, video_url, thumbnail_url")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (!plans?.length) return [];
-      const { data: places } = await supabase
-        .from("creator_places")
-        .select("id, place_name, category, photo_url, description, suggested_time, order_index, plan_id")
-        .in("plan_id", plans.map(p => p.id))
-        .eq("is_active", true);
-      return plans.map(plan => ({
-        ...plan,
-        places: (places ?? [])
-          .filter(pl => pl.plan_id === plan.id)
-          .sort((a, b) => (a.order_index ?? 99) - (b.order_index ?? 99)),
-      })) as (CreatorPlan & { places: CreatorPlaceItem[] })[];
-    },
-  });
 
 
 
@@ -308,26 +281,6 @@ const Home = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 overflow-y-auto px-5 pt-4 pb-28 max-w-lg mx-auto w-full">
 
-        {/* Creator Plans */}
-        {creatorPlans.length > 0 && (
-          <section className="mb-7">
-            <h3 className="text-base font-bold mb-3">{t("creator_plans")}</h3>
-            <div className="space-y-4">
-              {creatorPlans.map(plan => (
-                <CreatorPlanCard
-                  key={plan.id}
-                  plan={plan}
-                  onClick={() => setSelectedPlan(plan)}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-        <CreatorPlanSheet
-          plan={selectedPlan}
-          open={!!selectedPlan}
-          onOpenChange={open => { if (!open) setSelectedPlan(null); }}
-        />
 
         {/* Tabs */}
         <div className="flex border-b border-border/40 mb-5 mt-3" data-tour="trips">
