@@ -16,12 +16,15 @@ import CreatorPlanCard from "@/components/home/CreatorPlanCard";
 import CreatorPlanSheet from "@/components/home/CreatorPlanSheet";
 import type { CreatorPlan, CreatorPlaceItem } from "@/components/home/CreatorPlanCard";
 import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
+import { useTranslation } from "react-i18next";
 
 
 const Home = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { t } = useTranslation("home");
+  const { t: tCommon } = useTranslation("common");
   const [activeTab, setActiveTab] = useState<"aktywne" | "next-up">("aktywne");
   const [previewRoute, setPreviewRoute] = useState<any>(null);
   const [deletingTrip, setDeletingTrip] = useState<any>(null);
@@ -158,10 +161,10 @@ const Home = () => {
         await supabase.from("route_folders").delete().eq("id", trip.routes[0].folder_id);
       }
       queryClient.invalidateQueries({ queryKey: ["active-routes"] });
-      toast.success("Podróż została usunięta");
+      toast.success(t("toast_deleted"));
     } catch (err) {
       console.error("Delete trip error:", err);
-      toast.error("Nie udało się usunąć podróży");
+      toast.error(t("toast_delete_error"));
     }
     setDeletingTrip(null);
   };
@@ -189,9 +192,9 @@ const Home = () => {
         <div className="text-center mb-10">
           <div className="h-16 w-16 rounded-full orb-gradient mx-auto mb-6" />
           <h1 className="text-3xl font-black tracking-tight mb-3">TRASA</h1>
-          <p className="text-lg font-semibold mb-2">Twój AI asystent podróży</p>
+          <p className="text-lg font-semibold mb-2">{t("landing.tagline")}</p>
           <p className="text-muted-foreground text-sm max-w-[280px] mx-auto leading-relaxed">
-            Rozmawiasz — AI planuje. Podróżujesz — AI pamięta.
+            {t("landing.description")}
           </p>
         </div>
 
@@ -200,22 +203,22 @@ const Home = () => {
           <div className="flex items-start gap-3 rounded-2xl bg-card border border-border/50 p-4">
             <Sparkles className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
             <div>
-              <p className="text-sm font-semibold">Plan gotowy w minutę</p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Napisz tylko miasto i dni — AI ułoży trasę z konkretnymi miejscami, godzinami i dystansami.</p>
+              <p className="text-sm font-semibold">{t("landing.feature1_title")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{t("landing.feature1_desc")}</p>
             </div>
           </div>
           <div className="flex items-start gap-3 rounded-2xl bg-card border border-border/50 p-4">
             <Mic className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
             <div>
-              <p className="text-sm font-semibold">Głosowy debrief po dniu</p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Po powrocie do hotelu opowiedz głosowo jak minął dzień — AI zapyta, posłucha i zapisze wspomnienia.</p>
+              <p className="text-sm font-semibold">{t("landing.feature2_title")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{t("landing.feature2_desc")}</p>
             </div>
           </div>
           <div className="flex items-start gap-3 rounded-2xl bg-card border border-border/50 p-4">
             <BookOpen className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
             <div>
-              <p className="text-sm font-semibold">Pamięta Twoje preferencje</p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Z każdą podróżą TRASA uczy się czego unikasz i co kochasz — kolejny plan będzie jeszcze lepszy.</p>
+              <p className="text-sm font-semibold">{t("landing.feature3_title")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{t("landing.feature3_desc")}</p>
             </div>
           </div>
         </div>
@@ -227,7 +230,7 @@ const Home = () => {
             size="lg"
             className="w-full rounded-full text-base font-semibold"
           >
-            Zacznij bezpłatnie
+            {t("landing.start_free")}
           </Button>
           <Button
             onClick={() => navigate("/auth")}
@@ -235,12 +238,12 @@ const Home = () => {
             size="lg"
             className="w-full rounded-full text-base font-medium bg-card"
           >
-            Zaloguj się
+            {t("landing.login")}
           </Button>
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-8">
-          <Link to="/terms" className="underline">Regulamin i Polityka Prywatności</Link>
+          <Link to="/terms" className="underline">{t("landing.terms")}</Link>
         </p>
       </div>
     );
@@ -250,8 +253,8 @@ const Home = () => {
 
   const todayMidnight = new Date();
   todayMidnight.setHours(0, 0, 0, 0);
-  const activeTrips = trips.filter(t => !t.startDate || new Date(t.startDate) <= todayMidnight);
-  const upcomingTrips = trips.filter(t => t.startDate && new Date(t.startDate) > todayMidnight);
+  const activeTrips = trips.filter(tr => !tr.startDate || new Date(tr.startDate) <= todayMidnight);
+  const upcomingTrips = trips.filter(tr => tr.startDate && new Date(tr.startDate) > todayMidnight);
 
   // Accent colors cycling per trip/journal entry
   const ACCENTS = [
@@ -280,29 +283,6 @@ const Home = () => {
     transport: "bg-gray-400",
   };
 
-  const CATEGORY_LABEL_PL: Record<string, string> = {
-    restaurant: "Restauracja",
-    cafe: "Kawiarnia",
-    museum: "Muzeum",
-    monument: "Zabytek",
-    walk: "Spacer",
-    viewpoint: "Widok",
-    nightlife: "Nocne życie",
-    shopping: "Zakupy",
-    church: "Kościół",
-    gallery: "Galeria",
-    park: "Park",
-    bar: "Bar",
-    market: "Targ",
-    transport: "Transport",
-  };
-
-  const PRIORITY_LABEL: Record<string, string> = {
-    good_food: "Jedzenie", nice_views: "Widoki", long_walks: "Spacery",
-    museums: "Muzea", nightlife: "Nocne życie", shopping: "Zakupy",
-    local_vibes: "Klimaty", photography: "Foto",
-  };
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 overflow-y-auto px-5 pt-4 pb-28 max-w-lg mx-auto w-full">
@@ -310,7 +290,7 @@ const Home = () => {
         {/* Creator Plans */}
         {creatorPlans.length > 0 && (
           <section className="mb-7 -mx-5">
-            <h3 className="text-base font-bold px-5 mb-3">Plany twórców</h3>
+            <h3 className="text-base font-bold px-5 mb-3">{t("creator_plans")}</h3>
             <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x snap-mandatory scrollbar-none">
               {creatorPlans.map(plan => (
                 <CreatorPlanCard
@@ -339,7 +319,7 @@ const Home = () => {
                 activeTab === tab ? "text-foreground" : "text-muted-foreground"
               )}
             >
-              {tab === "aktywne" ? "Aktywne podróże" : "Nadchodzące podróże"}
+              {tab === "aktywne" ? t("tabs.active") : t("tabs.upcoming")}
               {activeTab === tab && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-full" />
               )}
@@ -366,7 +346,7 @@ const Home = () => {
                     : "";
                   const priorityLabels = (trip.priorities as string[])
                     .slice(0, 3)
-                    .map(p => PRIORITY_LABEL[p] ?? p)
+                    .map(p => t(`priorities.${p}`, { defaultValue: p }))
                     .join(" · ");
                   return (
                     <div key={trip.id} className="rounded-2xl bg-card border border-border/50 overflow-hidden flex">
@@ -383,14 +363,14 @@ const Home = () => {
                               </div>
                               <div className="text-right shrink-0">
                                 {dateStr && <p className="text-xs font-medium tabular-nums">{dateStr}</p>}
-                                <p className="text-[11px] text-muted-foreground mt-0.5">Punkty na trasie: {trip.pinCount}</p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">{t("points_on_route", { count: trip.pinCount })}</p>
                               </div>
                             </div>
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); setDeletingTrip(trip); }}
                             className="absolute top-3 right-3 p-1 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                            aria-label="Usuń podróż"
+                            aria-label={t("delete_aria")}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -411,7 +391,7 @@ const Home = () => {
                                   latitude: p.latitude,
                                   longitude: p.longitude,
                                 }))}
-                                dayLabel={trip.routes.length > 1 ? `Dzień ${route.day_number || 1}` : "Plan"}
+                                dayLabel={trip.routes.length > 1 ? t("day_label", { number: route.day_number || 1 }) : t("plan_label")}
                                 dateLabel={route.start_date ? format(new Date(route.start_date), "dd.MM.yyyy") : null}
                                 onStartReview={() => navigate(`/day-review?route=${route.id}`)}
                               />
@@ -423,7 +403,7 @@ const Home = () => {
                 })}
               </div>
             ) : (
-              <p className="text-muted-foreground text-sm">Brak aktywnych tras. Zaplanuj swoją podróż!</p>
+              <p className="text-muted-foreground text-sm">{t("empty_active")}</p>
             )}
 
           </section>
@@ -446,14 +426,14 @@ const Home = () => {
                       <div className="flex items-center justify-between mb-3">
                         <div>
                           <p className="text-[11px] font-medium text-orange-500">
-                            Za {daysUntil} {daysUntil === 1 ? "dzień" : "dni"}
+                            {daysUntil === 1 ? t("days_until_one", { count: daysUntil }) : t("days_until_many", { count: daysUntil })}
                           </p>
                           <p className="text-lg font-bold leading-tight">{trip.city}</p>
                         </div>
                         <button
                           onClick={() => setDeletingTrip(trip)}
                           className="p-1 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                          aria-label="Usuń podróż"
+                          aria-label={t("delete_aria")}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -468,13 +448,13 @@ const Home = () => {
                             <div key={route.id}>
                               {isMultiDay && (
                                 <p className="text-xs font-semibold text-muted-foreground mb-2 px-0.5">
-                                  Dzień {route.day_number || 1}
+                                  {t("day_label", { number: route.day_number || 1 })}
                                 </p>
                               )}
                               <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-4 snap-x snap-mandatory scrollbar-orange">
                                 {dayPins.map((pin: any, pIdx: number) => {
                                   const catColor = CATEGORY_DOT_COLORS[pin.category as string] ?? "bg-gray-400";
-                                  const catLabel = CATEGORY_LABEL_PL[pin.category as string] ?? "Miejsce";
+                                  const catLabel = t(`categories.${pin.category}`, { defaultValue: t("categories.place", { defaultValue: "Miejsce" }) });
                                   return (
                                     <button
                                       key={pIdx}
@@ -503,8 +483,8 @@ const Home = () => {
               </div>
             ) : (
               <div className="flex flex-col items-center py-12 text-center gap-2">
-                <p className="text-sm font-medium">Brak nadchodzących podróży</p>
-                <p className="text-xs text-muted-foreground">Zaplanuj kolejną przygodę!</p>
+                <p className="text-sm font-medium">{t("empty_upcoming")}</p>
+                <p className="text-xs text-muted-foreground">{t("empty_upcoming_cta")}</p>
               </div>
             )}
           </section>
@@ -520,7 +500,7 @@ const Home = () => {
             size="lg"
             className="w-full rounded-full text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20"
           >
-            Dodaj plan podróży
+            {t("add_plan")}
           </Button>
         </div>
       </div>
@@ -550,18 +530,18 @@ const Home = () => {
       <AlertDialog open={!!deletingTrip} onOpenChange={(open) => !open && setDeletingTrip(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Usunąć podróż?</AlertDialogTitle>
+            <AlertDialogTitle>{t("delete_trip_title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Czy na pewno chcesz usunąć podróż{deletingTrip ? ` „${deletingTrip.city}"` : ""}? Wszystkie trasy i pinezki zostaną trwale usunięte.
+              {t("delete_trip_desc", { city: deletingTrip?.city ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("buttons.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deletingTrip && handleDeleteTrip(deletingTrip)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Usuń
+              {tCommon("buttons.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

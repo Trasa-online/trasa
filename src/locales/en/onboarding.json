@@ -1,0 +1,61 @@
+{
+  "intro": {
+    "step0": {
+      "title": "Hello!",
+      "subtitle": "I'm Trasa — your personal guide for exploring Kraków.",
+      "speech": "Hello! I'm Trasa — your personal guide for exploring Kraków."
+    },
+    "step1": {
+      "title": "You talk — AI plans",
+      "subtitle": "Tell me what you want to see. In seconds I'll build a plan tailored exactly to you.",
+      "speech": "You talk naturally, and I plan the perfect day for you."
+    },
+    "step2": {
+      "title": "I learn your tastes",
+      "subtitle": "After every trip I get to know you better. Recommendations become more and more spot-on.",
+      "speech": "After every trip I learn your preferences and recommend more accurately."
+    }
+  },
+  "prefs_speech": "Before we start — tell me a bit about yourself and we'll tailor a travel plan just for you!",
+  "orb_label": "Repeat",
+  "lets_go": "Let's go!",
+  "prefs": {
+    "title": "Tell us about yourself",
+    "subtitle": "We'll tailor your travel plan to your preferences.",
+    "free_text_label": "Describe yourself in your own words",
+    "free_text_placeholder": "E.g. I love art and good coffee, I travel slowly with my camera...",
+    "tags_label": "Or pick tags below:",
+    "food_section": "Food & drinks",
+    "interests_section": "What do you like to explore",
+    "style_section": "How do you usually travel?",
+    "save_btn": "Start planning!",
+    "food": {
+      "vege": "Vegetarian",
+      "vegan": "Vegan",
+      "coffee": "Coffee snob",
+      "local_food": "Local cuisine",
+      "street_food": "Street food",
+      "fine_dining": "Fine dining",
+      "lactose_free": "Lactose-free",
+      "gluten_free": "Gluten-free"
+    },
+    "interests": {
+      "history": "History",
+      "art": "Art",
+      "nature": "Nature",
+      "shopping": "Shopping",
+      "nightlife": "Nightlife",
+      "photography": "Photography",
+      "architecture": "Architecture",
+      "music": "Music"
+    },
+    "style": {
+      "intensive": "Intensive",
+      "relaxed": "Relaxed",
+      "family": "Family",
+      "romantic": "Romantic",
+      "budget": "Budget",
+      "luxury": "Luxury"
+    }
+  }
+}

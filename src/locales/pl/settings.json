@@ -1,0 +1,12 @@
+{
+  "title": "Ustawienia profilu",
+  "username": "Nazwa użytkownika",
+  "save_changes": "Zapisz zmiany",
+  "travel_profile": "Mój profil podróżniczy",
+  "admin_panel": "Panel Administracyjny",
+  "change_password": "Zmień hasło",
+  "logout": "Wyloguj się",
+  "language": "Język",
+  "toast_saved": "Profil zaktualizowany!",
+  "toast_avatar_error": "Błąd podczas przesyłania zdjęcia"
+}

@@ -6,73 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Plus, Mic, MicOff } from "lucide-react";
-
-const FOOD_PREFS = [
-  { id: "vege", label: "Wegetarianin" },
-  { id: "vegan", label: "Vegan" },
-  { id: "coffee", label: "Coffee snob" },
-  { id: "local_food", label: "Kuchnia lokalna" },
-  { id: "street_food", label: "Street food" },
-  { id: "fine_dining", label: "Fine dining" },
-  { id: "lactose_free", label: "Bez laktozy" },
-  { id: "gluten_free", label: "Bezglutenowo" },
-];
-
-const INTERESTS = [
-  { id: "history", label: "Historia" },
-  { id: "art", label: "Sztuka" },
-  { id: "nature", label: "Natura" },
-  { id: "shopping", label: "Zakupy" },
-  { id: "nightlife", label: "Nocne życie" },
-  { id: "photography", label: "Fotografia" },
-  { id: "architecture", label: "Architektura" },
-  { id: "music", label: "Muzyka" },
-];
-
-const TRAVEL_STYLE = [
-  { id: "intensive", label: "Intensywnie" },
-  { id: "relaxed", label: "Spokojnie" },
-  { id: "family", label: "Rodzinnie" },
-  { id: "romantic", label: "Romantycznie" },
-  { id: "budget", label: "Budżetowo" },
-  { id: "luxury", label: "Luksusowo" },
-];
-
-const INTRO_STEPS = [
-  {
-    title: "Cześć!",
-    subtitle: "Jestem Trasa — Twój osobisty asystent odkrywania Krakowa.",
-    speech: "Cześć! Jestem Trasa — Twój osobisty asystent odkrywania Krakowa.",
-  },
-  {
-    title: "Rozmawiasz — AI planuje",
-    subtitle: "Powiedz mi co chcesz zobaczyć. W kilka sekund ułożę plan dopasowany dokładnie do Ciebie.",
-    speech: "Rozmawiasz naturalnie, a ja planuję idealny dzień dla Ciebie.",
-  },
-  {
-    title: "Uczę się Twoich gustów",
-    subtitle: "Po każdej podróży poznaję Cię lepiej. Rekomendacje stają się coraz celniejsze.",
-    speech: "Po każdej podróży uczę się Twoich gustów i polecam coraz trafniej.",
-  },
-];
-
-const PREFS_SPEECH =
-  "Zanim zaczniemy — opowiedz mi trochę o sobie, a dopasujemy plan podróży specjalnie dla Ciebie!";
+import { useTranslation } from "react-i18next";
 
 const Orb = ({
   isSpeaking,
   className,
   onTap,
+  ariaLabel,
 }: {
   isSpeaking: boolean;
   className?: string;
   onTap?: () => void;
+  ariaLabel: string;
 }) => (
   <button
     type="button"
     onClick={onTap}
     className={cn("relative focus:outline-none", className)}
-    aria-label="Powtórz"
+    aria-label={ariaLabel}
   >
     {isSpeaking && (
       <>
@@ -121,6 +72,7 @@ const Section = ({
   customItems,
   onAddCustom,
   onRemoveCustom,
+  otherPlaceholder,
 }: {
   title: string;
   items: { id: string; label: string }[];
@@ -129,6 +81,7 @@ const Section = ({
   customItems: string[];
   onAddCustom: (val: string) => void;
   onRemoveCustom: (val: string) => void;
+  otherPlaceholder: string;
 }) => {
   const [inputVal, setInputVal] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -168,7 +121,7 @@ const Section = ({
       <div className="flex gap-2 mt-3">
         <Input
           ref={inputRef}
-          placeholder="Inne..."
+          placeholder={otherPlaceholder}
           value={inputVal}
           onChange={(e) => setInputVal(e.target.value)}
           onKeyDown={(e) => {
@@ -195,6 +148,60 @@ const Section = ({
 const Onboarding = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { t, i18n } = useTranslation("onboarding");
+  const { t: tCommon } = useTranslation("common");
+
+  const INTRO_STEPS = [
+    {
+      title: t("intro.step0.title"),
+      subtitle: t("intro.step0.subtitle"),
+      speech: t("intro.step0.speech"),
+    },
+    {
+      title: t("intro.step1.title"),
+      subtitle: t("intro.step1.subtitle"),
+      speech: t("intro.step1.speech"),
+    },
+    {
+      title: t("intro.step2.title"),
+      subtitle: t("intro.step2.subtitle"),
+      speech: t("intro.step2.speech"),
+    },
+  ];
+
+  const FOOD_PREFS = [
+    { id: "vege", label: t("prefs.food.vege") },
+    { id: "vegan", label: t("prefs.food.vegan") },
+    { id: "coffee", label: t("prefs.food.coffee") },
+    { id: "local_food", label: t("prefs.food.local_food") },
+    { id: "street_food", label: t("prefs.food.street_food") },
+    { id: "fine_dining", label: t("prefs.food.fine_dining") },
+    { id: "lactose_free", label: t("prefs.food.lactose_free") },
+    { id: "gluten_free", label: t("prefs.food.gluten_free") },
+  ];
+
+  const INTERESTS = [
+    { id: "history", label: t("prefs.interests.history") },
+    { id: "art", label: t("prefs.interests.art") },
+    { id: "nature", label: t("prefs.interests.nature") },
+    { id: "shopping", label: t("prefs.interests.shopping") },
+    { id: "nightlife", label: t("prefs.interests.nightlife") },
+    { id: "photography", label: t("prefs.interests.photography") },
+    { id: "architecture", label: t("prefs.interests.architecture") },
+    { id: "music", label: t("prefs.interests.music") },
+  ];
+
+  const TRAVEL_STYLE = [
+    { id: "intensive", label: t("prefs.style.intensive") },
+    { id: "relaxed", label: t("prefs.style.relaxed") },
+    { id: "family", label: t("prefs.style.family") },
+    { id: "romantic", label: t("prefs.style.romantic") },
+    { id: "budget", label: t("prefs.style.budget") },
+    { id: "luxury", label: t("prefs.style.luxury") },
+  ];
+
+  const PREFS_SPEECH = t("prefs_speech");
+
   const [step, setStep] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [freeText, setFreeText] = useState("");
@@ -248,17 +255,17 @@ const Onboarding = () => {
       setIsSpeaking(false);
     }
 
-    // Fallback: Web Speech API (Zofia)
+    // Fallback: Web Speech API
     if (!window.speechSynthesis) return;
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "pl-PL";
+    utterance.lang = i18n.language === "pl" ? "pl-PL" : "en-US";
     utterance.rate = 0.9;
     utterance.pitch = 1.05;
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
     window.speechSynthesis.speak(utterance);
-  }, []);
+  }, [i18n.language]);
 
   const currentSpeech = step < INTRO_STEPS.length ? INTRO_STEPS[step].speech : PREFS_SPEECH;
 
@@ -287,7 +294,7 @@ const Onboarding = () => {
     }
 
     const recog = new SR();
-    recog.lang = "pl-PL";
+    recog.lang = i18n.language === "pl" ? "pl-PL" : "en-US";
     recog.continuous = false;
     recog.interimResults = false;
     recog.onresult = (e: any) => {
@@ -351,6 +358,7 @@ const Onboarding = () => {
             isSpeaking={isSpeaking}
             className="h-32 w-32"
             onTap={() => speak(screen.speech)}
+            ariaLabel={t("orb_label")}
           />
           <div className="text-center">
             <h1 className="text-3xl font-black tracking-tight mb-3">{screen.title}</h1>
@@ -365,7 +373,7 @@ const Onboarding = () => {
             onClick={() => { setStep(nextStep); speak(nextSpeech); }}
             className="w-full rounded-full font-semibold"
           >
-            {step === INTRO_STEPS.length - 1 ? "Zacznijmy!" : "Dalej"}
+            {step === INTRO_STEPS.length - 1 ? t("lets_go") : tCommon("buttons.next")}
           </Button>
 
           {step === 0 && (
@@ -374,7 +382,7 @@ const Onboarding = () => {
               onClick={() => { setStep(INTRO_STEPS.length); speak(PREFS_SPEECH); }}
               className="text-sm text-muted-foreground py-1"
             >
-              Pomiń
+              {tCommon("buttons.skip")}
             </button>
           )}
         </div>
@@ -390,25 +398,25 @@ const Onboarding = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <div className="flex justify-center pt-10 pb-2">
-        <Orb isSpeaking={isSpeaking} className="h-24 w-24" onTap={() => speak(PREFS_SPEECH)} />
+        <Orb isSpeaking={isSpeaking} className="h-24 w-24" onTap={() => speak(PREFS_SPEECH)} ariaLabel={t("orb_label")} />
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 pt-5 pb-32">
-        <h1 className="text-2xl font-black tracking-tight mb-1">Opowiedz o sobie</h1>
+        <h1 className="text-2xl font-black tracking-tight mb-1">{t("prefs.title")}</h1>
         <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
-          Dopasujemy plan podróży do Twoich upodobań.
+          {t("prefs.subtitle")}
         </p>
 
         {/* Free text / voice input */}
         <div className="mb-7">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-            Opisz siebie własnymi słowami
+            {t("prefs.free_text_label")}
           </p>
           <div className="relative">
             <textarea
               value={freeText}
               onChange={(e) => setFreeText(e.target.value)}
-              placeholder="Np. lubię sztukę i dobrą kawę, podróżuję spokojnie i z aparatem..."
+              placeholder={t("prefs.free_text_placeholder")}
               className="w-full rounded-xl border border-border bg-card px-3 py-2.5 pr-12 text-sm resize-none h-20 focus:outline-none focus:ring-1 focus:ring-ring"
             />
             {hasSR && (
@@ -426,37 +434,40 @@ const Onboarding = () => {
               </button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground mt-2">Lub wybierz tagi poniżej:</p>
+          <p className="text-xs text-muted-foreground mt-2">{t("prefs.tags_label")}</p>
         </div>
 
         <Section
-          title="Jedzenie i napoje"
+          title={t("prefs.food_section")}
           items={FOOD_PREFS}
           selected={foodSelected}
           onToggle={(id) => toggle(setFoodSelected, id)}
           customItems={foodCustom}
           onAddCustom={(val) => setFoodCustom(prev => [...prev, val])}
           onRemoveCustom={(val) => setFoodCustom(prev => prev.filter(v => v !== val))}
+          otherPlaceholder={tCommon("other")}
         />
 
         <Section
-          title="Co lubisz zwiedzać"
+          title={t("prefs.interests_section")}
           items={INTERESTS}
           selected={interestsSelected}
           onToggle={(id) => toggle(setInterestsSelected, id)}
           customItems={interestsCustom}
           onAddCustom={(val) => setInterestsCustom(prev => [...prev, val])}
           onRemoveCustom={(val) => setInterestsCustom(prev => prev.filter(v => v !== val))}
+          otherPlaceholder={tCommon("other")}
         />
 
         <Section
-          title="Jak zwykle podróżujesz?"
+          title={t("prefs.style_section")}
           items={TRAVEL_STYLE}
           selected={styleSelected}
           onToggle={(id) => toggle(setStyleSelected, id)}
           customItems={styleCustom}
           onAddCustom={(val) => setStyleCustom(prev => [...prev, val])}
           onRemoveCustom={(val) => setStyleCustom(prev => prev.filter(v => v !== val))}
+          otherPlaceholder={tCommon("other")}
         />
       </div>
 
@@ -466,7 +477,7 @@ const Onboarding = () => {
           disabled={saving}
           className="w-full rounded-full font-semibold"
         >
-          {saving ? "Zapisuję..." : "Zacznij planować!"}
+          {saving ? tCommon("buttons.saving") : t("prefs.save_btn")}
         </Button>
         <button
           type="button"
@@ -474,7 +485,7 @@ const Onboarding = () => {
           disabled={saving}
           className="text-sm text-muted-foreground text-center py-1"
         >
-          Pomiń
+          {tCommon("buttons.skip")}
         </button>
       </div>
     </div>

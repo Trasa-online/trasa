@@ -1,0 +1,12 @@
+{
+  "title": "Profile settings",
+  "username": "Username",
+  "save_changes": "Save changes",
+  "travel_profile": "My travel profile",
+  "admin_panel": "Admin panel",
+  "change_password": "Change password",
+  "logout": "Log out",
+  "language": "Language",
+  "toast_saved": "Profile updated!",
+  "toast_avatar_error": "Error uploading photo"
+}

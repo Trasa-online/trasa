@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 type Mode = "login" | "register";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
+  const { t } = useTranslation("auth");
   const [mode, setMode] = useState<Mode>(searchParams.get("tab") === "register" ? "register" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,7 +46,7 @@ const Auth = () => {
         .single();
       navigate(!profileError && profile?.onboarding_completed === false ? "/onboarding" : "/");
     } catch (error: any) {
-      toast.error(error.message || "Błąd logowania");
+      toast.error(error.message || t("errors.login"));
     } finally {
       setLoading(false);
     }
@@ -55,11 +57,11 @@ const Auth = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreed) {
-      toast.error("Musisz zaakceptować regulamin, żeby się zarejestrować.");
+      toast.error(t("errors.terms_required"));
       return;
     }
     if (username.trim().length < 2) {
-      toast.error("Nazwa użytkownika musi mieć co najmniej 2 znaki.");
+      toast.error(t("errors.username_short"));
       return;
     }
     setLoading(true);
@@ -70,7 +72,7 @@ const Auth = () => {
       });
       if (error) {
         if (error.code === "23505") {
-          toast.error("Ten email jest już na liście oczekujących.");
+          toast.error(t("errors.email_duplicate"));
         } else {
           throw error;
         }
@@ -78,7 +80,7 @@ const Auth = () => {
       }
       setWaitlistDone(true);
     } catch (error: any) {
-      toast.error(error.message || "Błąd zgłoszenia");
+      toast.error(error.message || t("errors.register"));
     } finally {
       setLoading(false);
     }
@@ -90,11 +92,16 @@ const Auth = () => {
       <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-6">
         <h1 className="text-5xl font-black tracking-tight mb-2">TRASA</h1>
         <p className="text-muted-foreground text-center text-sm max-w-[280px]">
-          Planuj podróże z AI. Zapisuj wspomnienia. Wracaj do nich kiedy chcesz.
+          {t("description")}
         </p>
         {/* Feature pills */}
         <div className="flex flex-wrap gap-1.5 justify-center mt-4 mb-8">
-          {["Wersja beta", "Planer tras z AI", "Dziennik podróży", "Mapa miejsc"].map((f) => (
+          {([
+            t("pills.beta"),
+            t("pills.planner"),
+            t("pills.journal"),
+            t("pills.map"),
+          ]).map((f) => (
             <span key={f} className="text-xs bg-card border border-border rounded-full px-3 py-1 text-muted-foreground">
               {f}
             </span>
@@ -110,7 +117,7 @@ const Auth = () => {
                 mode === "login" ? "bg-foreground text-background" : "bg-card text-muted-foreground hover:text-foreground"
               }`}
             >
-              Zaloguj się
+              {t("tabs.login")}
             </button>
             <button
               onClick={() => setMode("register")}
@@ -118,78 +125,78 @@ const Auth = () => {
                 mode === "register" ? "bg-foreground text-background" : "bg-card text-muted-foreground hover:text-foreground"
               }`}
             >
-              Zarejestruj się
+              {t("tabs.register")}
             </button>
           </div>
 
           {mode === "login" ? (
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("fields.email")}</Label>
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="twoj@email.com"
+                  placeholder={t("fields.email_placeholder")}
                   className="bg-card"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="password">Hasło</Label>
+                <Label htmlFor="password">{t("fields.password")}</Label>
                 <Input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder="••••••••"
+                  placeholder={t("fields.password_placeholder")}
                   className="bg-card"
                 />
               </div>
               <Button type="submit" className="w-full rounded-full" disabled={loading}>
-                {loading ? "Logowanie..." : "Zaloguj się"}
+                {loading ? t("logging_in") : t("login_btn")}
               </Button>
             </form>
           ) : waitlistDone ? (
             <div className="text-center py-6 space-y-3">
               <p className="text-3xl">✉️</p>
-              <p className="font-semibold">Zgłoszenie przyjęte!</p>
+              <p className="font-semibold">{t("waitlist_done_title")}</p>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Wkrótce wyślemy Ci link aktywacyjny na adres <strong>{email}</strong>.
+                {t("waitlist_done_desc")} <strong>{email}</strong>.
               </p>
               <button
                 onClick={() => { setWaitlistDone(false); setMode("login"); }}
                 className="text-sm text-muted-foreground underline pt-2"
               >
-                Wróć do logowania
+                {t("back_to_login")}
               </button>
             </div>
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="reg-username">Nazwa użytkownika</Label>
+                <Label htmlFor="reg-username">{t("fields.username")}</Label>
                 <Input
                   id="reg-username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  placeholder="twoja_nazwa"
+                  placeholder={t("fields.username_placeholder")}
                   minLength={2}
                   className="bg-card"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="reg-email">Email</Label>
+                <Label htmlFor="reg-email">{t("fields.email")}</Label>
                 <Input
                   id="reg-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="twoj@email.com"
+                  placeholder={t("fields.email_placeholder")}
                   className="bg-card"
                 />
               </div>
@@ -201,18 +208,18 @@ const Auth = () => {
                   className="mt-0.5 accent-foreground"
                 />
                 <span className="text-xs text-muted-foreground leading-relaxed">
-                  Akceptuję{" "}
+                  {t("terms_accept")}{" "}
                   <Link to="/terms" className="underline text-foreground" target="_blank">
-                    Regulamin i Politykę Prywatności
+                    {t("terms_link")}
                   </Link>{" "}
-                  aplikacji TRASA.
+                  {t("terms_app")}
                 </span>
               </label>
               <Button type="submit" className="w-full rounded-full" disabled={loading}>
-                {loading ? "Zgłaszam..." : "Dołącz do listy oczekujących"}
+                {loading ? t("registering") : t("register_btn")}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                TRASA jest w wersji beta. Po zgłoszeniu wyślemy Ci zaproszenie.
+                {t("beta_notice")}
               </p>
             </form>
           )}
@@ -220,7 +227,7 @@ const Auth = () => {
       </div>
 
       <p className="text-center text-xs text-muted-foreground pb-6">
-        <Link to="/terms" className="underline">Regulamin i Polityka Prywatności</Link>
+        <Link to="/terms" className="underline">{t("terms")}</Link>
       </p>
     </div>
   );

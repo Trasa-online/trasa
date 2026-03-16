@@ -2,19 +2,22 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 const OrbOverlay = ({ onClose, isSpeaking = false }: { onClose: () => void; isSpeaking?: boolean }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation("common");
+  const { t: tHome } = useTranslation("home");
   const [showInput, setShowInput] = useState(false);
   const [message, setMessage] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setShowInput(true);
       setTimeout(() => inputRef.current?.focus(), 150);
     }, 500);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleSubmit = () => {
@@ -30,7 +33,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false }: { onClose: () => void; isSp
         onClick={onClose}
         className="absolute right-4 p-2 text-muted-foreground hover:text-foreground"
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}
-        aria-label="Zamknij"
+        aria-label={t("buttons.close")}
       >
         <X className="h-6 w-6" />
       </button>
@@ -46,7 +49,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false }: { onClose: () => void; isSp
         )}
       >
         <p className="text-2xl font-bold tracking-tight text-center mb-6">
-          W czym mogę Ci pomóc?
+          {tHome("orb_question")}
         </p>
         <div className="flex gap-2 items-center">
           <input
@@ -54,7 +57,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false }: { onClose: () => void; isSp
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-            placeholder="Chcę zwiedzić Kraków przez 2 dni..."
+            placeholder={tHome("orb_placeholder")}
             className="flex-1 bg-card border border-border rounded-full px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
           <button

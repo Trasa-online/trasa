@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "home": "Home",
+    "routes": "Trasy",
+    "saved": "Zapisane",
+    "profile": "Profil"
+  },
+  "buttons": {
+    "next": "Dalej",
+    "skip": "Pomiń",
+    "save": "Zapisz",
+    "saving": "Zapisuję...",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "logout": "Wyloguj się",
+    "close": "Zamknij",
+    "add": "Dodaj",
+    "edit": "Edytuj",
+    "confirm": "Potwierdź",
+    "back": "Wróć"
+  },
+  "errors": {
+    "generic": "Coś poszło nie tak"
+  },
+  "other": "Inne..."
+}

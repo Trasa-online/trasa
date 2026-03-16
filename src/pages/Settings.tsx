@@ -11,12 +11,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Camera, Shield, ChevronRight, Compass } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 const Settings = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t, i18n } = useTranslation("settings");
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
 
@@ -74,7 +76,7 @@ const Settings = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      toast({ title: "Profil zaktualizowany!" });
+      toast({ title: t("toast_saved") });
     },
   });
 
@@ -89,7 +91,7 @@ const Settings = () => {
       .upload(fileName, file, { upsert: true });
 
     if (uploadError) {
-      toast({ variant: "destructive", title: "Błąd podczas przesyłania zdjęcia" });
+      toast({ variant: "destructive", title: t("toast_avatar_error") });
       return;
     }
 
@@ -104,7 +106,7 @@ const Settings = () => {
 
   return (
     <>
-      <PageHeader title="Ustawienia profilu" showBack />
+      <PageHeader title={t("title")} showBack />
       <div className="p-4 space-y-6">
         <div className="flex flex-col items-center gap-4 bg-card rounded-xl p-4">
           <div className="relative">
@@ -129,7 +131,7 @@ const Settings = () => {
 
         <div className="space-y-4 bg-card rounded-xl p-4">
           <div>
-            <Label htmlFor="username">Nazwa użytkownika</Label>
+            <Label htmlFor="username">{t("username")}</Label>
             <Input
               id="username"
               value={username}
@@ -143,7 +145,7 @@ const Settings = () => {
             onClick={() => updateProfileMutation.mutate()}
             disabled={updateProfileMutation.isPending}
           >
-            Zapisz zmiany
+            {t("save_changes")}
           </Button>
         </div>
 
@@ -152,8 +154,16 @@ const Settings = () => {
           className="w-full flex items-center gap-3 px-4 py-3 bg-card rounded-xl border border-border/40 hover:bg-muted transition-colors text-left"
         >
           <Compass className="h-4 w-4 text-primary flex-shrink-0" />
-          <span className="text-sm font-medium flex-1">Mój profil podróżniczy</span>
+          <span className="text-sm font-medium flex-1">{t("travel_profile")}</span>
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </button>
+
+        <button
+          onClick={() => i18n.changeLanguage(i18n.language === "pl" ? "en" : "pl")}
+          className="w-full flex items-center gap-3 px-4 py-3 bg-card rounded-xl border border-border/40 hover:bg-muted transition-colors text-left"
+        >
+          <span className="text-sm font-medium flex-1">{t("language")}</span>
+          <span className="text-sm text-muted-foreground font-medium">{i18n.language === "pl" ? "🇵🇱 PL" : "🇬🇧 EN"}</span>
         </button>
 
         <div className="space-y-2 bg-card rounded-xl p-4">
@@ -164,14 +174,14 @@ const Settings = () => {
               onClick={() => navigate("/admin")}
             >
               <Shield className="h-4 w-4 mr-2" />
-              Panel Administracyjny
+              {t("admin_panel")}
             </Button>
           )}
           <Button variant="outline" className="w-full">
-            Zmień hasło
+            {t("change_password")}
           </Button>
           <Button variant="destructive" className="w-full" onClick={signOut}>
-            Wyloguj się
+            {t("logout")}
           </Button>
         </div>
       </div>

@@ -1,0 +1,61 @@
+{
+  "intro": {
+    "step0": {
+      "title": "Cześć!",
+      "subtitle": "Jestem Trasa — Twój osobisty asystent odkrywania Krakowa.",
+      "speech": "Cześć! Jestem Trasa — Twój osobisty asystent odkrywania Krakowa."
+    },
+    "step1": {
+      "title": "Rozmawiasz — AI planuje",
+      "subtitle": "Powiedz mi co chcesz zobaczyć. W kilka sekund ułożę plan dopasowany dokładnie do Ciebie.",
+      "speech": "Rozmawiasz naturalnie, a ja planuję idealny dzień dla Ciebie."
+    },
+    "step2": {
+      "title": "Uczę się Twoich gustów",
+      "subtitle": "Po każdej podróży poznaję Cię lepiej. Rekomendacje stają się coraz celniejsze.",
+      "speech": "Po każdej podróży uczę się Twoich gustów i polecam coraz trafniej."
+    }
+  },
+  "prefs_speech": "Zanim zaczniemy — opowiedz mi trochę o sobie, a dopasujemy plan podróży specjalnie dla Ciebie!",
+  "orb_label": "Powtórz",
+  "lets_go": "Zacznijmy!",
+  "prefs": {
+    "title": "Opowiedz o sobie",
+    "subtitle": "Dopasujemy plan podróży do Twoich upodobań.",
+    "free_text_label": "Opisz siebie własnymi słowami",
+    "free_text_placeholder": "Np. lubię sztukę i dobrą kawę, podróżuję spokojnie i z aparatem...",
+    "tags_label": "Lub wybierz tagi poniżej:",
+    "food_section": "Jedzenie i napoje",
+    "interests_section": "Co lubisz zwiedzać",
+    "style_section": "Jak zwykle podróżujesz?",
+    "save_btn": "Zacznij planować!",
+    "food": {
+      "vege": "Wegetarianin",
+      "vegan": "Vegan",
+      "coffee": "Coffee snob",
+      "local_food": "Kuchnia lokalna",
+      "street_food": "Street food",
+      "fine_dining": "Fine dining",
+      "lactose_free": "Bez laktozy",
+      "gluten_free": "Bezglutenowo"
+    },
+    "interests": {
+      "history": "Historia",
+      "art": "Sztuka",
+      "nature": "Natura",
+      "shopping": "Zakupy",
+      "nightlife": "Nocne życie",
+      "photography": "Fotografia",
+      "architecture": "Architektura",
+      "music": "Muzyka"
+    },
+    "style": {
+      "intensive": "Intensywnie",
+      "relaxed": "Spokojnie",
+      "family": "Rodzinnie",
+      "romantic": "Romantycznie",
+      "budget": "Budżetowo",
+      "luxury": "Luksusowo"
+    }
+  }
+}

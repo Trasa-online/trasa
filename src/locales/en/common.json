@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "home": "Home",
+    "routes": "Routes",
+    "saved": "Saved",
+    "profile": "Profile"
+  },
+  "buttons": {
+    "next": "Next",
+    "skip": "Skip",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "logout": "Log out",
+    "close": "Close",
+    "add": "Add",
+    "edit": "Edit",
+    "confirm": "Confirm",
+    "back": "Back"
+  },
+  "errors": {
+    "generic": "Something went wrong"
+  },
+  "other": "Other..."
+}
