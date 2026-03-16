@@ -200,6 +200,7 @@ const Onboarding = () => {
   const [freeText, setFreeText] = useState("");
   const [isListening, setIsListening] = useState(false);
   const recogRef = useRef<any>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [foodSelected, setFoodSelected] = useState<Set<string>>(new Set());
   const [interestsSelected, setInterestsSelected] = useState<Set<string>>(new Set());
   const [styleSelected, setStyleSelected] = useState<Set<string>>(new Set());
@@ -208,9 +209,47 @@ const Onboarding = () => {
   const [styleCustom, setStyleCustom] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const speak = useCallback((text: string) => {
+  const speak = useCallback(async (text: string) => {
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    window.speechSynthesis?.cancel();
+
+    const elKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
+    if (elKey) {
+      try {
+        setIsSpeaking(true);
+        const res = await fetch(
+          "https://api.elevenlabs.io/v1/text-to-speech/eXpIbVcVbLo8ZJQDlDnl",
+          {
+            method: "POST",
+            headers: { "xi-api-key": elKey, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              text,
+              model_id: "eleven_multilingual_v2",
+              voice_settings: { stability: 0.5, similarity_boost: 0.8 },
+            }),
+          }
+        );
+        if (res.ok) {
+          const url = URL.createObjectURL(await res.blob());
+          const audio = new Audio(url);
+          audioRef.current = audio;
+          audio.onended = () => { setIsSpeaking(false); URL.revokeObjectURL(url); };
+          audio.onerror = () => setIsSpeaking(false);
+          await audio.play();
+          return;
+        }
+      } catch {
+        // fall through to Web Speech API
+      }
+      setIsSpeaking(false);
+    }
+
+    // Fallback: Web Speech API (Zofia)
     if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "pl-PL";
     utterance.rate = 0.9;
@@ -232,7 +271,10 @@ const Onboarding = () => {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => () => { window.speechSynthesis.cancel(); }, []);
+  useEffect(() => () => {
+    audioRef.current?.pause();
+    window.speechSynthesis?.cancel();
+  }, []);
 
   const handleToggleVoice = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
