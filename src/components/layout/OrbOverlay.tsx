@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { X, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const OrbOverlay = ({ onClose }: { onClose: () => void }) => {
+const OrbOverlay = ({ onClose, isSpeaking = false }: { onClose: () => void; isSpeaking?: boolean }) => {
   const navigate = useNavigate();
   const [showInput, setShowInput] = useState(false);
   const [message, setMessage] = useState("");
@@ -36,7 +36,7 @@ const OrbOverlay = ({ onClose }: { onClose: () => void }) => {
       </button>
 
       {/* Orb animates in from TopBar */}
-      <div className="h-32 w-32 rounded-full orb-gradient orb-emerge mb-10" />
+      <div className={cn("h-32 w-32 rounded-full orb-gradient orb-emerge mb-10", isSpeaking && "orb-speaking")} />
 
       {/* Input fades in after orb lands */}
       <div
