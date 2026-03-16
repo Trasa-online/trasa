@@ -392,8 +392,6 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
     );
   }
 
-  const activeDay = plan?.days.find(d => d.day_number === selectedDay);
-
   return (
     <div className="flex flex-col h-full">
 
