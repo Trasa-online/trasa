@@ -91,19 +91,21 @@ const Home = () => {
     queryFn: async () => {
       const { data: plans } = await supabase
         .from("creator_plans")
-        .select("id, creator_handle, city, title, video_url, thumbnail_url")
+        .select("id, creator_handle, creator_avatar_url, creator_social_url, creator_social_platform, city, title, description, tags, num_days, video_url, thumbnail_url")
         .eq("is_active", true)
         .order("created_at", { ascending: false })
         .limit(10);
       if (!plans?.length) return [];
       const { data: places } = await supabase
         .from("creator_places")
-        .select("id, place_name, category, plan_id")
+        .select("id, place_name, category, photo_url, description, suggested_time, order_index, plan_id")
         .in("plan_id", plans.map(p => p.id))
         .eq("is_active", true);
       return plans.map(plan => ({
         ...plan,
-        places: (places ?? []).filter(pl => pl.plan_id === plan.id),
+        places: (places ?? [])
+          .filter(pl => pl.plan_id === plan.id)
+          .sort((a, b) => (a.order_index ?? 99) - (b.order_index ?? 99)),
       })) as (CreatorPlan & { places: CreatorPlaceItem[] })[];
     },
   });
@@ -308,9 +310,9 @@ const Home = () => {
 
         {/* Creator Plans */}
         {creatorPlans.length > 0 && (
-          <section className="mb-7 -mx-5">
-            <h3 className="text-base font-bold px-5 mb-3">{t("creator_plans")}</h3>
-            <div className="flex gap-3 overflow-x-auto px-5 pb-1 snap-x snap-mandatory scrollbar-none">
+          <section className="mb-7">
+            <h3 className="text-base font-bold mb-3">{t("creator_plans")}</h3>
+            <div className="space-y-4">
               {creatorPlans.map(plan => (
                 <CreatorPlanCard
                   key={plan.id}
