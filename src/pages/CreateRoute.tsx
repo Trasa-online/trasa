@@ -2,14 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Mic, MessageSquare, CalendarIcon, Search, X } from "lucide-react";
 import { forwardGeocodeWithTypes } from "@/lib/googleMaps";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PlanChatExperience from "@/components/route/PlanChatExperience";
 import RouteSummaryDialog from "@/components/route/RouteSummaryDialog";
-import CreatorPlanCard from "@/components/home/CreatorPlanCard";
 import CreatorPlanSheet from "@/components/home/CreatorPlanSheet";
 import type { CreatorPlan, CreatorPlaceItem } from "@/components/home/CreatorPlanCard";
 import { cn } from "@/lib/utils";
@@ -97,30 +95,6 @@ const CreateRoute = () => {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [selectedPlan, setSelectedPlan] = useState<(CreatorPlan & { places: CreatorPlaceItem[] }) | null>(null);
 
-  const { data: creatorPlans = [] } = useQuery({
-    queryKey: ["creator-plans"],
-    queryFn: async () => {
-      const { data: plans } = await supabase
-        .from("creator_plans")
-        .select("id, creator_handle, creator_avatar_url, creator_social_url, creator_social_platform, city, title, description, tags, num_days, video_url, thumbnail_url")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (!plans?.length) return [];
-      const { data: places } = await supabase
-        .from("creator_places")
-        .select("id, place_name, category, photo_url, description, suggested_time, order_index, plan_id")
-        .in("plan_id", plans.map(p => p.id))
-        .eq("is_active", true);
-      return plans.map(plan => ({
-        ...plan,
-        places: (places ?? [])
-          .filter(pl => pl.plan_id === plan.id)
-          .sort((a, b) => (a.order_index ?? 99) - (b.order_index ?? 99)),
-      })) as (CreatorPlan & { places: CreatorPlaceItem[] })[];
-    },
-  });
-
   if (loading) return null;
   if (!user) {
     navigate("/auth");
@@ -188,20 +162,6 @@ const CreateRoute = () => {
         </div>
 
         <div className="p-4 space-y-6 max-w-lg mx-auto">
-
-          {/* Creator plan inspiration */}
-          {creatorPlans.length > 0 && (
-            <div className="-mx-4">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-4 mb-2">Szukasz inspiracji?</p>
-              <div className="flex gap-3 overflow-x-auto px-4 pb-1 snap-x snap-mandatory scrollbar-none">
-                {creatorPlans.map(plan => (
-                  <div key={plan.id} className="shrink-0 w-72 snap-start">
-                    <CreatorPlanCard plan={plan} onClick={() => setSelectedPlan(plan)} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* City badge */}
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border/50">
