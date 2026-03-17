@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Loader2, Brain } from "lucide-react";
+import { Send, Mic, MicOff, Loader2, Brain, Trash2, Plus, Footprints, ExternalLink, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { type PlanPin } from "./DayPinList";
-import PlaceSwiper from "./PlaceSwiper";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import AddPinSheet from "./AddPinSheet";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -113,7 +115,69 @@ function parseSuggestions(message: string): { cleanMessage: string; suggestions:
   }
 }
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const hasVoiceSupport =
+  typeof window !== "undefined" &&
+  ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
+
+const CATEGORY_EMOJI: Record<string, string> = {
+  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌿",
+  viewpoint: "🔭", shopping: "🛍️", nightlife: "🎶", monument: "🏰",
+  church: "⛪", market: "🏪", bar: "🍺", gallery: "🖼️", walk: "🚶",
+};
+
+const CATEGORY_LABEL: Record<string, string> = {
+  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum", park: "Park",
+  viewpoint: "Widok", shopping: "Zakupy", nightlife: "Nocne życie",
+  monument: "Zabytek", church: "Kościół", market: "Targ", bar: "Bar",
+  gallery: "Galeria", walk: "Spacer",
+};
+
 // ─── Helper components ────────────────────────────────────────────────────────
+
+function PlanPlaceCard({
+  pin, index, onClick, onRemove,
+}: { pin: PlanPin; index: number; onClick: () => void; onRemove: () => void }) {
+  return (
+    <div
+      className="flex items-center gap-3 bg-background rounded-xl p-3 border border-border/40 cursor-pointer active:scale-[0.98] transition-all"
+      onClick={onClick}
+    >
+      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-semibold">
+        {index + 1}
+      </div>
+      {pin.photoUrl && (
+        <img src={pin.photoUrl} alt={pin.place_name} className="flex-shrink-0 w-14 h-14 rounded-lg object-cover" />
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-foreground truncate">{pin.place_name}</p>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          {CATEGORY_LABEL[pin.category] && (
+            <span className="text-[10px] text-muted-foreground/60 bg-muted px-1.5 py-0.5 rounded-full">
+              {CATEGORY_EMOJI[pin.category]} {CATEGORY_LABEL[pin.category]}
+            </span>
+          )}
+          {pin.description && (
+            <p className="text-xs text-muted-foreground truncate">{pin.description}</p>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+        <span className="text-xs font-medium text-foreground">{pin.suggested_time}</span>
+        {pin.duration_minutes && (
+          <span className="text-[10px] text-muted-foreground/60">{pin.duration_minutes} min</span>
+        )}
+      </div>
+      <button
+        onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        className="flex-shrink-0 h-7 w-7 rounded flex items-center justify-center text-destructive/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
 
 function PlanSkeleton({ numDays }: { numDays: number }) {
   return (
@@ -150,10 +214,6 @@ function renderBubble(text: string) {
   );
 }
 
-const hasVoiceSupport =
-  typeof window !== "undefined" &&
-  ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUserMessage }: PlanChatExperienceProps) => {
@@ -166,6 +226,10 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
   const [initializing, setInitializing] = useState(true);
   const [preparingPlan, setPreparingPlan] = useState(false);
   const [memoryUsed, setMemoryUsed] = useState(false);
+  const [selectedPin, setSelectedPin] = useState<{
+    pin: PlanPin; dayNumber: number; pinIndex: number;
+  } | null>(null);
+  const [addPinDay, setAddPinDay] = useState<number | null>(null);
 
   // Sheet snap state
   const [snap, setSnap] = useState<SnapState>("half");
@@ -383,6 +447,21 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
   };
 
+  const handleRemovePin = (dayNumber: number, pinIndex: number) => {
+    setPlan(prev => prev ? {
+      ...prev,
+      days: prev.days.map(d =>
+        d.day_number === dayNumber
+          ? { ...d, pins: d.pins.filter((_, i) => i !== pinIndex) }
+          : d
+      ),
+    } : prev);
+  };
+
+  const handleConfirm = () => {
+    if (plan) onPlanReady(plan, messages);
+  };
+
   if (initializing) {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-4">
@@ -481,7 +560,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
             </div>
           )}
 
-          {/* Half / Full: swiper */}
+          {/* Half / Full: rich card list */}
           {(snap !== "peek" || dragH !== null) && plan && (
             <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
               {memoryUsed && (
@@ -495,17 +574,71 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
                   <PlanSkeleton numDays={preferences.numDays} />
                 </div>
               ) : (
-                <div className="flex-1 overflow-y-auto min-h-0">
-                  <PlaceSwiper
-                    key={plan.days.flatMap(d => d.pins).map(p => p.place_name).join("|")}
-                    days={plan.days}
-                    totalDays={plan.days.length}
-                    onFinish={(keptDays) => {
-                      const keptPlan = { ...plan, days: keptDays };
-                      setPlan(keptPlan);
-                      onPlanReady(keptPlan, messages);
-                    }}
-                  />
+                <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+                  {/* Scrollable card list */}
+                  <div className="flex-1 overflow-y-auto px-4">
+                    {plan.days.map((day) => (
+                      <div key={day.day_number} className="mb-4">
+                        {/* Day header */}
+                        <div className="flex items-center justify-between py-3">
+                          <h3 className="text-sm font-semibold text-foreground">
+                            {plan.days.length > 1 ? `Dzień ${day.day_number}` : "Plan dnia"}
+                          </h3>
+                          {day.day_metrics && (
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60">
+                              {day.day_metrics.total_walking_km && (
+                                <span>🚶 {day.day_metrics.total_walking_km} km</span>
+                              )}
+                              {day.day_metrics.crowd_level && (
+                                <span>
+                                  {day.day_metrics.crowd_level === "low" ? "🟢" : day.day_metrics.crowd_level === "medium" ? "🟡" : "🔴"}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Pin cards */}
+                        <div className="space-y-2">
+                          {day.pins.map((pin, idx) => (
+                            <div key={idx}>
+                              {idx > 0 && (pin.walking_time_from_prev || pin.distance_from_prev) && (
+                                <div className="flex items-center gap-1.5 pl-12 py-1 text-[11px] text-muted-foreground/60">
+                                  <Footprints className="h-3 w-3 shrink-0" />
+                                  {pin.walking_time_from_prev && <span>{pin.walking_time_from_prev}</span>}
+                                  {pin.distance_from_prev && <span>· {pin.distance_from_prev}</span>}
+                                </div>
+                              )}
+                              <PlanPlaceCard
+                                pin={pin}
+                                index={idx}
+                                onClick={() => setSelectedPin({ pin, dayNumber: day.day_number, pinIndex: idx })}
+                                onRemove={() => handleRemovePin(day.day_number, idx)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Add place button */}
+                        <button
+                          onClick={() => setAddPinDay(day.day_number)}
+                          className="mt-2 w-full py-2 rounded-xl border border-dashed border-border/60 text-xs text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Dodaj miejsce
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Sticky CTA */}
+                  <div className="flex-shrink-0 px-4 pb-4 pt-2 border-t border-border/40">
+                    <button
+                      onClick={handleConfirm}
+                      className="w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold"
+                    >
+                      Wybieram ten plan!
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -551,6 +684,110 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
           </Button>
         </div>
       </div>
+
+      {/* ── Pin detail sheet ──────────────────────────────────────────────── */}
+      <Sheet open={!!selectedPin} onOpenChange={(o) => !o && setSelectedPin(null)}>
+        <SheetContent side="bottom" className="max-h-[85dvh] flex flex-col p-0 rounded-t-3xl">
+          <VisuallyHidden><SheetTitle>{selectedPin?.pin.place_name}</SheetTitle></VisuallyHidden>
+          {selectedPin && (
+            <>
+              {selectedPin.pin.photoUrl && (
+                <div className="relative flex-shrink-0">
+                  <img
+                    src={selectedPin.pin.photoUrl}
+                    alt={selectedPin.pin.place_name}
+                    className="w-full h-48 object-cover"
+                  />
+                  <button
+                    onClick={() => setSelectedPin(null)}
+                    className="absolute top-3 right-3 h-8 w-8 rounded-full bg-background/80 backdrop-blur flex items-center justify-center"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+                <div>
+                  <h2 className="text-lg font-bold">{selectedPin.pin.place_name}</h2>
+                  <p className="text-sm text-muted-foreground mt-1">{selectedPin.pin.description}</p>
+                </div>
+                {(selectedPin.pin.pros?.length ?? 0) > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-foreground/60 mb-1.5">Dlaczego warto</p>
+                    <ul className="space-y-1">
+                      {selectedPin.pin.pros!.map((p, i) => (
+                        <li key={i} className="text-sm flex gap-2">
+                          <span className="text-green-500">✓</span>{p}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {(selectedPin.pin.cons?.length ?? 0) > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-foreground/60 mb-1.5">Warto wiedzieć</p>
+                    <ul className="space-y-1">
+                      {selectedPin.pin.cons!.map((c, i) => (
+                        <li key={i} className="text-sm flex gap-2">
+                          <span className="text-yellow-500">!</span>{c}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {selectedPin.pin.creator && (
+                  <a
+                    href={selectedPin.pin.creator.postUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 p-3 rounded-xl border border-border/40 hover:bg-muted transition-colors"
+                  >
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{selectedPin.pin.creator.name}</span>
+                  </a>
+                )}
+              </div>
+              <div className="flex-shrink-0 px-5 pb-6 pt-2 flex gap-2 border-t border-border/40">
+                <button
+                  onClick={() => {
+                    handleRemovePin(selectedPin.dayNumber, selectedPin.pinIndex);
+                    setSelectedPin(null);
+                  }}
+                  className="flex-1 py-3 rounded-xl border border-destructive/30 text-destructive text-sm font-medium"
+                >
+                  Usuń z planu
+                </button>
+                <button
+                  onClick={() => setSelectedPin(null)}
+                  className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
+                >
+                  Zamknij
+                </button>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Add pin sheet ─────────────────────────────────────────────────── */}
+      {addPinDay !== null && (
+        <AddPinSheet
+          open={addPinDay !== null}
+          onOpenChange={(o) => !o && setAddPinDay(null)}
+          cityContext={preferences.city}
+          onPinAdd={(pin) => {
+            setPlan(prev => prev ? {
+              ...prev,
+              days: prev.days.map(d =>
+                d.day_number === addPinDay
+                  ? { ...d, pins: [...d.pins, { ...pin, day_number: addPinDay }] }
+                  : d
+              ),
+            } : prev);
+            setAddPinDay(null);
+          }}
+        />
+      )}
 
     </div>
   );
