@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.get-alternatives]
 verify_jwt = false
+
+[functions.send-push]
+verify_jwt = false
+
+[functions.push-scheduler]
+verify_jwt = false
