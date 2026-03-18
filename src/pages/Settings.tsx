@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, ChevronRight, Compass } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Camera, Shield, ChevronRight, Compass, Bell } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 const Settings = () => {
   const { user, loading, signOut } = useAuth();
