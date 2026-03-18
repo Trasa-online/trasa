@@ -13,6 +13,7 @@ interface ActiveRoute {
 }
 
 interface PlaceResult {
+  found?: boolean;
   name: string;
   description: string;
   tip: string;
@@ -41,6 +42,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
   const [isListening, setIsListening] = useState(false);
   const [isIdentifying, setIsIdentifying] = useState(false);
   const [placeResult, setPlaceResult] = useState<PlaceResult | null>(null);
+  const [showSightseeingCategories, setShowSightseeingCategories] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -153,7 +155,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
       icon: <MapPin className="h-3 w-3" />,
       action: () => {
         onClose();
-        navigate(`/create?routeId=${route.id}`);
+        navigate(`/edit-plan?route=${route.id}`);
       },
     });
   }
@@ -168,9 +170,42 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
   }
 
   // Generic fallbacks — always show at least 2 chips
-  chips.push({ label: tHome("chip_sightseeing"), query: tHome("chip_sightseeing_query"), icon: <Map className="h-3 w-3" /> });
+  chips.push({
+    label: tHome("chip_sightseeing"),
+    query: "",
+    icon: <Map className="h-3 w-3" />,
+    action: () => setShowSightseeingCategories(true),
+  });
 
   const visibleChips = chips.slice(0, 4);
+
+  const sightseeingCategories = i18n.language === "en"
+    ? [
+        { label: "Monuments", emoji: "🏰", query: "Show me 3 interesting monuments and landmarks" },
+        { label: "Museums", emoji: "🏛️", query: "Show me 3 interesting museums" },
+        { label: "Parks", emoji: "🌳", query: "Show me 3 beautiful parks and places for a walk" },
+        { label: "Restaurants", emoji: "🍽️", query: "Recommend 3 restaurants" },
+        { label: "Cafés", emoji: "☕", query: "Recommend 3 cafés" },
+      ]
+    : [
+        { label: "Zabytki", emoji: "🏰", query: "Pokaż mi 3 najciekawsze zabytki" },
+        { label: "Muzea", emoji: "🏛️", query: "Pokaż mi 3 interesujące muzea" },
+        { label: "Parki", emoji: "🌳", query: "Pokaż mi 3 najpiękniejsze parki i miejsca na spacer" },
+        { label: "Restauracje", emoji: "🍽️", query: "Polecisz mi 3 restauracje?" },
+        { label: "Kawiarnie", emoji: "☕", query: "Polecisz mi 3 kawiarnie?" },
+      ];
+
+  const handleSightseeingCategory = (baseQuery: string) => {
+    const activeRoute = activeRoutes[0];
+    if (activeRoute) {
+      const q = `${baseQuery} w ${activeRoute.city}`;
+      onClose();
+      navigate(`/edit-plan?route=${activeRoute.id}&q=${encodeURIComponent(q)}`);
+    } else {
+      onClose();
+      navigate(`/create?q=${encodeURIComponent(baseQuery)}`);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center px-6">
@@ -198,26 +233,53 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
           {tHome("orb_question")}
         </p>
 
-        {/* Contextual chips */}
-        <div className="flex gap-2 flex-wrap justify-center">
-          {visibleChips.map((chip) => (
-            <button
-              key={chip.label}
-              type="button"
-              onClick={() => {
-                if (chip.action) {
-                  chip.action();
-                } else {
-                  handleSubmit(chip.query);
-                }
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border text-xs text-foreground hover:bg-muted active:scale-95 transition-transform"
-            >
-              {chip.icon}
-              {chip.label}
-            </button>
-          ))}
-        </div>
+        {/* Contextual chips / sightseeing category picker */}
+        {showSightseeingCategories ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-muted-foreground text-center">
+              {i18n.language === "en" ? "What are you looking for?" : "Co Cię interesuje?"}
+            </p>
+            <div className="flex gap-2 flex-wrap justify-center">
+              {sightseeingCategories.map((cat) => (
+                <button
+                  key={cat.label}
+                  type="button"
+                  onClick={() => handleSightseeingCategory(cat.query)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border text-xs text-foreground hover:bg-muted active:scale-95 transition-transform"
+                >
+                  {cat.emoji} {cat.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setShowSightseeingCategories(false)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
+              >
+                ← {i18n.language === "en" ? "Back" : "Wróć"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-2 flex-wrap justify-center">
+            {visibleChips.map((chip) => (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={() => {
+                  if (chip.action) {
+                    chip.action();
+                  } else {
+                    handleSubmit(chip.query);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border text-xs text-foreground hover:bg-muted active:scale-95 transition-transform"
+              >
+                {chip.icon}
+                {chip.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Place identification result */}
         {isIdentifying && (
@@ -228,10 +290,20 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
         )}
         {placeResult && !isIdentifying && (
           <div className="rounded-xl bg-card border border-border p-4 flex flex-col gap-1">
-            <p className="font-semibold text-sm">{placeResult.name}</p>
-            <p className="text-xs text-muted-foreground">{placeResult.description}</p>
-            {placeResult.tip && (
-              <p className="text-xs text-muted-foreground mt-1">💡 {placeResult.tip}</p>
+            {placeResult.found === false ? (
+              <p className="text-sm text-muted-foreground text-center">
+                {i18n.language === "en"
+                  ? "No place detected. Try a photo of a building, monument, or landmark."
+                  : "Nie wykryto miejsca. Spróbuj zdjęcia budynku, zabytku lub atrakcji."}
+              </p>
+            ) : (
+              <>
+                <p className="font-semibold text-sm">{placeResult.name}</p>
+                <p className="text-xs text-muted-foreground">{placeResult.description}</p>
+                {placeResult.tip && (
+                  <p className="text-xs text-muted-foreground mt-1">💡 {placeResult.tip}</p>
+                )}
+              </>
             )}
           </div>
         )}

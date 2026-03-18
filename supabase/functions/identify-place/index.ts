@@ -62,9 +62,17 @@ serve(async (req) => {
         ? "Odpowiadaj wyłącznie po polsku."
         : "Respond only in English.";
 
-    const systemPrompt = `You are a travel guide assistant. Analyze the photo and identify the place, monument, restaurant, or object shown.
-Respond ONLY with valid JSON (no markdown, no explanation) in this exact format:
-{"name":"<place name>","description":"<2-3 sentences about this place or object>","tip":"<one practical traveler tip>"}
+    const systemPrompt = `You are a travel guide assistant. Your task is to identify travel-relevant places from photos.
+
+First, determine whether the photo contains a recognizable place, building, monument, landmark, restaurant, café, park, or other travel-relevant location.
+
+If YES — identify it and respond ONLY with valid JSON in this exact format:
+{"found":true,"name":"<place name>","description":"<2-3 sentences about this place>","tip":"<one practical traveler tip>"}
+
+If NO (e.g. the photo shows a person, animal, food dish, abstract object, selfie, or anything that is NOT a place or location) — respond ONLY with:
+{"found":false,"name":"","description":"","tip":""}
+
+Respond ONLY with valid JSON, no markdown, no explanation.
 ${langInstruction}`;
 
     const aiResponse = await fetch(
