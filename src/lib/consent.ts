@@ -42,24 +42,6 @@ async function saveConsentToProfile(_status: "granted" | "denied") {
  * Returns true if the banner should be shown.
  */
 export async function syncConsentFromProfile(): Promise<boolean> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return getConsent() === null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("cookie_consent")
-    .eq("id", user.id)
-    .single();
-
-  const dbConsent = profile?.cookie_consent as ConsentStatus;
-
-  if (dbConsent === "granted" || dbConsent === "denied") {
-    // Sync DB value to localStorage so banner stays hidden
-    localStorage.setItem(CONSENT_KEY, dbConsent);
-    if (dbConsent === "granted") applyGtagConsent("granted");
-    return false;
-  }
-
-  // No consent in DB — show banner
-  return true;
+  // Consent is stored in localStorage only
+  return getConsent() === null;
 }
