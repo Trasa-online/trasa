@@ -2,7 +2,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-const CONSENT_KEY = "trasa_cookie_consent";
+const CONSENT_KEY = "trasa_cookie_consent_v2";
 
 export type ConsentStatus = "granted" | "denied" | null;
 
