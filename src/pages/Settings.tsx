@@ -168,9 +168,7 @@ const Settings = () => {
           <span className="text-sm text-muted-foreground font-medium">{i18n.language === "pl" ? "🇵🇱 PL" : "🇬🇧 EN"}</span>
         </button>
 
-        <div className="bg-card rounded-xl px-4 py-3">
-          <PushNotificationToggle />
-        </div>
+        <PushToggleSection />
 
         <div className="space-y-2 bg-card rounded-xl p-4">
           {isAdmin && (
