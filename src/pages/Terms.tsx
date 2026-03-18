@@ -57,11 +57,20 @@ const Terms = () => {
         </section>
 
         <section>
-          <h2 className="font-bold text-base mb-2">5. Cookies i analityka (Google Analytics)</h2>
+          <h2 className="font-bold text-base mb-2">5. Cookies i analityka (Google Analytics i Microsoft Clarity)</h2>
           <p className="text-muted-foreground">
-            Aplikacja korzysta z plików cookies (ciasteczek) Google Analytics 4 w celu analizy ruchu i poprawy jakości
-            usługi. Pliki cookies analityczne są ustawiane wyłącznie po udzieleniu przez Ciebie wyraźnej zgody poprzez
+            Aplikacja korzysta z narzędzi analitycznych wyłącznie po udzieleniu przez Ciebie wyraźnej zgody poprzez
             baner cookie widoczny przy pierwszym uruchomieniu aplikacji.
+          </p>
+          <p className="text-muted-foreground mt-2">
+            <strong>Google Analytics 4</strong> — analiza ruchu: anonimizowane adresy IP, odwiedzane podstrony,
+            czas trwania sesji, typ urządzenia. Dane nie pozwalają na bezpośrednią identyfikację użytkownika.
+          </p>
+          <p className="text-muted-foreground mt-2">
+            <strong>Microsoft Clarity</strong> — nagrania sesji i mapy ciepła (heatmaps) pozwalające zrozumieć
+            sposób korzystania z Aplikacji. Clarity może rejestrować kliknięcia, przewijanie i interakcje z UI.
+            Dane są przechowywane przez Microsoft Corporation (USA) na podstawie standardowych klauzul umownych
+            (art. 46 RODO). Więcej informacji: privacy.microsoft.com.
           </p>
           <p className="text-muted-foreground mt-2">
             <strong>Jakie dane zbiera Google Analytics:</strong> anonimizowane adresy IP, odwiedzane podstrony,
@@ -96,6 +105,7 @@ const Terms = () => {
             <li>Google Gemini (przez Lovable AI Gateway) — generowanie planów tras i przetwarzanie dziennika</li>
             <li>Google Maps / Google Places API — wyświetlanie map i wyszukiwanie miejsc</li>
             <li>Google Analytics 4 — analiza ruchu (za zgodą; patrz punkt 5)</li>
+            <li>Microsoft Clarity — nagrania sesji i heatmapy (za zgodą; patrz punkt 5)</li>
           </ul>
           <p className="text-muted-foreground mt-2">
             Treści rozmów z AI mogą być przekazywane do wyżej wymienionych usług wyłącznie w celu realizacji funkcji
