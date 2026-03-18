@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Mic, MessageSquare, CalendarIcon, Search, X } from "lucide-react";
+import { ArrowLeft, CalendarIcon, Search, X } from "lucide-react";
 import { forwardGeocodeWithTypes } from "@/lib/googleMaps";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,16 +27,6 @@ interface TripPreferences {
 }
 
 
-const PRIORITY_OPTIONS = [
-  { id: "good_food", label: "Dobre jedzenie", emoji: "🍽️" },
-  { id: "nice_views", label: "Ładne widoki", emoji: "🌅" },
-  { id: "long_walks", label: "Długie spacery", emoji: "🚶" },
-  { id: "museums", label: "Muzea i kultura", emoji: "🏛️" },
-  { id: "nightlife", label: "Życie nocne", emoji: "🌙" },
-  { id: "shopping", label: "Zakupy", emoji: "🛍️" },
-  { id: "local_vibes", label: "Lokalne klimaty", emoji: "🎭" },
-  { id: "photography", label: "Fotografia", emoji: "📸" },
-];
 
 function getPlaceEmoji(types: string[]): string {
   if (types.some(t => ["restaurant", "food", "meal_delivery", "meal_takeaway"].includes(t))) return "🍽️";
@@ -77,7 +67,6 @@ const CreateRoute = () => {
   const [mustSearch, setMustSearch] = useState("");
   const [mustSearchResults, setMustSearchResults] = useState<{ name: string; full_address: string; types: string[] }[]>([]);
   const mustSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [customPriority, setCustomPriority] = useState("");
   const [cityInput, setCityInput] = useState("Kraków");
   const [preferences, setPreferences] = useState<TripPreferences>({
     numDays: 1,
@@ -102,15 +91,6 @@ const CreateRoute = () => {
     return null;
   }
 
-  const togglePriority = (id: string) => {
-    setPreferences(prev => ({
-      ...prev,
-      priorities: prev.priorities.includes(id)
-        ? prev.priorities.filter(p => p !== id)
-        : [...prev.priorities, id],
-    }));
-  };
-
   const handleMustSearchChange = (value: string) => {
     setMustSearch(value);
     setMustSearchResults([]);
@@ -122,17 +102,6 @@ const CreateRoute = () => {
         setMustSearchResults(results.slice(0, 6));
       } catch { /* ignore */ }
     }, 400);
-  };
-
-  const addCustomPriority = () => {
-    const trimmed = customPriority.trim();
-    if (trimmed && !preferences.priorities.includes(trimmed)) {
-      setPreferences(prev => ({
-        ...prev,
-        priorities: [...prev.priorities, trimmed],
-      }));
-      setCustomPriority("");
-    }
   };
 
   const handleDateSelect = (date: Date | undefined) => {
@@ -212,78 +181,6 @@ const CreateRoute = () => {
             </div>
           </div>
 
-          {/* Pace */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Tempo dnia</label>
-            <div className="flex gap-2">
-              {[
-                { id: "active" as const, label: "Aktywne", emoji: "⚡" },
-                { id: "mixed" as const, label: "Mieszane", emoji: "⚖️" },
-                { id: "calm" as const, label: "Spokojne", emoji: "☕" },
-              ].map(option => (
-                <button
-                  key={option.id}
-                  onClick={() => setPreferences(prev => ({ ...prev, pace: option.id }))}
-                  className={cn(
-                    "flex-1 py-3 rounded-xl text-sm font-medium transition-colors border",
-                    preferences.pace === option.id
-                      ? "bg-foreground text-background border-foreground"
-                      : "bg-card text-foreground border-border hover:bg-muted"
-                  )}
-                >
-                  {option.emoji} {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Priorities */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Co jest dla Ciebie ważne?</label>
-            {validationErrors.priorities && <p className="text-xs text-destructive">{validationErrors.priorities}</p>}
-            <div className="flex flex-wrap gap-2">
-              {PRIORITY_OPTIONS.map(option => (
-                <button
-                  key={option.id}
-                  onClick={() => togglePriority(option.id)}
-                  className={cn(
-                    "px-3 py-2 rounded-full text-sm transition-colors border",
-                    preferences.priorities.includes(option.id)
-                      ? "bg-foreground text-background border-foreground"
-                      : "bg-card text-foreground border-border hover:bg-muted"
-                  )}
-                >
-                  {option.emoji} {option.label}
-                </button>
-              ))}
-              {/* Custom priorities */}
-              {preferences.priorities
-                .filter(p => !PRIORITY_OPTIONS.some(o => o.id === p))
-                .map(custom => (
-                  <button
-                    key={custom}
-                    onClick={() => togglePriority(custom)}
-                    className="px-3 py-2 rounded-full text-sm transition-colors border bg-foreground text-background border-foreground"
-                  >
-                    {custom}
-                  </button>
-                ))}
-            </div>
-            {/* Custom priority input */}
-            <div className="flex gap-2 mt-2">
-              <Input
-                placeholder="Inne..."
-                value={customPriority}
-                onChange={e => setCustomPriority(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addCustomPriority())}
-                className="flex-1 bg-card"
-              />
-              <Button variant="outline" size="sm" onClick={addCustomPriority} disabled={!customPriority.trim()}>
-                Dodaj
-              </Button>
-            </div>
-          </div>
-
           {/* Must-visit places */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Chętnie odwiedzę</label>
@@ -333,42 +230,10 @@ const CreateRoute = () => {
             )}
           </div>
 
-          {/* Planning mode */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Tryb planowania</label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPreferences(prev => ({ ...prev, planningMode: "text" }))}
-                className={cn(
-                  "flex-1 py-3 rounded-xl text-sm font-medium transition-colors border flex items-center justify-center gap-2",
-                  preferences.planningMode === "text"
-                    ? "bg-foreground text-background border-foreground"
-                    : "bg-card text-foreground border-border hover:bg-muted"
-                )}
-              >
-                <MessageSquare className="h-4 w-4" />
-                Tekst
-              </button>
-              <button
-                onClick={() => setPreferences(prev => ({ ...prev, planningMode: "voice" }))}
-                className={cn(
-                  "flex-1 py-3 rounded-xl text-sm font-medium transition-colors border flex items-center justify-center gap-2",
-                  preferences.planningMode === "voice"
-                    ? "bg-foreground text-background border-foreground"
-                    : "bg-card text-foreground border-border hover:bg-muted"
-                )}
-              >
-                <Mic className="h-4 w-4" />
-                Rozmowa
-              </button>
-            </div>
-          </div>
-
           {/* Next button */}
           <Button
             onClick={() => {
               const errors: Record<string, string> = {};
-              if (preferences.priorities.length === 0) errors.priorities = "Wybierz przynajmniej jeden priorytet";
               if (!selectedDate) errors.date = "Wybierz datę podróży";
               setValidationErrors(errors);
               if (Object.keys(errors).length === 0) setStep(2);
