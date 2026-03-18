@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Pencil } from "lucide-react";
+import { ChevronRight, Pencil, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PlaceDetailSheet from "./PlaceDetailSheet";
+import RouteMap from "@/components/RouteMap";
 
 interface Pin {
   id: string;
@@ -31,6 +32,23 @@ const TripDayView = ({ routeId, pins, dayLabel, dateLabel, onStartReview }: Trip
   const sortedPins = [...pins].sort((a, b) => a.pin_order - b.pin_order);
   const evening = isEvening();
 
+  const pinsWithCoords = sortedPins.filter(p => p.latitude && p.longitude);
+
+  const googleMapsUrl = useMemo(() => {
+    if (pinsWithCoords.length === 0) return null;
+    if (pinsWithCoords.length === 1) {
+      const p = pinsWithCoords[0];
+      return `https://www.google.com/maps/search/?api=1&query=${p.latitude},${p.longitude}`;
+    }
+    const origin = `${pinsWithCoords[0].latitude},${pinsWithCoords[0].longitude}`;
+    const dest = `${pinsWithCoords.at(-1)!.latitude},${pinsWithCoords.at(-1)!.longitude}`;
+    const waypoints = pinsWithCoords.slice(1, -1)
+      .map(p => `${p.latitude},${p.longitude}`)
+      .join("|");
+    const base = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}`;
+    return waypoints ? `${base}&waypoints=${waypoints}` : base;
+  }, [pinsWithCoords]);
+
   return (
     <div className="bg-muted/40 p-4">
       {/* Header */}
@@ -38,6 +56,22 @@ const TripDayView = ({ routeId, pins, dayLabel, dateLabel, onStartReview }: Trip
         <p className="text-sm font-semibold">{dayLabel}</p>
         {dateLabel && <p className="text-xs text-muted-foreground">{dateLabel}</p>}
       </div>
+
+      {/* Map + Google Maps link */}
+      {pinsWithCoords.length > 0 && (
+        <div className="mb-3 space-y-2">
+          <RouteMap pins={sortedPins} className="h-48 rounded-xl" />
+          <a
+            href={googleMapsUrl!}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-background/60 border border-border/60 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+          >
+            <Map className="h-3.5 w-3.5" />
+            Otwórz trasę w Google Maps ({pinsWithCoords.length} {pinsWithCoords.length === 1 ? "punkt" : "punktów"})
+          </a>
+        </div>
+      )}
 
       {/* Read-only pin list */}
       <div className="space-y-1 mb-3">
