@@ -15,6 +15,19 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
+function PushToggleSection() {
+  const { isSupported, isSubscribed, isLoading, toggle } = usePushNotifications();
+  const { t } = useTranslation("settings");
+  if (!isSupported) return null;
+  return (
+    <div className="w-full flex items-center gap-3 px-4 py-3 bg-card rounded-xl border border-border/40">
+      <Bell className="h-4 w-4 text-primary flex-shrink-0" />
+      <span className="text-sm font-medium flex-1">{t("push_notifications")}</span>
+      <Switch checked={isSubscribed} onCheckedChange={toggle} disabled={isLoading} />
+    </div>
+  );
+}
+
 const Settings = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
