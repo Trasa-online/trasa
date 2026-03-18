@@ -33,13 +33,8 @@ export function denyConsent() {
   void saveConsentToProfile("denied");
 }
 
-async function saveConsentToProfile(status: "granted" | "denied") {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  await supabase
-    .from("profiles")
-    .update({ cookie_consent: status, cookie_consent_at: new Date().toISOString() })
-    .eq("id", user.id);
+async function saveConsentToProfile(_status: "granted" | "denied") {
+  // cookie_consent column removed from profiles — consent stored in localStorage only
 }
 
 /**
@@ -47,24 +42,6 @@ async function saveConsentToProfile(status: "granted" | "denied") {
  * Returns true if the banner should be shown.
  */
 export async function syncConsentFromProfile(): Promise<boolean> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return getConsent() === null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("cookie_consent")
-    .eq("id", user.id)
-    .single();
-
-  const dbConsent = profile?.cookie_consent as ConsentStatus;
-
-  if (dbConsent === "granted" || dbConsent === "denied") {
-    // Sync DB value to localStorage so banner stays hidden
-    localStorage.setItem(CONSENT_KEY, dbConsent);
-    if (dbConsent === "granted") applyGtagConsent("granted");
-    return false;
-  }
-
-  // No consent in DB — show banner
-  return true;
+  // Consent is stored in localStorage only
+  return getConsent() === null;
 }

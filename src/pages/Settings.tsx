@@ -8,11 +8,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, ChevronRight, Compass } from "lucide-react";
-import PushNotificationToggle from "@/components/PushNotificationToggle";
+import { Camera, Shield, ChevronRight, Compass, Bell } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+
+function PushToggleSection() {
+  const { isSupported, isSubscribed, isLoading, toggle } = usePushNotifications();
+  const { t } = useTranslation("settings");
+  if (!isSupported) return null;
+  return (
+    <div className="w-full flex items-center gap-3 px-4 py-3 bg-card rounded-xl border border-border/40">
+      <Bell className="h-4 w-4 text-primary flex-shrink-0" />
+      <span className="text-sm font-medium flex-1">{t("push_notifications")}</span>
+      <Switch checked={isSubscribed} onCheckedChange={toggle} disabled={isLoading} />
+    </div>
+  );
+}
 
 const Settings = () => {
   const { user, loading, signOut } = useAuth();
@@ -167,9 +181,7 @@ const Settings = () => {
           <span className="text-sm text-muted-foreground font-medium">{i18n.language === "pl" ? "🇵🇱 PL" : "🇬🇧 EN"}</span>
         </button>
 
-        <div className="bg-card rounded-xl px-4 py-3">
-          <PushNotificationToggle />
-        </div>
+        <PushToggleSection />
 
         <div className="space-y-2 bg-card rounded-xl p-4">
           {isAdmin && (
