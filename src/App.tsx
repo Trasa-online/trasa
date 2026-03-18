@@ -13,6 +13,7 @@ function RouteTracker() {
   }, [location]);
   return null;
 }
+import CookieBanner from "./components/CookieBanner";
 import AppLayout from "./components/layout/AppLayout";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
@@ -39,6 +40,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <RouteTracker />
+        <CookieBanner />
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/terms" element={<Terms />} />
