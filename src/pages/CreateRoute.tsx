@@ -67,14 +67,14 @@ const CreateRoute = () => {
   const [mustSearch, setMustSearch] = useState("");
   const [mustSearchResults, setMustSearchResults] = useState<{ name: string; full_address: string; types: string[] }[]>([]);
   const mustSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [cityInput, setCityInput] = useState("Kraków");
+  const [cityInput, setCityInput] = useState("");
   const [preferences, setPreferences] = useState<TripPreferences>({
     numDays: 1,
     pace: "mixed",
     priorities: [],
     startDate: null,
     planningMode: "text",
-    city: "Kraków",
+    city: "",
     folderId,
     dayNumber,
   });
@@ -131,7 +131,7 @@ const CreateRoute = () => {
           <h1 className="text-lg font-semibold">Zaplanuj podróż</h1>
         </div>
 
-        <div className="p-4 space-y-6 max-w-lg mx-auto">
+        <div className="p-4 space-y-8 max-w-lg mx-auto">
 
           {/* Date picker — TOP */}
           <div className="space-y-2">
@@ -141,7 +141,7 @@ const CreateRoute = () => {
                 <Button
                   variant="outline"
                   className={cn(
-                    "w-full justify-start text-left font-normal bg-card",
+                    "w-full justify-start text-left font-normal bg-card h-12",
                     !selectedDate && "text-muted-foreground"
                   )}
                 >
@@ -167,18 +167,15 @@ const CreateRoute = () => {
           {/* City input */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Destynacja</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base pointer-events-none">🗺️</span>
-              <Input
-                placeholder="Wpisz miasto..."
-                value={cityInput}
-                onChange={e => {
-                  setCityInput(e.target.value);
-                  setPreferences(prev => ({ ...prev, city: e.target.value }));
-                }}
-                className="pl-9 bg-card"
-              />
-            </div>
+            <Input
+              placeholder="Wpisz miasto..."
+              value={cityInput}
+              onChange={e => {
+                setCityInput(e.target.value);
+                setPreferences(prev => ({ ...prev, city: e.target.value }));
+              }}
+              className="bg-card h-12"
+            />
           </div>
 
           {/* Must-visit places */}
@@ -190,7 +187,7 @@ const CreateRoute = () => {
                 placeholder="Szukaj miejsca..."
                 value={mustSearch}
                 onChange={e => handleMustSearchChange(e.target.value)}
-                className="pl-9 bg-card"
+                className="pl-9 bg-card h-12"
               />
               {mustSearchResults.length > 0 && (
                 <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
@@ -215,6 +212,9 @@ const CreateRoute = () => {
                 </div>
               )}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Np. konkretna restauracja, muzeum czy zabytek — AI uwzględni je w planie.
+            </p>
             {mustVisitPlaces.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {mustVisitPlaces.map(place => (
