@@ -23,6 +23,7 @@ const Settings = () => {
   const { t, i18n } = useTranslation("settings");
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const { isSupported: pushSupported, isSubscribed: pushEnabled, isLoading: pushLoading, toggle: togglePush } = usePushNotifications();
 
   useEffect(() => {
     if (!loading && !user) {
