@@ -16,7 +16,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface TripPreferences {
-  numDays: 1 | 2 | 3;
+  numDays: 1;
   pace: "active" | "calm" | "mixed";
   priorities: string[];
   startDate: string | null;
@@ -78,6 +78,7 @@ const CreateRoute = () => {
   const [mustSearchResults, setMustSearchResults] = useState<{ name: string; full_address: string; types: string[] }[]>([]);
   const mustSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [customPriority, setCustomPriority] = useState("");
+  const [cityInput, setCityInput] = useState("Kraków");
   const [preferences, setPreferences] = useState<TripPreferences>({
     numDays: 1,
     pace: "mixed",
@@ -163,33 +164,51 @@ const CreateRoute = () => {
 
         <div className="p-4 space-y-6 max-w-lg mx-auto">
 
-          {/* City badge */}
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border/50">
-            <span className="text-base">🗺️</span>
-            <div>
-              <p className="text-xs text-muted-foreground">Destynacja</p>
-              <p className="text-sm font-semibold">Kraków</p>
-            </div>
-          </div>
-
-          {/* Days */}
+          {/* Date picker — TOP */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Ile dni?</label>
-            <div className="flex gap-2">
-              {([1, 2, 3] as const).map(n => (
-                <button
-                  key={n}
-                  onClick={() => setPreferences(prev => ({ ...prev, numDays: n }))}
+            <label className="text-sm font-medium">Wybierz datę</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
                   className={cn(
-                    "flex-1 py-3 rounded-xl text-sm font-medium transition-colors border",
-                    preferences.numDays === n
-                      ? "bg-foreground text-background border-foreground"
-                      : "bg-card text-foreground border-border hover:bg-muted"
+                    "w-full justify-start text-left font-normal bg-card",
+                    !selectedDate && "text-muted-foreground"
                   )}
                 >
-                  {n} {n === 1 ? "dzień" : "dni"}
-                </button>
-              ))}
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? format(selectedDate, "PPP") : "Wybierz datę"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={handleDateSelect}
+                  disabled={(date) => { const today = new Date(); today.setHours(0, 0, 0, 0); const d = new Date(date); d.setHours(0, 0, 0, 0); return d.getTime() < today.getTime(); }}
+                  initialFocus
+                  weekStartsOn={1}
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            {validationErrors.date && <p className="text-xs text-destructive">{validationErrors.date}</p>}
+          </div>
+
+          {/* City input */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Destynacja</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base pointer-events-none">🗺️</span>
+              <Input
+                placeholder="Wpisz miasto..."
+                value={cityInput}
+                onChange={e => {
+                  setCityInput(e.target.value);
+                  setPreferences(prev => ({ ...prev, city: e.target.value }));
+                }}
+                className="pl-9 bg-card"
+              />
             </div>
           </div>
 
@@ -312,38 +331,6 @@ const CreateRoute = () => {
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Date picker */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Wybierz datę</label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal bg-card",
-                    !selectedDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "PPP") : "Wybierz datę"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={handleDateSelect}
-                  disabled={(date) => { const today = new Date(); today.setHours(0, 0, 0, 0); const d = new Date(date); d.setHours(0, 0, 0, 0); return d.getTime() < today.getTime(); }}
-                  initialFocus
-                  weekStartsOn={1}
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-            {validationErrors.date && <p className="text-xs text-destructive">{validationErrors.date}</p>}
-            <p className="text-xs text-muted-foreground">Data wpływa na Twój plan podróży</p>
           </div>
 
           {/* Planning mode */}
