@@ -33,13 +33,8 @@ export function denyConsent() {
   void saveConsentToProfile("denied");
 }
 
-async function saveConsentToProfile(status: "granted" | "denied") {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  await supabase
-    .from("profiles")
-    .update({ cookie_consent: status, cookie_consent_at: new Date().toISOString() })
-    .eq("id", user.id);
+async function saveConsentToProfile(_status: "granted" | "denied") {
+  // cookie_consent column removed from profiles — consent stored in localStorage only
 }
 
 /**
