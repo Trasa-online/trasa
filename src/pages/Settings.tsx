@@ -161,6 +161,18 @@ const Settings = () => {
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
 
+        {pushSupported && (
+          <button
+            onClick={togglePush}
+            disabled={pushLoading}
+            className="w-full flex items-center gap-3 px-4 py-3 bg-card rounded-xl border border-border/40 hover:bg-muted transition-colors text-left"
+          >
+            <Bell className="h-4 w-4 text-primary flex-shrink-0" />
+            <span className="text-sm font-medium flex-1">{t("push_notifications")}</span>
+            <Switch checked={pushEnabled} onCheckedChange={togglePush} disabled={pushLoading} />
+          </button>
+        )}
+
         <button
           onClick={() => i18n.changeLanguage(i18n.language === "pl" ? "en" : "pl")}
           className="w-full flex items-center gap-3 px-4 py-3 bg-card rounded-xl border border-border/40 hover:bg-muted transition-colors text-left"
