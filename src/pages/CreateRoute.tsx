@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, CalendarIcon, Search, X } from "lucide-react";
@@ -85,6 +86,8 @@ const CreateRoute = () => {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [selectedPlan, setSelectedPlan] = useState<(CreatorPlan & { places: CreatorPlaceItem[] }) | null>(null);
 
+  const { t } = useTranslation("create-route");
+
   if (loading) return null;
   if (!user) {
     navigate("/auth");
@@ -128,14 +131,14 @@ const CreateRoute = () => {
           <button onClick={() => navigate("/")} className="p-1">
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-lg font-semibold">Zaplanuj podróż</h1>
+          <h1 className="text-lg font-semibold">{t("title")}</h1>
         </div>
 
         <div className="p-4 space-y-8 max-w-lg mx-auto">
 
           {/* Date picker — TOP */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Wybierz datę</label>
+            <label className="text-sm font-medium">{t("date_label")}</label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -146,7 +149,7 @@ const CreateRoute = () => {
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "PPP") : "Wybierz datę"}
+                  {selectedDate ? format(selectedDate, "PPP") : t("date_placeholder")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -166,9 +169,9 @@ const CreateRoute = () => {
 
           {/* City input */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Destynacja</label>
+            <label className="text-sm font-medium">{t("city_label")}</label>
             <Input
-              placeholder="Wpisz miasto..."
+              placeholder={t("city_placeholder")}
               value={cityInput}
               onChange={e => {
                 setCityInput(e.target.value);
@@ -180,11 +183,11 @@ const CreateRoute = () => {
 
           {/* Must-visit places */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Chętnie odwiedzę</label>
+            <label className="text-sm font-medium">{t("must_visit_label")}</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
-                placeholder="Szukaj miejsca..."
+                placeholder={t("must_visit_placeholder")}
                 value={mustSearch}
                 onChange={e => handleMustSearchChange(e.target.value)}
                 className="pl-9 bg-card h-12"
@@ -213,7 +216,7 @@ const CreateRoute = () => {
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Np. konkretna restauracja, muzeum czy zabytek — AI uwzględni je w planie.
+              {t("must_visit_hint")}
             </p>
             {mustVisitPlaces.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -234,14 +237,14 @@ const CreateRoute = () => {
           <Button
             onClick={() => {
               const errors: Record<string, string> = {};
-              if (!selectedDate) errors.date = "Wybierz datę podróży";
+              if (!selectedDate) errors.date = t("date_error");
               setValidationErrors(errors);
               if (Object.keys(errors).length === 0) setStep(2);
             }}
             size="lg"
             className="w-full"
           >
-            Dalej
+            {t("next")}
           </Button>
         </div>
       </div>
@@ -268,7 +271,7 @@ const CreateRoute = () => {
         <button onClick={() => setStep(1)} className="p-1">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-lg font-semibold">Planowanie trasy</h1>
+        <h1 className="text-lg font-semibold">{t("planning_title")}</h1>
       </div>
 
       <div className="flex-1 min-h-0">

@@ -1,0 +1,13 @@
+{
+  "title": "Zaplanuj podróż",
+  "planning_title": "Planowanie trasy",
+  "date_label": "Wybierz datę",
+  "date_placeholder": "Wybierz datę",
+  "date_error": "Wybierz datę podróży",
+  "city_label": "Destynacja",
+  "city_placeholder": "Wpisz miasto...",
+  "must_visit_label": "Chętnie odwiedzę",
+  "must_visit_placeholder": "Szukaj miejsca...",
+  "must_visit_hint": "Np. konkretna restauracja, muzeum czy zabytek — AI uwzględni je w planie.",
+  "next": "Dalej"
+}
