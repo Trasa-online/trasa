@@ -8,5 +8,6 @@
   "logout": "Log out",
   "language": "Language",
   "toast_saved": "Profile updated!",
-  "toast_avatar_error": "Error uploading photo"
+  "toast_avatar_error": "Error uploading photo",
+  "push_notifications": "Push notifications"
 }
