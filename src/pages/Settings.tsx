@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, ChevronRight, Compass } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Camera, Shield, ChevronRight, Compass, Bell } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 const Settings = () => {
   const { user, loading, signOut } = useAuth();
@@ -21,6 +23,7 @@ const Settings = () => {
   const { t, i18n } = useTranslation("settings");
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const { isSupported: pushSupported, isSubscribed: pushEnabled, isLoading: pushLoading, toggle: togglePush } = usePushNotifications();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -157,6 +160,18 @@ const Settings = () => {
           <span className="text-sm font-medium flex-1">{t("travel_profile")}</span>
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
+
+        {pushSupported && (
+          <button
+            onClick={togglePush}
+            disabled={pushLoading}
+            className="w-full flex items-center gap-3 px-4 py-3 bg-card rounded-xl border border-border/40 hover:bg-muted transition-colors text-left"
+          >
+            <Bell className="h-4 w-4 text-primary flex-shrink-0" />
+            <span className="text-sm font-medium flex-1">{t("push_notifications")}</span>
+            <Switch checked={pushEnabled} onCheckedChange={togglePush} disabled={pushLoading} />
+          </button>
+        )}
 
         <button
           onClick={() => i18n.changeLanguage(i18n.language === "pl" ? "en" : "pl")}

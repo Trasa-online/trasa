@@ -8,5 +8,6 @@
   "logout": "Wyloguj się",
   "language": "Język",
   "toast_saved": "Profil zaktualizowany!",
-  "toast_avatar_error": "Błąd podczas przesyłania zdjęcia"
+  "toast_avatar_error": "Błąd podczas przesyłania zdjęcia",
+  "push_notifications": "Powiadomienia push"
 }
