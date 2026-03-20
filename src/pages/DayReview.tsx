@@ -354,25 +354,12 @@ const DayReview = () => {
           </div>
         )}
 
-        {/* Chat messages */}
+        {/* Chat messages — only show assistant messages */}
         {messages.length > 0 && (
           <div className="px-4 py-2 space-y-3">
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "flex",
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                )}
-              >
-                <div
-                  className={cn(
-                    "max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed",
-                    msg.role === "user"
-                      ? "bg-foreground text-background rounded-br-md"
-                      : "bg-muted text-foreground rounded-bl-md"
-                  )}
-                >
+            {messages.filter(msg => msg.role === "assistant").map((msg, i) => (
+              <div key={i} className="flex justify-start">
+                <div className="max-w-[85%] rounded-2xl rounded-bl-md px-4 py-2.5 text-[14px] leading-relaxed bg-muted text-foreground">
                   {msg.content}
                 </div>
               </div>

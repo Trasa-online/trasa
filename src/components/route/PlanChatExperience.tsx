@@ -216,6 +216,14 @@ function renderBubble(text: string) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+function getTodayCurrentTime(startDate: string | null): string | undefined {
+  if (!startDate) return undefined;
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  if (startDate !== todayStr) return undefined;
+  return `${String(today.getHours()).padStart(2, "0")}:${String(today.getMinutes()).padStart(2, "0")}`;
+}
+
 const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUserMessage }: PlanChatExperienceProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<TextMessage[]>([]);
@@ -283,6 +291,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
             messages: isSubsequentDay ? [] : [{ role: "user", content: initMsg }],
             force_plan: isSubsequentDay ? false : true,
             liked_places: likedPlaces,
+            current_time: getTodayCurrentTime(preferences.startDate),
           },
         });
 
@@ -359,7 +368,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
 
     try {
       const response = await supabase.functions.invoke("plan-route", {
-        body: { preferences, messages: newMessages, current_plan: plan, liked_places: likedPlaces },
+        body: { preferences, messages: newMessages, current_plan: plan, liked_places: likedPlaces, current_time: getTodayCurrentTime(preferences.startDate) },
       });
 
       if (response.error) throw new Error(response.error.message);
@@ -384,7 +393,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
           : newMessages;
         try {
           const planResponse = await supabase.functions.invoke("plan-route", {
-            body: { preferences, messages: apiMessages2, current_plan: plan, force_plan: true, liked_places: likedPlaces },
+            body: { preferences, messages: apiMessages2, current_plan: plan, force_plan: true, liked_places: likedPlaces, current_time: getTodayCurrentTime(preferences.startDate) },
           });
           if (!planResponse.error && planResponse.data?.plan) {
             if (planResponse.data.memory_used) setMemoryUsed(true);
