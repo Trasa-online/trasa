@@ -36,10 +36,10 @@ const ReviewSummary = () => {
       if (!routeId || !user) return null;
       const { data } = await supabase
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_narrative, review_photos")
+        .select("id, city, day_number, start_date, ai_summary, ai_highlight")
         .eq("id", routeId)
         .single();
-      return data;
+      return data as any;
     },
     enabled: !!routeId && !!user,
   });
@@ -65,10 +65,10 @@ const ReviewSummary = () => {
     queryFn: async () => {
       if (!routeId || !user) return [];
       const { data } = await supabase
-        .from("user_insights")
+        .from("user_insights" as any)
         .select("category, insight")
         .eq("source_route_id", routeId);
-      return data ?? [];
+      return (data ?? []) as unknown as { category: string; insight: string }[];
     },
     enabled: !!routeId && !!user,
   });
@@ -81,7 +81,7 @@ const ReviewSummary = () => {
 
   const chatMessages: { role: string; content: string }[] =
     locationState?.messages ??
-    chatSession?.messages ??
+    (chatSession?.messages as any) ??
     [];
 
   // Debounced save of narrative
@@ -90,7 +90,7 @@ const ReviewSummary = () => {
     if (narrativeTimer.current) clearTimeout(narrativeTimer.current);
     narrativeTimer.current = setTimeout(async () => {
       setSaving(true);
-      await supabase.from("routes").update({ review_narrative: value }).eq("id", routeId);
+      await supabase.from("routes").update({ review_narrative: value } as any).eq("id", routeId);
       setSaving(false);
     }, 1000);
   }, [routeId]);
@@ -126,7 +126,7 @@ const ReviewSummary = () => {
     if (newUrls.length) {
       const updated = [...photos, ...newUrls];
       setPhotos(updated);
-      await supabase.from("routes").update({ review_photos: updated }).eq("id", routeId);
+      await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
     }
 
     setUploading(false);
@@ -136,7 +136,7 @@ const ReviewSummary = () => {
   const removePhoto = async (url: string) => {
     const updated = photos.filter(p => p !== url);
     setPhotos(updated);
-    await supabase.from("routes").update({ review_photos: updated }).eq("id", routeId);
+    await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
   };
 
   const cityLabel = route?.city || "Podróż";

@@ -17,11 +17,11 @@ const JournalTab = ({ userId }: JournalTabProps) => {
     queryFn: async () => {
       const { data } = await supabase
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos")
+        .select("id, city, day_number, start_date, ai_summary, ai_highlight")
         .eq("user_id", userId)
         .eq("chat_status", "completed")
         .order("updated_at", { ascending: false });
-      return data ?? [];
+      return (data ?? []) as any[];
     },
     enabled: !!userId,
   });

@@ -1154,6 +1154,8 @@ export type Database = {
           pace: string | null
           priorities: string[] | null
           rating: number | null
+          review_narrative: string | null
+          review_photos: string[] | null
           start_date: string | null
           status: string
           title: string
@@ -1180,6 +1182,8 @@ export type Database = {
           pace?: string | null
           priorities?: string[] | null
           rating?: number | null
+          review_narrative?: string | null
+          review_photos?: string[] | null
           start_date?: string | null
           status?: string
           title: string
@@ -1206,6 +1210,8 @@ export type Database = {
           pace?: string | null
           priorities?: string[] | null
           rating?: number | null
+          review_narrative?: string | null
+          review_photos?: string[] | null
           start_date?: string | null
           status?: string
           title?: string
@@ -1275,6 +1281,41 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_insights: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          insight: string
+          source_route_id: string | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          insight: string
+          source_route_id?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          insight?: string
+          source_route_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_insights_source_route_id_fkey"
+            columns: ["source_route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
             referencedColumns: ["id"]
           },
         ]
