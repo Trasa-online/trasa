@@ -41,7 +41,7 @@ const TripDayView = ({ routeId, pins, dayLabel, dateLabel, onStartReview }: Trip
       return `https://www.google.com/maps/search/?api=1&query=${p.latitude},${p.longitude}`;
     }
     const origin = `${pinsWithCoords[0].latitude},${pinsWithCoords[0].longitude}`;
-    const dest = `${pinsWithCoords.at(-1)!.latitude},${pinsWithCoords.at(-1)!.longitude}`;
+    const dest = `${pinsWithCoords[pinsWithCoords.length - 1].latitude},${pinsWithCoords[pinsWithCoords.length - 1].longitude}`;
     const waypoints = pinsWithCoords.slice(1, -1)
       .map(p => `${p.latitude},${p.longitude}`)
       .join("|");

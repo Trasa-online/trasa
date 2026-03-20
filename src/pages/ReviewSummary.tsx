@@ -136,7 +136,7 @@ const ReviewSummary = () => {
   const removePhoto = async (url: string) => {
     const updated = photos.filter(p => p !== url);
     setPhotos(updated);
-    await supabase.from("routes").update({ review_photos: updated }).eq("id", routeId);
+    await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
   };
 
   const cityLabel = route?.city || "Podróż";

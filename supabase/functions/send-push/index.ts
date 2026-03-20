@@ -177,14 +177,14 @@ async function encryptPayload(
 }
 
 async function hkdfExtract(salt: Uint8Array, ikm: Uint8Array): Promise<Uint8Array> {
-  const key = await crypto.subtle.importKey("raw", salt, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return new Uint8Array(await crypto.subtle.sign("HMAC", key, ikm));
+  const key = await crypto.subtle.importKey("raw", salt.buffer as ArrayBuffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", key, ikm.buffer as ArrayBuffer));
 }
 
 async function hkdfExpand(prk: Uint8Array, info: Uint8Array, length: number): Promise<Uint8Array> {
-  const key = await crypto.subtle.importKey("raw", prk, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const key = await crypto.subtle.importKey("raw", prk.buffer as ArrayBuffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const input = concatUint8(info, new Uint8Array([1]));
-  const output = new Uint8Array(await crypto.subtle.sign("HMAC", key, input));
+  const output = new Uint8Array(await crypto.subtle.sign("HMAC", key, input.buffer as ArrayBuffer));
   return output.slice(0, length);
 }
 
