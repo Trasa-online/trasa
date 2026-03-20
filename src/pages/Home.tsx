@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import TripDayView from "@/components/home/TripDayView";
 import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
+import JournalTab from "@/components/home/JournalTab";
 import { useTranslation } from "react-i18next";
 
 
@@ -22,7 +23,7 @@ const Home = () => {
   const queryClient = useQueryClient();
   const { t } = useTranslation("home");
   const { t: tCommon } = useTranslation("common");
-  const [activeTab, setActiveTab] = useState<"aktywne" | "next-up">("aktywne");
+  const [activeTab, setActiveTab] = useState<"aktywne" | "next-up" | "dziennik">("aktywne");
   const [previewRoute, setPreviewRoute] = useState<any>(null);
   const [deletingTrip, setDeletingTrip] = useState<any>(null);
   const [selectedNextUpPin, setSelectedNextUpPin] = useState<any>(null);
@@ -284,7 +285,7 @@ const Home = () => {
 
         {/* Tabs */}
         <div className="flex border-b border-border/40 mb-5 mt-3" data-tour="trips">
-          {(["aktywne", "next-up"] as const).map((tab) => (
+          {(["aktywne", "next-up", "dziennik"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -293,7 +294,7 @@ const Home = () => {
                 activeTab === tab ? "text-foreground" : "text-muted-foreground"
               )}
             >
-              {tab === "aktywne" ? t("tabs.active") : t("tabs.upcoming")}
+              {tab === "aktywne" ? t("tabs.active") : tab === "next-up" ? t("tabs.upcoming") : "Dziennik"}
               {activeTab === tab && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-full" />
               )}
@@ -463,6 +464,9 @@ const Home = () => {
             )}
           </section>
         )}
+
+        {/* Dziennik tab */}
+        {activeTab === "dziennik" && <JournalTab userId={user.id} />}
 
       </div>
 

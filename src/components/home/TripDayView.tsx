@@ -114,7 +114,7 @@ const TripDayView = ({ routeId, pins, dayLabel, dateLabel, onStartReview }: Trip
             size="sm"
             className="w-full rounded-full text-sm font-medium"
           >
-            Opowiedz o dniu
+            Przejdź do podsumowania
           </Button>
         ) : (
           <p className="text-[11px] text-muted-foreground text-center py-0.5">

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Loader2, ArrowLeft, Send, Mic, MicOff } from "lucide-react";
+import { Settings, Loader2, ArrowLeft, Send, Mic, MicOff, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import RoutePlanTimeline from "@/components/route/RoutePlanTimeline";
@@ -30,6 +30,8 @@ const DayReview = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDone, setIsDone] = useState(false);
   const [initialSent, setInitialSent] = useState(false);
+  const [planOpen, setPlanOpen] = useState(false);
+  const [reviewSummary, setReviewSummary] = useState<any>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -114,19 +116,16 @@ const DayReview = () => {
     }
   }, [messages, isDone]);
 
-  // Redirect after done: go to next day plan if exists, otherwise home
+  // Redirect to review summary after conversation completes
   useEffect(() => {
     if (!isDone) return;
-    const nextDay = folderRoutes?.find(r => r.day_number === dayNumber + 1);
     const timer = setTimeout(() => {
-      if (nextDay) {
-        navigate(`/day-plan?route=${nextDay.id}&reviewed=${routeId}`);
-      } else {
-        navigate("/");
-      }
-    }, 2000);
+      navigate(`/review-summary?route=${routeId}`, {
+        state: { summary: reviewSummary, messages },
+      });
+    }, 1200);
     return () => clearTimeout(timer);
-  }, [isDone, navigate, folderRoutes, dayNumber, routeId]);
+  }, [isDone, navigate, routeId, reviewSummary, messages]);
 
   // Send message to chat-route edge function
   const callChatRoute = useCallback(async (chatMessages: ChatMessage[]) => {
@@ -173,6 +172,7 @@ const DayReview = () => {
       if (data.done) {
         setMessages(prev => [...prev, { role: "assistant", content: data.message }]);
         setIsDone(true);
+        setReviewSummary(data.summary ?? null);
         // Fire-and-forget: embed AAR into user memory for cross-trip recall
         supabase.functions.invoke("embed-memory", { body: { route_id: routeId } }).catch(() => {});
       } else {
@@ -310,9 +310,20 @@ const DayReview = () => {
 
       {/* Scrollable content */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        {/* Timeline */}
-        <div className="px-1">
-          <RoutePlanTimeline days={timelineDays} totalDays={totalDays} />
+        {/* Timeline accordion */}
+        <div className="mx-4 mb-3 mt-3">
+          <button
+            onClick={() => setPlanOpen(p => !p)}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-card border border-border/50 text-sm font-semibold"
+          >
+            <span>Plan dnia {route?.day_number || 1}</span>
+            <ChevronDown className={cn("h-4 w-4 transition-transform", planOpen && "rotate-180")} />
+          </button>
+          {planOpen && (
+            <div className="mt-1 rounded-2xl bg-card border border-border/50 overflow-hidden px-1">
+              <RoutePlanTimeline days={timelineDays} totalDays={totalDays} />
+            </div>
+          )}
         </div>
 
         {/* Next day plan */}

@@ -391,4 +391,49 @@ async function saveToDatabase(
     },
     { onConflict: "route_id" }
   );
+
+  // 6. Extract user insights for personalization
+  try {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (LOVABLE_API_KEY) {
+      const insightsPrompt = `Na podstawie poniższego podsumowania dnia podróży wyekstrahuj 3-5 wniosków o preferencjach i stylu podróżowania usera.
+Zwróć TYLKO valid JSON array, bez markdown, bez opisu. Każdy element: {"category": "...", "insight": "..."}.
+Kategorie (użyj jednej): pace, food, interests, avoid, preferences.
+Przykłady: {"category":"pace","insight":"Preferuje spokojne tempo, max 4 miejsca dziennie"}, {"category":"avoid","insight":"Unika zatłoczonych turystycznych restauracji"}.
+
+Dane wejściowe:
+${JSON.stringify({ city: summary.city, intent: summary.intent, highlight: summary.highlight, tip: summary.tip, deviations: summary.deviations, pins: summary.pins?.map((p: any) => ({ name: p.place_name, sentiment: p.sentiment, was_skipped: p.was_skipped, skip_reason: p.skip_reason })) })}`;
+
+      const insightsResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [{ role: "user", content: insightsPrompt }],
+          max_tokens: 400,
+          temperature: 0.3,
+        }),
+      });
+
+      if (insightsResp.ok) {
+        const insightsData = await insightsResp.json();
+        const raw = insightsData.choices?.[0]?.message?.content ?? "[]";
+        const cleaned = raw.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").trim();
+        const insights = JSON.parse(cleaned);
+        if (Array.isArray(insights) && insights.length) {
+          await supabase.from("user_insights").delete().eq("source_route_id", routeId);
+          await supabase.from("user_insights").insert(
+            insights.map((ins: any) => ({
+              user_id: userId,
+              category: ins.category ?? "preferences",
+              insight: ins.insight,
+              source_route_id: routeId,
+            }))
+          );
+        }
+      }
+    }
+  } catch (err) {
+    console.error("user_insights extraction failed (non-critical):", err);
+  }
 }

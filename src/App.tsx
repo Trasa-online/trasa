@@ -30,6 +30,7 @@ import SetPassword from "./pages/SetPassword";
 import Admin from "./pages/Admin";
 import TravelerProfile from "./pages/TravelerProfile";
 import EditPlan from "./pages/EditPlan";
+import ReviewSummary from "./pages/ReviewSummary";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
           <Route path="/admin" element={<Admin />} />
           <Route path="/moj-profil" element={<AppLayout><TravelerProfile /></AppLayout>} />
           <Route path="/edit-plan" element={<EditPlan />} />
+          <Route path="/review-summary" element={<ReviewSummary />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
