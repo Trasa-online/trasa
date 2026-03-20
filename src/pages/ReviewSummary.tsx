@@ -68,7 +68,7 @@ const ReviewSummary = () => {
         .from("user_insights" as any)
         .select("category, insight")
         .eq("source_route_id", routeId);
-      return (data ?? []) as { category: string; insight: string }[];
+      return (data ?? []) as unknown as { category: string; insight: string }[];
     },
     enabled: !!routeId && !!user,
   });
