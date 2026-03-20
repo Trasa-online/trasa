@@ -111,7 +111,7 @@ async function encryptPayload(
   // Import client public key
   const clientKey = await crypto.subtle.importKey(
     "raw",
-    clientPublicKey,
+    clientPublicKey.buffer as ArrayBuffer,
     { name: "ECDH", namedCurve: "P-256" },
     false,
     []
