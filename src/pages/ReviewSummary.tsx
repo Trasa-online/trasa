@@ -36,10 +36,10 @@ const ReviewSummary = () => {
       if (!routeId || !user) return null;
       const { data } = await supabase
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_narrative, review_photos")
+        .select("id, city, day_number, start_date, ai_summary, ai_highlight")
         .eq("id", routeId)
         .single();
-      return data;
+      return data as any;
     },
     enabled: !!routeId && !!user,
   });
