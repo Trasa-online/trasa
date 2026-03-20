@@ -126,7 +126,7 @@ const ReviewSummary = () => {
     if (newUrls.length) {
       const updated = [...photos, ...newUrls];
       setPhotos(updated);
-      await supabase.from("routes").update({ review_photos: updated }).eq("id", routeId);
+      await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
     }
 
     setUploading(false);
