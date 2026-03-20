@@ -81,7 +81,7 @@ const ReviewSummary = () => {
 
   const chatMessages: { role: string; content: string }[] =
     locationState?.messages ??
-    chatSession?.messages ??
+    (chatSession?.messages as any) ??
     [];
 
   // Debounced save of narrative
