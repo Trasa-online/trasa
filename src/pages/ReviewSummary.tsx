@@ -162,7 +162,7 @@ const ReviewSummary = () => {
     <div className="min-h-[100dvh] bg-background flex flex-col">
       {/* Header */}
       <header className="bg-muted px-4 pt-safe-4 pb-4 flex items-center gap-3 flex-shrink-0">
-        <button onClick={() => navigate(-1)} className="p-1 text-foreground/70 shrink-0">
+        <button onClick={() => navigate("/")} className="p-1 text-foreground/70 shrink-0">
           <ArrowLeft className="h-6 w-6" />
         </button>
         <h1 className="text-lg font-semibold truncate flex-1">Podsumowanie dnia</h1>
