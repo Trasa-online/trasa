@@ -336,7 +336,7 @@ serve(async (req) => {
   }
 
   try {
-    const { preferences, messages: userMessages, current_plan, force_plan, liked_places, current_time } = await req.json();
+    const { preferences, messages: userMessages, current_plan, force_plan, liked_places, current_time, current_date } = await req.json();
 
     if (!preferences || !userMessages) {
       return new Response(
@@ -547,7 +547,8 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       }
     }
 
-    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, current_time ?? undefined);
+    const isToday = current_date && preferences.startDate && preferences.startDate === current_date;
+    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined);
 
     // Call AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
