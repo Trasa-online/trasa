@@ -307,6 +307,7 @@ async function saveToDatabase(
   // 1. Update route
   await supabase.from("routes").update({
     chat_status: "completed",
+    status: "completed",
     city: summary.city ?? null,
     intent: summary.intent ?? null,
     ai_summary: summary.summary_text ?? null,
