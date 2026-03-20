@@ -65,10 +65,10 @@ const ReviewSummary = () => {
     queryFn: async () => {
       if (!routeId || !user) return [];
       const { data } = await supabase
-        .from("user_insights")
+        .from("user_insights" as any)
         .select("category, insight")
         .eq("source_route_id", routeId);
-      return data ?? [];
+      return (data ?? []) as { category: string; insight: string }[];
     },
     enabled: !!routeId && !!user,
   });
