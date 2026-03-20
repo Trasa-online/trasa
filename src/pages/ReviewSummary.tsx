@@ -161,12 +161,12 @@ const ReviewSummary = () => {
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col">
       {/* Header */}
-      <header className="bg-muted px-4 py-4 flex items-center gap-3 flex-shrink-0">
-        <button onClick={() => navigate("/")} className="p-1 text-foreground/70">
+      <header className="bg-muted px-4 pt-safe-4 pb-4 flex items-center gap-3 flex-shrink-0">
+        <button onClick={() => navigate(-1)} className="p-1 text-foreground/70 shrink-0">
           <ArrowLeft className="h-6 w-6" />
         </button>
-        <h1 className="text-lg font-semibold flex-1">Podsumowanie dnia</h1>
-        {saving && <span className="text-xs text-muted-foreground">Zapisywanie...</span>}
+        <h1 className="text-lg font-semibold truncate flex-1">Podsumowanie dnia</h1>
+        {saving && <span className="text-xs text-muted-foreground shrink-0">Zapisywanie...</span>}
       </header>
 
       <div className="flex-1 overflow-y-auto pb-8">
@@ -242,20 +242,25 @@ const ReviewSummary = () => {
           />
         </div>
 
-        {/* Insights banner */}
+        {/* Insights card */}
         {insights && insights.length > 0 && (
-          <div className="mx-4 mt-4 rounded-2xl bg-muted/50 border border-border/40 px-4 py-3">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="h-4 w-4 text-foreground/60" />
-              <p className="text-sm font-semibold">Czego się nauczyłam o Tobie</p>
+          <div className="mx-4 mt-4 rounded-2xl bg-card border border-border/50 overflow-hidden">
+            <div className="px-4 py-3 border-b border-border/40 flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-full bg-foreground/5 flex items-center justify-center shrink-0">
+                <Sparkles className="h-3.5 w-3.5 text-foreground/70" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold leading-tight">Zapisane informacje</p>
+                <p className="text-[11px] text-muted-foreground leading-tight">Na Twoje kolejne podróże</p>
+              </div>
             </div>
-            <ul className="space-y-1.5">
+            <ul className="divide-y divide-border/30">
               {insights.map((ins, i) => (
-                <li key={i} className="flex gap-2 text-sm">
-                  <span className="text-xs font-medium text-muted-foreground bg-background rounded-full px-2 py-0.5 self-start mt-px shrink-0">
+                <li key={i} className="flex items-start gap-3 px-4 py-3">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted rounded-md px-1.5 py-0.5 self-start mt-0.5 shrink-0">
                     {categoryLabels[ins.category] ?? ins.category}
                   </span>
-                  <span className="text-foreground/80 leading-snug">{ins.insight}</span>
+                  <span className="text-sm text-foreground/80 leading-snug">{ins.insight}</span>
                 </li>
               ))}
             </ul>
