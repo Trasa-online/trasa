@@ -157,7 +157,7 @@ async function encryptPayload(
   // Encrypt
   const aesKey = await crypto.subtle.importKey(
     "raw",
-    contentKey,
+    contentKey.buffer as ArrayBuffer,
     { name: "AES-GCM" },
     false,
     ["encrypt"]
