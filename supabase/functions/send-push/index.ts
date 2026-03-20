@@ -167,7 +167,7 @@ async function encryptPayload(
 
   const encrypted = new Uint8Array(
     await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv: nonce },
+      { name: "AES-GCM", iv: nonce.buffer as ArrayBuffer },
       aesKey,
       paddedPayload
     )
