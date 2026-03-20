@@ -90,7 +90,7 @@ const ReviewSummary = () => {
     if (narrativeTimer.current) clearTimeout(narrativeTimer.current);
     narrativeTimer.current = setTimeout(async () => {
       setSaving(true);
-      await supabase.from("routes").update({ review_narrative: value }).eq("id", routeId);
+      await supabase.from("routes").update({ review_narrative: value } as any).eq("id", routeId);
       setSaving(false);
     }, 1000);
   }, [routeId]);
