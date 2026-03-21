@@ -208,115 +208,130 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center px-6">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+      {/* Close button */}
       <button
         type="button"
         onClick={onClose}
-        className="absolute right-4 p-2 text-muted-foreground hover:text-foreground"
+        className="absolute right-4 p-2 text-muted-foreground hover:text-foreground z-10"
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}
         aria-label={t("buttons.close")}
       >
         <X className="h-6 w-6" />
       </button>
 
-      {/* Orb animates in from TopBar */}
-      <div className={cn("h-32 w-32 rounded-full orb-gradient orb-emerge mb-8", isSpeaking && "orb-speaking")} />
+      {/* Center area — orb + question + chips */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6">
 
-      {/* Input fades in after orb lands */}
-      <div
-        className={cn(
-          "w-full max-w-sm transition-all duration-500 flex flex-col gap-4",
-          showInput ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-        )}
-      >
-        <p className="text-2xl font-bold tracking-tight text-center">
-          {tHome("orb_question")}
-        </p>
+        {/* Orb with ripple rings */}
+        <div className="relative flex items-center justify-center mb-8">
+          {isSpeaking && (
+            <>
+              <div className="absolute h-32 w-32 rounded-full border-2 border-orange-400/25 orb-ripple" />
+              <div className="absolute h-32 w-32 rounded-full border-2 border-orange-400/15 orb-ripple-delay" />
+            </>
+          )}
+          <div className={cn("h-32 w-32 rounded-full orb-gradient orb-emerge", isSpeaking && "orb-speaking")} />
+        </div>
 
-        {/* Contextual chips / sightseeing category picker */}
-        {showSightseeingCategories ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-xs text-muted-foreground text-center">
-              {i18n.language === "en" ? "What are you looking for?" : "Co Cię interesuje?"}
-            </p>
-            <div className="flex gap-2 flex-wrap justify-center">
-              {sightseeingCategories.map((cat) => (
+        {/* Text + chips fade in after orb lands */}
+        <div
+          className={cn(
+            "w-full max-w-sm transition-all duration-500 flex flex-col gap-4 items-center",
+            showInput ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          )}
+        >
+          <p className="text-2xl font-bold tracking-tight text-center">
+            {tHome("orb_question")}
+          </p>
+
+          {/* Contextual chips / sightseeing category picker */}
+          {showSightseeingCategories ? (
+            <div className="flex flex-col gap-2 w-full items-center">
+              <p className="text-xs text-muted-foreground text-center">
+                {i18n.language === "en" ? "What are you looking for?" : "Co Cię interesuje?"}
+              </p>
+              <div className="flex gap-2 flex-wrap justify-center">
+                {sightseeingCategories.map((cat) => (
+                  <button
+                    key={cat.label}
+                    type="button"
+                    onClick={() => handleSightseeingCategory(cat.query)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border text-xs text-foreground hover:bg-muted active:scale-95 transition-transform"
+                  >
+                    {cat.emoji} {cat.label}
+                  </button>
+                ))}
                 <button
-                  key={cat.label}
                   type="button"
-                  onClick={() => handleSightseeingCategory(cat.query)}
+                  onClick={() => setShowSightseeingCategories(false)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
+                >
+                  ← {i18n.language === "en" ? "Back" : "Wróć"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2 flex-wrap justify-center">
+              {visibleChips.map((chip) => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={() => {
+                    if (chip.action) {
+                      chip.action();
+                    } else {
+                      handleSubmit(chip.query);
+                    }
+                  }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border text-xs text-foreground hover:bg-muted active:scale-95 transition-transform"
                 >
-                  {cat.emoji} {cat.label}
+                  {chip.icon}
+                  {chip.label}
                 </button>
               ))}
-              <button
-                type="button"
-                onClick={() => setShowSightseeingCategories(false)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
-              >
-                ← {i18n.language === "en" ? "Back" : "Wróć"}
-              </button>
             </div>
-          </div>
-        ) : (
-          <div className="flex gap-2 flex-wrap justify-center">
-            {visibleChips.map((chip) => (
-              <button
-                key={chip.label}
-                type="button"
-                onClick={() => {
-                  if (chip.action) {
-                    chip.action();
-                  } else {
-                    handleSubmit(chip.query);
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border text-xs text-foreground hover:bg-muted active:scale-95 transition-transform"
-              >
-                {chip.icon}
-                {chip.label}
-              </button>
-            ))}
-          </div>
-        )}
+          )}
 
-        {/* Place identification result */}
-        {isIdentifying && (
-          <div className="rounded-xl bg-card border border-border p-4 flex items-center gap-3">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground shrink-0" />
-            <span className="text-sm text-muted-foreground">{tHome("identifying_place")}</span>
-          </div>
-        )}
-        {placeResult && !isIdentifying && (
-          <div className="rounded-xl bg-card border border-border p-4 flex flex-col gap-1">
-            {placeResult.found === false ? (
-              <p className="text-sm text-muted-foreground text-center">
-                {i18n.language === "en"
-                  ? "No place detected. Try a photo of a building, monument, or landmark."
-                  : "Nie wykryto miejsca. Spróbuj zdjęcia budynku, zabytku lub atrakcji."}
-              </p>
-            ) : (
-              <>
-                <p className="font-semibold text-sm">{placeResult.name}</p>
-                <p className="text-xs text-muted-foreground">{placeResult.description}</p>
-                {placeResult.tip && (
-                  <p className="text-xs text-muted-foreground mt-1">💡 {placeResult.tip}</p>
-                )}
-              </>
-            )}
-          </div>
-        )}
+          {/* Place identification result */}
+          {isIdentifying && (
+            <div className="rounded-xl bg-card border border-border p-4 flex items-center gap-3 w-full">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground shrink-0" />
+              <span className="text-sm text-muted-foreground">{tHome("identifying_place")}</span>
+            </div>
+          )}
+          {placeResult && !isIdentifying && (
+            <div className="rounded-xl bg-card border border-border p-4 flex flex-col gap-1 w-full">
+              {placeResult.found === false ? (
+                <p className="text-sm text-muted-foreground text-center">
+                  {i18n.language === "en"
+                    ? "No place detected. Try a photo of a building, monument, or landmark."
+                    : "Nie wykryto miejsca. Spróbuj zdjęcia budynku, zabytku lub atrakcji."}
+                </p>
+              ) : (
+                <>
+                  <p className="font-semibold text-sm">{placeResult.name}</p>
+                  <p className="text-xs text-muted-foreground">{placeResult.description}</p>
+                  {placeResult.tip && (
+                    <p className="text-xs text-muted-foreground mt-1">💡 {placeResult.tip}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
-        {/* Input row */}
-        <div className="flex gap-2 items-center">
+      {/* Input bar — pinned to bottom */}
+      <div className="flex-shrink-0 px-4 pb-safe pt-3 border-t border-border/20">
+        <div className="flex gap-2 items-center max-w-sm mx-auto">
           {/* Mic button */}
           <button
             type="button"
             onClick={handleToggleVoice}
             className={cn(
               "h-11 w-11 rounded-full border border-border flex items-center justify-center shrink-0 active:scale-90 transition-transform",
-              isListening ? "bg-destructive text-destructive-foreground border-destructive" : "bg-card text-muted-foreground hover:text-foreground"
+              isListening ? "bg-destructive text-destructive-foreground border-destructive animate-pulse" : "bg-card text-muted-foreground hover:text-foreground"
             )}
             aria-label={isListening ? t("buttons.stop_recording") : t("buttons.start_recording")}
           >
