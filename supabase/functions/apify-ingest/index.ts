@@ -1,99 +1,145 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const APIFY_API_TOKEN = Deno.env.get("APIFY_API_TOKEN");
-    if (!APIFY_API_TOKEN) {
-      throw new Error("APIFY_API_TOKEN is not configured");
-    }
+    const { datasetId, runId, city = "Kraków", debug = false } = await req.json();
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { datasetId, city, source_platform = "apify" } = await req.json();
-
-    if (!datasetId || !city) {
+    if (!datasetId && !runId) {
       return new Response(
-        JSON.stringify({ error: "datasetId and city are required" }),
+        JSON.stringify({ error: "datasetId or runId is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Fetch items from Apify dataset
-    const apifyUrl = `https://api.apify.com/v2/datasets/${datasetId}/items?token=${APIFY_API_TOKEN}&format=json`;
-    const apifyRes = await fetch(apifyUrl);
+    const apifyToken = Deno.env.get("APIFY_API_TOKEN")!;
+    const openAiKey = Deno.env.get("OPENAI_API_KEY")!;
+    const anthropicKey = Deno.env.get("LOVABLE_API_KEY")!;
 
-    if (!apifyRes.ok) {
-      const errText = await apifyRes.text();
-      throw new Error(`Apify API error [${apifyRes.status}]: ${errText}`);
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    let resolvedDatasetId = datasetId;
+    if (!resolvedDatasetId && runId) {
+      const runRes = await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${apifyToken}`);
+      const runData = await runRes.json();
+      resolvedDatasetId = runData?.data?.defaultDatasetId;
+      if (!resolvedDatasetId) {
+        return new Response(
+          JSON.stringify({ error: "Could not find dataset for this runId" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
-    const items = await apifyRes.json();
-    console.log(`Fetched ${items.length} items from Apify dataset ${datasetId}`);
+    const datasetRes = await fetch(
+      `https://api.apify.com/v2/datasets/${resolvedDatasetId}/items?token=${apifyToken}&limit=500`
+    );
+    if (!datasetRes.ok) {
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch Apify dataset" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const items = await datasetRes.json();
+
+    if (debug) {
+      const sample = items.slice(0, 3).map((item: any) => ({
+        keys: Object.keys(item),
+        caption: item.caption,
+        likesCount: item.likesCount,
+        ownerUsername: item.ownerUsername,
+        displayUrl: item.displayUrl,
+        locationName: item.locationName,
+      }));
+      return new Response(
+        JSON.stringify({ debug: true, sample }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     let inserted = 0;
     let skipped = 0;
-    let errors = 0;
 
     for (const item of items) {
-      // Map Apify item to scraped_places schema
-      // Adjust field mapping based on your Apify actor output
-      const place = {
-        place_name: item.title || item.name || item.place_name || item.placeName,
+      const caption = item.caption || item.alt || item.accessibility_caption || "";
+      const creatorName = item.ownerUsername || item.owner?.username || "";
+      const thumbnailUrl = item.displayUrl || item.imageUrl || item.images?.[0] || "";
+      const postUrl = item.url || (item.shortCode ? `https://www.instagram.com/p/${item.shortCode}/` : "");
+      const likes = item.likesCount || item.likes || 0;
+      const locationHint = item.locationName || item.location?.name || city;
+
+      if (likes < 300 || caption.length < 15) { skipped++; continue; }
+
+      let parsed: any;
+      try {
+        const parseRes = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "x-api-key": anthropicKey,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 300,
+            messages: [{
+              role: "user",
+              content: `Przeanalizuj ten post z Instagrama i wyciągnij informacje o miejscu.\n\nCaption: "${caption.slice(0, 500)}"\nLokalizacja: "${locationHint}"\nMiasto: ${city}\n\nOdpowiedz TYLKO w JSON (bez markdown):\n{\n  "place_name": "nazwa miejsca lub null",\n  "category": "cafe|restaurant|bar|museum|park|attraction|shop|null",\n  "description": "1-2 zdania po polsku",\n  "tags": ["tag1", "tag2"],\n  "confidence": 0.0\n}`,
+            }],
+          }),
+        });
+        const parseData = await parseRes.json();
+        parsed = JSON.parse(parseData.content[0].text);
+      } catch { skipped++; continue; }
+
+      if (!parsed.place_name || parsed.confidence < 0.65) { skipped++; continue; }
+
+      const embedText = `${parsed.place_name}. ${parsed.description}. ${(parsed.tags ?? []).join(", ")}`;
+      let embedding: number[];
+      try {
+        const embedRes = await fetch("https://api.openai.com/v1/embeddings", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${openAiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: "text-embedding-3-small", input: embedText }),
+        });
+        const embedData = await embedRes.json();
+        embedding = embedData.data?.[0]?.embedding;
+        if (!embedding) throw new Error("no embedding");
+      } catch { skipped++; continue; }
+
+      const { error } = await supabase.from("scraped_places").upsert({
         city,
-        description: item.description || item.text || item.snippet || null,
-        category: item.category || item.type || null,
-        tags: item.tags || item.hashtags || [],
-        source_platform,
-        creator_name: item.creator || item.author || item.username || item.creatorName || null,
-        post_url: item.url || item.postUrl || item.link || null,
-        thumbnail_url: item.imageUrl || item.thumbnailUrl || item.image || item.photo || null,
-        latitude: item.latitude || item.lat || item.location?.lat || null,
-        longitude: item.longitude || item.lng || item.lon || item.location?.lng || null,
-        is_active: true,
-      };
+        place_name: parsed.place_name,
+        category: parsed.category ?? null,
+        description: parsed.description ?? null,
+        tags: parsed.tags ?? [],
+        source_platform: "instagram",
+        creator_name: creatorName,
+        post_url: postUrl,
+        thumbnail_url: thumbnailUrl,
+        embedding,
+      }, { onConflict: "place_name,city,source_platform" });
 
-      if (!place.place_name) {
-        skipped++;
-        continue;
-      }
-
-      const { error } = await supabase.from("scraped_places").insert(place);
-
-      if (error) {
-        console.error(`Error inserting "${place.place_name}":`, error.message);
-        errors++;
-      } else {
-        inserted++;
-      }
+      if (error) { skipped++; } else { inserted++; }
     }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        total: items.length,
-        inserted,
-        skipped,
-        errors,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ inserted, skipped, total: items.length }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
-    console.error("apify-ingest error:", error);
-    const msg = error instanceof Error ? error.message : "Unknown error";
+  } catch (err) {
     return new Response(
-      JSON.stringify({ success: false, error: msg }),
+      JSON.stringify({ error: String(err) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
