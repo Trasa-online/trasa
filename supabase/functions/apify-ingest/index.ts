@@ -68,7 +68,11 @@ serve(async (req) => {
     }
 
     let inserted = 0;
-    let skipped = 0;
+    let skippedLikes = 0;
+    let skippedParse = 0;
+    let skippedConfidence = 0;
+    let skippedEmbed = 0;
+    let skippedDb = 0;
 
     for (const item of items) {
       const caption = item.caption || item.alt || item.accessibility_caption || "";
@@ -78,7 +82,7 @@ serve(async (req) => {
       const likes = item.likesCount || item.likes || 0;
       const locationHint = item.locationName || item.location?.name || city;
 
-      if (likes < 3 || caption.length < 15) { skipped++; continue; }
+      if (likes < 3 || caption.length < 15) { skippedLikes++; continue; }
 
       let parsed: any;
       try {
@@ -100,9 +104,9 @@ serve(async (req) => {
         });
         const parseData = await parseRes.json();
         parsed = JSON.parse(parseData.content[0].text);
-      } catch { skipped++; continue; }
+      } catch { skippedParse++; continue; }
 
-      if (!parsed.place_name || parsed.confidence < 0.65) { skipped++; continue; }
+      if (!parsed.place_name || parsed.confidence < 0.65) { skippedConfidence++; continue; }
 
       const embedText = `${parsed.place_name}. ${parsed.description}. ${(parsed.tags ?? []).join(", ")}`;
       let embedding: number[];
@@ -115,7 +119,7 @@ serve(async (req) => {
         const embedData = await embedRes.json();
         embedding = embedData.data?.[0]?.embedding;
         if (!embedding) throw new Error("no embedding");
-      } catch { skipped++; continue; }
+      } catch { skippedEmbed++; continue; }
 
       const { error } = await supabase.from("scraped_places").upsert({
         city,
@@ -130,11 +134,11 @@ serve(async (req) => {
         embedding,
       }, { onConflict: "place_name,city,source_platform" });
 
-      if (error) { skipped++; } else { inserted++; }
+      if (error) { skippedDb++; } else { inserted++; }
     }
 
     return new Response(
-      JSON.stringify({ inserted, skipped, total: items.length }),
+      JSON.stringify({ inserted, skippedLikes, skippedParse, skippedConfidence, skippedEmbed, skippedDb, total: items.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
