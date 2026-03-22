@@ -68,7 +68,11 @@ serve(async (req) => {
     }
 
     let inserted = 0;
-    let skipped = 0;
+    let skippedLikes = 0;
+    let skippedParse = 0;
+    let skippedConfidence = 0;
+    let skippedEmbed = 0;
+    let skippedDb = 0;
 
     for (const item of items) {
       const caption = item.caption || item.alt || item.accessibility_caption || "";
