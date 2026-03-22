@@ -70,7 +70,7 @@ function buildPreviousDaysBlock(routes: { day_number: number; ai_summary: string
   return lines.join("\n\n");
 }
 
-function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string): string {
+function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string): string {
   const isNightlife = preferences.priorities.includes("nightlife") || (userProfile?.travel_interests ?? []).includes("nightlife");
   const timeInfo = currentTime ? `- Aktualna godzina: ${currentTime} — planuj miejsca dostępne od tej pory, nie zaczynaj od miejsc które są już zamknięte lub których opening hours zaczyna się wcześniej` : "";
   const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}${currentTime ? " (dziś)" : ""}` : "";
@@ -312,7 +312,7 @@ ZASADY FORMATU:
 - "Dodaj Y" → wstaw w logiczne miejsce, zaktualizuj suggested_time kolejnych punktów
 - "Usuń Z" → usuń, sprawdź czy kulminacja emocjonalna (H3) nadal jest zachowana
 - NIE regeneruj całego planu jeśli user pyta tylko o 1 zmianę${likedPlaces?.length ? `\n\n## 🎯 MIEJSCA DO UWZGLĘDNIENIA\nUżytkownik chce odwiedzić te miejsca — koniecznie wstaw je w plan:\n${likedPlaces.map(p => `- ${p}`).join("\n")}` : ""}
-
+${scrapedPlacesContext ? `\n\n${scrapedPlacesContext}` : ""}
 ## SZYBKIE ODPOWIEDZI (OBOWIĄZKOWE)
 Na końcu KAŻDEJ wiadomości dodaj dokładnie ten blok:
 <suggestions>["podpowiedź 1", "podpowiedź 2", "podpowiedź 3", "podpowiedź 4"]</suggestions>
@@ -473,6 +473,41 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       // ignore — columns may not be migrated yet
     }
 
+    // ── Scraped places retrieval ──
+    let scrapedPlacesContext = "";
+    const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (OPENAI_KEY && preferences.city?.trim()) {
+      try {
+        const ideal_day = userMessages.length > 0 ? userMessages[userMessages.length - 1]?.content : "";
+        const queryText = [ideal_day ?? "", preferences.city.trim(), (preferences.priorities ?? []).join(" ")].filter(Boolean).join(". ");
+        const embedRes = await fetch("https://api.openai.com/v1/embeddings", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: "text-embedding-3-small", input: queryText }),
+        });
+        if (embedRes.ok) {
+          const embedData = await embedRes.json();
+          const queryEmbedding = embedData.data?.[0]?.embedding;
+          if (queryEmbedding) {
+            const { data: places } = await supabase.rpc("match_scraped_places", {
+              query_embedding: queryEmbedding,
+              filter_city: preferences.city.trim(),
+              match_count: 15,
+              exclude_names: [],
+            });
+            if (places?.length) {
+              const placeLines = (places as any[]).map((p: any) =>
+                `- **${p.place_name}**${p.category ? ` (${p.category})` : ""}: ${p.description ?? ""}`
+              );
+              scrapedPlacesContext = `## 📍 MIEJSCA POLECANE PRZEZ LOKALNYCH (Instagram)\nPoniższe miejsca zostały wyłowione z Instagrama — rozważ ich uwzględnienie w planie, jeśli pasują do preferencji usera:\n\n${placeLines.join("\n")}`;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Scraped places retrieval error:", err);
+      }
+    }
+
     // ── Vector memory search + preference graph ──
     let memoryContext = "";
     let memoryUsed = false;
@@ -548,7 +583,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     }
 
     const isToday = current_date && preferences.startDate && preferences.startDate === current_date;
-    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined);
+    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined);
 
     // Call AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
