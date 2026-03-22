@@ -82,7 +82,7 @@ serve(async (req) => {
       const likes = item.likesCount || item.likes || 0;
       const locationHint = item.locationName || item.location?.name || city;
 
-      if (likes < 3 || caption.length < 15) { skipped++; continue; }
+      if (likes < 3 || caption.length < 15) { skippedLikes++; continue; }
 
       let parsed: any;
       try {
