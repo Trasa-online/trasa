@@ -224,6 +224,38 @@ function renderBubble(text: string) {
   );
 }
 
+async function enrichPlanWithInstagram(plan: RoutePlan, city: string, sb: typeof supabase): Promise<RoutePlan> {
+  try {
+    const { data: scraped } = await sb
+      .from("scraped_places")
+      .select("place_name, thumbnail_url, post_url, creator_name, source_platform")
+      .ilike("city", `%${city}%`);
+    if (!scraped?.length) return plan;
+    const lookup = new Map<string, typeof scraped[0]>();
+    for (const sp of scraped) lookup.set(sp.place_name.toLowerCase().trim(), sp);
+    return {
+      ...plan,
+      days: plan.days.map(day => ({
+        ...day,
+        pins: day.pins.map(pin => {
+          const match = lookup.get(pin.place_name.toLowerCase().trim());
+          if (!match) return pin;
+          return {
+            ...pin,
+            photoUrl: match.thumbnail_url || pin.photoUrl,
+            creator: {
+              platform: (match.source_platform ?? "instagram") as "instagram" | "tiktok" | "youtube",
+              name: match.creator_name ?? "",
+              thumbnailUrl: match.thumbnail_url ?? "",
+              postUrl: match.post_url ?? "",
+            },
+          };
+        }),
+      })),
+    };
+  } catch { return plan; }
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 function getCurrentTimeContext(): { current_time: string; current_date: string } {
