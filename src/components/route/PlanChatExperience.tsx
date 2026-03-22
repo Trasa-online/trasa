@@ -442,7 +442,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
             if (planResponse.data.memory_used) setMemoryUsed(true);
             const { cleanMessage: cm } = parseSuggestions(planResponse.data.message ?? "");
             if (cm) setMessages(prev => [...prev, { role: "assistant", content: cm }]);
-            setPlan(planResponse.data.plan);
+            enrichPlanWithInstagram(planResponse.data.plan, preferences.city || "", supabase).then(enriched => setPlan(enriched));
             setSnap("half");
           }
         } catch (planErr) {
