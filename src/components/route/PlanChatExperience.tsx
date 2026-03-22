@@ -350,7 +350,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
               : [];
 
           if (data?.plan) {
-            setPlan(data.plan);
+            enrichPlanWithInstagram(data.plan, preferences.city || "", supabase).then(enriched => setPlan(enriched));
             setMessages([...userMsgEntry, { role: "assistant", content: cleanMessage || fallbackIntro }]);
           } else {
             // Day 2+: only greeting returned, no plan yet — show greeting + skeleton
