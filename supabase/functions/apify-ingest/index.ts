@@ -106,7 +106,7 @@ serve(async (req) => {
         parsed = JSON.parse(parseData.content[0].text);
       } catch { skippedParse++; continue; }
 
-      if (!parsed.place_name || parsed.confidence < 0.65) { skipped++; continue; }
+      if (!parsed.place_name || parsed.confidence < 0.65) { skippedConfidence++; continue; }
 
       const embedText = `${parsed.place_name}. ${parsed.description}. ${(parsed.tags ?? []).join(", ")}`;
       let embedding: number[];
