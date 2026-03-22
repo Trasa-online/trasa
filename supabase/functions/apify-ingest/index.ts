@@ -119,7 +119,7 @@ serve(async (req) => {
         const embedData = await embedRes.json();
         embedding = embedData.data?.[0]?.embedding;
         if (!embedding) throw new Error("no embedding");
-      } catch { skipped++; continue; }
+      } catch { skippedEmbed++; continue; }
 
       const { error } = await supabase.from("scraped_places").upsert({
         city,
