@@ -103,6 +103,11 @@ serve(async (req) => {
           }),
         });
         const parseData = await parseRes.json();
+        if (!parseRes.ok) {
+          console.error("Claude API error:", parseRes.status, JSON.stringify(parseData));
+          skippedParse++;
+          continue;
+        }
         parsed = JSON.parse(parseData.content[0].text);
       } catch { skippedParse++; continue; }
 
