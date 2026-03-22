@@ -104,7 +104,7 @@ serve(async (req) => {
         });
         const parseData = await parseRes.json();
         parsed = JSON.parse(parseData.content[0].text);
-      } catch { skipped++; continue; }
+      } catch { skippedParse++; continue; }
 
       if (!parsed.place_name || parsed.confidence < 0.65) { skipped++; continue; }
 
