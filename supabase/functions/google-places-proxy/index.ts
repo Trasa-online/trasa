@@ -49,6 +49,22 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
 
+    // City autocomplete (returns cities/regions only)
+    if (body.action === "citysearch") {
+      const { query } = body;
+      const res = await fetch(
+        `${BASE}/place/autocomplete/json?input=${encodeURIComponent(query)}&types=(cities)&key=${apiKey}&language=pl`
+      );
+      const data = await res.json();
+      const results = ((data.predictions ?? []) as any[]).slice(0, 5).map((p: any) => ({
+        name: p.structured_formatting?.main_text ?? p.description,
+        full_address: p.description,
+      }));
+      return new Response(JSON.stringify({ results }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Text search for autocomplete (no coordinates needed)
     if (body.action === "textsearch") {
       const { query } = body;

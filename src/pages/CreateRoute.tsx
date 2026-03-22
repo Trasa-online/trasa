@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, CalendarIcon, Search, X } from "lucide-react";
-import { forwardGeocodeWithTypes } from "@/lib/googleMaps";
+import { forwardGeocodeWithTypes, geocodeCity } from "@/lib/googleMaps";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PlanChatExperience from "@/components/route/PlanChatExperience";
@@ -65,6 +65,8 @@ const CreateRoute = () => {
         if (data?.length) setLikedPlaces(data.map(p => p.place_name));
       });
   }, [creatorPlanId]);
+  const [cityResults, setCityResults] = useState<{ name: string; full_address: string }[]>([]);
+  const cityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mustSearch, setMustSearch] = useState("");
   const [mustSearchResults, setMustSearchResults] = useState<{ name: string; full_address: string; types: string[] }[]>([]);
   const mustSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -93,6 +95,20 @@ const CreateRoute = () => {
     navigate("/auth");
     return null;
   }
+
+  const handleCityInputChange = (value: string) => {
+    setCityInput(value);
+    setPreferences(prev => ({ ...prev, city: value }));
+    setCityResults([]);
+    if (cityTimer.current) clearTimeout(cityTimer.current);
+    if (value.length < 2) return;
+    cityTimer.current = setTimeout(async () => {
+      try {
+        const results = await geocodeCity(value);
+        setCityResults(results);
+      } catch { /* ignore */ }
+    }, 350);
+  };
 
   const handleMustSearchChange = (value: string) => {
     setMustSearch(value);
@@ -167,18 +183,38 @@ const CreateRoute = () => {
             {validationErrors.date && <p className="text-xs text-destructive">{validationErrors.date}</p>}
           </div>
 
-          {/* City input */}
+          {/* City input with autocomplete */}
           <div className="space-y-2">
             <label className="text-sm font-medium">{t("city_label")}</label>
-            <Input
-              placeholder={t("city_placeholder")}
-              value={cityInput}
-              onChange={e => {
-                setCityInput(e.target.value);
-                setPreferences(prev => ({ ...prev, city: e.target.value }));
-              }}
-              className="bg-card h-12"
-            />
+            <div className="relative">
+              <Input
+                placeholder={t("city_placeholder")}
+                value={cityInput}
+                onChange={e => handleCityInputChange(e.target.value)}
+                className="bg-card h-12"
+                autoComplete="off"
+              />
+              {cityResults.length > 0 && (
+                <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+                  {cityResults.map((result, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        setCityInput(result.name);
+                        setPreferences(prev => ({ ...prev, city: result.name }));
+                        setCityResults([]);
+                      }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-muted transition-colors border-b border-border/40 last:border-b-0"
+                    >
+                      <p className="text-sm font-medium">{result.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{result.full_address}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {validationErrors.city && <p className="text-xs text-destructive">{validationErrors.city}</p>}
           </div>
 
           {/* Must-visit places */}

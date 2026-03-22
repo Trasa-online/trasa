@@ -56,6 +56,19 @@ export const detectPlaceType = (types: string[]): PlaceCategory => {
   return 'other';
 };
 
+// City autocomplete (returns cities/regions via Places Autocomplete with types=(cities))
+export const geocodeCity = async (query: string): Promise<{ name: string; full_address: string }[]> => {
+  try {
+    const { data, error } = await supabase.functions.invoke("google-places-proxy", {
+      body: { action: "citysearch", query },
+    });
+    if (error || !data?.results) return [];
+    return data.results as { name: string; full_address: string }[];
+  } catch {
+    return [];
+  }
+};
+
 // Forward Geocoding with Place Types (via server-side proxy to avoid CORS)
 export const forwardGeocodeWithTypes = async (query: string) => {
   try {
