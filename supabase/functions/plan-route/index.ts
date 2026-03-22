@@ -473,6 +473,41 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       // ignore — columns may not be migrated yet
     }
 
+    // ── Scraped places retrieval ──
+    let scrapedPlacesContext = "";
+    const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (OPENAI_KEY && preferences.city?.trim()) {
+      try {
+        const ideal_day = userMessages.length > 0 ? userMessages[userMessages.length - 1]?.content : "";
+        const queryText = [ideal_day ?? "", preferences.city.trim(), (preferences.priorities ?? []).join(" ")].filter(Boolean).join(". ");
+        const embedRes = await fetch("https://api.openai.com/v1/embeddings", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: "text-embedding-3-small", input: queryText }),
+        });
+        if (embedRes.ok) {
+          const embedData = await embedRes.json();
+          const queryEmbedding = embedData.data?.[0]?.embedding;
+          if (queryEmbedding) {
+            const { data: places } = await supabase.rpc("match_scraped_places", {
+              query_embedding: queryEmbedding,
+              filter_city: preferences.city.trim(),
+              match_count: 15,
+              exclude_names: [],
+            });
+            if (places?.length) {
+              const placeLines = (places as any[]).map((p: any) =>
+                `- **${p.place_name}**${p.category ? ` (${p.category})` : ""}: ${p.description ?? ""}`
+              );
+              scrapedPlacesContext = `## 📍 MIEJSCA POLECANE PRZEZ LOKALNYCH (Instagram)\nPoniższe miejsca zostały wyłowione z Instagrama — rozważ ich uwzględnienie w planie, jeśli pasują do preferencji usera:\n\n${placeLines.join("\n")}`;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Scraped places retrieval error:", err);
+      }
+    }
+
     // ── Vector memory search + preference graph ──
     let memoryContext = "";
     let memoryUsed = false;
