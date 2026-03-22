@@ -232,14 +232,39 @@ async function enrichPlanWithInstagram(plan: RoutePlan, city: string, sb: typeof
       .select("place_name, thumbnail_url, post_url, creator_name, source_platform")
       .ilike("city", `%${city}%`);
     if (!scraped?.length) return plan;
-    const lookup = new Map<string, typeof scraped[0]>();
-    for (const sp of scraped) lookup.set(sp.place_name.toLowerCase().trim(), sp);
+
+    const scrapedList = scraped.map(sp => ({
+      ...sp,
+      nameLower: sp.place_name.toLowerCase().trim(),
+    }));
+
+    const normalize = (s: string) => s.toLowerCase().replace(/[\s._\-/]+/g, "");
+
+    function findMatch(pinName: string) {
+      const pinLower = pinName.toLowerCase().trim();
+      const pinNorm = normalize(pinName);
+      // 1. Exact match
+      const exact = scrapedList.find(sp => sp.nameLower === pinLower);
+      if (exact) return exact;
+      // 2. Normalized: one contains the other (min 5 chars)
+      const contained = scrapedList.find(sp => {
+        const spNorm = normalize(sp.place_name);
+        return spNorm.length >= 5 && (pinNorm.includes(spNorm) || spNorm.includes(pinNorm));
+      });
+      if (contained) return contained;
+      // 3. Any significant word (4+ chars) from scraped name appears in pin name
+      return scrapedList.find(sp => {
+        const words = sp.nameLower.split(/[\s._\-/]+/).filter(w => w.length >= 4);
+        return words.length > 0 && words.some(w => pinLower.includes(w));
+      }) ?? null;
+    }
+
     return {
       ...plan,
       days: plan.days.map(day => ({
         ...day,
         pins: day.pins.map(pin => {
-          const match = lookup.get(pin.place_name.toLowerCase().trim());
+          const match = findMatch(pin.place_name);
           if (!match) return pin;
           return {
             ...pin,
