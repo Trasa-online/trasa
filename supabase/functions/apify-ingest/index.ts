@@ -84,34 +84,17 @@ serve(async (req) => {
 
       if (likes < 3 || caption.length < 15) { skippedLikes++; continue; }
 
-      let parsed: any;
-      try {
-        const parseRes = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "x-api-key": anthropicKey,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "claude-3-5-haiku-20241022",
-            max_tokens: 300,
-            messages: [{
-              role: "user",
-              content: `Przeanalizuj ten post z Instagrama i wyciągnij informacje o miejscu.\n\nCaption: "${caption.slice(0, 500)}"\nLokalizacja: "${locationHint}"\nMiasto: ${city}\n\nOdpowiedz TYLKO w JSON (bez markdown):\n{\n  "place_name": "nazwa miejsca lub null",\n  "category": "cafe|restaurant|bar|museum|park|attraction|shop|null",\n  "description": "1-2 zdania po polsku",\n  "tags": ["tag1", "tag2"],\n  "confidence": 0.0\n}`,
-            }],
-          }),
-        });
-        const parseData = await parseRes.json();
-        if (!parseRes.ok) {
-          console.error("Claude API error:", parseRes.status, JSON.stringify(parseData));
-          skippedParse++;
-          continue;
-        }
-        parsed = JSON.parse(parseData.content[0].text);
-      } catch { skippedParse++; continue; }
-
-      if (!parsed.place_name || parsed.confidence < 0.65) { skippedConfidence++; continue; }
+      const placeName = item.ownerFullName || item.ownerUsername || null;
+      if (!placeName || caption.length < 15) {
+        skippedParse++;
+        continue;
+      }
+      const parsed = {
+        place_name: placeName,
+        category: null,
+        description: caption.slice(0, 400),
+        tags: item.hashtags?.slice(0, 5) ?? [],
+      };
 
       const embedText = `${parsed.place_name}. ${parsed.description}. ${(parsed.tags ?? []).join(", ")}`;
       let embedding: number[];
