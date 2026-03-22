@@ -6,8 +6,7 @@
   "date_error": "Wybierz datę podróży",
   "city_label": "Destynacja",
   "city_placeholder": "Wpisz miasto...",
-  "must_visit_label": "Chętnie odwiedzę",
-  "must_visit_placeholder": "Szukaj miejsca...",
-  "must_visit_hint": "Np. konkretna restauracja, muzeum czy zabytek — AI uwzględni je w planie.",
+  "ideal_day_label": "Jak wygląda Twój idealny dzień?",
+  "ideal_day_placeholder": "Np. zaczynam powoli, lubię kawę rano, chodzę pieszo, wolę klimatyczne miejsca niż turystyczne tłumy...",
   "next": "Dalej"
 }

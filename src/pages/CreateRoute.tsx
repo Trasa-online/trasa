@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, CalendarIcon, Search, X } from "lucide-react";
-import { forwardGeocodeWithTypes, geocodeCity } from "@/lib/googleMaps";
+import { ArrowLeft, CalendarIcon, Mic } from "lucide-react";
+import { geocodeCity } from "@/lib/googleMaps";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PlanChatExperience from "@/components/route/PlanChatExperience";
@@ -29,18 +30,6 @@ interface TripPreferences {
 
 
 
-function getPlaceEmoji(types: string[]): string {
-  if (types.some(t => ["restaurant", "food", "meal_delivery", "meal_takeaway"].includes(t))) return "🍽️";
-  if (types.some(t => ["cafe", "bakery"].includes(t))) return "☕";
-  if (types.some(t => ["bar", "night_club"].includes(t))) return "🍸";
-  if (types.some(t => ["museum"].includes(t))) return "🏛️";
-  if (types.some(t => ["park", "natural_feature"].includes(t))) return "🌳";
-  if (types.some(t => ["church", "place_of_worship", "synagogue", "mosque"].includes(t))) return "⛪";
-  if (types.some(t => ["shopping_mall", "store", "clothing_store", "department_store"].includes(t))) return "🛍️";
-  if (types.some(t => ["lodging"].includes(t))) return "🏨";
-  if (types.some(t => ["tourist_attraction", "point_of_interest"].includes(t))) return "🏰";
-  return "📍";
-}
 
 const CreateRoute = () => {
   const { user, loading } = useAuth();
@@ -52,7 +41,6 @@ const CreateRoute = () => {
   const initialUserMessage = searchParams.get("q") ?? undefined;
   const [step, setStep] = useState(creatorPlanId || initialUserMessage ? 2 : 1);
   const [likedPlaces, setLikedPlaces] = useState<string[]>([]);
-  const [mustVisitPlaces, setMustVisitPlaces] = useState<{ name: string; emoji: string }[]>([]);
 
   useEffect(() => {
     if (!creatorPlanId) return;
@@ -67,10 +55,10 @@ const CreateRoute = () => {
   }, [creatorPlanId]);
   const [cityResults, setCityResults] = useState<{ name: string; full_address: string }[]>([]);
   const cityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [mustSearch, setMustSearch] = useState("");
-  const [mustSearchResults, setMustSearchResults] = useState<{ name: string; full_address: string; types: string[] }[]>([]);
-  const mustSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [cityInput, setCityInput] = useState("");
+  const [idealDay, setIdealDay] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
   const [preferences, setPreferences] = useState<TripPreferences>({
     numDays: 1,
     pace: "mixed",
@@ -110,17 +98,28 @@ const CreateRoute = () => {
     }, 350);
   };
 
-  const handleMustSearchChange = (value: string) => {
-    setMustSearch(value);
-    setMustSearchResults([]);
-    if (mustSearchTimer.current) clearTimeout(mustSearchTimer.current);
-    if (value.length < 2) return;
-    mustSearchTimer.current = setTimeout(async () => {
-      try {
-        const results = await forwardGeocodeWithTypes(`${value} ${preferences.city}`);
-        setMustSearchResults(results.slice(0, 6));
-      } catch { /* ignore */ }
-    }, 400);
+  const handleToggleListen = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    const recognition = new SpeechRecognition();
+    recognition.lang = "pl-PL";
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results as any[])
+        .map((r: any) => r[0].transcript)
+        .join(" ");
+      setIdealDay(prev => prev ? `${prev} ${transcript}` : transcript);
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
   };
 
   const handleDateSelect = (date: Date | undefined) => {
@@ -217,55 +216,32 @@ const CreateRoute = () => {
             {validationErrors.city && <p className="text-xs text-destructive">{validationErrors.city}</p>}
           </div>
 
-          {/* Must-visit places */}
+          {/* Ideal day */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">{t("must_visit_label")}</label>
+            <label className="text-sm font-medium">{t("ideal_day_label")}</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input
-                placeholder={t("must_visit_placeholder")}
-                value={mustSearch}
-                onChange={e => handleMustSearchChange(e.target.value)}
-                className="pl-9 bg-card h-12"
+              <Textarea
+                placeholder={t("ideal_day_placeholder")}
+                value={idealDay}
+                onChange={e => setIdealDay(e.target.value)}
+                className="min-h-[120px] text-base resize-none pr-12 bg-card"
+                maxLength={600}
               />
-              {mustSearchResults.length > 0 && (
-                <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
-                  {mustSearchResults.map((result, i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        setMustVisitPlaces(prev =>
-                          prev.some(p => p.name === result.name)
-                            ? prev
-                            : [...prev, { name: result.name, emoji: getPlaceEmoji(result.types) }]
-                        );
-                        setMustSearch("");
-                        setMustSearchResults([]);
-                      }}
-                      className="w-full text-left px-4 py-2.5 hover:bg-muted transition-colors border-b border-border/40 last:border-b-0"
-                    >
-                      <p className="text-sm font-medium">{result.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{result.full_address}</p>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={handleToggleListen}
+                className={cn(
+                  "absolute bottom-3 right-3 p-2 rounded-full transition-colors",
+                  isListening
+                    ? "bg-red-500 text-white"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Mic className="h-4 w-4" />
+              </button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {t("must_visit_hint")}
-            </p>
-            {mustVisitPlaces.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {mustVisitPlaces.map(place => (
-                  <div key={place.name} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-foreground text-background">
-                    <span>{place.emoji}</span>
-                    <span>{place.name}</span>
-                    <button onClick={() => setMustVisitPlaces(prev => prev.filter(p => p.name !== place.name))}>
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+            {isListening && (
+              <p className="text-xs text-red-500">Słucham...</p>
             )}
           </div>
 
@@ -314,7 +290,8 @@ const CreateRoute = () => {
         <PlanChatExperience
           preferences={preferences}
           onPlanReady={handlePlanReady}
-          likedPlaces={[...likedPlaces, ...mustVisitPlaces.map(p => p.name)]}
+          likedPlaces={likedPlaces}
+          idealDay={idealDay}
           initialUserMessage={initialUserMessage}
         />
       </div>

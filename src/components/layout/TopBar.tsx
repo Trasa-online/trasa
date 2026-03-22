@@ -44,11 +44,14 @@ const TopBar = ({ onOrbClick }: { onOrbClick?: () => void }) => {
       >
         TRASA
       </button>
+      {/* ORB_DISABLED
       <button
         onClick={() => onOrbClick ? onOrbClick() : navigate("/create")}
         aria-label="Zaplanuj podróż"
         className="h-11 w-11 rounded-full orb-gradient active:scale-90 transition-transform"
       />
+      */}
+      <div className="w-11" />
     </header>
   );
 };

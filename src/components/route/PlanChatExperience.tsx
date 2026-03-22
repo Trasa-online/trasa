@@ -45,6 +45,7 @@ interface PlanChatExperienceProps {
   preferences: TripPreferences;
   onPlanReady: (plan: RoutePlan, messages: TextMessage[]) => void;
   likedPlaces?: string[];
+  idealDay?: string;
   initialUserMessage?: string;
 }
 
@@ -267,7 +268,7 @@ function getCurrentTimeContext(): { current_time: string; current_date: string }
   };
 }
 
-const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUserMessage }: PlanChatExperienceProps) => {
+const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, initialUserMessage }: PlanChatExperienceProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
@@ -334,6 +335,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
             messages: isSubsequentDay ? [] : [{ role: "user", content: initMsg }],
             force_plan: isSubsequentDay ? false : true,
             liked_places: likedPlaces,
+            ideal_day: idealDay || undefined,
             ...getCurrentTimeContext(),
           },
         });
@@ -411,7 +413,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
 
     try {
       const response = await supabase.functions.invoke("plan-route", {
-        body: { preferences, messages: newMessages, current_plan: plan, liked_places: likedPlaces, ...getCurrentTimeContext() },
+        body: { preferences, messages: newMessages, current_plan: plan, liked_places: likedPlaces, ideal_day: idealDay || undefined, ...getCurrentTimeContext() },
       });
 
       if (response.error) throw new Error(response.error.message);
