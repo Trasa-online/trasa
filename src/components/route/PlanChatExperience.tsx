@@ -1,13 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Loader2, Brain, Plus, ExternalLink, X } from "lucide-react";
+import { Send, Mic, MicOff, Loader2, Brain, Plus, ExternalLink, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { type PlanPin } from "./DayPinList";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import AddPinSheet from "./AddPinSheet";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -148,31 +146,31 @@ function CarouselPlanCard({
   return (
     <button
       onClick={onClick}
-      className="flex-shrink-0 w-40 rounded-2xl overflow-hidden bg-card border border-border/40 active:scale-[0.97] transition-transform text-left snap-start"
+      className="flex-shrink-0 w-[72vw] max-w-[280px] rounded-2xl overflow-hidden bg-card border border-border/40 active:scale-[0.97] transition-transform text-left snap-start"
     >
       {/* Photo */}
-      <div className="w-full h-28 bg-muted relative">
+      <div className="w-full h-44 bg-muted relative">
         {pin.photoUrl ? (
           <img src={pin.photoUrl} alt={pin.place_name} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-3xl">
+          <div className="w-full h-full flex items-center justify-center text-4xl">
             {CATEGORY_EMOJI[pin.category] ?? "📍"}
           </div>
         )}
         {/* Order badge */}
-        <div className="absolute top-2 left-2 h-5 w-5 rounded-full bg-foreground/90 text-background flex items-center justify-center text-[10px] font-bold">
+        <div className="absolute top-2 left-2 h-6 w-6 rounded-full bg-foreground/90 text-background flex items-center justify-center text-xs font-bold">
           {index + 1}
         </div>
         {/* Time badge */}
         {pin.suggested_time && (
-          <div className="absolute bottom-2 right-2 bg-background/90 backdrop-blur-sm rounded-full px-1.5 py-0.5 text-[10px] font-semibold">
+          <div className="absolute bottom-2 right-2 bg-background/90 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs font-semibold">
             {pin.suggested_time}
           </div>
         )}
         {/* Creator platform badge */}
         {pin.creator?.platform && PLATFORM_BADGE[pin.creator.platform] && (
           <div className={cn(
-            "absolute top-2 right-2 rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+            "absolute top-2 right-2 rounded-full px-2 py-0.5 text-[10px] font-bold",
             PLATFORM_BADGE[pin.creator.platform].className
           )}>
             {PLATFORM_BADGE[pin.creator.platform].label}
@@ -180,9 +178,9 @@ function CarouselPlanCard({
         )}
       </div>
       {/* Info */}
-      <div className="p-2.5">
-        <p className="text-xs font-semibold leading-tight line-clamp-2">{pin.place_name}</p>
-        <p className="text-[10px] text-muted-foreground mt-1">
+      <div className="p-3">
+        <p className="text-sm font-semibold leading-tight line-clamp-2">{pin.place_name}</p>
+        <p className="text-xs text-muted-foreground mt-1">
           {CATEGORY_EMOJI[pin.category]} {CATEGORY_LABEL[pin.category] ?? pin.category}
           {pin.duration_minutes ? ` · ${pin.duration_minutes} min` : ""}
         </p>
@@ -247,7 +245,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
   const [initializing, setInitializing] = useState(true);
   const [preparingPlan, setPreparingPlan] = useState(false);
   const [memoryUsed, setMemoryUsed] = useState(false);
-  const [selectedPin, setSelectedPin] = useState<{
+  const [detailPin, setDetailPin] = useState<{
     pin: PlanPin; dayNumber: number; pinIndex: number;
   } | null>(null);
   const [addPinDay, setAddPinDay] = useState<number | null>(null);
@@ -582,77 +580,177 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
             </div>
           )}
 
-          {/* Half / Full: rich card list */}
+          {/* Half / Full: carousel or detail view */}
           {(snap !== "peek" || dragH !== null) && plan && (
             <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
-              {memoryUsed && (
-                <div className="flex items-center gap-2 px-4 py-2 border-b border-border/40 flex-shrink-0">
-                  <Brain className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <span className="text-[12px] text-muted-foreground">Plan uwzględnia Twoje wcześniejsze preferencje</span>
-                </div>
-              )}
-              {preparingPlan ? (
-                <div className="px-4 py-3 overflow-y-auto flex-1">
-                  <PlanSkeleton numDays={preferences.numDays} />
-                </div>
-              ) : (
-                <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-                  {/* Scrollable card list */}
-                  <div className="flex-1 overflow-y-auto px-4">
-                    {plan.days.map((day) => (
-                      <div key={day.day_number} className="mb-4">
-                        {/* Day header */}
-                        <div className="flex items-center justify-between py-3">
-                          <h3 className="text-sm font-semibold text-foreground">
-                            {plan.days.length > 1 ? `Dzień ${day.day_number}` : "Plan dnia"}
-                          </h3>
-                          {day.day_metrics && (
-                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60">
-                              {day.day_metrics.total_walking_km && (
-                                <span>🚶 {day.day_metrics.total_walking_km} km</span>
-                              )}
-                              {day.day_metrics.crowd_level && (
-                                <span>
-                                  {day.day_metrics.crowd_level === "low" ? "🟢" : day.day_metrics.crowd_level === "medium" ? "🟡" : "🔴"}
-                                </span>
-                              )}
-                            </div>
+              {detailPin ? (
+                /* ── Detail view (replaces nested sheet) ── */
+                <>
+                  <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 border-b border-border/40">
+                    <button
+                      onClick={() => { setDetailPin(null); setSnap("half"); }}
+                      className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-muted"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </button>
+                    <h3 className="text-sm font-semibold truncate flex-1">{detailPin.pin.place_name}</h3>
+                    {detailPin.pin.suggested_time && (
+                      <span className="text-sm font-semibold tabular-nums">{detailPin.pin.suggested_time}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 overflow-y-auto">
+                    {detailPin.pin.photoUrl && (
+                      <img src={detailPin.pin.photoUrl} alt={detailPin.pin.place_name} className="w-full h-52 object-cover" />
+                    )}
+                    <div className="px-5 py-4 space-y-4">
+                      <div>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          {detailPin.pin.category && (
+                            <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+                              {CATEGORY_EMOJI[detailPin.pin.category]} {CATEGORY_LABEL[detailPin.pin.category] ?? detailPin.pin.category}
+                            </span>
+                          )}
+                          {detailPin.pin.duration_minutes && (
+                            <span className="text-xs text-muted-foreground">{detailPin.pin.duration_minutes} min</span>
+                          )}
+                          {detailPin.pin.walking_time_from_prev && (
+                            <span className="text-xs text-muted-foreground">· {detailPin.pin.walking_time_from_prev} od poprzedniego</span>
                           )}
                         </div>
-
-                        {/* Carousel of place cards */}
-                        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-orange">
-                          {day.pins.map((pin, idx) => (
-                            <CarouselPlanCard
-                              key={idx}
-                              pin={pin}
-                              index={idx}
-                              onClick={() => setSelectedPin({ pin, dayNumber: day.day_number, pinIndex: idx })}
-                            />
-                          ))}
-                          {/* Add place card */}
-                          <button
-                            onClick={() => setAddPinDay(day.day_number)}
-                            className="flex-shrink-0 w-40 h-[calc(112px+52px)] rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors snap-start"
-                          >
-                            <Plus className="h-5 w-5" />
-                            <span className="text-xs">Dodaj miejsce</span>
-                          </button>
-                        </div>
+                        {detailPin.pin.description && (
+                          <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{detailPin.pin.description}</p>
+                        )}
                       </div>
-                    ))}
+                      {(detailPin.pin.pros?.length ?? 0) > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-foreground/60 mb-1.5">Dlaczego warto</p>
+                          <ul className="space-y-1">
+                            {detailPin.pin.pros!.map((p, i) => (
+                              <li key={i} className="text-sm flex gap-2"><span className="text-green-500">✓</span>{p}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {(detailPin.pin.cons?.length ?? 0) > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-foreground/60 mb-1.5">Warto wiedzieć</p>
+                          <ul className="space-y-1">
+                            {detailPin.pin.cons!.map((c, i) => (
+                              <li key={i} className="text-sm flex gap-2"><span className="text-yellow-500">!</span>{c}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {detailPin.pin.creator && (
+                        <div>
+                          <p className="text-xs font-semibold text-foreground/50 uppercase tracking-wide mb-2">Poleca</p>
+                          <a
+                            href={detailPin.pin.creator.postUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-3 rounded-2xl bg-muted/60 hover:bg-muted transition-colors"
+                          >
+                            {detailPin.pin.creator.thumbnailUrl ? (
+                              <img src={detailPin.pin.creator.thumbnailUrl} alt={detailPin.pin.creator.name} className="h-10 w-10 rounded-full object-cover flex-shrink-0" />
+                            ) : (
+                              <div className={cn(
+                                "h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold",
+                                PLATFORM_BADGE[detailPin.pin.creator.platform]?.className ?? "bg-muted-foreground/20 text-foreground"
+                              )}>
+                                {PLATFORM_BADGE[detailPin.pin.creator.platform]?.label ?? "?"}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold truncate">{detailPin.pin.creator.name}</p>
+                              <p className="text-xs text-muted-foreground capitalize">{detailPin.pin.creator.platform} · Zobacz post</p>
+                            </div>
+                            <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
                   </div>
-
-                  {/* Sticky CTA */}
-                  <div className="flex-shrink-0 px-4 pb-4 pt-2 border-t border-border/40">
+                  <div className="flex-shrink-0 px-5 pb-6 pt-2 flex gap-2 border-t border-border/40">
                     <button
-                      onClick={handleConfirm}
-                      className="w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold"
+                      onClick={() => { handleRemovePin(detailPin.dayNumber, detailPin.pinIndex); setDetailPin(null); setSnap("half"); }}
+                      className="flex-1 py-3 rounded-xl border border-destructive/30 text-destructive text-sm font-medium"
                     >
-                      Wybieram ten plan!
+                      Usuń z planu
+                    </button>
+                    <button
+                      onClick={() => { setDetailPin(null); setSnap("half"); }}
+                      className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
+                    >
+                      Zamknij
                     </button>
                   </div>
-                </div>
+                </>
+              ) : (
+                /* ── Carousel view ── */
+                <>
+                  {memoryUsed && (
+                    <div className="flex items-center gap-2 px-4 py-2 border-b border-border/40 flex-shrink-0">
+                      <Brain className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-[12px] text-muted-foreground">Plan uwzględnia Twoje wcześniejsze preferencje</span>
+                    </div>
+                  )}
+                  {preparingPlan ? (
+                    <div className="px-4 py-3 overflow-y-auto flex-1">
+                      <PlanSkeleton numDays={preferences.numDays} />
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+                      <div className="flex-1 overflow-y-auto px-4">
+                        {plan.days.map((day) => (
+                          <div key={day.day_number} className="mb-4">
+                            <div className="flex items-center justify-between py-3">
+                              <h3 className="text-sm font-semibold text-foreground">
+                                {plan.days.length > 1 ? `Dzień ${day.day_number}` : "Plan dnia"}
+                              </h3>
+                              {day.day_metrics && (
+                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60">
+                                  {day.day_metrics.total_walking_km && (
+                                    <span>🚶 {day.day_metrics.total_walking_km} km</span>
+                                  )}
+                                  {day.day_metrics.crowd_level && (
+                                    <span>
+                                      {day.day_metrics.crowd_level === "low" ? "🟢" : day.day_metrics.crowd_level === "medium" ? "🟡" : "🔴"}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-orange">
+                              {day.pins.map((pin, idx) => (
+                                <CarouselPlanCard
+                                  key={idx}
+                                  pin={pin}
+                                  index={idx}
+                                  onClick={() => { setDetailPin({ pin, dayNumber: day.day_number, pinIndex: idx }); setSnap("full"); }}
+                                />
+                              ))}
+                              <button
+                                onClick={() => setAddPinDay(day.day_number)}
+                                className="flex-shrink-0 w-[72vw] max-w-[280px] h-[244px] rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors snap-start"
+                              >
+                                <Plus className="h-5 w-5" />
+                                <span className="text-xs">Dodaj miejsce</span>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex-shrink-0 px-4 pb-4 pt-2 border-t border-border/40">
+                        <button
+                          onClick={handleConfirm}
+                          className="w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold"
+                        >
+                          Wybieram ten plan!
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -697,131 +795,6 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
           </Button>
         </div>
       </div>
-
-      {/* ── Pin detail sheet ──────────────────────────────────────────────── */}
-      <Sheet open={!!selectedPin} onOpenChange={(o) => !o && setSelectedPin(null)}>
-        <SheetContent side="bottom" className="max-h-[85dvh] flex flex-col p-0 rounded-t-3xl">
-          <VisuallyHidden><SheetTitle>{selectedPin?.pin.place_name}</SheetTitle></VisuallyHidden>
-          {selectedPin && (
-            <>
-              {selectedPin.pin.photoUrl && (
-                <div className="relative flex-shrink-0">
-                  <img
-                    src={selectedPin.pin.photoUrl}
-                    alt={selectedPin.pin.place_name}
-                    className="w-full h-48 object-cover"
-                  />
-                  <button
-                    onClick={() => setSelectedPin(null)}
-                    className="absolute top-3 right-3 h-8 w-8 rounded-full bg-background/80 backdrop-blur flex items-center justify-center"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
-              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <h2 className="text-lg font-bold leading-tight">{selectedPin.pin.place_name}</h2>
-                    {selectedPin.pin.suggested_time && (
-                      <span className="text-sm font-semibold tabular-nums flex-shrink-0 mt-0.5">{selectedPin.pin.suggested_time}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    {selectedPin.pin.category && (
-                      <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">
-                        {CATEGORY_EMOJI[selectedPin.pin.category]} {CATEGORY_LABEL[selectedPin.pin.category] ?? selectedPin.pin.category}
-                      </span>
-                    )}
-                    {selectedPin.pin.duration_minutes && (
-                      <span className="text-xs text-muted-foreground">{selectedPin.pin.duration_minutes} min</span>
-                    )}
-                    {selectedPin.pin.walking_time_from_prev && (
-                      <span className="text-xs text-muted-foreground">· {selectedPin.pin.walking_time_from_prev} od poprzedniego</span>
-                    )}
-                  </div>
-                  {selectedPin.pin.description && (
-                    <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{selectedPin.pin.description}</p>
-                  )}
-                </div>
-                {(selectedPin.pin.pros?.length ?? 0) > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-foreground/60 mb-1.5">Dlaczego warto</p>
-                    <ul className="space-y-1">
-                      {selectedPin.pin.pros!.map((p, i) => (
-                        <li key={i} className="text-sm flex gap-2">
-                          <span className="text-green-500">✓</span>{p}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {(selectedPin.pin.cons?.length ?? 0) > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-foreground/60 mb-1.5">Warto wiedzieć</p>
-                    <ul className="space-y-1">
-                      {selectedPin.pin.cons!.map((c, i) => (
-                        <li key={i} className="text-sm flex gap-2">
-                          <span className="text-yellow-500">!</span>{c}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {selectedPin.pin.creator && (
-                  <div>
-                    <p className="text-xs font-semibold text-foreground/50 uppercase tracking-wide mb-2">Poleca</p>
-                    <a
-                      href={selectedPin.pin.creator.postUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 rounded-2xl bg-muted/60 hover:bg-muted transition-colors"
-                    >
-                      {/* Avatar or platform badge */}
-                      {selectedPin.pin.creator.thumbnailUrl ? (
-                        <img
-                          src={selectedPin.pin.creator.thumbnailUrl}
-                          alt={selectedPin.pin.creator.name}
-                          className="h-10 w-10 rounded-full object-cover flex-shrink-0"
-                        />
-                      ) : (
-                        <div className={cn(
-                          "h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold",
-                          PLATFORM_BADGE[selectedPin.pin.creator.platform]?.className ?? "bg-muted-foreground/20 text-foreground"
-                        )}>
-                          {PLATFORM_BADGE[selectedPin.pin.creator.platform]?.label ?? "?"}
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{selectedPin.pin.creator.name}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{selectedPin.pin.creator.platform} · Zobacz post</p>
-                      </div>
-                      <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    </a>
-                  </div>
-                )}
-              </div>
-              <div className="flex-shrink-0 px-5 pb-6 pt-2 flex gap-2 border-t border-border/40">
-                <button
-                  onClick={() => {
-                    handleRemovePin(selectedPin.dayNumber, selectedPin.pinIndex);
-                    setSelectedPin(null);
-                  }}
-                  className="flex-1 py-3 rounded-xl border border-destructive/30 text-destructive text-sm font-medium"
-                >
-                  Usuń z planu
-                </button>
-                <button
-                  onClick={() => setSelectedPin(null)}
-                  className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
-                >
-                  Zamknij
-                </button>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
 
       {/* ── Add pin sheet ─────────────────────────────────────────────────── */}
       {addPinDay !== null && (
