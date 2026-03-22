@@ -425,7 +425,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, initialUser
       }
 
       if (data.plan) {
-        setPlan(data.plan);
+        enrichPlanWithInstagram(data.plan, preferences.city || "", supabase).then(enriched => setPlan(enriched));
         setSnap("half"); // show updated plan
         setLoading(false);
       } else if (data.preparing_plan) {
