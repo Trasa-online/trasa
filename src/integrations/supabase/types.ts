@@ -1285,6 +1285,60 @@ export type Database = {
           },
         ]
       }
+      scraped_places: {
+        Row: {
+          category: string | null
+          city: string
+          creator_name: string | null
+          description: string | null
+          embedding: string | null
+          id: string
+          is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          place_name: string
+          post_url: string | null
+          scraped_at: string | null
+          source_platform: string | null
+          tags: string[] | null
+          thumbnail_url: string | null
+        }
+        Insert: {
+          category?: string | null
+          city: string
+          creator_name?: string | null
+          description?: string | null
+          embedding?: string | null
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          place_name: string
+          post_url?: string | null
+          scraped_at?: string | null
+          source_platform?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+        }
+        Update: {
+          category?: string | null
+          city?: string
+          creator_name?: string | null
+          description?: string | null
+          embedding?: string | null
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          place_name?: string
+          post_url?: string | null
+          scraped_at?: string | null
+          source_platform?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+        }
+        Relationships: []
+      }
       user_insights: {
         Row: {
           category: string
@@ -1547,6 +1601,27 @@ export type Database = {
           pin_id: string
           route_id: string
           similarity: number
+        }[]
+      }
+      match_scraped_places: {
+        Args: {
+          exclude_names?: string[]
+          filter_city: string
+          match_count?: number
+          query_embedding: string
+        }
+        Returns: {
+          category: string
+          creator_name: string
+          description: string
+          id: string
+          latitude: number
+          longitude: number
+          place_name: string
+          post_url: string
+          source_platform: string
+          tags: string[]
+          thumbnail_url: string
         }[]
       }
       restore_pins_from_backup: {
