@@ -312,7 +312,7 @@ ZASADY FORMATU:
 - "Dodaj Y" → wstaw w logiczne miejsce, zaktualizuj suggested_time kolejnych punktów
 - "Usuń Z" → usuń, sprawdź czy kulminacja emocjonalna (H3) nadal jest zachowana
 - NIE regeneruj całego planu jeśli user pyta tylko o 1 zmianę${likedPlaces?.length ? `\n\n## 🎯 MIEJSCA DO UWZGLĘDNIENIA\nUżytkownik chce odwiedzić te miejsca — koniecznie wstaw je w plan:\n${likedPlaces.map(p => `- ${p}`).join("\n")}` : ""}
-
+${scrapedPlacesContext ? `\n\n${scrapedPlacesContext}` : ""}
 ## SZYBKIE ODPOWIEDZI (OBOWIĄZKOWE)
 Na końcu KAŻDEJ wiadomości dodaj dokładnie ten blok:
 <suggestions>["podpowiedź 1", "podpowiedź 2", "podpowiedź 3", "podpowiedź 4"]</suggestions>
