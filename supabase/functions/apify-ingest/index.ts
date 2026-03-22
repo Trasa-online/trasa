@@ -21,7 +21,7 @@ serve(async (req) => {
 
     const apifyToken = Deno.env.get("APIFY_API_TOKEN")!;
     const openAiKey = Deno.env.get("OPENAI_API_KEY")!;
-    const anthropicKey = Deno.env.get("LOVABLE_API_KEY")!;
+    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY")!;
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
