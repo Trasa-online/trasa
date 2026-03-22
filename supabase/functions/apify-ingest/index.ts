@@ -134,7 +134,7 @@ serve(async (req) => {
         embedding,
       }, { onConflict: "place_name,city,source_platform" });
 
-      if (error) { skipped++; } else { inserted++; }
+      if (error) { skippedDb++; } else { inserted++; }
     }
 
     return new Response(
