@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const CITIES = ["Kraków", "Gdańsk", "Warszawa", "Wrocław", "Poznań", "Zakopane"];
+const CITIES = ["Kraków", "Warszawa", "Łódź", "Wrocław", "Poznań", "Gdańsk"];
 const ITEM_HEIGHT = 80;
 const VISIBLE_ITEMS = 5;
 const CONTAINER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
@@ -18,6 +18,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [notifyEmail, setNotifyEmail] = useState("");
+  const [notifyCity, setNotifyCity] = useState("");
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Scroll to initial position
@@ -49,11 +50,16 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
   };
 
   const handleNotify = () => {
+    if (!notifyCity.trim()) {
+      toast.error("Wpisz nazwę miasta");
+      return;
+    }
     if (!notifyEmail.includes("@")) {
       toast.error("Podaj prawidłowy adres email");
       return;
     }
-    toast.success("Dzięki! Powiadomimy Cię gdy Twoje miasto będzie dostępne.");
+    toast.success(`Dzięki! Gdy ${notifyCity} będzie dostępne, damy Ci znać.`);
+    setNotifyCity("");
     setNotifyEmail("");
   };
 
@@ -113,11 +119,19 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
       </div>
 
       {/* "Not your city?" banner */}
-      <div className="mx-5 mb-4 px-4 py-3 rounded-2xl bg-muted/60 border border-border/40">
-        <p className="text-xs font-medium text-foreground mb-2">
+      <div className="mx-5 mb-4 px-4 py-3 rounded-2xl bg-muted/60 border border-border/40 space-y-2">
+        <p className="text-xs font-medium text-foreground">
           Nie widzisz swojego miasta?
         </p>
         <div className="flex gap-2">
+          <Input
+            type="text"
+            placeholder="Nazwa miasta"
+            value={notifyCity}
+            onChange={(e) => setNotifyCity(e.target.value)}
+            className="h-8 text-xs flex-1 bg-background"
+            onKeyDown={(e) => e.key === "Enter" && handleNotify()}
+          />
           <Input
             type="email"
             placeholder="Twój email"
@@ -135,6 +149,9 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
             Wyślij
           </Button>
         </div>
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          Podając email zgadzasz się na jednorazowe powiadomienie, gdy Twoje miasto pojawi się w aplikacji. Nie wysyłamy spamu.
+        </p>
       </div>
 
       {/* CTA */}
