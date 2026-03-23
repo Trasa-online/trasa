@@ -474,7 +474,7 @@ const Home = () => {
       <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm border-t border-border/20 px-5 pt-3 pb-safe-4" data-tour="cta">
         <div className="max-w-lg mx-auto">
           <Button
-            onClick={() => navigate("/create")}
+            onClick={() => navigate("/plan")}
             size="lg"
             className="w-full rounded-full text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20"
           >

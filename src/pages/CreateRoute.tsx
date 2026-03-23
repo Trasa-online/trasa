@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,8 @@ interface TripPreferences {
 const CreateRoute = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const wizardState = (location.state as { city?: string; date?: string } | null);
   const [searchParams] = useSearchParams();
   const folderId = searchParams.get("trip") ?? undefined;
   const dayNumber = searchParams.get("day") ? parseInt(searchParams.get("day")!) : undefined;
@@ -55,21 +57,22 @@ const CreateRoute = () => {
   }, [creatorPlanId]);
   const [cityResults, setCityResults] = useState<{ name: string; full_address: string }[]>([]);
   const cityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [cityInput, setCityInput] = useState("");
+  const [cityInput, setCityInput] = useState(wizardState?.city ?? "");
   const [idealDay, setIdealDay] = useState("");
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const wizardDate = wizardState?.date ? new Date(wizardState.date) : undefined;
   const [preferences, setPreferences] = useState<TripPreferences>({
     numDays: 1,
     pace: "mixed",
     priorities: [],
-    startDate: null,
+    startDate: wizardDate ? wizardDate.toISOString().slice(0, 10) : null,
     planningMode: "text",
-    city: "",
+    city: wizardState?.city ?? "",
     folderId,
     dayNumber,
   });
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(wizardDate);
   const [showSummary, setShowSummary] = useState(false);
   const [finalPlan, setFinalPlan] = useState<any>(null);
   const [finalMessages, setFinalMessages] = useState<any[]>([]);
