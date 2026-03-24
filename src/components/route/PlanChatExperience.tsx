@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Loader2, Brain, Plus, ExternalLink, ArrowLeft, Star } from "lucide-react";
+import { Send, Mic, MicOff, Loader2, Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -174,57 +174,90 @@ function PostThumbnail({ post }: { post: { thumbnail_url: string; creator_name: 
   );
 }
 
-function CarouselPlanCard({
-  pin, index, onClick,
-}: { pin: PlanPin; index: number; onClick: () => void }) {
+function LargeCarouselCard({
+  pin, index, dayLabel, onClick,
+}: { pin: PlanPin; index: number; dayLabel?: string; onClick: () => void }) {
   const [imgFailed, setImgFailed] = useState(false);
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    pointerStart.current = { x: e.clientX, y: e.clientY };
+  };
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!pointerStart.current) return;
+    const dx = e.clientX - pointerStart.current.x;
+    const dy = e.clientY - pointerStart.current.y;
+    pointerStart.current = null;
+    if (dy > 40 && Math.abs(dy) > Math.abs(dx) * 1.4) onClick();
+  };
+
   return (
-    <button
+    <div
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
       onClick={onClick}
-      className="flex-shrink-0 w-[72vw] max-w-[280px] rounded-2xl overflow-hidden bg-card border border-border/40 active:scale-[0.97] transition-transform text-left snap-start"
+      className="flex-shrink-0 w-[80vw] h-full rounded-2xl overflow-hidden bg-card border border-border/40 snap-center flex flex-col cursor-pointer active:scale-[0.98] transition-transform select-none"
     >
-      {/* Photo */}
-      <div className="w-full h-44 bg-muted relative">
+      {/* Hero image — 62% of card height */}
+      <div className="relative flex-[62] min-h-0">
         {pin.photoUrl && !imgFailed ? (
           <img src={pin.photoUrl} alt={pin.place_name} className="w-full h-full object-cover" onError={() => setImgFailed(true)} />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-stone-100 to-stone-200 dark:from-stone-800 dark:to-stone-900">
+          <div className="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-br from-stone-100 to-stone-200 dark:from-stone-800 dark:to-stone-900">
             {CATEGORY_EMOJI[pin.category] ?? "📍"}
           </div>
         )}
-        {/* Order badge */}
-        <div className="absolute top-2 left-2 h-6 w-6 rounded-full bg-foreground/90 text-background flex items-center justify-center text-xs font-bold">
-          {index + 1}
-        </div>
-        {/* Time badge */}
-        {pin.suggested_time && (
-          <div className="absolute bottom-2 right-2 bg-background/90 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs font-semibold">
-            {pin.suggested_time}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/50" />
+        {/* Number + day label */}
+        <div className="absolute top-3 left-3 flex items-center gap-1.5">
+          <div className="h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center text-xs font-bold backdrop-blur-sm">
+            {index + 1}
           </div>
-        )}
-          {/* Influencer thumbnails - overlapping avatars */}
+          {dayLabel && (
+            <span className="text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5">{dayLabel}</span>
+          )}
+        </div>
+        {/* Creator avatars */}
         {(pin.creators?.length ?? 0) > 0 && (
-          <div className="absolute bottom-2 left-2 flex -space-x-1.5">
-            {pin.creators!.slice(0, 4).map((c, i) => (
+          <div className="absolute top-3 right-3 flex -space-x-1.5">
+            {pin.creators!.slice(0, 3).map((c, i) => (
               <CreatorAvatar key={i} name={c.name} thumbnailUrl={c.thumbnailUrl} zIndex={10 - i} />
             ))}
-            {(pin.creators!.length > 4) && (
-              <div className="h-7 w-7 rounded-full border-2 border-card bg-muted/80 flex items-center justify-center text-[9px] font-bold text-foreground/70 flex-shrink-0" style={{ zIndex: 6 }}>
-                +{pin.creators!.length - 4}
+            {pin.creators!.length > 3 && (
+              <div className="h-7 w-7 rounded-full border-2 border-card bg-black/50 text-white flex items-center justify-center text-[9px] font-bold" style={{ zIndex: 7 }}>
+                +{pin.creators!.length - 3}
               </div>
             )}
           </div>
         )}
+        {/* Swipe-down hint */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-60">
+          <ChevronDown className="h-4 w-4 text-white" />
+        </div>
       </div>
-      {/* Info */}
-      <div className="p-3">
-        <p className="text-sm font-semibold leading-tight line-clamp-2">{pin.place_name}</p>
-        <p className="text-xs text-muted-foreground mt-1">
-          {CATEGORY_EMOJI[pin.category]} {CATEGORY_LABEL[pin.category] ?? pin.category}
-          {pin.duration_minutes ? ` · ${pin.duration_minutes} min` : ""}
-        </p>
+
+      {/* Info — 38% */}
+      <div className="flex-[38] min-h-0 px-4 py-3 flex flex-col justify-between">
+        <div className="space-y-1 min-h-0">
+          <p className="text-base font-bold leading-tight line-clamp-2">{pin.place_name}</p>
+          <p className="text-xs text-muted-foreground">
+            {CATEGORY_EMOJI[pin.category]} {CATEGORY_LABEL[pin.category] ?? pin.category}
+            {pin.duration_minutes ? ` · ${pin.duration_minutes} min` : ""}
+          </p>
+          {pin.description && (
+            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{pin.description}</p>
+          )}
+        </div>
+        <div className="flex items-center justify-between">
+          {pin.suggested_time && (
+            <span className="text-sm font-bold tabular-nums">{pin.suggested_time}</span>
+          )}
+          {pin.walking_time_from_prev && (
+            <span className="text-xs text-muted-foreground">🚶 {pin.walking_time_from_prev}</span>
+          )}
+        </div>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -999,47 +1032,31 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
                     </div>
                   ) : (
                     <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-                      <div className="flex-1 overflow-y-auto px-4">
-                        {plan.days.map((day) => (
-                          <div key={day.day_number} className="mb-4">
-                            <div className="flex items-center justify-between py-3">
-                              <h3 className="text-sm font-semibold text-foreground">
-                                {plan.days.length > 1 ? `Dzień ${day.day_number}` : "Plan dnia"}
-                              </h3>
-                              {day.day_metrics && (
-                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60">
-                                  {day.day_metrics.total_walking_km && (
-                                    <span>🚶 {day.day_metrics.total_walking_km} km</span>
-                                  )}
-                                  {day.day_metrics.crowd_level && (
-                                    <span>
-                                      {day.day_metrics.crowd_level === "low" ? "🟢" : day.day_metrics.crowd_level === "medium" ? "🟡" : "🔴"}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-orange">
-                              {day.pins.map((pin, idx) => (
-                                <CarouselPlanCard
-                                  key={idx}
-                                  pin={pin}
-                                  index={idx}
-                                  onClick={() => { setDetailPin({ pin, dayNumber: day.day_number, pinIndex: idx }); setSnap("full"); }}
-                                />
-                              ))}
-                              <button
-                                onClick={() => setAddPinDay(day.day_number)}
-                                className="flex-shrink-0 w-[72vw] max-w-[280px] h-[244px] rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors snap-start"
-                              >
-                                <Plus className="h-5 w-5" />
-                                <span className="text-xs">Dodaj miejsce</span>
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                      {/* Large card carousel — fills available height */}
+                      <div className="flex-1 min-h-0 overflow-hidden py-2">
+                        <div className="h-full flex gap-3 overflow-x-auto px-[10vw] snap-x snap-mandatory scrollbar-none">
+                          {plan.days.flatMap((day) =>
+                            day.pins.map((pin, idx) => (
+                              <LargeCarouselCard
+                                key={`${day.day_number}-${idx}`}
+                                pin={pin}
+                                index={idx}
+                                dayLabel={plan.days.length > 1 ? `Dzień ${day.day_number}` : undefined}
+                                onClick={() => { setDetailPin({ pin, dayNumber: day.day_number, pinIndex: idx }); setSnap("full"); }}
+                              />
+                            ))
+                          )}
+                          {/* Add pin button — same height as cards */}
+                          <button
+                            onClick={() => setAddPinDay(plan.days[plan.days.length - 1].day_number)}
+                            className="flex-shrink-0 w-[80vw] h-full rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-2 text-muted-foreground snap-center"
+                          >
+                            <Plus className="h-6 w-6" />
+                            <span className="text-sm">Dodaj miejsce</span>
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex-shrink-0 px-4 pb-4 pt-2 border-t border-border/40">
+                      <div className="flex-shrink-0 px-4 pb-4 pt-1 border-t border-border/40">
                         <button
                           onClick={handleConfirm}
                           className="w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold"
