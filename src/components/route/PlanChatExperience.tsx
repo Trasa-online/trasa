@@ -294,7 +294,7 @@ async function enrichPlanWithInstagram(plan: RoutePlan, city: string, sb: typeof
 
     // All pins get creators: keyword-matched first, then round-robin city posts as fallback
     let rrIdx = 0;
-    return {
+    const instagramEnriched: RoutePlan = {
       ...plan,
       days: plan.days.map(day => ({
         ...day,
@@ -320,13 +320,52 @@ async function enrichPlanWithInstagram(plan: RoutePlan, city: string, sb: typeof
           }));
           return {
             ...pin,
-            photoUrl: pin.photoUrl || matches[0].thumbnail_url || undefined,
+            photoUrl: pin.photoUrl || undefined,
             creator: creators[0],
             creators,
           };
         }),
       })),
     };
+
+    // Fetch Google Places photos for all pins without a photoUrl
+    const allPins = instagramEnriched.days.flatMap(d => d.pins);
+    const needsPhoto = allPins.filter(p => !p.photoUrl && p.latitude && p.longitude);
+    if (needsPhoto.length > 0) {
+      const results = await Promise.allSettled(
+        needsPhoto.map(pin =>
+          sb.functions.invoke("google-places-proxy", {
+            body: { placeName: pin.place_name, latitude: pin.latitude, longitude: pin.longitude },
+          }).then(({ data }) => {
+            const photoRef = data?.result?.photos?.[0]?.photo_reference;
+            return {
+              place_name: pin.place_name,
+              photoUrl: photoRef
+                ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photoRef}&key=${GOOGLE_MAPS_API_KEY}`
+                : null,
+            };
+          })
+        )
+      );
+      const photoMap = new Map<string, string>();
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value.photoUrl) {
+          photoMap.set(r.value.place_name, r.value.photoUrl);
+        }
+      }
+      return {
+        ...instagramEnriched,
+        days: instagramEnriched.days.map(day => ({
+          ...day,
+          pins: day.pins.map(pin => ({
+            ...pin,
+            photoUrl: pin.photoUrl || photoMap.get(pin.place_name) || undefined,
+          })),
+        })),
+      };
+    }
+
+    return instagramEnriched;
   } catch { return plan; }
 }
 
