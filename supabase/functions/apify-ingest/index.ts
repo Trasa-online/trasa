@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { datasetId, runId, city = "Kraków", debug = false } = await req.json();
+    const { datasetId, runId, city = "Kraków", debug = false, clearExisting = false } = await req.json();
 
     if (!datasetId && !runId) {
       return new Response(
@@ -67,6 +67,10 @@ serve(async (req) => {
       );
     }
 
+    if (clearExisting) {
+      await supabase.from("scraped_places").delete().ilike("city", `%${city}%`);
+    }
+
     let inserted = 0;
     let skippedLikes = 0;
     let skippedParse = 0;
@@ -82,7 +86,7 @@ serve(async (req) => {
       const likes = item.likesCount || item.likes || 0;
       const locationHint = item.locationName || item.location?.name || city;
 
-      if (likes < 3 || caption.length < 15) { skippedLikes++; continue; }
+      if (likes < 50 || caption.length < 15) { skippedLikes++; continue; }
 
       const placeName = item.ownerFullName || item.ownerUsername || null;
       if (!placeName || caption.length < 15) {
