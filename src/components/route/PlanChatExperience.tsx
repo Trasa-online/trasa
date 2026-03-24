@@ -177,6 +177,7 @@ function PostThumbnail({ post }: { post: { thumbnail_url: string; creator_name: 
 function CarouselPlanCard({
   pin, index, onClick,
 }: { pin: PlanPin; index: number; onClick: () => void }) {
+  const [imgFailed, setImgFailed] = useState(false);
   return (
     <button
       onClick={onClick}
@@ -184,10 +185,10 @@ function CarouselPlanCard({
     >
       {/* Photo */}
       <div className="w-full h-44 bg-muted relative">
-        {pin.photoUrl ? (
-          <img src={pin.photoUrl} alt={pin.place_name} className="w-full h-full object-cover" />
+        {pin.photoUrl && !imgFailed ? (
+          <img src={pin.photoUrl} alt={pin.place_name} className="w-full h-full object-cover" onError={() => setImgFailed(true)} />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-4xl">
+          <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-stone-100 to-stone-200 dark:from-stone-800 dark:to-stone-900">
             {CATEGORY_EMOJI[pin.category] ?? "📍"}
           </div>
         )}
