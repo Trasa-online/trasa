@@ -35,13 +35,15 @@ const CreateRoute = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const wizardState = (location.state as { city?: string; date?: string } | null);
+  const wizardState = (location.state as { city?: string; date?: string; fromTemplate?: boolean; routeId?: string; initialPlan?: any } | null);
+  const fromTemplate = wizardState?.fromTemplate ?? false;
+  const templateInitialPlan = wizardState?.initialPlan ?? null;
   const [searchParams] = useSearchParams();
   const folderId = searchParams.get("trip") ?? undefined;
   const dayNumber = searchParams.get("day") ? parseInt(searchParams.get("day")!) : undefined;
   const creatorPlanId = searchParams.get("creatorPlan") ?? undefined;
   const initialUserMessage = searchParams.get("q") ?? undefined;
-  const [step, setStep] = useState(creatorPlanId || initialUserMessage ? 2 : 1);
+  const [step, setStep] = useState(creatorPlanId || initialUserMessage || fromTemplate ? 2 : 1);
   const [likedPlaces, setLikedPlaces] = useState<string[]>([]);
 
   useEffect(() => {
@@ -296,6 +298,7 @@ const CreateRoute = () => {
           likedPlaces={likedPlaces}
           idealDay={idealDay}
           initialUserMessage={initialUserMessage}
+          initialPlan={templateInitialPlan ?? undefined}
         />
       </div>
 

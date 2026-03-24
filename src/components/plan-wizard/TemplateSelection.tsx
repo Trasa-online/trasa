@@ -168,7 +168,21 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
         .eq("id", selected.id)
         .then(() => {});
 
-      navigate(`/day-plan?route=${route.id}`);
+      // Build RoutePlan from template pins for PlanChatExperience
+      const initialPlan = {
+        city,
+        days: [{ day_number: 1, pins: selected.pins.map(p => ({ ...p, day_number: 1 })) }],
+      };
+
+      navigate("/create", {
+        state: {
+          fromTemplate: true,
+          routeId: route.id,
+          city,
+          date: date.toISOString(),
+          initialPlan,
+        },
+      });
     } catch (err) {
       console.error("Fork error:", err);
       toast.error("Nie udało się utworzyć trasy. Spróbuj ponownie.");

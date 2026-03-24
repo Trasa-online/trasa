@@ -47,6 +47,7 @@ interface PlanChatExperienceProps {
   likedPlaces?: string[];
   idealDay?: string;
   initialUserMessage?: string;
+  initialPlan?: RoutePlan;
 }
 
 type SnapState = "peek" | "half" | "full";
@@ -293,7 +294,7 @@ function getCurrentTimeContext(): { current_time: string; current_date: string }
   };
 }
 
-const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, initialUserMessage }: PlanChatExperienceProps) => {
+const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, initialUserMessage, initialPlan }: PlanChatExperienceProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
@@ -340,8 +341,14 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
     }
   }, [messages]);
 
-  // Initialize: Day 1 → immediate real plan; Day 2+ → greeting referencing previous day
+  // Initialize: if initialPlan provided (template fork) → skip AI; else generate
   useEffect(() => {
+    if (initialPlan) {
+      enrichPlanWithInstagram(initialPlan, preferences.city || "", supabase).then(enriched => setPlan(enriched));
+      setMessages([{ role: "assistant", content: `Oto Twój plan w **${preferences.city}** 🗺️\n\nMogę go dostosować do Twoich potrzeb — powiedz co zmienić!` }]);
+      setInitializing(false);
+      return;
+    }
     const initialize = async () => {
       const nDays = preferences.numDays;
       const daysLabel = nDays === 1 ? "1 dzień" : `${nDays} dni`;
