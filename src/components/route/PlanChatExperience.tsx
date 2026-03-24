@@ -143,6 +143,37 @@ const PLATFORM_BADGE: Record<string, { label: string; className: string }> = {
 
 // ─── Helper components ────────────────────────────────────────────────────────
 
+const AVATAR_COLORS = ["#e85d04","#2d6a4f","#9d4edd","#1d3557","#c77dff","#f4a261","#f97316","#0096c7"];
+function nameColor(name: string) { return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length]; }
+
+function CreatorAvatar({ name, thumbnailUrl, zIndex, size = 7 }: { name: string; thumbnailUrl?: string; zIndex?: number; size?: number }) {
+  const [failed, setFailed] = useState(false);
+  const initials = name ? name.replace(/^@/, "").charAt(0).toUpperCase() : "?";
+  const cls = `h-${size} w-${size} rounded-full border-2 border-card overflow-hidden flex-shrink-0 flex items-center justify-center text-white text-[10px] font-bold`;
+  return (
+    <div className={cls} style={{ zIndex, backgroundColor: nameColor(name) }}>
+      {thumbnailUrl && !failed
+        ? <img src={thumbnailUrl} alt={name} className="w-full h-full object-cover" onError={() => setFailed(true)} />
+        : initials
+      }
+    </div>
+  );
+}
+
+function PostThumbnail({ post }: { post: { thumbnail_url: string; creator_name: string; post_url: string } }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <a href={post.post_url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 w-24 rounded-xl overflow-hidden relative block">
+      {post.thumbnail_url && !failed
+        ? <img src={post.thumbnail_url} alt={post.creator_name} className="w-24 h-24 object-cover" onError={() => setFailed(true)} />
+        : <div className="w-24 h-24 flex items-center justify-center text-white text-2xl font-bold" style={{ backgroundColor: nameColor(post.creator_name) }}>{post.creator_name.charAt(0).toUpperCase()}</div>
+      }
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+      <p className="absolute bottom-1 left-1 right-1 text-white text-[10px] font-medium truncate">@{post.creator_name}</p>
+    </a>
+  );
+}
+
 function CarouselPlanCard({
   pin, index, onClick,
 }: { pin: PlanPin; index: number; onClick: () => void }) {
@@ -174,12 +205,7 @@ function CarouselPlanCard({
         {(pin.creators?.length ?? 0) > 0 && (
           <div className="absolute bottom-2 left-2 flex -space-x-1.5">
             {pin.creators!.slice(0, 4).map((c, i) => (
-              <div key={i} className="h-7 w-7 rounded-full border-2 border-card overflow-hidden bg-muted flex-shrink-0" style={{ zIndex: 10 - i }}>
-                {c.thumbnailUrl
-                  ? <img src={c.thumbnailUrl} alt={c.name} className="w-full h-full object-cover" />
-                  : <div className="w-full h-full bg-gradient-to-br from-orange-400 to-pink-500" />
-                }
-              </div>
+              <CreatorAvatar key={i} name={c.name} thumbnailUrl={c.thumbnailUrl} zIndex={10 - i} />
             ))}
             {(pin.creators!.length > 4) && (
               <div className="h-7 w-7 rounded-full border-2 border-card bg-muted/80 flex items-center justify-center text-[9px] font-bold text-foreground/70 flex-shrink-0" style={{ zIndex: 6 }}>
@@ -244,31 +270,45 @@ async function enrichPlanWithInstagram(plan: RoutePlan, city: string, sb: typeof
       .ilike("city", `%${city}%`);
     if (!scraped?.length) return plan;
 
+    // Only keep entries with a post_url (thumbnail may be expired but post is stable)
+    const pool = scraped.filter(sp => sp.post_url);
+
     // Significant words from pin name that should appear in caption
     function pinKeywords(pinName: string): string[] {
       return pinName
         .toLowerCase()
         .split(/[\s,.\-/()]+/)
         .filter(w => w.length >= 4)
-        .filter(w => !["lunch", "dinner", "kolacja", "obiad", "przy", "przy", "restaurant"].includes(w));
+        .filter(w => !["lunch", "dinner", "kolacja", "obiad", "przy", "restaurant"].includes(w));
     }
 
     function findMatches(pinName: string) {
       const keywords = pinKeywords(pinName);
       if (keywords.length === 0) return [];
-      return scraped!.filter(sp => {
+      return pool.filter(sp => {
         const desc = (sp.description ?? "").toLowerCase();
-        const pn = (sp.place_name ?? "").toLowerCase();
-        return keywords.some(kw => desc.includes(kw) || pn.includes(kw));
-      }).filter(sp => sp.thumbnail_url);
+        return keywords.some(kw => desc.includes(kw));
+      });
     }
 
+    // All pins get creators: keyword-matched first, then round-robin city posts as fallback
+    let rrIdx = 0;
     return {
       ...plan,
       days: plan.days.map(day => ({
         ...day,
         pins: day.pins.map(pin => {
-          const matches = findMatches(pin.place_name);
+          let matches = findMatches(pin.place_name);
+          // Fallback: take next 2 from city pool so every pin shows something
+          if (matches.length < 2 && pool.length > 0) {
+            const extras = [];
+            for (let i = 0; i < 2 && extras.length < 2 - matches.length; i++) {
+              const candidate = pool[(rrIdx + i) % pool.length];
+              if (!matches.includes(candidate)) extras.push(candidate);
+            }
+            rrIdx = (rrIdx + 2) % pool.length;
+            matches = [...matches, ...extras];
+          }
           if (!matches.length) return pin;
           const creators = matches.slice(0, 5).map(m => ({
             platform: (m.source_platform ?? "instagram") as "instagram" | "tiktok" | "youtube",
@@ -808,17 +848,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
                           {/* Thumbnails row */}
                           <div className="flex gap-2 overflow-x-auto pb-2 -mx-5 px-5">
                             {detailExtra!.scrapedPosts.map((post, i) => (
-                              <a
-                                key={i}
-                                href={post.post_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-shrink-0 w-24 rounded-xl overflow-hidden relative"
-                              >
-                                <img src={post.thumbnail_url} alt={post.creator_name} className="w-24 h-24 object-cover" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                                <p className="absolute bottom-1 left-1 right-1 text-white text-[10px] font-medium truncate">@{post.creator_name}</p>
-                              </a>
+                              <PostThumbnail key={i} post={post} />
                             ))}
                           </div>
                           {/* First influencer's quote/description */}
