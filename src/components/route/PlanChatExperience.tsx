@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Loader2, Brain, Plus, ExternalLink, ArrowLeft } from "lucide-react";
+import { Send, Mic, MicOff, Loader2, Brain, Plus, ExternalLink, ArrowLeft, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { type PlanPin } from "./DayPinList";
 import AddPinSheet from "./AddPinSheet";
+import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -307,6 +308,12 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
   const [detailPin, setDetailPin] = useState<{
     pin: PlanPin; dayNumber: number; pinIndex: number;
   } | null>(null);
+  const [detailExtra, setDetailExtra] = useState<{
+    photoUrl: string | null;
+    rating: number | null;
+    ratingsTotal: number | null;
+    scrapedPosts: { thumbnail_url: string; creator_name: string; post_url: string }[];
+  } | null>(null);
   const [addPinDay, setAddPinDay] = useState<number | null>(null);
 
   // Sheet snap state
@@ -340,6 +347,63 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Fetch Google Places details + scraped Instagram posts when a pin is opened
+  useEffect(() => {
+    if (!detailPin) { setDetailExtra(null); return; }
+    setDetailExtra(null);
+    const { pin } = detailPin;
+    const city = preferences.city || "";
+
+    const fetchDetailData = async () => {
+      // Google Places: photo + rating
+      let photoUrl: string | null = pin.photoUrl ?? null;
+      let rating: number | null = null;
+      let ratingsTotal: number | null = null;
+
+      if (pin.latitude && pin.longitude) {
+        try {
+          const { data } = await supabase.functions.invoke("google-places-proxy", {
+            body: { placeName: pin.place_name, latitude: pin.latitude, longitude: pin.longitude },
+          });
+          const result = data?.result;
+          if (result) {
+            const photoRef = result.photos?.[0]?.photo_reference;
+            if (photoRef) {
+              photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photoRef}&key=${GOOGLE_MAPS_API_KEY}`;
+            }
+            rating = result.rating ?? null;
+            ratingsTotal = result.user_ratings_total ?? null;
+          }
+        } catch { /* keep defaults */ }
+      }
+
+      // scraped_places: Instagram thumbnails matching place name
+      const normalize = (s: string) => s.toLowerCase().replace(/[\s._-]+/g, "");
+      const pinName = normalize(pin.place_name);
+      let scrapedPosts: { thumbnail_url: string; creator_name: string; post_url: string }[] = [];
+      try {
+        const { data } = await supabase
+          .from("scraped_places")
+          .select("thumbnail_url, creator_name, post_url, place_name")
+          .ilike("city", `%${city}%`)
+          .not("thumbnail_url", "is", null)
+          .limit(100);
+        if (data) {
+          scrapedPosts = data
+            .filter(sp => {
+              const spName = normalize(sp.place_name ?? "");
+              return spName.includes(pinName) || pinName.includes(spName);
+            })
+            .slice(0, 6) as { thumbnail_url: string; creator_name: string; post_url: string }[];
+        }
+      } catch { /* ignore */ }
+
+      setDetailExtra({ photoUrl, rating, ratingsTotal, scrapedPosts });
+    };
+
+    fetchDetailData();
+  }, [detailPin?.pin.place_name]);
 
   // Initialize: if initialPlan provided (template fork) → skip AI; else generate
   useEffect(() => {
@@ -650,43 +714,102 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
           {(snap !== "peek" || dragH !== null) && plan && (
             <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
               {detailPin ? (
-                /* ── Detail view (replaces nested sheet) ── */
+                /* ── Detail view ── */
                 <>
-                  <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 border-b border-border/40">
-                    <button
-                      onClick={() => { setDetailPin(null); setSnap("half"); }}
-                      className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-muted"
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                    </button>
-                    <h3 className="text-sm font-semibold truncate flex-1">{detailPin.pin.place_name}</h3>
-                    {detailPin.pin.suggested_time && (
-                      <span className="text-sm font-semibold tabular-nums">{detailPin.pin.suggested_time}</span>
-                    )}
-                  </div>
                   <div className="flex-1 overflow-y-auto">
-                    {detailPin.pin.photoUrl && (
-                      <img src={detailPin.pin.photoUrl} alt={detailPin.pin.place_name} className="w-full h-52 object-cover" />
-                    )}
-                    <div className="px-5 py-4 space-y-4">
-                      <div>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          {detailPin.pin.category && (
-                            <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">
-                              {CATEGORY_EMOJI[detailPin.pin.category]} {CATEGORY_LABEL[detailPin.pin.category] ?? detailPin.pin.category}
+                    {/* Hero image with gradient overlay */}
+                    <div className="relative w-full h-56 bg-muted flex-shrink-0">
+                      {detailExtra === null ? (
+                        <div className="w-full h-full bg-muted animate-pulse" />
+                      ) : detailExtra.photoUrl ? (
+                        <img src={detailExtra.photoUrl} alt={detailPin.pin.place_name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-orange-100 to-amber-200" />
+                      )}
+                      {/* Gradient overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                      {/* Back button */}
+                      <button
+                        onClick={() => { setDetailPin(null); setDetailExtra(null); setSnap("half"); }}
+                        className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </button>
+                      {/* Place name + time overlay */}
+                      <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
+                        <h3 className="text-lg font-bold text-white leading-tight">{detailPin.pin.place_name}</h3>
+                        <div className="flex items-center gap-3 mt-1">
+                          {detailPin.pin.suggested_time && (
+                            <span className="text-sm font-semibold text-white/90">{detailPin.pin.suggested_time}</span>
+                          )}
+                          {detailExtra?.rating && (
+                            <span className="flex items-center gap-1 text-sm text-white/90">
+                              <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                              {detailExtra.rating.toFixed(1)}
+                              {detailExtra.ratingsTotal && (
+                                <span className="text-white/60 text-xs">({detailExtra.ratingsTotal.toLocaleString()})</span>
+                              )}
                             </span>
                           )}
-                          {detailPin.pin.duration_minutes && (
-                            <span className="text-xs text-muted-foreground">{detailPin.pin.duration_minutes} min</span>
-                          )}
-                          {detailPin.pin.walking_time_from_prev && (
-                            <span className="text-xs text-muted-foreground">· {detailPin.pin.walking_time_from_prev} od poprzedniego</span>
-                          )}
                         </div>
-                        {detailPin.pin.description && (
-                          <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{detailPin.pin.description}</p>
+                      </div>
+                    </div>
+
+                    <div className="px-5 py-4 space-y-4">
+                      {/* Category + duration */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {detailPin.pin.category && (
+                          <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+                            {CATEGORY_EMOJI[detailPin.pin.category]} {CATEGORY_LABEL[detailPin.pin.category] ?? detailPin.pin.category}
+                          </span>
+                        )}
+                        {detailPin.pin.duration_minutes && (
+                          <span className="text-xs text-muted-foreground">{detailPin.pin.duration_minutes} min</span>
+                        )}
+                        {detailPin.pin.walking_time_from_prev && (
+                          <span className="text-xs text-muted-foreground">· {detailPin.pin.walking_time_from_prev} od poprzedniego</span>
                         )}
                       </div>
+
+                      {/* Description */}
+                      {detailPin.pin.description && (
+                        <p className="text-sm text-muted-foreground leading-relaxed">{detailPin.pin.description}</p>
+                      )}
+
+                      {/* Mini map */}
+                      {detailPin.pin.latitude && detailPin.pin.longitude && (
+                        <div className="rounded-2xl overflow-hidden h-32 w-full bg-muted">
+                          <img
+                            src={`https://maps.googleapis.com/maps/api/staticmap?center=${detailPin.pin.latitude},${detailPin.pin.longitude}&zoom=16&size=600x240&scale=2&markers=color:black%7C${detailPin.pin.latitude},${detailPin.pin.longitude}&key=${GOOGLE_MAPS_API_KEY}&style=feature:poi%7Cvisibility:off`}
+                            alt="Mapa"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+
+                      {/* Instagram thumbnails from scraped_places */}
+                      {(detailExtra?.scrapedPosts?.length ?? 0) > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-foreground/50 uppercase tracking-wide mb-2">Polecane przez twórców</p>
+                          <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5">
+                            {detailExtra!.scrapedPosts.map((post, i) => (
+                              <a
+                                key={i}
+                                href={post.post_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-shrink-0 w-24 rounded-xl overflow-hidden relative"
+                              >
+                                <img src={post.thumbnail_url} alt={post.creator_name} className="w-24 h-24 object-cover" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                <p className="absolute bottom-1 left-1 right-1 text-white text-[10px] font-medium truncate">@{post.creator_name}</p>
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Pros */}
                       {(detailPin.pin.pros?.length ?? 0) > 0 && (
                         <div>
                           <p className="text-xs font-semibold text-foreground/60 mb-1.5">Dlaczego warto</p>
@@ -697,6 +820,8 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
                           </ul>
                         </div>
                       )}
+
+                      {/* Cons */}
                       {(detailPin.pin.cons?.length ?? 0) > 0 && (
                         <div>
                           <p className="text-xs font-semibold text-foreground/60 mb-1.5">Warto wiedzieć</p>
@@ -707,6 +832,8 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
                           </ul>
                         </div>
                       )}
+
+                      {/* Creator (from AI enrichment) */}
                       {detailPin.pin.creator && (
                         <div>
                           <p className="text-xs font-semibold text-foreground/50 uppercase tracking-wide mb-2">Poleca</p>
@@ -734,17 +861,21 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
                           </a>
                         </div>
                       )}
+
+                      {/* Spacer for bottom buttons */}
+                      <div className="h-4" />
                     </div>
                   </div>
+
                   <div className="flex-shrink-0 px-5 pb-6 pt-2 flex gap-2 border-t border-border/40">
                     <button
-                      onClick={() => { handleRemovePin(detailPin.dayNumber, detailPin.pinIndex); setDetailPin(null); setSnap("half"); }}
+                      onClick={() => { handleRemovePin(detailPin.dayNumber, detailPin.pinIndex); setDetailPin(null); setDetailExtra(null); setSnap("half"); }}
                       className="flex-1 py-3 rounded-xl border border-destructive/30 text-destructive text-sm font-medium"
                     >
                       Usuń z planu
                     </button>
                     <button
-                      onClick={() => { setDetailPin(null); setSnap("half"); }}
+                      onClick={() => { setDetailPin(null); setDetailExtra(null); setSnap("half"); }}
                       className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
                     >
                       Zamknij
