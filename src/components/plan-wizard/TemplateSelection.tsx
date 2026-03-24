@@ -52,10 +52,10 @@ const HANDLE_STYLES: Record<string, { color: string; initials: string }> = {
 const getHandleStyle = (handle: string) =>
   HANDLE_STYLES[handle] ?? { color: "#6b7280", initials: handle.replace("@", "").charAt(0).toUpperCase() };
 
-const enrichTemplate = (t: DbTemplate): RouteTemplate => ({
-  ...t,
-  ...getHandleStyle(t.creator_handle),
-});
+const enrichTemplate = (t: DbTemplate): RouteTemplate => {
+  const style = getHandleStyle(t.creator_handle);
+  return { ...t, creator_color: style.color, creator_initials: style.initials };
+};
 
 const getStaticMapUrl = (pins: TemplatePin[]) => {
   if (!pins?.length) return null;
@@ -110,15 +110,15 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
   const [forking, setForking] = useState(false);
 
   useEffect(() => {
-    supabase
+    (supabase as any)
       .from("route_templates")
       .select("*")
       .ilike("city", `%${city}%`)
       .eq("is_active", true)
       .order("created_at", { ascending: true })
-      .then(({ data, error }) => {
+      .then(({ data, error }: { data: DbTemplate[] | null; error: any }) => {
         if (error) console.error("Template fetch error:", error);
-        setTemplates((data as DbTemplate[] ?? []).map(enrichTemplate));
+        setTemplates((data ?? []).map(enrichTemplate));
         setLoading(false);
       });
   }, [city]);
@@ -162,13 +162,13 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
       const { error: pinsError } = await supabase.from("pins").insert(pinsToInsert);
       if (pinsError) throw pinsError;
 
-      supabase
+      (supabase as any)
         .from("route_templates")
         .update({ fork_count: selected.fork_count + 1 })
         .eq("id", selected.id)
         .then(() => {});
 
-      navigate(`/day-plan?id=${route.id}`);
+      navigate(`/day-plan?route=${route.id}`);
     } catch (err) {
       console.error("Fork error:", err);
       toast.error("Nie udało się utworzyć trasy. Spróbuj ponownie.");
