@@ -178,24 +178,29 @@ function LargeCarouselCard({
   pin, index, dayLabel, onClick,
 }: { pin: PlanPin; index: number; dayLabel?: string; onClick: () => void }) {
   const [imgFailed, setImgFailed] = useState(false);
-  const pointerStart = useRef<{ x: number; y: number } | null>(null);
+  const pointerStart = useRef<{ x: number; y: number; t: number } | null>(null);
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    pointerStart.current = { x: e.clientX, y: e.clientY };
+    pointerStart.current = { x: e.clientX, y: e.clientY, t: Date.now() };
   };
   const handlePointerUp = (e: React.PointerEvent) => {
     if (!pointerStart.current) return;
     const dx = e.clientX - pointerStart.current.x;
     const dy = e.clientY - pointerStart.current.y;
+    const dt = Date.now() - pointerStart.current.t;
+    const dist = Math.sqrt(dx * dx + dy * dy);
     pointerStart.current = null;
-    if (dy > 40 && Math.abs(dy) > Math.abs(dx) * 1.4) onClick();
+    // Tap: small movement + short press
+    if (dist < 12 && dt < 400) { onClick(); return; }
+    // Swipe down: downward gesture
+    if (dy > 40 && Math.abs(dy) > Math.abs(dx) * 1.4) { onClick(); return; }
+    // Horizontal swipe → card navigation, do nothing
   };
 
   return (
     <div
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
-      onClick={onClick}
       className="flex-shrink-0 w-[80vw] h-full rounded-2xl overflow-hidden bg-card border border-border/40 snap-center flex flex-col cursor-pointer active:scale-[0.98] transition-transform select-none"
     >
       {/* Hero image — 62% of card height */}
