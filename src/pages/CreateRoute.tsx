@@ -285,7 +285,7 @@ const CreateRoute = () => {
     <div className="h-[100dvh] bg-background flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-safe-4 pb-4 border-b border-border/40 flex-shrink-0">
-        <button onClick={() => setStep(1)} className="p-1">
+        <button onClick={() => fromTemplate ? navigate("/plan") : setStep(1)} className="p-1">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-semibold">{t("planning_title")}</h1>

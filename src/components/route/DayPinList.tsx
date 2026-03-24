@@ -24,6 +24,13 @@ export interface PlanPin {
     thumbnailUrl: string;
     postUrl: string;
   };
+  creators?: {
+    platform: "youtube" | "tiktok" | "instagram";
+    name: string;
+    thumbnailUrl: string;
+    postUrl: string;
+    description?: string;
+  }[];
 }
 
 interface DayPinListProps {

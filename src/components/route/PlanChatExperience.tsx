@@ -170,13 +170,22 @@ function CarouselPlanCard({
             {pin.suggested_time}
           </div>
         )}
-        {/* Creator platform badge */}
-        {pin.creator?.platform && PLATFORM_BADGE[pin.creator.platform] && (
-          <div className={cn(
-            "absolute top-2 right-2 rounded-full px-2 py-0.5 text-[10px] font-bold",
-            PLATFORM_BADGE[pin.creator.platform].className
-          )}>
-            {PLATFORM_BADGE[pin.creator.platform].label}
+          {/* Influencer thumbnails - overlapping avatars */}
+        {(pin.creators?.length ?? 0) > 0 && (
+          <div className="absolute bottom-2 left-2 flex -space-x-1.5">
+            {pin.creators!.slice(0, 4).map((c, i) => (
+              <div key={i} className="h-7 w-7 rounded-full border-2 border-card overflow-hidden bg-muted flex-shrink-0" style={{ zIndex: 10 - i }}>
+                {c.thumbnailUrl
+                  ? <img src={c.thumbnailUrl} alt={c.name} className="w-full h-full object-cover" />
+                  : <div className="w-full h-full bg-gradient-to-br from-orange-400 to-pink-500" />
+                }
+              </div>
+            ))}
+            {(pin.creators!.length > 4) && (
+              <div className="h-7 w-7 rounded-full border-2 border-card bg-muted/80 flex items-center justify-center text-[9px] font-bold text-foreground/70 flex-shrink-0" style={{ zIndex: 6 }}>
+                +{pin.creators!.length - 4}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -231,34 +240,27 @@ async function enrichPlanWithInstagram(plan: RoutePlan, city: string, sb: typeof
   try {
     const { data: scraped } = await sb
       .from("scraped_places")
-      .select("place_name, thumbnail_url, post_url, creator_name, source_platform")
+      .select("place_name, thumbnail_url, post_url, creator_name, source_platform, description")
       .ilike("city", `%${city}%`);
     if (!scraped?.length) return plan;
 
-    const scrapedList = scraped.map(sp => ({
-      ...sp,
-      nameLower: sp.place_name.toLowerCase().trim(),
-    }));
+    // Significant words from pin name that should appear in caption
+    function pinKeywords(pinName: string): string[] {
+      return pinName
+        .toLowerCase()
+        .split(/[\s,.\-/()]+/)
+        .filter(w => w.length >= 4)
+        .filter(w => !["lunch", "dinner", "kolacja", "obiad", "przy", "przy", "restaurant"].includes(w));
+    }
 
-    const normalize = (s: string) => s.toLowerCase().replace(/[\s._\-/]+/g, "");
-
-    function findMatch(pinName: string) {
-      const pinLower = pinName.toLowerCase().trim();
-      const pinNorm = normalize(pinName);
-      // 1. Exact match
-      const exact = scrapedList.find(sp => sp.nameLower === pinLower);
-      if (exact) return exact;
-      // 2. Normalized: one contains the other (min 5 chars)
-      const contained = scrapedList.find(sp => {
-        const spNorm = normalize(sp.place_name);
-        return spNorm.length >= 5 && (pinNorm.includes(spNorm) || spNorm.includes(pinNorm));
-      });
-      if (contained) return contained;
-      // 3. Any significant word (4+ chars) from scraped name appears in pin name
-      return scrapedList.find(sp => {
-        const words = sp.nameLower.split(/[\s._\-/]+/).filter(w => w.length >= 4);
-        return words.length > 0 && words.some(w => pinLower.includes(w));
-      }) ?? null;
+    function findMatches(pinName: string) {
+      const keywords = pinKeywords(pinName);
+      if (keywords.length === 0) return [];
+      return scraped!.filter(sp => {
+        const desc = (sp.description ?? "").toLowerCase();
+        const pn = (sp.place_name ?? "").toLowerCase();
+        return keywords.some(kw => desc.includes(kw) || pn.includes(kw));
+      }).filter(sp => sp.thumbnail_url);
     }
 
     return {
@@ -266,17 +268,20 @@ async function enrichPlanWithInstagram(plan: RoutePlan, city: string, sb: typeof
       days: plan.days.map(day => ({
         ...day,
         pins: day.pins.map(pin => {
-          const match = findMatch(pin.place_name);
-          if (!match) return pin;
+          const matches = findMatches(pin.place_name);
+          if (!matches.length) return pin;
+          const creators = matches.slice(0, 5).map(m => ({
+            platform: (m.source_platform ?? "instagram") as "instagram" | "tiktok" | "youtube",
+            name: m.creator_name ?? "",
+            thumbnailUrl: m.thumbnail_url ?? "",
+            postUrl: m.post_url ?? "",
+            description: m.description ?? undefined,
+          }));
           return {
             ...pin,
-            photoUrl: match.thumbnail_url || pin.photoUrl,
-            creator: {
-              platform: (match.source_platform ?? "instagram") as "instagram" | "tiktok" | "youtube",
-              name: match.creator_name ?? "",
-              thumbnailUrl: match.thumbnail_url ?? "",
-              postUrl: match.post_url ?? "",
-            },
+            photoUrl: pin.photoUrl || matches[0].thumbnail_url || undefined,
+            creator: creators[0],
+            creators,
           };
         }),
       })),
@@ -312,7 +317,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
     photoUrl: string | null;
     rating: number | null;
     ratingsTotal: number | null;
-    scrapedPosts: { thumbnail_url: string; creator_name: string; post_url: string }[];
+    scrapedPosts: { thumbnail_url: string; creator_name: string; post_url: string; description: string }[];
   } | null>(null);
   const [addPinDay, setAddPinDay] = useState<number | null>(null);
 
@@ -378,26 +383,35 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
         } catch { /* keep defaults */ }
       }
 
-      // scraped_places: Instagram thumbnails matching place name
-      const normalize = (s: string) => s.toLowerCase().replace(/[\s._-]+/g, "");
-      const pinName = normalize(pin.place_name);
-      let scrapedPosts: { thumbnail_url: string; creator_name: string; post_url: string }[] = [];
-      try {
-        const { data } = await supabase
-          .from("scraped_places")
-          .select("thumbnail_url, creator_name, post_url, place_name")
-          .ilike("city", `%${city}%`)
-          .not("thumbnail_url", "is", null)
-          .limit(100);
-        if (data) {
-          scrapedPosts = data
-            .filter(sp => {
-              const spName = normalize(sp.place_name ?? "");
-              return spName.includes(pinName) || pinName.includes(spName);
-            })
-            .slice(0, 6) as { thumbnail_url: string; creator_name: string; post_url: string }[];
-        }
-      } catch { /* ignore */ }
+      // scraped_places: match by caption (description) containing pin name keywords
+      const keywords = pin.place_name
+        .toLowerCase().split(/[\s,.\-/()]+/).filter(w => w.length >= 4);
+      let scrapedPosts: { thumbnail_url: string; creator_name: string; post_url: string; description: string }[] = [];
+      // First try from already-enriched creators on the pin
+      if (pin.creators?.length) {
+        scrapedPosts = pin.creators
+          .filter(c => c.thumbnailUrl)
+          .map(c => ({ thumbnail_url: c.thumbnailUrl, creator_name: c.name, post_url: c.postUrl, description: c.description ?? "" }));
+      }
+      // If no creators on pin, fetch from DB
+      if (!scrapedPosts.length && keywords.length > 0) {
+        try {
+          const { data } = await supabase
+            .from("scraped_places")
+            .select("thumbnail_url, creator_name, post_url, description")
+            .ilike("city", `%${city}%`)
+            .not("thumbnail_url", "is", null)
+            .limit(200);
+          if (data) {
+            scrapedPosts = data
+              .filter(sp => {
+                const desc = (sp.description ?? "").toLowerCase();
+                return keywords.some(kw => desc.includes(kw));
+              })
+              .slice(0, 6) as { thumbnail_url: string; creator_name: string; post_url: string; description: string }[];
+          }
+        } catch { /* ignore */ }
+      }
 
       setDetailExtra({ photoUrl, rating, ratingsTotal, scrapedPosts });
     };
@@ -787,11 +801,12 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
                         </div>
                       )}
 
-                      {/* Instagram thumbnails from scraped_places */}
+                      {/* Influencer recommendations from scraped_places */}
                       {(detailExtra?.scrapedPosts?.length ?? 0) > 0 && (
                         <div>
                           <p className="text-xs font-semibold text-foreground/50 uppercase tracking-wide mb-2">Polecane przez twórców</p>
-                          <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5">
+                          {/* Thumbnails row */}
+                          <div className="flex gap-2 overflow-x-auto pb-2 -mx-5 px-5">
                             {detailExtra!.scrapedPosts.map((post, i) => (
                               <a
                                 key={i}
@@ -806,6 +821,23 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
                               </a>
                             ))}
                           </div>
+                          {/* First influencer's quote/description */}
+                          {detailExtra!.scrapedPosts[0]?.description && (
+                            <div className="mt-3 p-3 rounded-2xl bg-muted/60">
+                              <p className="text-xs font-semibold text-foreground/60 mb-1">@{detailExtra!.scrapedPosts[0].creator_name} poleca</p>
+                              <p className="text-sm text-foreground/80 leading-relaxed line-clamp-4">
+                                {detailExtra!.scrapedPosts[0].description}
+                              </p>
+                              <a
+                                href={detailExtra!.scrapedPosts[0].post_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                Zobacz post <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </div>
+                          )}
                         </div>
                       )}
 
