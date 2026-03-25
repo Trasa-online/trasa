@@ -303,34 +303,27 @@ function renderBubble(text: string) {
 
 async function enrichPlanWithInstagram(plan: RoutePlan, city: string, sb: typeof supabase): Promise<RoutePlan> {
   try {
+    // Step 1: scraped_places enrichment (optional — graceful if empty)
     const { data: scraped } = await sb
       .from("scraped_places")
       .select("place_name, thumbnail_url, post_url, creator_name, source_platform, description")
       .ilike("city", `%${city}%`);
-    if (!scraped?.length) return plan;
 
-    // Only keep entries with a post_url (thumbnail may be expired but post is stable)
-    const pool = scraped.filter(sp => sp.post_url);
+    const pool = (scraped ?? []).filter(sp => sp.post_url);
 
-    // Significant words from pin name that should appear in caption
     function pinKeywords(pinName: string): string[] {
-      return pinName
-        .toLowerCase()
-        .split(/[\s,.\-/()]+/)
+      return pinName.toLowerCase().split(/[\s,.\-/()]+/)
         .filter(w => w.length >= 4)
         .filter(w => !["lunch", "dinner", "kolacja", "obiad", "przy", "restaurant"].includes(w));
     }
 
     function findMatches(pinName: string) {
+      if (!pool.length) return [];
       const keywords = pinKeywords(pinName);
-      if (keywords.length === 0) return [];
-      return pool.filter(sp => {
-        const desc = (sp.description ?? "").toLowerCase();
-        return keywords.some(kw => desc.includes(kw));
-      });
+      if (!keywords.length) return [];
+      return pool.filter(sp => keywords.some(kw => (sp.description ?? "").toLowerCase().includes(kw)));
     }
 
-    // All pins get creators: keyword-matched first, then round-robin city posts as fallback
     let rrIdx = 0;
     const instagramEnriched: RoutePlan = {
       ...plan,
@@ -338,9 +331,8 @@ async function enrichPlanWithInstagram(plan: RoutePlan, city: string, sb: typeof
         ...day,
         pins: day.pins.map(pin => {
           let matches = findMatches(pin.place_name);
-          // Fallback: take next 2 from city pool so every pin shows something
           if (matches.length < 2 && pool.length > 0) {
-            const extras = [];
+            const extras: typeof pool = [];
             for (let i = 0; i < 2 && extras.length < 2 - matches.length; i++) {
               const candidate = pool[(rrIdx + i) % pool.length];
               if (!matches.includes(candidate)) extras.push(candidate);
@@ -356,12 +348,7 @@ async function enrichPlanWithInstagram(plan: RoutePlan, city: string, sb: typeof
             postUrl: m.post_url ?? "",
             description: m.description ?? undefined,
           }));
-          return {
-            ...pin,
-            photoUrl: pin.photoUrl || undefined,
-            creator: creators[0],
-            creators,
-          };
+          return { ...pin, creator: creators[0], creators };
         }),
       })),
     };
