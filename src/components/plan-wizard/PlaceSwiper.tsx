@@ -4,6 +4,7 @@ import { X, Heart, MapPin, Star, Sparkles, ArrowRight, Info } from "lucide-react
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
+import { supabase } from "@/integrations/supabase/client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,7 +33,9 @@ export type PlaceCategory =
   | "monument"
   | "gallery"
   | "market"
-  | "viewpoint";
+  | "viewpoint"
+  | "shopping"
+  | "experience";
 
 // ─── Category config ──────────────────────────────────────────────────────────
 
@@ -47,6 +50,8 @@ const CATEGORY_LABELS: Record<PlaceCategory, string> = {
   gallery: "Galeria",
   market: "Targ",
   viewpoint: "Widok",
+  shopping: "Zakupy",
+  experience: "Rozrywka",
 };
 
 const CATEGORY_COLORS: Record<PlaceCategory, string> = {
@@ -60,276 +65,10 @@ const CATEGORY_COLORS: Record<PlaceCategory, string> = {
   gallery: "bg-purple-500/20 text-purple-400",
   market: "bg-yellow-500/20 text-yellow-400",
   viewpoint: "bg-sky-500/20 text-sky-400",
+  shopping: "bg-rose-500/20 text-rose-400",
+  experience: "bg-teal-500/20 text-teal-400",
 };
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-// Replace with real DB query when places table is ready
-
-const MOCK_PLACES: MockPlace[] = [
-  {
-    id: "krakow-1",
-    place_name: "Wawel",
-    category: "monument",
-    city: "Kraków",
-    address: "Wawel 5, Kraków",
-    latitude: 50.0543,
-    longitude: 19.9352,
-    rating: 4.8,
-    photo_url:
-      "https://images.unsplash.com/photo-1519197924294-4ba991a11128?w=800&q=80",
-    vibe_tags: ["historia", "widoki", "ikona"],
-    description: "Zamek i katedra na wzgórzu — serce polskiej historii.",
-  },
-  {
-    id: "krakow-2",
-    place_name: "Rynek Główny",
-    category: "monument",
-    city: "Kraków",
-    address: "Rynek Główny, Kraków",
-    latitude: 50.0617,
-    longitude: 19.9373,
-    rating: 4.7,
-    photo_url:
-      "https://images.unsplash.com/photo-1571155236990-b2a6bc8e4c08?w=800&q=80",
-    vibe_tags: ["centrum", "architektura", "tłoczno"],
-    description: "Największy średniowieczny rynek w Europie.",
-  },
-  {
-    id: "krakow-3",
-    place_name: "Kazimierz",
-    category: "monument",
-    city: "Kraków",
-    address: "Kazimierz, Kraków",
-    latitude: 50.0517,
-    longitude: 19.9431,
-    rating: 4.7,
-    photo_url:
-      "https://images.unsplash.com/photo-1604357209793-fca5dca89f97?w=800&q=80",
-    vibe_tags: ["klimat", "historia", "życie nocne"],
-    description: "Dawna dzielnica żydowska — teraz modna i artystyczna.",
-  },
-  {
-    id: "krakow-4",
-    place_name: "MOCAK",
-    category: "museum",
-    city: "Kraków",
-    address: "Lipowa 4, Kraków",
-    latitude: 50.0519,
-    longitude: 19.9601,
-    rating: 4.5,
-    price_level: 2,
-    photo_url:
-      "https://images.unsplash.com/photo-1513519245088-0e12902e35ca?w=800&q=80",
-    vibe_tags: ["sztuka", "nowoczesne", "cisza"],
-    description: "Muzeum Sztuki Współczesnej z odważnymi wystawami.",
-  },
-  {
-    id: "krakow-5",
-    place_name: "Muzeum Narodowe",
-    category: "museum",
-    city: "Kraków",
-    address: "al. 3 Maja 1, Kraków",
-    latitude: 50.0597,
-    longitude: 19.9192,
-    rating: 4.6,
-    price_level: 2,
-    photo_url:
-      "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&q=80",
-    vibe_tags: ["sztuka", "historia", "duże"],
-    description: "Największa galeria sztuki polskiej — malarstwo, rzeźba, rzemiosło.",
-  },
-  {
-    id: "krakow-6",
-    place_name: "Planty",
-    category: "park",
-    city: "Kraków",
-    address: "Planty, Kraków",
-    latitude: 50.0597,
-    longitude: 19.9375,
-    rating: 4.7,
-    photo_url:
-      "https://images.unsplash.com/photo-1511497584788-876760111969?w=800&q=80",
-    vibe_tags: ["spacer", "zieleń", "relaks"],
-    description: "Zielony pierścień ogrodów otaczający Stare Miasto.",
-  },
-  {
-    id: "krakow-7",
-    place_name: "Park Jordana",
-    category: "park",
-    city: "Kraków",
-    address: "al. 3 Maja, Kraków",
-    latitude: 50.0611,
-    longitude: 19.9136,
-    rating: 4.5,
-    photo_url:
-      "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=800&q=80",
-    vibe_tags: ["spacer", "sport", "rodziny"],
-    description: "Rozległy park z alejami, stawami i boiskami.",
-  },
-  {
-    id: "krakow-8",
-    place_name: "Karma Coffee",
-    category: "cafe",
-    city: "Kraków",
-    address: "ul. Estery 10, Kraków",
-    latitude: 50.0512,
-    longitude: 19.9445,
-    rating: 4.8,
-    price_level: 2,
-    photo_url:
-      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80",
-    vibe_tags: ["specialty", "klimat", "Kazimierz"],
-    description: "Kultowe specialty coffee w sercu Kazimierza.",
-  },
-  {
-    id: "krakow-9",
-    place_name: "Kawiarnia Literacka",
-    category: "cafe",
-    city: "Kraków",
-    address: "ul. Mikołajska 5, Kraków",
-    latitude: 50.0621,
-    longitude: 19.9381,
-    rating: 4.4,
-    price_level: 2,
-    photo_url:
-      "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&q=80",
-    vibe_tags: ["klimat", "książki", "spokojnie"],
-    description: "Stara Krakowska kawiarnia z duszą — idealnie do czytania.",
-  },
-  {
-    id: "krakow-10",
-    place_name: "Wesele",
-    category: "restaurant",
-    city: "Kraków",
-    address: "Rynek Główny 10, Kraków",
-    latitude: 50.0617,
-    longitude: 19.9370,
-    rating: 4.6,
-    price_level: 3,
-    photo_url:
-      "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80",
-    vibe_tags: ["polska kuchnia", "klimat", "Rynek"],
-    description: "Polska kuchnia w zabytkowych wnętrzach przy Rynku.",
-  },
-  {
-    id: "krakow-11",
-    place_name: "Miód Malina",
-    category: "restaurant",
-    city: "Kraków",
-    address: "ul. Grodzka 40, Kraków",
-    latitude: 50.0588,
-    longitude: 19.9378,
-    rating: 4.5,
-    price_level: 2,
-    photo_url:
-      "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80",
-    vibe_tags: ["polska kuchnia", "przystępne", "tradycja"],
-    description: "Tradycyjna polska kuchnia — pierogi, barszcz, żurek.",
-  },
-  {
-    id: "krakow-12",
-    place_name: "Veganic",
-    category: "restaurant",
-    city: "Kraków",
-    address: "ul. Szewska 2, Kraków",
-    latitude: 50.0618,
-    longitude: 19.9350,
-    rating: 4.7,
-    price_level: 2,
-    photo_url:
-      "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80",
-    vibe_tags: ["vegan", "zdrowe", "modne"],
-    description: "Najlepsza wegańska restauracja w mieście — bez kompromisów.",
-  },
-  {
-    id: "krakow-13",
-    place_name: "Alchemia",
-    category: "bar",
-    city: "Kraków",
-    address: "ul. Estery 5, Kraków",
-    latitude: 50.0515,
-    longitude: 19.9440,
-    rating: 4.5,
-    price_level: 2,
-    photo_url:
-      "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?w=800&q=80",
-    vibe_tags: ["klimat", "mroczne", "Kazimierz"],
-    description: "Legendarny bar Kazimierza — mroczny klimat i dobre drinki.",
-  },
-  {
-    id: "krakow-14",
-    place_name: "Szara Kazimierz",
-    category: "bar",
-    city: "Kraków",
-    address: "ul. Szeroka 39, Kraków",
-    latitude: 50.0506,
-    longitude: 19.9461,
-    rating: 4.6,
-    price_level: 3,
-    photo_url:
-      "https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?w=800&q=80",
-    vibe_tags: ["cocktails", "elegancko", "Kazimierz"],
-    description: "Elegancki bar koktajlowy z widokiem na Plac Szeroki.",
-  },
-  {
-    id: "krakow-15",
-    place_name: "Bulwar Wiślany",
-    category: "viewpoint",
-    city: "Kraków",
-    address: "Bulwar Czerwieński, Kraków",
-    latitude: 50.0525,
-    longitude: 19.9420,
-    rating: 4.6,
-    photo_url:
-      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
-    vibe_tags: ["spacer", "widoki", "Wisła"],
-    description: "Nadwiślańska promenada z widokiem na Wawel.",
-  },
-  {
-    id: "krakow-16",
-    place_name: "Stary Kleparz",
-    category: "market",
-    city: "Kraków",
-    address: "Rynek Kleparski, Kraków",
-    latitude: 50.0672,
-    longitude: 19.9381,
-    rating: 4.5,
-    photo_url:
-      "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800&q=80",
-    vibe_tags: ["lokalne", "świeże", "autentyczne"],
-    description: "Stary targ z lokalnymi produktami — warzywa, sery, kwiaty.",
-  },
-  {
-    id: "krakow-17",
-    place_name: "Pauza",
-    category: "gallery",
-    city: "Kraków",
-    address: "ul. Floriańska 18, Kraków",
-    latitude: 50.0636,
-    longitude: 19.9387,
-    rating: 4.4,
-    price_level: 2,
-    photo_url:
-      "https://images.unsplash.com/photo-1541367777708-7905fe3296c0?w=800&q=80",
-    vibe_tags: ["sztuka", "bar", "wernisaże"],
-    description: "Bar-galeria z wystawami lokalnych artystów i dobrą muzyką.",
-  },
-  {
-    id: "krakow-18",
-    place_name: "Prozak 2.0",
-    category: "club",
-    city: "Kraków",
-    address: "Plac Dominikański 2, Kraków",
-    latitude: 50.0598,
-    longitude: 19.9347,
-    rating: 4.3,
-    price_level: 2,
-    photo_url:
-      "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&q=80",
-    vibe_tags: ["techno", "noc", "taniec"],
-    description: "Kultowy klub elektroniczny w podziemiach Starego Miasta.",
-  },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -600,19 +339,29 @@ interface PlaceSwiperProps {
 const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
   const navigate = useNavigate();
 
-  // Filter places for selected city (case-insensitive, fallback to Kraków)
-  const cityPlaces = MOCK_PLACES.filter(
-    (p) => p.city.toLowerCase() === city.toLowerCase()
-  );
-  const places = cityPlaces.length > 0 ? cityPlaces : MOCK_PLACES;
-
-  const [queue, setQueue] = useState<MockPlace[]>(places);
+  const [queue, setQueue] = useState<MockPlace[]>([]);
+  const [loading, setLoading] = useState(true);
   const [likedPlaces, setLikedPlaces] = useState<MockPlace[]>([]);
   const [skippedPlaces, setSkippedPlaces] = useState<MockPlace[]>([]);
   const [showBanner, setShowBanner] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    supabase
+      .from("places")
+      .select("*")
+      .ilike("city", city)
+      .eq("is_active", true)
+      .then(({ data }) => {
+        if (data?.length) {
+          setQueue(data as MockPlace[]);
+        }
+        setLoading(false);
+      });
+  }, [city]);
 
   // Check match condition
   useEffect(() => {
@@ -655,6 +404,22 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
     setShowBanner(false);
     setBannerDismissed(true);
   };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="flex gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-2 w-2 rounded-full bg-orange-500 animate-bounce"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   // All cards swiped
   if (queue.length === 0) {
