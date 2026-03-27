@@ -35,7 +35,7 @@ const CreateRoute = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const wizardState = (location.state as { city?: string; date?: string; fromTemplate?: boolean; routeId?: string; initialPlan?: any; likedPlaceNames?: string[] } | null);
+  const wizardState = (location.state as { city?: string; date?: string; fromTemplate?: boolean; routeId?: string; initialPlan?: any; likedPlaceNames?: string[]; skippedPlaceNames?: string[] } | null);
   const fromTemplate = wizardState?.fromTemplate ?? false;
   const templateInitialPlan = wizardState?.initialPlan ?? null;
   const [searchParams] = useSearchParams();
@@ -44,6 +44,7 @@ const CreateRoute = () => {
   const creatorPlanId = searchParams.get("creatorPlan") ?? undefined;
   const initialUserMessage = searchParams.get("q") ?? undefined;
   const wizardLikedPlaces = wizardState?.likedPlaceNames ?? [];
+  const wizardSkippedPlaces = wizardState?.skippedPlaceNames ?? [];
   const [step, setStep] = useState(creatorPlanId || initialUserMessage || fromTemplate || wizardLikedPlaces.length > 0 ? 2 : 1);
   const [likedPlaces, setLikedPlaces] = useState<string[]>(wizardLikedPlaces);
 
@@ -297,6 +298,7 @@ const CreateRoute = () => {
           preferences={preferences}
           onPlanReady={handlePlanReady}
           likedPlaces={likedPlaces}
+          skippedPlaces={wizardSkippedPlaces}
           idealDay={idealDay}
           initialUserMessage={initialUserMessage}
           initialPlan={templateInitialPlan ?? undefined}

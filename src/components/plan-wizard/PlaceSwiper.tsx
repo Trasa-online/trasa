@@ -608,6 +608,7 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
 
   const [queue, setQueue] = useState<MockPlace[]>(places);
   const [likedPlaces, setLikedPlaces] = useState<MockPlace[]>([]);
+  const [skippedPlaces, setSkippedPlaces] = useState<MockPlace[]>([]);
   const [showBanner, setShowBanner] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
@@ -629,6 +630,8 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
   };
 
   const handleSkip = () => {
+    const [top] = queue;
+    if (top) setSkippedPlaces((prev) => [...prev, top]);
     setQueue((prev) => prev.slice(1));
   };
 
@@ -643,6 +646,7 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
         city,
         date: date.toISOString(),
         likedPlaceNames: likedPlaces.map((p) => p.place_name),
+        skippedPlaceNames: skippedPlaces.map((p) => p.place_name),
       },
     });
   };

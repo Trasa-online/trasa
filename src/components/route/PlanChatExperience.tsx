@@ -46,6 +46,7 @@ interface PlanChatExperienceProps {
   preferences: TripPreferences;
   onPlanReady: (plan: RoutePlan, messages: TextMessage[]) => void;
   likedPlaces?: string[];
+  skippedPlaces?: string[];
   idealDay?: string;
   initialUserMessage?: string;
   initialPlan?: RoutePlan;
@@ -397,7 +398,7 @@ function getCurrentTimeContext(): { current_time: string; current_date: string }
   };
 }
 
-const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, initialUserMessage, initialPlan }: PlanChatExperienceProps) => {
+const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlaces, idealDay, initialUserMessage, initialPlan }: PlanChatExperienceProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
@@ -542,6 +543,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
             messages: isSubsequentDay ? [] : [{ role: "user", content: initMsg }],
             force_plan: isSubsequentDay ? false : true,
             liked_places: likedPlaces,
+            skipped_places: skippedPlaces?.length ? skippedPlaces : undefined,
             ideal_day: idealDay || undefined,
             ...getCurrentTimeContext(),
           },
@@ -620,7 +622,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
 
     try {
       const response = await supabase.functions.invoke("plan-route", {
-        body: { preferences, messages: newMessages, current_plan: plan, liked_places: likedPlaces, ideal_day: idealDay || undefined, ...getCurrentTimeContext() },
+        body: { preferences, messages: newMessages, current_plan: plan, liked_places: likedPlaces, skipped_places: skippedPlaces?.length ? skippedPlaces : undefined, ideal_day: idealDay || undefined, ...getCurrentTimeContext() },
       });
 
       if (response.error) throw new Error(response.error.message);
@@ -645,7 +647,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
           : newMessages;
         try {
           const planResponse = await supabase.functions.invoke("plan-route", {
-            body: { preferences, messages: apiMessages2, current_plan: plan, force_plan: true, liked_places: likedPlaces, ...getCurrentTimeContext() },
+            body: { preferences, messages: apiMessages2, current_plan: plan, force_plan: true, liked_places: likedPlaces, skipped_places: skippedPlaces?.length ? skippedPlaces : undefined, ...getCurrentTimeContext() },
           });
           if (!planResponse.error && planResponse.data?.plan) {
             if (planResponse.data.memory_used) setMemoryUsed(true);
