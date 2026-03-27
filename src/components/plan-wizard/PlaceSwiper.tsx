@@ -434,7 +434,7 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Match banner */}
       {showBanner && (
         <MatchBanner
@@ -459,7 +459,7 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
       </div>
 
       {/* Card stack */}
-      <div className="flex-1 relative mx-4 min-h-0">
+      <div className="flex-1 relative mx-4 min-h-0 overflow-hidden">
         {queue
           .slice(0, 3)
           .reverse()
