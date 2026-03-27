@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Loader2, Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown } from "lucide-react";
+import { Send, Mic, MicOff, Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -242,25 +242,17 @@ function LargeCarouselCard({
       </div>
 
       {/* Info — 38% */}
-      <div className="flex-[38] min-h-0 px-4 py-3 flex flex-col justify-between">
-        <div className="space-y-1 min-h-0">
-          <p className="text-base font-bold leading-tight line-clamp-2">{pin.place_name}</p>
-          <p className="text-xs text-muted-foreground">
-            {CATEGORY_EMOJI[pin.category]} {CATEGORY_LABEL[pin.category] ?? pin.category}
-            {pin.duration_minutes ? ` · ${pin.duration_minutes} min` : ""}
-          </p>
-          {pin.description && (
-            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{pin.description}</p>
-          )}
-        </div>
-        <div className="flex items-center justify-between">
-          {pin.suggested_time && (
-            <span className="text-sm font-bold tabular-nums">{pin.suggested_time}</span>
-          )}
-          {pin.walking_time_from_prev && (
-            <span className="text-xs text-muted-foreground">🚶 {pin.walking_time_from_prev}</span>
-          )}
-        </div>
+      <div className="flex-[38] min-h-0 px-3.5 py-3 flex flex-col gap-1.5">
+        <span className="text-[11px] font-medium text-muted-foreground/70 bg-muted px-2 py-0.5 rounded-full self-start">
+          {CATEGORY_EMOJI[pin.category]} {CATEGORY_LABEL[pin.category] ?? pin.category}
+        </span>
+        <p className="text-sm font-bold leading-tight line-clamp-2 text-foreground">{pin.place_name}</p>
+        {pin.description && (
+          <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 flex-1">{pin.description}</p>
+        )}
+        {pin.walking_time_from_prev && (
+          <p className="text-[11px] text-muted-foreground/60 mt-auto">🚶 {pin.walking_time_from_prev}</p>
+        )}
       </div>
     </div>
   );
@@ -733,9 +725,55 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, idealDay, i
 
   if (initializing) {
     return (
-      <div className="flex flex-col items-center justify-center h-full space-y-4">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Przygotowuję rozmowę...</p>
+      <div className="flex flex-col items-center justify-center h-full px-8 gap-8">
+        {/* Animated route illustration */}
+        <svg width="200" height="120" viewBox="0 0 200 120" fill="none" className="overflow-visible">
+          {/* Lines between dots */}
+          <line x1="30" y1="90" x2="75" y2="40" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+            className="text-border"
+            strokeDasharray="70" strokeDashoffset="70"
+            style={{ animation: "drawLine 0.6s ease forwards 0.2s" }} />
+          <line x1="75" y1="40" x2="120" y2="70" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+            className="text-border"
+            strokeDasharray="60" strokeDashoffset="60"
+            style={{ animation: "drawLine 0.6s ease forwards 0.7s" }} />
+          <line x1="120" y1="70" x2="160" y2="30" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+            className="text-border"
+            strokeDasharray="60" strokeDashoffset="60"
+            style={{ animation: "drawLine 0.6s ease forwards 1.2s" }} />
+
+          {/* Dots */}
+          {[
+            { cx: 30, cy: 90, delay: "0s" },
+            { cx: 75, cy: 40, delay: "0.5s" },
+            { cx: 120, cy: 70, delay: "1s" },
+            { cx: 160, cy: 30, delay: "1.5s" },
+          ].map((dot, i) => (
+            <g key={i}>
+              <circle cx={dot.cx} cy={dot.cy} r="10" fill="currentColor" className="text-muted/30"
+                style={{ animation: `popIn 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards ${dot.delay}`, opacity: 0 }} />
+              <circle cx={dot.cx} cy={dot.cy} r="5" fill="currentColor" className="text-foreground"
+                style={{ animation: `popIn 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards ${dot.delay}`, opacity: 0 }} />
+            </g>
+          ))}
+        </svg>
+
+        <style>{`
+          @keyframes drawLine {
+            to { stroke-dashoffset: 0; }
+          }
+          @keyframes popIn {
+            from { opacity: 0; transform: scale(0); transform-origin: center; }
+            to { opacity: 1; transform: scale(1); transform-origin: center; }
+          }
+        `}</style>
+
+        <div className="text-center space-y-2">
+          <p className="text-base font-semibold text-foreground">Tworzę Twoją trasę</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Ty się zrelaksuj, trasowiczu!
+          </p>
+        </div>
       </div>
     );
   }

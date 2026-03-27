@@ -517,34 +517,34 @@ interface MatchBannerProps {
 }
 
 const MatchBanner = ({ likedCount, onConfirm, onDismiss }: MatchBannerProps) => (
-  <div className="mx-4 mb-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 p-4 shadow-lg shadow-orange-500/30 animate-in slide-in-from-top-2 duration-400">
-    <div className="flex items-start gap-3">
-      <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-        <Sparkles className="h-5 w-5 text-white" />
+  <div className="mx-4 mb-3 rounded-2xl bg-card border border-border/60 p-3.5 animate-in slide-in-from-top-2 duration-300">
+    <div className="flex items-center gap-2.5">
+      <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
+        <Sparkles className="h-4 w-4 text-orange-500" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-white font-bold text-sm leading-snug">
-          Masz gotową trasę!
+        <p className="text-sm font-semibold text-foreground leading-snug">
+          Gotowe! Ułożyć z tego trasę?
         </p>
-        <p className="text-white/80 text-xs mt-0.5">
-          Na podstawie {likedCount} wybranych miejsc @trasa ułożyła dla Ciebie plan dnia.
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {likedCount} wybranych miejsc · @trasa dopasuje plan
         </p>
       </div>
-    </div>
-    <div className="flex gap-2 mt-3">
-      <button
-        onClick={onConfirm}
-        className="flex-1 flex items-center justify-center gap-1.5 bg-white text-orange-600 font-bold text-sm rounded-xl py-2.5 active:scale-[0.97] transition-transform"
-      >
-        Sprawdź trasę
-        <ArrowRight className="h-4 w-4" />
-      </button>
-      <button
-        onClick={onDismiss}
-        className="px-4 text-white/70 text-sm font-medium"
-      >
-        Więcej miejsc
-      </button>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={onDismiss}
+          className="text-xs text-muted-foreground px-2 py-1"
+        >
+          Więcej
+        </button>
+        <button
+          onClick={onConfirm}
+          className="flex items-center gap-1 bg-orange-500 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-[0.97] transition-transform"
+        >
+          Tak
+          <ArrowRight className="h-3 w-3" />
+        </button>
+      </div>
     </div>
   </div>
 );
@@ -711,26 +711,26 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
       </div>
 
       {/* Action buttons */}
-      <div className="flex items-center justify-center gap-6 py-6 shrink-0">
+      <div className="flex items-center justify-center gap-4 py-5 shrink-0">
         <button
           onClick={handleSkip}
-          className="h-16 w-16 rounded-full border-2 border-border bg-card flex items-center justify-center shadow-md active:scale-90 transition-transform"
+          className="h-14 w-14 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform"
         >
-          <X className="h-7 w-7 text-muted-foreground" />
+          <X className="h-6 w-6 text-muted-foreground" />
         </button>
 
         <button
           onClick={handleLike}
-          className="h-20 w-20 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-xl shadow-orange-500/40 active:scale-90 transition-transform"
+          className="h-16 w-16 rounded-full bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30 active:scale-90 transition-transform"
         >
-          <Heart className="h-9 w-9 text-white fill-white" />
+          <Heart className="h-7 w-7 text-white fill-white" />
         </button>
 
         <button
           onClick={() => queue[0] && handleTap(queue[0])}
-          className="h-16 w-16 rounded-full border-2 border-border bg-card flex items-center justify-center shadow-md active:scale-90 transition-transform"
+          className="h-14 w-14 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform"
         >
-          <Info className="h-6 w-6 text-muted-foreground" />
+          <Info className="h-5 w-5 text-muted-foreground" />
         </button>
       </div>
 
