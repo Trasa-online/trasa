@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import CityPicker from "@/components/plan-wizard/CityPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
-import TemplateSelection from "@/components/plan-wizard/TemplateSelection";
+import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 
 type Step = 1 | 2 | 3;
 
@@ -61,7 +61,7 @@ const PlanWizard = () => {
         )}
 
         {step === 3 && date && (
-          <TemplateSelection city={city} date={date} />
+          <PlaceSwiper city={city} date={date} />
         )}
       </div>
     </div>

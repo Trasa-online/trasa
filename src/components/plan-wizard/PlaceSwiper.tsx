@@ -1,0 +1,721 @@
+import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { X, Heart, MapPin, Star, Sparkles, ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface MockPlace {
+  id: string;
+  place_name: string;
+  category: PlaceCategory;
+  city: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  rating: number;
+  price_level?: 1 | 2 | 3 | 4;
+  photo_url: string;
+  vibe_tags: string[];
+  description: string;
+}
+
+export type PlaceCategory =
+  | "restaurant"
+  | "cafe"
+  | "museum"
+  | "park"
+  | "bar"
+  | "club"
+  | "monument"
+  | "gallery"
+  | "market"
+  | "viewpoint";
+
+// ─── Category config ──────────────────────────────────────────────────────────
+
+const CATEGORY_LABELS: Record<PlaceCategory, string> = {
+  restaurant: "Restauracja",
+  cafe: "Kawiarnia",
+  museum: "Muzeum",
+  park: "Park",
+  bar: "Bar",
+  club: "Klub",
+  monument: "Zabytek",
+  gallery: "Galeria",
+  market: "Targ",
+  viewpoint: "Widok",
+};
+
+const CATEGORY_COLORS: Record<PlaceCategory, string> = {
+  restaurant: "bg-orange-500/20 text-orange-400",
+  cafe: "bg-amber-500/20 text-amber-400",
+  museum: "bg-violet-500/20 text-violet-400",
+  park: "bg-emerald-500/20 text-emerald-400",
+  bar: "bg-blue-500/20 text-blue-400",
+  club: "bg-pink-500/20 text-pink-400",
+  monument: "bg-stone-500/20 text-stone-400",
+  gallery: "bg-purple-500/20 text-purple-400",
+  market: "bg-yellow-500/20 text-yellow-400",
+  viewpoint: "bg-sky-500/20 text-sky-400",
+};
+
+// ─── Mock data ────────────────────────────────────────────────────────────────
+// Replace with real DB query when places table is ready
+
+const MOCK_PLACES: MockPlace[] = [
+  {
+    id: "krakow-1",
+    place_name: "Wawel",
+    category: "monument",
+    city: "Kraków",
+    address: "Wawel 5, Kraków",
+    latitude: 50.0543,
+    longitude: 19.9352,
+    rating: 4.8,
+    photo_url:
+      "https://images.unsplash.com/photo-1519197924294-4ba991a11128?w=800&q=80",
+    vibe_tags: ["historia", "widoki", "ikona"],
+    description: "Zamek i katedra na wzgórzu — serce polskiej historii.",
+  },
+  {
+    id: "krakow-2",
+    place_name: "Rynek Główny",
+    category: "monument",
+    city: "Kraków",
+    address: "Rynek Główny, Kraków",
+    latitude: 50.0617,
+    longitude: 19.9373,
+    rating: 4.7,
+    photo_url:
+      "https://images.unsplash.com/photo-1571155236990-b2a6bc8e4c08?w=800&q=80",
+    vibe_tags: ["centrum", "architektura", "tłoczno"],
+    description: "Największy średniowieczny rynek w Europie.",
+  },
+  {
+    id: "krakow-3",
+    place_name: "Kazimierz",
+    category: "monument",
+    city: "Kraków",
+    address: "Kazimierz, Kraków",
+    latitude: 50.0517,
+    longitude: 19.9431,
+    rating: 4.7,
+    photo_url:
+      "https://images.unsplash.com/photo-1604357209793-fca5dca89f97?w=800&q=80",
+    vibe_tags: ["klimat", "historia", "życie nocne"],
+    description: "Dawna dzielnica żydowska — teraz modna i artystyczna.",
+  },
+  {
+    id: "krakow-4",
+    place_name: "MOCAK",
+    category: "museum",
+    city: "Kraków",
+    address: "Lipowa 4, Kraków",
+    latitude: 50.0519,
+    longitude: 19.9601,
+    rating: 4.5,
+    price_level: 2,
+    photo_url:
+      "https://images.unsplash.com/photo-1513519245088-0e12902e35ca?w=800&q=80",
+    vibe_tags: ["sztuka", "nowoczesne", "cisza"],
+    description: "Muzeum Sztuki Współczesnej z odważnymi wystawami.",
+  },
+  {
+    id: "krakow-5",
+    place_name: "Muzeum Narodowe",
+    category: "museum",
+    city: "Kraków",
+    address: "al. 3 Maja 1, Kraków",
+    latitude: 50.0597,
+    longitude: 19.9192,
+    rating: 4.6,
+    price_level: 2,
+    photo_url:
+      "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&q=80",
+    vibe_tags: ["sztuka", "historia", "duże"],
+    description: "Największa galeria sztuki polskiej — malarstwo, rzeźba, rzemiosło.",
+  },
+  {
+    id: "krakow-6",
+    place_name: "Planty",
+    category: "park",
+    city: "Kraków",
+    address: "Planty, Kraków",
+    latitude: 50.0597,
+    longitude: 19.9375,
+    rating: 4.7,
+    photo_url:
+      "https://images.unsplash.com/photo-1511497584788-876760111969?w=800&q=80",
+    vibe_tags: ["spacer", "zieleń", "relaks"],
+    description: "Zielony pierścień ogrodów otaczający Stare Miasto.",
+  },
+  {
+    id: "krakow-7",
+    place_name: "Park Jordana",
+    category: "park",
+    city: "Kraków",
+    address: "al. 3 Maja, Kraków",
+    latitude: 50.0611,
+    longitude: 19.9136,
+    rating: 4.5,
+    photo_url:
+      "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=800&q=80",
+    vibe_tags: ["spacer", "sport", "rodziny"],
+    description: "Rozległy park z alejami, stawami i boiskami.",
+  },
+  {
+    id: "krakow-8",
+    place_name: "Karma Coffee",
+    category: "cafe",
+    city: "Kraków",
+    address: "ul. Estery 10, Kraków",
+    latitude: 50.0512,
+    longitude: 19.9445,
+    rating: 4.8,
+    price_level: 2,
+    photo_url:
+      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80",
+    vibe_tags: ["specialty", "klimat", "Kazimierz"],
+    description: "Kultowe specialty coffee w sercu Kazimierza.",
+  },
+  {
+    id: "krakow-9",
+    place_name: "Kawiarnia Literacka",
+    category: "cafe",
+    city: "Kraków",
+    address: "ul. Mikołajska 5, Kraków",
+    latitude: 50.0621,
+    longitude: 19.9381,
+    rating: 4.4,
+    price_level: 2,
+    photo_url:
+      "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&q=80",
+    vibe_tags: ["klimat", "książki", "spokojnie"],
+    description: "Stara Krakowska kawiarnia z duszą — idealnie do czytania.",
+  },
+  {
+    id: "krakow-10",
+    place_name: "Wesele",
+    category: "restaurant",
+    city: "Kraków",
+    address: "Rynek Główny 10, Kraków",
+    latitude: 50.0617,
+    longitude: 19.9370,
+    rating: 4.6,
+    price_level: 3,
+    photo_url:
+      "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80",
+    vibe_tags: ["polska kuchnia", "klimat", "Rynek"],
+    description: "Polska kuchnia w zabytkowych wnętrzach przy Rynku.",
+  },
+  {
+    id: "krakow-11",
+    place_name: "Miód Malina",
+    category: "restaurant",
+    city: "Kraków",
+    address: "ul. Grodzka 40, Kraków",
+    latitude: 50.0588,
+    longitude: 19.9378,
+    rating: 4.5,
+    price_level: 2,
+    photo_url:
+      "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80",
+    vibe_tags: ["polska kuchnia", "przystępne", "tradycja"],
+    description: "Tradycyjna polska kuchnia — pierogi, barszcz, żurek.",
+  },
+  {
+    id: "krakow-12",
+    place_name: "Veganic",
+    category: "restaurant",
+    city: "Kraków",
+    address: "ul. Szewska 2, Kraków",
+    latitude: 50.0618,
+    longitude: 19.9350,
+    rating: 4.7,
+    price_level: 2,
+    photo_url:
+      "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80",
+    vibe_tags: ["vegan", "zdrowe", "modne"],
+    description: "Najlepsza wegańska restauracja w mieście — bez kompromisów.",
+  },
+  {
+    id: "krakow-13",
+    place_name: "Alchemia",
+    category: "bar",
+    city: "Kraków",
+    address: "ul. Estery 5, Kraków",
+    latitude: 50.0515,
+    longitude: 19.9440,
+    rating: 4.5,
+    price_level: 2,
+    photo_url:
+      "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?w=800&q=80",
+    vibe_tags: ["klimat", "mroczne", "Kazimierz"],
+    description: "Legendarny bar Kazimierza — mroczny klimat i dobre drinki.",
+  },
+  {
+    id: "krakow-14",
+    place_name: "Szara Kazimierz",
+    category: "bar",
+    city: "Kraków",
+    address: "ul. Szeroka 39, Kraków",
+    latitude: 50.0506,
+    longitude: 19.9461,
+    rating: 4.6,
+    price_level: 3,
+    photo_url:
+      "https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?w=800&q=80",
+    vibe_tags: ["cocktails", "elegancko", "Kazimierz"],
+    description: "Elegancki bar koktajlowy z widokiem na Plac Szeroki.",
+  },
+  {
+    id: "krakow-15",
+    place_name: "Bulwar Wiślany",
+    category: "viewpoint",
+    city: "Kraków",
+    address: "Bulwar Czerwieński, Kraków",
+    latitude: 50.0525,
+    longitude: 19.9420,
+    rating: 4.6,
+    photo_url:
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
+    vibe_tags: ["spacer", "widoki", "Wisła"],
+    description: "Nadwiślańska promenada z widokiem na Wawel.",
+  },
+  {
+    id: "krakow-16",
+    place_name: "Stary Kleparz",
+    category: "market",
+    city: "Kraków",
+    address: "Rynek Kleparski, Kraków",
+    latitude: 50.0672,
+    longitude: 19.9381,
+    rating: 4.5,
+    photo_url:
+      "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800&q=80",
+    vibe_tags: ["lokalne", "świeże", "autentyczne"],
+    description: "Stary targ z lokalnymi produktami — warzywa, sery, kwiaty.",
+  },
+  {
+    id: "krakow-17",
+    place_name: "Pauza",
+    category: "gallery",
+    city: "Kraków",
+    address: "ul. Floriańska 18, Kraków",
+    latitude: 50.0636,
+    longitude: 19.9387,
+    rating: 4.4,
+    price_level: 2,
+    photo_url:
+      "https://images.unsplash.com/photo-1541367777708-7905fe3296c0?w=800&q=80",
+    vibe_tags: ["sztuka", "bar", "wernisaże"],
+    description: "Bar-galeria z wystawami lokalnych artystów i dobrą muzyką.",
+  },
+  {
+    id: "krakow-18",
+    place_name: "Prozak 2.0",
+    category: "club",
+    city: "Kraków",
+    address: "Plac Dominikański 2, Kraków",
+    latitude: 50.0598,
+    longitude: 19.9347,
+    rating: 4.3,
+    price_level: 2,
+    photo_url:
+      "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&q=80",
+    vibe_tags: ["techno", "noc", "taniec"],
+    description: "Kultowy klub elektroniczny w podziemiach Starego Miasta.",
+  },
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const PRICE_DOTS = (level?: number) =>
+  level ? "·".repeat(level) + "·".repeat(4 - level).replace(/·/g, "○") : null;
+
+const MATCH_THRESHOLD = 3; // minimum likes to show match banner
+const CATEGORY_DIVERSITY = 2; // minimum different categories
+
+// ─── SwipeCard ────────────────────────────────────────────────────────────────
+
+interface SwipeCardProps {
+  place: MockPlace;
+  onLike: () => void;
+  onSkip: () => void;
+  isTop: boolean;
+  offset: number; // 0 = top, 1 = second, 2 = third
+}
+
+const SwipeCard = ({ place, onLike, onSkip, isTop, offset }: SwipeCardProps) => {
+  const [imgFailed, setImgFailed] = useState(false);
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const GRADIENT_BG = ["from-slate-700 to-slate-900", "from-stone-700 to-stone-900", "from-zinc-700 to-zinc-900"];
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!isTop) return;
+    pointerStart.current = { x: e.clientX, y: e.clientY };
+    setDragging(true);
+    cardRef.current?.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isTop || !pointerStart.current || !dragging) return;
+    const dx = e.clientX - pointerStart.current.x;
+    setDragX(dx);
+  };
+
+  const handlePointerUp = () => {
+    if (!isTop) return;
+    setDragging(false);
+    if (dragX > 80) {
+      onLike();
+    } else if (dragX < -80) {
+      onSkip();
+    }
+    setDragX(0);
+    pointerStart.current = null;
+  };
+
+  const rotation = isTop ? dragX * 0.08 : 0;
+  const likeOpacity = isTop ? Math.min(dragX / 80, 1) : 0;
+  const skipOpacity = isTop ? Math.min(-dragX / 80, 1) : 0;
+
+  const stackScale = 1 - offset * 0.04;
+  const stackY = offset * 10;
+
+  return (
+    <div
+      ref={cardRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      style={{
+        transform: isTop
+          ? `translateX(${dragX}px) rotate(${rotation}deg)`
+          : `scale(${stackScale}) translateY(${stackY}px)`,
+        transition: dragging ? "none" : "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        zIndex: 10 - offset,
+        touchAction: "none",
+      }}
+      className={cn(
+        "absolute inset-0 rounded-3xl overflow-hidden shadow-2xl select-none",
+        isTop ? "cursor-grab active:cursor-grabbing" : "pointer-events-none"
+      )}
+    >
+      {/* Photo */}
+      <div className="absolute inset-0">
+        {imgFailed ? (
+          <div className={cn("w-full h-full bg-gradient-to-br", GRADIENT_BG[offset % 3])} />
+        ) : (
+          <img
+            src={place.photo_url}
+            alt={place.place_name}
+            className="w-full h-full object-cover"
+            onError={() => setImgFailed(true)}
+            draggable={false}
+          />
+        )}
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+      </div>
+
+      {/* Like / Skip indicators */}
+      {isTop && (
+        <>
+          <div
+            className="absolute top-8 left-6 rotate-[-20deg] border-4 border-emerald-400 rounded-xl px-3 py-1"
+            style={{ opacity: likeOpacity }}
+          >
+            <span className="text-emerald-400 font-black text-2xl tracking-widest">CHCĘ</span>
+          </div>
+          <div
+            className="absolute top-8 right-6 rotate-[20deg] border-4 border-red-400 rounded-xl px-3 py-1"
+            style={{ opacity: skipOpacity }}
+          >
+            <span className="text-red-400 font-black text-2xl tracking-widest">SKIP</span>
+          </div>
+        </>
+      )}
+
+      {/* Content */}
+      <div className="absolute bottom-0 left-0 right-0 p-5 space-y-2">
+        {/* Category */}
+        <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full", CATEGORY_COLORS[place.category])}>
+          {CATEGORY_LABELS[place.category]}
+        </span>
+
+        {/* Name */}
+        <h2 className="text-2xl font-black text-white leading-tight">{place.place_name}</h2>
+
+        {/* Meta row */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
+            <span className="text-white/90 text-sm font-medium">{place.rating}</span>
+          </div>
+          {place.price_level && (
+            <span className="text-white/60 text-sm">{PRICE_DOTS(place.price_level)}</span>
+          )}
+          <div className="flex items-center gap-1">
+            <MapPin className="h-3 w-3 text-white/50" />
+            <span className="text-white/60 text-xs truncate">{place.address.split(",")[0]}</span>
+          </div>
+        </div>
+
+        {/* Description */}
+        <p className="text-white/75 text-sm leading-snug">{place.description}</p>
+
+        {/* Vibe tags */}
+        <div className="flex gap-1.5 flex-wrap pt-0.5">
+          {place.vibe_tags.map((tag) => (
+            <span key={tag} className="text-[11px] text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
+              {tag}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Match Banner ─────────────────────────────────────────────────────────────
+
+interface MatchBannerProps {
+  likedCount: number;
+  onConfirm: () => void;
+  onDismiss: () => void;
+}
+
+const MatchBanner = ({ likedCount, onConfirm, onDismiss }: MatchBannerProps) => (
+  <div className="mx-4 mb-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 p-4 shadow-lg shadow-orange-500/30 animate-in slide-in-from-top-2 duration-400">
+    <div className="flex items-start gap-3">
+      <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+        <Sparkles className="h-5 w-5 text-white" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-white font-bold text-sm leading-snug">
+          Masz gotową trasę!
+        </p>
+        <p className="text-white/80 text-xs mt-0.5">
+          Na podstawie {likedCount} wybranych miejsc @trasa ułożyła dla Ciebie plan dnia.
+        </p>
+      </div>
+    </div>
+    <div className="flex gap-2 mt-3">
+      <button
+        onClick={onConfirm}
+        className="flex-1 flex items-center justify-center gap-1.5 bg-white text-orange-600 font-bold text-sm rounded-xl py-2.5 active:scale-[0.97] transition-transform"
+      >
+        Sprawdź trasę
+        <ArrowRight className="h-4 w-4" />
+      </button>
+      <button
+        onClick={onDismiss}
+        className="px-4 text-white/70 text-sm font-medium"
+      >
+        Więcej miejsc
+      </button>
+    </div>
+  </div>
+);
+
+// ─── Done state ───────────────────────────────────────────────────────────────
+
+const EmptyState = ({
+  likedPlaces,
+  onProceed,
+  city,
+  date,
+}: {
+  likedPlaces: MockPlace[];
+  onProceed: () => void;
+  city: string;
+  date: Date;
+}) => (
+  <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
+    <div className="text-5xl">🗺️</div>
+    <div>
+      <p className="font-bold text-lg">Przejrzałeś wszystkie miejsca</p>
+      <p className="text-muted-foreground text-sm mt-1">
+        {likedPlaces.length > 0
+          ? `Wybrałeś ${likedPlaces.length} miejsc — ułóżmy z nich plan!`
+          : "Nie wybrałeś żadnego miejsca — może zacznijmy od nowa?"}
+      </p>
+    </div>
+    {likedPlaces.length > 0 ? (
+      <button
+        onClick={onProceed}
+        className="bg-orange-500 text-white font-bold rounded-full px-8 py-3.5 shadow-lg shadow-orange-500/30 active:scale-[0.97] transition-transform"
+      >
+        Ułóż plan z {likedPlaces.length} miejsc
+      </button>
+    ) : (
+      <button
+        onClick={() => window.location.reload()}
+        className="border border-border rounded-full px-6 py-3 text-sm text-muted-foreground"
+      >
+        Zacznij od nowa
+      </button>
+    )}
+  </div>
+);
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+interface PlaceSwiperProps {
+  city: string;
+  date: Date;
+}
+
+const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
+  const navigate = useNavigate();
+
+  // Filter places for selected city (case-insensitive, fallback to Kraków)
+  const cityPlaces = MOCK_PLACES.filter(
+    (p) => p.city.toLowerCase() === city.toLowerCase()
+  );
+  const places = cityPlaces.length > 0 ? cityPlaces : MOCK_PLACES;
+
+  const [queue, setQueue] = useState<MockPlace[]>(places);
+  const [likedPlaces, setLikedPlaces] = useState<MockPlace[]>([]);
+  const [skippedCount, setSkippedCount] = useState(0);
+  const [showBanner, setShowBanner] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  // Check match condition
+  useEffect(() => {
+    if (bannerDismissed) return;
+    const uniqueCategories = new Set(likedPlaces.map((p) => p.category)).size;
+    if (likedPlaces.length >= MATCH_THRESHOLD && uniqueCategories >= CATEGORY_DIVERSITY) {
+      setShowBanner(true);
+    }
+  }, [likedPlaces, bannerDismissed]);
+
+  const handleLike = () => {
+    const [top, ...rest] = queue;
+    setLikedPlaces((prev) => [...prev, top]);
+    setQueue(rest);
+  };
+
+  const handleSkip = () => {
+    setQueue((prev) => prev.slice(1));
+    setSkippedCount((n) => n + 1);
+  };
+
+  const handleProceed = () => {
+    navigate("/create", {
+      state: {
+        city,
+        date: date.toISOString(),
+        likedPlaceNames: likedPlaces.map((p) => p.place_name),
+      },
+    });
+  };
+
+  const handleBannerDismiss = () => {
+    setShowBanner(false);
+    setBannerDismissed(true);
+  };
+
+  // All cards swiped
+  if (queue.length === 0) {
+    return (
+      <EmptyState
+        likedPlaces={likedPlaces}
+        onProceed={handleProceed}
+        city={city}
+        date={date}
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Match banner */}
+      {showBanner && (
+        <MatchBanner
+          likedCount={likedPlaces.length}
+          onConfirm={handleProceed}
+          onDismiss={handleBannerDismiss}
+        />
+      )}
+
+      {/* Progress */}
+      <div className="flex items-center justify-between px-5 pb-2 shrink-0">
+        <span className="text-xs text-muted-foreground">
+          {city} · {format(date, "d MMM")}
+        </span>
+        <div className="flex items-center gap-1.5">
+          {likedPlaces.length > 0 && (
+            <span className="text-xs font-medium text-orange-500">
+              {likedPlaces.length} wybranych
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Card stack */}
+      <div className="flex-1 relative mx-4 min-h-0">
+        {queue
+          .slice(0, 3)
+          .reverse()
+          .map((place, reversedIdx) => {
+            const offset = 2 - reversedIdx; // 0 = top, 1 = second, 2 = third
+            return (
+              <SwipeCard
+                key={place.id}
+                place={place}
+                onLike={handleLike}
+                onSkip={handleSkip}
+                isTop={offset === 0}
+                offset={offset}
+              />
+            );
+          })}
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex items-center justify-center gap-6 py-6 shrink-0">
+        <button
+          onClick={handleSkip}
+          className="h-16 w-16 rounded-full border-2 border-border bg-card flex items-center justify-center shadow-md active:scale-90 transition-transform"
+        >
+          <X className="h-7 w-7 text-muted-foreground" />
+        </button>
+
+        <button
+          onClick={handleLike}
+          className="h-20 w-20 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-xl shadow-orange-500/40 active:scale-90 transition-transform"
+        >
+          <Heart className="h-9 w-9 text-white fill-white" />
+        </button>
+
+        <button
+          onClick={handleSkip}
+          className="h-16 w-16 rounded-full border-2 border-border bg-card flex items-center justify-center shadow-md opacity-0 pointer-events-none"
+        >
+          {/* spacer for centering */}
+        </button>
+      </div>
+
+      {/* Skip to plan link */}
+      {likedPlaces.length > 0 && (
+        <button
+          onClick={handleProceed}
+          className="pb-safe-4 pb-4 text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Pomiń · Zaplanuj z {likedPlaces.length} wybranych
+        </button>
+      )}
+    </div>
+  );
+};
+
+export default PlaceSwiper;

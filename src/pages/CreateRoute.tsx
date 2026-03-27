@@ -35,7 +35,7 @@ const CreateRoute = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const wizardState = (location.state as { city?: string; date?: string; fromTemplate?: boolean; routeId?: string; initialPlan?: any } | null);
+  const wizardState = (location.state as { city?: string; date?: string; fromTemplate?: boolean; routeId?: string; initialPlan?: any; likedPlaceNames?: string[] } | null);
   const fromTemplate = wizardState?.fromTemplate ?? false;
   const templateInitialPlan = wizardState?.initialPlan ?? null;
   const [searchParams] = useSearchParams();
@@ -43,8 +43,9 @@ const CreateRoute = () => {
   const dayNumber = searchParams.get("day") ? parseInt(searchParams.get("day")!) : undefined;
   const creatorPlanId = searchParams.get("creatorPlan") ?? undefined;
   const initialUserMessage = searchParams.get("q") ?? undefined;
-  const [step, setStep] = useState(creatorPlanId || initialUserMessage || fromTemplate ? 2 : 1);
-  const [likedPlaces, setLikedPlaces] = useState<string[]>([]);
+  const wizardLikedPlaces = wizardState?.likedPlaceNames ?? [];
+  const [step, setStep] = useState(creatorPlanId || initialUserMessage || fromTemplate || wizardLikedPlaces.length > 0 ? 2 : 1);
+  const [likedPlaces, setLikedPlaces] = useState<string[]>(wizardLikedPlaces);
 
   useEffect(() => {
     if (!creatorPlanId) return;
