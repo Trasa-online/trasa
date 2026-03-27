@@ -350,14 +350,15 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
 
   useEffect(() => {
     setLoading(true);
-    supabase
+    (supabase as any)
       .from("places")
       .select("*")
       .ilike("city", city)
       .eq("is_active", true)
-      .then(({ data }) => {
+      .then(({ data }: { data: MockPlace[] | null }) => {
         if (data?.length) {
-          setQueue(data as MockPlace[]);
+          const shuffled = [...data].sort(() => Math.random() - 0.5);
+          setQueue(shuffled);
         }
         setLoading(false);
       });
