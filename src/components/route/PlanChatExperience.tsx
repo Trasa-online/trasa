@@ -753,55 +753,82 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
   };
 
   if (initializing) {
+    // Total loop: 3.6s — lines draw in sequentially, dots pop in, brief hold, then resets
+    const LOOP = 3.6;
+    const lines = [
+      { x1: 30, y1: 90, x2: 75,  y2: 40, len: 70, start: 0    },
+      { x1: 75, y1: 40, x2: 120, y2: 70, len: 60, start: 0.22 },
+      { x1: 120,y1: 70, x2: 160, y2: 30, len: 60, start: 0.44 },
+    ];
+    const dots = [
+      { cx: 30,  cy: 90, start: 0    },
+      { cx: 75,  cy: 40, start: 0.22 },
+      { cx: 120, cy: 70, start: 0.44 },
+      { cx: 160, cy: 30, start: 0.66 },
+    ];
+    // Each segment draws over 25% of total loop, holds until 83%, fades out by 97%
+    const lineStyle = (start: number, len: number) => ({
+      strokeDasharray: len,
+      strokeDashoffset: len,
+      animation: `lineLoop${Math.round(start*100)} ${LOOP}s ease-in-out infinite`,
+    });
+    const dotStyle = (start: number) => ({
+      opacity: 0,
+      animation: `dotLoop ${LOOP}s ease-in-out ${start * LOOP}s infinite`,
+    });
+
     return (
       <div className="flex flex-col items-center justify-center h-full px-8 gap-8">
-        {/* Animated route illustration */}
-        <svg width="200" height="120" viewBox="0 0 200 120" fill="none" className="overflow-visible">
-          {/* Lines between dots */}
-          <line x1="30" y1="90" x2="75" y2="40" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
-            className="text-border"
-            strokeDasharray="70" strokeDashoffset="70"
-            style={{ animation: "drawLine 0.6s ease forwards 0.2s" }} />
-          <line x1="75" y1="40" x2="120" y2="70" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
-            className="text-border"
-            strokeDasharray="60" strokeDashoffset="60"
-            style={{ animation: "drawLine 0.6s ease forwards 0.7s" }} />
-          <line x1="120" y1="70" x2="160" y2="30" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
-            className="text-border"
-            strokeDasharray="60" strokeDashoffset="60"
-            style={{ animation: "drawLine 0.6s ease forwards 1.2s" }} />
+        <style>{`
+          @keyframes lineLoop0 {
+            0%          { stroke-dashoffset: 70; opacity: 0; }
+            4%          { opacity: 1; }
+            25%         { stroke-dashoffset: 0; }
+            83%         { stroke-dashoffset: 0; opacity: 1; }
+            97%, 100%   { stroke-dashoffset: 70; opacity: 0; }
+          }
+          @keyframes lineLoop22 {
+            0%, 22%     { stroke-dashoffset: 60; opacity: 0; }
+            26%         { opacity: 1; }
+            47%         { stroke-dashoffset: 0; }
+            83%         { stroke-dashoffset: 0; opacity: 1; }
+            97%, 100%   { stroke-dashoffset: 60; opacity: 0; }
+          }
+          @keyframes lineLoop44 {
+            0%, 44%     { stroke-dashoffset: 60; opacity: 0; }
+            48%         { opacity: 1; }
+            69%         { stroke-dashoffset: 0; }
+            83%         { stroke-dashoffset: 0; opacity: 1; }
+            97%, 100%   { stroke-dashoffset: 60; opacity: 0; }
+          }
+          @keyframes dotLoop {
+            0%          { opacity: 0; transform: scale(0); transform-box: fill-box; transform-origin: center; }
+            8%          { opacity: 1; transform: scale(1.25); transform-box: fill-box; transform-origin: center; }
+            18%, 83%    { opacity: 1; transform: scale(1);   transform-box: fill-box; transform-origin: center; }
+            97%, 100%   { opacity: 0; transform: scale(0);   transform-box: fill-box; transform-origin: center; }
+          }
+        `}</style>
 
-          {/* Dots */}
-          {[
-            { cx: 30, cy: 90, delay: "0s" },
-            { cx: 75, cy: 40, delay: "0.5s" },
-            { cx: 120, cy: 70, delay: "1s" },
-            { cx: 160, cy: 30, delay: "1.5s" },
-          ].map((dot, i) => (
+        <svg width="200" height="120" viewBox="0 0 200 120" fill="none" className="overflow-visible">
+          {lines.map((l, i) => (
+            <line key={i}
+              x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+              stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+              className="text-border"
+              style={lineStyle(l.start, l.len)}
+            />
+          ))}
+          {dots.map((d, i) => (
             <g key={i}>
-              <circle cx={dot.cx} cy={dot.cy} r="10" fill="currentColor" className="text-muted/30"
-                style={{ animation: `popIn 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards ${dot.delay}`, opacity: 0 }} />
-              <circle cx={dot.cx} cy={dot.cy} r="5" fill="currentColor" className="text-foreground"
-                style={{ animation: `popIn 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards ${dot.delay}`, opacity: 0 }} />
+              <circle cx={d.cx} cy={d.cy} r="10" fill="currentColor" className="text-muted/30" style={dotStyle(d.start)} />
+              <circle cx={d.cx} cy={d.cy} r="5"  fill="currentColor" className="text-foreground" style={dotStyle(d.start)} />
             </g>
           ))}
         </svg>
 
-        <style>{`
-          @keyframes drawLine {
-            to { stroke-dashoffset: 0; }
-          }
-          @keyframes popIn {
-            from { opacity: 0; transform: scale(0); transform-origin: center; }
-            to { opacity: 1; transform: scale(1); transform-origin: center; }
-          }
-        `}</style>
-
         <div className="text-center space-y-2">
           <p className="text-base font-semibold text-foreground">Tworzę Twoją trasę</p>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Ty się zrelaksuj, trasowiczu!
-          </p>
+          <p className="text-sm text-muted-foreground leading-relaxed">Ty się zrelaksuj, trasowiczu!</p>
         </div>
       </div>
     );

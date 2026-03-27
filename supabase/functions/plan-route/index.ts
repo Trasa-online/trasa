@@ -428,7 +428,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
               method: "POST",
               headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
               body: JSON.stringify({
-                model: "google/gemini-2.5-pro",
+                model: "google/gemini-2.5-pro-preview-06-05",
                 messages: [{ role: "user", content: openingPrompt }],
                 max_tokens: 300,
                 temperature: 0.7,
@@ -616,19 +616,22 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       ...userMessages,
     ];
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: aiMessages,
-        max_tokens: 8000,
-        temperature: 0.7,
-      }),
-    });
+    // Try Gemini 2.5 Pro first, fall back to Flash if unavailable
+    const PRIMARY_MODEL = "google/gemini-2.5-pro-preview-06-05";
+    const FALLBACK_MODEL = "google/gemini-2.5-flash";
+
+    const callAI = async (model: string) =>
+      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
+        body: JSON.stringify({ model, messages: aiMessages, max_tokens: 8000, temperature: 0.7 }),
+      });
+
+    let aiResponse = await callAI(PRIMARY_MODEL);
+    if (!aiResponse.ok) {
+      console.warn(`Primary model ${PRIMARY_MODEL} failed (${aiResponse.status}), falling back to ${FALLBACK_MODEL}`);
+      aiResponse = await callAI(FALLBACK_MODEL);
+    }
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
