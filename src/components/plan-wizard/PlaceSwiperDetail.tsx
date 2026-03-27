@@ -163,30 +163,24 @@ const PlaceSwiperDetail = ({
         .from("pins")
         .select("id", { count: "exact", head: true })
         .ilike("place_name", `%${place.place_name}%`)
-        .then(({ count }) => {
-          setUsageCount(count ?? 0);
-        })
-        .catch(() => setUsageCount(0));
+        .then(({ count }) => { setUsageCount(count ?? 0); }, () => setUsageCount(0));
 
       // 3. Creator posts from scraped_places (keyword match on description)
       const words = place.place_name
         .split(/\s+/)
         .filter((w) => w.length >= 4);
-      let creatorsPromise = Promise.resolve();
-      if (words.length > 0) {
-        const orFilter = words
-          .map((w) => `description.ilike.%${w}%`)
-          .join(",");
-        creatorsPromise = (supabase as any)
-          .from("scraped_places")
-          .select("creator_name, thumbnail_url, post_url, description")
-          .or(orFilter)
-          .limit(5)
-          .then(({ data }: { data: Creator[] | null }) => {
-            setCreators(data ?? []);
-          })
-          .catch(() => {});
-      }
+      const creatorsPromise: Promise<void> = (async () => {
+        if (words.length === 0) return;
+        try {
+          const orFilter = words.map((w) => `description.ilike.%${w}%`).join(",");
+          const { data } = await (supabase as any)
+            .from("scraped_places")
+            .select("creator_name, thumbnail_url, post_url, description")
+            .or(orFilter)
+            .limit(5);
+          setCreators((data as Creator[]) ?? []);
+        } catch { /* ignore */ }
+      })();
 
       await Promise.allSettled([placesPromise, usagePromise, creatorsPromise]);
       setLoading(false);
@@ -217,7 +211,7 @@ const PlaceSwiperDetail = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-[92vh] rounded-t-3xl p-0 overflow-hidden flex flex-col"
+        className="h-[92vh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden"
       >
         {/* Close pill */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 w-10 h-1 bg-foreground/20 rounded-full" />
@@ -227,10 +221,11 @@ const PlaceSwiperDetail = ({
             {/* Photo carousel */}
             <div
               className="relative h-64 bg-muted shrink-0 overflow-hidden"
-              onPointerDown={(e) => { swipeStartX.current = e.clientX; }}
-              onPointerUp={(e) => {
+              style={{ touchAction: "pan-y" }}
+              onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
+              onTouchEnd={(e) => {
                 if (swipeStartX.current === null) return;
-                const dx = e.clientX - swipeStartX.current;
+                const dx = e.changedTouches[0].clientX - swipeStartX.current;
                 swipeStartX.current = null;
                 if (Math.abs(dx) > 40 && photos.length > 1) {
                   if (dx < 0) setActivePhoto(n => Math.min(photos.length - 1, n + 1));
@@ -244,7 +239,7 @@ const PlaceSwiperDetail = ({
                     src={photos[activePhoto]}
                     alt={place.place_name}
                     className="w-full h-full object-cover"
-                    onError={(e) => {
+                    onError={() => {
                       if (activePhoto < photos.length - 1)
                         setActivePhoto((n) => n + 1);
                     }}
@@ -273,17 +268,17 @@ const PlaceSwiperDetail = ({
                   {/* Tap areas to navigate */}
                   <button
                     className="absolute left-0 inset-y-0 w-1/3"
-                    onClick={() =>
-                      setActivePhoto((n) => Math.max(0, n - 1))
-                    }
+                    onClick={() => setActivePhoto((n) => Math.max(0, n - 1))}
                   />
                   <button
                     className="absolute right-0 inset-y-0 w-1/3"
-                    onClick={() =>
-                      setActivePhoto((n) => Math.min(photos.length - 1, n + 1))
-                    }
+                    onClick={() => setActivePhoto((n) => Math.min(photos.length - 1, n + 1))}
                   />
                 </>
+              ) : loading ? (
+                <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 text-white/40 animate-spin" />
+                </div>
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900" />
               )}
@@ -456,16 +451,18 @@ const PlaceSwiperDetail = ({
                   </div>
                 )}
 
-                {/* Static map */}
+                {/* Interactive map */}
                 <div>
                   <h3 className="text-sm font-semibold text-foreground mb-2">
                     Lokalizacja
                   </h3>
-                  <div className="rounded-2xl overflow-hidden border border-border/40 h-44">
-                    <img
-                      src={`https://maps.googleapis.com/maps/api/staticmap?center=${place.latitude},${place.longitude}&zoom=15&size=600x300&scale=2&markers=color:black|${place.latitude},${place.longitude}&key=${GOOGLE_MAPS_API_KEY}&style=feature:poi%7Cvisibility:off`}
-                      alt="Mapa"
-                      className="w-full h-full object-cover"
+                  <div className="rounded-2xl overflow-hidden border border-border/40 h-52">
+                    <iframe
+                      src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(place.place_name)}&center=${place.latitude},${place.longitude}&zoom=16`}
+                      className="w-full h-full border-0"
+                      loading="lazy"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
                     />
                   </div>
                 </div>

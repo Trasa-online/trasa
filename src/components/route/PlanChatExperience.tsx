@@ -661,6 +661,32 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
           console.error("Force plan error:", planErr);
         }
         setPreparingPlan(false);
+      } else if (plan && !data.plan) {
+        // AI gave text but no updated plan — check if it promised a change and force the plan
+        const editKeywords = ["zamien", "zamień", "dodaj", "usuń", "usun", "zmien", "zmień", "aktualizuj", "usunął", "dodałem", "zamieniłem", "oto zaktualizowany", "plan po zmianach", "nowa wersja"];
+        const msgLower = (parsedMsg ?? "").toLowerCase();
+        const seemsLikeEdit = editKeywords.some(k => msgLower.includes(k));
+        if (seemsLikeEdit) {
+          setPreparingPlan(true);
+          const apiMessages2 = parsedMsg
+            ? [...newMessages, { role: "assistant" as const, content: parsedMsg }]
+            : newMessages;
+          try {
+            const planResponse = await supabase.functions.invoke("plan-route", {
+              body: { preferences, messages: apiMessages2, current_plan: plan, force_plan: true, liked_places: likedPlaces, skipped_places: skippedPlaces?.length ? skippedPlaces : undefined, ...getCurrentTimeContext() },
+            });
+            if (!planResponse.error && planResponse.data?.plan) {
+              enrichPlanWithInstagram(planResponse.data.plan, preferences.city || "", supabase).then(enriched => setPlan(enriched));
+              setSnap("half");
+            }
+          } catch (planErr) {
+            console.error("Force plan fallback error:", planErr);
+          }
+          setPreparingPlan(false);
+        } else {
+          setSnap("peek");
+        }
+        setLoading(false);
       } else {
         // Text only — snap to peek so chat is visible
         setSnap("peek");
