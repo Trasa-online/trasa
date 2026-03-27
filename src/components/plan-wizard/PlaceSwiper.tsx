@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import { supabase } from "@/integrations/supabase/client";
+import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,14 +90,34 @@ interface SwipeCardProps {
   offset: number; // 0 = top, 1 = second, 2 = third
 }
 
+
 const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardProps) => {
   const [imgFailed, setImgFailed] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(place.photo_url ?? null);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const pointerStart = useRef<{ x: number; y: number; t: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const GRADIENT_BG = ["from-slate-700 to-slate-900", "from-stone-700 to-stone-900", "from-zinc-700 to-zinc-900"];
+
+  // Prefetch Google Places photo when card is top or next-in-line
+  useEffect(() => {
+    if (offset > 1 || photoUrl || !GOOGLE_MAPS_API_KEY) return;
+    supabase.functions
+      .invoke("google-places-proxy", {
+        body: { placeName: place.place_name, latitude: place.latitude, longitude: place.longitude },
+      })
+      .then(({ data }) => {
+        const ref = data?.result?.photos?.[0]?.photo_reference;
+        if (ref) {
+          setPhotoUrl(
+            `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${ref}&key=${GOOGLE_MAPS_API_KEY}`
+          );
+        }
+      })
+      .catch(() => {});
+  }, [offset, place.place_name, place.latitude, place.longitude]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!isTop) return;
@@ -161,11 +182,11 @@ const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardPro
     >
       {/* Photo */}
       <div className="absolute inset-0">
-        {!place.photo_url || imgFailed ? (
+        {!photoUrl || imgFailed ? (
           <div className={cn("w-full h-full bg-gradient-to-br", GRADIENT_BG[offset % 3])} />
         ) : (
           <img
-            src={place.photo_url}
+            src={photoUrl}
             alt={place.place_name}
             className="w-full h-full object-cover"
             onError={() => setImgFailed(true)}
