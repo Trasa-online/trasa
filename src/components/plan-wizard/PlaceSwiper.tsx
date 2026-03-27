@@ -161,7 +161,7 @@ const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardPro
     >
       {/* Photo */}
       <div className="absolute inset-0">
-        {imgFailed ? (
+        {!place.photo_url || imgFailed ? (
           <div className={cn("w-full h-full bg-gradient-to-br", GRADIENT_BG[offset % 3])} />
         ) : (
           <img
@@ -173,7 +173,7 @@ const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardPro
           />
         )}
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
       </div>
 
       {/* Like / Skip indicators */}
@@ -460,7 +460,7 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
       </div>
 
       {/* Card stack */}
-      <div className="flex-1 relative mx-4 min-h-0 overflow-hidden">
+      <div className="relative mx-4 overflow-hidden" style={{ flex: "1 1 0", minHeight: 0 }}>
         {queue
           .slice(0, 3)
           .reverse()
