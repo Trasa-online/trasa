@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Heart, MapPin, Star, Sparkles, ArrowRight } from "lucide-react";
+import { X, Heart, MapPin, Star, Sparkles, ArrowRight, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import PlaceSwiperDetail from "./PlaceSwiperDetail";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -344,22 +345,23 @@ interface SwipeCardProps {
   place: MockPlace;
   onLike: () => void;
   onSkip: () => void;
+  onTap: () => void;
   isTop: boolean;
   offset: number; // 0 = top, 1 = second, 2 = third
 }
 
-const SwipeCard = ({ place, onLike, onSkip, isTop, offset }: SwipeCardProps) => {
+const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardProps) => {
   const [imgFailed, setImgFailed] = useState(false);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const pointerStart = useRef<{ x: number; y: number } | null>(null);
+  const pointerStart = useRef<{ x: number; y: number; t: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const GRADIENT_BG = ["from-slate-700 to-slate-900", "from-stone-700 to-stone-900", "from-zinc-700 to-zinc-900"];
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!isTop) return;
-    pointerStart.current = { x: e.clientX, y: e.clientY };
+    pointerStart.current = { x: e.clientX, y: e.clientY, t: Date.now() };
     setDragging(true);
     cardRef.current?.setPointerCapture(e.pointerId);
   };
@@ -370,16 +372,25 @@ const SwipeCard = ({ place, onLike, onSkip, isTop, offset }: SwipeCardProps) => 
     setDragX(dx);
   };
 
-  const handlePointerUp = () => {
-    if (!isTop) return;
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isTop || !pointerStart.current) return;
+    const dx = e.clientX - pointerStart.current.x;
+    const dy = e.clientY - pointerStart.current.y;
+    const dt = Date.now() - pointerStart.current.t;
+    const dist = Math.sqrt(dx * dx + dy * dy);
     setDragging(false);
+    setDragX(0);
+    pointerStart.current = null;
+
+    if (dist < 12 && dt < 350) {
+      onTap();
+      return;
+    }
     if (dragX > 80) {
       onLike();
     } else if (dragX < -80) {
       onSkip();
     }
-    setDragX(0);
-    pointerStart.current = null;
   };
 
   const rotation = isTop ? dragX * 0.08 : 0;
@@ -472,13 +483,25 @@ const SwipeCard = ({ place, onLike, onSkip, isTop, offset }: SwipeCardProps) => 
         {/* Description */}
         <p className="text-white/75 text-sm leading-snug">{place.description}</p>
 
-        {/* Vibe tags */}
-        <div className="flex gap-1.5 flex-wrap pt-0.5">
-          {place.vibe_tags.map((tag) => (
-            <span key={tag} className="text-[11px] text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
-              {tag}
-            </span>
-          ))}
+        {/* Vibe tags + info button row */}
+        <div className="flex items-center justify-between gap-2 pt-0.5">
+          <div className="flex gap-1.5 flex-wrap">
+            {place.vibe_tags.map((tag) => (
+              <span key={tag} className="text-[11px] text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
+                {tag}
+              </span>
+            ))}
+          </div>
+          {isTop && (
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); onTap(); }}
+              className="shrink-0 flex items-center gap-1 bg-white/15 hover:bg-white/25 text-white/80 text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors"
+            >
+              <Info className="h-3 w-3" />
+              więcej
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -585,9 +608,10 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
 
   const [queue, setQueue] = useState<MockPlace[]>(places);
   const [likedPlaces, setLikedPlaces] = useState<MockPlace[]>([]);
-  const [skippedCount, setSkippedCount] = useState(0);
   const [showBanner, setShowBanner] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   // Check match condition
   useEffect(() => {
@@ -606,7 +630,11 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
 
   const handleSkip = () => {
     setQueue((prev) => prev.slice(1));
-    setSkippedCount((n) => n + 1);
+  };
+
+  const handleTap = (place: MockPlace) => {
+    setDetailPlace(place);
+    setDetailOpen(true);
   };
 
   const handleProceed = () => {
@@ -674,6 +702,7 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
                 place={place}
                 onLike={handleLike}
                 onSkip={handleSkip}
+                onTap={() => handleTap(place)}
                 isTop={offset === 0}
                 offset={offset}
               />
@@ -698,10 +727,10 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
         </button>
 
         <button
-          onClick={handleSkip}
-          className="h-16 w-16 rounded-full border-2 border-border bg-card flex items-center justify-center shadow-md opacity-0 pointer-events-none"
+          onClick={() => queue[0] && handleTap(queue[0])}
+          className="h-16 w-16 rounded-full border-2 border-border bg-card flex items-center justify-center shadow-md active:scale-90 transition-transform"
         >
-          {/* spacer for centering */}
+          <Info className="h-6 w-6 text-muted-foreground" />
         </button>
       </div>
 
@@ -714,6 +743,15 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
           Pomiń · Zaplanuj z {likedPlaces.length} wybranych
         </button>
       )}
+
+      {/* Detail sheet */}
+      <PlaceSwiperDetail
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        place={detailPlace}
+        onLike={() => { handleLike(); }}
+        onSkip={() => { handleSkip(); }}
+      />
     </div>
   );
 };
