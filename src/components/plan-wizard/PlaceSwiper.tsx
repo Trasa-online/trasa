@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Heart, MapPin, Star, Sparkles, ArrowRight, Info } from "lucide-react";
+import { X, Heart, MapPin, Star, Sparkles, ArrowRight, Info, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
@@ -93,7 +93,8 @@ interface SwipeCardProps {
 
 const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardProps) => {
   const [imgFailed, setImgFailed] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(place.photo_url ?? null);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [photoIdx, setPhotoIdx] = useState(0);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const pointerStart = useRef<{ x: number; y: number; t: number } | null>(null);
@@ -101,20 +102,20 @@ const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardPro
 
   const GRADIENT_BG = ["from-slate-700 to-slate-900", "from-stone-700 to-stone-900", "from-zinc-700 to-zinc-900"];
 
-  // Prefetch Google Places photo when card is top or next-in-line
+  // Prefetch Google Places photos when card is top or next-in-line
   useEffect(() => {
-    if (offset > 1 || photoUrl || !GOOGLE_MAPS_API_KEY) return;
+    if (offset > 1 || !GOOGLE_MAPS_API_KEY) return;
     supabase.functions
       .invoke("google-places-proxy", {
         body: { placeName: place.place_name, latitude: place.latitude, longitude: place.longitude },
       })
       .then(({ data }) => {
-        const ref = data?.result?.photos?.[0]?.photo_reference;
-        if (ref) {
-          setPhotoUrl(
-            `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${ref}&key=${GOOGLE_MAPS_API_KEY}`
+        const refs: string[] = (data?.result?.photos ?? [])
+          .slice(0, 5)
+          .map((p: { photo_reference: string }) =>
+            `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${p.photo_reference}&key=${GOOGLE_MAPS_API_KEY}`
           );
-        }
+        if (refs.length > 0) setPhotoUrls(refs);
       })
       .catch(() => {});
   }, [offset, place.place_name, place.latitude, place.longitude]);
@@ -143,7 +144,17 @@ const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardPro
     pointerStart.current = null;
 
     if (dist < 12 && dt < 350) {
-      onTap();
+      // Tap left half → prev photo, right half → next photo
+      if (photoUrls.length > 1) {
+        const cardRect = cardRef.current?.getBoundingClientRect();
+        const tapX = e.clientX;
+        const centerX = cardRect ? cardRect.left + cardRect.width / 2 : window.innerWidth / 2;
+        if (tapX < centerX) {
+          setPhotoIdx(n => Math.max(0, n - 1));
+        } else {
+          setPhotoIdx(n => Math.min(photoUrls.length - 1, n + 1));
+        }
+      }
       return;
     }
     if (dragX > 80) {
@@ -182,19 +193,30 @@ const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardPro
     >
       {/* Photo */}
       <div className="absolute inset-0">
-        {!photoUrl || imgFailed ? (
+        {photoUrls.length === 0 || imgFailed ? (
           <div className={cn("w-full h-full bg-gradient-to-br", GRADIENT_BG[offset % 3])} />
         ) : (
           <img
-            src={photoUrl}
+            src={photoUrls[photoIdx]}
             alt={place.place_name}
             className="w-full h-full object-cover"
-            onError={() => setImgFailed(true)}
+            onError={() => {
+              if (photoIdx < photoUrls.length - 1) setPhotoIdx(n => n + 1);
+              else setImgFailed(true);
+            }}
             draggable={false}
           />
         )}
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
+        {/* Photo dots */}
+        {isTop && photoUrls.length > 1 && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+            {photoUrls.map((_, i) => (
+              <div key={i} className={cn("h-1 rounded-full transition-all", i === photoIdx ? "w-4 bg-white" : "w-1.5 bg-white/50")} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Like / Skip indicators */}
@@ -364,6 +386,7 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
   const [loading, setLoading] = useState(true);
   const [likedPlaces, setLikedPlaces] = useState<MockPlace[]>([]);
   const [skippedPlaces, setSkippedPlaces] = useState<MockPlace[]>([]);
+  const [history, setHistory] = useState<{ place: MockPlace; wasLiked: boolean }[]>([]);
   const [showBanner, setShowBanner] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
@@ -396,14 +419,31 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
 
   const handleLike = () => {
     const [top, ...rest] = queue;
+    if (!top) return;
+    setHistory(prev => [...prev, { place: top, wasLiked: true }]);
     setLikedPlaces((prev) => [...prev, top]);
     setQueue(rest);
   };
 
   const handleSkip = () => {
-    const [top] = queue;
-    if (top) setSkippedPlaces((prev) => [...prev, top]);
-    setQueue((prev) => prev.slice(1));
+    const [top, ...rest] = queue;
+    if (!top) return;
+    setHistory(prev => [...prev, { place: top, wasLiked: false }]);
+    setSkippedPlaces((prev) => [...prev, top]);
+    setQueue(rest);
+  };
+
+  const handleUndo = () => {
+    const last = history[history.length - 1];
+    if (!last) return;
+    setHistory(prev => prev.slice(0, -1));
+    setQueue(prev => [last.place, ...prev]);
+    if (last.wasLiked) {
+      setLikedPlaces(prev => prev.filter(p => p.id !== last.place.id));
+    } else {
+      setSkippedPlaces(prev => prev.filter(p => p.id !== last.place.id));
+    }
+    setShowBanner(false);
   };
 
   const handleTap = (place: MockPlace) => {
@@ -502,7 +542,15 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
       </div>
 
       {/* Action buttons */}
-      <div className="flex items-center justify-center gap-4 py-5 shrink-0">
+      <div className="flex items-center justify-center gap-3 py-5 shrink-0">
+        <button
+          onClick={handleUndo}
+          disabled={history.length === 0}
+          className="h-12 w-12 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform disabled:opacity-25"
+        >
+          <RotateCcw className="h-4 w-4 text-muted-foreground" />
+        </button>
+
         <button
           onClick={handleSkip}
           className="h-14 w-14 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform"

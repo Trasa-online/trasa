@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Star, MapPin, Loader2, Heart, Users, Instagram } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
@@ -130,6 +130,7 @@ const PlaceSwiperDetail = ({
   const [usageCount, setUsageCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
+  const swipeStartX = useRef<number | null>(null);
 
   useEffect(() => {
     if (!open || !place) {
@@ -224,7 +225,19 @@ const PlaceSwiperDetail = ({
         {!place ? null : (
           <>
             {/* Photo carousel */}
-            <div className="relative h-64 bg-muted shrink-0 overflow-hidden">
+            <div
+              className="relative h-64 bg-muted shrink-0 overflow-hidden"
+              onPointerDown={(e) => { swipeStartX.current = e.clientX; }}
+              onPointerUp={(e) => {
+                if (swipeStartX.current === null) return;
+                const dx = e.clientX - swipeStartX.current;
+                swipeStartX.current = null;
+                if (Math.abs(dx) > 40 && photos.length > 1) {
+                  if (dx < 0) setActivePhoto(n => Math.min(photos.length - 1, n + 1));
+                  else setActivePhoto(n => Math.max(0, n - 1));
+                }
+              }}
+            >
               {photos.length > 0 ? (
                 <>
                   <img
@@ -282,6 +295,16 @@ const PlaceSwiperDetail = ({
               >
                 <X className="h-4 w-4 text-white" />
               </button>
+              {/* Google Maps link */}
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.place_name} ${place.address ?? ""}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute top-4 left-4 h-8 px-3 rounded-full bg-black/40 flex items-center gap-1.5 text-white text-xs font-medium"
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                Google Maps
+              </a>
             </div>
 
             {/* Scrollable content */}

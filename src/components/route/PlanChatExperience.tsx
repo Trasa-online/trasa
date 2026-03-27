@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown } from "lucide-react";
+import { Send, Mic, MicOff, Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -418,6 +418,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
     scrapedPosts: { thumbnail_url: string; creator_name: string; post_url: string; description: string }[];
   } | null>(null);
   const [addPinDay, setAddPinDay] = useState<number | null>(null);
+  const [showMap, setShowMap] = useState(false);
 
   // Sheet snap state
   const [snap, setSnap] = useState<SnapState>("half");
@@ -831,6 +832,48 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
           </div>
         </div>
 
+        {/* ── Map overlay ─────────────────────────────────────────────────── */}
+        {showMap && plan && (() => {
+          const allPins = plan.days.flatMap(d => d.pins).filter(p => p.latitude && p.longitude);
+          const markers = allPins.map((p, i) =>
+            `markers=color:0xff6b35%7Clabel:${i + 1}%7C${p.latitude},${p.longitude}`
+          ).join("&");
+          const mapsAppUrl = allPins.length > 0
+            ? `https://www.google.com/maps/dir/${allPins.map(p => `${p.latitude},${p.longitude}`).join("/")}`
+            : "";
+          const staticUrl = `https://maps.googleapis.com/maps/api/staticmap?size=800x800&scale=2&${markers}&key=${GOOGLE_MAPS_API_KEY}`;
+          return (
+            <div className="absolute inset-0 bg-background z-30 flex flex-col">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 shrink-0">
+                <button onClick={() => setShowMap(false)} className="h-8 w-8 flex items-center justify-center">
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+                <h2 className="font-semibold flex-1">Trasa na mapie</h2>
+                {mapsAppUrl && (
+                  <a href={mapsAppUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-xs text-orange-500 font-medium flex items-center gap-1">
+                    Otwórz <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
+              <div className="flex-1 overflow-auto">
+                <img src={staticUrl} alt="Mapa trasy" className="w-full" />
+              </div>
+              <div className="shrink-0 px-4 py-3 border-t border-border/40 space-y-1.5 max-h-44 overflow-y-auto">
+                {allPins.map((p, i) => (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <div className="h-5 w-5 rounded-full bg-orange-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                      {i + 1}
+                    </div>
+                    <span className="font-medium truncate flex-1">{p.place_name}</span>
+                    {p.suggested_time && <span className="text-muted-foreground text-xs shrink-0">{p.suggested_time}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ── Draggable bottom sheet ──────────────────────────────────────── */}
         <div
           style={{
@@ -1088,10 +1131,17 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
                           </button>
                         </div>
                       </div>
-                      <div className="flex-shrink-0 px-4 pb-4 pt-1 border-t border-border/40">
+                      <div className="flex-shrink-0 px-4 pb-4 pt-1 border-t border-border/40 flex gap-2">
+                        <button
+                          onClick={() => setShowMap(true)}
+                          className="flex items-center gap-1.5 px-4 py-3.5 rounded-xl border border-border/60 text-sm font-medium text-muted-foreground shrink-0"
+                        >
+                          <Map className="h-4 w-4" />
+                          Mapa
+                        </button>
                         <button
                           onClick={handleConfirm}
-                          className="w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold"
+                          className="flex-1 py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold"
                         >
                           Wybieram ten plan!
                         </button>
