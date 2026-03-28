@@ -306,7 +306,7 @@ const AdminRoutes = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border/40 px-4 py-3 flex items-center gap-3">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border/40 px-4 pt-safe-4 pb-3 flex items-center gap-3">
         <button onClick={() => navigate("/")} className="p-1 shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </button>
