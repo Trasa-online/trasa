@@ -65,9 +65,9 @@ type SnapState = "peek" | "half" | "full";
 
 function getSnapPx(snap: SnapState, containerH?: number): number {
   const h = containerH ?? window.innerHeight;
-  if (snap === "peek") return 88;
-  if (snap === "half") return Math.round(h * 0.52);
-  return Math.round(h * 0.80);
+  if (snap === "peek") return 80;
+  if (snap === "half") return Math.round(h * 0.62);
+  return Math.round(h * 0.82);
 }
 
 // ─── Mock plan data for Kraków ────────────────────────────────────────────────
@@ -1240,21 +1240,21 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
       </div>
 
       {/* ── Sticky input area ────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-2 pb-safe">
-          <div className="flex items-end gap-2 max-w-lg mx-auto">
+      <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-2" style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom, 8px))" }}>
+        <div className="flex items-center gap-2 max-w-lg mx-auto">
           {hasVoiceSupport && (
             <button
               type="button"
               onClick={toggleVoice}
               className={cn(
-                "flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center transition-colors",
-                listening ? "bg-destructive text-destructive-foreground animate-pulse" : "bg-muted text-muted-foreground hover:text-foreground"
+                "flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition-colors",
+                listening ? "bg-destructive text-destructive-foreground animate-pulse" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </button>
           )}
-          <div className="flex-1 relative">
+          <div className="flex-1 relative flex items-center">
             <textarea
               ref={inputRef}
               value={input}
@@ -1263,18 +1263,18 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
               placeholder="Chcesz coś zmienić?"
               rows={1}
               disabled={loading}
-              className="w-full resize-none rounded-xl border border-border/60 bg-card px-4 py-2.5 text-base placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 disabled:opacity-50"
-              style={{ maxHeight: "120px" }}
+              className="w-full resize-none rounded-2xl border border-border/60 bg-card px-4 py-2.5 pr-12 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 disabled:opacity-50"
+              style={{ maxHeight: "100px" }}
             />
+            <Button
+              size="icon"
+              onClick={() => sendMessage()}
+              disabled={!input.trim() || loading}
+              className="absolute right-1.5 bottom-1.5 h-8 w-8 rounded-xl flex-shrink-0"
+            >
+              <Send className="h-3.5 w-3.5" />
+            </Button>
           </div>
-          <Button
-            size="icon"
-            onClick={() => sendMessage()}
-            disabled={!input.trim() || loading}
-            className="flex-shrink-0 h-10 w-10 rounded-full"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
