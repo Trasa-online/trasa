@@ -32,6 +32,7 @@ import TravelerProfile from "./pages/TravelerProfile";
 import EditPlan from "./pages/EditPlan";
 import ReviewSummary from "./pages/ReviewSummary";
 import PlanWizard from "./pages/PlanWizard";
+import AdminRoutes from "./pages/AdminRoutes";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const App = () => (
           <Route path="/edit-plan" element={<EditPlan />} />
           <Route path="/review-summary" element={<ReviewSummary />} />
           <Route path="/plan" element={<PlanWizard />} />
+          <Route path="/admin/routes" element={<AdminRoutes />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
