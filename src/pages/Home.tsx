@@ -12,6 +12,7 @@ import RoutePreviewModal from "@/components/route/RoutePreviewModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import TripDayView from "@/components/home/TripDayView";
+import UpcomingTripCard from "@/components/home/UpcomingTripCard";
 import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
 import JournalTab from "@/components/home/JournalTab";
 import { useTranslation } from "react-i18next";
@@ -261,22 +262,6 @@ const Home = () => {
     { bar: "bg-cyan-500", dot: "bg-cyan-400" },
   ];
 
-  const CATEGORY_DOT_COLORS: Record<string, string> = {
-    restaurant: "bg-orange-400",
-    cafe: "bg-amber-400",
-    museum: "bg-blue-500",
-    monument: "bg-violet-400",
-    walk: "bg-emerald-400",
-    viewpoint: "bg-sky-400",
-    nightlife: "bg-purple-500",
-    shopping: "bg-pink-400",
-    church: "bg-stone-400",
-    gallery: "bg-rose-400",
-    park: "bg-green-400",
-    bar: "bg-yellow-400",
-    market: "bg-lime-400",
-    transport: "bg-gray-400",
-  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -401,71 +386,15 @@ const Home = () => {
             {routesLoading ? (
               <Skeleton className="h-48 w-full rounded-2xl" />
             ) : upcomingTrips.length > 0 ? (
-              <div className="space-y-6">
-                {upcomingTrips.map((trip) => {
-                  const daysUntil = differenceInDays(new Date(trip.startDate!), todayMidnight);
-                  const isMultiDay = trip.routes.length > 1;
-                  const sortedRoutes = [...trip.routes].sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0));
-                  return (
-                    <div key={trip.id}>
-                      {/* Trip header */}
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <p className="text-[11px] font-medium text-orange-500">
-                            {daysUntil === 1 ? t("days_until_one", { count: daysUntil }) : t("days_until_many", { count: daysUntil })}
-                          </p>
-                          <p className="text-lg font-bold leading-tight">{trip.city}</p>
-                        </div>
-                        <button
-                          onClick={() => setDeletingTrip(trip)}
-                          className="p-1 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                          aria-label={t("delete_aria")}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-
-                      {/* Per-day sections */}
-                      <div className="space-y-4">
-                        {sortedRoutes.map((route: any) => {
-                          const dayPins = [...(route.pins || [])].sort((a: any, b: any) => (a.pin_order || 0) - (b.pin_order || 0));
-                          if (dayPins.length === 0) return null;
-                          return (
-                            <div key={route.id}>
-                              {isMultiDay && (
-                                <p className="text-xs font-semibold text-muted-foreground mb-2 px-0.5">
-                                  {t("day_label", { number: route.day_number || 1 })}
-                                </p>
-                              )}
-                              <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-4 snap-x snap-mandatory scrollbar-orange">
-                                {dayPins.map((pin: any, pIdx: number) => {
-                                  const catColor = CATEGORY_DOT_COLORS[pin.category as string] ?? "bg-gray-400";
-                                  const catLabel = t(`categories.${pin.category}`, { defaultValue: t("categories.place", { defaultValue: "Miejsce" }) });
-                                  return (
-                                    <button
-                                      key={pIdx}
-                                      onClick={() => setSelectedNextUpPin(pin)}
-                                      className="shrink-0 w-48 rounded-2xl bg-card border border-border/50 p-3.5 text-left shadow-sm snap-start"
-                                    >
-                                      <div className="flex items-start justify-between gap-2 mb-1">
-                                        <p className="text-sm font-bold leading-tight flex-1 line-clamp-2">{pin.place_name}</p>
-                                        <div className={`h-5 w-5 rounded-full shrink-0 mt-0.5 ${catColor}`} />
-                                      </div>
-                                      <p className="text-[11px] text-muted-foreground">{catLabel}</p>
-                                      {pin.description && (
-                                        <p className="text-xs text-muted-foreground/70 mt-1.5 line-clamp-2 leading-relaxed">{pin.description}</p>
-                                      )}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="space-y-8">
+                {upcomingTrips.map((trip) => (
+                  <UpcomingTripCard
+                    key={trip.id}
+                    trip={trip}
+                    onDelete={() => setDeletingTrip(trip)}
+                    onPinTap={setSelectedNextUpPin}
+                  />
+                ))}
               </div>
             ) : (
               <div className="flex flex-col items-center py-12 text-center gap-2">
