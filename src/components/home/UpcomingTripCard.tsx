@@ -4,7 +4,6 @@ import { format, differenceInDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
-import { cn } from "@/lib/utils";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌿",
@@ -19,10 +18,14 @@ function PinThumb({ pin, onClick }: { pin: any; onClick: () => void }) {
   const [photo, setPhoto] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!GOOGLE_MAPS_API_KEY || !pin.latitude || !pin.longitude) return;
+    if (!GOOGLE_MAPS_API_KEY) return;
+    const hasCoords = pin.latitude && pin.longitude && pin.latitude !== 0 && pin.longitude !== 0;
     supabase.functions
       .invoke("google-places-proxy", {
-        body: { placeName: pin.place_name, latitude: pin.latitude, longitude: pin.longitude },
+        body: {
+          placeName: pin.place_name,
+          ...(hasCoords ? { latitude: pin.latitude, longitude: pin.longitude } : {}),
+        },
       })
       .then(({ data }) => {
         const ref = data?.result?.photos?.[0]?.photo_reference;
