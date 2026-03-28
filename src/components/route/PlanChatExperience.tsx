@@ -440,6 +440,8 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
   const recognitionRef = useRef<any>(null);
   const sendMessageRef = useRef<(text?: string) => void>(() => {});
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const savedCarouselScroll = useRef<number>(0);
   const [containerH, setContainerH] = useState(0);
 
   // Measure the real height of the chat+sheet container so the sheet never overflows into the input
@@ -1016,8 +1018,15 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                       {/* Back button */}
                       <button
-                        onClick={() => { setDetailPin(null); setDetailExtra(null); setSnap("half"); }}
-                        className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white"
+                        onClick={() => {
+                          setDetailPin(null);
+                          setDetailExtra(null);
+                          setSnap("half");
+                          requestAnimationFrame(() => {
+                            if (carouselRef.current) carouselRef.current.scrollLeft = savedCarouselScroll.current;
+                          });
+                        }}
+                        className="absolute top-3 left-3 h-9 w-9 rounded-full bg-black/70 flex items-center justify-center text-white ring-1 ring-white/30"
                       >
                         <ArrowLeft className="h-4 w-4" />
                       </button>
@@ -1193,7 +1202,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
                     <div className="flex-1 flex flex-col overflow-hidden min-h-0">
                       {/* Large card carousel — fills available height */}
                       <div className="flex-1 min-h-0 overflow-hidden py-2">
-                        <div className="h-full flex gap-3 overflow-x-auto px-[10vw] snap-x snap-mandatory scrollbar-none">
+                        <div ref={carouselRef} className="h-full flex gap-3 overflow-x-auto px-[10vw] snap-x snap-mandatory scrollbar-none">
                           {plan.days.flatMap((day) =>
                             day.pins.map((pin, idx) => (
                               <LargeCarouselCard
@@ -1201,7 +1210,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
                                 pin={pin}
                                 index={idx}
                                 dayLabel={plan.days.length > 1 ? `Dzień ${day.day_number}` : undefined}
-                                onClick={() => { setDetailPin({ pin, dayNumber: day.day_number, pinIndex: idx }); setSnap("full"); }}
+                                onClick={() => { savedCarouselScroll.current = carouselRef.current?.scrollLeft ?? 0; setDetailPin({ pin, dayNumber: day.day_number, pinIndex: idx }); setSnap("full"); }}
                               />
                             ))
                           )}
