@@ -283,7 +283,7 @@ const Home = () => {
       <div className="flex-1 overflow-y-auto px-5 pt-4 pb-28 max-w-lg mx-auto w-full">
 
         {/* Admin shortcut — visible only for Natalia */}
-        {user?.email === "natalia@trasa.app" && (
+        {user?.email === "nat.maz98@gmail.com" && (
           <div className="flex justify-end mb-2">
             <button
               onClick={() => navigate("/admin/routes")}
