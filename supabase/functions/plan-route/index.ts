@@ -70,7 +70,30 @@ function buildPreviousDaysBlock(routes: { day_number: number; ai_summary: string
   return lines.join("\n\n");
 }
 
-function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[]): string {
+function inferPersonalityType(preferences: TripPreferences, userProfile?: UserProfile): string {
+  const priorities = preferences.priorities ?? [];
+  const interests = userProfile?.travel_interests ?? [];
+  if (priorities.includes("nightlife") || interests.includes("nightlife")) return "nocny";
+  if (priorities.includes("museums") || interests.includes("history") || interests.includes("art")) return "kulturalny";
+  if (priorities.includes("good_food") || interests.includes("coffee")) return "kawiarniany";
+  if (priorities.includes("shopping")) return "zakupowy";
+  if (preferences.pace === "active") return "aktywny";
+  if (priorities.includes("long_walks") || priorities.includes("nice_views")) return "aktywny";
+  return "mix";
+}
+
+function buildRouteExamplesContext(examples: any[]): string {
+  if (!examples.length) return "";
+  const lines = examples.map((ex: any) => {
+    const pins = (ex.pins as any[]).map((p: any) =>
+      `    ${p.suggested_time} · ${p.place_name} (${p.category}, ${p.duration_minutes} min)${p.walking_time_from_prev ? ` — ${p.walking_time_from_prev} pieszo` : ""}`
+    ).join("\n");
+    return `### "${ex.title}" (${ex.personality_type})\n${ex.description ? `${ex.description}\n` : ""}Piny:\n${pins}`;
+  });
+  return `## 🏆 WZORCOWE TRASY (zatwierdzone przez redakcję TRASA)\nPoniższe trasy zostały ocenione jako idealne dla Krakowa. Planuj w podobnym rytmie, logice geograficznej i strukturze dnia:\n\n${lines.join("\n\n")}`;
+}
+
+function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string): string {
   const isNightlife = preferences.priorities.includes("nightlife") || (userProfile?.travel_interests ?? []).includes("nightlife");
   const timeInfo = currentTime ? `- Aktualna godzina: ${currentTime} — planuj miejsca dostępne od tej pory, nie zaczynaj od miejsc które są już zamknięte lub których opening hours zaczyna się wcześniej` : "";
   const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}${currentTime ? " (dziś)" : ""}` : "";
@@ -322,7 +345,7 @@ ZASADY FORMATU:
 - NIE regeneruj całego planu strukturalnie — tylko zmień to co user prosił
 - NIE mów "za chwilę", "przygotowuję", "zaktualizuję" — po prostu zrób to i pokaż plan
 - Komentarz do zmiany: MAX 1 zdanie przed blokiem planu${likedPlaces?.length ? `\n\n## 🎯 MIEJSCA DO UWZGLĘDNIENIA\nUżytkownik chce odwiedzić te miejsca — koniecznie wstaw je w plan:\n${likedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${skippedPlaces?.length ? `\n\n## ❌ MIEJSCA DO POMINIĘCIA\nUżytkownik świadomie odrzucił te miejsca podczas przeglądania — NIE wstawiaj ich do planu ani nie proponuj podobnych:\n${skippedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${idealDay ? `\n\n## 💭 JAK WYGLĄDA IDEALNY DZIEŃ UŻYTKOWNIKA\n${idealDay}\n\nDopasuj styl, tempo i dobór miejsc do tej wizji.` : ""}
-${scrapedPlacesContext ? `\n\n${scrapedPlacesContext}` : ""}
+${scrapedPlacesContext ? `\n\n${scrapedPlacesContext}` : ""}${routeExamplesContext ? `\n\n${routeExamplesContext}` : ""}
 ## SZYBKIE ODPOWIEDZI (OBOWIĄZKOWE)
 Na końcu KAŻDEJ wiadomości dodaj dokładnie ten blok:
 <suggestions>["podpowiedź 1", "podpowiedź 2", "podpowiedź 3", "podpowiedź 4"]</suggestions>
@@ -591,8 +614,40 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       }
     }
 
+    // ── Route examples (approved curated routes as few-shot style guide) ──
+    let routeExamplesContext = "";
+    if (preferences.city?.trim()) {
+      try {
+        const personalityType = inferPersonalityType(preferences, profileData ?? undefined);
+        // Fetch up to 3 approved examples: prefer matching personality, fallback to any
+        const { data: exactMatch } = await supabase
+          .from("route_examples")
+          .select("title, personality_type, description, pins")
+          .ilike("city", preferences.city.trim())
+          .eq("is_approved", true)
+          .eq("personality_type", personalityType)
+          .limit(2);
+
+        const exactIds = (exactMatch ?? []).map((_: any, i: number) => i);
+        const { data: fallback } = await supabase
+          .from("route_examples")
+          .select("title, personality_type, description, pins")
+          .ilike("city", preferences.city.trim())
+          .eq("is_approved", true)
+          .neq("personality_type", personalityType)
+          .limit(exactIds.length < 2 ? 3 - (exactMatch?.length ?? 0) : 1);
+
+        const examples = [...(exactMatch ?? []), ...(fallback ?? [])].slice(0, 3);
+        if (examples.length > 0) {
+          routeExamplesContext = buildRouteExamplesContext(examples);
+        }
+      } catch {
+        // Non-blocking
+      }
+    }
+
     const isToday = current_date && preferences.startDate && preferences.startDate === current_date;
-    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined);
+    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined);
 
     // Call AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
