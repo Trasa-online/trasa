@@ -737,9 +737,13 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
         </span>
         <div className="flex items-center gap-1.5">
           {likedPlaces.length > 0 && (
-            <span className="text-xs font-medium text-orange-500">
+            <button
+              onClick={handleProceed}
+              className="flex items-center gap-1.5 bg-orange-500 text-white text-xs font-semibold px-3 py-1.5 rounded-full active:scale-95 transition-transform shadow-sm shadow-orange-500/30"
+            >
               {likedPlaces.length} wybranych
-            </span>
+              <ArrowRight className="h-3 w-3" />
+            </button>
           )}
         </div>
       </div>
