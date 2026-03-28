@@ -363,44 +363,152 @@ const MatchModal = ({ likedPlaces, userInitials, onConfirm, onDismiss }: MatchMo
 
 // ─── Done state ───────────────────────────────────────────────────────────────
 
+const PERSONALITY_LABELS: Record<string, { label: string; emoji: string }> = {
+  kulturalny:  { label: "Kulturalny",   emoji: "🎭" },
+  historyczny: { label: "Historyczny",  emoji: "🏰" },
+  kawiarniany: { label: "Kawiarniany",  emoji: "☕" },
+  nocny:       { label: "Nocny",        emoji: "🌙" },
+  aktywny:     { label: "Aktywny",      emoji: "🏃" },
+  zakupowy:    { label: "Zakupowy",     emoji: "🛍️" },
+  mix:         { label: "Zrównoważony", emoji: "✨" },
+};
+
+interface RouteExamplePin {
+  place_name: string;
+  category: string;
+  suggested_time: string;
+  duration_minutes: number;
+  walking_time_from_prev: string | null;
+  note?: string | null;
+}
+
+interface RouteExample {
+  id: string;
+  title: string;
+  personality_type: string;
+  description: string | null;
+  pins: RouteExamplePin[];
+}
+
+interface MatchedRoute extends RouteExample {
+  score: number;
+  matchedNames: string[];
+}
+
 const EmptyState = ({
   likedPlaces,
+  matchedRoutes,
   onProceed,
-  city,
-  date,
+  onPickRoute,
+  loadingExamples,
 }: {
   likedPlaces: MockPlace[];
+  matchedRoutes: MatchedRoute[];
   onProceed: () => void;
-  city: string;
-  date: Date;
-}) => (
-  <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
-    <div className="text-5xl">🗺️</div>
-    <div>
-      <p className="font-bold text-lg">Przejrzałeś wszystkie miejsca</p>
-      <p className="text-muted-foreground text-sm mt-1">
-        {likedPlaces.length > 0
-          ? `Wybrałeś ${likedPlaces.length} miejsc — ułóżmy z nich plan!`
-          : "Nie wybrałeś żadnego miejsca — może zacznijmy od nowa?"}
-      </p>
-    </div>
-    {likedPlaces.length > 0 ? (
+  onPickRoute: (route: RouteExample) => void;
+  loadingExamples: boolean;
+}) => {
+  if (likedPlaces.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
+        <div className="text-5xl">🗺️</div>
+        <div>
+          <p className="font-bold text-lg">Przejrzałeś wszystkie miejsca</p>
+          <p className="text-muted-foreground text-sm mt-1">Nie wybrałeś żadnego miejsca — może zacznijmy od nowa?</p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="border border-border rounded-full px-6 py-3 text-sm text-muted-foreground"
+        >
+          Zacznij od nowa
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto px-4 pb-safe-6 pb-6">
+      {/* Header */}
+      <div className="pt-6 pb-4 text-center">
+        <p className="text-2xl font-black text-foreground">Gotowe!</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          {matchedRoutes.length > 0
+            ? "Znalazłam trasy pasujące do Twoich wyborów"
+            : "Zaplanujmy trasę z Twoich miejsc"}
+        </p>
+      </div>
+
+      {loadingExamples && (
+        <div className="flex justify-center py-8">
+          <div className="flex gap-1.5">
+            {[0, 1, 2].map(i => (
+              <div key={i} className="h-2 w-2 rounded-full bg-orange-500 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Matched route cards */}
+      {!loadingExamples && matchedRoutes.map((route) => {
+        const meta = PERSONALITY_LABELS[route.personality_type] ?? { label: route.personality_type, emoji: "📍" };
+        return (
+          <div key={route.id} className="mb-3 rounded-2xl border border-border bg-card p-4 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-semibold bg-muted px-2 py-0.5 rounded-full text-foreground">
+                    {meta.emoji} {meta.label}
+                  </span>
+                  <span className="text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    {route.score} wspólnych miejsc
+                  </span>
+                </div>
+                <p className="font-bold text-foreground mt-1.5">{route.title}</p>
+              </div>
+            </div>
+
+            {/* Matched place pills */}
+            <div className="flex flex-wrap gap-1.5">
+              {route.matchedNames.map(name => (
+                <span key={name} className="text-xs bg-orange-500/10 text-orange-600 px-2.5 py-1 rounded-full font-medium">
+                  {name}
+                </span>
+              ))}
+              {route.pins.length - route.matchedNames.length > 0 && (
+                <span className="text-xs bg-muted text-muted-foreground px-2.5 py-1 rounded-full">
+                  +{route.pins.length - route.matchedNames.length} innych
+                </span>
+              )}
+            </div>
+
+            <button
+              onClick={() => onPickRoute(route)}
+              className="w-full py-3 rounded-xl bg-foreground text-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+            >
+              Wybierz tę trasę
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        );
+      })}
+
+      {/* Fallback: plan from scratch */}
       <button
         onClick={onProceed}
-        className="bg-orange-500 text-white font-bold rounded-full px-8 py-3.5 shadow-lg shadow-orange-500/30 active:scale-[0.97] transition-transform"
+        className={cn(
+          "w-full py-3.5 rounded-2xl text-sm font-semibold active:scale-[0.97] transition-transform",
+          matchedRoutes.length > 0
+            ? "border border-border text-muted-foreground bg-card mt-1"
+            : "bg-orange-500 text-white shadow-lg shadow-orange-500/25"
+        )}
       >
-        Ułóż plan z {likedPlaces.length} miejsc
+        {matchedRoutes.length > 0
+          ? `Zaplanuj od zera z ${likedPlaces.length} miejsc`
+          : `Ułóż plan z ${likedPlaces.length} miejsc`}
       </button>
-    ) : (
-      <button
-        onClick={() => window.location.reload()}
-        className="border border-border rounded-full px-6 py-3 text-sm text-muted-foreground"
-      >
-        Zacznij od nowa
-      </button>
-    )}
-  </div>
-);
+    </div>
+  );
+};
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -423,6 +531,8 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [matchedRoutes, setMatchedRoutes] = useState<MatchedRoute[]>([]);
+  const [loadingExamples, setLoadingExamples] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -499,6 +609,64 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
     setBannerDismissed(true);
   };
 
+  // Fetch + match route_examples when queue runs out
+  useEffect(() => {
+    if (queue.length > 0 || loading || likedPlaces.length === 0) return;
+    setLoadingExamples(true);
+    (supabase as any)
+      .from("route_examples")
+      .select("id, title, personality_type, description, pins")
+      .ilike("city", city)
+      .eq("is_approved", true)
+      .then(({ data }: { data: RouteExample[] | null }) => {
+        if (!data?.length) { setLoadingExamples(false); return; }
+        const likedNames = likedPlaces.map(p => p.place_name.toLowerCase().trim());
+        const scored: MatchedRoute[] = data
+          .map(r => {
+            const matched = r.pins.filter(p =>
+              likedNames.includes(p.place_name.toLowerCase().trim())
+            );
+            return { ...r, score: matched.length, matchedNames: matched.map(p => p.place_name) };
+          })
+          .filter(r => r.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 5);
+        setMatchedRoutes(scored);
+        setLoadingExamples(false);
+      });
+  }, [queue.length, loading, likedPlaces, city]);
+
+  const handlePickRoute = (route: RouteExample) => {
+    const initialPlan = {
+      city,
+      days: [{
+        day_number: 1,
+        pins: route.pins.map(p => ({
+          place_name: p.place_name,
+          address: "",
+          description: p.note ?? "",
+          suggested_time: p.suggested_time,
+          duration_minutes: p.duration_minutes,
+          category: p.category,
+          latitude: 0,
+          longitude: 0,
+          day_number: 1,
+          walking_time_from_prev: p.walking_time_from_prev ?? null,
+        })),
+      }],
+    };
+    navigate("/create", {
+      state: {
+        city,
+        date: date.toISOString(),
+        fromTemplate: true,
+        initialPlan,
+        likedPlaceNames: likedPlaces.map(p => p.place_name),
+        skippedPlaceNames: skippedPlaces.map(p => p.place_name),
+      },
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -520,9 +688,10 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
     return (
       <EmptyState
         likedPlaces={likedPlaces}
+        matchedRoutes={matchedRoutes}
         onProceed={handleProceed}
-        city={city}
-        date={date}
+        onPickRoute={handlePickRoute}
+        loadingExamples={loadingExamples}
       />
     );
   }
