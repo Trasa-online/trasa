@@ -306,38 +306,43 @@ interface MatchModalProps {
   onDismiss: () => void;
 }
 
-const MatchModal = ({ likedPlaces, userInitials, onConfirm, onDismiss }: MatchModalProps) => {
-  const preview = likedPlaces.slice(0, 3);
+const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: MatchModalProps) => {
+  const orbs = likedPlaces.slice(0, 3);
+  const extra = likedPlaces.length - 3;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-sm bg-card rounded-3xl p-7 flex flex-col items-center gap-5 shadow-2xl animate-in zoom-in-95 duration-300">
-        {/* Avatar */}
-        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
-          <span className="text-white text-xl font-black">{userInitials}</span>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-safe-6 pb-6 flex flex-col items-center gap-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+
+        {/* Orbs row */}
+        <div className="flex items-center justify-center gap-3">
+          {orbs.map((p) => (
+            <div key={p.id} className="flex flex-col items-center gap-2">
+              <div className="h-14 w-14 rounded-full bg-gradient-to-br from-orange-400/20 to-amber-400/20 border border-orange-300/30 flex items-center justify-center text-2xl shadow-sm">
+                {CATEGORY_EMOJI_MAP[p.category] ?? "📍"}
+              </div>
+            </div>
+          ))}
+          {extra > 0 && (
+            <div className="h-14 w-14 rounded-full bg-muted border border-border flex items-center justify-center">
+              <span className="text-sm font-bold text-muted-foreground">+{extra}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Place names */}
+        <div className="flex flex-col items-center gap-1 w-full">
+          {orbs.map((p) => (
+            <p key={p.id} className="text-sm font-medium text-foreground">{p.place_name}</p>
+          ))}
+          {extra > 0 && (
+            <p className="text-xs text-muted-foreground mt-0.5">i {extra} więcej</p>
+          )}
         </div>
 
         {/* Headline */}
         <div className="text-center space-y-1">
           <p className="text-2xl font-black text-foreground">Bingo!</p>
-          <p className="text-base text-muted-foreground leading-snug">Mamy dla Ciebie trasę.</p>
-        </div>
-
-        {/* Place pills */}
-        <div className="flex flex-wrap gap-2 justify-center">
-          {preview.map((p) => (
-            <span
-              key={p.id}
-              className="flex items-center gap-1.5 bg-muted px-3.5 py-1.5 rounded-full text-sm font-medium text-foreground"
-            >
-              <span>{CATEGORY_EMOJI_MAP[p.category] ?? "📍"}</span>
-              <span className="max-w-[120px] truncate">{p.place_name}</span>
-            </span>
-          ))}
-          {likedPlaces.length > 3 && (
-            <span className="bg-muted px-3.5 py-1.5 rounded-full text-sm text-muted-foreground">
-              +{likedPlaces.length - 3}
-            </span>
-          )}
+          <p className="text-sm text-muted-foreground">Mamy dla Ciebie trasę.</p>
         </div>
 
         {/* Buttons */}
