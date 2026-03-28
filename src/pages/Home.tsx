@@ -282,6 +282,17 @@ const Home = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 overflow-y-auto px-5 pt-4 pb-28 max-w-lg mx-auto w-full">
 
+        {/* Admin shortcut — visible only for Natalia */}
+        {user?.email === "natalia@trasa.app" && (
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={() => navigate("/admin/routes")}
+              className="text-xs bg-orange-500/10 text-orange-600 font-semibold px-3 py-1.5 rounded-full"
+            >
+              🗺️ Trasy wzorcowe
+            </button>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex border-b border-border/40 mb-5 mt-3" data-tour="trips">
