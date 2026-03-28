@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import CityPicker from "@/components/plan-wizard/CityPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
@@ -15,9 +15,14 @@ const stepTitles: Record<Step, string> = {
 
 const PlanWizard = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState<Step>(1);
-  const [city, setCity] = useState("");
-  const [date, setDate] = useState<Date | null>(null);
+  const location = useLocation();
+  const returnState = location.state as { step?: number; city?: string; date?: string; likedPlaceNames?: string[]; skippedPlaceNames?: string[] } | null;
+
+  const [step, setStep] = useState<Step>((returnState?.step as Step) ?? 1);
+  const [city, setCity] = useState(returnState?.city ?? "");
+  const [date, setDate] = useState<Date | null>(returnState?.date ? new Date(returnState.date) : null);
+  const returnLiked = returnState?.likedPlaceNames ?? [];
+  const returnSkipped = returnState?.skippedPlaceNames ?? [];
 
   const handleBack = () => {
     if (step === 1) navigate("/");
@@ -61,7 +66,12 @@ const PlanWizard = () => {
         )}
 
         {step === 3 && date && (
-          <PlaceSwiper city={city} date={date} />
+          <PlaceSwiper
+            city={city}
+            date={date}
+            initialLikedPlaceNames={returnLiked}
+            initialSkippedPlaceNames={returnSkipped}
+          />
         )}
       </div>
     </div>

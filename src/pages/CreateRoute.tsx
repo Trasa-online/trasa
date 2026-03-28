@@ -34,7 +34,6 @@ const CreateRoute = () => {
     initialPlan?: any; likedPlaceNames?: string[]; skippedPlaceNames?: string[];
     matchedRoutes?: MatchedRouteStub[]; selectedRouteIndex?: number;
   } | null);
-  const fromTemplate = wizardState?.fromTemplate ?? false;
   const matchedRoutes = wizardState?.matchedRoutes ?? [];
   const [altIndex, setAltIndex] = useState(wizardState?.selectedRouteIndex ?? 0);
 
@@ -102,7 +101,25 @@ const CreateRoute = () => {
     <div className="h-[100dvh] bg-background flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-safe-4 pb-4 border-b border-border/40 flex-shrink-0">
-        <button onClick={() => fromTemplate ? navigate("/plan") : navigate("/")} className="p-1">
+        <button
+          onClick={() => {
+            const hasSwipeContext = currentCity && wizardState?.date;
+            if (hasSwipeContext) {
+              navigate("/plan", {
+                state: {
+                  step: 3,
+                  city: currentCity,
+                  date: wizardState?.date,
+                  likedPlaceNames: wizardLikedPlaces,
+                  skippedPlaceNames: wizardSkippedPlaces,
+                },
+              });
+            } else {
+              navigate("/");
+            }
+          }}
+          className="p-1"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-semibold">{t("planning_title")}</h1>

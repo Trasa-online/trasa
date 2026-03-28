@@ -520,9 +520,11 @@ const EmptyState = ({
 interface PlaceSwiperProps {
   city: string;
   date: Date;
+  initialLikedPlaceNames?: string[];
+  initialSkippedPlaceNames?: string[];
 }
 
-const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPlaceNames = [] }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const userInitials = (user?.email ?? "?").slice(0, 2).toUpperCase();
@@ -548,8 +550,14 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
       .eq("is_active", true)
       .then(({ data }: { data: MockPlace[] | null }) => {
         if (data?.length) {
-          const shuffled = [...data].sort(() => Math.random() - 0.5);
-          setQueue(shuffled);
+          const likedSet = new Set(initialLikedPlaceNames.map(n => n.toLowerCase()));
+          const skippedSet = new Set(initialSkippedPlaceNames.map(n => n.toLowerCase()));
+          const liked = data.filter(p => likedSet.has(p.place_name.toLowerCase()));
+          const skipped = data.filter(p => skippedSet.has(p.place_name.toLowerCase()));
+          const remaining = data.filter(p => !likedSet.has(p.place_name.toLowerCase()) && !skippedSet.has(p.place_name.toLowerCase()));
+          if (liked.length) setLikedPlaces(liked);
+          if (skipped.length) setSkippedPlaces(skipped);
+          setQueue([...remaining].sort(() => Math.random() - 0.5));
         }
         setLoading(false);
       });
