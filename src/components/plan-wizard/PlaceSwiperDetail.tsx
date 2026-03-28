@@ -355,23 +355,17 @@ const PlaceSwiperDetail = ({
                   ))}
                 </div>
 
-                {/* Usage stat */}
-                {usageCount !== null && (
+                {/* Usage stat — only show when at least 1 route used it */}
+                {usageCount !== null && usageCount > 0 && (
                   <div className="flex items-center gap-2.5 py-3 px-4 bg-muted/50 rounded-2xl">
                     <div className="h-9 w-9 rounded-full bg-orange-500/15 flex items-center justify-center shrink-0">
                       <Users className="h-4.5 w-4.5 text-orange-500" />
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-foreground">
-                        {usageCount === 0
-                          ? "Nowe miejsce"
-                          : `${usageCount} ${usageCount === 1 ? "trasa" : usageCount < 5 ? "trasy" : "tras"} w TRASA`}
+                        {`${usageCount} ${usageCount === 1 ? "trasa" : usageCount < 5 ? "trasy" : "tras"} w TRASA`}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {usageCount === 0
-                          ? "Bądź pierwszy który to odwiedzi"
-                          : "tyle razy dodano to miejsce do planów"}
-                      </p>
+                      <p className="text-xs text-muted-foreground">tyle razy dodano to miejsce do planów</p>
                     </div>
                   </div>
                 )}
