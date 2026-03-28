@@ -189,67 +189,60 @@ const RouteSummaryDialog = ({
     onOpenChange(false);
   };
 
+  const allPins = plan.days.flatMap((d, di) =>
+    d.pins.filter(p => p.latitude && p.longitude).map((p, pi) => ({
+      latitude: p.latitude,
+      longitude: p.longitude,
+      place_name: p.place_name,
+      address: p.address,
+      pin_order: plan.days.slice(0, di).reduce((s, dd) => s + dd.pins.length, 0) + pi,
+    }))
+  );
+
   return (
     <Dialog open={open} onOpenChange={() => onOpenChange(false)}>
-      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto p-0 gap-0 [&>button]:hidden">
+      <DialogContent className="max-w-md h-[88vh] p-0 gap-0 [&>button]:hidden flex flex-col overflow-hidden">
         <VisuallyHidden>
           <DialogTitle>{dateTitle}</DialogTitle>
         </VisuallyHidden>
-        {/* Header */}
-        <div className="flex items-start justify-between p-5 pb-0">
-          <h2 className="text-xl font-bold leading-tight pr-4">{dateTitle}</h2>
-          <button
-            onClick={handleGoBack}
-            className="shrink-0 mt-0.5"
-          >
-            <X className="h-6 w-6 text-muted-foreground hover:text-foreground transition-colors" />
+
+        {/* Header — fixed */}
+        <div className="flex-shrink-0 flex items-center justify-between px-5 pt-5 pb-3 border-b border-border/40">
+          <h2 className="text-lg font-bold leading-tight pr-4">{dateTitle}</h2>
+          <button onClick={handleGoBack} className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-muted">
+            <X className="h-4 w-4 text-muted-foreground" />
           </button>
         </div>
 
-        <div className="h-px bg-border mx-5 mt-3" />
-
-        {(() => {
-          const allPins = plan.days.flatMap((d, di) =>
-            d.pins.filter(p => p.latitude && p.longitude).map((p, pi) => ({
-              latitude: p.latitude,
-              longitude: p.longitude,
-              place_name: p.place_name,
-              address: p.address,
-              pin_order: plan.days.slice(0, di).reduce((s, dd) => s + dd.pins.length, 0) + pi,
-            }))
-          );
-          return allPins.length > 0 ? (
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {allPins.length > 0 && (
             <div className="mx-5 mt-4">
-              <RouteMap pins={allPins} className="aspect-[16/9] rounded-xl" />
+              <RouteMap pins={allPins} className="h-40 rounded-2xl" />
             </div>
-          ) : null;
-        })()}
+          )}
+          <RoutePlanTimeline days={plan.days} totalDays={plan.days.length} />
+        </div>
 
-        {/* Timeline */}
-        <RoutePlanTimeline days={plan.days} totalDays={plan.days.length} />
-
-        {/* Action buttons */}
-        <div className="flex flex-col gap-2 px-5 pb-6 pt-2">
+        {/* Buttons — fixed at bottom */}
+        <div className="flex-shrink-0 flex flex-col gap-2.5 px-5 pt-3 pb-6 border-t border-border/40 bg-background">
           <button
             onClick={saveRoute}
             disabled={saving}
-            className="w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
+            className="w-full py-3.5 rounded-2xl bg-orange-500 text-white text-sm font-bold disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
           >
             {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Zapisuję...
-              </>
+              <><Loader2 className="h-4 w-4 animate-spin" />Zapisuję...</>
             ) : (
-              "Zapisz trasę"
+              "Zapisz trasę →"
             )}
           </button>
           <button
             onClick={handleGoBack}
             disabled={saving}
-            className="w-full py-3 rounded-xl border border-border text-sm font-medium text-foreground bg-card disabled:opacity-50"
+            className="w-full py-3 rounded-2xl border border-border text-sm font-medium text-muted-foreground disabled:opacity-50"
           >
-            Cofnij do edycji
+            Wróć do edycji
           </button>
         </div>
       </DialogContent>
