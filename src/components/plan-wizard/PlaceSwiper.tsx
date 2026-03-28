@@ -641,31 +641,40 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
       });
   }, [queue.length, loading, likedPlaces, city]);
 
-  const handlePickRoute = (route: RouteExample) => {
-    const initialPlan = {
-      city,
-      days: [{
+  const buildPlan = (route: RouteExample) => ({
+    city,
+    days: [{
+      day_number: 1,
+      pins: route.pins.map(p => ({
+        place_name: p.place_name,
+        address: "",
+        description: p.note ?? "",
+        suggested_time: p.suggested_time,
+        duration_minutes: p.duration_minutes,
+        category: p.category,
+        latitude: 0,
+        longitude: 0,
         day_number: 1,
-        pins: route.pins.map(p => ({
-          place_name: p.place_name,
-          address: "",
-          description: p.note ?? "",
-          suggested_time: p.suggested_time,
-          duration_minutes: p.duration_minutes,
-          category: p.category,
-          latitude: 0,
-          longitude: 0,
-          day_number: 1,
-          walking_time_from_prev: p.walking_time_from_prev ?? null,
-        })),
-      }],
-    };
+        walking_time_from_prev: p.walking_time_from_prev ?? null,
+      })),
+    }],
+  });
+
+  const handlePickRoute = (route: RouteExample) => {
+    const selectedIndex = matchedRoutes.findIndex(r => r.id === route.id);
     navigate("/create", {
       state: {
         city,
         date: date.toISOString(),
         fromTemplate: true,
-        initialPlan,
+        initialPlan: buildPlan(route),
+        matchedRoutes: matchedRoutes.map(r => ({
+          id: r.id,
+          title: r.title,
+          personality_type: r.personality_type,
+          pins: r.pins,
+        })),
+        selectedRouteIndex: selectedIndex,
         likedPlaceNames: likedPlaces.map(p => p.place_name),
         skippedPlaceNames: skippedPlaces.map(p => p.place_name),
       },

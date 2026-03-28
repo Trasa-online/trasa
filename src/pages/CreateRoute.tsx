@@ -18,13 +18,35 @@ interface TripPreferences {
   dayNumber?: number;
 }
 
+interface MatchedRouteStub {
+  id: string;
+  title: string;
+  personality_type: string;
+  pins: { place_name: string; category: string; suggested_time: string; duration_minutes: number; walking_time_from_prev: string | null; note?: string | null }[];
+}
+
 const CreateRoute = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const wizardState = (location.state as { city?: string; date?: string; fromTemplate?: boolean; routeId?: string; initialPlan?: any; likedPlaceNames?: string[]; skippedPlaceNames?: string[] } | null);
+  const wizardState = (location.state as {
+    city?: string; date?: string; fromTemplate?: boolean; routeId?: string;
+    initialPlan?: any; likedPlaceNames?: string[]; skippedPlaceNames?: string[];
+    matchedRoutes?: MatchedRouteStub[]; selectedRouteIndex?: number;
+  } | null);
   const fromTemplate = wizardState?.fromTemplate ?? false;
-  const templateInitialPlan = wizardState?.initialPlan ?? null;
+  const matchedRoutes = wizardState?.matchedRoutes ?? [];
+  const [altIndex, setAltIndex] = useState(wizardState?.selectedRouteIndex ?? 0);
+
+  const buildPlan = (route: MatchedRouteStub, city: string) => ({
+    city,
+    days: [{ day_number: 1, pins: route.pins.map(p => ({ place_name: p.place_name, address: "", description: p.note ?? "", suggested_time: p.suggested_time, duration_minutes: p.duration_minutes, category: p.category, latitude: 0, longitude: 0, day_number: 1, walking_time_from_prev: p.walking_time_from_prev ?? null })) }],
+  });
+
+  const currentCity = wizardState?.city ?? "";
+  const templateInitialPlan = matchedRoutes.length > 0
+    ? buildPlan(matchedRoutes[altIndex] ?? matchedRoutes[0], currentCity)
+    : (wizardState?.initialPlan ?? null);
   const [searchParams] = useSearchParams();
   const folderId = searchParams.get("trip") ?? undefined;
   const dayNumber = searchParams.get("day") ? parseInt(searchParams.get("day")!) : undefined;
@@ -88,6 +110,7 @@ const CreateRoute = () => {
 
       <div className="flex-1 min-h-0">
         <PlanChatExperience
+          key={altIndex}
           preferences={preferences}
           onPlanReady={handlePlanReady}
           likedPlaces={likedPlaces}
@@ -95,6 +118,9 @@ const CreateRoute = () => {
           idealDay={idealDay}
           initialUserMessage={initialUserMessage}
           initialPlan={templateInitialPlan ?? undefined}
+          altRoutes={matchedRoutes.map(r => ({ id: r.id, title: r.title, personality_type: r.personality_type }))}
+          altIndex={altIndex}
+          onSwitchAlt={setAltIndex}
         />
       </div>
 

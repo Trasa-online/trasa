@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown, Map } from "lucide-react";
+import { Send, Mic, MicOff, Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown, Map, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -42,6 +42,12 @@ interface TripPreferences {
   dayNumber?: number;
 }
 
+interface AltRoute {
+  id: string;
+  title: string;
+  personality_type: string;
+}
+
 interface PlanChatExperienceProps {
   preferences: TripPreferences;
   onPlanReady: (plan: RoutePlan, messages: TextMessage[]) => void;
@@ -50,6 +56,9 @@ interface PlanChatExperienceProps {
   idealDay?: string;
   initialUserMessage?: string;
   initialPlan?: RoutePlan;
+  altRoutes?: AltRoute[];
+  altIndex?: number;
+  onSwitchAlt?: (i: number) => void;
 }
 
 type SnapState = "peek" | "half" | "full";
@@ -398,7 +407,7 @@ function getCurrentTimeContext(): { current_time: string; current_date: string }
   };
 }
 
-const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlaces, idealDay, initialUserMessage, initialPlan }: PlanChatExperienceProps) => {
+const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt }: PlanChatExperienceProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
@@ -936,19 +945,41 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
           className="absolute bottom-0 left-0 right-0 bg-card border-t border-border/60 rounded-t-3xl flex flex-col overflow-hidden z-10"
         >
           {/* Drag handle */}
-          <div
-            className="flex-shrink-0 flex justify-center items-center py-4 cursor-grab active:cursor-grabbing select-none"
-            style={{ touchAction: "none" }}
-            onPointerDown={handleDragStart}
-            onPointerMove={handleDragMove}
-            onPointerUp={handleDragEnd}
-            onPointerCancel={handleDragEnd}
-            onClick={() => {
-              if (dragH !== null) return;
-              setSnap(s => s === "peek" ? "half" : s === "half" ? "full" : "peek");
-            }}
-          >
+          <div className="flex-shrink-0 relative flex justify-center items-center py-4 select-none">
+            <div
+              className="absolute inset-0 cursor-grab active:cursor-grabbing"
+              style={{ touchAction: "none" }}
+              onPointerDown={handleDragStart}
+              onPointerMove={handleDragMove}
+              onPointerUp={handleDragEnd}
+              onPointerCancel={handleDragEnd}
+              onClick={() => {
+                if (dragH !== null) return;
+                setSnap(s => s === "peek" ? "half" : s === "half" ? "full" : "peek");
+              }}
+            />
             <div className="w-10 h-1 rounded-full bg-muted-foreground/25" />
+            {altRoutes && altRoutes.length > 1 && onSwitchAlt && altIndex !== undefined && (
+              <div className="absolute right-3 flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                <button
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={() => onSwitchAlt(altIndex > 0 ? altIndex - 1 : altRoutes.length - 1)}
+                  className="h-7 w-7 rounded-full border border-border bg-background flex items-center justify-center active:scale-90 transition-transform"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+                <span className="text-xs text-muted-foreground font-medium tabular-nums">
+                  {altIndex + 1}/{altRoutes.length}
+                </span>
+                <button
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={() => onSwitchAlt(altIndex < altRoutes.length - 1 ? altIndex + 1 : 0)}
+                  className="h-7 w-7 rounded-full border border-border bg-background flex items-center justify-center active:scale-90 transition-transform"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Peek: summary pills */}
