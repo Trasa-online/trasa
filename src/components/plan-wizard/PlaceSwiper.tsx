@@ -735,21 +735,13 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
         <span className="text-xs text-muted-foreground">
           {city} · {format(date, "d MMM")}
         </span>
-        <div className="flex items-center gap-1.5">
-          {likedPlaces.length > 0 && (
-            <button
-              onClick={handleProceed}
-              className="flex items-center gap-1.5 bg-orange-500 text-white text-xs font-semibold px-3 py-1.5 rounded-full active:scale-95 transition-transform shadow-sm shadow-orange-500/30"
-            >
-              {likedPlaces.length} wybranych
-              <ArrowRight className="h-3 w-3" />
-            </button>
-          )}
-        </div>
+        <span className="text-xs text-muted-foreground">
+          {likedPlaces.length > 0 ? `${likedPlaces.length} wybranych` : ""}
+        </span>
       </div>
 
       {/* Card stack */}
-      <div className="relative mx-4" style={{ flex: "1 1 0", minHeight: 0, maxHeight: "min(600px, 70dvh)" }}>
+      <div className="relative mx-4" style={{ flex: "1 1 0", minHeight: 0, maxHeight: "min(680px, 78dvh)" }}>
         {queue
           .slice(0, 3)
           .reverse()
@@ -801,6 +793,16 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
         </button>
       </div>
 
+      {/* Small text proceed link */}
+      {likedPlaces.length > 0 && (
+        <button
+          onClick={handleProceed}
+          className="pb-3 text-center text-xs text-muted-foreground active:opacity-70 transition-opacity shrink-0"
+        >
+          {likedPlaces.length} {likedPlaces.length === 1 ? "wybrane" : "wybranych"} ·{" "}
+          <span className="text-foreground font-medium">Zaplanuj trasę</span>
+        </button>
+      )}
 
       {/* Detail sheet */}
       <PlaceSwiperDetail
