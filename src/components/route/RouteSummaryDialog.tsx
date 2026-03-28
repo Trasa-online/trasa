@@ -142,6 +142,34 @@ const RouteSummaryDialog = ({
         }]);
       }
 
+      // Submit to route_examples as candidate (silent background — never blocks user)
+      const inferPersonality = (priorities: string[], pace: string) => {
+        if (priorities.includes("museums") || priorities.includes("art")) return "kulturalny";
+        if (priorities.includes("history")) return "historyczny";
+        if (priorities.includes("cafes") || priorities.includes("coffee")) return "kawiarniany";
+        if (priorities.includes("nightlife") || priorities.includes("bars")) return "nocny";
+        if (priorities.includes("active") || pace === "active") return "aktywny";
+        if (priorities.includes("shopping")) return "zakupowy";
+        return "mix";
+      };
+      const personalityType = inferPersonality(preferences.priorities ?? [], preferences.pace ?? "mixed");
+      const examplePins = plan.days[0]?.pins.map(p => ({
+        place_name: p.place_name,
+        category: p.category,
+        suggested_time: p.suggested_time,
+        duration_minutes: p.duration_minutes ?? 60,
+        walking_time_from_prev: p.walking_time_from_prev ?? null,
+        note: p.description ?? null,
+      })) ?? [];
+      supabase.from("route_examples" as any).insert({
+        city: plan.city,
+        title: `${plan.city} — ${personalityType}`,
+        personality_type: personalityType,
+        pins: examplePins,
+        is_approved: false,
+        is_rejected: false,
+      }).then(() => {/* silent */});
+
       toast({ title: "Trasa zapisana! 🎉", description: `${plan.city}` });
       onOpenChange(false);
       navigate("/");
