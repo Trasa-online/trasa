@@ -1391,6 +1391,8 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
           open={addPinDay !== null}
           onOpenChange={(o) => !o && setAddPinDay(null)}
           cityContext={preferences.city}
+          likedPlaces={likedPlaces}
+          existingPinNames={plan?.days.flatMap(d => d.pins).map(p => p.place_name)}
           onPinAdd={(pin) => {
             setPlan(prev => prev ? {
               ...prev,

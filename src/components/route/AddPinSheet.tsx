@@ -1,9 +1,8 @@
-import { useState, useCallback } from "react";
-import { Search, Loader2, MapPin, Plus } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Loader2, MapPin, Plus, Heart, Tag } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
+import { supabase } from "@/integrations/supabase/client";
 import type { PlanPin } from "./DayPinList";
 
 interface AddPinSheetProps {
@@ -11,165 +10,340 @@ interface AddPinSheetProps {
   onOpenChange: (open: boolean) => void;
   onPinAdd: (pin: PlanPin) => void;
   cityContext: string;
+  likedPlaces?: string[];
+  existingPinNames?: string[];
 }
 
-interface SearchResult {
-  name: string;
-  formatted_address: string;
-  place_id: string;
-  geometry: { location: { lat: number; lng: number } };
-  types: string[];
+type Tab = "liked" | "search" | "category";
+
+interface DbPlace {
+  id: string;
+  place_name: string;
+  category: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  description: string;
   rating?: number;
 }
 
-const typeToCategory: Record<string, string> = {
-  restaurant: "restaurant",
-  cafe: "cafe",
-  museum: "museum",
-  park: "park",
-  bar: "bar",
-  bakery: "cafe",
-  church: "church",
-  art_gallery: "gallery",
-  tourist_attraction: "viewpoint",
-  shopping_mall: "shopping",
-  night_club: "nightlife",
+const CATEGORY_LABELS: Record<string, string> = {
+  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum",
+  park: "Park", bar: "Bar", club: "Klub", monument: "Zabytek",
+  gallery: "Galeria", market: "Targ", viewpoint: "Widok",
+  shopping: "Zakupy", experience: "Rozrywka", walk: "Spacer",
 };
 
-const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext }: AddPinSheetProps) => {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+const CATEGORY_EMOJI: Record<string, string> = {
+  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌿",
+  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
+  market: "🛒", viewpoint: "🔭", shopping: "🛍️", experience: "🎪", walk: "🚶",
+};
 
-  const searchPlaces = useCallback(async (searchQuery: string) => {
-    if (searchQuery.length < 2) {
-      setResults([]);
+function dbPlaceToPin(p: DbPlace): PlanPin {
+  return {
+    place_name: p.place_name,
+    address: p.address ?? "",
+    description: p.description ?? "",
+    suggested_time: "00:00",
+    category: p.category,
+    latitude: p.latitude,
+    longitude: p.longitude,
+    day_number: 0,
+  };
+}
+
+const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = [], existingPinNames = [] }: AddPinSheetProps) => {
+  const existingSet = new Set(existingPinNames.map(n => n.toLowerCase()));
+  const availableLiked = likedPlaces.filter(n => !existingSet.has(n.toLowerCase()));
+
+  const defaultTab: Tab = availableLiked.length > 0 ? "liked" : "search";
+  const [tab, setTab] = useState<Tab>(defaultTab);
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<DbPlace[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [allCityPlaces, setAllCityPlaces] = useState<DbPlace[]>([]);
+  const [loadingCity, setLoadingCity] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [addingName, setAddingName] = useState<string | null>(null);
+
+  // Fetch all places for city (for category browse + liked lookup)
+  useEffect(() => {
+    if (!open || !cityContext) return;
+    setLoadingCity(true);
+    (supabase as any)
+      .from("places")
+      .select("id, place_name, category, address, latitude, longitude, description, rating")
+      .ilike("city", cityContext)
+      .eq("is_active", true)
+      .then(({ data }: { data: DbPlace[] | null }) => {
+        setAllCityPlaces(data ?? []);
+        setLoadingCity(false);
+      });
+  }, [open, cityContext]);
+
+  // Search in places table
+  useEffect(() => {
+    if (tab !== "search" || query.length < 2) {
+      setSearchResults([]);
       return;
     }
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      const { data } = await (supabase as any)
+        .from("places")
+        .select("id, place_name, category, address, latitude, longitude, description, rating")
+        .ilike("city", cityContext)
+        .ilike("place_name", `%${query}%`)
+        .eq("is_active", true)
+        .limit(10);
+      setSearchResults(data ?? []);
+      setSearching(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query, tab, cityContext]);
 
-    setSearching(true);
-    try {
-      const fullQuery = cityContext
-        ? `${searchQuery} ${cityContext}`
-        : searchQuery;
-
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(fullQuery)}&key=${GOOGLE_MAPS_API_KEY}&language=pl`
-      );
-      const data = await response.json();
-
-      if (data.status === "OK" && data.results) {
-        setResults(data.results.slice(0, 6));
-      } else {
-        setResults([]);
-      }
-    } catch (err) {
-      console.error("Place search error:", err);
-      setResults([]);
-    }
-    setSearching(false);
-  }, [cityContext]);
-
-  const handleInputChange = (value: string) => {
-    setQuery(value);
-    if (debounceTimer) clearTimeout(debounceTimer);
-    const timer = setTimeout(() => searchPlaces(value), 400);
-    setDebounceTimer(timer);
-  };
-
-  const handleSelectPlace = (result: SearchResult) => {
-    const detectedCategory = result.types?.find(t => typeToCategory[t]);
-
-    const pin: PlanPin = {
-      place_name: result.name,
-      address: result.formatted_address,
-      description: "",
-      suggested_time: "00:00",
-      category: detectedCategory ? typeToCategory[detectedCategory] : "viewpoint",
-      latitude: result.geometry.location.lat,
-      longitude: result.geometry.location.lng,
-      day_number: 0, // will be set by parent
-    };
-
-    onPinAdd(pin);
+  const handleClose = () => {
     setQuery("");
-    setResults([]);
+    setSearchResults([]);
+    setSelectedCategory(null);
     onOpenChange(false);
   };
 
+  const handleAddDbPlace = (place: DbPlace) => {
+    onPinAdd(dbPlaceToPin(place));
+    handleClose();
+  };
+
+  const handleAddLikedByName = async (name: string) => {
+    setAddingName(name);
+    const match = allCityPlaces.find(p => p.place_name.toLowerCase() === name.toLowerCase());
+    if (match) {
+      onPinAdd(dbPlaceToPin(match));
+    } else {
+      // Not in DB — add with name only, AI will handle it
+      onPinAdd({
+        place_name: name,
+        address: "",
+        description: "",
+        suggested_time: "00:00",
+        category: "viewpoint",
+        latitude: 0,
+        longitude: 0,
+        day_number: 0,
+      });
+    }
+    setAddingName(null);
+    handleClose();
+  };
+
+  const categories = [...new Set(allCityPlaces.map(p => p.category))].sort();
+  const categoryPlaces = selectedCategory
+    ? allCityPlaces.filter(p => p.category === selectedCategory && !existingSet.has(p.place_name.toLowerCase()))
+    : [];
+
+  const tabs: { id: Tab; label: string; icon: React.ReactNode; count?: number }[] = [
+    { id: "liked", label: "Wybrane", icon: <Heart className="h-3.5 w-3.5" />, count: availableLiked.length },
+    { id: "search", label: "Szukaj", icon: <Search className="h-3.5 w-3.5" /> },
+    { id: "category", label: "Kategorie", icon: <Tag className="h-3.5 w-3.5" /> },
+  ];
+
   return (
-    <Sheet open={open} onOpenChange={(v) => {
-      if (!v) {
-        setQuery("");
-        setResults([]);
-      }
-      onOpenChange(v);
-    }}>
-      <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl">
-        <SheetHeader className="text-left pb-3">
+    <Sheet open={open} onOpenChange={(v) => !v && handleClose()}>
+      <SheetContent side="bottom" className="h-[75vh] rounded-t-3xl flex flex-col">
+        <SheetHeader className="text-left pb-2 flex-shrink-0">
           <SheetTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
             Dodaj punkt
           </SheetTitle>
         </SheetHeader>
 
-        {/* Search input */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => handleInputChange(e.target.value)}
-            placeholder={cityContext ? `Szukaj w ${cityContext}...` : "Szukaj miejsca..."}
-            autoFocus
-            className="w-full h-11 pl-10 pr-4 rounded-xl border border-border bg-muted/30 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30"
-          />
-        </div>
-
-        {/* Results */}
-        <div className="flex-1 overflow-y-auto space-y-1.5">
-          {searching && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          )}
-
-          {!searching && results.length === 0 && query.length >= 2 && (
-            <div className="text-center py-8 text-sm text-muted-foreground">
-              Brak wyników dla "{query}"
-            </div>
-          )}
-
-          {!searching && results.map((result) => (
+        {/* Tabs */}
+        <div className="flex gap-1 mb-3 flex-shrink-0">
+          {tabs.map(t => (
             <button
-              key={result.place_id}
-              onClick={() => handleSelectPlace(result)}
-              className="w-full flex items-start gap-3 p-3 rounded-xl hover:bg-muted/50 active:scale-[0.98] transition-all text-left"
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors",
+                tab === t.id
+                  ? "bg-foreground text-background"
+                  : "bg-muted text-muted-foreground"
+              )}
             >
-              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-muted flex items-center justify-center">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {result.name}
-                </p>
-                <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                  {result.formatted_address}
-                </p>
-                {result.rating && (
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    ⭐ {result.rating}
-                  </p>
-                )}
-              </div>
+              {t.icon}
+              {t.label}
+              {t.count !== undefined && t.count > 0 && (
+                <span className={cn(
+                  "h-4 min-w-[16px] px-0.5 rounded-full flex items-center justify-center text-[10px] font-bold",
+                  tab === t.id ? "bg-background/20 text-background" : "bg-orange-500 text-white"
+                )}>
+                  {t.count}
+                </span>
+              )}
             </button>
           ))}
+        </div>
 
-          {!searching && query.length < 2 && (
-            <div className="text-center py-8 text-sm text-muted-foreground">
-              Wpisz nazwę miejsca, aby wyszukać
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+
+          {/* ── Liked tab ── */}
+          {tab === "liked" && (
+            <div className="space-y-1.5">
+              {availableLiked.length === 0 ? (
+                <div className="text-center py-12 text-sm text-muted-foreground">
+                  {likedPlaces.length === 0
+                    ? "Nie wybrałeś żadnych miejsc podczas przeglądania"
+                    : "Wszystkie wybrane miejsca są już w planie"}
+                </div>
+              ) : (
+                availableLiked.map(name => {
+                  const dbPlace = allCityPlaces.find(p => p.place_name.toLowerCase() === name.toLowerCase());
+                  return (
+                    <button
+                      key={name}
+                      onClick={() => handleAddLikedByName(name)}
+                      disabled={addingName === name}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted/40 active:scale-[0.98] transition-all text-left"
+                    >
+                      <div className="flex-shrink-0 h-9 w-9 rounded-full bg-orange-500/10 flex items-center justify-center text-lg">
+                        {CATEGORY_EMOJI[dbPlace?.category ?? ""] ?? "📍"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{name}</p>
+                        {dbPlace && (
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">
+                            {CATEGORY_LABELS[dbPlace.category] ?? dbPlace.category}
+                          </p>
+                        )}
+                      </div>
+                      {addingName === name
+                        ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground flex-shrink-0" />
+                        : <Plus className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      }
+                    </button>
+                  );
+                })
+              )}
             </div>
+          )}
+
+          {/* ── Search tab ── */}
+          {tab === "search" && (
+            <>
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder={cityContext ? `Szukaj w ${cityContext}…` : "Szukaj miejsca…"}
+                  autoFocus
+                  className="w-full h-11 pl-10 pr-4 rounded-xl border border-border bg-muted/30 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30"
+                />
+              </div>
+              {searching && (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {!searching && query.length >= 2 && searchResults.length === 0 && (
+                <p className="text-center py-8 text-sm text-muted-foreground">Brak wyników dla „{query}"</p>
+              )}
+              {!searching && searchResults.length > 0 && (
+                <div className="space-y-1.5">
+                  {searchResults.map(place => (
+                    <button
+                      key={place.id}
+                      onClick={() => handleAddDbPlace(place)}
+                      className="w-full flex items-start gap-3 p-3 rounded-xl bg-muted/40 active:scale-[0.98] transition-all text-left"
+                    >
+                      <div className="flex-shrink-0 h-9 w-9 rounded-full bg-muted flex items-center justify-center text-lg">
+                        {CATEGORY_EMOJI[place.category] ?? "📍"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{place.place_name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {CATEGORY_LABELS[place.category] ?? place.category}
+                          {place.rating ? ` · ⭐ ${place.rating}` : ""}
+                        </p>
+                      </div>
+                      <Plus className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              {!searching && query.length < 2 && (
+                <p className="text-center py-8 text-sm text-muted-foreground">Wpisz nazwę miejsca, aby wyszukać</p>
+              )}
+            </>
+          )}
+
+          {/* ── Category tab ── */}
+          {tab === "category" && (
+            <>
+              {loadingCity ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <>
+                  {/* Category chips */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {categories.map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors",
+                          selectedCategory === cat
+                            ? "bg-foreground text-background"
+                            : "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {CATEGORY_EMOJI[cat] ?? "📍"} {CATEGORY_LABELS[cat] ?? cat}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Places for selected category */}
+                  {selectedCategory && (
+                    <div className="space-y-1.5">
+                      {categoryPlaces.length === 0 ? (
+                        <p className="text-center py-6 text-sm text-muted-foreground">Wszystkie miejsca z tej kategorii są już w planie</p>
+                      ) : (
+                        categoryPlaces.map(place => (
+                          <button
+                            key={place.id}
+                            onClick={() => handleAddDbPlace(place)}
+                            className="w-full flex items-start gap-3 p-3 rounded-xl bg-muted/40 active:scale-[0.98] transition-all text-left"
+                          >
+                            <div className="flex-shrink-0 h-9 w-9 rounded-full bg-muted flex items-center justify-center">
+                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-foreground truncate">{place.place_name}</p>
+                              {place.description && (
+                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{place.description}</p>
+                              )}
+                              {place.rating && (
+                                <p className="text-[11px] text-muted-foreground mt-0.5">⭐ {place.rating}</p>
+                              )}
+                            </div>
+                            <Plus className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {!selectedCategory && (
+                    <p className="text-center py-8 text-sm text-muted-foreground">Wybierz kategorię powyżej</p>
+                  )}
+                </>
+              )}
+            </>
           )}
         </div>
       </SheetContent>
