@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Heart, MapPin, Star, Sparkles, ArrowRight, Info, RotateCcw } from "lucide-react";
+import { X, Heart, MapPin, Star, ArrowRight, Info, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import { supabase } from "@/integrations/supabase/client";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
+import { useAuth } from "@/hooks/useAuth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -290,46 +291,75 @@ const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardPro
   );
 };
 
-// ─── Match Banner ─────────────────────────────────────────────────────────────
+// ─── Match Modal ──────────────────────────────────────────────────────────────
 
-interface MatchBannerProps {
-  likedCount: number;
+const CATEGORY_EMOJI_MAP: Record<string, string> = {
+  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌿",
+  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
+  market: "🛒", viewpoint: "🔭", shopping: "🛍️", experience: "🎪",
+};
+
+interface MatchModalProps {
+  likedPlaces: MockPlace[];
+  userInitials: string;
   onConfirm: () => void;
   onDismiss: () => void;
 }
 
-const MatchBanner = ({ likedCount, onConfirm, onDismiss }: MatchBannerProps) => (
-  <div className="mx-4 mb-3 rounded-2xl bg-card border border-border/60 p-3.5 animate-in slide-in-from-top-2 duration-300">
-    <div className="flex items-center gap-2.5">
-      <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
-        <Sparkles className="h-4 w-4 text-orange-500" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-foreground leading-snug">
-          Gotowe! Ułożyć z tego trasę?
-        </p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {likedCount} wybranych miejsc · @trasa dopasuje plan
-        </p>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <button
-          onClick={onDismiss}
-          className="text-xs text-muted-foreground px-2 py-1"
-        >
-          Więcej
-        </button>
-        <button
-          onClick={onConfirm}
-          className="flex items-center gap-1 bg-orange-500 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-[0.97] transition-transform"
-        >
-          Tak
-          <ArrowRight className="h-3 w-3" />
-        </button>
+const MatchModal = ({ likedPlaces, userInitials, onConfirm, onDismiss }: MatchModalProps) => {
+  const preview = likedPlaces.slice(0, 3);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-sm bg-card rounded-3xl p-7 flex flex-col items-center gap-5 shadow-2xl animate-in zoom-in-95 duration-300">
+        {/* Avatar */}
+        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+          <span className="text-white text-xl font-black">{userInitials}</span>
+        </div>
+
+        {/* Headline */}
+        <div className="text-center space-y-1">
+          <p className="text-2xl font-black text-foreground">Bingo!</p>
+          <p className="text-base text-muted-foreground leading-snug">Mamy dla Ciebie trasę.</p>
+        </div>
+
+        {/* Place pills */}
+        <div className="flex flex-wrap gap-2 justify-center">
+          {preview.map((p) => (
+            <span
+              key={p.id}
+              className="flex items-center gap-1.5 bg-muted px-3.5 py-1.5 rounded-full text-sm font-medium text-foreground"
+            >
+              <span>{CATEGORY_EMOJI_MAP[p.category] ?? "📍"}</span>
+              <span className="max-w-[120px] truncate">{p.place_name}</span>
+            </span>
+          ))}
+          {likedPlaces.length > 3 && (
+            <span className="bg-muted px-3.5 py-1.5 rounded-full text-sm text-muted-foreground">
+              +{likedPlaces.length - 3}
+            </span>
+          )}
+        </div>
+
+        {/* Buttons */}
+        <div className="w-full flex flex-col gap-2.5">
+          <button
+            onClick={onConfirm}
+            className="w-full py-3.5 rounded-2xl bg-orange-500 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-500/25"
+          >
+            Sprawdzam trasę
+            <ArrowRight className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onDismiss}
+            className="w-full py-3 rounded-2xl border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
+          >
+            Wróć do przeglądania
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ─── Done state ───────────────────────────────────────────────────────────────
 
@@ -381,6 +411,8 @@ interface PlaceSwiperProps {
 
 const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const userInitials = (user?.email ?? "?").slice(0, 2).toUpperCase();
 
   const [queue, setQueue] = useState<MockPlace[]>([]);
   const [loading, setLoading] = useState(true);
@@ -497,10 +529,11 @@ const PlaceSwiper = ({ city, date }: PlaceSwiperProps) => {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Match banner */}
+      {/* Match modal */}
       {showBanner && (
-        <MatchBanner
-          likedCount={likedPlaces.length}
+        <MatchModal
+          likedPlaces={likedPlaces}
+          userInitials={userInitials}
           onConfirm={handleProceed}
           onDismiss={handleBannerDismiss}
         />
