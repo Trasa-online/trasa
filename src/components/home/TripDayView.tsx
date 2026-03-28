@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronRight, Pencil, Map } from "lucide-react";
+import { ChevronRight, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PlaceDetailSheet from "./PlaceDetailSheet";
 import RouteMap from "@/components/RouteMap";
@@ -16,7 +15,6 @@ interface Pin {
 }
 
 interface TripDayViewProps {
-  routeId: string;
   pins: Pin[];
   dayLabel: string;
   dateLabel?: string | null;
@@ -25,8 +23,7 @@ interface TripDayViewProps {
 
 const isEvening = () => new Date().getHours() >= 17;
 
-const TripDayView = ({ routeId, pins, dayLabel, dateLabel, onStartReview }: TripDayViewProps) => {
-  const navigate = useNavigate();
+const TripDayView = ({ pins, dayLabel, dateLabel, onStartReview }: TripDayViewProps) => {
   const [selectedPin, setSelectedPin] = useState<Pin | null>(null);
 
   const sortedPins = [...pins].sort((a, b) => a.pin_order - b.pin_order);
@@ -100,14 +97,6 @@ const TripDayView = ({ routeId, pins, dayLabel, dateLabel, onStartReview }: Trip
 
       {/* Action buttons */}
       <div className="space-y-2">
-        <button
-          onClick={() => navigate(`/edit-plan?route=${routeId}`)}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-border/60 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-          Popraw trasę
-        </button>
-
         {evening ? (
           <Button
             onClick={onStartReview}

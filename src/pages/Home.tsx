@@ -352,7 +352,6 @@ const Home = () => {
                           .map((route: any) => (
                             <div key={route.id} className="border-t border-border/50">
                               <TripDayView
-                                routeId={route.id}
                                 pins={(route.pins as any[]).map((p: any) => ({
                                   id: p.id,
                                   place_name: p.place_name,

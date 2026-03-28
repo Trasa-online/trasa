@@ -123,7 +123,7 @@ const DayReview = () => {
       navigate(`/review-summary?route=${routeId}`, {
         state: { summary: reviewSummary, messages },
       });
-    }, 1200);
+    }, 4000);
     return () => clearTimeout(timer);
   }, [isDone, navigate, routeId, reviewSummary, messages]);
 
@@ -191,7 +191,7 @@ const DayReview = () => {
       setInitialSent(true);
       // Pass a hidden trigger message to the API but don't show it in the UI
       const initialMessages: ChatMessage[] = [
-        { role: "user", content: "Cześć! Opowiem Ci o moim dniu." },
+        { role: "user", content: `Skończyłem dzień w ${route.city}. Chcę zrobić podsumowanie.` },
       ];
       callChatRoute(initialMessages);
     }
@@ -369,7 +369,7 @@ const DayReview = () => {
                     "max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed",
                     msg.role === "user"
                       ? "bg-foreground text-background rounded-br-md"
-                      : "bg-muted text-foreground rounded-bl-md"
+                      : "bg-card border border-border/50 text-foreground rounded-bl-md"
                   )}
                 >
                   {msg.content}
@@ -380,7 +380,7 @@ const DayReview = () => {
             {/* Loading indicator */}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-2.5">
+                <div className="bg-card border border-border/50 rounded-2xl rounded-bl-md px-4 py-2.5">
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 </div>
               </div>
@@ -390,10 +390,11 @@ const DayReview = () => {
 
         {/* Done state */}
         {isDone && (
-          <div className="flex flex-col items-center px-8 py-8">
-            <h2 className="text-xl font-black text-center">Super! Dziękuję za rozmowę.</h2>
-            <p className="text-muted-foreground text-center mt-3 text-sm leading-relaxed">
-              Zapisałam Twoje odpowiedzi. Za chwilę wrócisz na stronę główną.
+          <div className="flex flex-col items-center px-8 py-10">
+            <div className="text-4xl mb-4">✨</div>
+            <h2 className="text-2xl font-black text-center leading-tight">Świetna rozmowa!</h2>
+            <p className="text-muted-foreground text-center mt-3 text-sm leading-relaxed max-w-xs">
+              Zapisałam Twoje wrażenia z dnia. Za chwilę przejdziesz do podsumowania.
             </p>
           </div>
         )}
@@ -401,7 +402,7 @@ const DayReview = () => {
 
       {/* Sticky input — only when chat is active and not done */}
       {!isDone && (
-        <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-3 pb-safe z-10">
+        <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] z-10">
           <div className="flex items-end gap-2 max-w-lg mx-auto">
             {hasVoiceSupport && (
               <button
@@ -427,7 +428,7 @@ const DayReview = () => {
                 placeholder="Napisz odpowiedź..."
                 rows={1}
                 disabled={isLoading}
-                className="w-full resize-none rounded-xl border border-border/60 bg-muted/30 px-4 py-2.5 text-base placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 disabled:opacity-50"
+                className="w-full resize-none rounded-xl border border-border bg-muted px-4 py-2.5 text-base placeholder:text-muted-foreground/60 focus:outline-none focus:border-foreground/30 disabled:opacity-50"
                 style={{ maxHeight: "120px" }}
               />
             </div>

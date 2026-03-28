@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Camera, ChevronDown, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/imageCompression";
-import { toast } from "sonner";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 
@@ -25,6 +24,7 @@ const ReviewSummary = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const narrativeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -242,28 +242,34 @@ const ReviewSummary = () => {
           />
         </div>
 
-        {/* Insights card */}
+        {/* Insights card (accordion) */}
         {insights && insights.length > 0 && (
           <div className="mx-4 mt-4 rounded-2xl bg-card border border-border/50 overflow-hidden">
-            <div className="px-4 py-3 border-b border-border/40 flex items-center gap-2.5">
+            <button
+              onClick={() => setInsightsOpen(p => !p)}
+              className="w-full flex items-center gap-2.5 px-4 py-3"
+            >
               <div className="h-7 w-7 rounded-full bg-foreground/5 flex items-center justify-center shrink-0">
                 <Sparkles className="h-3.5 w-3.5 text-foreground/70" />
               </div>
-              <div>
+              <div className="flex-1 text-left">
                 <p className="text-sm font-semibold leading-tight">Zapisane informacje</p>
-                <p className="text-[11px] text-muted-foreground leading-tight">Na Twoje kolejne podróże</p>
+                <p className="text-[11px] text-muted-foreground leading-tight">{insights.length} wniosków na kolejne podróże</p>
               </div>
-            </div>
-            <ul className="divide-y divide-border/30">
-              {insights.map((ins, i) => (
-                <li key={i} className="flex items-start gap-3 px-4 py-3">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted rounded-md px-1.5 py-0.5 self-start mt-0.5 shrink-0">
-                    {categoryLabels[ins.category] ?? ins.category}
-                  </span>
-                  <span className="text-sm text-foreground/80 leading-snug">{ins.insight}</span>
-                </li>
-              ))}
-            </ul>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform shrink-0", insightsOpen && "rotate-180")} />
+            </button>
+            {insightsOpen && (
+              <ul className="divide-y divide-border/30 border-t border-border/40">
+                {insights.map((ins, i) => (
+                  <li key={i} className="flex items-start gap-3 px-4 py-3">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted rounded-md px-1.5 py-0.5 self-start mt-0.5 shrink-0">
+                      {categoryLabels[ins.category] ?? ins.category}
+                    </span>
+                    <span className="text-sm text-foreground/80 leading-snug">{ins.insight}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 
@@ -280,14 +286,14 @@ const ReviewSummary = () => {
             {chatOpen && (
               <div className="mt-1 rounded-2xl bg-card border border-border/50 overflow-hidden px-4 py-3 space-y-3">
                 {chatMessages
-                  .filter(m => m.content && m.content !== "Cześć! Opowiem Ci o moim dniu.")
+                  .filter(m => m.content && !m.content.startsWith("Skończyłem") && m.content !== "Cześć! Opowiem Ci o moim dniu.")
                   .map((m, i) => (
                     <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
                       <div className={cn(
                         "max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed",
                         m.role === "user"
                           ? "bg-foreground text-background"
-                          : "bg-muted text-foreground"
+                          : "bg-card border border-border/50 text-foreground"
                       )}>
                         {m.content}
                       </div>
@@ -297,7 +303,21 @@ const ReviewSummary = () => {
             )}
           </div>
         )}
+
+        <div className="h-6" />
       </div>
+
+      {/* Fixed bottom CTA — visible when user added photos or narrative */}
+      {(photos.length > 0 || narrative.trim().length > 0) && (
+        <div className="flex-shrink-0 px-4 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] border-t border-border/30 bg-background">
+          <button
+            onClick={() => navigate("/")}
+            className="w-full py-4 rounded-2xl bg-foreground text-background font-bold text-base active:scale-[0.98] transition-transform"
+          >
+            Gotowe — wróć do strony głównej
+          </button>
+        </div>
+      )}
     </div>
   );
 };
