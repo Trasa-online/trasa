@@ -442,6 +442,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
   } | null>(null);
   const [addPinDay, setAddPinDay] = useState<number | null>(null);
   const [showMap, setShowMap] = useState(false);
+  const [showSwapOptions, setShowSwapOptions] = useState(false);
 
   // Sheet snap state
   const [snap, setSnap] = useState<SnapState>("half");
@@ -1035,6 +1036,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
                         onClick={() => {
                           setDetailPin(null);
                           setDetailExtra(null);
+                          setShowSwapOptions(false);
                           setSnap("half");
                           requestAnimationFrame(() => {
                             if (carouselRef.current) carouselRef.current.scrollLeft = savedCarouselScroll.current;
@@ -1184,26 +1186,79 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
                     </div>
                   </div>
 
-                  <div className="flex-shrink-0 px-5 pb-6 pt-2 flex gap-2 border-t border-border/40">
-                    <button
-                      onClick={() => { handleRemovePin(detailPin.dayNumber, detailPin.pinIndex); setDetailPin(null); setDetailExtra(null); setSnap("half"); }}
-                      className="flex-1 py-3 rounded-xl border border-destructive/30 text-destructive text-sm font-medium"
-                    >
-                      Usuń z planu
-                    </button>
-                    <button
-                      onClick={() => {
-                        setDetailPin(null);
-                        setDetailExtra(null);
-                        setSnap("half");
-                        requestAnimationFrame(() => {
-                          if (carouselRef.current) carouselRef.current.scrollLeft = savedCarouselScroll.current;
-                        });
-                      }}
-                      className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
-                    >
-                      Zamknij
-                    </button>
+                  <div className="flex-shrink-0 border-t border-border/40">
+                    {showSwapOptions ? (() => {
+                      const inPlanNames = new Set(
+                        plan?.days.flatMap(d => d.pins).map(p => p.place_name.toLowerCase()) ?? []
+                      );
+                      const candidates = (likedPlaces ?? []).filter(
+                        name => !inPlanNames.has(name.toLowerCase())
+                      );
+                      return (
+                        <div className="px-5 pt-3 pb-6">
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-sm font-semibold text-foreground">Zamień na…</p>
+                            <button onClick={() => setShowSwapOptions(false)} className="text-xs text-muted-foreground">Anuluj</button>
+                          </div>
+                          {candidates.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-4">Brak innych wybranych miejsc</p>
+                          ) : (
+                            <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
+                              {candidates.map(name => (
+                                <button
+                                  key={name}
+                                  onClick={() => {
+                                    const old = detailPin.pin.place_name;
+                                    setDetailPin(null);
+                                    setDetailExtra(null);
+                                    setShowSwapOptions(false);
+                                    setSnap("half");
+                                    requestAnimationFrame(() => {
+                                      if (carouselRef.current) carouselRef.current.scrollLeft = savedCarouselScroll.current;
+                                    });
+                                    sendMessage(`Zamień ${old} na ${name}`);
+                                  }}
+                                  className="text-left px-4 py-3 rounded-xl bg-muted text-sm font-medium text-foreground active:scale-[0.97] transition-transform"
+                                >
+                                  {name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })() : (
+                      <div className="px-5 pb-6 pt-2 flex gap-2">
+                        <button
+                          onClick={() => { handleRemovePin(detailPin.dayNumber, detailPin.pinIndex); setDetailPin(null); setDetailExtra(null); setShowSwapOptions(false); setSnap("half"); }}
+                          className="flex-1 py-3 rounded-xl border border-destructive/30 text-destructive text-sm font-medium"
+                        >
+                          Usuń
+                        </button>
+                        {(likedPlaces?.length ?? 0) > 0 && (
+                          <button
+                            onClick={() => setShowSwapOptions(true)}
+                            className="flex-1 py-3 rounded-xl border border-border text-foreground text-sm font-medium"
+                          >
+                            Zamień
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            setDetailPin(null);
+                            setDetailExtra(null);
+                            setShowSwapOptions(false);
+                            setSnap("half");
+                            requestAnimationFrame(() => {
+                              if (carouselRef.current) carouselRef.current.scrollLeft = savedCarouselScroll.current;
+                            });
+                          }}
+                          className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
+                        >
+                          Zamknij
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (
@@ -1249,7 +1304,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
                           {plan.days.flatMap((day) =>
                             day.pins.map((pin, idx) => (
                               <LargeCarouselCard
-                                key={`${day.day_number}-${idx}`}
+                                key={`${day.day_number}-${pin.place_name}`}
                                 pin={pin}
                                 index={idx}
                                 dayLabel={plan.days.length > 1 ? `Dzień ${day.day_number}` : undefined}
