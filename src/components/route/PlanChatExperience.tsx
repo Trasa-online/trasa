@@ -1200,6 +1200,28 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
                     </div>
                   ) : (
                     <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+                      {/* Alt route switcher pills */}
+                      {altRoutes && altRoutes.length > 1 && onSwitchAlt && altIndex !== undefined && (
+                        <div className="flex gap-2 px-4 pb-2 overflow-x-auto scrollbar-none flex-shrink-0">
+                          {altRoutes.map((r, i) => {
+                            const active = i === altIndex;
+                            return (
+                              <button
+                                key={r.id}
+                                onClick={() => onSwitchAlt(i)}
+                                className={cn(
+                                  "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors",
+                                  active
+                                    ? "bg-foreground text-background"
+                                    : "bg-muted text-muted-foreground hover:text-foreground"
+                                )}
+                              >
+                                {r.title}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                       {/* Large card carousel — fills available height */}
                       <div className="flex-1 min-h-0 overflow-hidden py-2">
                         <div ref={carouselRef} className="h-full flex gap-3 overflow-x-auto px-[10vw] snap-x snap-mandatory scrollbar-none">
@@ -1249,7 +1271,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
       </div>
 
       {/* ── Sticky input area ────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-2" style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom, 8px))" }}>
+      <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-2 min-h-[56px]" style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom, 8px))" }}>
         <div className="flex items-center gap-2 max-w-lg mx-auto">
           {hasVoiceSupport && (
             <button

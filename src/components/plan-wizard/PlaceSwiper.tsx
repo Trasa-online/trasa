@@ -745,7 +745,7 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
       </div>
 
       {/* Card stack */}
-      <div className="relative mx-4 overflow-hidden" style={{ flex: "1 1 0", minHeight: 0 }}>
+      <div className="relative mx-4" style={{ height: "min(460px, 54dvh)" }}>
         {queue
           .slice(0, 3)
           .reverse()
@@ -797,14 +797,17 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
         </button>
       </div>
 
-      {/* Skip to plan link */}
+      {/* Proceed CTA */}
       {likedPlaces.length > 0 && (
-        <button
-          onClick={handleProceed}
-          className="pb-safe-4 pb-4 text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Pomiń · Zaplanuj z {likedPlaces.length} wybranych
-        </button>
+        <div className="px-4 pb-safe-4 pb-4 shrink-0">
+          <button
+            onClick={handleProceed}
+            className="w-full py-3.5 rounded-2xl bg-orange-500 text-white font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 active:scale-[0.97] transition-transform"
+          >
+            Zaplanuj z {likedPlaces.length} wybranych
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
       )}
 
       {/* Detail sheet */}
