@@ -188,7 +188,21 @@ function LargeCarouselCard({
   pin, index, dayLabel, onClick,
 }: { pin: PlanPin; index: number; dayLabel?: string; onClick: () => void }) {
   const [imgFailed, setImgFailed] = useState(false);
+  const [fetchedPhoto, setFetchedPhoto] = useState<string | null>(pin.photoUrl ?? null);
   const pointerStart = useRef<{ x: number; y: number; t: number } | null>(null);
+
+  useEffect(() => {
+    if (fetchedPhoto || !GOOGLE_MAPS_API_KEY) return;
+    supabase.functions
+      .invoke("google-places-proxy", {
+        body: { placeName: pin.place_name, latitude: pin.latitude || undefined, longitude: pin.longitude || undefined },
+      })
+      .then(({ data }) => {
+        const ref = data?.result?.photos?.[0]?.photo_reference;
+        if (ref) setFetchedPhoto(`https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${ref}&key=${GOOGLE_MAPS_API_KEY}`);
+      })
+      .catch(() => {});
+  }, [pin.place_name]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     pointerStart.current = { x: e.clientX, y: e.clientY, t: Date.now() };
@@ -215,8 +229,8 @@ function LargeCarouselCard({
     >
       {/* Hero image — 62% of card height */}
       <div className="relative flex-[62] min-h-0">
-        {pin.photoUrl && !imgFailed ? (
-          <img src={pin.photoUrl} alt={pin.place_name} className="w-full h-full object-cover" onError={() => setImgFailed(true)} />
+        {fetchedPhoto && !imgFailed ? (
+          <img src={fetchedPhoto} alt={pin.place_name} className="w-full h-full object-cover" onError={() => setImgFailed(true)} />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-br from-stone-100 to-stone-200 dark:from-stone-800 dark:to-stone-900">
             {CATEGORY_EMOJI[pin.category] ?? "📍"}
@@ -1178,7 +1192,14 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
                       Usuń z planu
                     </button>
                     <button
-                      onClick={() => { setDetailPin(null); setDetailExtra(null); setSnap("half"); }}
+                      onClick={() => {
+                        setDetailPin(null);
+                        setDetailExtra(null);
+                        setSnap("half");
+                        requestAnimationFrame(() => {
+                          if (carouselRef.current) carouselRef.current.scrollLeft = savedCarouselScroll.current;
+                        });
+                      }}
                       className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
                     >
                       Zamknij
