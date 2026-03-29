@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown, Map, ChevronLeft, ChevronRight } from "lucide-react";
+import { Send, Mic, MicOff, Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown, ChevronUp, Map, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -796,6 +796,24 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
     } : prev);
   };
 
+  const handleMovePin = (dayNumber: number, pinIndex: number, direction: "up" | "down") => {
+    setPlan(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        days: prev.days.map(d => {
+          if (d.day_number !== dayNumber) return d;
+          const pins = [...d.pins];
+          const swapWith = direction === "up" ? pinIndex - 1 : pinIndex + 1;
+          if (swapWith < 0 || swapWith >= pins.length) return d;
+          [pins[pinIndex], pins[swapWith]] = [pins[swapWith], pins[pinIndex]];
+          return { ...d, pins };
+        }),
+      };
+    });
+    setDetailPin(prev => prev ? { ...prev, pinIndex: direction === "up" ? pinIndex - 1 : pinIndex + 1 } : prev);
+  };
+
   const handleConfirm = () => {
     if (plan) onPlanReady(plan, messages);
   };
@@ -1276,35 +1294,62 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
                         </div>
                       );
                     })() : (
-                      <div className="px-5 pb-6 pt-2 flex gap-2">
-                        <button
-                          onClick={() => { handleRemovePin(detailPin.dayNumber, detailPin.pinIndex); setDetailPin(null); setDetailExtra(null); setShowSwapOptions(false); setSnap("half"); }}
-                          className="flex-1 py-3 rounded-xl border border-destructive/30 text-destructive text-sm font-medium"
-                        >
-                          Usuń
-                        </button>
-                        {(likedPlaces?.length ?? 0) > 0 && (
+                      <div className="px-5 pb-6 pt-2 space-y-2">
+                        {/* Reorder buttons */}
+                        {(() => {
+                          const day = plan?.days.find(d => d.day_number === detailPin.dayNumber);
+                          const total = day?.pins.length ?? 0;
+                          const idx = detailPin.pinIndex;
+                          if (total <= 1) return null;
+                          return (
+                            <div className="flex gap-2">
+                              <button
+                                disabled={idx === 0}
+                                onClick={() => handleMovePin(detailPin.dayNumber, idx, "up")}
+                                className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium flex items-center justify-center gap-1.5 disabled:opacity-30"
+                              >
+                                <ChevronUp className="h-4 w-4" /> Wyżej
+                              </button>
+                              <button
+                                disabled={idx === total - 1}
+                                onClick={() => handleMovePin(detailPin.dayNumber, idx, "down")}
+                                className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium flex items-center justify-center gap-1.5 disabled:opacity-30"
+                              >
+                                <ChevronDown className="h-4 w-4" /> Niżej
+                              </button>
+                            </div>
+                          );
+                        })()}
+                        <div className="flex gap-2">
                           <button
-                            onClick={() => setShowSwapOptions(true)}
-                            className="flex-1 py-3 rounded-xl border border-border text-foreground text-sm font-medium"
+                            onClick={() => { handleRemovePin(detailPin.dayNumber, detailPin.pinIndex); setDetailPin(null); setDetailExtra(null); setShowSwapOptions(false); setSnap("half"); }}
+                            className="flex-1 py-3 rounded-xl border border-destructive/30 text-destructive text-sm font-medium"
                           >
-                            Zamień
+                            Usuń
                           </button>
-                        )}
-                        <button
-                          onClick={() => {
-                            setDetailPin(null);
-                            setDetailExtra(null);
-                            setShowSwapOptions(false);
-                            setSnap("half");
-                            requestAnimationFrame(() => {
-                              if (carouselRef.current) carouselRef.current.scrollLeft = savedCarouselScroll.current;
-                            });
-                          }}
-                          className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
-                        >
-                          Zamknij
-                        </button>
+                          {(likedPlaces?.length ?? 0) > 0 && (
+                            <button
+                              onClick={() => setShowSwapOptions(true)}
+                              className="flex-1 py-3 rounded-xl border border-border text-foreground text-sm font-medium"
+                            >
+                              Zamień
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              setDetailPin(null);
+                              setDetailExtra(null);
+                              setShowSwapOptions(false);
+                              setSnap("half");
+                              requestAnimationFrame(() => {
+                                if (carouselRef.current) carouselRef.current.scrollLeft = savedCarouselScroll.current;
+                              });
+                            }}
+                            className="flex-1 py-3 rounded-xl bg-foreground text-background text-sm font-semibold"
+                          >
+                            Zamknij
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
