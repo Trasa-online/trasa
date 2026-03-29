@@ -173,6 +173,8 @@ const DayReview = () => {
         setMessages(prev => [...prev, { role: "assistant", content: data.message }]);
         setIsDone(true);
         setReviewSummary(data.summary ?? null);
+        // Mark route as reviewed so it moves to Dziennik tab
+        supabase.from("routes").update({ chat_status: "completed" } as any).eq("id", routeId).then(() => {});
         // Fire-and-forget: embed AAR into user memory for cross-trip recall
         supabase.functions.invoke("embed-memory", { body: { route_id: routeId } }).catch(() => {});
       } else {
