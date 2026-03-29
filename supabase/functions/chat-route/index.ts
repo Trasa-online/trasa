@@ -207,7 +207,7 @@ serve(async (req) => {
         Authorization: `Bearer ${GEMINI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gemini-2.0-flash",
+        model: "gemini-1.5-pro",
         messages: aiMessages,
         max_tokens: 2000,
         temperature: 0.7,
@@ -394,7 +394,7 @@ ${JSON.stringify({ city: summary.city, intent: summary.intent, highlight: summar
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${GEMINI_API_KEY}` },
         body: JSON.stringify({
-          model: "gemini-2.0-flash",
+          model: "gemini-1.5-pro",
           messages: [{ role: "user", content: insightsPrompt }],
           max_tokens: 400,
           temperature: 0.3,
