@@ -443,6 +443,28 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
   const [addPinDay, setAddPinDay] = useState<number | null>(null);
   const [showMap, setShowMap] = useState(false);
   const [showSwapOptions, setShowSwapOptions] = useState(false);
+  const [swapCandidates, setSwapCandidates] = useState<{ place_name: string; category: string; description: string; suggested_time: string | null; walking_time?: string | null }[]>([]);
+
+  // Fetch enriched swap candidates when swap panel opens
+  useEffect(() => {
+    if (!showSwapOptions || !likedPlaces?.length || !plan) return;
+    const inPlanNames = new Set(plan.days.flatMap(d => d.pins).map(p => p.place_name.toLowerCase()));
+    const candidateNames = likedPlaces.filter(n => !inPlanNames.has(n.toLowerCase()));
+    if (!candidateNames.length) { setSwapCandidates([]); return; }
+    (supabase as any)
+      .from("places")
+      .select("place_name, category, description, suggested_time")
+      .ilike("city", plan.city)
+      .in("place_name", candidateNames)
+      .then(({ data }: { data: any[] | null }) => {
+        if (!data?.length) {
+          setSwapCandidates(candidateNames.map(n => ({ place_name: n, category: "", description: "", suggested_time: null })));
+          return;
+        }
+        const placeMap = new globalThis.Map(data.map((p: any) => [p.place_name.toLowerCase(), p]));
+        setSwapCandidates(candidateNames.map(n => placeMap.get(n.toLowerCase()) ?? { place_name: n, category: "", description: "", suggested_time: null }));
+      });
+  }, [showSwapOptions, likedPlaces, plan]);
 
   // Sheet snap state
   const [snap, setSnap] = useState<SnapState>("half");
@@ -1188,25 +1210,19 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
 
                   <div className="flex-shrink-0 border-t border-border/40">
                     {showSwapOptions ? (() => {
-                      const inPlanNames = new Set(
-                        plan?.days.flatMap(d => d.pins).map(p => p.place_name.toLowerCase()) ?? []
-                      );
-                      const candidates = (likedPlaces ?? []).filter(
-                        name => !inPlanNames.has(name.toLowerCase())
-                      );
                       return (
                         <div className="px-5 pt-3 pb-6">
                           <div className="flex items-center justify-between mb-3">
                             <p className="text-sm font-semibold text-foreground">Zamień na…</p>
                             <button onClick={() => setShowSwapOptions(false)} className="text-xs text-muted-foreground">Anuluj</button>
                           </div>
-                          {candidates.length === 0 ? (
+                          {swapCandidates.length === 0 ? (
                             <p className="text-sm text-muted-foreground text-center py-4">Brak innych wybranych miejsc</p>
                           ) : (
-                            <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
-                              {candidates.map(name => (
+                            <div className="flex flex-col gap-2 max-h-56 overflow-y-auto">
+                              {swapCandidates.map(place => (
                                 <button
-                                  key={name}
+                                  key={place.place_name}
                                   onClick={() => {
                                     const old = detailPin.pin.place_name;
                                     setDetailPin(null);
@@ -1216,11 +1232,26 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
                                     requestAnimationFrame(() => {
                                       if (carouselRef.current) carouselRef.current.scrollLeft = savedCarouselScroll.current;
                                     });
-                                    sendMessage(`Zamień ${old} na ${name}`);
+                                    sendMessage(`Zamień ${old} na ${place.place_name}`);
                                   }}
-                                  className="text-left px-4 py-3 rounded-xl bg-muted text-sm font-medium text-foreground active:scale-[0.97] transition-transform"
+                                  className="text-left px-3 py-2.5 rounded-xl bg-muted active:scale-[0.97] transition-transform"
                                 >
-                                  {name}
+                                  <div className="flex items-start justify-between gap-2">
+                                    <span className="text-sm font-semibold text-foreground leading-tight">{place.place_name}</span>
+                                    {place.suggested_time && (
+                                      <span className="text-xs text-muted-foreground shrink-0 mt-0.5">{place.suggested_time}</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                    {place.category && (
+                                      <span className="text-[10px] bg-background border border-border/50 px-1.5 py-0.5 rounded-full text-muted-foreground">
+                                        {CATEGORY_EMOJI[place.category]} {CATEGORY_LABEL[place.category] ?? place.category}
+                                      </span>
+                                    )}
+                                    {place.description && (
+                                      <span className="text-xs text-muted-foreground truncate">{place.description}</span>
+                                    )}
+                                  </div>
                                 </button>
                               ))}
                             </div>
