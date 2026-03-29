@@ -36,7 +36,7 @@ const ReviewSummary = () => {
       if (!routeId || !user) return null;
       const { data } = await supabase
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight")
+        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative")
         .eq("id", routeId)
         .single();
       return data as any;
@@ -183,8 +183,12 @@ const ReviewSummary = () => {
                 )}
               </div>
             </div>
-            {route?.ai_summary && (
+            {route?.ai_summary ? (
               <p className="text-sm text-foreground/80 leading-relaxed">{route.ai_summary}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground/60 italic">
+                Brak podsumowania AI — dodaj zdjęcia i opis poniżej, żeby zachować wspomnienia z tego dnia.
+              </p>
             )}
             {route?.ai_highlight && (
               <div className="mt-3 px-3 py-2 rounded-xl bg-muted/60 text-sm text-muted-foreground italic">
