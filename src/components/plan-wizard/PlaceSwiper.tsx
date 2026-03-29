@@ -580,12 +580,38 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
     }
   }, [likedPlaces, bannerDismissed]);
 
+  const saveReaction = (place: MockPlace, reaction: "liked" | "skipped") => {
+    if (!user) return;
+    (supabase as any)
+      .from("user_place_reactions")
+      .upsert({
+        user_id: user.id,
+        place_id: place.id,
+        place_name: place.place_name,
+        city: place.city,
+        category: place.category,
+        photo_url: place.photo_url ?? null,
+        reaction,
+      }, { onConflict: "user_id,place_id" })
+      .then(() => {});
+  };
+
+  const deleteReaction = (placeId: string) => {
+    if (!user) return;
+    (supabase as any)
+      .from("user_place_reactions")
+      .delete()
+      .match({ user_id: user.id, place_id: placeId })
+      .then(() => {});
+  };
+
   const handleLike = () => {
     const [top, ...rest] = queue;
     if (!top) return;
     setHistory(prev => [...prev, { place: top, wasLiked: true }]);
     setLikedPlaces((prev) => [...prev, top]);
     setQueue(rest);
+    saveReaction(top, "liked");
   };
 
   const handleSkip = () => {
@@ -594,6 +620,7 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
     setHistory(prev => [...prev, { place: top, wasLiked: false }]);
     setSkippedPlaces((prev) => [...prev, top]);
     setQueue(rest);
+    saveReaction(top, "skipped");
   };
 
   const handleUndo = () => {
@@ -606,6 +633,7 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
     } else {
       setSkippedPlaces(prev => prev.filter(p => p.id !== last.place.id));
     }
+    deleteReaction(last.place.id);
     setShowBanner(false);
   };
 
