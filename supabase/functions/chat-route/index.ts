@@ -180,9 +180,9 @@ serve(async (req) => {
 
     const systemPrompt = buildSystemPrompt(pinsContext, pins.length, hasNextDay);
 
-    // Call AI via Lovable gateway
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    // Call AI via Google Gemini API
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
       return new Response(
         JSON.stringify({ error: "AI API key not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -200,14 +200,14 @@ serve(async (req) => {
       ...userMessages,
     ];
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-1.5-pro",
+        model: "gemini-2.0-flash",
         messages: aiMessages,
         max_tokens: 2000,
         temperature: 0.7,
@@ -380,8 +380,8 @@ async function saveToDatabase(
 
   // 6. Extract user insights for personalization
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (LOVABLE_API_KEY) {
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (GEMINI_API_KEY) {
       const insightsPrompt = `Na podstawie poniższego podsumowania dnia podróży wyekstrahuj 3-5 wniosków o preferencjach i stylu podróżowania usera.
 Zwróć TYLKO valid JSON array, bez markdown, bez opisu. Każdy element: {"category": "...", "insight": "..."}.
 Kategorie (użyj jednej): pace, food, interests, avoid, preferences.
@@ -390,11 +390,11 @@ Przykłady: {"category":"pace","insight":"Preferuje spokojne tempo, max 4 miejsc
 Dane wejściowe:
 ${JSON.stringify({ city: summary.city, intent: summary.intent, highlight: summary.highlight, tip: summary.tip, deviations: summary.deviations, pins: summary.pins?.map((p: any) => ({ name: p.place_name, sentiment: p.sentiment, was_skipped: p.was_skipped, skip_reason: p.skip_reason })) })}`;
 
-      const insightsResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const insightsResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${GEMINI_API_KEY}` },
         body: JSON.stringify({
-          model: "google/gemini-1.5-pro",
+          model: "gemini-2.0-flash",
           messages: [{ role: "user", content: insightsPrompt }],
           max_tokens: 400,
           temperature: 0.3,
