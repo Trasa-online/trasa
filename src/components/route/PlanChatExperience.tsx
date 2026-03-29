@@ -942,7 +942,14 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
           const mapsAppUrl = allPins.length > 0
             ? `https://www.google.com/maps/dir/${allPins.map(p => `${p.latitude},${p.longitude}`).join("/")}`
             : "";
-          const staticUrl = `https://maps.googleapis.com/maps/api/staticmap?size=800x800&scale=2&${markers}&key=${GOOGLE_MAPS_API_KEY}`;
+          const origin = allPins[0];
+          const destination = allPins[allPins.length - 1];
+          const waypoints = allPins.slice(1, -1).map(p => `${p.latitude},${p.longitude}`).join("|");
+          const embedUrl = allPins.length >= 2
+            ? `https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_API_KEY}&origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}${waypoints ? `&waypoints=${waypoints}` : ""}&mode=walking`
+            : allPins.length === 1
+              ? `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${origin.latitude},${origin.longitude}`
+              : "";
           return (
             <div className="absolute inset-0 bg-background z-30 flex flex-col">
               <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 shrink-0">
@@ -957,8 +964,18 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
                   </a>
                 )}
               </div>
-              <div className="flex-1 overflow-auto">
-                <img src={staticUrl} alt="Mapa trasy" className="w-full" />
+              <div className="flex-1 relative">
+                {embedUrl ? (
+                  <iframe
+                    src={embedUrl}
+                    className="absolute inset-0 w-full h-full border-0"
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Brak danych mapy</div>
+                )}
               </div>
               <div className="shrink-0 px-4 py-3 border-t border-border/40 space-y-1.5 max-h-44 overflow-y-auto">
                 {allPins.map((p, i) => (

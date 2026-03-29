@@ -127,6 +127,9 @@ const DayReview = () => {
     return () => clearTimeout(timer);
   }, [isDone, navigate, routeId, reviewSummary, messages]);
 
+  const stripMarkdown = (text: string) =>
+    text.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/#{1,6}\s/g, "");
+
   // Send message to chat-route edge function
   const callChatRoute = useCallback(async (chatMessages: ChatMessage[]) => {
     if (!routeId || !session?.access_token) return;
@@ -170,7 +173,7 @@ const DayReview = () => {
       const data = await response.json();
 
       if (data.done) {
-        setMessages(prev => [...prev, { role: "assistant", content: data.message }]);
+        setMessages(prev => [...prev, { role: "assistant", content: stripMarkdown(data.message) }]);
         setIsDone(true);
         setReviewSummary(data.summary ?? null);
         // Mark route as reviewed so it moves to Dziennik tab
@@ -178,7 +181,7 @@ const DayReview = () => {
         // Fire-and-forget: embed AAR into user memory for cross-trip recall
         supabase.functions.invoke("embed-memory", { body: { route_id: routeId } }).catch(() => {});
       } else {
-        setMessages(prev => [...prev, { role: "assistant", content: data.message }]);
+        setMessages(prev => [...prev, { role: "assistant", content: stripMarkdown(data.message) }]);
       }
     } catch (err) {
       console.error("Failed to call chat-route:", err);
