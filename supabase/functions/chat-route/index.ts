@@ -214,10 +214,10 @@ serve(async (req) => {
         body: geminiRequestBody,
       });
 
-    let aiResponse = await callGemini("gemini-2.5-pro");
+    let aiResponse = await callGemini("gemini-2.5-flash");
     if (!aiResponse.ok) {
-      console.warn("gemini-2.5-pro failed, falling back to gemini-2.5-flash");
-      aiResponse = await callGemini("gemini-2.5-flash");
+      console.warn("gemini-2.5-flash failed, falling back to gemini-2.5-pro");
+      aiResponse = await callGemini("gemini-2.5-pro");
     }
 
     if (!aiResponse.ok) {
@@ -235,13 +235,16 @@ serve(async (req) => {
     // Fallback for empty response (safety filter, token limit, etc.)
     const safeText = assistantText || "Dziękuję za rozmowę! Zapisuję podsumowanie Twojego dnia.";
 
-    // Always strip <route_summary> block before showing to user
+    // Strip <route_summary> block — handles both closed and unclosed tags (truncated responses)
     const cleanMessage = safeText
-      .replace(/<route_summary>[\s\S]*?<\/route_summary>/, "")
+      .replace(/<route_summary>[\s\S]*?<\/route_summary>/g, "")
+      .replace(/<route_summary>[\s\S]*/g, "")
       .trim() || "Dziękuję! Zapisuję podsumowanie Twojego dnia.";
 
-    // Check if conversation complete
-    const summaryMatch = safeText.match(/<route_summary>([\s\S]*?)<\/route_summary>/);
+    // Check if conversation complete — try closed tag first, then extract partial JSON
+    const closedMatch = safeText.match(/<route_summary>([\s\S]*?)<\/route_summary>/);
+    const openMatch = !closedMatch ? safeText.match(/<route_summary>([\s\S]*)$/) : null;
+    const summaryMatch = closedMatch || openMatch;
 
     if (summaryMatch) {
       try {

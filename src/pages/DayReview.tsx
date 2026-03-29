@@ -302,7 +302,7 @@ const DayReview = () => {
   return (
     <div className="h-[100dvh] bg-background flex flex-col">
       {/* Header */}
-      <header className="bg-muted px-4 py-4 flex items-center justify-between">
+      <header className="bg-muted px-4 pt-[max(16px,env(safe-area-inset-top))] pb-4 flex items-center justify-between">
         <button onClick={() => navigate("/")} className="p-1 text-foreground/70">
           <ArrowLeft className="h-6 w-6" />
         </button>
