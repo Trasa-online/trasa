@@ -52,6 +52,7 @@ interface PlanChatExperienceProps {
   preferences: TripPreferences;
   onPlanReady: (plan: RoutePlan, messages: TextMessage[]) => void;
   likedPlaces?: string[];
+  likedPlacesData?: { place_name: string; category: string; description: string }[];
   skippedPlaces?: string[];
   idealDay?: string;
   initialUserMessage?: string;
@@ -421,7 +422,7 @@ function getCurrentTimeContext(): { current_time: string; current_date: string }
   };
 }
 
-const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt }: PlanChatExperienceProps) => {
+const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlacesData, skippedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt }: PlanChatExperienceProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
@@ -451,6 +452,18 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
     const inPlanNames = new Set(plan.days.flatMap(d => d.pins).map(p => p.place_name.toLowerCase()));
     const candidateNames = likedPlaces.filter(n => !inPlanNames.has(n.toLowerCase()));
     if (!candidateNames.length) { setSwapCandidates([]); return; }
+
+    // Use pre-loaded swipe data if available (avoids DB lookup)
+    if (likedPlacesData?.length) {
+      const dataMap = new globalThis.Map(likedPlacesData.map(p => [p.place_name.toLowerCase(), p]));
+      setSwapCandidates(candidateNames.map(n => {
+        const d = dataMap.get(n.toLowerCase());
+        return d ? { ...d, suggested_time: null } : { place_name: n, category: "", description: "", suggested_time: null };
+      }));
+      return;
+    }
+
+    // Fallback: query DB
     (supabase as any)
       .from("places")
       .select("place_name, category, description, suggested_time")
@@ -464,7 +477,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, skippedPlac
         const placeMap = new globalThis.Map(data.map((p: any) => [p.place_name.toLowerCase(), p]));
         setSwapCandidates(candidateNames.map(n => placeMap.get(n.toLowerCase()) ?? { place_name: n, category: "", description: "", suggested_time: null }));
       });
-  }, [showSwapOptions, likedPlaces, plan]);
+  }, [showSwapOptions, likedPlaces, likedPlacesData, plan]);
 
   // Sheet snap state
   const [snap, setSnap] = useState<SnapState>("half");
