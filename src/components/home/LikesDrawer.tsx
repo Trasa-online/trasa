@@ -31,51 +31,6 @@ const CATEGORY_LABEL: Record<string, string> = {
   shopping: "Zakupy", experience: "Rozrywka",
 };
 
-// ─── Context menu ─────────────────────────────────────────────────────────────
-
-function ContextMenu({
-  reaction,
-  onToggle,
-  onRemove,
-  onClose,
-  anchorY,
-}: {
-  reaction: "liked" | "skipped";
-  onToggle: () => void;
-  onRemove: () => void;
-  onClose: () => void;
-  anchorY: number;
-}) {
-  const windowH = window.innerHeight;
-  const menuH = 110;
-  const top = anchorY + menuH > windowH ? anchorY - menuH : anchorY;
-
-  return (
-    <>
-      <div className="fixed inset-0 z-[60]" onClick={onClose} />
-      <div
-        className="fixed left-4 right-4 z-[61] bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
-        style={{ top }}
-      >
-        <button
-          onClick={() => { onToggle(); onClose(); }}
-          className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-medium text-left active:bg-muted/60 border-b border-border/50"
-        >
-          {reaction === "liked"
-            ? <><ThumbsDown className="h-4 w-4 text-muted-foreground" /> Przenieś do odrzuconych</>
-            : <><Heart className="h-4 w-4 text-rose-500" /> Przenieś do polubionych</>}
-        </button>
-        <button
-          onClick={() => { onRemove(); onClose(); }}
-          className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-medium text-left active:bg-muted/60 text-destructive"
-        >
-          <Trash2 className="h-4 w-4" /> Usuń
-        </button>
-      </div>
-    </>
-  );
-}
-
 // ─── PlaceRow ─────────────────────────────────────────────────────────────────
 
 const SWIPE_THRESHOLD = 72;
@@ -90,34 +45,14 @@ function PlaceRow({
   onRemove: () => void;
 }) {
   const [offsetX, setOffsetX] = useState(0);
-  const [contextMenu, setContextMenu] = useState<{ y: number } | null>(null);
   const startX = useRef(0);
   const startY = useRef(0);
   const isSwiping = useRef(false);
-  const isLongPress = useRef(false);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const rowRef = useRef<HTMLDivElement>(null);
-
-  const cancelLongPress = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  };
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     startX.current = e.clientX;
     startY.current = e.clientY;
     isSwiping.current = false;
-    isLongPress.current = false;
-
-    longPressTimer.current = setTimeout(() => {
-      if (!isSwiping.current) {
-        isLongPress.current = true;
-        const rect = rowRef.current?.getBoundingClientRect();
-        setContextMenu({ y: rect ? rect.bottom + 4 : e.clientY });
-      }
-    }, 500);
   }, []);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
@@ -126,7 +61,6 @@ function PlaceRow({
 
     if (!isSwiping.current && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
       isSwiping.current = true;
-      cancelLongPress();
     }
 
     if (isSwiping.current) {
@@ -135,7 +69,6 @@ function PlaceRow({
   }, []);
 
   const handlePointerUp = useCallback(() => {
-    cancelLongPress();
     if (isSwiping.current && offsetX <= -SWIPE_THRESHOLD) {
       onRemove();
     } else {
@@ -145,7 +78,6 @@ function PlaceRow({
   }, [offsetX, onRemove]);
 
   const handlePointerCancel = useCallback(() => {
-    cancelLongPress();
     setOffsetX(0);
     isSwiping.current = false;
   }, []);
@@ -153,10 +85,10 @@ function PlaceRow({
   const deleteReveal = Math.min(1, Math.abs(offsetX) / SWIPE_THRESHOLD);
 
   return (
-    <div ref={rowRef} className="relative overflow-hidden">
+    <div className="relative overflow-hidden">
       {/* Swipe-left delete background */}
       <div
-        className="absolute inset-y-0 right-0 flex items-center justify-end px-5 bg-destructive rounded-2xl"
+        className="absolute inset-y-0 right-0 flex items-center justify-end px-5 bg-destructive"
         style={{ opacity: deleteReveal, width: `${Math.max(56, Math.abs(offsetX))}px` }}
       >
         <Trash2 className="h-5 w-5 text-white" />
@@ -164,7 +96,7 @@ function PlaceRow({
 
       {/* Row content */}
       <div
-        className="relative flex items-center gap-3 py-2.5 px-4 bg-background touch-pan-y"
+        className="relative flex items-center gap-3 py-2.5 px-4 bg-background touch-pan-y select-none"
         style={{ transform: `translateX(${offsetX}px)`, transition: isSwiping.current ? "none" : "transform 0.2s ease" }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -192,18 +124,18 @@ function PlaceRow({
             </span>
           )}
         </div>
-      </div>
 
-      {/* Long-press context menu */}
-      {contextMenu && (
-        <ContextMenu
-          reaction={place.reaction}
-          onToggle={onToggle}
-          onRemove={onRemove}
-          onClose={() => setContextMenu(null)}
-          anchorY={contextMenu.y}
-        />
-      )}
+        {/* Move to other section */}
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={onToggle}
+          className="flex-shrink-0 h-8 px-2.5 rounded-full bg-muted flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground active:bg-muted/70"
+        >
+          {place.reaction === "liked"
+            ? <><ThumbsDown className="h-3 w-3" /> Odrzuć</>
+            : <><Heart className="h-3 w-3" /> Polub</>}
+        </button>
+      </div>
     </div>
   );
 }
@@ -258,7 +190,6 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
 
   const filtered = reactions.filter(r => r.reaction === tab);
 
-  // Group only by city
   const byCity = filtered.reduce<Record<string, PlaceReaction[]>>((acc, p) => {
     if (!acc[p.city]) acc[p.city] = [];
     acc[p.city].push(p);
@@ -302,9 +233,7 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
             onClick={() => setTab("liked")}
             className={cn(
               "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors",
-              tab === "liked"
-                ? "bg-rose-500 text-white"
-                : "bg-muted text-muted-foreground"
+              tab === "liked" ? "bg-rose-500 text-white" : "bg-muted text-muted-foreground"
             )}
           >
             <Heart className={cn("h-3.5 w-3.5", tab === "liked" && "fill-current")} />
@@ -322,9 +251,7 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
             onClick={() => setTab("skipped")}
             className={cn(
               "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors",
-              tab === "skipped"
-                ? "bg-foreground text-background"
-                : "bg-muted text-muted-foreground"
+              tab === "skipped" ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
             )}
           >
             <ThumbsDown className="h-3.5 w-3.5" />
@@ -352,28 +279,22 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
                 <>
                   <Heart className="h-10 w-10 text-muted-foreground/30" />
                   <p className="text-sm font-medium text-foreground/70">Brak polubionych miejsc</p>
-                  <p className="text-xs text-muted-foreground">
-                    Przeglądaj miejsca i lajkuj to, co Cię kręci.
-                  </p>
+                  <p className="text-xs text-muted-foreground">Przeglądaj miejsca i lajkuj to, co Cię kręci.</p>
                 </>
               ) : (
                 <>
                   <ThumbsDown className="h-10 w-10 text-muted-foreground/30" />
                   <p className="text-sm font-medium text-foreground/70">Brak odrzuconych miejsc</p>
-                  <p className="text-xs text-muted-foreground">
-                    Miejsca, które pominiesz podczas swipowania, pojawią się tutaj.
-                  </p>
+                  <p className="text-xs text-muted-foreground">Miejsca, które pominiesz podczas swipowania, pojawią się tutaj.</p>
                 </>
               )}
             </div>
           ) : (
             Object.entries(byCity).map(([city, cityPlaces]) => (
               <div key={city} className="mb-4">
-                {/* City header */}
                 <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {city}
                 </p>
-                {/* Flat list */}
                 <div className="mx-4 rounded-2xl bg-card border border-border/50 overflow-hidden divide-y divide-border/20">
                   {cityPlaces.map(p => (
                     <PlaceRow
