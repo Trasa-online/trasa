@@ -967,20 +967,40 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
         {/* ── Map overlay ─────────────────────────────────────────────────── */}
         {showMap && plan && (() => {
           const allPins = plan.days.flatMap(d => d.pins).filter(p => p.latitude && p.longitude);
-          const markers = allPins.map((p, i) =>
-            `markers=color:0xff6b35%7Clabel:${i + 1}%7C${p.latitude},${p.longitude}`
-          ).join("&");
           const mapsAppUrl = allPins.length > 0
             ? `https://www.google.com/maps/dir/${allPins.map(p => `${p.latitude},${p.longitude}`).join("/")}`
             : "";
-          const origin = allPins[0];
-          const destination = allPins[allPins.length - 1];
-          const waypoints = allPins.slice(1, -1).map(p => `${p.latitude},${p.longitude}`).join("|");
-          const embedUrl = allPins.length >= 2
-            ? `https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_API_KEY}&origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}${waypoints ? `&waypoints=${waypoints}` : ""}&mode=walking`
-            : allPins.length === 1
-              ? `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${origin.latitude},${origin.longitude}`
-              : "";
+          const pinsJson = JSON.stringify(allPins.map((p, i) => ({
+            lat: p.latitude, lng: p.longitude,
+            name: p.place_name, time: p.suggested_time || "", index: i + 1,
+          })));
+          const leafletHtml = `<!DOCTYPE html><html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{height:100vh;overflow:hidden}
+#map{height:100vh;width:100%}
+.pm{background:#f97316;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:-apple-system,sans-serif;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.leaflet-popup-content{margin:10px 14px}
+.pn{font-size:13px;font-weight:600;font-family:-apple-system,sans-serif}
+.pt{font-size:11px;color:#888;margin-top:2px;font-family:-apple-system,sans-serif}
+</style></head><body><div id="map"></div>
+<script>
+const pins=${pinsJson};
+const map=L.map('map',{zoomControl:true,attributionControl:false});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
+const coords=pins.map(p=>[p.lat,p.lng]);
+if(coords.length>1)L.polyline(coords,{color:'#f97316',weight:3,opacity:.6,dashArray:'7 5'}).addTo(map);
+pins.forEach(p=>{
+  const icon=L.divIcon({className:'',html:'<div class="pm">'+p.index+'</div>',iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-18]});
+  L.marker([p.lat,p.lng],{icon}).bindPopup('<div class="pn">'+p.name+'</div>'+(p.time?'<div class="pt">'+p.time+'</div>':'')).addTo(map);
+});
+if(coords.length>1)map.fitBounds(coords,{padding:[50,50]});
+else if(coords.length===1)map.setView(coords[0],15);
+<\/script></body></html>`;
           return (
             <div className="absolute inset-0 bg-background z-30 flex flex-col">
               <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 shrink-0">
@@ -996,13 +1016,11 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
                 )}
               </div>
               <div className="flex-1 relative">
-                {embedUrl ? (
+                {allPins.length > 0 ? (
                   <iframe
-                    src={embedUrl}
+                    srcDoc={leafletHtml}
                     className="absolute inset-0 w-full h-full border-0"
-                    allowFullScreen
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
+                    sandbox="allow-scripts"
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Brak danych mapy</div>
