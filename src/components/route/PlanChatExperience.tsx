@@ -263,9 +263,30 @@ function LargeCarouselCard({
             <span className="text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5">{dayLabel}</span>
           )}
         </div>
-        {/* Creator avatars */}
+        {/* Reorder arrows — same row as number, right edge */}
+        {(onMoveUp || onMoveDown) && (
+          <div className="absolute top-3 right-3 flex items-center gap-1">
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); onMoveUp?.(); }}
+              disabled={isFirst}
+              className="h-7 w-7 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center disabled:opacity-25 active:bg-black/80 transition-colors"
+            >
+              <ChevronUp className="h-3.5 w-3.5 text-white" />
+            </button>
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); onMoveDown?.(); }}
+              disabled={isLast}
+              className="h-7 w-7 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center disabled:opacity-25 active:bg-black/80 transition-colors"
+            >
+              <ChevronDown className="h-3.5 w-3.5 text-white" />
+            </button>
+          </div>
+        )}
+        {/* Creator avatars — below reorder row */}
         {(pin.creators?.length ?? 0) > 0 && (
-          <div className="absolute top-3 right-3 flex -space-x-1.5">
+          <div className="absolute top-12 right-3 flex -space-x-1.5">
             {pin.creators!.slice(0, 3).map((c, i) => (
               <CreatorAvatar key={i} name={c.name} thumbnailUrl={c.thumbnailUrl} zIndex={10 - i} />
             ))}
@@ -297,25 +318,6 @@ function LargeCarouselCard({
             <p className="text-[11px] text-muted-foreground/60 mt-auto">🚶 {pin.walking_time_from_prev}</p>
           )}
         </div>
-        {/* Right: reorder arrows — only shown when handlers provided */}
-        {(onMoveUp || onMoveDown) && (
-          <div className="flex flex-col justify-center gap-1 shrink-0">
-            <button
-              onClick={e => { e.stopPropagation(); onMoveUp?.(); }}
-              disabled={isFirst}
-              className="h-8 w-8 rounded-lg border border-border/60 flex items-center justify-center disabled:opacity-25 active:bg-muted transition-colors"
-            >
-              <ChevronUp className="h-4 w-4" />
-            </button>
-            <button
-              onClick={e => { e.stopPropagation(); onMoveDown?.(); }}
-              disabled={isLast}
-              className="h-8 w-8 rounded-lg border border-border/60 flex items-center justify-center disabled:opacity-25 active:bg-muted transition-colors"
-            >
-              <ChevronDown className="h-4 w-4" />
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
