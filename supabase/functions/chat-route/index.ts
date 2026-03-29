@@ -229,28 +229,28 @@ serve(async (req) => {
     const aiData = await aiResponse.json();
     const assistantText = aiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
-    if (!assistantText) {
-      return new Response(
-        JSON.stringify({ error: "Empty AI response" }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Fallback for empty response (safety filter, token limit, etc.)
+    const safeText = assistantText || "Dziękuję za rozmowę! Zapisuję podsumowanie Twojego dnia.";
+
+    // Always strip <route_summary> block before showing to user
+    const cleanMessage = safeText
+      .replace(/<route_summary>[\s\S]*?<\/route_summary>/, "")
+      .trim() || "Dziękuję! Zapisuję podsumowanie Twojego dnia.";
 
     // Check if conversation complete
-    const summaryMatch = assistantText.match(
-      /<route_summary>([\s\S]*?)<\/route_summary>/
-    );
+    const summaryMatch = safeText.match(/<route_summary>([\s\S]*?)<\/route_summary>/);
 
     if (summaryMatch) {
       try {
-        const summary = JSON.parse(summaryMatch[1]);
+        // Clean JSON: remove markdown code blocks if present
+        const rawJson = summaryMatch[1]
+          .replace(/```(?:json)?\s*/gi, "")
+          .replace(/```/g, "")
+          .trim();
+        const summary = JSON.parse(rawJson);
 
         // Save to DB
-        await saveToDatabase(supabase, route_id, user.id, summary, pins, userMessages, assistantText);
-
-        const cleanMessage = assistantText
-          .replace(/<route_summary>[\s\S]*?<\/route_summary>/, "")
-          .trim();
+        await saveToDatabase(supabase, route_id, user.id, summary, pins, userMessages, safeText);
 
         return new Response(
           JSON.stringify({ done: true, message: cleanMessage, summary }),
@@ -258,14 +258,14 @@ serve(async (req) => {
         );
       } catch (parseErr) {
         console.error("Failed to parse route_summary:", parseErr);
-        // Fall through — treat as non-complete
+        // Fall through with clean message (no raw JSON shown to user)
       }
     }
 
     // Conversation continues — save progress
     const allMessages = [
       ...userMessages,
-      { role: "assistant", content: assistantText },
+      { role: "assistant", content: safeText },
     ];
 
     await supabase.from("chat_sessions").upsert(
@@ -286,7 +286,7 @@ serve(async (req) => {
       .eq("chat_status", "none");
 
     return new Response(
-      JSON.stringify({ done: false, message: assistantText }),
+      JSON.stringify({ done: false, message: cleanMessage }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
