@@ -29,7 +29,6 @@ const ReviewSummary = () => {
   const narrativeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch route data
   const { data: route } = useQuery({
     queryKey: ["review-summary-route", routeId],
     queryFn: async () => {
@@ -44,7 +43,6 @@ const ReviewSummary = () => {
     enabled: !!routeId && !!user,
   });
 
-  // Fetch chat history (fallback if not in location state)
   const { data: chatSession } = useQuery({
     queryKey: ["review-chat-session", routeId],
     queryFn: async () => {
@@ -59,7 +57,6 @@ const ReviewSummary = () => {
     enabled: !!routeId && !!user && !locationState?.messages,
   });
 
-  // Fetch user insights for this route
   const { data: insights } = useQuery({
     queryKey: ["route-insights", routeId],
     queryFn: async () => {
@@ -73,18 +70,14 @@ const ReviewSummary = () => {
     enabled: !!routeId && !!user,
   });
 
-  // Populate from DB when loaded
   useEffect(() => {
     if (route?.review_narrative) setNarrative(route.review_narrative);
     if (route?.review_photos?.length) setPhotos(route.review_photos);
   }, [route?.review_narrative, route?.review_photos]);
 
   const chatMessages: { role: string; content: string }[] =
-    locationState?.messages ??
-    (chatSession?.messages as any) ??
-    [];
+    locationState?.messages ?? (chatSession?.messages as any) ?? [];
 
-  // Debounced save of narrative
   const saveNarrative = useCallback((value: string) => {
     if (!routeId) return;
     if (narrativeTimer.current) clearTimeout(narrativeTimer.current);
@@ -104,31 +97,22 @@ const ReviewSummary = () => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length || !routeId || !user) return;
     setUploading(true);
-
     const newUrls: string[] = [];
     for (const file of files.slice(0, 6 - photos.length)) {
       try {
         const compressed = await compressImage(file, 1200, 1200, 0.8);
-        const ext = "jpg";
-        const path = `${user.id}/${routeId}/review_${Date.now()}.${ext}`;
+        const path = `${user.id}/${routeId}/review_${Date.now()}.jpg`;
         const { error } = await supabase.storage
           .from("route-images")
           .upload(path, compressed, { contentType: "image/jpeg", upsert: false });
-        if (!error) {
-          const url = `${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`;
-          newUrls.push(url);
-        }
-      } catch (err) {
-        console.error("Photo upload error:", err);
-      }
+        if (!error) newUrls.push(`${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`);
+      } catch {}
     }
-
     if (newUrls.length) {
       const updated = [...photos, ...newUrls];
       setPhotos(updated);
       await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
     }
-
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -146,119 +130,167 @@ const ReviewSummary = () => {
     : "";
 
   const categoryLabels: Record<string, string> = {
-    pace: "Tempo",
-    food: "Jedzenie",
-    interests: "Zainteresowania",
-    avoid: "Unikaj",
-    preferences: "Preferencje",
+    pace: "Tempo", food: "Jedzenie", interests: "Zainteresowania",
+    avoid: "Unikaj", preferences: "Preferencje",
   };
 
-  if (!user) {
-    navigate("/auth");
-    return null;
-  }
+  if (!user) { navigate("/auth"); return null; }
+
+  const heroPhoto = photos[0];
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col">
-      {/* Header */}
-      <header className="bg-muted px-4 pt-safe-4 pb-4 flex items-center gap-3 flex-shrink-0">
-        <button onClick={() => navigate("/")} className="p-1 text-foreground/70 shrink-0">
-          <ArrowLeft className="h-6 w-6" />
-        </button>
-        <h1 className="text-lg font-semibold truncate flex-1">Podsumowanie dnia</h1>
-        {saving && <span className="text-xs text-muted-foreground shrink-0">Zapisywanie...</span>}
-      </header>
 
-      <div className="flex-1 overflow-y-auto pb-8">
-        {/* Summary card */}
-        <div className="mx-4 mt-4 rounded-2xl bg-card border border-border/50 overflow-hidden">
-          <div className="px-4 py-4">
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <div>
-                <h2 className="text-xl font-bold leading-tight">{cityLabel}</h2>
-                {(dayLabel || dateLabel) && (
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    {[dayLabel, dateLabel].filter(Boolean).join(" · ")}
-                  </p>
-                )}
-              </div>
-            </div>
-            {route?.ai_summary ? (
-              <p className="text-sm text-foreground/80 leading-relaxed">{route.ai_summary}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground/60 italic">
-                Brak podsumowania AI — dodaj zdjęcia i opis poniżej, żeby zachować wspomnienia z tego dnia.
-              </p>
-            )}
-            {route?.ai_highlight && (
-              <div className="mt-3 px-3 py-2 rounded-xl bg-muted/60 text-sm text-muted-foreground italic">
-                "{route.ai_highlight}"
-              </div>
-            )}
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <div className="relative w-full aspect-[4/5] flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
+        {heroPhoto && (
+          <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        )}
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/75" />
+
+        {/* No photo placeholder */}
+        {!heroPhoto && (
+          <div className="absolute inset-0 flex items-center justify-center text-8xl opacity-20 select-none">
+            🗺️
           </div>
+        )}
+
+        {/* Back + save indicator */}
+        <div className="absolute left-0 right-0 flex items-center justify-between px-4"
+          style={{ top: "max(16px, env(safe-area-inset-top, 16px))" }}>
+          <button
+            onClick={() => navigate("/")}
+            className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center"
+          >
+            <ArrowLeft className="h-5 w-5 text-white" />
+          </button>
+          {saving && (
+            <span className="text-xs text-white/70 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5">
+              Zapisywanie...
+            </span>
+          )}
         </div>
 
-        {/* Photos section */}
-        <div className="mx-4 mt-4">
-          <p className="text-sm font-medium mb-2">Zdjęcia</p>
-          <div className="flex gap-2 flex-wrap">
-            {photos.map((url) => (
-              <div key={url} className="relative w-20 h-20 rounded-xl overflow-hidden border border-border/40">
-                <img src={url} alt="" className="w-full h-full object-cover" />
-                <button
-                  onClick={() => removePhoto(url)}
-                  className="absolute top-0.5 right-0.5 bg-black/60 rounded-full p-0.5"
-                >
-                  <X className="h-3 w-3 text-white" />
-                </button>
-              </div>
-            ))}
-            {photos.length < 6 && (
+        {/* City + date */}
+        <div className="absolute bottom-0 left-0 right-0 px-5 pb-6">
+          {dateLabel && (
+            <p className="text-white/70 text-sm mb-1">{dateLabel}</p>
+          )}
+          <h1 className="text-white text-3xl font-black leading-tight drop-shadow-sm">
+            {cityLabel}
+          </h1>
+          {dayLabel && (
+            <p className="text-white/70 text-base font-medium mt-0.5">{dayLabel}</p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Scrollable content ────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto pb-32">
+
+        {/* AI highlight — big pull quote */}
+        {route?.ai_highlight && (
+          <div className="px-5 pt-6 pb-5 border-b border-border/30">
+            <p className="text-[22px] font-bold leading-snug text-foreground">
+              „{route.ai_highlight}"
+            </p>
+          </div>
+        )}
+
+        {/* AI summary */}
+        <div className="px-5 pt-5 pb-5 border-b border-border/30">
+          {route?.ai_summary ? (
+            <p className="text-sm text-foreground/70 leading-relaxed">{route.ai_summary}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground/50 italic leading-relaxed">
+              Brak podsumowania AI — dodaj zdjęcia i opis, żeby zachować wspomnienia z tego dnia.
+            </p>
+          )}
+        </div>
+
+        {/* ── Photos ── */}
+        <div className="pt-5 pb-5 border-b border-border/30">
+          <div className="flex items-center justify-between px-5 mb-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Zdjęcia
+            </p>
+            {photos.length > 0 && photos.length < 6 && (
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="w-20 h-20 rounded-xl border-2 border-dashed border-border/60 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-foreground/30 transition-colors"
+                className="text-xs font-semibold text-primary"
               >
-                <Camera className="h-5 w-5" />
-                <span className="text-[10px]">{uploading ? "..." : "Dodaj"}</span>
+                {uploading ? "Dodawanie…" : "+ Dodaj"}
               </button>
             )}
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={handlePhotoUpload}
-          />
+
+          {photos.length > 0 ? (
+            <div className="flex gap-2.5 overflow-x-auto px-5 scrollbar-none pb-1">
+              {photos.map((url) => (
+                <div key={url} className="relative flex-shrink-0 w-32 h-32 rounded-2xl overflow-hidden shadow-sm">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => removePhoto(url)}
+                    className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm rounded-full p-1"
+                  >
+                    <X className="h-3 w-3 text-white" />
+                  </button>
+                </div>
+              ))}
+              {photos.length < 6 && (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="flex-shrink-0 w-32 h-32 rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-1.5 text-muted-foreground"
+                >
+                  <Camera className="h-6 w-6" />
+                  <span className="text-xs">{uploading ? "…" : "Dodaj"}</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="mx-5 w-[calc(100%-40px)] h-24 rounded-2xl border-2 border-dashed border-border/40 flex items-center justify-center gap-2.5 text-muted-foreground active:bg-muted/40 transition-colors"
+            >
+              <Camera className="h-5 w-5" />
+              <span className="text-sm">{uploading ? "Dodawanie…" : "Dodaj zdjęcia z tego dnia"}</span>
+            </button>
+          )}
+
+          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
         </div>
 
-        {/* Narrative section */}
-        <div className="mx-4 mt-4">
-          <p className="text-sm font-medium mb-2">Relacja z podróży</p>
+        {/* ── Narrative ── */}
+        <div className="px-5 pt-5 pb-5 border-b border-border/30">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+            Twoje wspomnienia
+          </p>
           <textarea
             value={narrative}
             onChange={e => handleNarrativeChange(e.target.value)}
-            placeholder="Opisz swoje wspomnienia z tego dnia..."
-            rows={4}
-            className="w-full px-3 py-2.5 rounded-xl bg-card border border-border/50 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-foreground/20 placeholder:text-muted-foreground/50"
+            placeholder="Co zapamiętasz z tego dnia? Opisz swoje wrażenia, emocje, niespodzianki…"
+            rows={5}
+            className="w-full bg-transparent border-0 text-[15px] text-foreground resize-none focus:outline-none placeholder:text-muted-foreground/40 leading-relaxed"
           />
         </div>
 
-        {/* Insights card (accordion) */}
+        {/* ── Insights ── */}
         {insights && insights.length > 0 && (
-          <div className="mx-4 mt-4 rounded-2xl bg-card border border-border/50 overflow-hidden">
+          <div className="mx-5 mt-4 rounded-2xl bg-card border border-border/50 overflow-hidden">
             <button
               onClick={() => setInsightsOpen(p => !p)}
-              className="w-full flex items-center gap-2.5 px-4 py-3"
+              className="w-full flex items-center gap-3 px-4 py-3.5"
             >
-              <div className="h-7 w-7 rounded-full bg-foreground/5 flex items-center justify-center shrink-0">
-                <Sparkles className="h-3.5 w-3.5 text-foreground/70" />
+              <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
+                <Sparkles className="h-4 w-4 text-orange-500" />
               </div>
               <div className="flex-1 text-left">
-                <p className="text-sm font-semibold leading-tight">Zapisane informacje</p>
-                <p className="text-[11px] text-muted-foreground leading-tight">{insights.length} wniosków na kolejne podróże</p>
+                <p className="text-sm font-semibold">Zapisane wnioski</p>
+                <p className="text-[11px] text-muted-foreground">{insights.length} rzeczy na kolejne podróże</p>
               </div>
               <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform shrink-0", insightsOpen && "rotate-180")} />
             </button>
@@ -266,7 +298,7 @@ const ReviewSummary = () => {
               <ul className="divide-y divide-border/30 border-t border-border/40">
                 {insights.map((ins, i) => (
                   <li key={i} className="flex items-start gap-3 px-4 py-3">
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted rounded-md px-1.5 py-0.5 self-start mt-0.5 shrink-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground bg-muted rounded-md px-1.5 py-0.5 self-start mt-0.5 shrink-0">
                       {categoryLabels[ins.category] ?? ins.category}
                     </span>
                     <span className="text-sm text-foreground/80 leading-snug">{ins.insight}</span>
@@ -277,9 +309,9 @@ const ReviewSummary = () => {
           </div>
         )}
 
-        {/* Chat history (collapsible) */}
+        {/* ── Chat history ── */}
         {chatMessages.length > 0 && (
-          <div className="mx-4 mt-4">
+          <div className="mx-5 mt-3">
             <button
               onClick={() => setChatOpen(p => !p)}
               className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-card border border-border/50 text-sm font-semibold"
@@ -297,7 +329,7 @@ const ReviewSummary = () => {
                         "max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed",
                         m.role === "user"
                           ? "bg-foreground text-background"
-                          : "bg-card border border-border/50 text-foreground"
+                          : "bg-muted text-foreground"
                       )}>
                         {m.content}
                       </div>
@@ -307,21 +339,18 @@ const ReviewSummary = () => {
             )}
           </div>
         )}
-
-        <div className="h-6" />
       </div>
 
-      {/* Fixed bottom CTA — visible when user added photos or narrative */}
-      {(photos.length > 0 || narrative.trim().length > 0) && (
-        <div className="flex-shrink-0 px-4 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] border-t border-border/30 bg-background">
-          <button
-            onClick={() => navigate("/")}
-            className="w-full py-4 rounded-2xl bg-foreground text-background font-bold text-base active:scale-[0.98] transition-transform"
-          >
-            Gotowe — wróć do strony głównej
-          </button>
-        </div>
-      )}
+      {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
+      <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30"
+        style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
+        <button
+          onClick={() => navigate("/")}
+          className="w-full py-4 rounded-2xl bg-foreground text-background font-bold text-base active:scale-[0.98] transition-transform"
+        >
+          Gotowe
+        </button>
+      </div>
     </div>
   );
 };
