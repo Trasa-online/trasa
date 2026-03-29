@@ -195,24 +195,27 @@ serve(async (req) => {
       ? "\n\nUWAGA: Osiągnięto limit wiadomości. Wygeneruj TERAZ podsumowanie w bloku <route_summary>...</route_summary> na podstawie zebranych informacji."
       : "";
 
-    const aiMessages = [
-      { role: "system", content: systemPrompt + finishInstruction },
-      ...userMessages,
-    ];
+    // Convert to native Gemini format
+    const geminiContents = userMessages.map((m: any) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    }));
 
-    const aiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${GEMINI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gemini-2.5-pro-preview-06-05",
-        messages: aiMessages,
-        max_tokens: 2000,
-        temperature: 0.7,
-      }),
-    });
+    const aiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-06-05:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": GEMINI_API_KEY,
+        },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt + finishInstruction }] },
+          contents: geminiContents,
+          generationConfig: { maxOutputTokens: 2000, temperature: 0.7 },
+        }),
+      }
+    );
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
@@ -224,7 +227,7 @@ serve(async (req) => {
     }
 
     const aiData = await aiResponse.json();
-    const assistantText = aiData.choices?.[0]?.message?.content ?? "";
+    const assistantText = aiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
     if (!assistantText) {
       return new Response(
@@ -390,20 +393,21 @@ Przykłady: {"category":"pace","insight":"Preferuje spokojne tempo, max 4 miejsc
 Dane wejściowe:
 ${JSON.stringify({ city: summary.city, intent: summary.intent, highlight: summary.highlight, tip: summary.tip, deviations: summary.deviations, pins: summary.pins?.map((p: any) => ({ name: p.place_name, sentiment: p.sentiment, was_skipped: p.was_skipped, skip_reason: p.skip_reason })) })}`;
 
-      const insightsResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${GEMINI_API_KEY}` },
-        body: JSON.stringify({
-          model: "gemini-2.5-pro-preview-06-05",
-          messages: [{ role: "user", content: insightsPrompt }],
-          max_tokens: 400,
-          temperature: 0.3,
-        }),
-      });
+      const insightsResp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-06-05:generateContent`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: insightsPrompt }] }],
+            generationConfig: { maxOutputTokens: 400, temperature: 0.3 },
+          }),
+        }
+      );
 
       if (insightsResp.ok) {
         const insightsData = await insightsResp.json();
-        const raw = insightsData.choices?.[0]?.message?.content ?? "[]";
+        const raw = insightsData.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
         const cleaned = raw.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").trim();
         const insights = JSON.parse(cleaned);
         if (Array.isArray(insights) && insights.length) {
