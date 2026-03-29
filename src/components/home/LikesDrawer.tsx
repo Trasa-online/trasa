@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Heart, ThumbsDown, Trash2, ChevronDown } from "lucide-react";
+import { X, Heart, ThumbsDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -25,13 +25,60 @@ const CATEGORY_EMOJI: Record<string, string> = {
 };
 
 const CATEGORY_LABEL: Record<string, string> = {
-  restaurant: "Restauracje", cafe: "Kawiarnie", museum: "Muzea",
-  park: "Parki", bar: "Bary", club: "Kluby", monument: "Zabytki",
-  gallery: "Galerie", market: "Targi", viewpoint: "Widoki",
+  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum",
+  park: "Park", bar: "Bar", club: "Klub", monument: "Zabytek",
+  gallery: "Galeria", market: "Targ", viewpoint: "Widok",
   shopping: "Zakupy", experience: "Rozrywka",
 };
 
+// ─── Context menu ─────────────────────────────────────────────────────────────
+
+function ContextMenu({
+  reaction,
+  onToggle,
+  onRemove,
+  onClose,
+  anchorY,
+}: {
+  reaction: "liked" | "skipped";
+  onToggle: () => void;
+  onRemove: () => void;
+  onClose: () => void;
+  anchorY: number;
+}) {
+  const windowH = window.innerHeight;
+  const menuH = 110;
+  const top = anchorY + menuH > windowH ? anchorY - menuH : anchorY;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[60]" onClick={onClose} />
+      <div
+        className="fixed left-4 right-4 z-[61] bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
+        style={{ top }}
+      >
+        <button
+          onClick={() => { onToggle(); onClose(); }}
+          className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-medium text-left active:bg-muted/60 border-b border-border/50"
+        >
+          {reaction === "liked"
+            ? <><ThumbsDown className="h-4 w-4 text-muted-foreground" /> Przenieś do odrzuconych</>
+            : <><Heart className="h-4 w-4 text-rose-500" /> Przenieś do polubionych</>}
+        </button>
+        <button
+          onClick={() => { onRemove(); onClose(); }}
+          className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-medium text-left active:bg-muted/60 text-destructive"
+        >
+          <Trash2 className="h-4 w-4" /> Usuń
+        </button>
+      </div>
+    </>
+  );
+}
+
 // ─── PlaceRow ─────────────────────────────────────────────────────────────────
+
+const SWIPE_THRESHOLD = 72;
 
 function PlaceRow({
   place,
@@ -42,152 +89,120 @@ function PlaceRow({
   onToggle: () => void;
   onRemove: () => void;
 }) {
+  const [offsetX, setOffsetX] = useState(0);
+  const [contextMenu, setContextMenu] = useState<{ y: number } | null>(null);
+  const startX = useRef(0);
+  const startY = useRef(0);
+  const isSwiping = useRef(false);
+  const isLongPress = useRef(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  const cancelLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    startX.current = e.clientX;
+    startY.current = e.clientY;
+    isSwiping.current = false;
+    isLongPress.current = false;
+
+    longPressTimer.current = setTimeout(() => {
+      if (!isSwiping.current) {
+        isLongPress.current = true;
+        const rect = rowRef.current?.getBoundingClientRect();
+        setContextMenu({ y: rect ? rect.bottom + 4 : e.clientY });
+      }
+    }, 500);
+  }, []);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    const dx = e.clientX - startX.current;
+    const dy = e.clientY - startY.current;
+
+    if (!isSwiping.current && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+      isSwiping.current = true;
+      cancelLongPress();
+    }
+
+    if (isSwiping.current) {
+      setOffsetX(Math.min(0, dx));
+    }
+  }, []);
+
+  const handlePointerUp = useCallback(() => {
+    cancelLongPress();
+    if (isSwiping.current && offsetX <= -SWIPE_THRESHOLD) {
+      onRemove();
+    } else {
+      setOffsetX(0);
+    }
+    isSwiping.current = false;
+  }, [offsetX, onRemove]);
+
+  const handlePointerCancel = useCallback(() => {
+    cancelLongPress();
+    setOffsetX(0);
+    isSwiping.current = false;
+  }, []);
+
+  const deleteReveal = Math.min(1, Math.abs(offsetX) / SWIPE_THRESHOLD);
+
   return (
-    <div className="flex items-center gap-3 py-2.5 px-4">
-      {/* Thumbnail */}
-      <div className="h-12 w-12 rounded-xl overflow-hidden bg-muted flex-shrink-0">
-        {place.photo_url ? (
-          <img src={place.photo_url} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-xl">
-            {CATEGORY_EMOJI[place.category ?? ""] ?? "📍"}
-          </div>
-        )}
+    <div ref={rowRef} className="relative overflow-hidden">
+      {/* Swipe-left delete background */}
+      <div
+        className="absolute inset-y-0 right-0 flex items-center justify-end px-5 bg-destructive rounded-2xl"
+        style={{ opacity: deleteReveal, width: `${Math.max(56, Math.abs(offsetX))}px` }}
+      >
+        <Trash2 className="h-5 w-5 text-white" />
       </div>
 
-      {/* Name + category */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold leading-tight truncate">{place.place_name}</p>
-        {place.category && (
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            {CATEGORY_EMOJI[place.category]} {CATEGORY_LABEL[place.category] ?? place.category}
-          </p>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-1.5 flex-shrink-0">
-        {/* Toggle reaction */}
-        <button
-          onClick={onToggle}
-          className={cn(
-            "h-8 w-8 rounded-full flex items-center justify-center transition-colors",
-            place.reaction === "liked"
-              ? "bg-rose-500/10 text-rose-500 active:bg-rose-500/20"
-              : "bg-muted text-muted-foreground active:bg-muted/80"
+      {/* Row content */}
+      <div
+        className="relative flex items-center gap-3 py-2.5 px-4 bg-background touch-pan-y"
+        style={{ transform: `translateX(${offsetX}px)`, transition: isSwiping.current ? "none" : "transform 0.2s ease" }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+      >
+        {/* Thumbnail */}
+        <div className="h-12 w-12 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+          {place.photo_url ? (
+            <img src={place.photo_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-xl">
+              {CATEGORY_EMOJI[place.category ?? ""] ?? "📍"}
+            </div>
           )}
-          title={place.reaction === "liked" ? "Przenieś do odrzuconych" : "Przenieś do polubionych"}
-        >
-          {place.reaction === "liked"
-            ? <Heart className="h-4 w-4 fill-current" />
-            : <ThumbsDown className="h-4 w-4" />}
-        </button>
-        {/* Remove */}
-        <button
-          onClick={onRemove}
-          className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground active:bg-muted/80 transition-colors"
-          title="Usuń"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        </div>
+
+        {/* Name + category chip */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold leading-tight truncate">{place.place_name}</p>
+          {place.category && (
+            <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-muted text-[11px] text-muted-foreground font-medium">
+              {CATEGORY_EMOJI[place.category]}
+              {CATEGORY_LABEL[place.category] ?? place.category}
+            </span>
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
 
-// ─── CategoryGroup ────────────────────────────────────────────────────────────
-
-function CategoryGroup({
-  category,
-  places,
-  onToggle,
-  onRemove,
-}: {
-  category: string;
-  places: PlaceReaction[];
-  onToggle: (id: string) => void;
-  onRemove: (id: string) => void;
-}) {
-  const [open, setOpen] = useState(true);
-
-  return (
-    <div className="border-t border-border/30 first:border-t-0">
-      <button
-        onClick={() => setOpen(p => !p)}
-        className="w-full flex items-center gap-2 px-4 py-2.5 text-left"
-      >
-        <span className="text-base">{CATEGORY_EMOJI[category] ?? "📍"}</span>
-        <span className="text-xs font-semibold text-muted-foreground flex-1">
-          {CATEGORY_LABEL[category] ?? category}
-        </span>
-        <span className="text-[11px] text-muted-foreground/60 bg-muted rounded-full px-2 py-0.5">
-          {places.length}
-        </span>
-        <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", open && "rotate-180")} />
-      </button>
-      {open && (
-        <div className="divide-y divide-border/20">
-          {places.map(p => (
-            <PlaceRow
-              key={p.id}
-              place={p}
-              onToggle={() => onToggle(p.id)}
-              onRemove={() => onRemove(p.id)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── CitySection ──────────────────────────────────────────────────────────────
-
-function CitySection({
-  city,
-  places,
-  onToggle,
-  onRemove,
-}: {
-  city: string;
-  places: PlaceReaction[];
-  onToggle: (id: string) => void;
-  onRemove: (id: string) => void;
-}) {
-  const [open, setOpen] = useState(true);
-
-  // Group by category within city
-  const byCategory = places.reduce<Record<string, PlaceReaction[]>>((acc, p) => {
-    const key = p.category ?? "other";
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(p);
-    return acc;
-  }, {});
-
-  return (
-    <div className="mb-2">
-      {/* City header */}
-      <button
-        onClick={() => setOpen(p => !p)}
-        className="w-full flex items-center gap-2 px-4 py-3 text-left"
-      >
-        <p className="text-sm font-bold flex-1">{city}</p>
-        <span className="text-[11px] text-muted-foreground">{places.length} miejsc</span>
-        <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
-      </button>
-
-      {open && (
-        <div className="rounded-2xl bg-card border border-border/50 overflow-hidden mx-4 mb-3">
-          {Object.entries(byCategory).map(([category, catPlaces]) => (
-            <CategoryGroup
-              key={category}
-              category={category}
-              places={catPlaces}
-              onToggle={onToggle}
-              onRemove={onRemove}
-            />
-          ))}
-        </div>
+      {/* Long-press context menu */}
+      {contextMenu && (
+        <ContextMenu
+          reaction={place.reaction}
+          onToggle={onToggle}
+          onRemove={onRemove}
+          onClose={() => setContextMenu(null)}
+          anchorY={contextMenu.y}
+        />
       )}
     </div>
   );
@@ -243,7 +258,7 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
 
   const filtered = reactions.filter(r => r.reaction === tab);
 
-  // Group by city
+  // Group only by city
   const byCity = filtered.reduce<Record<string, PlaceReaction[]>>((acc, p) => {
     if (!acc[p.city]) acc[p.city] = [];
     acc[p.city].push(p);
@@ -353,13 +368,23 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
             </div>
           ) : (
             Object.entries(byCity).map(([city, cityPlaces]) => (
-              <CitySection
-                key={city}
-                city={city}
-                places={cityPlaces}
-                onToggle={(id) => toggleMutation.mutate(id)}
-                onRemove={(id) => removeMutation.mutate(id)}
-              />
+              <div key={city} className="mb-4">
+                {/* City header */}
+                <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {city}
+                </p>
+                {/* Flat list */}
+                <div className="mx-4 rounded-2xl bg-card border border-border/50 overflow-hidden divide-y divide-border/20">
+                  {cityPlaces.map(p => (
+                    <PlaceRow
+                      key={p.id}
+                      place={p}
+                      onToggle={() => toggleMutation.mutate(p.id)}
+                      onRemove={() => removeMutation.mutate(p.id)}
+                    />
+                  ))}
+                </div>
+              </div>
             ))
           )}
         </div>
