@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown, ChevronUp, Map, ChevronLeft, ChevronRight } from "lucide-react";
+import { Send, Mic, MicOff, Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown, ChevronUp, Map as MapIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -52,7 +52,7 @@ interface PlanChatExperienceProps {
   preferences: TripPreferences;
   onPlanReady: (plan: RoutePlan, messages: TextMessage[]) => void;
   likedPlaces?: string[];
-  likedPlacesData?: { place_name: string; category: string; description: string }[];
+  likedPlacesData?: { place_name: string; category: string; description: string; latitude?: number; longitude?: number }[];
   skippedPlaces?: string[];
   idealDay?: string;
   initialUserMessage?: string;
@@ -144,6 +144,22 @@ const CATEGORY_LABEL: Record<string, string> = {
   viewpoint: "Widok", shopping: "Zakupy", nightlife: "Nocne życie",
   monument: "Zabytek", church: "Kościół", market: "Targ", bar: "Bar",
   gallery: "Galeria", walk: "Spacer",
+};
+
+const CATEGORY_BG: Record<string, string> = {
+  restaurant: "bg-orange-100 text-orange-600",
+  cafe: "bg-amber-100 text-amber-700",
+  museum: "bg-purple-100 text-purple-600",
+  park: "bg-green-100 text-green-600",
+  viewpoint: "bg-sky-100 text-sky-600",
+  shopping: "bg-pink-100 text-pink-600",
+  nightlife: "bg-indigo-100 text-indigo-600",
+  monument: "bg-stone-100 text-stone-600",
+  church: "bg-yellow-100 text-yellow-700",
+  market: "bg-lime-100 text-lime-700",
+  bar: "bg-rose-100 text-rose-600",
+  gallery: "bg-fuchsia-100 text-fuchsia-600",
+  walk: "bg-teal-100 text-teal-600",
 };
 
 const PLATFORM_BADGE: Record<string, { label: string; className: string }> = {
@@ -453,12 +469,27 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
     const candidateNames = likedPlaces.filter(n => !inPlanNames.has(n.toLowerCase()));
     if (!candidateNames.length) { setSwapCandidates([]); return; }
 
+    const calcWalkingTime = (lat1: number, lng1: number, lat2: number, lng2: number): string => {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+      const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const mins = Math.round(dist / 5 * 60);
+      return `~${mins} min`;
+    };
+    const fromPin = detailPin?.pin;
+
     // Use pre-loaded swipe data if available (avoids DB lookup)
     if (likedPlacesData?.length) {
-      const dataMap = new globalThis.Map(likedPlacesData.map(p => [p.place_name.toLowerCase(), p]));
+      const dataMap = new Map(likedPlacesData.map(p => [p.place_name.toLowerCase(), p]));
       setSwapCandidates(candidateNames.map(n => {
         const d = dataMap.get(n.toLowerCase());
-        return d ? { ...d, suggested_time: null } : { place_name: n, category: "", description: "", suggested_time: null };
+        if (!d) return { place_name: n, category: "", description: "", suggested_time: null, walking_time: null };
+        const walking_time = (fromPin && fromPin.latitude && fromPin.longitude && d.latitude && d.longitude)
+          ? calcWalkingTime(fromPin.latitude, fromPin.longitude, d.latitude, d.longitude)
+          : null;
+        return { place_name: d.place_name, category: d.category, description: d.description, suggested_time: null, walking_time };
       }));
       return;
     }
@@ -466,18 +497,25 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
     // Fallback: query DB
     (supabase as any)
       .from("places")
-      .select("place_name, category, description, suggested_time")
+      .select("place_name, category, description, suggested_time, latitude, longitude")
       .ilike("city", plan.city)
       .in("place_name", candidateNames)
       .then(({ data }: { data: any[] | null }) => {
         if (!data?.length) {
-          setSwapCandidates(candidateNames.map(n => ({ place_name: n, category: "", description: "", suggested_time: null })));
+          setSwapCandidates(candidateNames.map(n => ({ place_name: n, category: "", description: "", suggested_time: null, walking_time: null })));
           return;
         }
-        const placeMap = new globalThis.Map(data.map((p: any) => [p.place_name.toLowerCase(), p]));
-        setSwapCandidates(candidateNames.map(n => placeMap.get(n.toLowerCase()) ?? { place_name: n, category: "", description: "", suggested_time: null }));
+        const placeMap = new Map(data.map((p: any) => [p.place_name.toLowerCase(), p]));
+        setSwapCandidates(candidateNames.map(n => {
+          const p = placeMap.get(n.toLowerCase());
+          if (!p) return { place_name: n, category: "", description: "", suggested_time: null, walking_time: null };
+          const walking_time = (fromPin && fromPin.latitude && fromPin.longitude && p.latitude && p.longitude)
+            ? calcWalkingTime(fromPin.latitude, fromPin.longitude, p.latitude, p.longitude)
+            : null;
+          return { ...p, walking_time };
+        }));
       });
-  }, [showSwapOptions, likedPlaces, likedPlacesData, plan]);
+  }, [showSwapOptions, likedPlaces, likedPlacesData, plan, detailPin]);
 
   // Sheet snap state
   const [snap, setSnap] = useState<SnapState>("half");
@@ -1300,23 +1338,33 @@ else if(coords.length===1)map.setView(coords[0],15);
                                     });
                                     sendMessage(`Zamień ${old} na ${place.place_name}`);
                                   }}
-                                  className="text-left px-3 py-2.5 rounded-xl bg-muted active:scale-[0.97] transition-transform"
+                                  className="text-left w-full px-3 py-3 rounded-xl bg-muted active:scale-[0.97] transition-transform flex items-start gap-3"
                                 >
-                                  <div className="flex items-start justify-between gap-2">
-                                    <span className="text-sm font-semibold text-foreground leading-tight">{place.place_name}</span>
-                                    {place.suggested_time && (
-                                      <span className="text-xs text-muted-foreground shrink-0 mt-0.5">{place.suggested_time}</span>
-                                    )}
+                                  {/* Category icon circle */}
+                                  <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg ${CATEGORY_BG[place.category] ?? "bg-muted-foreground/10 text-muted-foreground"}`}>
+                                    {CATEGORY_EMOJI[place.category] ?? "📍"}
                                   </div>
-                                  <div className="flex items-center gap-1.5 mt-1">
-                                    {place.category && (
-                                      <span className="text-[10px] bg-background border border-border/50 px-1.5 py-0.5 rounded-full text-muted-foreground">
-                                        {CATEGORY_EMOJI[place.category]} {CATEGORY_LABEL[place.category] ?? place.category}
-                                      </span>
-                                    )}
+                                  {/* Content */}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <span className="text-sm font-semibold text-foreground leading-tight">{place.place_name}</span>
+                                      {place.suggested_time && (
+                                        <span className="text-xs text-muted-foreground shrink-0 mt-0.5">{place.suggested_time}</span>
+                                      )}
+                                    </div>
                                     {place.description && (
-                                      <span className="text-xs text-muted-foreground truncate">{place.description}</span>
+                                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{place.description}</p>
                                     )}
+                                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                      {place.category && (
+                                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${CATEGORY_BG[place.category] ?? "bg-muted-foreground/10 text-muted-foreground"}`}>
+                                          {CATEGORY_LABEL[place.category] ?? place.category}
+                                        </span>
+                                      )}
+                                      {place.walking_time && (
+                                        <span className="text-[10px] text-muted-foreground">🚶 {place.walking_time} spaceru</span>
+                                      )}
+                                    </div>
                                   </div>
                                 </button>
                               ))}
@@ -1451,7 +1499,7 @@ else if(coords.length===1)map.setView(coords[0],15);
                           onClick={() => setShowMap(true)}
                           className="flex items-center gap-1.5 px-4 py-3.5 rounded-xl border border-border/60 text-sm font-medium text-muted-foreground shrink-0"
                         >
-                          <Map className="h-4 w-4" />
+                          <MapIcon className="h-4 w-4" />
                           Mapa
                         </button>
                         <button

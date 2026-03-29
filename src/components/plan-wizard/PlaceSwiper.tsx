@@ -621,7 +621,7 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
         date: date.toISOString(),
         likedPlaceNames: likedPlaces.map((p) => p.place_name),
         skippedPlaceNames: skippedPlaces.map((p) => p.place_name),
-        likedPlacesData: likedPlaces.map((p) => ({ place_name: p.place_name, category: p.category as string, description: p.description })),
+        likedPlacesData: likedPlaces.map((p) => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude })),
       },
     });
   };
@@ -694,7 +694,7 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
         selectedRouteIndex: selectedIndex,
         likedPlaceNames: likedPlaces.map(p => p.place_name),
         skippedPlaceNames: skippedPlaces.map(p => p.place_name),
-        likedPlacesData: likedPlaces.map(p => ({ place_name: p.place_name, category: p.category as string, description: p.description })),
+        likedPlacesData: likedPlaces.map(p => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude })),
       },
     });
   };

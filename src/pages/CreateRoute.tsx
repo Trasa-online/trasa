@@ -32,7 +32,7 @@ const CreateRoute = () => {
   const wizardState = (location.state as {
     city?: string; date?: string; fromTemplate?: boolean; routeId?: string;
     initialPlan?: any; likedPlaceNames?: string[]; skippedPlaceNames?: string[];
-    likedPlacesData?: { place_name: string; category: string; description: string }[];
+    likedPlacesData?: { place_name: string; category: string; description: string; latitude?: number; longitude?: number }[];
     matchedRoutes?: MatchedRouteStub[]; selectedRouteIndex?: number;
   } | null);
   const matchedRoutes = wizardState?.matchedRoutes ?? [];
