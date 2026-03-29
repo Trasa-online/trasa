@@ -161,8 +161,8 @@ const DayReview = () => {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        console.error("chat-route error:", errData);
-        toast.error("Błąd AI. Spróbuj ponownie.");
+        console.error("chat-route error:", response.status, errData);
+        toast.error(`Błąd AI (${response.status}): ${errData?.error ?? "Spróbuj ponownie."}`);
         setIsLoading(false);
         return;
       }
