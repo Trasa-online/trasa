@@ -202,8 +202,8 @@ function PostThumbnail({ post }: { post: { thumbnail_url: string; creator_name: 
 }
 
 function LargeCarouselCard({
-  pin, index, dayLabel, onClick,
-}: { pin: PlanPin; index: number; dayLabel?: string; onClick: () => void }) {
+  pin, index, dayLabel, onClick, onMoveUp, onMoveDown, isFirst, isLast,
+}: { pin: PlanPin; index: number; dayLabel?: string; onClick: () => void; onMoveUp?: () => void; onMoveDown?: () => void; isFirst?: boolean; isLast?: boolean }) {
   const [imgFailed, setImgFailed] = useState(false);
   const [fetchedPhoto, setFetchedPhoto] = useState<string | null>(pin.photoUrl ?? null);
   const pointerStart = useRef<{ x: number; y: number; t: number } | null>(null);
@@ -283,16 +283,38 @@ function LargeCarouselCard({
       </div>
 
       {/* Info — 38% */}
-      <div className="flex-[38] min-h-0 px-3.5 py-3 flex flex-col gap-1.5">
-        <span className="text-[11px] font-medium text-muted-foreground/70 bg-muted px-2 py-0.5 rounded-full self-start">
-          {CATEGORY_EMOJI[pin.category]} {CATEGORY_LABEL[pin.category] ?? pin.category}
-        </span>
-        <p className="text-sm font-bold leading-tight line-clamp-2 text-foreground">{pin.place_name}</p>
-        {pin.description && (
-          <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 flex-1">{pin.description}</p>
-        )}
-        {pin.walking_time_from_prev && (
-          <p className="text-[11px] text-muted-foreground/60 mt-auto">🚶 {pin.walking_time_from_prev}</p>
+      <div className="flex-[38] min-h-0 px-3.5 py-3 flex items-stretch gap-2">
+        {/* Left: text content */}
+        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+          <span className="text-[11px] font-medium text-muted-foreground/70 bg-muted px-2 py-0.5 rounded-full self-start">
+            {CATEGORY_EMOJI[pin.category]} {CATEGORY_LABEL[pin.category] ?? pin.category}
+          </span>
+          <p className="text-sm font-bold leading-tight line-clamp-2 text-foreground">{pin.place_name}</p>
+          {pin.description && (
+            <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 flex-1">{pin.description}</p>
+          )}
+          {pin.walking_time_from_prev && (
+            <p className="text-[11px] text-muted-foreground/60 mt-auto">🚶 {pin.walking_time_from_prev}</p>
+          )}
+        </div>
+        {/* Right: reorder arrows — only shown when handlers provided */}
+        {(onMoveUp || onMoveDown) && (
+          <div className="flex flex-col justify-center gap-1 shrink-0">
+            <button
+              onClick={e => { e.stopPropagation(); onMoveUp?.(); }}
+              disabled={isFirst}
+              className="h-8 w-8 rounded-lg border border-border/60 flex items-center justify-center disabled:opacity-25 active:bg-muted transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); onMoveDown?.(); }}
+              disabled={isLast}
+              className="h-8 w-8 rounded-lg border border-border/60 flex items-center justify-center disabled:opacity-25 active:bg-muted transition-colors"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -1374,31 +1396,6 @@ else if(coords.length===1)map.setView(coords[0],15);
                       );
                     })() : (
                       <div className="px-5 pb-6 pt-2 space-y-2">
-                        {/* Reorder buttons */}
-                        {(() => {
-                          const day = plan?.days.find(d => d.day_number === detailPin.dayNumber);
-                          const total = day?.pins.length ?? 0;
-                          const idx = detailPin.pinIndex;
-                          if (total <= 1) return null;
-                          return (
-                            <div className="flex gap-2">
-                              <button
-                                disabled={idx === 0}
-                                onClick={() => handleMovePin(detailPin.dayNumber, idx, "up")}
-                                className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium flex items-center justify-center gap-1.5 disabled:opacity-30"
-                              >
-                                <ChevronUp className="h-4 w-4" /> Wyżej
-                              </button>
-                              <button
-                                disabled={idx === total - 1}
-                                onClick={() => handleMovePin(detailPin.dayNumber, idx, "down")}
-                                className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium flex items-center justify-center gap-1.5 disabled:opacity-30"
-                              >
-                                <ChevronDown className="h-4 w-4" /> Niżej
-                              </button>
-                            </div>
-                          );
-                        })()}
                         <div className="flex gap-2">
                           <button
                             onClick={() => { handleRemovePin(detailPin.dayNumber, detailPin.pinIndex); setDetailPin(null); setDetailExtra(null); setShowSwapOptions(false); setSnap("half"); }}
@@ -1481,6 +1478,10 @@ else if(coords.length===1)map.setView(coords[0],15);
                                 index={idx}
                                 dayLabel={plan.days.length > 1 ? `Dzień ${day.day_number}` : undefined}
                                 onClick={() => { savedCarouselScroll.current = carouselRef.current?.scrollLeft ?? 0; setDetailPin({ pin, dayNumber: day.day_number, pinIndex: idx }); setSnap("full"); }}
+                                onMoveUp={idx > 0 ? () => handleMovePin(day.day_number, idx, "up") : undefined}
+                                onMoveDown={idx < day.pins.length - 1 ? () => handleMovePin(day.day_number, idx, "down") : undefined}
+                                isFirst={idx === 0}
+                                isLast={idx === day.pins.length - 1}
                               />
                             ))
                           )}
