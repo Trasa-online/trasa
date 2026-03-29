@@ -176,10 +176,12 @@ const DayReview = () => {
         setMessages(prev => [...prev, { role: "assistant", content: stripMarkdown(data.message) }]);
         setIsDone(true);
         setReviewSummary(data.summary ?? null);
-        // Mark route as reviewed so it moves to Dziennik tab
-        supabase.from("routes").update({ chat_status: "completed" } as any).eq("id", routeId).then(() => {});
+        // Mark route as reviewed and completed so it moves to Dziennik and leaves active trips
+        supabase.from("routes").update({ chat_status: "completed", trip_type: "completed" } as any).eq("id", routeId).then(() => {});
         // Fire-and-forget: embed AAR into user memory for cross-trip recall
         supabase.functions.invoke("embed-memory", { body: { route_id: routeId } }).catch(() => {});
+        // Auto-navigate to summary page after a short delay
+        setTimeout(() => navigate(`/review-summary?route=${routeId}`), 2200);
       } else {
         setMessages(prev => [...prev, { role: "assistant", content: stripMarkdown(data.message) }]);
       }

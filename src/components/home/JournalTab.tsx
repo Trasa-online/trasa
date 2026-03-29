@@ -17,7 +17,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
     queryFn: async () => {
       const { data } = await supabase
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight")
+        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos")
         .eq("user_id", userId)
         .eq("chat_status", "completed")
         .order("updated_at", { ascending: false });
@@ -46,43 +46,62 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   }
 
   return (
-    <div className="space-y-3 px-4 py-3">
+    <div className="space-y-4 px-4 py-3">
       {entries.map((entry) => {
         const thumb = entry.review_photos?.[0] ?? getRandomPinPlaceholder(entry.id);
         const dateLabel = entry.start_date
           ? format(new Date(entry.start_date), "d MMMM yyyy", { locale: pl })
           : "";
+        const hasUserPhoto = !!entry.review_photos?.[0];
 
         return (
           <button
             key={entry.id}
             onClick={() => navigate(`/review-summary?route=${entry.id}`)}
-            className="w-full flex items-center gap-3 rounded-2xl bg-card border border-border/50 overflow-hidden text-left hover:bg-card/80 active:bg-muted transition-colors"
+            className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform"
           >
-            {/* Thumbnail */}
-            <div className="w-20 h-20 shrink-0 overflow-hidden">
+            {/* Cover photo */}
+            <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
               <img
                 src={thumb}
                 alt=""
                 className="w-full h-full object-cover"
               />
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              {/* City + date badge on photo */}
+              <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+                <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">
+                  {entry.city || "Podróż"}
+                  {entry.day_number ? <span className="font-normal text-white/80"> · Dzień {entry.day_number}</span> : ""}
+                </p>
+                {dateLabel && (
+                  <p className="text-white/70 text-xs mt-0.5">{dateLabel}</p>
+                )}
+              </div>
+              {/* "Twoje zdjęcie" badge if user uploaded a photo */}
+              {hasUserPhoto && (
+                <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-[10px] text-white/90">
+                  📷 Twoje zdjęcie
+                </div>
+              )}
             </div>
 
-            {/* Info */}
-            <div className="flex-1 min-w-0 py-3 pr-3">
-              <p className="text-sm font-semibold leading-tight truncate">
-                {entry.city || "Podróż"}
-                {entry.day_number ? ` · Dzień ${entry.day_number}` : ""}
-              </p>
-              {dateLabel && (
-                <p className="text-[11px] text-muted-foreground mt-0.5">{dateLabel}</p>
-              )}
-              {entry.ai_summary && (
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-snug">
-                  {entry.ai_summary}
-                </p>
-              )}
-            </div>
+            {/* Text below photo */}
+            {(entry.ai_highlight || entry.ai_summary) && (
+              <div className="px-4 py-3">
+                {entry.ai_highlight && (
+                  <p className="text-sm text-foreground/80 italic leading-snug mb-1.5">
+                    "{entry.ai_highlight}"
+                  </p>
+                )}
+                {entry.ai_summary && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-snug">
+                    {entry.ai_summary}
+                  </p>
+                )}
+              </div>
+            )}
           </button>
         );
       })}
