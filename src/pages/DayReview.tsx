@@ -305,7 +305,7 @@ const DayReview = () => {
   return (
     <div className="h-[100dvh] bg-background flex flex-col">
       {/* Header */}
-      <header className="bg-muted px-4 pt-[max(16px,env(safe-area-inset-top))] pb-4 flex items-center justify-between">
+      <header className="bg-muted px-4 pt-safe-4 pb-4 flex items-center justify-between">
         <button onClick={() => navigate("/")} className="p-1 text-foreground/70">
           <ArrowLeft className="h-6 w-6" />
         </button>
@@ -407,7 +407,7 @@ const DayReview = () => {
 
       {/* Sticky input — only when chat is active and not done */}
       {!isDone && (
-        <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] z-10">
+        <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-3 pb-safe-4 z-10">
           <div className="flex items-end gap-2 max-w-lg mx-auto">
             {hasVoiceSupport && (
               <button

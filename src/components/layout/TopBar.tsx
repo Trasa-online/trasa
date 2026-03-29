@@ -25,7 +25,7 @@ const TopBar = ({ onOrbClick }: { onOrbClick?: () => void }) => {
   if (!user) return null;
 
   return (
-    <header className="sticky top-0 z-50 bg-background border-b border-border/40 px-4 pt-safe pb-3 flex items-center justify-between">
+    <header className="sticky top-0 z-50 bg-background border-b border-border/40 px-4 pt-safe-4 pb-3 flex items-center justify-between">
       {user ? (
         <button onClick={() => navigate("/moj-profil")} className="p-0.5">
           <Avatar className="h-11 w-11">

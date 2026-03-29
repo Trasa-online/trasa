@@ -245,7 +245,7 @@ const DayPlan = () => {
   return (
     <div className="flex flex-col h-[100dvh] bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-background px-4 pt-safe pb-3 flex items-center gap-3">
+      <header className="sticky top-0 z-50 border-b border-border/40 bg-background px-4 pt-safe-4 pb-3 flex items-center gap-3">
         <button onClick={() => navigate("/")} className="p-1 -ml-1">
           <ArrowLeft className="h-5 w-5" />
         </button>
