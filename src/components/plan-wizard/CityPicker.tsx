@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const CITIES = ["Kraków", "Warszawa", "Łódź", "Wrocław", "Poznań", "Gdańsk"];
+const CITIES = ["Kraków", "Budapeszt", "Warszawa", "Wrocław", "Poznań", "Gdańsk"];
 const ITEM_HEIGHT = 80;
 const VISIBLE_ITEMS = 5;
 const CONTAINER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
