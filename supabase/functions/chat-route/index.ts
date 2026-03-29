@@ -218,7 +218,7 @@ serve(async (req) => {
       const errText = await aiResponse.text();
       console.error("AI Gateway error:", errText);
       return new Response(
-        JSON.stringify({ error: "AI service error" }),
+        JSON.stringify({ error: `AI error ${aiResponse.status}: ${errText}` }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
