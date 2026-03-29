@@ -202,7 +202,7 @@ serve(async (req) => {
     }));
 
     const aiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-06-05:generateContent`,
       {
         method: "POST",
         headers: {
@@ -394,7 +394,7 @@ Dane wejściowe:
 ${JSON.stringify({ city: summary.city, intent: summary.intent, highlight: summary.highlight, tip: summary.tip, deviations: summary.deviations, pins: summary.pins?.map((p: any) => ({ name: p.place_name, sentiment: p.sentiment, was_skipped: p.was_skipped, skip_reason: p.skip_reason })) })}`;
 
       const insightsResp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-06-05:generateContent`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
