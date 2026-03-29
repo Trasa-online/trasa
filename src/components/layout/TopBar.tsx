@@ -1,12 +1,16 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Heart } from "lucide-react";
+import LikesDrawer from "@/components/home/LikesDrawer";
 
 const TopBar = ({ onOrbClick }: { onOrbClick?: () => void }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [likesOpen, setLikesOpen] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ["profile-topbar", user?.id],
@@ -51,7 +55,17 @@ const TopBar = ({ onOrbClick }: { onOrbClick?: () => void }) => {
         className="h-11 w-11 rounded-full orb-gradient active:scale-90 transition-transform"
       />
       */}
-      <div className="w-11" />
+      <button
+        onClick={() => setLikesOpen(true)}
+        className="h-11 w-11 flex items-center justify-center text-muted-foreground"
+        aria-label="Twoje miejsca"
+      >
+        <Heart className="h-5 w-5" />
+      </button>
+
+      {likesOpen && user && (
+        <LikesDrawer open={likesOpen} onClose={() => setLikesOpen(false)} userId={user.id} />
+      )}
     </header>
   );
 };

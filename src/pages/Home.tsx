@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Trash2, BookOpen, Sparkles, Mic, Heart } from "lucide-react";
+import { Trash2, BookOpen, Sparkles, Mic } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { format, differenceInDays } from "date-fns";
@@ -15,7 +15,6 @@ import TripDayView from "@/components/home/TripDayView";
 import UpcomingTripCard from "@/components/home/UpcomingTripCard";
 import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
 import JournalTab from "@/components/home/JournalTab";
-import LikesDrawer from "@/components/home/LikesDrawer";
 import { useTranslation } from "react-i18next";
 
 
@@ -29,7 +28,6 @@ const Home = () => {
   const [previewRoute, setPreviewRoute] = useState<any>(null);
   const [deletingTrip, setDeletingTrip] = useState<any>(null);
   const [selectedNextUpPin, setSelectedNextUpPin] = useState<any>(null);
-  const [likesOpen, setLikesOpen] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -281,32 +279,23 @@ const Home = () => {
           </div>
         )}
 
-        {/* Tabs + heart button */}
-        <div className="flex items-center border-b border-border/40 mb-5 mt-3" data-tour="trips">
-          <div className="flex flex-1">
-            {(["aktywne", "next-up", "dziennik"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  "relative px-4 py-2.5 text-sm font-medium transition-colors",
-                  activeTab === tab ? "text-foreground" : "text-muted-foreground"
-                )}
-              >
-                {tab === "aktywne" ? t("tabs.active") : tab === "next-up" ? t("tabs.upcoming") : "Dziennik"}
-                {activeTab === tab && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-full" />
-                )}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setLikesOpen(true)}
-            className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-rose-500 transition-colors ml-1"
-            aria-label="Twoje miejsca"
-          >
-            <Heart className="h-4.5 w-4.5" />
-          </button>
+        {/* Tabs */}
+        <div className="flex border-b border-border/40 mb-5 mt-3" data-tour="trips">
+          {(["aktywne", "next-up", "dziennik"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "relative px-4 py-2.5 text-sm font-medium transition-colors",
+                activeTab === tab ? "text-foreground" : "text-muted-foreground"
+              )}
+            >
+              {tab === "aktywne" ? t("tabs.active") : tab === "next-up" ? t("tabs.upcoming") : "Dziennik"}
+              {activeTab === tab && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-full" />
+              )}
+            </button>
+          ))}
         </div>
 
         {/* Aktywne plany tab */}
@@ -452,11 +441,6 @@ const Home = () => {
           open={!!selectedNextUpPin}
           onOpenChange={(open) => !open && setSelectedNextUpPin(null)}
         />
-      )}
-
-      {/* Likes drawer */}
-      {likesOpen && (
-        <LikesDrawer open={likesOpen} onClose={() => setLikesOpen(false)} userId={user.id} />
       )}
 
       {/* Delete trip confirmation */}
