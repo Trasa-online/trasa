@@ -180,6 +180,19 @@ const DayPlan = () => {
     }
   };
 
+  const handleMovePin = (dayIndex: number, pinIndex: number, direction: "up" | "down") => {
+    if (!plan) return;
+    const newDays = plan.days.map((day, dIdx) => {
+      if (dIdx !== dayIndex) return day;
+      const pins = [...day.pins];
+      const swapWith = direction === "up" ? pinIndex - 1 : pinIndex + 1;
+      if (swapWith < 0 || swapWith >= pins.length) return day;
+      [pins[pinIndex], pins[swapWith]] = [pins[swapWith], pins[pinIndex]];
+      return { ...day, pins };
+    });
+    setPlan({ ...plan, days: newDays });
+  };
+
   const savePlan = async () => {
     if (!plan || !routeId || !user) return;
     setSaving(true);
@@ -251,7 +264,7 @@ const DayPlan = () => {
         {/* Read-only plan timeline */}
         {plan && timelineDays.length > 0 && (
           <div className="border-b border-border/40">
-            <RoutePlanTimeline days={timelineDays} totalDays={1} />
+            <RoutePlanTimeline days={timelineDays} totalDays={1} onMovePin={handleMovePin} />
           </div>
         )}
 
