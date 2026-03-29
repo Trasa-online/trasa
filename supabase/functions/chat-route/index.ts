@@ -201,25 +201,28 @@ serve(async (req) => {
       parts: [{ text: m.content }],
     }));
 
-    const aiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent`,
-      {
+    const geminiRequestBody = JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt + finishInstruction }] },
+      contents: geminiContents,
+      generationConfig: { maxOutputTokens: 2000, temperature: 0.7 },
+    });
+
+    const callGemini = async (model: string) =>
+      fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": GEMINI_API_KEY,
-        },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemPrompt + finishInstruction }] },
-          contents: geminiContents,
-          generationConfig: { maxOutputTokens: 2000, temperature: 0.7 },
-        }),
-      }
-    );
+        headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
+        body: geminiRequestBody,
+      });
+
+    let aiResponse = await callGemini("gemini-2.5-pro");
+    if (!aiResponse.ok) {
+      console.warn("gemini-2.5-pro failed, falling back to gemini-2.5-flash");
+      aiResponse = await callGemini("gemini-2.5-flash");
+    }
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
-      console.error("AI Gateway error:", errText);
+      console.error("AI error:", errText);
       return new Response(
         JSON.stringify({ error: `AI error ${aiResponse.status}: ${errText}` }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
