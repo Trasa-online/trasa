@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, GripVertical, Plus, Footprints, RefreshCw } from "lucide-react";
+import { Trash2, GripVertical, Plus, Footprints, RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface PlanPin {
@@ -155,13 +155,39 @@ const DayPinList = ({
                 )}
                 onClick={() => onPinClick?.(pin)}
               >
-                {/* Drag handle */}
-                <div
-                  className="flex-shrink-0 cursor-grab active:cursor-grabbing touch-none text-muted-foreground/30"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <GripVertical className="h-4 w-4" />
-                </div>
+                {/* Reorder: arrows on mobile, drag handle on desktop */}
+                {onReorderPins ? (
+                  <div className="flex-shrink-0 flex flex-col gap-0 touch-none" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      disabled={index === 0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const newPins = [...pins];
+                        [newPins[index], newPins[index - 1]] = [newPins[index - 1], newPins[index]];
+                        onReorderPins(dayNumber, newPins);
+                      }}
+                      className="p-0.5 text-muted-foreground/40 hover:text-foreground disabled:opacity-20 transition-colors"
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      disabled={index === pins.length - 1}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const newPins = [...pins];
+                        [newPins[index], newPins[index + 1]] = [newPins[index + 1], newPins[index]];
+                        onReorderPins(dayNumber, newPins);
+                      }}
+                      className="p-0.5 text-muted-foreground/40 hover:text-foreground disabled:opacity-20 transition-colors"
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex-shrink-0 cursor-grab active:cursor-grabbing touch-none text-muted-foreground/30">
+                    <GripVertical className="h-4 w-4" />
+                  </div>
+                )}
 
                 {/* Number badge */}
                 <div className="flex-shrink-0 w-6 h-6 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-semibold">
