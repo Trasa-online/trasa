@@ -33,6 +33,7 @@ import EditPlan from "./pages/EditPlan";
 import ReviewSummary from "./pages/ReviewSummary";
 import PlanWizard from "./pages/PlanWizard";
 import AdminRoutes from "./pages/AdminRoutes";
+import SharedRoute from "./pages/SharedRoute";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const App = () => (
           <Route path="/review-summary" element={<ReviewSummary />} />
           <Route path="/plan" element={<PlanWizard />} />
           <Route path="/admin/routes" element={<AdminRoutes />} />
+          <Route path="/route/:id" element={<SharedRoute />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

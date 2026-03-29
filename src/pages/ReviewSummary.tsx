@@ -3,13 +3,20 @@ import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Camera, ChevronDown, Sparkles, X } from "lucide-react";
+import { ArrowLeft, Camera, ChevronDown, Sparkles, X, Share2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
+const CATEGORY_EMOJI: Record<string, string> = {
+  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
+  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
+  market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
+  walk: "🚶",
+};
 
 const ReviewSummary = () => {
   const { user, loading: authLoading } = useAuth();
@@ -26,6 +33,7 @@ const ReviewSummary = () => {
   const [chatOpen, setChatOpen] = useState(false);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const narrativeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,6 +63,20 @@ const ReviewSummary = () => {
       return data;
     },
     enabled: !!routeId && !!user && !locationState?.messages,
+  });
+
+  const { data: pins = [] } = useQuery({
+    queryKey: ["review-summary-pins", routeId],
+    queryFn: async () => {
+      if (!routeId || !user) return [];
+      const { data } = await supabase
+        .from("pins")
+        .select("id, place_name, category, suggested_time, images, image_url, pin_order")
+        .eq("route_id", routeId)
+        .order("pin_order");
+      return (data ?? []) as any[];
+    },
+    enabled: !!routeId && !!user,
   });
 
   const { data: insights } = useQuery({
@@ -121,6 +143,19 @@ const ReviewSummary = () => {
     const updated = photos.filter(p => p !== url);
     setPhotos(updated);
     await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
+  };
+
+  const handleShare = async () => {
+    if (!routeId) return;
+    setSharing(true);
+    await supabase.from("routes").update({ is_shared: true } as any).eq("id", routeId);
+    const url = `${window.location.origin}/route/${routeId}`;
+    if (navigator.share) {
+      await navigator.share({ title: `Trasa: ${cityLabel}`, url }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(url).catch(() => {});
+    }
+    setSharing(false);
   };
 
   const cityLabel = route?.city || "Podróż";
@@ -265,6 +300,44 @@ const ReviewSummary = () => {
           <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
         </div>
 
+        {/* ── Places ── */}
+        {pins.length > 0 && (
+          <div className="px-5 pt-5 pb-5 border-b border-border/30">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+              Miejsca w tej trasie
+            </p>
+            <div className="space-y-3">
+              {pins.map((pin: any, i: number) => {
+                const thumb = pin.images?.[0] ?? pin.image_url ?? null;
+                return (
+                  <div key={pin.id} className="flex items-center gap-3">
+                    <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-[11px] font-bold text-muted-foreground shrink-0">
+                      {i + 1}
+                    </div>
+                    <div className="h-11 w-11 rounded-xl overflow-hidden bg-muted shrink-0">
+                      {thumb ? (
+                        <img src={thumb} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-lg">
+                          {CATEGORY_EMOJI[pin.category] ?? "📍"}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold leading-tight truncate">{pin.place_name}</p>
+                      {pin.suggested_time && (
+                        <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Clock className="h-3 w-3" /> {pin.suggested_time}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ── Narrative ── */}
         <div className="px-5 pt-5 pb-5 border-b border-border/30">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
@@ -343,11 +416,19 @@ const ReviewSummary = () => {
       </div>
 
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
-      <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30"
+      <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 space-y-2 bg-background/80 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         <button
+          onClick={handleShare}
+          disabled={sharing}
+          className="w-full py-4 rounded-2xl bg-orange-500 text-white font-bold text-base active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
+        >
+          <Share2 className="h-4 w-4" />
+          {sharing ? "Tworzę link…" : "Poleć tę trasę"}
+        </button>
+        <button
           onClick={() => navigate("/")}
-          className="w-full py-4 rounded-2xl bg-foreground text-background font-bold text-base active:scale-[0.98] transition-transform"
+          className="w-full py-3 rounded-2xl text-muted-foreground font-medium text-sm active:bg-muted/50 transition-colors"
         >
           Gotowe
         </button>
