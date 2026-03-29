@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Camera, ChevronDown, Sparkles, X, Share2, Clock } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowLeft, Camera, X, Share2, Clock } from "lucide-react";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -22,16 +21,11 @@ const ReviewSummary = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const location = useLocation();
   const routeId = searchParams.get("route");
-
-  const locationState = location.state as { summary?: any; messages?: any[] } | null;
 
   const [narrative, setNarrative] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [insightsOpen, setInsightsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState(false);
   const narrativeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -51,19 +45,6 @@ const ReviewSummary = () => {
     enabled: !!routeId && !!user,
   });
 
-  const { data: chatSession } = useQuery({
-    queryKey: ["review-chat-session", routeId],
-    queryFn: async () => {
-      if (!routeId || !user) return null;
-      const { data } = await supabase
-        .from("chat_sessions")
-        .select("messages")
-        .eq("route_id", routeId)
-        .single();
-      return data;
-    },
-    enabled: !!routeId && !!user && !locationState?.messages,
-  });
 
   const { data: pins = [] } = useQuery({
     queryKey: ["review-summary-pins", routeId],
@@ -79,26 +60,12 @@ const ReviewSummary = () => {
     enabled: !!routeId && !!user,
   });
 
-  const { data: insights } = useQuery({
-    queryKey: ["route-insights", routeId],
-    queryFn: async () => {
-      if (!routeId || !user) return [];
-      const { data } = await supabase
-        .from("user_insights" as any)
-        .select("category, insight")
-        .eq("source_route_id", routeId);
-      return (data ?? []) as unknown as { category: string; insight: string }[];
-    },
-    enabled: !!routeId && !!user,
-  });
 
   useEffect(() => {
     if (route?.review_narrative) setNarrative(route.review_narrative);
     if (route?.review_photos?.length) setPhotos(route.review_photos);
   }, [route?.review_narrative, route?.review_photos]);
 
-  const chatMessages: { role: string; content: string }[] =
-    locationState?.messages ?? (chatSession?.messages as any) ?? [];
 
   const saveNarrative = useCallback((value: string) => {
     if (!routeId) return;
@@ -163,11 +130,6 @@ const ReviewSummary = () => {
   const dateLabel = route?.start_date
     ? format(new Date(route.start_date), "d MMMM yyyy", { locale: pl })
     : "";
-
-  const categoryLabels: Record<string, string> = {
-    pace: "Tempo", food: "Jedzenie", interests: "Zainteresowania",
-    avoid: "Unikaj", preferences: "Preferencje",
-  };
 
   if (authLoading) return null;
   if (!user) { navigate("/auth"); return null; }
@@ -352,67 +314,6 @@ const ReviewSummary = () => {
           />
         </div>
 
-        {/* ── Insights ── */}
-        {insights && insights.length > 0 && (
-          <div className="mx-5 mt-4 rounded-2xl bg-card border border-border/50 overflow-hidden">
-            <button
-              onClick={() => setInsightsOpen(p => !p)}
-              className="w-full flex items-center gap-3 px-4 py-3.5"
-            >
-              <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
-                <Sparkles className="h-4 w-4 text-orange-500" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-semibold">Zapisane wnioski</p>
-                <p className="text-[11px] text-muted-foreground">{insights.length} rzeczy na kolejne podróże</p>
-              </div>
-              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform shrink-0", insightsOpen && "rotate-180")} />
-            </button>
-            {insightsOpen && (
-              <ul className="divide-y divide-border/30 border-t border-border/40">
-                {insights.map((ins, i) => (
-                  <li key={i} className="flex items-start gap-3 px-4 py-3">
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground bg-muted rounded-md px-1.5 py-0.5 self-start mt-0.5 shrink-0">
-                      {categoryLabels[ins.category] ?? ins.category}
-                    </span>
-                    <span className="text-sm text-foreground/80 leading-snug">{ins.insight}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-
-        {/* ── Chat history ── */}
-        {chatMessages.length > 0 && (
-          <div className="mx-5 mt-3">
-            <button
-              onClick={() => setChatOpen(p => !p)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-card border border-border/50 text-sm font-semibold"
-            >
-              <span>Historia rozmowy</span>
-              <ChevronDown className={cn("h-4 w-4 transition-transform", chatOpen && "rotate-180")} />
-            </button>
-            {chatOpen && (
-              <div className="mt-1 rounded-2xl bg-card border border-border/50 overflow-hidden px-4 py-3 space-y-3">
-                {chatMessages
-                  .filter(m => m.content && !m.content.startsWith("Skończyłem") && m.content !== "Cześć! Opowiem Ci o moim dniu.")
-                  .map((m, i) => (
-                    <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
-                      <div className={cn(
-                        "max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed",
-                        m.role === "user"
-                          ? "bg-foreground text-background"
-                          : "bg-muted text-foreground"
-                      )}>
-                        {m.content}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
