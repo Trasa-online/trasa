@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Loader2, MapPin, Plus, Heart, Tag } from "lucide-react";
+import { Search, Loader2, MapPin, Plus, Heart, Tag, PenLine } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +14,7 @@ interface AddPinSheetProps {
   existingPinNames?: string[];
 }
 
-type Tab = "liked" | "search" | "category";
+type Tab = "liked" | "search" | "category" | "manual";
 
 interface DbPlace {
   id: string;
@@ -32,13 +32,20 @@ const CATEGORY_LABELS: Record<string, string> = {
   park: "Park", bar: "Bar", club: "Klub", monument: "Zabytek",
   gallery: "Galeria", market: "Targ", viewpoint: "Widok",
   shopping: "Zakupy", experience: "Rozrywka", walk: "Spacer",
+  nightlife: "Nocne życie", church: "Kościół",
 };
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌿",
   bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
-  market: "🛒", viewpoint: "🔭", shopping: "🛍️", experience: "🎪", walk: "🚶",
+  market: "🛒", viewpoint: "🔭", shopping: "🛍️", experience: "🎪",
+  walk: "🚶", nightlife: "🎶", church: "⛪",
 };
+
+const MANUAL_CATEGORIES = [
+  "restaurant", "cafe", "bar", "museum", "park", "monument",
+  "gallery", "viewpoint", "shopping", "market", "walk", "experience",
+];
 
 function dbPlaceToPin(p: DbPlace): PlanPin {
   return {
@@ -66,6 +73,12 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
   const [loadingCity, setLoadingCity] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [addingName, setAddingName] = useState<string | null>(null);
+
+  // Manual form state
+  const [manualName, setManualName] = useState("");
+  const [manualCategory, setManualCategory] = useState<string>("restaurant");
+  const [manualTime, setManualTime] = useState("");
+  const [manualAddress, setManualAddress] = useState("");
 
   // Fetch all places for city (for category browse + liked lookup)
   useEffect(() => {
@@ -107,6 +120,10 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
     setQuery("");
     setSearchResults([]);
     setSelectedCategory(null);
+    setManualName("");
+    setManualCategory("restaurant");
+    setManualTime("");
+    setManualAddress("");
     onOpenChange(false);
   };
 
@@ -121,7 +138,6 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
     if (match) {
       onPinAdd(dbPlaceToPin(match));
     } else {
-      // Not in DB — add with name only, AI will handle it
       onPinAdd({
         place_name: name,
         address: "",
@@ -137,6 +153,26 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
     handleClose();
   };
 
+  const handleAddManual = () => {
+    if (!manualName.trim()) return;
+    onPinAdd({
+      place_name: manualName.trim(),
+      address: manualAddress.trim(),
+      description: "",
+      suggested_time: manualTime || "00:00",
+      category: manualCategory,
+      latitude: 0,
+      longitude: 0,
+      day_number: 0,
+    });
+    handleClose();
+  };
+
+  const switchToManualWithQuery = () => {
+    setManualName(query);
+    setTab("manual");
+  };
+
   const categories = [...new Set(allCityPlaces.map(p => p.category))].sort();
   const categoryPlaces = selectedCategory
     ? allCityPlaces.filter(p => p.category === selectedCategory && !existingSet.has(p.place_name.toLowerCase()))
@@ -146,11 +182,12 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
     { id: "liked", label: "Wybrane", icon: <Heart className="h-3.5 w-3.5" />, count: availableLiked.length },
     { id: "search", label: "Szukaj", icon: <Search className="h-3.5 w-3.5" /> },
     { id: "category", label: "Kategorie", icon: <Tag className="h-3.5 w-3.5" /> },
+    { id: "manual", label: "Własne", icon: <PenLine className="h-3.5 w-3.5" /> },
   ];
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && handleClose()}>
-      <SheetContent side="bottom" className="h-[75vh] rounded-t-3xl flex flex-col">
+      <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl flex flex-col">
         <SheetHeader className="text-left pb-2 flex-shrink-0">
           <SheetTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
@@ -159,13 +196,13 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
         </SheetHeader>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-3 flex-shrink-0">
+        <div className="flex gap-1 mb-3 flex-shrink-0 overflow-x-auto pb-0.5">
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors",
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap",
                 tab === t.id
                   ? "bg-foreground text-background"
                   : "bg-muted text-muted-foreground"
@@ -249,7 +286,16 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                 </div>
               )}
               {!searching && query.length >= 2 && searchResults.length === 0 && (
-                <p className="text-center py-8 text-sm text-muted-foreground">Brak wyników dla „{query}"</p>
+                <div className="flex flex-col items-center py-8 gap-3">
+                  <p className="text-sm text-muted-foreground">Brak wyników dla „{query}"</p>
+                  <button
+                    onClick={switchToManualWithQuery}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-foreground text-background text-sm font-semibold active:scale-[0.97] transition-transform"
+                  >
+                    <PenLine className="h-4 w-4" />
+                    Dodaj „{query}" ręcznie
+                  </button>
+                </div>
               )}
               {!searching && searchResults.length > 0 && (
                 <div className="space-y-1.5">
@@ -289,7 +335,6 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                 </div>
               ) : (
                 <>
-                  {/* Category chips */}
                   <div className="flex flex-wrap gap-2 mb-4">
                     {categories.map(cat => (
                       <button
@@ -307,7 +352,6 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                     ))}
                   </div>
 
-                  {/* Places for selected category */}
                   {selectedCategory && (
                     <div className="space-y-1.5">
                       {categoryPlaces.length === 0 ? (
@@ -344,6 +388,85 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                 </>
               )}
             </>
+          )}
+
+          {/* ── Manual tab ── */}
+          {tab === "manual" && (
+            <div className="space-y-4 pb-4">
+              {/* Name */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                  Nazwa miejsca
+                </label>
+                <input
+                  type="text"
+                  value={manualName}
+                  onChange={e => setManualName(e.target.value)}
+                  placeholder="np. Kawiarnia u Marii"
+                  autoFocus={tab === "manual"}
+                  className="w-full h-11 px-3 rounded-xl border border-border bg-muted/30 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                  Kategoria
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {MANUAL_CATEGORIES.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setManualCategory(cat)}
+                      className={cn(
+                        "flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-colors",
+                        manualCategory === cat
+                          ? "bg-foreground text-background"
+                          : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {CATEGORY_EMOJI[cat]} {CATEGORY_LABELS[cat]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Address (optional) */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                  Adres <span className="font-normal normal-case">(opcjonalnie)</span>
+                </label>
+                <input
+                  type="text"
+                  value={manualAddress}
+                  onChange={e => setManualAddress(e.target.value)}
+                  placeholder="np. ul. Floriańska 5, Kraków"
+                  className="w-full h-11 px-3 rounded-xl border border-border bg-muted/30 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30"
+                />
+              </div>
+
+              {/* Suggested time (optional) */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                  Godzina <span className="font-normal normal-case">(opcjonalnie)</span>
+                </label>
+                <input
+                  type="time"
+                  value={manualTime}
+                  onChange={e => setManualTime(e.target.value)}
+                  className="w-full h-11 px-3 rounded-xl border border-border bg-muted/30 text-sm focus:outline-none focus:border-foreground/30"
+                />
+              </div>
+
+              {/* Submit */}
+              <button
+                onClick={handleAddManual}
+                disabled={!manualName.trim()}
+                className="w-full py-3.5 rounded-xl bg-foreground text-background font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-transform"
+              >
+                Dodaj do planu
+              </button>
+            </div>
           )}
         </div>
       </SheetContent>
