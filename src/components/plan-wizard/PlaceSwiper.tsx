@@ -77,7 +77,8 @@ const CATEGORY_COLORS: Record<PlaceCategory, string> = {
 const PRICE_DOTS = (level?: number) =>
   level ? "·".repeat(level) + "·".repeat(4 - level).replace(/·/g, "○") : null;
 
-const MATCH_THRESHOLD = 3; // minimum likes to show match banner
+const MATCH_THRESHOLD = 5; // minimum likes to show match banner
+const MATCH_THRESHOLD_REPEAT = 11; // re-show banner after dismissal
 const CATEGORY_DIVERSITY = 2; // minimum different categories
 
 // ─── SwipeCard ────────────────────────────────────────────────────────────────
@@ -565,8 +566,15 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
 
   // Check match condition
   useEffect(() => {
-    if (bannerDismissed) return;
     const uniqueCategories = new Set(likedPlaces.map((p) => p.category)).size;
+    if (bannerDismissed) {
+      // Re-show after user liked enough extra places
+      if (likedPlaces.length >= MATCH_THRESHOLD_REPEAT && uniqueCategories >= CATEGORY_DIVERSITY) {
+        setBannerDismissed(false);
+        setShowBanner(true);
+      }
+      return;
+    }
     if (likedPlaces.length >= MATCH_THRESHOLD && uniqueCategories >= CATEGORY_DIVERSITY) {
       setShowBanner(true);
     }
