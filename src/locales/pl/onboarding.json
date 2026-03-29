@@ -2,18 +2,18 @@
   "intro": {
     "step0": {
       "title": "Cześć!",
-      "subtitle": "Jestem Trasa — Twój osobisty asystent odkrywania Krakowa.",
-      "speech": "Cześć! Jestem Trasa — Twój osobisty asystent odkrywania Krakowa."
+      "subtitle": "Jestem Trasa — Twój osobisty przewodnik po polskich miastach.",
+      "speech": "Cześć! Jestem Trasa — Twój osobisty przewodnik po polskich miastach."
     },
     "step1": {
-      "title": "Rozmawiasz — AI planuje",
-      "subtitle": "Powiedz mi co chcesz zobaczyć. W kilka sekund ułożę plan dopasowany dokładnie do Ciebie.",
-      "speech": "Rozmawiasz naturalnie, a ja planuję idealny dzień dla Ciebie."
+      "title": "Odkryj to, co Cię kręci",
+      "subtitle": "Przeglądaj miejsca jak na social mediach. Swipe w prawo — AI zbierze z tego Twoją trasę.",
+      "speech": "Przeglądaj miejsca i lajkuj to, co Cię kręci. AI ułoży z tego idealną trasę."
     },
     "step2": {
-      "title": "Uczę się Twoich gustów",
-      "subtitle": "Po każdej podróży poznaję Cię lepiej. Rekomendacje stają się coraz celniejsze.",
-      "speech": "Po każdej podróży uczę się Twoich gustów i polecam coraz trafniej."
+      "title": "Trasa planuje i zapamiętuje",
+      "subtitle": "AI buduje plan w kilka sekund. Po każdym dniu rozmawiamy — z czasem rekomendacje trafiają coraz celniej.",
+      "speech": "AI układa plan, a po każdej podróży uczy się Twoich gustów. Z czasem rekomendacje trafiają coraz celniej."
     }
   },
   "prefs_speech": "Zanim zaczniemy — opowiedz mi trochę o sobie, a dopasujemy plan podróży specjalnie dla Ciebie!",

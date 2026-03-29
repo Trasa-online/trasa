@@ -8,6 +8,94 @@ import { cn } from "@/lib/utils";
 import { Plus, Mic, MicOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+// ── Swipe demo animation ──────────────────────────────────────────────────────
+
+const SWIPE_CARDS = [
+  { emoji: "🏰", name: "Wawel", city: "Kraków", liked: true },
+  { emoji: "☕", name: "Kawiarnia Płyś", city: "Kraków", liked: true },
+  { emoji: "🏛️", name: "Muzeum MOCAK", city: "Kraków", liked: false },
+  { emoji: "🌊", name: "Molo w Sopocie", city: "Gdańsk", liked: true },
+  { emoji: "🍕", name: "Pizzeria Dolabella", city: "Kraków", liked: true },
+  { emoji: "🎨", name: "Galeria Bunkier Sztuki", city: "Kraków", liked: false },
+];
+
+type SwipePhase = "enter" | "show" | "exit";
+
+const SwipeDemo = () => {
+  const [idx, setIdx] = useState(0);
+  const [phase, setPhase] = useState<SwipePhase>("enter");
+
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout>;
+    if (phase === "enter") t = setTimeout(() => setPhase("show"), 420);
+    else if (phase === "show") t = setTimeout(() => setPhase("exit"), 950);
+    else t = setTimeout(() => { setIdx(i => (i + 1) % SWIPE_CARDS.length); setPhase("enter"); }, 460);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  const card = SWIPE_CARDS[idx];
+
+  const cardStyle: React.CSSProperties = (() => {
+    if (phase === "enter") return {
+      transform: "scale(0.86) translateY(18px)",
+      opacity: 0,
+      transition: "all 0.42s cubic-bezier(0.34,1.56,0.64,1)",
+    };
+    if (phase === "exit") return {
+      transform: card.liked
+        ? "scale(1.04) rotate(14deg) translateX(160%)"
+        : "scale(1.04) rotate(-14deg) translateX(-160%)",
+      opacity: 0,
+      transition: "all 0.44s cubic-bezier(0.55,0,1,0.45)",
+    };
+    return {
+      transform: "scale(1) rotate(0deg) translateX(0)",
+      opacity: 1,
+      transition: "all 0.42s cubic-bezier(0.34,1.56,0.64,1)",
+    };
+  })();
+
+  return (
+    <div className="relative h-52 w-44 mx-auto select-none">
+      {/* Stack cards behind */}
+      <div className="absolute inset-0 rounded-2xl bg-card border border-border/30 shadow-sm"
+        style={{ transform: "scale(0.90) translateY(10px)", zIndex: 0 }} />
+      <div className="absolute inset-0 rounded-2xl bg-card border border-border/40 shadow-sm"
+        style={{ transform: "scale(0.95) translateY(5px)", zIndex: 1 }} />
+
+      {/* Active card */}
+      <div
+        style={{ ...cardStyle, zIndex: 2, position: "absolute", inset: 0 }}
+        className="rounded-2xl bg-card border border-border/60 shadow-lg flex flex-col items-center justify-center gap-3 p-5"
+      >
+        <div className="text-5xl">{card.emoji}</div>
+        <div className="text-center">
+          <p className="text-sm font-bold text-foreground leading-tight">{card.name}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{card.city}</p>
+        </div>
+
+        {/* Like / skip badge shown during exit */}
+        {phase === "exit" && (
+          <div className={cn(
+            "absolute top-3 rounded-full px-2.5 py-1 text-xs font-black border-2",
+            card.liked
+              ? "right-3 bg-green-50 text-green-600 border-green-400"
+              : "left-3 bg-red-50 text-red-500 border-red-400"
+          )}>
+            {card.liked ? "💛 TAK" : "✕ NIE"}
+          </div>
+        )}
+      </div>
+
+      {/* Thumb hint arrows */}
+      <div className="absolute -bottom-7 left-0 right-0 flex justify-between px-2 text-[11px] text-muted-foreground/60 font-medium">
+        <span>✕ pomiń</span>
+        <span>polub 💛</span>
+      </div>
+    </div>
+  );
+};
+
 const Orb = ({
   isSpeaking,
   className,
@@ -156,16 +244,19 @@ const Onboarding = () => {
       title: t("intro.step0.title"),
       subtitle: t("intro.step0.subtitle"),
       speech: t("intro.step0.speech"),
+      visual: "orb" as const,
     },
     {
       title: t("intro.step1.title"),
       subtitle: t("intro.step1.subtitle"),
       speech: t("intro.step1.speech"),
+      visual: "swipe" as const,
     },
     {
       title: t("intro.step2.title"),
       subtitle: t("intro.step2.subtitle"),
       speech: t("intro.step2.speech"),
+      visual: "orb" as const,
     },
   ];
 
@@ -353,18 +444,31 @@ const Onboarding = () => {
 
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <div className="flex-1 flex flex-col items-center justify-center px-8 gap-12">
-          <Orb
-            isSpeaking={isSpeaking}
-            className="h-32 w-32"
-            onTap={() => speak(screen.speech)}
-            ariaLabel={t("orb_label")}
-          />
+        <div className="flex-1 flex flex-col items-center justify-center px-8 gap-10">
+          {screen.visual === "swipe" ? (
+            <SwipeDemo />
+          ) : (
+            <Orb
+              isSpeaking={isSpeaking}
+              className="h-32 w-32"
+              onTap={() => speak(screen.speech)}
+              ariaLabel={t("orb_label")}
+            />
+          )}
           <div className="text-center">
             <h1 className="text-3xl font-black tracking-tight mb-3">{screen.title}</h1>
             <p className="text-muted-foreground text-base leading-relaxed max-w-xs mx-auto">
               {screen.subtitle}
             </p>
+            {screen.visual === "swipe" && (
+              <button
+                type="button"
+                onClick={() => speak(screen.speech)}
+                className="mt-4 text-xs text-muted-foreground/60 underline-offset-2 hover:text-muted-foreground transition-colors"
+              >
+                🔊 {t("orb_label")}
+              </button>
+            )}
           </div>
         </div>
 

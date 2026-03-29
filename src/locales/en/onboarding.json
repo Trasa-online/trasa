@@ -2,18 +2,18 @@
   "intro": {
     "step0": {
       "title": "Hello!",
-      "subtitle": "I'm Trasa — your personal guide for exploring Kraków.",
-      "speech": "Hello! I'm Trasa — your personal guide for exploring Kraków."
+      "subtitle": "I'm Trasa — your personal guide for exploring Polish cities.",
+      "speech": "Hello! I'm Trasa — your personal guide for exploring Polish cities."
     },
     "step1": {
-      "title": "You talk — AI plans",
-      "subtitle": "Tell me what you want to see. In seconds I'll build a plan tailored exactly to you.",
-      "speech": "You talk naturally, and I plan the perfect day for you."
+      "title": "Discover what excites you",
+      "subtitle": "Browse places like social media. Swipe right — AI turns your picks into a perfect route.",
+      "speech": "Browse places and like what catches your eye. AI will build your route from it."
     },
     "step2": {
-      "title": "I learn your tastes",
-      "subtitle": "After every trip I get to know you better. Recommendations become more and more spot-on.",
-      "speech": "After every trip I learn your preferences and recommend more accurately."
+      "title": "Trasa plans and remembers",
+      "subtitle": "AI builds your plan in seconds. After every day we debrief — recommendations get sharper every trip.",
+      "speech": "AI builds your plan, and after each trip it learns your taste. Recommendations get sharper every time."
     }
   },
   "prefs_speech": "Before we start — tell me a bit about yourself and we'll tailor a travel plan just for you!",
