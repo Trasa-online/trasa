@@ -12,7 +12,7 @@ import { pl } from "date-fns/locale";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
 const ReviewSummary = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -134,6 +134,7 @@ const ReviewSummary = () => {
     avoid: "Unikaj", preferences: "Preferencje",
   };
 
+  if (authLoading) return null;
   if (!user) { navigate("/auth"); return null; }
 
   const heroPhoto = photos[0];
