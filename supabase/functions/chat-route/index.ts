@@ -207,7 +207,7 @@ serve(async (req) => {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro-preview-06-05",
+        model: "gpt-4o",
         messages: aiMessages,
         max_tokens: 2000,
         temperature: 0.7,
@@ -394,7 +394,7 @@ ${JSON.stringify({ city: summary.city, intent: summary.intent, highlight: summar
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro-preview-06-05",
+          model: "gpt-4o",
           messages: [{ role: "user", content: insightsPrompt }],
           max_tokens: 400,
           temperature: 0.3,
