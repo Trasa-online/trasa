@@ -127,8 +127,13 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
       { location: pos, language: "pl" },
       (results: any[], status: string) => {
         if (status === "OK" && results?.[0]) {
-          const name = results[0].address_components?.[0]?.long_name
-            ?? results[0].formatted_address.split(",")[0];
+          const comps: any[] = results[0].address_components ?? [];
+          const get = (type: string) => comps.find((c: any) => c.types.includes(type))?.long_name;
+          const streetNum = get("street_number");
+          const route = get("route");
+          const neighborhood = get("neighborhood") ?? get("sublocality_level_1") ?? get("sublocality");
+          const poi = get("point_of_interest") ?? get("establishment");
+          const name = poi ?? neighborhood ?? (route ? (streetNum ? `${route} ${streetNum}` : route) : null) ?? results[0].formatted_address.split(",")[0];
           setQuery(name);
           setSelected({ name, lat: pos.lat, lng: pos.lng });
         }
