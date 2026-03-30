@@ -16,7 +16,7 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 flex items-center justify-center px-2">
+      <div className="px-2 pt-4" style={{ height: 420 }}>
         <Calendar
           mode="single"
           selected={selected}
@@ -31,9 +31,9 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
             caption: "flex justify-center pt-1 relative items-center mb-4",
             caption_label: "text-2xl font-bold uppercase tracking-wider",
             nav: "space-x-1 flex items-center",
-            nav_button: "h-9 w-9 bg-transparent p-0 opacity-70 hover:opacity-100 text-xl font-bold",
-            nav_button_previous: "absolute left-1",
-            nav_button_next: "absolute right-1",
+            nav_button: "h-9 w-9 bg-transparent p-0 text-xl font-bold",
+            nav_button_previous: "absolute left-1 opacity-20 cursor-not-allowed pointer-events-none",
+            nav_button_next: "absolute right-1 opacity-70 hover:opacity-100",
             table: "w-full border-collapse",
             head_row: "flex w-full",
             head_cell: "text-muted-foreground rounded-md flex-1 font-semibold text-[0.85rem] text-center py-2",
