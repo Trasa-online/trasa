@@ -4,6 +4,12 @@ import * as Sentry from "@sentry/react";
 import App from "./App.tsx";
 import "./index.css";
 import "./i18n";
+import { getConsent } from "@/lib/consent";
+
+// Fire Clarity immediately for users who already granted consent
+if (getConsent() === "granted" && typeof (window as any)._clarityInit === "function") {
+  (window as any)._clarityInit();
+}
 
 // ─── Sentry error tracking ────────────────────────────────────────────────────
 if (import.meta.env.VITE_SENTRY_DSN) {
