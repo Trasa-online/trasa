@@ -54,7 +54,7 @@ const PlanWizard = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Szukaj miejsca…"
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className="flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
             />
             <button
               onClick={() => setSearchOpen(false)}
