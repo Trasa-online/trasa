@@ -798,23 +798,26 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
             <p className="text-sm text-muted-foreground">Brak wyników dla tego miasta</p>
           </div>
         )}
-        {displayQueue
-          .slice(0, 3)
-          .reverse()
-          .map((place, reversedIdx) => {
-            const offset = 2 - reversedIdx;
-            return (
-              <SwipeCard
-                key={place.id}
-                place={place}
-                onLike={handleLike}
-                onSkip={handleSkip}
-                onTap={() => handleTap(place)}
-                isTop={offset === 0}
-                offset={offset}
-              />
-            );
-          })}
+        {(() => {
+          const cardSlice = displayQueue.slice(0, 3);
+          return cardSlice
+            .slice()
+            .reverse()
+            .map((place, reversedIdx) => {
+              const offset = cardSlice.length - 1 - reversedIdx;
+              return (
+                <SwipeCard
+                  key={place.id}
+                  place={place}
+                  onLike={handleLike}
+                  onSkip={handleSkip}
+                  onTap={() => handleTap(place)}
+                  isTop={offset === 0}
+                  offset={offset}
+                />
+              );
+            });
+        })()}
       </div>
 
       {/* Action buttons */}
