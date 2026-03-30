@@ -33,7 +33,7 @@ const PlanWizard = () => {
   return (
     <div className="flex flex-col h-screen bg-background max-w-lg mx-auto">
       {/* Header */}
-      <div className="flex items-center px-4 pt-safe-4 pt-4 pb-3 border-b border-border/20 shrink-0">
+      <div className="flex items-center px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
         <button
           onClick={handleBack}
           className="h-9 w-9 flex items-center justify-center -ml-1 text-foreground"
