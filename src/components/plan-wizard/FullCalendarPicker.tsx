@@ -10,9 +10,14 @@ interface FullCalendarPickerProps {
 
 const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
   const [selected, setSelected] = useState<Date | undefined>();
+  const [month, setMonth] = useState(new Date());
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  const isCurrentMonth =
+    month.getFullYear() === today.getFullYear() &&
+    month.getMonth() === today.getMonth();
 
   return (
     <div className="flex flex-col h-full">
@@ -21,6 +26,8 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
           mode="single"
           selected={selected}
           onSelect={setSelected}
+          month={month}
+          onMonthChange={setMonth}
           disabled={(date) => date < today}
           fromDate={today}
           locale={pl}
@@ -32,7 +39,7 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
             caption_label: "text-2xl font-bold uppercase tracking-wider",
             nav: "space-x-1 flex items-center",
             nav_button: "h-9 w-9 bg-transparent p-0 text-xl font-bold",
-            nav_button_previous: "absolute left-1 opacity-20 cursor-not-allowed pointer-events-none",
+            nav_button_previous: `absolute left-1 opacity-20 ${isCurrentMonth ? "cursor-not-allowed pointer-events-none" : "hover:opacity-100"}`,
             nav_button_next: "absolute right-1 opacity-70 hover:opacity-100",
             table: "w-full border-collapse",
             head_row: "flex w-full",
