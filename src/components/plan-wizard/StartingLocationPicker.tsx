@@ -31,19 +31,31 @@ const ZoomControls = () => {
   return (
     <div className="absolute bottom-4 right-3 z-10 flex flex-col gap-1">
       <button
-        onClick={() => map?.setZoom((map.getZoom() ?? 13) + 1)}
+        onPointerDown={(e) => { e.stopPropagation(); map?.setZoom((map.getZoom() ?? 13) + 1); }}
         className="w-9 h-9 bg-white rounded-lg shadow-md flex items-center justify-center text-foreground active:bg-accent"
       >
         <Plus className="h-4 w-4" />
       </button>
       <button
-        onClick={() => map?.setZoom((map.getZoom() ?? 13) - 1)}
+        onPointerDown={(e) => { e.stopPropagation(); map?.setZoom((map.getZoom() ?? 13) - 1); }}
         className="w-9 h-9 bg-white rounded-lg shadow-md flex items-center justify-center text-foreground active:bg-accent"
       >
         <Minus className="h-4 w-4" />
       </button>
     </div>
   );
+};
+
+// Pans the map programmatically when a pin is set
+const MapPanner = ({ pos }: { pos: { lat: number; lng: number } | null }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (map && pos) {
+      map.panTo(pos);
+      map.setZoom(15);
+    }
+  }, [map, pos]);
+  return null;
 };
 
 const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps) => {
@@ -173,9 +185,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
       <div className="flex-1 relative mx-4 rounded-2xl overflow-hidden">
         <Map
           defaultCenter={center}
-          center={markerPos ?? center}
           defaultZoom={13}
-          zoom={markerPos ? 15 : 13}
           gestureHandling="greedy"
           disableDefaultUI
           mapId="starting-location"
@@ -187,6 +197,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
               <div className="w-5 h-5 bg-orange-500 rounded-full border-2 border-white shadow-lg" />
             </AdvancedMarker>
           )}
+          <MapPanner pos={markerPos} />
           <ZoomControls />
         </Map>
 
