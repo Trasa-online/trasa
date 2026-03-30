@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, X } from "lucide-react";
+import { ArrowLeft, Search, X, Plus } from "lucide-react";
 import CityPicker from "@/components/plan-wizard/CityPicker";
 import StartingLocationPicker from "@/components/plan-wizard/StartingLocationPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
@@ -19,6 +19,7 @@ const PlanWizard = () => {
   const [date, setDate] = useState<Date | null>(returnState?.date ? new Date(returnState.date) : null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAddPlace, setShowAddPlace] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const returnLiked = returnState?.likedPlaceNames ?? [];
   const returnSkipped = returnState?.skippedPlaceNames ?? [];
@@ -68,12 +69,20 @@ const PlanWizard = () => {
           <>
             <h1 className="flex-1 text-center text-xl font-black tracking-tight">trasa</h1>
             {step === 4 ? (
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="h-9 w-9 flex items-center justify-center -mr-1 shrink-0 text-foreground"
-              >
-                <Search className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-1 -mr-1">
+                <button
+                  onClick={() => setShowAddPlace(true)}
+                  className="h-9 w-9 flex items-center justify-center shrink-0 text-foreground"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  className="h-9 w-9 flex items-center justify-center shrink-0 text-foreground"
+                >
+                  <Search className="h-5 w-5" />
+                </button>
+              </div>
             ) : (
               <div className="w-9" />
             )}
@@ -104,6 +113,8 @@ const PlanWizard = () => {
             initialLikedPlaceNames={returnLiked}
             initialSkippedPlaceNames={returnSkipped}
             searchQuery={searchQuery}
+            showAddPlace={showAddPlace}
+            onAddPlaceClose={() => setShowAddPlace(false)}
           />
         )}
       </div>

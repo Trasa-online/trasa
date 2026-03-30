@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Heart, MapPin, Star, ArrowRight, ChevronUp, RotateCcw, Plus } from "lucide-react";
+import { X, Heart, MapPin, Star, ArrowRight, ChevronUp, RotateCcw } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -525,9 +525,11 @@ interface PlaceSwiperProps {
   initialLikedPlaceNames?: string[];
   initialSkippedPlaceNames?: string[];
   searchQuery?: string;
+  showAddPlace?: boolean;
+  onAddPlaceClose?: () => void;
 }
 
-const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "" }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const userInitials = (user?.email ?? "?").slice(0, 2).toUpperCase();
@@ -544,7 +546,8 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
   const [detailOpen, setDetailOpen] = useState(false);
   const [matchedRoutes, setMatchedRoutes] = useState<MatchedRoute[]>([]);
   const [loadingExamples, setLoadingExamples] = useState(false);
-  const [showAddPlace, setShowAddPlace] = useState(false);
+  const showAddPlace = showAddPlaceProp;
+  const setShowAddPlace = (v: boolean) => { if (!v) onAddPlaceClose?.(); };
 
   useEffect(() => {
     setLoading(true);
@@ -879,17 +882,6 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
           <ChevronUp className="h-5 w-5 text-muted-foreground" />
         </button>
       </div>
-
-      {/* Add custom place chip */}
-      {!showAddPlace && (
-        <button
-          onClick={() => setShowAddPlace(true)}
-          className="mx-auto mb-1 flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-border/60 text-xs text-muted-foreground bg-background active:bg-muted transition-colors shrink-0"
-        >
-          <Plus className="h-3 w-3" />
-          Dodaj swoje miejsce
-        </button>
-      )}
 
       {/* Small text proceed link */}
       {likedPlaces.length > 0 && !showAddPlace && (
