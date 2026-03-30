@@ -10,6 +10,7 @@ interface TripPreferences {
   startDate: string | null;
   planningMode: string;
   city?: string;
+  startingLocation?: string;
   folderId?: string;
   dayNumber?: number;
 }
@@ -99,6 +100,7 @@ function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, user
   const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}${currentTime ? " (dziś)" : ""}` : "";
   const cityInfo = preferences.city?.trim() ? `- Destynacja: ${preferences.city.trim()}` : "";
   const dayInfo = preferences.dayNumber ? `- Planowany dzień: Dzień ${preferences.dayNumber}` : "";
+  const startInfo = preferences.startingLocation?.trim() ? `- Punkt startowy / nocleg: ${preferences.startingLocation.trim()} — zacznij trasę od tego miejsca i kończ w okolicy` : "";
   const cityKnown = !!preferences.city?.trim();
   const cityName = preferences.city?.trim() ?? "";
 
@@ -134,6 +136,7 @@ ${dateInfo}
 ${timeInfo}
 ${cityInfo}
 ${dayInfo}
+${startInfo}
 ${userProfileContext}
 ${currentPlanContext}
 ${previousDaysContext ? `\n## 🧠 PAMIĘĆ — POPRZEDNIE DNI TEJ PODRÓŻY\nPoniżej feedback z poprzednich dni tej samej podróży.\n\n${previousDaysContext}\n\nJAK UŻYWAĆ:\n- NIE modyfikuj planu automatycznie bez zgody usera.\n- Gdy user potwierdzi zmiany — uwzględnij feedback przy generowaniu planu.\n- Gdy generujesz plan, dodaj 1 zdanie co uwzględniłeś (np. "Unikam zatłoczonych miejsc przed 12").\n` : ""}${memoryContext ? `\n## 💡 DŁUGOTERMINOWE PREFERENCJE UŻYTKOWNIKA\nZ poprzednich podróży wiem o tym userze:\n\n${memoryContext}\n\nUwzględnij te preferencje przy wyborze miejsc i stylu planu. Nie wspominaj wprost że "pamiętasz" — po prostu planuj zgodnie z nimi.\n` : ""}
