@@ -523,10 +523,9 @@ interface PlaceSwiperProps {
   initialLikedPlaceNames?: string[];
   initialSkippedPlaceNames?: string[];
   searchQuery?: string;
-  onSearchClose?: () => void;
 }
 
-const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", onSearchClose }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "" }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const userInitials = (user?.email ?? "?").slice(0, 2).toUpperCase();
@@ -814,7 +813,7 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
       </div>
 
       {/* Action buttons */}
-      <div className={`flex items-center justify-center gap-3 py-5 shrink-0 ${isSearching ? "invisible" : ""}`}>
+      <div className="flex items-center justify-center gap-3 py-5 shrink-0">
         <button
           onClick={handleUndo}
           disabled={history.length === 0}

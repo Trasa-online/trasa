@@ -95,7 +95,6 @@ const PlanWizard = () => {
             initialLikedPlaceNames={returnLiked}
             initialSkippedPlaceNames={returnSkipped}
             searchQuery={searchQuery}
-            onSearchClose={() => setSearchOpen(false)}
           />
         )}
       </div>
