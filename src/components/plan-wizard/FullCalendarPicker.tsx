@@ -22,6 +22,7 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
           selected={selected}
           onSelect={setSelected}
           disabled={(date) => date < today}
+          fromDate={today}
           locale={pl}
           className="w-full"
           classNames={{
