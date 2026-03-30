@@ -173,17 +173,20 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
           return;
         }
         const extracted = data.places[0] as { place_name: string };
+        // Fill input with extracted name and show suggestions — user picks the right one
+        setQuery(extracted.place_name);
+        setMode("text");
+        setStatus("idle");
         if (autocompleteRef.current) {
           autocompleteRef.current.getPlacePredictions(
             { input: `${extracted.place_name} ${city}`, language: "pl" },
             (predictions: any[], s: string) => {
               if (s === "OK" && predictions?.length) {
-                const p = predictions[0];
-                resolveByPlaceId(p.place_id, extracted.place_name);
+                setSuggestions(predictions.slice(0, 5));
+                setShowSuggestions(true);
               } else {
-                // Fallback: use extracted name directly without geocoding
-                setPreview({ place_name: extracted.place_name, category: "experience", address: city, latitude: 0, longitude: 0, description: "", photo_url: "" });
-                setStatus("preview");
+                setStatus("error");
+                setErrorMsg(`Znalazłam nazwę „${extracted.place_name}", ale nie udało się jej zlokalizować. Popraw nazwę ręcznie.`);
               }
             }
           );
@@ -214,7 +217,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
 
       {/* Input */}
       <div className="relative">
-        <div className="flex items-center bg-muted/60 rounded-xl px-3 h-12 gap-2">
+        <div className="flex items-center bg-background border border-border rounded-xl px-3 h-12 gap-2">
           {inputIcon}
           <input
             autoFocus
