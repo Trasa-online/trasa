@@ -420,14 +420,7 @@ const Home = () => {
         <div className="max-w-lg mx-auto">
           <Button
             onClick={() => {
-              const pending = (activeRoutes as any[] || []).find(
-                r => r.trip_type === "ongoing" && r.chat_status !== "completed"
-              );
-              if (pending) {
-                setDebriefBlockRoute(pending);
-              } else {
-                navigate("/plan");
-              }
+              navigate("/plan");
             }}
             size="lg"
             className="w-full rounded-full text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20"
