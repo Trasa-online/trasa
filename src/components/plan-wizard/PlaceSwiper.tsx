@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Heart, MapPin, Star, ArrowRight, ChevronUp, RotateCcw } from "lucide-react";
+import { X, Heart, MapPin, Star, ArrowRight, ChevronUp, RotateCcw, Plus } from "lucide-react";
+import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
@@ -543,6 +544,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
   const [detailOpen, setDetailOpen] = useState(false);
   const [matchedRoutes, setMatchedRoutes] = useState<MatchedRoute[]>([]);
   const [loadingExamples, setLoadingExamples] = useState(false);
+  const [showAddPlace, setShowAddPlace] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -791,33 +793,59 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
         </span>
       </div>
 
-      {/* Card stack */}
+      {/* Card stack / Add custom place panel */}
       <div className="relative mx-4" style={{ flex: "1 1 0", minHeight: 0, maxHeight: "min(680px, 78dvh)" }}>
-        {isSearching && displayQueue.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-sm text-muted-foreground">Brak wyników dla tego miasta</p>
-          </div>
+        {showAddPlace ? (
+          <AddCustomPlacePanel
+            city={city}
+            onCancel={() => setShowAddPlace(false)}
+            onAdd={(added) => {
+              const customPlace: MockPlace = {
+                id: `custom-${Date.now()}`,
+                place_name: added.place_name,
+                category: added.category,
+                city,
+                address: added.address,
+                latitude: added.latitude,
+                longitude: added.longitude,
+                rating: 0,
+                photo_url: added.photo_url,
+                vibe_tags: [],
+                description: added.description,
+              };
+              setLikedPlaces((prev) => [...prev, customPlace]);
+              setShowAddPlace(false);
+            }}
+          />
+        ) : (
+          <>
+            {isSearching && displayQueue.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <p className="text-sm text-muted-foreground">Brak wyników dla tego miasta</p>
+              </div>
+            )}
+            {(() => {
+              const cardSlice = displayQueue.slice(0, 3);
+              return cardSlice
+                .slice()
+                .reverse()
+                .map((place, reversedIdx) => {
+                  const offset = cardSlice.length - 1 - reversedIdx;
+                  return (
+                    <SwipeCard
+                      key={place.id}
+                      place={place}
+                      onLike={handleLike}
+                      onSkip={handleSkip}
+                      onTap={() => handleTap(place)}
+                      isTop={offset === 0}
+                      offset={offset}
+                    />
+                  );
+                });
+            })()}
+          </>
         )}
-        {(() => {
-          const cardSlice = displayQueue.slice(0, 3);
-          return cardSlice
-            .slice()
-            .reverse()
-            .map((place, reversedIdx) => {
-              const offset = cardSlice.length - 1 - reversedIdx;
-              return (
-                <SwipeCard
-                  key={place.id}
-                  place={place}
-                  onLike={handleLike}
-                  onSkip={handleSkip}
-                  onTap={() => handleTap(place)}
-                  isTop={offset === 0}
-                  offset={offset}
-                />
-              );
-            });
-        })()}
       </div>
 
       {/* Action buttons */}
@@ -852,8 +880,19 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
         </button>
       </div>
 
+      {/* Add custom place chip */}
+      {!showAddPlace && (
+        <button
+          onClick={() => setShowAddPlace(true)}
+          className="mx-auto mb-1 flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-border/60 text-xs text-muted-foreground bg-background active:bg-muted transition-colors shrink-0"
+        >
+          <Plus className="h-3 w-3" />
+          Dodaj swoje miejsce
+        </button>
+      )}
+
       {/* Small text proceed link */}
-      {likedPlaces.length > 0 && (
+      {likedPlaces.length > 0 && !showAddPlace && (
         <button
           onClick={handleProceed}
           className="pb-3 text-center text-xs text-muted-foreground active:opacity-70 transition-opacity shrink-0"
