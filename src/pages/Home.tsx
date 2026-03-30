@@ -88,37 +88,17 @@ const Home = () => {
 
 
 
-  // Group active routes by folder for multi-day trips
   const getActiveTrips = () => {
     if (!activeRoutes) return [];
-
-    const folderMap = new Map<string | null, any[]>();
-    activeRoutes.forEach((route: any) => {
-      const key = route.folder_id || route.id;
-      if (!folderMap.has(key)) folderMap.set(key, []);
-      folderMap.get(key)!.push(route);
-    });
-
-    return Array.from(folderMap.values()).map(routes => {
-      routes.sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0));
-      const first = routes[0];
-      const allPins = routes.flatMap((r: any) => r.pins || []);
-      const priorities = first.priorities || [];
-
-      const dates = routes.map((r: any) => r.start_date).filter(Boolean).sort();
-      const startDate = dates[0] || null;
-      const endDate = dates[dates.length - 1] || startDate;
-
-      return {
-        id: first.folder_id || first.id,
-        city: first.city || "Trasa",
-        startDate,
-        endDate,
-        priorities,
-        pinCount: allPins.length,
-        routes,
-      };
-    });
+    return (activeRoutes as any[]).map(route => ({
+      id: route.id,
+      city: route.city || "Trasa",
+      startDate: route.start_date || null,
+      endDate: route.start_date || null,
+      priorities: route.priorities || [],
+      pinCount: (route.pins || []).length,
+      routes: [route],
+    }));
   };
 
   const handleTripClick = (trip: any) => {

@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Plus, FileText, FolderPlus } from "lucide-react";
+import { MapPin, Plus, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
@@ -20,8 +20,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import RouteItem from "@/components/route/RouteItem";
-import FolderCard from "@/components/route/FolderCard";
-import { useFolders } from "@/hooks/useFolders";
 
 const MyRoutes = () => {
   const { user, loading } = useAuth();
@@ -29,11 +27,6 @@ const MyRoutes = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [deletingRouteId, setDeletingRouteId] = useState<string | null>(null);
-  const [deletingFolderId, setDeletingFolderId] = useState<string | null>(null);
-
-  const { folders, deleteFolder } = useFolders();
-
-  // notifications removed
 
   useEffect(() => {
     if (!loading && !user) {
@@ -73,29 +66,22 @@ const MyRoutes = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (routeId: string) => {
-      const { error: pinsError } = await supabase
-        .from("pins")
-        .delete()
-        .eq("route_id", routeId);
+      const { error: pinsError } = await supabase.from("pins").delete().eq("route_id", routeId);
       if (pinsError) throw pinsError;
-
       const { error } = await supabase.from("routes").delete().eq("id", routeId);
       if (error) throw error;
     },
     onMutate: async (routeId) => {
       await queryClient.cancelQueries({ queryKey: ["my-routes-published"] });
       await queryClient.cancelQueries({ queryKey: ["my-routes-draft"] });
-
       const prevPublished = queryClient.getQueryData<any[]>(["my-routes-published", user?.id]);
       const prevDraft = queryClient.getQueryData<any[]>(["my-routes-draft", user?.id]);
-
       queryClient.setQueryData<any[]>(["my-routes-published", user?.id], (old) =>
         old?.filter((r) => r.id !== routeId) ?? []
       );
       queryClient.setQueryData<any[]>(["my-routes-draft", user?.id], (old) =>
         old?.filter((r) => r.id !== routeId) ?? []
       );
-
       return { prevPublished, prevDraft };
     },
     onSuccess: () => {
@@ -104,12 +90,8 @@ const MyRoutes = () => {
       toast({ title: "Trasa została usunięta" });
     },
     onError: (_err, _routeId, context) => {
-      if (context?.prevPublished) {
-        queryClient.setQueryData(["my-routes-published", user?.id], context.prevPublished);
-      }
-      if (context?.prevDraft) {
-        queryClient.setQueryData(["my-routes-draft", user?.id], context.prevDraft);
-      }
+      if (context?.prevPublished) queryClient.setQueryData(["my-routes-published", user?.id], context.prevPublished);
+      if (context?.prevDraft) queryClient.setQueryData(["my-routes-draft", user?.id], context.prevDraft);
       toast({ variant: "destructive", title: "Błąd", description: "Nie udało się usunąć trasy" });
     },
   });
@@ -125,7 +107,7 @@ const MyRoutes = () => {
           <div>
             <h2 className="text-lg font-bold">Twoje trasy</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {(publishedRoutes?.length || 0) + (draftRoutes?.length || 0)} tras · {folders.length} podróży
+              {(publishedRoutes?.length || 0) + (draftRoutes?.length || 0)} tras
             </p>
           </div>
           <Button size="sm" onClick={() => navigate("/create")}>
@@ -135,21 +117,14 @@ const MyRoutes = () => {
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground px-4 pb-2">
-        Podróże grupują trasy z jednego wyjazdu (np. "Japonia" z dniami 1-14)
-      </p>
-
       <Tabs defaultValue="published" className="w-full">
         <div className="px-4">
-          <TabsList className="w-full grid grid-cols-3 bg-muted/50">
+          <TabsList className="w-full grid grid-cols-2 bg-muted/50">
             <TabsTrigger value="published" className="text-xs">
               Opublikowane ({publishedRoutes?.length || 0})
             </TabsTrigger>
             <TabsTrigger value="draft" className="text-xs">
               Robocze ({draftRoutes?.length || 0})
-            </TabsTrigger>
-            <TabsTrigger value="folders" className="text-xs">
-              Podróże ({folders.length})
             </TabsTrigger>
           </TabsList>
         </div>
@@ -185,30 +160,8 @@ const MyRoutes = () => {
             />
           )}
         </TabsContent>
-
-        <TabsContent value="folders" className="space-y-3 px-4 mt-3">
-          {folders.map((folder) => (
-            <FolderCard
-              key={folder.id}
-              folder={folder}
-              onDelete={setDeletingFolderId}
-              onEdit={(id) => navigate(`/edit-folder/${id}`)}
-            />
-          ))}
-          {folders.length === 0 && (
-            <EmptyState
-              icon={FolderPlus}
-              title="Brak podróży"
-              description="Grupuj swoje trasy w podróże – osobna podróż na każdy wyjazd"
-              actionLabel="Utwórz podróż"
-              actionIcon={Plus}
-              onAction={() => navigate("/create-folder")}
-            />
-          )}
-        </TabsContent>
       </Tabs>
 
-      {/* Delete route dialog */}
       <AlertDialog open={!!deletingRouteId} onOpenChange={(open) => !open && setDeletingRouteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -224,32 +177,6 @@ const MyRoutes = () => {
                 if (deletingRouteId) {
                   deleteMutation.mutate(deletingRouteId);
                   setDeletingRouteId(null);
-                }
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Usuń
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete folder dialog */}
-      <AlertDialog open={!!deletingFolderId} onOpenChange={(open) => !open && setDeletingFolderId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Usuń podróż</AlertDialogTitle>
-            <AlertDialogDescription>
-              Czy na pewno chcesz usunąć tę podróż? Trasy w niej zawarte nie zostaną usunięte, tylko odłączone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Anuluj</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deletingFolderId) {
-                  deleteFolder.mutate(deletingFolderId);
-                  setDeletingFolderId(null);
                 }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
