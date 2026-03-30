@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Heart, MapPin, Star, ArrowRight, ChevronUp, RotateCcw, Search } from "lucide-react";
+import { X, Heart, MapPin, Star, ArrowRight, ChevronUp, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
@@ -522,18 +522,16 @@ interface PlaceSwiperProps {
   date: Date;
   initialLikedPlaceNames?: string[];
   initialSkippedPlaceNames?: string[];
-  searchOpen?: boolean;
+  searchQuery?: string;
   onSearchClose?: () => void;
 }
 
-const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchOpen = false, onSearchClose }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", onSearchClose }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const userInitials = (user?.email ?? "?").slice(0, 2).toUpperCase();
 
   const [allPlaces, setAllPlaces] = useState<MockPlace[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const [queue, setQueue] = useState<MockPlace[]>([]);
   const [loading, setLoading] = useState(true);
   const [likedPlaces, setLikedPlaces] = useState<MockPlace[]>([]);
@@ -568,14 +566,6 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
         setLoading(false);
       });
   }, [city]);
-
-  // Focus search input when opened, reset query when closed
-  useEffect(() => {
-    if (searchOpen) {
-      setSearchQuery("");
-      setTimeout(() => searchInputRef.current?.focus(), 50);
-    }
-  }, [searchOpen]);
 
   const searchResults = searchQuery.trim().length >= 2
     ? allPlaces.filter(p => p.place_name.toLowerCase().includes(searchQuery.trim().toLowerCase())).slice(0, 5)
@@ -775,33 +765,17 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Search overlay */}
-      {searchOpen && (
-        <div className="absolute inset-0 z-40 bg-background flex flex-col">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/20">
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Szukaj miejsca…"
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            />
-            <button onClick={onSearchClose} className="p-1 text-muted-foreground">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-4 py-2">
-            {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center mt-8">Brak miejsca w bazie dla tego miasta</p>
-            )}
-            {searchResults.map((place) => (
+      {/* Search results dropdown */}
+      {searchQuery.trim().length >= 2 && (
+        <div className="absolute top-0 left-0 right-0 z-40 bg-background border-b border-border shadow-lg">
+          {searchResults.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Brak miejsca w bazie dla tego miasta</p>
+          ) : (
+            searchResults.map((place) => (
               <button
                 key={place.id}
                 onClick={() => { setDetailPlace(place); setDetailOpen(true); onSearchClose?.(); }}
-                className="w-full flex items-center gap-3 py-3 border-b border-border/10 text-left active:bg-muted/40 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 border-b border-border/10 text-left active:bg-muted/40 transition-colors"
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{place.place_name}</p>
@@ -811,8 +785,8 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
                   {CATEGORY_LABELS[place.category]}
                 </span>
               </button>
-            ))}
-          </div>
+            ))
+          )}
         </div>
       )}
 
