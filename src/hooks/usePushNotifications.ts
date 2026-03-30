@@ -57,9 +57,9 @@ export function usePushNotifications() {
     setIsLoading(true);
 
     try {
-      // Register push SW
-      const registration = await navigator.serviceWorker.register("/sw-push.js");
-      await navigator.serviceWorker.ready;
+      // Use the already-registered PWA service worker (sw.js compiled from src/sw.ts)
+      // Do NOT register sw-push.js separately — subscriptions must be tied to the active SW
+      const registration = await navigator.serviceWorker.ready;
 
       // Request permission
       const permission = await Notification.requestPermission();
@@ -107,13 +107,11 @@ export function usePushNotifications() {
     setIsLoading(true);
 
     try {
-      // Unsubscribe from push manager
-      const registration = await navigator.serviceWorker.getRegistration("/sw-push.js");
-      if (registration) {
-        const subscription = await registration.pushManager.getSubscription();
-        if (subscription) {
-          await subscription.unsubscribe();
-        }
+      // Unsubscribe from the PWA service worker
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        await subscription.unsubscribe();
       }
 
       // Remove from DB

@@ -28,6 +28,7 @@ const Home = () => {
   const [previewRoute, setPreviewRoute] = useState<any>(null);
   const [deletingTrip, setDeletingTrip] = useState<any>(null);
   const [selectedNextUpPin, setSelectedNextUpPin] = useState<any>(null);
+  const [debriefBlockRoute, setDebriefBlockRoute] = useState<any>(null);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -147,21 +148,46 @@ const Home = () => {
   };
 
   const handleDeleteTrip = async (trip: any) => {
-    try {
-      for (const route of trip.routes) {
-        await supabase.from("pins").delete().eq("route_id", route.id);
-        await supabase.from("routes").delete().eq("id", route.id);
-      }
-      if (trip.routes[0]?.folder_id) {
-        await supabase.from("route_folders").delete().eq("id", trip.routes[0].folder_id);
-      }
-      queryClient.invalidateQueries({ queryKey: ["active-routes"] });
-      toast.success(t("toast_deleted"));
-    } catch (err) {
-      console.error("Delete trip error:", err);
-      toast.error(t("toast_delete_error"));
-    }
     setDeletingTrip(null);
+
+    // Optimistically remove from cache so the UI updates immediately
+    const previousRoutes = queryClient.getQueryData<any[]>(["active-routes", user?.id]);
+    queryClient.setQueryData(["active-routes", user?.id], (old: any[] | undefined) =>
+      (old ?? []).filter(r => !trip.routes.some((tr: any) => tr.id === r.id))
+    );
+
+    let undone = false;
+
+    toast.success(`Usunięto trasę „${trip.city}"`, {
+      duration: 5000,
+      action: {
+        label: "Cofnij",
+        onClick: () => {
+          undone = true;
+          // Restore the previous cache state
+          queryClient.setQueryData(["active-routes", user?.id], previousRoutes);
+          toast.success("Trasa przywrócona");
+        },
+      },
+    });
+
+    setTimeout(async () => {
+      if (undone) return;
+      try {
+        for (const route of trip.routes) {
+          await supabase.from("pins").delete().eq("route_id", route.id);
+          await supabase.from("routes").delete().eq("id", route.id);
+        }
+        if (trip.routes[0]?.folder_id) {
+          await supabase.from("route_folders").delete().eq("id", trip.routes[0].folder_id);
+        }
+      } catch (err) {
+        console.error("Delete trip error:", err);
+        // Restore on error too
+        queryClient.setQueryData(["active-routes", user?.id], previousRoutes);
+        toast.error(t("toast_delete_error"));
+      }
+    }, 5200);
   };
 
   if (authLoading) {
@@ -413,7 +439,16 @@ const Home = () => {
       <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm border-t border-border/20 px-5 pt-3 pb-safe-4" data-tour="cta">
         <div className="max-w-lg mx-auto">
           <Button
-            onClick={() => navigate("/plan")}
+            onClick={() => {
+              const pending = (activeRoutes as any[] || []).find(
+                r => r.trip_type === "ongoing" && r.chat_status !== "completed"
+              );
+              if (pending) {
+                setDebriefBlockRoute(pending);
+              } else {
+                navigate("/plan");
+              }
+            }}
             size="lg"
             className="w-full rounded-full text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20"
           >
@@ -442,6 +477,32 @@ const Home = () => {
           onOpenChange={(open) => !open && setSelectedNextUpPin(null)}
         />
       )}
+
+      {/* Debrief gate */}
+      <AlertDialog open={!!debriefBlockRoute} onOpenChange={(open) => !open && setDebriefBlockRoute(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Podsumuj poprzedni dzień</AlertDialogTitle>
+            <AlertDialogDescription>
+              Zanim zaplanujemy nowy dzień, podsumujmy poprzedni. Zajmie to tylko chwilę — AI przygotuje wspomnienia z trasy.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Nie teraz</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (debriefBlockRoute) {
+                  navigate(`/day-review?route=${debriefBlockRoute.id}`);
+                  setDebriefBlockRoute(null);
+                }
+              }}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              Podsumuj dzień
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete trip confirmation */}
       <AlertDialog open={!!deletingTrip} onOpenChange={(open) => !open && setDeletingTrip(null)}>

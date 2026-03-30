@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Star, MapPin, ExternalLink } from "lucide-react";
+import { Loader2, Star, MapPin, ExternalLink, Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 
 interface Pin {
@@ -88,6 +89,36 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                     ({details.user_ratings_total.toLocaleString()} opinii)
                   </span>
                 )}
+              </div>
+            )}
+
+            {/* Opening hours */}
+            {details.opening_hours ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className={cn("text-sm font-semibold", details.opening_hours.open_now ? "text-green-600 dark:text-green-400" : "text-red-500")}>
+                    {details.opening_hours.open_now ? "Otwarte teraz" : "Zamknięte"}
+                  </span>
+                </div>
+                {details.opening_hours.weekday_text?.length > 0 && (
+                  <div className="bg-muted/40 rounded-xl p-3 space-y-1">
+                    {(details.opening_hours.weekday_text as string[]).map((line, i) => {
+                      const [day, ...rest] = line.split(": ");
+                      return (
+                        <div key={i} className="flex gap-2 text-xs">
+                          <span className="text-muted-foreground w-24 flex-shrink-0">{day}</span>
+                          <span className="text-foreground/80">{rest.join(": ")}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-xl px-3 py-2.5">
+                <Clock className="h-4 w-4 flex-shrink-0" />
+                <span>Brak potwierdzonych godzin otwarcia — sprawdź w Google</span>
               </div>
             )}
 
