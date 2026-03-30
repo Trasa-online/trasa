@@ -31,7 +31,6 @@ const PlanWizard = () => {
   }, [searchOpen]);
 
   const handleBack = () => {
-    if (searchOpen) { setSearchOpen(false); return; }
     if (step === 1) navigate("/");
     else setStep((s) => (s - 1) as Step);
   };

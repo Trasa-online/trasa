@@ -614,20 +614,22 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
   };
 
   const handleLike = () => {
-    const [top, ...rest] = queue;
+    const top = displayQueue[0];
     if (!top) return;
     setHistory(prev => [...prev, { place: top, wasLiked: true }]);
-    setLikedPlaces((prev) => [...prev, top]);
-    setQueue(rest);
+    setLikedPlaces(prev => [...prev, top]);
+    setAllPlaces(prev => prev.filter(p => p.id !== top.id));
+    setQueue(prev => prev.filter(p => p.id !== top.id));
     saveReaction(top, "liked");
   };
 
   const handleSkip = () => {
-    const [top, ...rest] = queue;
+    const top = displayQueue[0];
     if (!top) return;
     setHistory(prev => [...prev, { place: top, wasLiked: false }]);
-    setSkippedPlaces((prev) => [...prev, top]);
-    setQueue(rest);
+    setSkippedPlaces(prev => [...prev, top]);
+    setAllPlaces(prev => prev.filter(p => p.id !== top.id));
+    setQueue(prev => prev.filter(p => p.id !== top.id));
     saveReaction(top, "skipped");
   };
 
@@ -840,7 +842,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
         </button>
 
         <button
-          onClick={() => queue[0] && handleTap(queue[0])}
+          onClick={() => displayQueue[0] && handleTap(displayQueue[0])}
           className="h-14 w-14 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform"
         >
           <ChevronUp className="h-5 w-5 text-muted-foreground" />
