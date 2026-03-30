@@ -14,6 +14,7 @@ interface WaitlistEntry {
   created_at: string;
   notified_at: string | null;
   source: string | null;
+  referral_code?: string | null;
   has_account?: boolean;
 }
 
@@ -33,7 +34,7 @@ const Admin = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"waitlist" | "places">("waitlist");
+  const [tab, setTab] = useState<"waitlist" | "places" | "referrals">("waitlist");
 
   // Waitlist state
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
@@ -42,6 +43,18 @@ const Admin = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [generatedLinks, setGeneratedLinks] = useState<Record<string, string>>({});
   const [deleting, setDeleting] = useState<string | null>(null);
+
+  // Referrals state
+  const [referrals, setReferrals] = useState<Array<{
+    id: string;
+    code: string;
+    slot: number;
+    used_by_email: string | null;
+    used_by_name: string | null;
+    used_at: string | null;
+    owner: { username: string | null; first_name: string | null; avatar_url: string | null };
+  }>>([]);
+  const [fetchingReferrals, setFetchingReferrals] = useState(false);
 
   // Creator plans state
   const [plans, setPlans] = useState<CreatorPlan[]>([]);
@@ -73,6 +86,7 @@ const Admin = () => {
         setIsAdmin(true);
         loadWaitlist();
         loadPlans();
+        loadReferrals();
       });
   }, [user, loading, navigate]);
 
@@ -115,6 +129,29 @@ const Admin = () => {
       setPlans([]);
     }
     setFetchingPlaces(false);
+  };
+
+  const loadReferrals = async () => {
+    setFetchingReferrals(true);
+    const { data: codes } = await (supabase as any)
+      .from("referral_codes")
+      .select("id, code, slot, used_by_email, used_by_name, used_at, owner_id")
+      .order("slot");
+    if (codes?.length) {
+      const ownerIds = [...new Set(codes.map((c: any) => c.owner_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url, first_name")
+        .in("id", ownerIds as string[]);
+      const profileMap = Object.fromEntries((profiles ?? []).map((p: any) => [p.id, p]));
+      setReferrals(codes.map((c: any) => ({
+        ...c,
+        owner: profileMap[c.owner_id] ?? { username: null, first_name: null, avatar_url: null },
+      })));
+    } else {
+      setReferrals([]);
+    }
+    setFetchingReferrals(false);
   };
 
   const handleInvite = async (entry: WaitlistEntry) => {
@@ -252,7 +289,7 @@ const Admin = () => {
 
       {/* Tabs */}
       <div className="flex border-b border-border/40">
-        {(["waitlist", "places"] as const).map(t => (
+        {(["waitlist", "referrals", "places"] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -260,7 +297,7 @@ const Admin = () => {
               tab === t ? "border-b-2 border-foreground text-foreground" : "text-muted-foreground"
             }`}
           >
-            {t === "waitlist" ? "Lista oczekujących" : "Miejsca twórców"}
+            {t === "waitlist" ? "Oczekujący" : t === "referrals" ? "Zaproszenia" : "Miejsca"}
           </button>
         ))}
       </div>
@@ -293,6 +330,11 @@ const Admin = () => {
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
+                        {entry.referral_code && (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                            🔗 Zaproszony
+                          </span>
+                        )}
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                           entry.has_account
                             ? "bg-blue-100 text-blue-700"
@@ -334,6 +376,68 @@ const Admin = () => {
                         ) : entry.notified_at ? "Wygeneruj nowy link" : "Generuj link aktywacyjny"}
                       </Button>
                     )}
+                  </div>
+                );
+              })}
+            </div>
+          )
+        )}
+
+        {/* ── Referrals Tab ── */}
+        {tab === "referrals" && (
+          fetchingReferrals ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : referrals.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-12">Brak kodów zaproszeń.</p>
+          ) : (
+            <div className="space-y-3">
+              {/* Group by owner */}
+              {Object.entries(
+                referrals.reduce<Record<string, typeof referrals>>((acc, r) => {
+                  const key = r.owner.username ?? r.id;
+                  if (!acc[key]) acc[key] = [];
+                  acc[key].push(r);
+                  return acc;
+                }, {})
+              ).map(([, slots]) => {
+                const owner = slots[0].owner;
+                const ownerName = owner.first_name || owner.username || "Użytkownik";
+                return (
+                  <div key={slots[0].id} className="border border-border rounded-xl p-4 bg-card space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-sm font-bold text-orange-600 flex-shrink-0">
+                        {ownerName.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{ownerName}</p>
+                        {owner.username && <p className="text-xs text-muted-foreground">@{owner.username}</p>}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {slots.map(slot => (
+                        <div key={slot.code} className="flex items-center gap-3 text-xs">
+                          <span className="text-muted-foreground w-16 flex-shrink-0">Slot {slot.slot}</span>
+                          {slot.used_at ? (
+                            <span className="flex-1 font-medium text-amber-600 dark:text-amber-400">
+                              Wykorzystany — {slot.used_by_name || slot.used_by_email || "nieznany"}
+                            </span>
+                          ) : (
+                            <span className="flex-1 font-mono text-muted-foreground truncate">
+                              {window.location.origin}/join/{slot.code}
+                            </span>
+                          )}
+                          <span className={`px-2 py-0.5 rounded-full font-semibold ${
+                            slot.used_at
+                              ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                              : "bg-muted text-muted-foreground"
+                          }`}>
+                            {slot.used_at ? "Użyty" : "Wolny"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 );
               })}

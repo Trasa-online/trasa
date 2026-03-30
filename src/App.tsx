@@ -34,6 +34,7 @@ import ReviewSummary from "./pages/ReviewSummary";
 import PlanWizard from "./pages/PlanWizard";
 import AdminRoutes from "./pages/AdminRoutes";
 import SharedRoute from "./pages/SharedRoute";
+import JoinPage from "./pages/JoinPage";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,7 @@ const App = () => (
           <Route path="/plan" element={<PlanWizard />} />
           <Route path="/admin/routes" element={<AdminRoutes />} />
           <Route path="/route/:id" element={<SharedRoute />} />
+          <Route path="/join/:code" element={<JoinPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -294,6 +294,7 @@ const Onboarding = () => {
   const PREFS_SPEECH = t("prefs_speech");
 
   const [step, setStep] = useState(0);
+  const [firstName, setFirstName] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [freeText, setFreeText] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -416,6 +417,7 @@ const Onboarding = () => {
       if (!user) { navigate("/"); return; }
 
       await supabase.from("profiles").update({
+        ...(firstName.trim() ? { first_name: firstName.trim() } as any : {}),
         dietary_prefs: skip ? [] : [...Array.from(foodSelected), ...foodCustom],
         travel_interests: skip ? [] : [
           ...Array.from(interestsSelected),
@@ -510,6 +512,19 @@ const Onboarding = () => {
         <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
           {t("prefs.subtitle")}
         </p>
+
+        {/* First name */}
+        <div className="mb-7">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+            Jak masz na imię?
+          </p>
+          <Input
+            value={firstName}
+            onChange={e => setFirstName(e.target.value)}
+            placeholder="np. Marta"
+            className="bg-card"
+          />
+        </div>
 
         {/* Free text / voice input */}
         <div className="mb-7">

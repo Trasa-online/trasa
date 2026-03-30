@@ -15,10 +15,17 @@ const Auth = () => {
   const [mode, setMode] = useState<Mode>(searchParams.get("tab") === "register" ? "register" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
   const [username, setUsername] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Pick up referral code from URL (?ref=CODE) or landing page (localStorage)
+  useEffect(() => {
+    const refFromUrl = searchParams.get("ref");
+    if (refFromUrl) localStorage.setItem("pending_referral_code", refFromUrl);
+  }, [searchParams]);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -64,11 +71,17 @@ const Auth = () => {
       toast.error(t("errors.username_short"));
       return;
     }
+    if (firstName.trim().length < 1) {
+      toast.error("Podaj swoje imię");
+      return;
+    }
     setLoading(true);
     try {
-      const { error } = await supabase.from("waitlist").insert({
+      const referralCode = localStorage.getItem("pending_referral_code") || null;
+      const { error } = await (supabase as any).from("waitlist").insert({
         email: email.trim().toLowerCase(),
-        source: "website",
+        source: referralCode ? "referral" : "website",
+        referral_code: referralCode,
       });
       if (error) {
         if (error.code === "23505") {
@@ -78,6 +91,7 @@ const Auth = () => {
         }
         return;
       }
+      localStorage.removeItem("pending_referral_code");
       setWaitlistDone(true);
     } catch (error: any) {
       toast.error(error.message || t("errors.register"));
@@ -175,6 +189,18 @@ const Auth = () => {
             </div>
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="reg-firstname">Imię</Label>
+                <Input
+                  id="reg-firstname"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  placeholder="np. Marta"
+                  className="bg-card"
+                />
+              </div>
               <div className="space-y-1.5">
                 <Label htmlFor="reg-username">{t("fields.username")}</Label>
                 <Input
