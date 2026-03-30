@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Search, X } from "lucide-react";
-import { APIProvider, Map, AdvancedMarker, useMapsLibrary } from "@vis.gl/react-google-maps";
+import { Search, X, MapPin, Plus, Minus } from "lucide-react";
+import { APIProvider, Map, AdvancedMarker, useMapsLibrary, useMap } from "@vis.gl/react-google-maps";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
+import { cn } from "@/lib/utils";
 
 const CITY_CENTERS: Record<string, { lat: number; lng: number }> = {
   "Kraków":   { lat: 50.0617, lng: 19.9373 },
@@ -25,6 +26,26 @@ interface StartingLocationPickerProps {
   onSkip: () => void;
 }
 
+const ZoomControls = () => {
+  const map = useMap();
+  return (
+    <div className="absolute bottom-4 right-3 z-10 flex flex-col gap-1">
+      <button
+        onClick={() => map?.setZoom((map.getZoom() ?? 13) + 1)}
+        className="w-9 h-9 bg-white rounded-lg shadow-md flex items-center justify-center text-foreground active:bg-accent"
+      >
+        <Plus className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => map?.setZoom((map.getZoom() ?? 13) - 1)}
+        className="w-9 h-9 bg-white rounded-lg shadow-md flex items-center justify-center text-foreground active:bg-accent"
+      >
+        <Minus className="h-4 w-4" />
+      </button>
+    </div>
+  );
+};
+
 const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps) => {
   const center = CITY_CENTERS[city] ?? { lat: 50.0617, lng: 19.9373 };
 
@@ -33,6 +54,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [markerPos, setMarkerPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [pinMode, setPinMode] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const places = useMapsLibrary("places");
@@ -76,6 +98,21 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
     );
   }, [city]);
 
+  const reverseGeocode = useCallback((pos: { lat: number; lng: number }) => {
+    if (!geocoderRef.current) return;
+    geocoderRef.current.geocode(
+      { location: pos, language: "pl" },
+      (results: any[], status: string) => {
+        if (status === "OK" && results?.[0]) {
+          const name = results[0].address_components?.[0]?.long_name
+            ?? results[0].formatted_address.split(",")[0];
+          setQuery(name);
+          setSelected({ name, lat: pos.lat, lng: pos.lng });
+        }
+      }
+    );
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
@@ -106,7 +143,19 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
     setSuggestions([]);
     setShowSuggestions(false);
     setMarkerPos(null);
+    setPinMode(false);
   };
+
+  const handleMapClick = useCallback((e: any) => {
+    if (!pinMode) return;
+    const lat = e.detail?.latLng?.lat;
+    const lng = e.detail?.latLng?.lng;
+    if (lat == null || lng == null) return;
+    const pos = { lat, lng };
+    setMarkerPos(pos);
+    setPinMode(false);
+    reverseGeocode(pos);
+  }, [pinMode, reverseGeocode]);
 
   return (
     <div className="flex flex-col h-full">
@@ -130,14 +179,23 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
           gestureHandling="greedy"
           disableDefaultUI
           mapId="starting-location"
-          style={{ width: "100%", height: "100%" }}
+          style={{ width: "100%", height: "100%", cursor: pinMode ? "crosshair" : "grab" }}
+          onClick={handleMapClick}
         >
           {markerPos && (
             <AdvancedMarker position={markerPos}>
-              <div className="w-4 h-4 bg-orange-500 rounded-full border-2 border-white shadow-lg" />
+              <div className="w-5 h-5 bg-orange-500 rounded-full border-2 border-white shadow-lg" />
             </AdvancedMarker>
           )}
+          <ZoomControls />
         </Map>
+
+        {/* Pin mode banner */}
+        {pinMode && (
+          <div className="absolute bottom-16 left-3 right-3 z-10 bg-foreground text-background text-sm font-medium text-center py-2.5 rounded-xl shadow-lg">
+            Stuknij w mapę aby zaznaczyć punkt
+          </div>
+        )}
 
         {/* Search input overlay */}
         <div className="absolute top-3 left-3 right-3 z-10">
@@ -152,9 +210,19 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
                 placeholder="Hotel, ulica, dzielnica…"
                 className="flex-1 text-base bg-transparent outline-none placeholder:text-muted-foreground"
               />
-              {query.length > 0 && (
+              {query.length > 0 ? (
                 <button onClick={handleClear} className="shrink-0 text-muted-foreground">
                   <X className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => { setPinMode((v) => !v); setShowSuggestions(false); }}
+                  className={cn(
+                    "shrink-0 transition-colors",
+                    pinMode ? "text-orange-500" : "text-muted-foreground"
+                  )}
+                >
+                  <MapPin className="h-4 w-4" />
                 </button>
               )}
             </div>
