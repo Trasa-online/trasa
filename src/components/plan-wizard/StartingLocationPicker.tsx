@@ -174,7 +174,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
       {/* Header text */}
       <div className="px-5 pt-6 pb-4 space-y-1">
         <p className="text-3xl font-black leading-tight">
-          Skąd wyruszasz<br />w {city}?
+          Skąd chcesz<br />zacząć?
         </p>
         <p className="text-sm text-muted-foreground">
           Dobierzemy miejsca blisko Twojej okolicy.
