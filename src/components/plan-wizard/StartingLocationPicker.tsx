@@ -5,6 +5,16 @@ import { APIProvider, Map, AdvancedMarker, useMapsLibrary, useMap } from "@vis.g
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { cn } from "@/lib/utils";
 
+const MAX_DISTANCE_KM = 40;
+
+const haversineKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+};
+
 const CITY_CENTERS: Record<string, { lat: number; lng: number }> = {
   "Kraków":   { lat: 50.0617, lng: 19.9373 },
   "Gdańsk":   { lat: 54.3520, lng: 18.6466 },
@@ -67,6 +77,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [markerPos, setMarkerPos] = useState<{ lat: number; lng: number } | null>(null);
   const [pinMode, setPinMode] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const places = useMapsLibrary("places");
@@ -137,17 +148,27 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
     setQuery(s.name);
     setShowSuggestions(false);
     setSuggestions([]);
+    setLocationError(null);
     if (geocoderRef.current) {
       geocoderRef.current.geocode({ placeId: s.placeId }, (results: any[], status: string) => {
         if (status === "OK" && results?.[0]) {
           const loc = results[0].geometry.location;
           const pos = { lat: loc.lat(), lng: loc.lng() };
+          if (!isWithinCity(pos)) {
+            setQuery("");
+            setLocationError(`To miejsce jest poza ${city}. Wybierz coś w obrębie miasta.`);
+            return;
+          }
           setMarkerPos(pos);
           setSelected({ name: s.name, lat: pos.lat, lng: pos.lng });
         }
       });
     }
   };
+
+  const isWithinCity = useCallback((pos: { lat: number; lng: number }) => {
+    return haversineKm(center, pos) <= MAX_DISTANCE_KM;
+  }, [center]);
 
   const handleClear = () => {
     setQuery("");
@@ -156,6 +177,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
     setShowSuggestions(false);
     setMarkerPos(null);
     setPinMode(false);
+    setLocationError(null);
   };
 
   const handleMapClick = useCallback((e: any) => {
@@ -164,10 +186,15 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
     const lng = e.detail?.latLng?.lng;
     if (lat == null || lng == null) return;
     const pos = { lat, lng };
-    setMarkerPos(pos);
     setPinMode(false);
+    setLocationError(null);
+    if (!isWithinCity(pos)) {
+      setLocationError(`To miejsce jest poza ${city}. Zaznacz punkt w obrębie miasta.`);
+      return;
+    }
+    setMarkerPos(pos);
     reverseGeocode(pos);
-  }, [pinMode, reverseGeocode]);
+  }, [pinMode, reverseGeocode, isWithinCity, city]);
 
   return (
     <div className="flex flex-col h-full">
@@ -238,7 +265,13 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
               )}
             </div>
 
-            {showSuggestions && suggestions.length > 0 && (
+            {locationError && (
+              <div className="mt-1 bg-white rounded-xl shadow-lg px-4 py-3 text-sm text-red-500 font-medium">
+                {locationError}
+              </div>
+            )}
+
+            {!locationError && showSuggestions && suggestions.length > 0 && (
               <div className="mt-1 bg-white rounded-xl shadow-lg overflow-hidden">
                 {suggestions.map((s) => (
                   <button
