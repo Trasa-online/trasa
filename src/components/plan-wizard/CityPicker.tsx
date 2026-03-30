@@ -119,8 +119,8 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
       </div>
 
       {/* "Not your city?" banner */}
-      <div className="mx-5 mb-4 px-4 py-3 rounded-2xl bg-muted/60 border border-border/40 space-y-2">
-        <p className="text-xs font-medium text-foreground">
+      <div className="mx-5 mb-4 px-4 py-3 rounded-2xl bg-background border border-border space-y-2 shadow-sm">
+        <p className="text-xs font-semibold text-foreground">
           Nie widzisz swojego miasta?
         </p>
         <div className="flex gap-2">
@@ -129,7 +129,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
             placeholder="Nazwa miasta"
             value={notifyCity}
             onChange={(e) => setNotifyCity(e.target.value)}
-            className="h-8 text-xs flex-1 bg-background"
+            className="h-8 text-xs flex-1"
             onKeyDown={(e) => e.key === "Enter" && handleNotify()}
           />
           <Input
@@ -137,7 +137,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
             placeholder="Twój email"
             value={notifyEmail}
             onChange={(e) => setNotifyEmail(e.target.value)}
-            className="h-8 text-xs flex-1 bg-background"
+            className="h-8 text-xs flex-1"
             onKeyDown={(e) => e.key === "Enter" && handleNotify()}
           />
           <Button
@@ -149,7 +149,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
             Wyślij
           </Button>
         </div>
-        <p className="text-[10px] text-muted-foreground leading-relaxed">
+        <p className="text-[10px] text-foreground/60 leading-relaxed">
           Podając email zgadzasz się na jednorazowe powiadomienie, gdy Twoje miasto pojawi się w aplikacji. Nie wysyłamy spamu.
         </p>
       </div>
