@@ -83,9 +83,6 @@ const TripDayView = ({ pins, dayLabel, dateLabel, onStartReview }: TripDayViewPr
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-medium leading-tight truncate">{pin.place_name}</p>
-              {pin.suggested_time && (
-                <p className="text-[11px] text-muted-foreground">{pin.suggested_time}</p>
-              )}
             </div>
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
           </button>

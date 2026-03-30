@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Heart, MapPin, Star, ArrowRight, Info, RotateCcw } from "lucide-react";
+import { X, Heart, MapPin, Star, ArrowRight, ChevronUp, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
@@ -280,10 +280,9 @@ const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardPro
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => { e.stopPropagation(); onTap(); }}
-              className="shrink-0 flex items-center gap-1 bg-white/15 hover:bg-white/25 text-white/80 text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors"
+              className="shrink-0 h-10 w-10 rounded-full bg-white flex items-center justify-center shadow-md active:scale-90 transition-transform"
             >
-              <Info className="h-3 w-3" />
-              więcej
+              <ChevronUp className="h-5 w-5 text-black" />
             </button>
           )}
         </div>
@@ -827,7 +826,7 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
           onClick={() => queue[0] && handleTap(queue[0])}
           className="h-14 w-14 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform"
         >
-          <Info className="h-5 w-5 text-muted-foreground" />
+          <ChevronUp className="h-5 w-5 text-muted-foreground" />
         </button>
       </div>
 

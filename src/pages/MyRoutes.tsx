@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Plus, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/ui/empty-state";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +25,6 @@ const MyRoutes = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [deletingRouteId, setDeletingRouteId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -87,12 +86,12 @@ const MyRoutes = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-routes-published"] });
       queryClient.invalidateQueries({ queryKey: ["my-routes-draft"] });
-      toast({ title: "Trasa została usunięta" });
+      toast.success("Trasa została usunięta");
     },
     onError: (_err, _routeId, context) => {
       if (context?.prevPublished) queryClient.setQueryData(["my-routes-published", user?.id], context.prevPublished);
       if (context?.prevDraft) queryClient.setQueryData(["my-routes-draft", user?.id], context.prevDraft);
-      toast({ variant: "destructive", title: "Błąd", description: "Nie udało się usunąć trasy" });
+      toast.error("Nie udało się usunąć trasy");
     },
   });
 

@@ -5,7 +5,7 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Loader2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { format, addDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import type { PlanPin } from "./DayPinList";
@@ -57,7 +57,6 @@ const RouteSummaryDialog = ({
   const [saving, setSaving] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const startDate = preferences.startDate ? new Date(preferences.startDate) : null;
   const endDate = startDate && preferences.numDays > 1
@@ -178,12 +177,12 @@ const RouteSummaryDialog = ({
         is_rejected: false,
       }).then(() => {});
 
-      toast({ title: "Trasa zapisana! 🎉", description: plan.city });
+      toast.success("Trasa zapisana! 🎉", { description: plan.city });
       onOpenChange(false);
       navigate("/");
     } catch (error) {
       console.error("Save error:", error);
-      toast({ variant: "destructive", title: "Błąd zapisu", description: "Spróbuj ponownie." });
+      toast.error("Błąd zapisu", { description: "Spróbuj ponownie." });
     } finally {
       setSaving(false);
     }

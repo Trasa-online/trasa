@@ -6,7 +6,7 @@ import { Check, X, ChevronDown, ChevronUp, Zap, ArrowLeft, Clock, MapPin } from 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -223,7 +223,6 @@ const CITY = "Kraków";
 const AdminRoutes = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const [routes, setRoutes] = useState<RouteExample[]>([]);
   const [fetching, setFetching] = useState(true);
@@ -256,10 +255,10 @@ const AdminRoutes = () => {
         body: { city: CITY },
       });
       if (error) throw new Error(String(error));
-      toast({ title: "Wygenerowano 30 tras! 🎉", description: "Możesz teraz przeglądać i zatwierdzać." });
+      toast.success("Wygenerowano 30 tras! 🎉", { description: "Możesz teraz przeglądać i zatwierdzać." });
       await fetchRoutes();
     } catch (err) {
-      toast({ title: "Błąd generowania", description: String(err), variant: "destructive" });
+      toast.error("Błąd generowania", { description: String(err) });
     } finally {
       setGenerating(false);
     }

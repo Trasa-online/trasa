@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Camera, Shield, ChevronRight, Compass, Bell } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
@@ -31,7 +31,6 @@ function PushToggleSection() {
 const Settings = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const { t, i18n } = useTranslation("settings");
   const [username, setUsername] = useState("");
@@ -91,7 +90,7 @@ const Settings = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      toast({ title: t("toast_saved") });
+      toast.success(t("toast_saved"));
     },
   });
 
@@ -106,7 +105,7 @@ const Settings = () => {
       .upload(fileName, file, { upsert: true });
 
     if (uploadError) {
-      toast({ variant: "destructive", title: t("toast_avatar_error") });
+      toast.error(t("toast_avatar_error"));
       return;
     }
 

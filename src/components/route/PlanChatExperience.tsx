@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { type PlanPin } from "./DayPinList";
 import AddPinSheet from "./AddPinSheet";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
@@ -463,7 +463,6 @@ function getCurrentTimeContext(): { current_time: string; current_date: string }
 }
 
 const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlacesData, skippedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt }: PlanChatExperienceProps) => {
-  const { toast } = useToast();
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
   const [input, setInput] = useState("");
@@ -694,13 +693,13 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
           }
         } else {
           console.error("plan-route error:", response.error);
-          toast({ title: "Błąd generowania planu", description: String(response.error), variant: "destructive" });
+          toast.error("Błąd generowania planu", { description: String(response.error) });
           setPlan(buildMockPlan(nDays));
           setMessages([{ role: "assistant", content: fallbackIntro }]);
         }
       } catch (err) {
         console.error("plan-route init failed:", err);
-        toast({ title: "Błąd inicjalizacji", description: String(err), variant: "destructive" });
+        toast.error("Błąd inicjalizacji", { description: String(err) });
         setPlan(buildMockPlan(nDays));
         setMessages([{ role: "assistant", content: fallbackIntro }]);
       } finally {
