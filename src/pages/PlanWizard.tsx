@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 import CityPicker from "@/components/plan-wizard/CityPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
@@ -21,6 +21,7 @@ const PlanWizard = () => {
   const [step, setStep] = useState<Step>((returnState?.step as Step) ?? 1);
   const [city, setCity] = useState(returnState?.city ?? "");
   const [date, setDate] = useState<Date | null>(returnState?.date ? new Date(returnState.date) : null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const returnLiked = returnState?.likedPlaceNames ?? [];
   const returnSkipped = returnState?.skippedPlaceNames ?? [];
 
@@ -42,7 +43,16 @@ const PlanWizard = () => {
         <h1 className="flex-1 text-center text-xl font-black tracking-tight">
           {stepTitles[step]}
         </h1>
-        <div className="w-9" />
+        {step === 3 ? (
+          <button
+            onClick={() => setSearchOpen((o) => !o)}
+            className="h-9 w-9 flex items-center justify-center -mr-1 text-foreground"
+          >
+            <Search className="h-5 w-5" />
+          </button>
+        ) : (
+          <div className="w-9" />
+        )}
       </div>
 
       {/* Content */}
@@ -71,6 +81,8 @@ const PlanWizard = () => {
             date={date}
             initialLikedPlaceNames={returnLiked}
             initialSkippedPlaceNames={returnSkipped}
+            searchOpen={searchOpen}
+            onSearchClose={() => setSearchOpen(false)}
           />
         )}
       </div>
