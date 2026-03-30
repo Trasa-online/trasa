@@ -567,9 +567,10 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
       });
   }, [city]);
 
-  const searchResults = searchQuery.trim().length >= 2
-    ? allPlaces.filter(p => p.place_name.toLowerCase().includes(searchQuery.trim().toLowerCase())).slice(0, 5)
-    : [];
+  const isSearching = searchQuery.trim().length >= 2;
+  const displayQueue = isSearching
+    ? allPlaces.filter(p => p.place_name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : queue;
 
   // Check match condition
   useEffect(() => {
@@ -765,30 +766,6 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Search results dropdown */}
-      {searchQuery.trim().length >= 2 && (
-        <div className="absolute top-0 left-0 right-0 z-40 bg-background border-b border-border shadow-lg">
-          {searchResults.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Brak miejsca w bazie dla tego miasta</p>
-          ) : (
-            searchResults.map((place) => (
-              <button
-                key={place.id}
-                onClick={() => { setDetailPlace(place); setDetailOpen(true); onSearchClose?.(); }}
-                className="w-full flex items-center gap-3 px-4 py-3 border-b border-border/10 text-left active:bg-muted/40 transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{place.place_name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{place.address?.split(",")[0]}</p>
-                </div>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${CATEGORY_COLORS[place.category]}`}>
-                  {CATEGORY_LABELS[place.category]}
-                </span>
-              </button>
-            ))
-          )}
-        </div>
-      )}
 
       {/* Match modal */}
       {showBanner && (
@@ -812,11 +789,16 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
 
       {/* Card stack */}
       <div className="relative mx-4" style={{ flex: "1 1 0", minHeight: 0, maxHeight: "min(680px, 78dvh)" }}>
-        {queue
+        {isSearching && displayQueue.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <p className="text-sm text-muted-foreground">Brak wyników dla tego miasta</p>
+          </div>
+        )}
+        {displayQueue
           .slice(0, 3)
           .reverse()
           .map((place, reversedIdx) => {
-            const offset = 2 - reversedIdx; // 0 = top, 1 = second, 2 = third
+            const offset = 2 - reversedIdx;
             return (
               <SwipeCard
                 key={place.id}
@@ -832,7 +814,7 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
       </div>
 
       {/* Action buttons */}
-      <div className="flex items-center justify-center gap-3 py-5 shrink-0">
+      <div className={`flex items-center justify-center gap-3 py-5 shrink-0 ${isSearching ? "invisible" : ""}`}>
         <button
           onClick={handleUndo}
           disabled={history.length === 0}
