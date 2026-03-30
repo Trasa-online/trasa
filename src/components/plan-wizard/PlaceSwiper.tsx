@@ -520,12 +520,13 @@ const EmptyState = ({
 interface PlaceSwiperProps {
   city: string;
   date: Date;
+  startingLocation?: string;
   initialLikedPlaceNames?: string[];
   initialSkippedPlaceNames?: string[];
   searchQuery?: string;
 }
 
-const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "" }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "" }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const userInitials = (user?.email ?? "?").slice(0, 2).toUpperCase();
@@ -654,6 +655,7 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
       state: {
         city,
         date: date.toISOString(),
+        startingLocation: startingLocation || undefined,
         likedPlaceNames: likedPlaces.map((p) => p.place_name),
         skippedPlaceNames: skippedPlaces.map((p) => p.place_name),
         likedPlacesData: likedPlaces.map((p) => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude })),
@@ -718,6 +720,7 @@ const PlaceSwiper = ({ city, date, initialLikedPlaceNames = [], initialSkippedPl
       state: {
         city,
         date: date.toISOString(),
+        startingLocation: startingLocation || undefined,
         fromTemplate: true,
         initialPlan: buildPlan(route),
         matchedRoutes: matchedRoutes.map(r => ({

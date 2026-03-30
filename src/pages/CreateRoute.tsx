@@ -14,6 +14,7 @@ interface TripPreferences {
   startDate: string | null;
   planningMode: "voice" | "text";
   city: string;
+  startingLocation?: string;
   folderId?: string;
   dayNumber?: number;
 }
@@ -30,7 +31,7 @@ const CreateRoute = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const wizardState = (location.state as {
-    city?: string; date?: string; fromTemplate?: boolean; routeId?: string;
+    city?: string; date?: string; startingLocation?: string; fromTemplate?: boolean; routeId?: string;
     initialPlan?: any; likedPlaceNames?: string[]; skippedPlaceNames?: string[];
     likedPlacesData?: { place_name: string; category: string; description: string; latitude?: number; longitude?: number }[];
     matchedRoutes?: MatchedRouteStub[]; selectedRouteIndex?: number;
@@ -78,6 +79,7 @@ const CreateRoute = () => {
     startDate: wizardDate ? wizardDate.toISOString().slice(0, 10) : null,
     planningMode: "text",
     city: wizardState?.city ?? "",
+    startingLocation: wizardState?.startingLocation,
     folderId,
     dayNumber,
   });

@@ -38,6 +38,7 @@ interface TripPreferences {
   startDate: string | null;
   planningMode: string;
   city: string;
+  startingLocation?: string;
   folderId?: string;
   dayNumber?: number;
 }
@@ -668,6 +669,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
             liked_places: likedPlaces,
             skipped_places: skippedPlaces?.length ? skippedPlaces : undefined,
             ideal_day: idealDay || undefined,
+            starting_location: preferences.startingLocation || undefined,
             ...getCurrentTimeContext(),
           },
         });

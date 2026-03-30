@@ -2,10 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, X } from "lucide-react";
 import CityPicker from "@/components/plan-wizard/CityPicker";
+import StartingLocationPicker from "@/components/plan-wizard/StartingLocationPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 const PlanWizard = () => {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ const PlanWizard = () => {
 
   const [step, setStep] = useState<Step>((returnState?.step as Step) ?? 1);
   const [city, setCity] = useState(returnState?.city ?? "");
+  const [startingLocation, setStartingLocation] = useState("");
   const [date, setDate] = useState<Date | null>(returnState?.date ? new Date(returnState.date) : null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,7 +47,7 @@ const PlanWizard = () => {
           <ArrowLeft className="h-5 w-5" />
         </button>
 
-        {searchOpen && step === 3 ? (
+        {searchOpen && step === 4 ? (
           <>
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
@@ -66,7 +68,7 @@ const PlanWizard = () => {
         ) : (
           <>
             <h1 className="flex-1 text-center text-xl font-black tracking-tight">trasa</h1>
-            {step === 3 ? (
+            {step === 4 ? (
               <button
                 onClick={() => setSearchOpen(true)}
                 className="h-9 w-9 flex items-center justify-center -mr-1 shrink-0 text-foreground"
@@ -86,12 +88,20 @@ const PlanWizard = () => {
           <CityPicker onConfirm={(selectedCity) => { setCity(selectedCity); setStep(2); }} />
         )}
         {step === 2 && (
-          <FullCalendarPicker onConfirm={(selectedDate) => { setDate(selectedDate); setStep(3); }} />
+          <StartingLocationPicker
+            city={city}
+            onConfirm={(loc) => { setStartingLocation(loc); setStep(3); }}
+            onSkip={() => setStep(3)}
+          />
         )}
-        {step === 3 && date && (
+        {step === 3 && (
+          <FullCalendarPicker onConfirm={(selectedDate) => { setDate(selectedDate); setStep(4); }} />
+        )}
+        {step === 4 && date && (
           <PlaceSwiper
             city={city}
             date={date}
+            startingLocation={startingLocation}
             initialLikedPlaceNames={returnLiked}
             initialSkippedPlaceNames={returnSkipped}
             searchQuery={searchQuery}
