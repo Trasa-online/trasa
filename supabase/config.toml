@@ -1,22 +1,22 @@
 project_id = "chxphfcpehxshvijqtlf"
 
 [functions.translate-place]
-verify_jwt = false
+verify_jwt = true
 
 [functions.plan-route]
-verify_jwt = false
+verify_jwt = true
 
 [functions.google-places-proxy]
-verify_jwt = false
+verify_jwt = true
 
 [functions.chat-route]
-verify_jwt = false
+verify_jwt = true
 
 [functions.embed-memory]
-verify_jwt = false
+verify_jwt = true
 
 [functions.get-alternatives]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-push]
 verify_jwt = false

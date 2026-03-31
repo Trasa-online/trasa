@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ALLOWED_ORIGINS = ["https://trasa.lovable.app", "http://localhost:8080"];
 
@@ -38,6 +39,46 @@ serve(async (req) => {
   }
 
   try {
+    // ── Auth ──
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ── Rate limiting: 30 calls/hour per user ──
+    {
+      const windowStart = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { data: rl } = await supabase
+        .from("rate_limits")
+        .select("count, window_start")
+        .eq("user_id", user.id)
+        .eq("endpoint", "orb-chat")
+        .single();
+
+      if (rl && rl.window_start > windowStart && rl.count >= 30) {
+        return new Response(
+          JSON.stringify({ error: "Przekroczyłeś limit 30 wiadomości na godzinę." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const newCount = (!rl || rl.window_start <= windowStart) ? 1 : rl.count + 1;
+      await supabase.from("rate_limits").upsert({
+        user_id: user.id,
+        endpoint: "orb-chat",
+        count: newCount,
+        window_start: (!rl || rl.window_start <= windowStart) ? new Date().toISOString() : rl.window_start,
+      });
+    }
+
     const { message, messages = [], city } = await req.json();
 
     if (!message) {

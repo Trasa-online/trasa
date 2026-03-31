@@ -19,6 +19,8 @@ const Auth = () => {
   const [username, setUsername] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
+  const [formOpenedAt] = useState(() => Date.now());
   const navigate = useNavigate();
 
   // Pick up referral code from URL (?ref=CODE) or landing page (localStorage)
@@ -63,6 +65,10 @@ const Auth = () => {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Anti-bot: honeypot field must be empty
+    if (honeypot) return;
+    // Anti-bot: form must be open for at least 3 seconds
+    if (Date.now() - formOpenedAt < 3000) return;
     if (!agreed) {
       toast.error(t("errors.terms_required"));
       return;
@@ -180,6 +186,16 @@ const Auth = () => {
             </div>
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
+              {/* Honeypot — hidden from humans, bots fill it */}
+              <input
+                type="text"
+                name="website"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+                tabIndex={-1}
+                aria-hidden="true"
+                style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", overflow: "hidden" }}
+              />
               <div className="space-y-1.5">
                 <Label htmlFor="reg-firstname">Imię</Label>
                 <Input

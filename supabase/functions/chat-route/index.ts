@@ -117,6 +117,32 @@ serve(async (req) => {
       );
     }
 
+    // ── Rate limiting: 20 calls/hour per user ──
+    {
+      const windowStart = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { data: rl } = await supabase
+        .from("rate_limits")
+        .select("count, window_start")
+        .eq("user_id", user.id)
+        .eq("endpoint", "chat-route")
+        .single();
+
+      if (rl && rl.window_start > windowStart && rl.count >= 20) {
+        return new Response(
+          JSON.stringify({ error: "Przekroczyłeś limit 20 wiadomości na godzinę." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const newCount = (!rl || rl.window_start <= windowStart) ? 1 : rl.count + 1;
+      await supabase.from("rate_limits").upsert({
+        user_id: user.id,
+        endpoint: "chat-route",
+        count: newCount,
+        window_start: (!rl || rl.window_start <= windowStart) ? new Date().toISOString() : rl.window_start,
+      });
+    }
+
     // Load route + pins
     const { data: route } = await supabase
       .from("routes")

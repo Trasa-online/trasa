@@ -403,6 +403,32 @@ serve(async (req) => {
       );
     }
 
+    // ── Rate limiting: 15 calls/hour per user ──
+    {
+      const windowStart = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { data: rl } = await supabase
+        .from("rate_limits")
+        .select("count, window_start")
+        .eq("user_id", user.id)
+        .eq("endpoint", "plan-route")
+        .single();
+
+      if (rl && rl.window_start > windowStart && rl.count >= 15) {
+        return new Response(
+          JSON.stringify({ error: "Przekroczyłeś limit 15 planowań na godzinę. Spróbuj za chwilę." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const newCount = (!rl || rl.window_start <= windowStart) ? 1 : rl.count + 1;
+      await supabase.from("rate_limits").upsert({
+        user_id: user.id,
+        endpoint: "plan-route",
+        count: newCount,
+        window_start: (!rl || rl.window_start <= windowStart) ? new Date().toISOString() : rl.window_start,
+      });
+    }
+
     const MAX_MESSAGES = 10;
 
     // ── Fetch AAR from previous days (needed for first message too) ──
