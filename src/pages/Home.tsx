@@ -51,7 +51,6 @@ const Home = () => {
         .from("routes")
         .select("id, city, created_at, ai_summary, user_id")
         .in("user_id", followingIds)
-        .eq("is_shared", true)
         .order("created_at", { ascending: false })
         .limit(30);
       if (!routes || routes.length === 0) return [];

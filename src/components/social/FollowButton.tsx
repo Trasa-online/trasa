@@ -35,8 +35,10 @@ export default function FollowButton({ targetUserId, initialIsFollowing, classNa
       setIsFollowing(prev => !prev); // revert
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["following-ids", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["follow-counts"] });
       queryClient.invalidateQueries({ queryKey: ["public-profile"] });
-      queryClient.invalidateQueries({ queryKey: ["social-feed", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["social-feed"] });
       queryClient.invalidateQueries({ queryKey: ["profile-stats", user?.id] });
     },
   });
