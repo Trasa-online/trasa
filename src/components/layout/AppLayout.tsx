@@ -105,7 +105,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       <main className="max-w-lg mx-auto">
         {children}
       </main>
-      <BottomNav />
+      {user && <BottomNav />}
       {showOrbOverlay && (
         <OrbOverlay
           isSpeaking={isSpeaking}
