@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Copy, Check, Camera } from "lucide-react";
+import { Settings, Copy, Check, Camera, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import UserSearchDrawer from "@/components/social/UserSearchDrawer";
 
 // ── InviteSlot ────────────────────────────────────────────────────────────────
 
@@ -112,6 +113,7 @@ const TravelerProfile = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const handleAvatarUpload = async (file: File) => {
     if (!user) return;
@@ -168,6 +170,18 @@ const TravelerProfile = () => {
     enabled: !!user,
   });
 
+  const { data: followCounts } = useQuery({
+    queryKey: ["follow-counts", user?.id],
+    queryFn: async () => {
+      const [{ count: followers }, { count: following }] = await Promise.all([
+        supabase.from("followers").select("*", { count: "exact", head: true }).eq("following_id", user!.id),
+        supabase.from("followers").select("*", { count: "exact", head: true }).eq("follower_id", user!.id),
+      ]);
+      return { followers: followers ?? 0, following: following ?? 0 };
+    },
+    enabled: !!user,
+  });
+
   if (loading || !user) return null;
 
   const displayName = profile?.first_name || profile?.username || "";
@@ -181,7 +195,12 @@ const TravelerProfile = () => {
 
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-2 pb-2">
-        <div className="w-9" />
+        <button
+          onClick={() => setSearchOpen(true)}
+          className="h-9 w-9 flex items-center justify-center rounded-xl text-muted-foreground hover:bg-muted transition-colors"
+        >
+          <Search className="h-5 w-5" />
+        </button>
         <h1 className="text-base font-black tracking-tight">Mój profil</h1>
         <button
           onClick={() => navigate("/settings")}
@@ -230,6 +249,8 @@ const TravelerProfile = () => {
         <div className="flex gap-3">
           <StatCard value={stats?.trips ?? 0} label="Tras" />
           <StatCard value={stats?.cities ?? 0} label="Miast" />
+          <StatCard value={followCounts?.followers ?? 0} label="Obserwujący" />
+          <StatCard value={followCounts?.following ?? 0} label="Obserwuje" />
         </div>
 
         {/* Invites */}
@@ -252,6 +273,7 @@ const TravelerProfile = () => {
         )}
 
       </div>
+      <UserSearchDrawer open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 };
