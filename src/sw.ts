@@ -32,7 +32,7 @@ self.addEventListener("push", (event: PushEvent) => {
   }
 
   const title = data.title ?? "📍 TRASA";
-  const options: NotificationOptions = {
+  const options: NotificationOptions & { vibrate?: number[] } = {
     body: data.body ?? "",
     icon: "/icon-192.png",
     badge: "/icon-192.png",

@@ -22,11 +22,11 @@ export default function SharedRoute() {
       const { data, error } = await supabase
         .from("routes")
         .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos")
-        .eq("id", id!)
-        .eq("is_shared" as any, true)
+        .eq("id", id as string)
+        .eq("is_shared", true)
         .single();
       if (error) return null;
-      return data as any;
+      return data;
     },
     enabled: !!id,
   });
