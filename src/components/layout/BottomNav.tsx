@@ -19,7 +19,7 @@ const BottomNav = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/40 z-50 pb-safe">
-      <div className="grid grid-cols-5 h-16 max-w-lg mx-auto">
+      <div className="grid grid-cols-5 h-12 max-w-lg mx-auto">
 
         {/* Left tabs */}
         {LEFT_ITEMS.map(({ to, end, icon: Icon, label }) => (
@@ -45,8 +45,8 @@ const BottomNav = () => {
           className="flex items-center justify-center"
           aria-label="Dodaj trasę"
         >
-          <span className="h-12 w-12 rounded-full bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/30 active:scale-95 transition-transform">
-            <Plus className="h-6 w-6 text-white stroke-[2.5px]" />
+          <span className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/30 active:scale-95 transition-transform">
+            <Plus className="h-5 w-5 text-white stroke-[2.5px]" />
           </span>
         </button>
 
