@@ -180,7 +180,7 @@ const TravelerProfile = () => {
     <div className="min-h-screen bg-background pb-24">
 
       {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-safe-4 pb-3">
+      <div className="flex items-center justify-between px-5 pt-2 pb-2">
         <div className="w-9" />
         <h1 className="text-base font-black tracking-tight">Mój profil</h1>
         <button
@@ -230,7 +230,6 @@ const TravelerProfile = () => {
         <div className="flex gap-3">
           <StatCard value={stats?.trips ?? 0} label="Tras" />
           <StatCard value={stats?.cities ?? 0} label="Miast" />
-          <StatCard value={stats?.days ?? 0} label="Dni" />
         </div>
 
         {/* Invites */}
