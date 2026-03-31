@@ -51,8 +51,7 @@ export default function PublicProfile() {
       const { data } = await supabase
         .from("routes")
         .select("city")
-        .eq("user_id", profile!.id)
-        .eq("is_shared", true);
+        .eq("user_id", profile!.id);
       const all = data ?? [];
       const cities = new Set(all.map(r => r.city).filter(Boolean)).size;
       return { trips: all.length, cities };
@@ -82,7 +81,6 @@ export default function PublicProfile() {
         .from("routes")
         .select("id, city, start_date, ai_summary")
         .eq("user_id", profile!.id)
-        .eq("is_shared", true)
         .order("created_at", { ascending: false })
         .limit(10);
       return data ?? [];
@@ -145,10 +143,10 @@ export default function PublicProfile() {
           <StatCard value={stats?.cities ?? 0} label="Miast" />
         </div>
 
-        {/* Shared routes */}
+        {/* Routes */}
         {sharedRoutes.length > 0 && (
           <section className="space-y-3">
-            <p className="text-sm font-bold">Udostępnione trasy</p>
+            <p className="text-sm font-bold">Trasy</p>
             {sharedRoutes.map((route: any) => (
               <button
                 key={route.id}

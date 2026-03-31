@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface FollowButtonProps {
   targetUserId: string;
@@ -15,28 +16,39 @@ export default function FollowButton({ targetUserId, initialIsFollowing, classNa
   const queryClient = useQueryClient();
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
 
+  // Sync with prop when it changes (e.g. after query refetch)
+  useEffect(() => {
+    setIsFollowing(initialIsFollowing);
+  }, [initialIsFollowing]);
+
   const mutation = useMutation({
     mutationFn: async () => {
-      if (!user) return;
+      if (!user) throw new Error("Not authenticated");
       if (isFollowing) {
-        await supabase.from("followers")
+        const { error } = await supabase.from("followers")
           .delete()
           .eq("follower_id", user.id)
           .eq("following_id", targetUserId);
+        if (error) throw error;
       } else {
-        await supabase.from("followers")
+        const { error } = await supabase.from("followers")
           .insert({ follower_id: user.id, following_id: targetUserId });
+        if (error) throw error;
       }
     },
     onMutate: () => {
       setIsFollowing(prev => !prev); // optimistic
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Follow error:", error);
       setIsFollowing(prev => !prev); // revert
+      toast.error("Nie udało się zaktualizować obserwowania");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["following-ids", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["is-following", user?.id, targetUserId] });
       queryClient.invalidateQueries({ queryKey: ["follow-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["profile-follow-counts", targetUserId] });
       queryClient.invalidateQueries({ queryKey: ["public-profile"] });
       queryClient.invalidateQueries({ queryKey: ["social-feed"] });
       queryClient.invalidateQueries({ queryKey: ["profile-stats", user?.id] });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,14 @@ export default function UserSearchDrawer({ open, onClose }: Props) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Delay focus to avoid iOS password manager trigger on drawer open
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => inputRef.current?.focus(), 400);
+    return () => clearTimeout(t);
+  }, [open]);
 
   const trimmed = query.trim().replace(/^@/, "");
 
@@ -70,15 +78,16 @@ export default function UserSearchDrawer({ open, onClose }: Props) {
           <div className="flex-1 flex items-center gap-2 bg-muted rounded-xl px-3 h-10">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
-              autoFocus
-              type="search"
+              ref={inputRef}
+              type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Szukaj @username..."
-              autoComplete="off"
+              autoComplete="new-password"
               autoCorrect="off"
               autoCapitalize="off"
               spellCheck={false}
+              data-form-type="other"
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             {query && (

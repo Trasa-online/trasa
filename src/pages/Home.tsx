@@ -41,6 +41,8 @@ const Home = () => {
       return (data ?? []).map(r => r.following_id as string);
     },
     enabled: !!user,
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   const { data: feedItems = [], isLoading: feedLoading } = useQuery({
