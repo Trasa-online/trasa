@@ -179,7 +179,7 @@ const TravelerProfile = () => {
       <div className="px-5 space-y-6 max-w-lg mx-auto">
 
         {/* Avatar + name */}
-        <div className="flex flex-col items-center gap-5 pt-4">
+        <div className="flex flex-col items-center gap-5 pt-1">
           <CompletionRing percent={completionPct}>
             <Avatar className="h-[88px] w-[88px]">
               <AvatarImage src={profile?.avatar_url || ""} />
