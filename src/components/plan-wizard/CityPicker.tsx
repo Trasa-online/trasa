@@ -6,15 +6,50 @@ import { toast } from "sonner";
 import { ChevronDown, Check } from "lucide-react";
 
 // ── Country / city data ────────────────────────────────────────────────────
-// Add new countries + cities here as data gets seeded in the DB
+// comingSoon: true = shown grayed out, not selectable
+// To activate: set comingSoon: false (or remove the flag)
 
-const COUNTRIES = [
-  { code: "PL", flag: "🇵🇱", name: "Polska",    cities: ["Kraków"] },
-  { code: "HU", flag: "🇭🇺", name: "Węgry",     cities: ["Budapeszt"] },
-  // { code: "MT", flag: "🇲🇹", name: "Malta",     cities: ["Valletta"] },  // coming soon
-] as const;
+type City = { name: string; comingSoon?: boolean };
 
-type CountryCode = typeof COUNTRIES[number]["code"];
+type Country = {
+  code: string;
+  flag: string;
+  name: string;
+  comingSoon?: boolean;
+  cities: City[];
+};
+
+const COUNTRIES: Country[] = [
+  {
+    code: "PL", flag: "🇵🇱", name: "Polska",
+    cities: [
+      { name: "Kraków" },
+      { name: "Łódź",       comingSoon: true },
+      { name: "Poznań",     comingSoon: true },
+      { name: "Trójmiasto", comingSoon: true },
+      { name: "Warszawa",   comingSoon: true },
+      { name: "Wrocław",    comingSoon: true },
+    ],
+  },
+  {
+    code: "HU", flag: "🇭🇺", name: "Węgry",
+    cities: [{ name: "Budapeszt" }],
+  },
+  {
+    code: "ES", flag: "🇪🇸", name: "Hiszpania", comingSoon: true,
+    cities: [{ name: "Barcelona", comingSoon: true }],
+  },
+  {
+    code: "PT", flag: "🇵🇹", name: "Portugalia", comingSoon: true,
+    cities: [{ name: "Lizbona", comingSoon: true }],
+  },
+  {
+    code: "IT", flag: "🇮🇹", name: "Włochy", comingSoon: true,
+    cities: [{ name: "Rzym", comingSoon: true }],
+  },
+];
+
+type ActiveCountryCode = "PL" | "HU";
 
 // ── Drum constants ─────────────────────────────────────────────────────────
 
@@ -28,11 +63,11 @@ interface CityPickerProps {
 }
 
 const CityPicker = ({ onConfirm }: CityPickerProps) => {
-  const [countryCode, setCountryCode] = useState<CountryCode>("PL");
+  const [countryCode, setCountryCode] = useState<ActiveCountryCode>("PL");
   const [countryMenuOpen, setCountryMenuOpen] = useState(false);
 
   const selectedCountry = COUNTRIES.find(c => c.code === countryCode)!;
-  const cities = [...selectedCountry.cities];
+  const cities = selectedCountry.cities;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -64,12 +99,22 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
     }, 80);
   };
 
-  const getTextClass = (distance: number) => {
+  const getTextClass = (distance: number, comingSoon?: boolean) => {
+    if (comingSoon) {
+      // Fixed dim style regardless of position
+      if (distance === 0) return "text-5xl font-black text-foreground/25";
+      if (distance === 1) return "text-[2rem] font-semibold text-foreground/15";
+      if (distance === 2) return "text-2xl font-medium text-foreground/10";
+      return "text-xl font-normal text-foreground/[0.06]";
+    }
     if (distance === 0) return "text-5xl font-black text-foreground";
     if (distance === 1) return "text-[2rem] font-semibold text-foreground/60";
     if (distance === 2) return "text-2xl font-medium text-foreground/30";
     return "text-xl font-normal text-foreground/15";
   };
+
+  const selectedCity = cities[selectedIndex];
+  const isComingSoon = !!selectedCity?.comingSoon;
 
   const handleNotify = () => {
     if (!notifyCity.trim()) { toast.error("Wpisz nazwę miasta"); return; }
@@ -96,18 +141,30 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
         {countryMenuOpen && (
           <>
             <div className="fixed inset-0 z-10" onClick={() => setCountryMenuOpen(false)} />
-            <div className="absolute top-full mt-2 z-20 bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden min-w-[180px]">
-              {COUNTRIES.map(country => (
-                <button
-                  key={country.code}
-                  onClick={() => { setCountryCode(country.code as CountryCode); setCountryMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-muted transition-colors text-left"
-                >
-                  <span className="text-lg leading-none">{country.flag}</span>
-                  <span className="flex-1">{country.name}</span>
-                  {country.code === countryCode && <Check className="h-4 w-4 text-orange-600" />}
-                </button>
-              ))}
+            <div className="absolute top-full mt-2 z-20 bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden min-w-[200px]">
+              {COUNTRIES.map(country => {
+                const isActive = !country.comingSoon;
+                return isActive ? (
+                  <button
+                    key={country.code}
+                    onClick={() => { setCountryCode(country.code as ActiveCountryCode); setCountryMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-muted transition-colors text-left"
+                  >
+                    <span className="text-lg leading-none">{country.flag}</span>
+                    <span className="flex-1">{country.name}</span>
+                    {country.code === countryCode && <Check className="h-4 w-4 text-orange-600" />}
+                  </button>
+                ) : (
+                  <div
+                    key={country.code}
+                    className="flex items-center gap-3 px-4 py-3 text-sm opacity-35"
+                  >
+                    <span className="text-lg leading-none">{country.flag}</span>
+                    <span className="flex-1 font-medium">{country.name}</span>
+                    <span className="text-[10px] font-semibold text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">Wkrótce</span>
+                  </div>
+                );
+              })}
             </div>
           </>
         )}
@@ -135,12 +192,12 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
               const distance = Math.abs(i - selectedIndex);
               return (
                 <div
-                  key={city}
+                  key={city.name}
                   onClick={() => { setSelectedIndex(i); scrollRef.current?.scrollTo({ top: i * ITEM_HEIGHT, behavior: "smooth" }); }}
-                  className={cn("flex items-center justify-center cursor-pointer transition-all duration-150 select-none", getTextClass(distance))}
+                  className={cn("flex items-center justify-center cursor-pointer transition-all duration-150 select-none", getTextClass(distance, city.comingSoon))}
                   style={{ height: ITEM_HEIGHT, scrollSnapAlign: "center" }}
                 >
-                  {city}
+                  {city.name}
                 </div>
               );
             })}
@@ -165,11 +222,17 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
       {/* CTA */}
       <div className="px-5 pb-safe-4 pb-6">
         <Button
-          onClick={() => onConfirm(cities[selectedIndex])}
+          onClick={() => !isComingSoon && onConfirm(selectedCity.name)}
+          disabled={isComingSoon}
           size="lg"
-          className="w-full rounded-full text-base font-semibold bg-orange-600 hover:bg-orange-700 text-white border-0 shadow-lg shadow-orange-600/20"
+          className={cn(
+            "w-full rounded-full text-base font-semibold border-0 shadow-lg",
+            isComingSoon
+              ? "bg-muted text-muted-foreground shadow-none cursor-default"
+              : "bg-orange-600 hover:bg-orange-700 text-white shadow-orange-600/20"
+          )}
         >
-          Dalej
+          {isComingSoon ? "Wkrótce dostępne" : "Dalej"}
         </Button>
       </div>
     </div>
