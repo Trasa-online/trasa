@@ -84,7 +84,7 @@ const Home = () => {
   const firstName = (profile as any)?.first_name;
 
   return (
-    <div className="flex-1 flex flex-col px-4 pt-3 pb-4 gap-3">
+    <div className="flex-1 flex flex-col px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] gap-3">
       {/* Main card — fills remaining height */}
       <div className="flex-1 w-full bg-card border border-border/40 rounded-3xl flex flex-col items-center justify-center gap-6 px-8 py-10">
         <img src="/icon-192.png" alt="TRASA" className="w-20 h-20 rounded-2xl" style={{ boxShadow: "1px 1px 4px rgba(0,0,0,0.1)" }} />

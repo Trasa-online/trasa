@@ -4,7 +4,7 @@ const SwipeHistory = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex-1 flex flex-col px-4 pt-2 pb-4">
+    <div className="flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
       <h1 className="text-xl font-black tracking-tight pt-2 pb-3">Polubione miejsca</h1>
 
       <div className="flex-1 rounded-3xl bg-card border border-border/40 flex flex-col items-center justify-center gap-5 px-8 text-center">
