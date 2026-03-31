@@ -3,9 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Compass, Heart, ThumbsDown, X, ChevronRight, ArrowLeft } from "lucide-react";
+import { Compass, Heart, ThumbsDown, X, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import CityPicker from "@/components/plan-wizard/CityPicker";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
@@ -24,7 +23,6 @@ const SwipeHistory = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"liked" | "skipped">("liked");
-  const [cityPickerVisible, setCityPickerVisible] = useState(false);
 
   const { data: reactions = [], isLoading } = useQuery({
     queryKey: ["place-reactions", user?.id],
@@ -57,32 +55,6 @@ const SwipeHistory = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["place-reactions", user?.id] }),
   });
 
-  // Full-screen CityPicker overlay
-  if (cityPickerVisible) {
-    return (
-      <div className="fixed inset-0 z-50 bg-background flex flex-col">
-        <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-          <button
-            onClick={() => setCityPickerVisible(false)}
-            className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <h1 className="flex-1 text-center text-xl font-black tracking-tight">trasa</h1>
-          <div className="w-9" />
-        </div>
-        <div className="flex-1 overflow-hidden">
-          <CityPicker
-            onConfirm={(city) => {
-              setCityPickerVisible(false);
-              navigate("/plan", { state: { step: 4, city, date: new Date().toISOString() } });
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
-
   const filtered = reactions.filter((r: any) => r.reaction === tab);
   const likedCount = reactions.filter((r: any) => r.reaction === "liked").length;
   const skippedCount = reactions.filter((r: any) => r.reaction === "skipped").length;
@@ -99,7 +71,7 @@ const SwipeHistory = () => {
 
       {/* Explore CTA */}
       <button
-        onClick={() => setCityPickerVisible(true)}
+        onClick={() => navigate("/plan")}
         className="w-full bg-card border-2 border-orange-600 rounded-3xl px-5 py-5 flex items-center gap-4 mb-5 active:scale-[0.98] transition-transform"
       >
         <div className="h-12 w-12 rounded-2xl bg-orange-600/10 flex items-center justify-center flex-shrink-0">
