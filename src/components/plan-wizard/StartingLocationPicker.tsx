@@ -16,12 +16,16 @@ const haversineKm = (a: { lat: number; lng: number }, b: { lat: number; lng: num
 };
 
 const CITY_CENTERS: Record<string, { lat: number; lng: number }> = {
-  "Kraków":   { lat: 50.0617, lng: 19.9373 },
-  "Gdańsk":   { lat: 54.3520, lng: 18.6466 },
-  "Warszawa": { lat: 52.2297, lng: 21.0122 },
-  "Wrocław":  { lat: 51.1079, lng: 17.0385 },
-  "Poznań":   { lat: 52.4064, lng: 16.9252 },
-  "Zakopane": { lat: 49.2992, lng: 19.9496 },
+  "Kraków":    { lat: 50.0617, lng: 19.9373 },
+  "Gdańsk":    { lat: 54.3520, lng: 18.6466 },
+  "Warszawa":  { lat: 52.2297, lng: 21.0122 },
+  "Wrocław":   { lat: 51.1079, lng: 17.0385 },
+  "Poznań":    { lat: 52.4064, lng: 16.9252 },
+  "Zakopane":  { lat: 49.2992, lng: 19.9496 },
+  "Łódź":      { lat: 51.7592, lng: 19.4560 },
+  "Trójmiasto":{ lat: 54.3520, lng: 18.6466 },
+  "Budapeszt": { lat: 47.4979, lng: 19.0402 },
+  "Valletta":  { lat: 35.8997, lng: 14.5147 },
 };
 
 interface Suggestion {
