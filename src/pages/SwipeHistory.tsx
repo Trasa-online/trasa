@@ -71,7 +71,7 @@ const SwipeHistory = () => {
 
       {/* Explore CTA */}
       <button
-        onClick={() => navigate("/plan")}
+        onClick={() => navigate("/plan", { state: { exploreMode: true } })}
         className="w-full bg-card border-2 border-orange-600 rounded-3xl px-5 py-5 flex items-center gap-4 mb-5 active:scale-[0.98] transition-transform"
       >
         <div className="h-12 w-12 rounded-2xl bg-orange-600/10 flex items-center justify-center flex-shrink-0">

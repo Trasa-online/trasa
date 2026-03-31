@@ -11,7 +11,7 @@ type Step = 1 | 2 | 3 | 4;
 const PlanWizard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const returnState = location.state as { step?: number; city?: string; date?: string; likedPlaceNames?: string[]; skippedPlaceNames?: string[] } | null;
+  const returnState = location.state as { step?: number; city?: string; date?: string; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; exploreMode?: boolean } | null;
 
   const [step, setStep] = useState<Step>((returnState?.step as Step) ?? 1);
   const [city, setCity] = useState(returnState?.city ?? "");
@@ -21,6 +21,7 @@ const PlanWizard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddPlace, setShowAddPlace] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const exploreMode = returnState?.exploreMode ?? false;
   const returnLiked = returnState?.likedPlaceNames ?? [];
   const returnSkipped = returnState?.skippedPlaceNames ?? [];
 
@@ -93,7 +94,11 @@ const PlanWizard = () => {
       {/* Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {step === 1 && (
-          <CityPicker onConfirm={(selectedCity) => { setCity(selectedCity); setStep(2); }} />
+          <CityPicker onConfirm={(selectedCity) => {
+            setCity(selectedCity);
+            if (exploreMode) { setDate(new Date()); setStep(4); }
+            else setStep(2);
+          }} />
         )}
         {step === 2 && (
           <StartingLocationPicker
