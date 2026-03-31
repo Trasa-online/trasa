@@ -68,7 +68,7 @@ const PlanWizard = () => {
           </>
         ) : (
           <>
-            <h1 className="flex-1 text-center text-xl font-black tracking-tight">trasa</h1>
+            <div className="flex-1" />
             {step === 4 ? (
               <div className="flex items-center gap-1 -mr-1">
                 <button
