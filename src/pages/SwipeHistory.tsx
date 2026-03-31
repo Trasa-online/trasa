@@ -1,13 +1,18 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Compass, Heart, ThumbsDown, X, ChevronRight } from "lucide-react";
+import { Compass, Heart, ThumbsDown, X, ChevronRight, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SwipeDiscovery from "@/components/discover/SwipeDiscovery";
 
-const CITIES = ["Kraków", "Gdańsk", "Warszawa", "Wrocław", "Poznań", "Zakopane"];
+const CITIES = [
+  "Kraków", "Gdańsk", "Warszawa", "Wrocław", "Poznań", "Zakopane",
+  "Łódź", "Szczecin", "Lublin", "Katowice", "Białystok", "Gdynia",
+  "Rzeszów", "Toruń", "Bydgoszcz", "Olsztyn", "Kielce",
+  "Berlin", "Paryż", "Rzym", "Barcelona", "Amsterdam", "Praga",
+  "Wiedeń", "Budapeszt", "Lizbona", "Madryt", "Londyn", "Dublin",
+];
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
@@ -23,11 +28,11 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 const SwipeHistory = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"liked" | "skipped">("liked");
   const [exploreCity, setExploreCity] = useState<string | null>(null);
   const [cityPickerOpen, setCityPickerOpen] = useState(false);
+  const [citySearch, setCitySearch] = useState("");
 
   const { data: reactions = [], isLoading } = useQuery({
     queryKey: ["place-reactions", user?.id],
@@ -90,7 +95,7 @@ const SwipeHistory = () => {
 
         {/* Explore CTA */}
         <button
-          onClick={() => navigate("/plan")}
+          onClick={() => { setCitySearch(""); setCityPickerOpen(true); }}
           className="w-full bg-card border-2 border-orange-600 rounded-3xl px-5 py-5 flex items-center gap-4 mb-5 active:scale-[0.98] transition-transform"
         >
           <div className="h-12 w-12 rounded-2xl bg-orange-600/10 flex items-center justify-center flex-shrink-0">
@@ -198,22 +203,64 @@ const SwipeHistory = () => {
       {cityPickerOpen && (
         <div className="fixed inset-0 z-50 flex flex-col">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setCityPickerOpen(false)} />
-          <div className="relative mt-auto w-full bg-background rounded-t-3xl pb-safe">
+          <div className="relative mt-auto w-full bg-background rounded-t-3xl" style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom, 24px))" }}>
             <div className="flex justify-center pt-3 pb-1">
               <div className="h-1 w-10 rounded-full bg-border" />
             </div>
-            <div className="px-5 pt-2 pb-6">
-              <h2 className="text-lg font-bold mb-4">Wybierz miasto</h2>
-              <div className="grid grid-cols-2 gap-2.5">
-                {CITIES.map(city => (
-                  <button
-                    key={city}
-                    onClick={() => { setCityPickerOpen(false); setExploreCity(city); }}
-                    className="rounded-2xl border border-border/50 bg-card py-3.5 text-sm font-semibold text-center active:bg-muted transition-colors"
-                  >
-                    {city}
+            <div className="px-5 pt-2 pb-2">
+              <h2 className="text-lg font-bold mb-3">Gdzie chcesz odkrywać?</h2>
+              {/* Search input */}
+              <div className="flex items-center gap-2 bg-muted rounded-2xl px-4 py-3 mb-4">
+                <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Szukaj miasta lub kraju…"
+                  value={citySearch}
+                  onChange={e => setCitySearch(e.target.value)}
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+                {citySearch && (
+                  <button onClick={() => setCitySearch("")}>
+                    <X className="h-4 w-4 text-muted-foreground" />
                   </button>
-                ))}
+                )}
+              </div>
+              {/* City list */}
+              <div className="max-h-64 overflow-y-auto space-y-1.5 pb-1">
+                {(() => {
+                  const q = citySearch.trim().toLowerCase();
+                  const filtered = q
+                    ? CITIES.filter(c => c.toLowerCase().includes(q))
+                    : CITIES;
+                  const showCustom = q && !CITIES.some(c => c.toLowerCase() === q);
+                  return (
+                    <>
+                      {showCustom && (
+                        <button
+                          onClick={() => { setCityPickerOpen(false); setExploreCity(citySearch.trim()); }}
+                          className="w-full rounded-2xl border-2 border-orange-600 bg-orange-600/5 py-3 text-sm font-semibold text-orange-600 text-center active:bg-orange-600/10 transition-colors"
+                        >
+                          Szukaj w „{citySearch.trim()}"
+                        </button>
+                      )}
+                      {filtered.map(city => (
+                        <button
+                          key={city}
+                          onClick={() => { setCityPickerOpen(false); setExploreCity(city); }}
+                          className="w-full rounded-2xl border border-border/50 bg-card py-3 text-sm font-semibold text-center active:bg-muted transition-colors"
+                        >
+                          {city}
+                        </button>
+                      ))}
+                      {filtered.length === 0 && !showCustom && (
+                        <p className="text-sm text-muted-foreground text-center py-4">Brak wyników</p>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
