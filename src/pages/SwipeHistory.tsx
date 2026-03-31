@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +23,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 const SwipeHistory = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"liked" | "skipped">("liked");
   const [exploreCity, setExploreCity] = useState<string | null>(null);
@@ -88,7 +90,7 @@ const SwipeHistory = () => {
 
         {/* Explore CTA */}
         <button
-          onClick={() => setCityPickerOpen(true)}
+          onClick={() => navigate("/plan")}
           className="w-full bg-orange-600 rounded-3xl px-5 py-5 flex items-center gap-4 mb-5 active:scale-[0.98] transition-transform shadow-lg shadow-orange-600/20"
         >
           <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
