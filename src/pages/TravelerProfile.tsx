@@ -182,7 +182,7 @@ const TravelerProfile = () => {
 
   if (loading || !user) return null;
 
-  const displayName = profile?.first_name || profile?.username || "";
+  const displayName = profile?.username || profile?.first_name || "";
 
   // Profile completion: avatar, first_name, username = 3 fields
   const completionFields = [!!profile?.avatar_url, !!profile?.first_name, !!profile?.username];
@@ -230,7 +230,7 @@ const TravelerProfile = () => {
 
           <div className="text-center mt-2">
             <h2 className="text-2xl font-black leading-tight">
-              {profile?.first_name || profile?.username || "Użytkownik"}
+              {profile?.username || profile?.first_name || "Użytkownik"}
             </h2>
             {profile?.username && profile?.first_name && (
               <p className="text-sm text-muted-foreground mt-0.5">@{profile.username}</p>

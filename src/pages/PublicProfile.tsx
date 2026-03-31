@@ -96,7 +96,7 @@ export default function PublicProfile() {
     </div>
   );
 
-  const displayName = profile.first_name || profile.username;
+  const displayName = profile.username || profile.first_name;
 
   return (
     <div className="min-h-screen bg-background pb-8">

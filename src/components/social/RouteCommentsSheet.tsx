@@ -85,7 +85,7 @@ export default function RouteCommentsSheet({ routeId, open, onOpenChange }: Rout
           ) : (
             comments.map((c: any) => {
               const profile = c.profiles;
-              const displayName = profile?.first_name || profile?.username || "Użytkownik";
+              const displayName = profile?.username || profile?.first_name || "Użytkownik";
               const isOwn = user?.id === c.user_id;
               return (
                 <div key={c.id} className="flex gap-3 px-5 py-3">

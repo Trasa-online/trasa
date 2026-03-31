@@ -37,7 +37,7 @@ export default function FeedActivityCard({ route, actor }: FeedActivityCardProps
   const queryClient = useQueryClient();
   const [commentsOpen, setCommentsOpen] = useState(false);
 
-  const displayName = actor.first_name || actor.username || "Ktoś";
+  const displayName = actor.username || actor.first_name || "Ktoś";
   const timeAgo = formatDistanceToNow(new Date(route.created_at), { addSuffix: false, locale: pl });
   const photos = route.review_photos ?? [];
 

@@ -86,7 +86,7 @@ export default function UserSearch() {
         ) : (
           <div className="divide-y divide-border/30">
             {visible.map(profile => {
-              const displayName = profile.first_name || profile.username;
+              const displayName = profile.username || profile.first_name;
               return (
                 <div key={profile.id} className="flex items-center gap-3 px-4 py-3">
                   <button onClick={() => navigate(`/profil/${profile.username}`)}>

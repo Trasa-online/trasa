@@ -295,6 +295,7 @@ const Onboarding = () => {
 
   const [step, setStep] = useState(0);
   const [firstName, setFirstName] = useState("");
+  const [gender, setGender] = useState<string>("");
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [freeText, setFreeText] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -418,6 +419,7 @@ const Onboarding = () => {
 
       await supabase.from("profiles").update({
         ...(firstName.trim() ? { first_name: firstName.trim() } as any : {}),
+        ...(gender ? { gender } as any : {}),
         dietary_prefs: skip ? [] : [...Array.from(foodSelected), ...foodCustom],
         travel_interests: skip ? [] : [
           ...Array.from(interestsSelected),
@@ -524,6 +526,29 @@ const Onboarding = () => {
             placeholder="np. Marta"
             className="bg-card"
           />
+          <p className="text-xs text-muted-foreground mt-2">Używane tylko w rozmowie z asystentem AI.</p>
+        </div>
+
+        {/* Gender */}
+        <div className="mb-7">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+            Płeć
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: "female", label: "Kobieta" },
+              { id: "male", label: "Mężczyzna" },
+              { id: "nonbinary", label: "Niebinarna/y" },
+              { id: "prefer_not", label: "Wolę nie podawać" },
+            ].map(opt => (
+              <Chip
+                key={opt.id}
+                label={opt.label}
+                selected={gender === opt.id}
+                onClick={() => setGender(gender === opt.id ? "" : opt.id)}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Free text / voice input */}
