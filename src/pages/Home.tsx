@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Mic, BookOpen } from "lucide-react";
+import { Sparkles, Mic, BookOpen, UserPlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
 
@@ -80,27 +80,50 @@ const Home = () => {
     );
   }
 
-  // ── Authenticated home: big card + CTA ──
+  // ── Authenticated home: social hub ──
   const firstName = (profile as any)?.first_name;
 
   return (
     <div className="flex-1 flex flex-col px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] gap-3">
-      {/* Main card — fills remaining height */}
+
+      {/* Social hub card */}
       <div className="flex-1 w-full bg-card border border-border/40 rounded-3xl flex flex-col items-center justify-center gap-6 px-8 py-10">
-        <img src="/icon-192.png" alt="TRASA" className="w-20 h-20 rounded-2xl" style={{ boxShadow: "1px 1px 4px rgba(0,0,0,0.1)" }} />
-        <div className="text-center">
-          <h1 className="text-3xl font-black tracking-tight">TRASA</h1>
-          {firstName && (
-            <p className="text-sm text-muted-foreground mt-1">
-              {t("greeting_with_name", { name: firstName })}
-            </p>
-          )}
+
+        {/* Illustration */}
+        <div className="relative">
+          {/* Background circle */}
+          <div className="w-24 h-24 rounded-full bg-orange-50 flex items-center justify-center">
+            {/* Two person silhouettes */}
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Left person */}
+              <circle cx="18" cy="16" r="8" fill="#fdba74" />
+              <path d="M4 44c0-7.732 6.268-14 14-14s14 6.268 14 14" fill="#fdba74" />
+              {/* Right person (offset, slightly larger) */}
+              <circle cx="38" cy="14" r="9" fill="#ea580c" />
+              <path d="M22 44c0-8.284 6.716-15 15-15s15 6.716 15 15" fill="#ea580c" />
+            </svg>
+          </div>
+          {/* Plus badge */}
+          <div className="absolute -top-1 -right-1 h-7 w-7 rounded-full bg-orange-600 flex items-center justify-center shadow-md">
+            <UserPlus className="h-3.5 w-3.5 text-white" />
+          </div>
         </div>
+
+        <div className="text-center space-y-2">
+          {firstName && (
+            <p className="text-sm text-muted-foreground">Hej {firstName} 👋</p>
+          )}
+          <p className="text-xl font-bold tracking-tight">Nie masz jeszcze znajomych</p>
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
+            Zaproś znajomych do TRASA i razem planujcie podróże, śledźcie trasy i inspirujcie się nawzajem.
+          </p>
+        </div>
+
         <button
-          onClick={() => navigate("/plan")}
-          className="w-full py-4 rounded-2xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] transition-all text-white font-bold text-base shadow-lg shadow-orange-600/20"
+          onClick={() => navigate("/moj-profil")}
+          className="w-full py-3.5 rounded-2xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] transition-all text-white font-bold text-base shadow-lg shadow-orange-600/20"
         >
-          + {t("add_plan")}
+          Dodaj znajomych
         </button>
       </div>
 
