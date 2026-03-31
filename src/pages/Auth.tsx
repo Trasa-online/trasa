@@ -111,9 +111,7 @@ const Auth = () => {
       {/* Hero */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-6">
         {/* Logo mark */}
-        <div className="w-14 h-14 rounded-2xl bg-orange-600 flex items-center justify-center mb-4 shadow-lg shadow-orange-600/25">
-          <span className="text-white font-black text-xl tracking-tight">T</span>
-        </div>
+        <img src="/icon-192.png" alt="TRASA" className="w-14 h-14 rounded-2xl mb-4 shadow-lg shadow-orange-600/25" />
         <h1 className="text-4xl font-black tracking-tight mb-1.5">TRASA</h1>
         <p className="text-muted-foreground text-center text-sm max-w-[260px] leading-relaxed mb-8">
           {t("description")}
