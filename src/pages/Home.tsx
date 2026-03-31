@@ -48,8 +48,9 @@ const Home = () => {
       const feedUserIds = [...new Set([...followingIds, user.id])];
       const { data: routes } = await supabase
         .from("routes")
-        .select("id, city, created_at, ai_summary, user_id, review_photos, likes(user_id), comments(id)")
+        .select("id, city, created_at, ai_summary, user_id, review_photos, likes(user_id), comments(id), pins(place_name, category, pin_order)")
         .in("user_id", feedUserIds)
+        .or("is_shared.eq.true,is_shared.is.null")
         .order("created_at", { ascending: false })
         .limit(30);
 

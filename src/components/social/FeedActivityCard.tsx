@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -9,6 +9,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import RouteCommentsSheet from "./RouteCommentsSheet";
 
+const CATEGORY_EMOJI: Record<string, string> = {
+  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
+  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
+  market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
+  walk: "🚶",
+};
+
+interface FeedPin {
+  place_name: string;
+  category: string | null;
+  pin_order: number | null;
+}
+
 interface FeedRoute {
   id: string;
   city: string;
@@ -17,6 +30,7 @@ interface FeedRoute {
   review_photos?: string[] | null;
   likes?: { user_id: string }[];
   comments?: { id: string }[];
+  pins?: FeedPin[];
 }
 
 interface FeedActor {
@@ -26,12 +40,69 @@ interface FeedActor {
   avatar_url: string | null;
 }
 
-interface FeedActivityCardProps {
-  route: FeedRoute;
-  actor: FeedActor;
+function PhotoSlider({ photos }: { photos: string[] }) {
+  const [current, setCurrent] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const idx = Math.round(scrollRef.current.scrollLeft / scrollRef.current.offsetWidth);
+    setCurrent(idx);
+  };
+
+  if (photos.length === 1) {
+    return (
+      <div className="rounded-2xl overflow-hidden bg-muted aspect-[4/3] mb-2.5">
+        <img src={photos[0]} alt="" className="w-full h-full object-cover" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-2.5">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide rounded-2xl gap-0"
+        style={{ scrollBehavior: "smooth" }}
+      >
+        {photos.map((url, i) => (
+          <div key={i} className="flex-shrink-0 w-full snap-center aspect-[4/3] overflow-hidden bg-muted">
+            <img src={url} alt="" className="w-full h-full object-cover" />
+          </div>
+        ))}
+      </div>
+      {/* Dot indicator */}
+      <div className="flex justify-center gap-1 mt-1.5">
+        {photos.map((_, i) => (
+          <div
+            key={i}
+            className={`h-1.5 rounded-full transition-all ${i === current ? "w-4 bg-foreground" : "w-1.5 bg-muted-foreground/30"}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
-export default function FeedActivityCard({ route, actor }: FeedActivityCardProps) {
+function PinsSummary({ pins }: { pins: FeedPin[] }) {
+  const sorted = [...pins].sort((a, b) => (a.pin_order ?? 0) - (b.pin_order ?? 0));
+  return (
+    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide mb-2.5 -mx-1 px-1">
+      {sorted.map((pin, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-1 bg-muted rounded-full px-2.5 py-1 flex-shrink-0"
+        >
+          <span className="text-[11px]">{CATEGORY_EMOJI[pin.category ?? ""] ?? "📍"}</span>
+          <span className="text-[11px] font-medium text-foreground/80 whitespace-nowrap">{pin.place_name}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function FeedActivityCard({ route, actor }: { route: FeedRoute; actor: FeedActor }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -40,6 +111,7 @@ export default function FeedActivityCard({ route, actor }: FeedActivityCardProps
   const displayName = actor.username || actor.first_name || "Ktoś";
   const timeAgo = formatDistanceToNow(new Date(route.created_at), { addSuffix: false, locale: pl });
   const photos = route.review_photos ?? [];
+  const pins = (route.pins ?? []).filter(p => p.place_name);
 
   const likedBy = (route.likes ?? []).map(l => l.user_id);
   const likeCount = likedBy.length;
@@ -78,9 +150,7 @@ export default function FeedActivityCard({ route, actor }: FeedActivityCardProps
         };
       });
     },
-    onError: () => {
-      queryClient.invalidateQueries({ queryKey: ["social-feed-v2", user?.id] });
-    },
+    onError: () => queryClient.invalidateQueries({ queryKey: ["social-feed-v2", user?.id] }),
   });
 
   const goToProfile = () => actor.username && navigate(`/profil/${actor.username}`);
@@ -125,50 +195,34 @@ export default function FeedActivityCard({ route, actor }: FeedActivityCardProps
             </p>
           )}
 
-          {/* Photos */}
-          {photos.length > 0 && (
-            <div className={`grid gap-1.5 mb-3 ${photos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-              {photos.slice(0, 2).map((url, i) => (
-                <div key={i} className="rounded-2xl overflow-hidden bg-muted aspect-square">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                </div>
-              ))}
-            </div>
-          )}
+          {/* Photos slider */}
+          {photos.length > 0 && <PhotoSlider photos={photos} />}
+
+          {/* Pins summary */}
+          {pins.length > 0 && <PinsSummary pins={pins} />}
 
           {/* Action bar */}
-          <div className="flex items-center gap-5 mt-2">
+          <div className="flex items-center gap-5 mt-1">
             <button
               onClick={() => user && likeMutation.mutate(!isLiked)}
               className="flex items-center gap-1.5 transition-colors"
               disabled={!user || likeMutation.isPending}
             >
-              <Heart
-                className={`h-5 w-5 transition-colors ${isLiked ? "fill-red-500 text-red-500" : "text-muted-foreground"}`}
-              />
-              {likeCount > 0 && (
-                <span className="text-xs text-muted-foreground tabular-nums">{likeCount}</span>
-              )}
+              <Heart className={`h-5 w-5 transition-colors ${isLiked ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
+              {likeCount > 0 && <span className="text-xs text-muted-foreground tabular-nums">{likeCount}</span>}
             </button>
-
             <button
               onClick={() => setCommentsOpen(true)}
               className="flex items-center gap-1.5 text-muted-foreground"
             >
               <MessageCircle className="h-5 w-5" />
-              {commentCount > 0 && (
-                <span className="text-xs tabular-nums">{commentCount}</span>
-              )}
+              {commentCount > 0 && <span className="text-xs tabular-nums">{commentCount}</span>}
             </button>
           </div>
         </div>
       </div>
 
-      <RouteCommentsSheet
-        routeId={route.id}
-        open={commentsOpen}
-        onOpenChange={setCommentsOpen}
-      />
+      <RouteCommentsSheet routeId={route.id} open={commentsOpen} onOpenChange={setCommentsOpen} />
     </>
   );
 }

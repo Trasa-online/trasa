@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Share2 } from "lucide-react";
+import { ArrowLeft, Camera, X, Share2, Globe, Lock } from "lucide-react";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -25,6 +25,7 @@ const ReviewSummary = () => {
 
   const [narrative, setNarrative] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
+  const [isPublic, setIsPublic] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -37,7 +38,7 @@ const ReviewSummary = () => {
       if (!routeId || !user) return null;
       const { data } = await supabase
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative")
+        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative, is_shared")
         .eq("id", routeId)
         .single();
       return data as any;
@@ -64,8 +65,14 @@ const ReviewSummary = () => {
   useEffect(() => {
     if (route?.review_narrative) setNarrative(route.review_narrative);
     if (route?.review_photos?.length) setPhotos(route.review_photos);
-  }, [route?.review_narrative, route?.review_photos]);
+    if (route?.is_shared != null) setIsPublic(route.is_shared);
+  }, [route?.review_narrative, route?.review_photos, route?.is_shared]);
 
+
+  const togglePublic = async (val: boolean) => {
+    setIsPublic(val);
+    if (routeId) await supabase.from("routes").update({ is_shared: val } as any).eq("id", routeId);
+  };
 
   const saveNarrative = useCallback((value: string) => {
     if (!routeId) return;
@@ -260,6 +267,23 @@ const ReviewSummary = () => {
           )}
 
           <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
+        </div>
+
+        {/* ── Visibility toggle ── */}
+        <div className="px-5 pt-4 pb-4 border-b border-border/30 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {isPublic ? <Globe className="h-4 w-4 text-orange-600" /> : <Lock className="h-4 w-4 text-muted-foreground" />}
+            <div>
+              <p className="text-sm font-semibold">{isPublic ? "Publiczne" : "Prywatne"}</p>
+              <p className="text-xs text-muted-foreground">{isPublic ? "Widoczne na feedzie znajomych" : "Tylko dla Ciebie"}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => togglePublic(!isPublic)}
+            className={`relative w-12 h-6 rounded-full transition-colors ${isPublic ? "bg-orange-600" : "bg-muted-foreground/30"}`}
+          >
+            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isPublic ? "translate-x-6" : "translate-x-0.5"}`} />
+          </button>
         </div>
 
         {/* ── Places ── */}
