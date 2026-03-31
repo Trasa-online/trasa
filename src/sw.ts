@@ -32,7 +32,8 @@ self.addEventListener("push", (event: PushEvent) => {
   }
 
   const title = data.title ?? "📍 TRASA";
-  const options: NotificationOptions & { vibrate?: number[] } = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const options: any = {
     body: data.body ?? "",
     icon: "/icon-192.png",
     badge: "/icon-192.png",
