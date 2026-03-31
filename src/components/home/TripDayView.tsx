@@ -18,16 +18,28 @@ interface TripDayViewProps {
   pins: Pin[];
   dayLabel: string;
   dateLabel?: string | null;
+  date?: string | null;
   onStartReview: () => void;
 }
 
-const isEvening = () => new Date().getHours() >= 17;
+const getReviewAvailability = (date?: string | null): "available" | "today_too_early" | "future" => {
+  if (!date) return "available";
+  const tripDate = new Date(date);
+  const today = new Date();
+  tripDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  if (tripDate < today) return "available";
+  if (tripDate.getTime() === today.getTime()) {
+    return new Date().getHours() >= 17 ? "available" : "today_too_early";
+  }
+  return "future";
+};
 
-const TripDayView = ({ pins, dayLabel, dateLabel, onStartReview }: TripDayViewProps) => {
+const TripDayView = ({ pins, dayLabel, dateLabel, date, onStartReview }: TripDayViewProps) => {
   const [selectedPin, setSelectedPin] = useState<Pin | null>(null);
 
   const sortedPins = [...pins].sort((a, b) => a.pin_order - b.pin_order);
-  const evening = isEvening();
+  const reviewStatus = getReviewAvailability(date);
 
   const pinsWithCoords = sortedPins.filter(p => p.latitude && p.longitude);
 
@@ -94,7 +106,7 @@ const TripDayView = ({ pins, dayLabel, dateLabel, onStartReview }: TripDayViewPr
 
       {/* Action buttons */}
       <div className="space-y-2">
-        {evening ? (
+        {reviewStatus === "available" ? (
           <Button
             onClick={onStartReview}
             size="sm"
@@ -102,11 +114,11 @@ const TripDayView = ({ pins, dayLabel, dateLabel, onStartReview }: TripDayViewPr
           >
             Przejdź do podsumowania
           </Button>
-        ) : (
+        ) : reviewStatus === "today_too_early" ? (
           <p className="text-[11px] text-muted-foreground text-center py-0.5">
             "Opowiedz o dniu" dostępne od 17:00
           </p>
-        )}
+        ) : null}
       </div>
 
       {selectedPin && (

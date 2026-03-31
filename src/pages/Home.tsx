@@ -369,6 +369,7 @@ const Home = () => {
                                 }))}
                                 dayLabel={trip.routes.length > 1 ? t("day_label", { number: route.day_number || 1 }) : t("plan_label")}
                                 dateLabel={route.start_date ? format(new Date(route.start_date), "dd.MM.yyyy") : null}
+                                date={route.start_date ?? null}
                                 onStartReview={() => navigate(`/day-review?route=${route.id}`)}
                               />
                             </div>
