@@ -37,21 +37,23 @@ export default function FollowButton({ targetUserId, initialIsFollowing, classNa
       }
     },
     onMutate: () => {
+      const wasFollowing = isFollowing;
       setIsFollowing(prev => !prev); // optimistic
+      return { wasFollowing };
     },
-    onError: (error) => {
+    onError: (error, _, context) => {
       console.error("Follow error:", error);
-      setIsFollowing(prev => !prev); // revert
+      setIsFollowing(context?.wasFollowing ?? isFollowing); // revert
       toast.error("Nie udało się zaktualizować obserwowania");
     },
-    onSuccess: () => {
-      // refetchQueries actively triggers refetch (not just marks stale)
-      queryClient.refetchQueries({ queryKey: ["following-ids", user?.id] });
+    onSuccess: (_, __, context) => {
+      toast.success(context?.wasFollowing ? "Przestałeś obserwować" : "Obserwujesz!");
+      queryClient.invalidateQueries({ queryKey: ["social-feed-v2", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["following-ids", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["is-following", user?.id, targetUserId] });
       queryClient.invalidateQueries({ queryKey: ["follow-counts"] });
       queryClient.invalidateQueries({ queryKey: ["profile-follow-counts", targetUserId] });
       queryClient.invalidateQueries({ queryKey: ["public-profile"] });
-      queryClient.invalidateQueries({ queryKey: ["social-feed"] });
       queryClient.invalidateQueries({ queryKey: ["profile-stats", user?.id] });
     },
   });

@@ -29,31 +29,33 @@ const Home = () => {
     }
   }, [loading, user, profile, navigate]);
 
-  // Feed: people I follow
-  const { data: followingIds = [], isLoading: loadingFollowing } = useQuery({
-    queryKey: ["following-ids", user?.id],
+  // Single query: get following IDs + their routes in one go
+  // No two-query chain — avoids race conditions with cache
+  const { data: feed, isLoading: feedLoading } = useQuery({
+    queryKey: ["social-feed-v2", user?.id],
     queryFn: async () => {
-      if (!user) return [];
-      const { data } = await supabase.from("followers").select("following_id").eq("follower_id", user.id);
-      return (data ?? []).map(r => r.following_id as string);
-    },
-    enabled: !!user,
-    refetchOnMount: "always",
-    staleTime: 0,
-  });
+      if (!user) return { followingIds: [], items: [] };
 
-  const { data: feedItems = [], isLoading: feedLoading } = useQuery({
-    queryKey: ["social-feed", user?.id, followingIds],
-    queryFn: async () => {
-      if (followingIds.length === 0) return [];
+      // Step 1: who do I follow?
+      const { data: followRows } = await supabase
+        .from("followers")
+        .select("following_id")
+        .eq("follower_id", user.id);
+
+      const followingIds = (followRows ?? []).map(r => r.following_id as string);
+      if (followingIds.length === 0) return { followingIds: [], items: [] };
+
+      // Step 2: their routes
       const { data: routes } = await supabase
         .from("routes")
         .select("id, city, created_at, ai_summary, user_id")
         .in("user_id", followingIds)
         .order("created_at", { ascending: false })
         .limit(30);
-      if (!routes || routes.length === 0) return [];
 
+      if (!routes || routes.length === 0) return { followingIds, items: [] };
+
+      // Step 3: their profiles
       const actorIds = [...new Set(routes.map(r => r.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
@@ -61,12 +63,18 @@ const Home = () => {
         .in("id", actorIds);
 
       const profileMap = Object.fromEntries((profiles ?? []).map(p => [p.id, p]));
-      return routes.map(r => ({ route: r, actor: profileMap[r.user_id] ?? null })).filter(i => i.actor);
+      const items = routes
+        .map(r => ({ route: r, actor: profileMap[r.user_id] ?? null }))
+        .filter(i => i.actor);
+
+      return { followingIds, items };
     },
-    enabled: followingIds.length > 0,
+    enabled: !!user,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
-  if (loading || loadingFollowing) return null;
+  if (loading) return null;
 
   // ── Landing for unauthenticated ──
   if (!user) {
@@ -119,90 +127,88 @@ const Home = () => {
   }
 
   const firstName = (profile as any)?.first_name;
+  const followingIds = feed?.followingIds ?? [];
+  const feedItems = feed?.items ?? [];
 
   // ── Feed view (has following) ──
   if (followingIds.length > 0) {
     return (
-      <>
-        <div className="flex-1 flex flex-col px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
-          <div className="flex items-center justify-between pt-2 pb-4">
-            <h1 className="text-xl font-black tracking-tight">Aktywność</h1>
-            <button
-              onClick={() => navigate("/search")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-xs font-semibold text-muted-foreground"
-            >
-              <Users className="h-3.5 w-3.5" />
-              Znajdź
-            </button>
-          </div>
-
-          {feedLoading ? (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">Ładowanie...</div>
-          ) : feedItems.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
-              <Users className="h-10 w-10 text-muted-foreground/30" />
-              <div>
-                <p className="font-semibold text-sm">Nikt jeszcze nie dodał trasy</p>
-                <p className="text-xs text-muted-foreground mt-1">Gdy znajomi opublikują trasę, pojawi się tutaj.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {feedItems.map(({ route, actor }) => (
-                <FeedActivityCard key={route.id} route={route as any} actor={actor as any} />
-              ))}
-            </div>
-          )}
+      <div className="flex-1 flex flex-col px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
+        <div className="flex items-center justify-between pt-2 pb-4">
+          <h1 className="text-xl font-black tracking-tight">Aktywność</h1>
+          <button
+            onClick={() => navigate("/search")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-xs font-semibold text-muted-foreground"
+          >
+            <Users className="h-3.5 w-3.5" />
+            Znajdź
+          </button>
         </div>
-      </>
+
+        {feedLoading ? (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">Ładowanie...</div>
+        ) : feedItems.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
+            <Users className="h-10 w-10 text-muted-foreground/30" />
+            <div>
+              <p className="font-semibold text-sm">Nikt jeszcze nie dodał trasy</p>
+              <p className="text-xs text-muted-foreground mt-1">Gdy znajomi opublikują trasę, pojawi się tutaj.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {feedItems.map(({ route, actor }) => (
+              <FeedActivityCard key={route.id} route={route as any} actor={actor as any} />
+            ))}
+          </div>
+        )}
+      </div>
     );
   }
 
   // ── Empty social hub (no following yet) ──
   return (
-    <>
-      <div className="flex-1 flex flex-col px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] gap-3">
-        <div className="flex-1 w-full bg-card border border-border/40 rounded-3xl flex flex-col items-center justify-center gap-6 px-8 py-10">
-          <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-orange-50 flex items-center justify-center">
-              <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-                <circle cx="18" cy="16" r="8" fill="#fdba74" />
-                <path d="M4 44c0-7.732 6.268-14 14-14s14 6.268 14 14" fill="#fdba74" />
-                <circle cx="38" cy="14" r="9" fill="#ea580c" />
-                <path d="M22 44c0-8.284 6.716-15 15-15s15 6.716 15 15" fill="#ea580c" />
-              </svg>
-            </div>
-            <div className="absolute -top-1 -right-1 h-7 w-7 rounded-full bg-orange-600 flex items-center justify-center shadow-md">
-              <UserPlus className="h-3.5 w-3.5 text-white" />
-            </div>
+    <div className="flex-1 flex flex-col px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] gap-3">
+      <div className="flex-1 w-full bg-card border border-border/40 rounded-3xl flex flex-col items-center justify-center gap-6 px-8 py-10">
+        <div className="relative">
+          <div className="w-24 h-24 rounded-full bg-orange-50 flex items-center justify-center">
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+              <circle cx="18" cy="16" r="8" fill="#fdba74" />
+              <path d="M4 44c0-7.732 6.268-14 14-14s14 6.268 14 14" fill="#fdba74" />
+              <circle cx="38" cy="14" r="9" fill="#ea580c" />
+              <path d="M22 44c0-8.284 6.716-15 15-15s15 6.716 15 15" fill="#ea580c" />
+            </svg>
           </div>
-
-          <div className="text-center space-y-2">
-            {firstName && <p className="text-sm text-muted-foreground">Hej {firstName} 👋</p>}
-            <p className="text-xl font-bold tracking-tight">Nie masz jeszcze znajomych</p>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
-              Zaproś znajomych do TRASA i razem planujcie podróże, śledźcie trasy i inspirujcie się nawzajem.
-            </p>
+          <div className="absolute -top-1 -right-1 h-7 w-7 rounded-full bg-orange-600 flex items-center justify-center shadow-md">
+            <UserPlus className="h-3.5 w-3.5 text-white" />
           </div>
-
-          <button
-            onClick={() => navigate("/search")}
-            className="w-full py-3.5 rounded-2xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] transition-all text-white font-bold text-base shadow-lg shadow-orange-600/20"
-          >
-            Dodaj znajomych
-          </button>
         </div>
 
-        {user.email === "nat.maz98@gmail.com" && (
-          <button
-            onClick={() => navigate("/admin/routes")}
-            className="self-center text-xs bg-orange-600/10 text-orange-600 font-semibold px-4 py-2 rounded-full"
-          >
-            🗺️ Trasy wzorcowe
-          </button>
-        )}
+        <div className="text-center space-y-2">
+          {firstName && <p className="text-sm text-muted-foreground">Hej {firstName} 👋</p>}
+          <p className="text-xl font-bold tracking-tight">Nie masz jeszcze znajomych</p>
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
+            Zaproś znajomych do TRASA i razem planujcie podróże, śledźcie trasy i inspirujcie się nawzajem.
+          </p>
+        </div>
+
+        <button
+          onClick={() => navigate("/search")}
+          className="w-full py-3.5 rounded-2xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] transition-all text-white font-bold text-base shadow-lg shadow-orange-600/20"
+        >
+          Dodaj znajomych
+        </button>
       </div>
-    </>
+
+      {user.email === "nat.maz98@gmail.com" && (
+        <button
+          onClick={() => navigate("/admin/routes")}
+          className="self-center text-xs bg-orange-600/10 text-orange-600 font-semibold px-4 py-2 rounded-full"
+        >
+          🗺️ Trasy wzorcowe
+        </button>
+      )}
+    </div>
   );
 };
 
