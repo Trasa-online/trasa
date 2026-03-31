@@ -147,7 +147,7 @@ const MyTrips = () => {
 
         {/* Header */}
         <div className="px-5 pt-safe-4 pb-0 max-w-lg mx-auto">
-          <h1 className="text-xl font-black tracking-tight pt-3 pb-4">Moje trasy</h1>
+          <h1 className="text-xl font-black tracking-tight pt-3 pb-2">Moje trasy</h1>
 
           {/* Tabs */}
           <div className="flex border-b border-border/40 mb-5">
