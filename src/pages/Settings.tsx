@@ -4,11 +4,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, ChevronRight, Compass, Bell } from "lucide-react";
+import { Camera, Shield, Bell, LogOut, ChevronRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { toast } from "sonner";
@@ -20,8 +19,8 @@ function PushToggleSection() {
   const { t } = useTranslation("settings");
   if (!isSupported) return null;
   return (
-    <div className="w-full flex items-center gap-3 px-4 py-3 bg-card rounded-xl border border-border/40">
-      <Bell className="h-4 w-4 text-primary flex-shrink-0" />
+    <div className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40">
+      <Bell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
       <span className="text-sm font-medium flex-1">{t("push_notifications")}</span>
       <Switch checked={isSubscribed} onCheckedChange={toggle} disabled={isLoading} />
     </div>
@@ -32,14 +31,14 @@ const Settings = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { t, i18n } = useTranslation("settings");
+  const { t } = useTranslation("settings");
+
+  const [firstName, setFirstName] = useState("");
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate("/auth");
-    }
+    if (!loading && !user) navigate("/auth");
   }, [user, loading, navigate]);
 
   const { data: profile } = useQuery({
@@ -50,7 +49,6 @@ const Settings = () => {
         .select("*")
         .eq("id", user?.id)
         .single();
-
       if (error) throw error;
       return data;
     },
@@ -66,7 +64,6 @@ const Settings = () => {
         .eq("user_id", user?.id)
         .eq("role", "admin")
         .maybeSingle();
-
       return !!data;
     },
     enabled: !!user,
@@ -74,6 +71,7 @@ const Settings = () => {
 
   useEffect(() => {
     if (profile) {
+      setFirstName((profile as any).first_name || "");
       setUsername(profile.username || "");
       setAvatarUrl(profile.avatar_url || "");
     }
@@ -83,9 +81,8 @@ const Settings = () => {
     mutationFn: async () => {
       const { error } = await supabase
         .from("profiles")
-        .update({ username, avatar_url: avatarUrl })
+        .update({ first_name: firstName, username, avatar_url: avatarUrl } as any)
         .eq("id", user?.id);
-
       if (error) throw error;
     },
     onSuccess: () => {
@@ -96,112 +93,108 @@ const Settings = () => {
 
   const handleAvatarUpload = async (file: File) => {
     if (!user) return;
-
     const fileExt = file.name.split(".").pop();
     const fileName = `${user.id}/avatar.${fileExt}`;
-
     const { error: uploadError } = await supabase.storage
       .from("avatars")
       .upload(fileName, file, { upsert: true });
-
-    if (uploadError) {
-      toast.error(t("toast_avatar_error"));
-      return;
-    }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from("avatars")
-      .getPublicUrl(fileName);
-
+    if (uploadError) { toast.error(t("toast_avatar_error")); return; }
+    const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
     setAvatarUrl(publicUrl);
   };
 
   if (loading || !user) return null;
 
+  const displayName = firstName || username || "";
+
   return (
-    <>
+    <div className="min-h-screen bg-background pb-10">
       <PageHeader title={t("title")} showBack />
-      <div className="p-4 space-y-6">
-        <div className="flex flex-col items-center gap-4 bg-card rounded-xl p-4">
+
+      <div className="p-4 space-y-6 max-w-lg mx-auto">
+
+        {/* Avatar */}
+        <div className="flex flex-col items-center gap-3 py-4">
           <div className="relative">
-            <Avatar className="h-24 w-24">
+            <Avatar className="h-20 w-20">
               <AvatarImage src={avatarUrl} />
-              <AvatarFallback>{username?.[0]?.toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="bg-orange-100 text-orange-600 text-2xl font-bold">
+                {displayName.charAt(0).toUpperCase() || "U"}
+              </AvatarFallback>
             </Avatar>
-            <label className="absolute bottom-0 right-0 bg-foreground text-background p-2 rounded-full cursor-pointer">
-              <Camera className="h-4 w-4" />
+            <label className="absolute bottom-0 right-0 bg-foreground text-background p-1.5 rounded-full cursor-pointer shadow">
+              <Camera className="h-3.5 w-3.5" />
               <input
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleAvatarUpload(file);
-                }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }}
               />
             </label>
           </div>
+          {displayName && <p className="text-base font-bold">{displayName}</p>}
         </div>
 
-        <div className="space-y-4 bg-card rounded-xl p-4">
-          <div>
+        {/* Profile fields */}
+        <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="first_name">{t("first_name")}</Label>
+            <Input
+              id="first_name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="np. Marta"
+              className="bg-background"
+            />
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="username">{t("username")}</Label>
             <Input
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              placeholder="twoja_nazwa"
               className="bg-background"
             />
           </div>
-
-          <Button
-            className="w-full"
+          <button
             onClick={() => updateProfileMutation.mutate()}
             disabled={updateProfileMutation.isPending}
+            className="w-full py-3 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-semibold text-sm transition-colors disabled:opacity-50"
           >
-            {t("save_changes")}
-          </Button>
+            {updateProfileMutation.isPending ? "Zapisuję..." : t("save_changes")}
+          </button>
         </div>
 
-        <button
-          onClick={() => navigate("/moj-profil")}
-          className="w-full flex items-center gap-3 px-4 py-3 bg-card rounded-xl border border-border/40 hover:bg-muted transition-colors text-left"
-        >
-          <Compass className="h-4 w-4 text-primary flex-shrink-0" />
-          <span className="text-sm font-medium flex-1">{t("travel_profile")}</span>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </button>
+        {/* Other settings */}
+        <div className="space-y-2">
+          <PushToggleSection />
 
-        <button
-          onClick={() => i18n.changeLanguage(i18n.language === "pl" ? "en" : "pl")}
-          className="w-full flex items-center gap-3 px-4 py-3 bg-card rounded-xl border border-border/40 hover:bg-muted transition-colors text-left"
-        >
-          <span className="text-sm font-medium flex-1">{t("language")}</span>
-          <span className="text-sm text-muted-foreground font-medium">{i18n.language === "pl" ? "🇵🇱 PL" : "🇬🇧 EN"}</span>
-        </button>
-
-        <PushToggleSection />
-
-        <div className="space-y-2 bg-card rounded-xl p-4">
           {isAdmin && (
-            <Button
-              variant="outline"
-              className="w-full"
+            <button
               onClick={() => navigate("/admin")}
+              className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
             >
-              <Shield className="h-4 w-4 mr-2" />
-              {t("admin_panel")}
-            </Button>
+              <Shield className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-sm font-medium flex-1">{t("admin_panel")}</span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
           )}
-          <Button variant="outline" className="w-full">
-            {t("change_password")}
-          </Button>
-          <Button variant="destructive" className="w-full" onClick={signOut}>
-            {t("logout")}
-          </Button>
         </div>
+
+        {/* Danger zone */}
+        <div className="space-y-2">
+          <button
+            onClick={signOut}
+            className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+          >
+            <LogOut className="h-4 w-4 text-destructive flex-shrink-0" />
+            <span className="text-sm font-medium text-destructive flex-1">{t("logout")}</span>
+          </button>
+        </div>
+
       </div>
-    </>
+    </div>
   );
 };
 
