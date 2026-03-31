@@ -17,8 +17,8 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 8%;
 
-    /* ── Primary — toned-down burnt orange ── */
-    --primary: 21 72% 36%;
+    /* ── Primary — orange (#EA580C = orange-600) ── */
+    --primary: 21 90% 48%;
     --primary-foreground: 0 0% 100%;
 
     /* ── Secondary — light gray ── */
@@ -38,7 +38,7 @@ All colors MUST be HSL.
 
     --border: 0 0% 85%;
     --input: 0 0% 91%;
-    --ring: 21 72% 36%;
+    --ring: 21 90% 48%;
 
     /* ── Tertiary — amber/gold ── */
     --star: 45 100% 51%;
@@ -62,7 +62,7 @@ All colors MUST be HSL.
 
 /* Orb flowing gradient animation */
 .orb-gradient {
-  background: linear-gradient(135deg, #A8450E, #C4601A, #8C3A0A, #A8450E);
+  background: linear-gradient(135deg, #EA580C, #FB923C, #C2410C, #EA580C);
   background-size: 300% 300%;
   animation: orb-flow 4s ease infinite;
 }
@@ -118,7 +118,7 @@ All colors MUST be HSL.
 /* Orange scrollbar for horizontal pin sliders */
 .scrollbar-orange {
   scrollbar-width: thin;
-  scrollbar-color: #A8450E transparent;
+  scrollbar-color: #F9662B transparent;
 }
 .scrollbar-orange::-webkit-scrollbar {
   height: 3px;
@@ -127,7 +127,7 @@ All colors MUST be HSL.
   background: transparent;
 }
 .scrollbar-orange::-webkit-scrollbar-thumb {
-  background: #A8450E;
+  background: #F9662B;
   border-radius: 9999px;
 }
 
