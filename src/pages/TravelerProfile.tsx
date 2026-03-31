@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Copy, Check } from "lucide-react";
+import { Settings, Copy, Check, Camera } from "lucide-react";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -109,6 +111,19 @@ function CompletionRing({ percent, children }: { percent: number; children: Reac
 const TravelerProfile = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!user) return;
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${user.id}/avatar.${fileExt}`;
+    const { error } = await supabase.storage.from("avatars").upload(fileName, file, { upsert: true });
+    if (error) { toast.error("Błąd podczas przesyłania zdjęcia"); return; }
+    const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
+    await supabase.from("profiles").update({ avatar_url: publicUrl } as any).eq("id", user.id);
+    queryClient.invalidateQueries({ queryKey: ["profile-full", user.id] });
+    toast.success("Zdjęcie zaktualizowane!");
+  };
 
   const { data: profile } = useQuery({
     queryKey: ["profile-full", user?.id],
@@ -180,14 +195,26 @@ const TravelerProfile = () => {
 
         {/* Avatar + name */}
         <div className="flex flex-col items-center gap-5 pt-1">
-          <CompletionRing percent={completionPct}>
-            <Avatar className="h-[88px] w-[88px]">
-              <AvatarImage src={profile?.avatar_url || ""} />
-              <AvatarFallback className="bg-orange-100 text-orange-600 text-3xl font-black">
-                {displayName.charAt(0).toUpperCase() || "U"}
-              </AvatarFallback>
-            </Avatar>
-          </CompletionRing>
+          <div className="relative">
+            <CompletionRing percent={completionPct}>
+              <Avatar className="h-[88px] w-[88px]">
+                <AvatarImage src={profile?.avatar_url || ""} />
+                <AvatarFallback className="bg-orange-100 text-orange-600 text-3xl font-black">
+                  {displayName.charAt(0).toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+            </CompletionRing>
+            {/* Camera button */}
+            <label className="absolute bottom-0 right-0 h-8 w-8 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md">
+              <Camera className="h-3.5 w-3.5" />
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }}
+              />
+            </label>
+          </div>
 
           <div className="text-center mt-2">
             <h2 className="text-2xl font-black leading-tight">
