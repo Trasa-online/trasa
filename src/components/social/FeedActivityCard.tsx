@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -41,15 +41,6 @@ interface FeedActor {
 }
 
 function PhotoSlider({ photos }: { photos: string[] }) {
-  const [current, setCurrent] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const handleScroll = () => {
-    if (!scrollRef.current) return;
-    const idx = Math.round(scrollRef.current.scrollLeft / scrollRef.current.offsetWidth);
-    setCurrent(idx);
-  };
-
   if (photos.length === 1) {
     return (
       <div className="rounded-2xl overflow-hidden bg-muted aspect-[4/3] mb-2.5">
@@ -59,28 +50,16 @@ function PhotoSlider({ photos }: { photos: string[] }) {
   }
 
   return (
-    <div className="mb-2.5">
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide rounded-2xl gap-0"
-        style={{ scrollBehavior: "smooth" }}
-      >
-        {photos.map((url, i) => (
-          <div key={i} className="flex-shrink-0 w-full snap-center aspect-[4/3] overflow-hidden bg-muted">
-            <img src={url} alt="" className="w-full h-full object-cover" />
-          </div>
-        ))}
-      </div>
-      {/* Dot indicator */}
-      <div className="flex justify-center gap-1 mt-1.5">
-        {photos.map((_, i) => (
-          <div
-            key={i}
-            className={`h-1.5 rounded-full transition-all ${i === current ? "w-4 bg-foreground" : "w-1.5 bg-muted-foreground/30"}`}
-          />
-        ))}
-      </div>
+    <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-2.5 -mr-4 pr-4">
+      {photos.map((url, i) => (
+        <div
+          key={i}
+          className="flex-shrink-0 rounded-2xl overflow-hidden bg-muted aspect-[3/4]"
+          style={{ width: "72%" }}
+        >
+          <img src={url} alt="" className="w-full h-full object-cover" />
+        </div>
+      ))}
     </div>
   );
 }
