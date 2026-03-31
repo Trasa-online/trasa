@@ -452,7 +452,7 @@ const PlaceSwiperDetail = ({
                   </h3>
                   <div className="rounded-2xl overflow-hidden border border-border/40 h-52">
                     <iframe
-                      src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(place.place_name)}&center=${place.latitude},${place.longitude}&zoom=16`}
+                      src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(place.place_name)}${place.latitude && place.longitude ? `&center=${place.latitude},${place.longitude}&zoom=16` : ""}`}
                       className="w-full h-full border-0"
                       loading="lazy"
                       allowFullScreen
