@@ -36,11 +36,14 @@ const JournalTab = ({ userId }: JournalTabProps) => {
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-        <p className="text-sm font-medium text-foreground/70 mb-1">Dziennik jest pusty</p>
-        <p className="text-xs text-muted-foreground">
-          Po zakończeniu rozmowy podsumowującej dzień, wpis pojawi się tutaj.
-        </p>
+      <div className="flex-1 flex flex-col items-center justify-center gap-5 px-8 py-16 text-center">
+        <div className="w-20 h-20 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+        <div className="space-y-2">
+          <p className="text-xl font-bold tracking-tight">Wkrótce tutaj</p>
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-[240px] mx-auto">
+            Po zakończeniu rozmowy podsumowującej dzień, wpis pojawi się tutaj.
+          </p>
+        </div>
       </div>
     );
   }
