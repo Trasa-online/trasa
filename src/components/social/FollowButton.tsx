@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -14,10 +14,19 @@ export default function FollowButton({ targetUserId, initialIsFollowing, classNa
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Read directly from cache — stays in sync without useEffect fights
-  const cached = queryClient.getQueryData<string[]>(["following-ids", user?.id]);
-  const isFollowing = cached != null
-    ? cached.includes(targetUserId)
+  // useQuery subscribes to the cache — component re-renders on setQueryData
+  const { data: followingIds } = useQuery<string[]>({
+    queryKey: ["following-ids", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase.from("followers").select("following_id").eq("follower_id", user.id);
+      return (data ?? []).map(r => r.following_id as string);
+    },
+    enabled: !!user,
+    staleTime: 0,
+  });
+  const isFollowing = followingIds != null
+    ? followingIds.includes(targetUserId)
     : initialIsFollowing;
 
   const mutation = useMutation({
