@@ -3,9 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Copy, Check, Loader2, ArrowLeft, Trash2, Plus, ToggleLeft, ToggleRight, Link as LinkIcon, Sparkles } from "lucide-react";
+import { Copy, Check, Loader2, ArrowLeft, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface WaitlistEntry {
@@ -18,23 +17,11 @@ interface WaitlistEntry {
   has_account?: boolean;
 }
 
-interface CreatorPlan {
-  id: string;
-  creator_handle: string;
-  city: string;
-  title: string;
-  video_url: string | null;
-  thumbnail_url: string | null;
-  is_active: boolean;
-  created_at: string;
-  places?: { id: string; place_name: string; category: string | null }[];
-}
-
 const Admin = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"waitlist" | "places" | "referrals">("waitlist");
+  const [tab, setTab] = useState<"waitlist" | "referrals">("waitlist");
 
   // Waitlist state
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
@@ -56,21 +43,6 @@ const Admin = () => {
   }>>([]);
   const [fetchingReferrals, setFetchingReferrals] = useState(false);
 
-  // Creator plans state
-  const [plans, setPlans] = useState<CreatorPlan[]>([]);
-  const [fetchingPlaces, setFetchingPlaces] = useState(false);
-  const [togglingPlan, setTogglingPlan] = useState<string | null>(null);
-  const [deletingPlan, setDeletingPlan] = useState<string | null>(null);
-  const [extractUrl, setExtractUrl] = useState("");
-  const [extracting, setExtracting] = useState(false);
-  const [extractedPlaces, setExtractedPlaces] = useState<Array<{
-    place_name: string; city: string | null; category: string | null; creator_handle: string | null;
-  }>>([]);
-  const [extractedSourceUrl, setExtractedSourceUrl] = useState<string | null>(null);
-  const [extractedThumbnail, setExtractedThumbnail] = useState<string | null>(null);
-  const [planTitle, setPlanTitle] = useState("");
-  const [savingPlan, setSavingPlan] = useState(false);
-
   useEffect(() => {
     if (loading) return;
     if (!user) { navigate("/auth"); return; }
@@ -85,7 +57,6 @@ const Admin = () => {
         if (!data) { navigate("/"); return; }
         setIsAdmin(true);
         loadWaitlist();
-        loadPlans();
         loadReferrals();
       });
   }, [user, loading, navigate]);
@@ -108,27 +79,6 @@ const Admin = () => {
       console.error("Failed to load waitlist:", err);
     }
     setFetchingList(false);
-  };
-
-  const loadPlans = async () => {
-    setFetchingPlaces(true);
-    const { data: planData } = await supabase
-      .from("creator_plans")
-      .select("id, creator_handle, city, title, video_url, thumbnail_url, is_active, created_at")
-      .order("created_at", { ascending: false });
-    if (planData?.length) {
-      const { data: placeData } = await supabase
-        .from("creator_places")
-        .select("id, place_name, category, plan_id")
-        .in("plan_id", planData.map(p => p.id));
-      setPlans(planData.map(plan => ({
-        ...plan,
-        places: (placeData ?? []).filter(pl => pl.plan_id === plan.id),
-      })));
-    } else {
-      setPlans([]);
-    }
-    setFetchingPlaces(false);
   };
 
   const loadReferrals = async () => {
@@ -194,82 +144,6 @@ const Admin = () => {
     }
   };
 
-  const handleExtractUrl = async () => {
-    const url = extractUrl.trim();
-    if (!url) return;
-    setExtracting(true);
-    setExtractedPlaces([]);
-    try {
-      const { data, error } = await supabase.functions.invoke("extract-creator-place", {
-        body: { url },
-      });
-      if (error || !data) throw new Error(error?.message ?? "Błąd ekstrakcji");
-      if (data.error) throw new Error(data.error);
-
-      const places = data.places ?? [];
-      if (places.length === 0) {
-        toast.error("AI nie znalazło konkretnych miejsc w tym materiale");
-      } else {
-        setExtractedPlaces(places);
-        setExtractedSourceUrl(url);
-        setExtractedThumbnail(data.photo_url ?? null);
-        const handle = places[0]?.creator_handle ?? "";
-        if (handle) setPlanTitle(`Plan od ${handle}`);
-        toast.success(`Znaleziono ${places.length} miejsc — nadaj tytuł i zapisz plan`);
-        setExtractUrl("");
-      }
-    } catch (err: any) {
-      toast.error(err.message ?? "Nie udało się przetworzyć URL");
-    }
-    setExtracting(false);
-  };
-
-  const handleSavePlan = async () => {
-    if (!planTitle.trim()) { toast.error("Wpisz tytuł planu"); return; }
-    const valid = extractedPlaces.filter(p => p.place_name && p.city);
-    if (valid.length === 0) { toast.error("Brak miejsc do zapisania"); return; }
-    setSavingPlan(true);
-    const creatorHandle = extractedPlaces[0]?.creator_handle || "@nieznany";
-    const city = extractedPlaces[0]?.city || "";
-    const { data: plan, error: planErr } = await supabase
-      .from("creator_plans")
-      .insert({ title: planTitle.trim(), creator_handle: creatorHandle, city, video_url: extractedSourceUrl, thumbnail_url: extractedThumbnail })
-      .select("id")
-      .single();
-    if (planErr || !plan) { toast.error("Błąd zapisu planu: " + planErr?.message); setSavingPlan(false); return; }
-    const { error: placesErr } = await supabase.from("creator_places").insert(
-      valid.map(p => ({ plan_id: plan.id, place_name: p.place_name, city: p.city!, category: p.category || null, creator_handle: creatorHandle, instagram_reel_url: extractedSourceUrl || null }))
-    );
-    if (placesErr) { toast.error("Błąd zapisu miejsc: " + placesErr.message); setSavingPlan(false); return; }
-    toast.success(`Plan „${planTitle}" zapisany z ${valid.length} miejscami!`);
-    setExtractedPlaces([]);
-    setExtractedSourceUrl(null);
-    setExtractedThumbnail(null);
-    setPlanTitle("");
-    loadPlans();
-    setSavingPlan(false);
-  };
-
-  const handleTogglePlan = async (plan: CreatorPlan) => {
-    setTogglingPlan(plan.id);
-    const { error } = await supabase.from("creator_plans").update({ is_active: !plan.is_active }).eq("id", plan.id);
-    if (error) { toast.error("Błąd aktualizacji"); } else {
-      setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, is_active: !p.is_active } : p));
-    }
-    setTogglingPlan(null);
-  };
-
-  const handleDeletePlan = async (plan: CreatorPlan) => {
-    if (!confirm(`Usunąć plan „${plan.title}"? Usunie też wszystkie powiązane miejsca.`)) return;
-    setDeletingPlan(plan.id);
-    const { error } = await supabase.from("creator_plans").delete().eq("id", plan.id);
-    if (error) { toast.error("Błąd usuwania"); } else {
-      setPlans(prev => prev.filter(p => p.id !== plan.id));
-      toast.success("Plan usunięty");
-    }
-    setDeletingPlan(null);
-  };
-
   if (loading || isAdmin === null) return null;
 
   return (
@@ -289,7 +163,7 @@ const Admin = () => {
 
       {/* Tabs */}
       <div className="flex border-b border-border/40">
-        {(["waitlist", "referrals", "places"] as const).map(t => (
+        {(["waitlist", "referrals"] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -297,7 +171,7 @@ const Admin = () => {
               tab === t ? "border-b-2 border-foreground text-foreground" : "text-muted-foreground"
             }`}
           >
-            {t === "waitlist" ? "Oczekujący" : t === "referrals" ? "Zaproszenia" : "Miejsca"}
+            {t === "waitlist" ? "Oczekujący" : "Zaproszenia"}
           </button>
         ))}
       </div>
@@ -393,7 +267,6 @@ const Admin = () => {
             <p className="text-sm text-muted-foreground text-center py-12">Brak kodów zaproszeń.</p>
           ) : (
             <div className="space-y-3">
-              {/* Group by owner */}
               {Object.entries(
                 referrals.reduce<Record<string, typeof referrals>>((acc, r) => {
                   const key = r.owner.username ?? r.id;
@@ -443,133 +316,6 @@ const Admin = () => {
               })}
             </div>
           )
-        )}
-
-        {/* ── Creator Places Tab ── */}
-        {tab === "places" && (
-          <div className="space-y-6">
-            {/* Add form */}
-            <div className="border border-border rounded-xl p-4 bg-card space-y-3">
-              <p className="font-semibold text-sm">Dodaj miejsce</p>
-
-              {/* URL auto-fill */}
-              <div className="bg-muted/40 rounded-xl p-3 space-y-2">
-                <p className="text-xs font-medium flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Auto-wypełnij z URL (YouTube / TikTok)
-                </p>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    value={extractUrl}
-                    onChange={e => setExtractUrl(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && (e.preventDefault(), handleExtractUrl())}
-                    className="flex-1 bg-background text-sm"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExtractUrl}
-                    disabled={!extractUrl.trim() || extracting}
-                    className="shrink-0"
-                  >
-                    {extracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
-                  </Button>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Wklej link → AI przeczyta opis i wyciągnie wszystkie wymienione miejsca.
-                </p>
-              </div>
-
-              {/* Extracted places → save as plan */}
-              {extractedPlaces.length > 0 && (
-                <div className="space-y-3 border border-border rounded-xl p-3 bg-background">
-                  {extractedThumbnail && (
-                    <img src={extractedThumbnail} alt="miniaturka" className="w-full h-32 object-cover rounded-lg" />
-                  )}
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Znaleziono {extractedPlaces.length} miejsc — nadaj tytuł i zapisz jako plan
-                  </p>
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Tytuł planu</label>
-                    <Input
-                      placeholder="np. 10 kawiarni w Krakowie"
-                      value={planTitle}
-                      onChange={e => setPlanTitle(e.target.value)}
-                      className="bg-card text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    {extractedPlaces.map((p, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground text-xs w-4">{idx + 1}.</span>
-                        <span className="font-medium truncate">{p.place_name}</span>
-                        <span className="text-xs text-muted-foreground ml-auto shrink-0">{p.category}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <Button onClick={handleSavePlan} disabled={savingPlan || !planTitle.trim()} className="w-full">
-                    {savingPlan ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Zapisywanie...</> : "Zapisz plan"}
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Plans list */}
-            {fetchingPlaces ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : plans.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Brak planów twórców.</p>
-            ) : (
-              <div className="space-y-3">
-                {plans.map(plan => (
-                  <div key={plan.id} className="border border-border rounded-xl bg-card overflow-hidden">
-                    {plan.thumbnail_url && (
-                      <img src={plan.thumbnail_url} alt={plan.title} className="w-full h-24 object-cover" />
-                    )}
-                    <div className="p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm">{plan.title}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {plan.creator_handle} · {plan.city} · {plan.places?.length ?? 0} miejsc
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            onClick={() => handleTogglePlan(plan)}
-                            disabled={togglingPlan === plan.id}
-                            className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-                            title={plan.is_active ? "Dezaktywuj" : "Aktywuj"}
-                          >
-                            {togglingPlan === plan.id ? (
-                              <Loader2 className="h-5 w-5 animate-spin" />
-                            ) : plan.is_active ? (
-                              <ToggleRight className="h-5 w-5 text-green-600" />
-                            ) : (
-                              <ToggleLeft className="h-5 w-5" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleDeletePlan(plan)}
-                            disabled={deletingPlan === plan.id}
-                            className="h-7 w-7 flex items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                          >
-                            {deletingPlan === plan.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                          </button>
-                        </div>
-                      </div>
-                      {!plan.is_active && (
-                        <span className="inline-block mt-2 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Nieaktywne</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         )}
       </div>
     </div>

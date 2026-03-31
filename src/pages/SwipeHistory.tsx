@@ -1,18 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Compass, Heart, ThumbsDown, X, ChevronRight, Search } from "lucide-react";
+import { Compass, Heart, ThumbsDown, X, ChevronRight, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import SwipeDiscovery from "@/components/discover/SwipeDiscovery";
-
-const CITIES = [
-  "Kraków", "Gdańsk", "Warszawa", "Wrocław", "Poznań", "Zakopane",
-  "Łódź", "Szczecin", "Lublin", "Katowice", "Białystok", "Gdynia",
-  "Rzeszów", "Toruń", "Bydgoszcz", "Olsztyn", "Kielce",
-  "Berlin", "Paryż", "Rzym", "Barcelona", "Amsterdam", "Praga",
-  "Wiedeń", "Budapeszt", "Lizbona", "Madryt", "Londyn", "Dublin",
-];
+import CityPicker from "@/components/plan-wizard/CityPicker";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
@@ -28,11 +21,10 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 const SwipeHistory = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"liked" | "skipped">("liked");
-  const [exploreCity, setExploreCity] = useState<string | null>(null);
-  const [cityPickerOpen, setCityPickerOpen] = useState(false);
-  const [citySearch, setCitySearch] = useState("");
+  const [cityPickerVisible, setCityPickerVisible] = useState(false);
 
   const { data: reactions = [], isLoading } = useQuery({
     queryKey: ["place-reactions", user?.id],
@@ -65,16 +57,29 @@ const SwipeHistory = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["place-reactions", user?.id] }),
   });
 
-  // Show SwipeDiscovery fullscreen when city selected
-  if (exploreCity) {
+  // Full-screen CityPicker overlay
+  if (cityPickerVisible) {
     return (
-      <SwipeDiscovery
-        city={exploreCity}
-        onDone={() => {
-          setExploreCity(null);
-          queryClient.invalidateQueries({ queryKey: ["place-reactions", user?.id] });
-        }}
-      />
+      <div className="fixed inset-0 z-50 bg-background flex flex-col">
+        <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
+          <button
+            onClick={() => setCityPickerVisible(false)}
+            className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h1 className="flex-1 text-center text-xl font-black tracking-tight">trasa</h1>
+          <div className="w-9" />
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <CityPicker
+            onConfirm={(city) => {
+              setCityPickerVisible(false);
+              navigate("/plan", { state: { step: 4, city, date: new Date().toISOString() } });
+            }}
+          />
+        </div>
+      </div>
     );
   }
 
@@ -89,184 +94,114 @@ const SwipeHistory = () => {
   }, {});
 
   return (
-    <>
-      <div className="flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
-        <h1 className="text-xl font-black tracking-tight pt-2 pb-4">Eksploruj</h1>
+    <div className="flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
+      <h1 className="text-xl font-black tracking-tight pt-2 pb-4">Eksploruj</h1>
 
-        {/* Explore CTA */}
-        <button
-          onClick={() => { setCitySearch(""); setCityPickerOpen(true); }}
-          className="w-full bg-card border-2 border-orange-600 rounded-3xl px-5 py-5 flex items-center gap-4 mb-5 active:scale-[0.98] transition-transform"
-        >
-          <div className="h-12 w-12 rounded-2xl bg-orange-600/10 flex items-center justify-center flex-shrink-0">
-            <Compass className="h-6 w-6 text-orange-600" />
-          </div>
-          <div className="flex-1 text-left">
-            <p className="text-foreground font-bold text-base leading-tight">Odkrywaj miejsca</p>
-            <p className="text-muted-foreground text-sm mt-0.5">Przeglądaj i lajkuj polecane przez twórców</p>
-          </div>
-          <ChevronRight className="h-5 w-5 text-orange-600 flex-shrink-0" />
-        </button>
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => setTab("liked")}
-            className={cn(
-              "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors",
-              tab === "liked" ? "bg-rose-500 text-white" : "bg-card border border-border/50 text-muted-foreground"
-            )}
-          >
-            <Heart className={cn("h-3.5 w-3.5", tab === "liked" && "fill-current")} />
-            Polubione
-            {likedCount > 0 && (
-              <span className={cn("rounded-full px-1.5 text-[10px] font-bold", tab === "liked" ? "bg-white/20" : "bg-muted")}>
-                {likedCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setTab("skipped")}
-            className={cn(
-              "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors",
-              tab === "skipped" ? "bg-foreground text-background" : "bg-card border border-border/50 text-muted-foreground"
-            )}
-          >
-            <ThumbsDown className="h-3.5 w-3.5" />
-            Odrzucone
-            {skippedCount > 0 && (
-              <span className={cn("rounded-full px-1.5 text-[10px] font-bold", tab === "skipped" ? "bg-white/20" : "bg-muted")}>
-                {skippedCount}
-              </span>
-            )}
-          </button>
+      {/* Explore CTA */}
+      <button
+        onClick={() => setCityPickerVisible(true)}
+        className="w-full bg-card border-2 border-orange-600 rounded-3xl px-5 py-5 flex items-center gap-4 mb-5 active:scale-[0.98] transition-transform"
+      >
+        <div className="h-12 w-12 rounded-2xl bg-orange-600/10 flex items-center justify-center flex-shrink-0">
+          <Compass className="h-6 w-6 text-orange-600" />
         </div>
+        <div className="flex-1 text-left">
+          <p className="text-foreground font-bold text-base leading-tight">Odkrywaj miejsca</p>
+          <p className="text-muted-foreground text-sm mt-0.5">Zaplanuj podróż do wybranego miasta</p>
+        </div>
+        <ChevronRight className="h-5 w-5 text-orange-600 flex-shrink-0" />
+      </button>
 
-        {/* Places list */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">Ładowanie...</div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center py-12 text-center gap-2">
-            {tab === "liked"
-              ? <><Heart className="h-8 w-8 text-muted-foreground/30" /><p className="text-sm text-muted-foreground">Brak polubionych miejsc</p></>
-              : <><ThumbsDown className="h-8 w-8 text-muted-foreground/30" /><p className="text-sm text-muted-foreground">Brak odrzuconych miejsc</p></>
-            }
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {Object.entries(byCity).map(([city, cityPlaces]) => (
-              <div key={city}>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-1">{city}</p>
-                <div className="rounded-2xl bg-card border border-border/50 overflow-hidden divide-y divide-border/20">
-                  {cityPlaces.map((p: any) => (
-                    <div key={p.id} className="flex items-center gap-3 py-2.5 px-4">
-                      <div className="h-12 w-12 rounded-xl overflow-hidden bg-muted flex-shrink-0">
-                        {p.photo_url
-                          ? <img src={p.photo_url} alt="" className="w-full h-full object-cover" />
-                          : <div className="w-full h-full flex items-center justify-center text-xl">{CATEGORY_EMOJI[p.category ?? ""] ?? "📍"}</div>
-                        }
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold leading-tight truncate">{p.place_name}</p>
-                        {p.category && (
-                          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-muted text-[11px] text-muted-foreground font-medium">
-                            {CATEGORY_EMOJI[p.category]} {CATEGORY_LABEL[p.category] ?? p.category}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <button
-                          onClick={() => toggleMutation.mutate(p.id)}
-                          className="h-8 px-2.5 rounded-full bg-muted text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5 active:bg-muted/70"
-                        >
-                          {p.reaction === "liked"
-                            ? <><ThumbsDown className="h-3 w-3" /> Odrzuć</>
-                            : <><Heart className="h-3 w-3" /> Polub</>}
-                        </button>
-                        <button
-                          onClick={() => removeMutation.mutate(p.id)}
-                          className="h-8 w-8 rounded-full bg-muted text-muted-foreground/50 flex items-center justify-center active:bg-muted/70"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Tabs */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setTab("liked")}
+          className={cn(
+            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors",
+            tab === "liked" ? "bg-rose-500 text-white" : "bg-card border border-border/50 text-muted-foreground"
+          )}
+        >
+          <Heart className={cn("h-3.5 w-3.5", tab === "liked" && "fill-current")} />
+          Polubione
+          {likedCount > 0 && (
+            <span className={cn("rounded-full px-1.5 text-[10px] font-bold", tab === "liked" ? "bg-white/20" : "bg-muted")}>
+              {likedCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setTab("skipped")}
+          className={cn(
+            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors",
+            tab === "skipped" ? "bg-foreground text-background" : "bg-card border border-border/50 text-muted-foreground"
+          )}
+        >
+          <ThumbsDown className="h-3.5 w-3.5" />
+          Odrzucone
+          {skippedCount > 0 && (
+            <span className={cn("rounded-full px-1.5 text-[10px] font-bold", tab === "skipped" ? "bg-white/20" : "bg-muted")}>
+              {skippedCount}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* City picker bottom sheet */}
-      {cityPickerOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setCityPickerOpen(false)} />
-          <div className="relative mt-auto w-full bg-background rounded-t-3xl" style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom, 24px))" }}>
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="h-1 w-10 rounded-full bg-border" />
-            </div>
-            <div className="px-5 pt-2 pb-2">
-              <h2 className="text-lg font-bold mb-3">Gdzie chcesz odkrywać?</h2>
-              {/* Search input */}
-              <div className="flex items-center gap-2 bg-muted rounded-2xl px-4 py-3 mb-4">
-                <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Szukaj miasta lub kraju…"
-                  value={citySearch}
-                  onChange={e => setCitySearch(e.target.value)}
-                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                />
-                {citySearch && (
-                  <button onClick={() => setCitySearch("")}>
-                    <X className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                )}
-              </div>
-              {/* City list */}
-              <div className="max-h-64 overflow-y-auto space-y-1.5 pb-1">
-                {(() => {
-                  const q = citySearch.trim().toLowerCase();
-                  const filtered = q
-                    ? CITIES.filter(c => c.toLowerCase().includes(q))
-                    : CITIES;
-                  const showCustom = q && !CITIES.some(c => c.toLowerCase() === q);
-                  return (
-                    <>
-                      {showCustom && (
-                        <button
-                          onClick={() => { setCityPickerOpen(false); setExploreCity(citySearch.trim()); }}
-                          className="w-full rounded-2xl border-2 border-orange-600 bg-orange-600/5 py-3 text-sm font-semibold text-orange-600 text-center active:bg-orange-600/10 transition-colors"
-                        >
-                          Szukaj w „{citySearch.trim()}"
-                        </button>
+      {/* Places list */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">Ładowanie...</div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center py-12 text-center gap-2">
+          {tab === "liked"
+            ? <><Heart className="h-8 w-8 text-muted-foreground/30" /><p className="text-sm text-muted-foreground">Brak polubionych miejsc</p></>
+            : <><ThumbsDown className="h-8 w-8 text-muted-foreground/30" /><p className="text-sm text-muted-foreground">Brak odrzuconych miejsc</p></>
+          }
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {Object.entries(byCity).map(([city, cityPlaces]) => (
+            <div key={city}>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-1">{city}</p>
+              <div className="rounded-2xl bg-card border border-border/50 overflow-hidden divide-y divide-border/20">
+                {cityPlaces.map((p: any) => (
+                  <div key={p.id} className="flex items-center gap-3 py-2.5 px-4">
+                    <div className="h-12 w-12 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+                      {p.photo_url
+                        ? <img src={p.photo_url} alt="" className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center text-xl">{CATEGORY_EMOJI[p.category ?? ""] ?? "📍"}</div>
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold leading-tight truncate">{p.place_name}</p>
+                      {p.category && (
+                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-muted text-[11px] text-muted-foreground font-medium">
+                          {CATEGORY_EMOJI[p.category]} {CATEGORY_LABEL[p.category] ?? p.category}
+                        </span>
                       )}
-                      {filtered.map(city => (
-                        <button
-                          key={city}
-                          onClick={() => { setCityPickerOpen(false); setExploreCity(city); }}
-                          className="w-full rounded-2xl border border-border/50 bg-card py-3 text-sm font-semibold text-center active:bg-muted transition-colors"
-                        >
-                          {city}
-                        </button>
-                      ))}
-                      {filtered.length === 0 && !showCustom && (
-                        <p className="text-sm text-muted-foreground text-center py-4">Brak wyników</p>
-                      )}
-                    </>
-                  );
-                })()}
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => toggleMutation.mutate(p.id)}
+                        className="h-8 px-2.5 rounded-full bg-muted text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5 active:bg-muted/70"
+                      >
+                        {p.reaction === "liked"
+                          ? <><ThumbsDown className="h-3 w-3" /> Odrzuć</>
+                          : <><Heart className="h-3 w-3" /> Polub</>}
+                      </button>
+                      <button
+                        onClick={() => removeMutation.mutate(p.id)}
+                        className="h-8 w-8 rounded-full bg-muted text-muted-foreground/50 flex items-center justify-center active:bg-muted/70"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
+          ))}
         </div>
       )}
-    </>
+    </div>
   );
 };
 
