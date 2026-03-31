@@ -1,11 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
-import { Map, MapPin, BookOpen, User, Plus } from "lucide-react";
+import { Map, Compass, BookOpen, User, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const LEFT_ITEMS = [
-  { to: "/moje-trasy", end: false, icon: Map,    label: "Trasy"   },
-  { to: "/historia",   end: false, icon: MapPin,  label: "Miejsca" },
+  { to: "/moje-trasy", end: false, icon: Map,     label: "Trasy"    },
+  { to: "/historia",   end: false, icon: Compass,  label: "Eksploruj" },
 ];
 
 const RIGHT_ITEMS = [
