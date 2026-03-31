@@ -261,7 +261,7 @@ const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardPro
           )}
           <div className="flex items-center gap-1">
             <MapPin className="h-3 w-3 text-white/50" />
-            <span className="text-white/60 text-xs truncate">{place.address.split(",")[0]}</span>
+            <span className="text-white/60 text-xs truncate">{place.address?.split(",")[0]}</span>
           </div>
         </div>
 
@@ -271,7 +271,7 @@ const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardPro
         {/* Vibe tags + info button row */}
         <div className="flex items-center justify-between gap-2 pt-0.5">
           <div className="flex gap-1.5 flex-wrap">
-            {place.vibe_tags.map((tag) => (
+            {(place.vibe_tags ?? []).map((tag) => (
               <span key={tag} className="text-[11px] text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
                 {tag}
               </span>

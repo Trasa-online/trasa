@@ -345,7 +345,7 @@ const PlaceSwiperDetail = ({
 
                 {/* Vibe tags */}
                 <div className="flex gap-1.5 flex-wrap -mt-2">
-                  {place.vibe_tags.map((tag) => (
+                  {(place.vibe_tags ?? []).map((tag) => (
                     <span
                       key={tag}
                       className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full"
