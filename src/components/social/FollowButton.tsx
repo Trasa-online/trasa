@@ -30,7 +30,6 @@ export default function FollowButton({ targetUserId, initialIsFollowing, classNa
     : initialIsFollowing;
 
   const mutation = useMutation({
-    // Pass the intended action as a variable to avoid stale closure on isFollowing
     mutationFn: async (follow: boolean) => {
       if (!user) throw new Error("Brak sesji");
       if (follow) {
@@ -45,18 +44,19 @@ export default function FollowButton({ targetUserId, initialIsFollowing, classNa
         if (error) throw error;
       }
     },
-    onMutate: (follow) => {
-      // Optimistically update the cache directly — no local useState
+    onMutate: async (follow) => {
+      // Cancel any in-flight refetch — otherwise it would overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ["following-ids", user?.id] });
+      const previous = queryClient.getQueryData<string[]>(["following-ids", user?.id]);
       queryClient.setQueryData<string[]>(["following-ids", user?.id], (old = []) =>
         follow ? [...old, targetUserId] : old.filter(id => id !== targetUserId)
       );
+      return { previous };
     },
-    onError: (error, follow) => {
-      // Revert cache on error
-      queryClient.setQueryData<string[]>(["following-ids", user?.id], (old = []) =>
-        follow ? old.filter(id => id !== targetUserId) : [...old, targetUserId]
-      );
-      toast.error("Błąd: " + (error as any)?.message ?? "Spróbuj ponownie");
+    onError: (error, _follow, context) => {
+      // Revert to snapshot taken before optimistic update
+      queryClient.setQueryData(["following-ids", user?.id], context?.previous);
+      toast.error((error as any)?.message ?? "Spróbuj ponownie");
     },
     onSuccess: (_, follow) => {
       toast.success(follow ? "Obserwujesz!" : "Przestałeś obserwować");
