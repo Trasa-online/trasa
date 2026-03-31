@@ -939,6 +939,60 @@ export type Database = {
         }
         Relationships: []
       }
+      places: {
+        Row: {
+          address: string | null
+          best_time: string[] | null
+          category: string
+          city: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          photo_url: string | null
+          place_name: string
+          price_level: number | null
+          rating: number | null
+          vibe_tags: string[] | null
+        }
+        Insert: {
+          address?: string | null
+          best_time?: string[] | null
+          category: string
+          city: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          photo_url?: string | null
+          place_name: string
+          price_level?: number | null
+          rating?: number | null
+          vibe_tags?: string[] | null
+        }
+        Update: {
+          address?: string | null
+          best_time?: string[] | null
+          category?: string
+          city?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          photo_url?: string | null
+          place_name?: string
+          price_level?: number | null
+          rating?: number | null
+          vibe_tags?: string[] | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -947,6 +1001,7 @@ export type Database = {
           cookie_consent_at: string | null
           created_at: string | null
           dietary_prefs: string[] | null
+          first_name: string | null
           id: string
           onboarding_completed: boolean | null
           travel_interests: string[] | null
@@ -959,6 +1014,7 @@ export type Database = {
           cookie_consent_at?: string | null
           created_at?: string | null
           dietary_prefs?: string[] | null
+          first_name?: string | null
           id: string
           onboarding_completed?: boolean | null
           travel_interests?: string[] | null
@@ -971,6 +1027,7 @@ export type Database = {
           cookie_consent_at?: string | null
           created_at?: string | null
           dietary_prefs?: string[] | null
+          first_name?: string | null
           id?: string
           onboarding_completed?: boolean | null
           travel_interests?: string[] | null
@@ -1008,6 +1065,71 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string | null
+          id: string
+          owner_id: string
+          slot: number
+          used_at: string | null
+          used_by_email: string | null
+          used_by_name: string | null
+          used_by_profile_id: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          id?: string
+          owner_id: string
+          slot: number
+          used_at?: string | null
+          used_by_email?: string | null
+          used_by_name?: string | null
+          used_by_profile_id?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          id?: string
+          owner_id?: string
+          slot?: number
+          used_at?: string | null
+          used_by_email?: string | null
+          used_by_name?: string | null
+          used_by_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_codes_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_codes_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_codes_used_by_profile_id_fkey"
+            columns: ["used_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_codes_used_by_profile_id_fkey"
+            columns: ["used_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       route_completions: {
         Row: {
           created_at: string
@@ -1033,6 +1155,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      route_examples: {
+        Row: {
+          city: string
+          created_at: string | null
+          day_metrics: Json | null
+          description: string | null
+          evaluator_notes: string | null
+          id: string
+          is_approved: boolean | null
+          is_rejected: boolean | null
+          personality_type: string
+          pins: Json
+          title: string
+        }
+        Insert: {
+          city: string
+          created_at?: string | null
+          day_metrics?: Json | null
+          description?: string | null
+          evaluator_notes?: string | null
+          id?: string
+          is_approved?: boolean | null
+          is_rejected?: boolean | null
+          personality_type: string
+          pins?: Json
+          title: string
+        }
+        Update: {
+          city?: string
+          created_at?: string | null
+          day_metrics?: Json | null
+          description?: string | null
+          evaluator_notes?: string | null
+          id?: string
+          is_approved?: boolean | null
+          is_rejected?: boolean | null
+          personality_type?: string
+          pins?: Json
+          title?: string
+        }
+        Relationships: []
       }
       route_folders: {
         Row: {
@@ -1136,6 +1300,54 @@ export type Database = {
           },
         ]
       }
+      route_templates: {
+        Row: {
+          city: string
+          cover_photos: string[] | null
+          created_at: string | null
+          creator_handle: string | null
+          fork_count: number | null
+          id: string
+          is_active: boolean | null
+          is_featured: boolean | null
+          personality_type: string | null
+          pins: Json | null
+          point_count: number | null
+          tags: string[] | null
+          title: string
+        }
+        Insert: {
+          city: string
+          cover_photos?: string[] | null
+          created_at?: string | null
+          creator_handle?: string | null
+          fork_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          personality_type?: string | null
+          pins?: Json | null
+          point_count?: number | null
+          tags?: string[] | null
+          title: string
+        }
+        Update: {
+          city?: string
+          cover_photos?: string[] | null
+          created_at?: string | null
+          creator_handle?: string | null
+          fork_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          personality_type?: string | null
+          pins?: Json | null
+          point_count?: number | null
+          tags?: string[] | null
+          title?: string
+        }
+        Relationships: []
+      }
       routes: {
         Row: {
           ai_highlight: string | null
@@ -1151,6 +1363,7 @@ export type Database = {
           folder_order: number | null
           id: string
           intent: Json | null
+          is_shared: boolean | null
           pace: string | null
           priorities: string[] | null
           rating: number | null
@@ -1179,6 +1392,7 @@ export type Database = {
           folder_order?: number | null
           id?: string
           intent?: Json | null
+          is_shared?: boolean | null
           pace?: string | null
           priorities?: string[] | null
           rating?: number | null
@@ -1207,6 +1421,7 @@ export type Database = {
           folder_order?: number | null
           id?: string
           intent?: Json | null
+          is_shared?: boolean | null
           pace?: string | null
           priorities?: string[] | null
           rating?: number | null
@@ -1421,6 +1636,64 @@ export type Database = {
           },
         ]
       }
+      user_place_reactions: {
+        Row: {
+          category: string | null
+          city: string
+          created_at: string | null
+          id: string
+          photo_url: string | null
+          place_id: string | null
+          place_name: string
+          reaction: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          city: string
+          created_at?: string | null
+          id?: string
+          photo_url?: string | null
+          place_id?: string | null
+          place_name: string
+          reaction: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          city?: string
+          created_at?: string | null
+          id?: string
+          photo_url?: string | null
+          place_id?: string | null
+          place_name?: string
+          reaction?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_place_reactions_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_place_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_place_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_preference_graph: {
         Row: {
           confidence: number
@@ -1526,6 +1799,7 @@ export type Database = {
           email: string
           id: string
           notified_at: string | null
+          referral_code: string | null
           source: string | null
         }
         Insert: {
@@ -1533,6 +1807,7 @@ export type Database = {
           email: string
           id?: string
           notified_at?: string | null
+          referral_code?: string | null
           source?: string | null
         }
         Update: {
@@ -1540,6 +1815,7 @@ export type Database = {
           email?: string
           id?: string
           notified_at?: string | null
+          referral_code?: string | null
           source?: string | null
         }
         Relationships: []
