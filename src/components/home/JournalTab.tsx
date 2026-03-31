@@ -36,7 +36,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
 
   if (entries.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-5 px-8 py-16 text-center">
+      <div className="flex-1 flex flex-col items-center justify-center gap-5 px-8 py-24 text-center">
         <div className="w-20 h-20 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
         <div className="space-y-2">
           <p className="text-xl font-bold tracking-tight">Wkrótce tutaj</p>
@@ -49,7 +49,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   }
 
   return (
-    <div className="space-y-4 px-4 py-3">
+    <div className="space-y-3 pb-2">
       {entries.map((entry) => {
         const thumb = entry.review_photos?.[0] ?? getRandomPinPlaceholder(entry.id);
         const dateLabel = entry.start_date
