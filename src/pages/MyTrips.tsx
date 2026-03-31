@@ -45,7 +45,6 @@ const MyTrips = () => {
         .select("*, pins(*)")
         .eq("user_id", user.id)
         .in("trip_type", ["planning", "ongoing"])
-        .eq("status", "draft")
         .order("created_at", { ascending: false });
       return data || [];
     },
