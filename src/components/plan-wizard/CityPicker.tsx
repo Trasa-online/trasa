@@ -29,13 +29,8 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
   const [notifyCity, setNotifyCity] = useState("");
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Reset drum to top when region changes
-  useEffect(() => {
-    setSelectedIndex(0);
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollTo({ top: 0, behavior: "smooth" });
-  }, [region]);
+  // Reset drum to top when region changes (region toggle hidden for now)
+  // useEffect(() => { ... }, [region]);
 
   // Scroll to initial position on mount
   useEffect(() => {
