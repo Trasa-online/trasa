@@ -1,32 +1,21 @@
 import { useState, useEffect } from "react";
 import { getConsent, grantConsent, denyConsent, syncConsentFromProfile } from "@/lib/consent";
-import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const CookieBanner = () => {
+  const { user, loading } = useAuth();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // Check localStorage first (fast path for returning users)
+    // Only show after user is authenticated
+    if (loading || !user) return;
     if (getConsent() !== null) return;
 
-    // No local consent — check DB in case user is logged in
     syncConsentFromProfile().then((shouldShow) => {
       if (shouldShow) setVisible(true);
     });
-  }, []);
-
-  // Also show banner when a user logs in without prior consent
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" && getConsent() === null) {
-        syncConsentFromProfile().then((shouldShow) => {
-          if (shouldShow) setVisible(true);
-        });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+  }, [user, loading]);
 
   if (!visible) return null;
 
