@@ -1,6 +1,7 @@
 import { ReactNode, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import TopBar from "./TopBar";
+import BottomNav from "./BottomNav";
 import OrbOverlay from "./OrbOverlay";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -104,6 +105,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       <main className="max-w-lg mx-auto">
         {children}
       </main>
+      <BottomNav />
       {showOrbOverlay && (
         <OrbOverlay
           isSpeaking={isSpeaking}
