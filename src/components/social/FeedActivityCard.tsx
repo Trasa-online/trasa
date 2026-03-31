@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
-import { MapPin, Heart, MessageCircle } from "lucide-react";
+import { MapPin, Heart, Map } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import RouteCommentsSheet from "./RouteCommentsSheet";
+import RouteMapSheet from "./RouteMapSheet";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
@@ -20,6 +20,8 @@ interface FeedPin {
   place_name: string;
   category: string | null;
   pin_order: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface FeedRoute {
@@ -29,7 +31,6 @@ interface FeedRoute {
   ai_summary?: string | null;
   review_photos?: string[] | null;
   likes?: { user_id: string }[];
-  comments?: { id: string }[];
   pins?: FeedPin[];
 }
 
@@ -85,7 +86,7 @@ export default function FeedActivityCard({ route, actor }: { route: FeedRoute; a
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
 
   const displayName = actor.username || actor.first_name || "Ktoś";
   const timeAgo = formatDistanceToNow(new Date(route.created_at), { addSuffix: false, locale: pl });
@@ -95,7 +96,6 @@ export default function FeedActivityCard({ route, actor }: { route: FeedRoute; a
   const likedBy = (route.likes ?? []).map(l => l.user_id);
   const likeCount = likedBy.length;
   const isLiked = !!user && likedBy.includes(user.id);
-  const commentCount = (route.comments ?? []).length;
 
   const likeMutation = useMutation({
     mutationFn: async (liked: boolean) => {
@@ -191,17 +191,16 @@ export default function FeedActivityCard({ route, actor }: { route: FeedRoute; a
               {likeCount > 0 && <span className="text-xs text-muted-foreground tabular-nums">{likeCount}</span>}
             </button>
             <button
-              onClick={() => setCommentsOpen(true)}
+              onClick={() => setMapOpen(true)}
               className="flex items-center gap-1.5 text-muted-foreground"
             >
-              <MessageCircle className="h-5 w-5" />
-              {commentCount > 0 && <span className="text-xs tabular-nums">{commentCount}</span>}
+              <Map className="h-5 w-5" />
             </button>
           </div>
         </div>
       </div>
 
-      <RouteCommentsSheet routeId={route.id} open={commentsOpen} onOpenChange={setCommentsOpen} />
+      <RouteMapSheet city={route.city} pins={route.pins ?? []} open={mapOpen} onOpenChange={setMapOpen} />
     </>
   );
 }

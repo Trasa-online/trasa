@@ -48,7 +48,7 @@ const Home = () => {
       const feedUserIds = [...new Set([...followingIds, user.id])];
       const { data: routes } = await supabase
         .from("routes")
-        .select("id, city, created_at, ai_summary, user_id, review_photos, likes(user_id), comments(id), pins(place_name, category, pin_order)")
+        .select("id, city, created_at, ai_summary, user_id, review_photos, likes(user_id), pins(place_name, category, pin_order, latitude, longitude)")
         .in("user_id", feedUserIds)
         .order("created_at", { ascending: false })
         .limit(30);
