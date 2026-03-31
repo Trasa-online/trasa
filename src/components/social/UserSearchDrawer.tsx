@@ -71,10 +71,14 @@ export default function UserSearchDrawer({ open, onClose }: Props) {
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
               autoFocus
-              type="text"
+              type="search"
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Szukaj @username..."
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             {query && (

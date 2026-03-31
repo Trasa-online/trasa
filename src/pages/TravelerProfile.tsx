@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Copy, Check, Camera, Search } from "lucide-react";
+import { Settings, Copy, Check, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -195,12 +195,7 @@ const TravelerProfile = () => {
 
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-2 pb-2">
-        <button
-          onClick={() => setSearchOpen(true)}
-          className="h-9 w-9 flex items-center justify-center rounded-xl text-muted-foreground hover:bg-muted transition-colors"
-        >
-          <Search className="h-5 w-5" />
-        </button>
+        <div className="h-9 w-9" />
         <h1 className="text-base font-black tracking-tight">Mój profil</h1>
         <button
           onClick={() => navigate("/settings")}
@@ -249,8 +244,30 @@ const TravelerProfile = () => {
         <div className="flex gap-3">
           <StatCard value={stats?.trips ?? 0} label="Tras" />
           <StatCard value={stats?.cities ?? 0} label="Miast" />
-          <StatCard value={followCounts?.followers ?? 0} label="Obserwujący" />
-          <StatCard value={followCounts?.following ?? 0} label="Obserwuje" />
+        </div>
+
+        {/* Followers / following */}
+        <div className="bg-card border border-border/40 rounded-2xl overflow-hidden">
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="w-full flex items-center justify-between px-4 py-3.5 active:bg-muted transition-colors border-b border-border/30"
+          >
+            <span className="text-sm font-medium text-foreground">Obserwujący</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold">{followCounts?.followers ?? 0}</span>
+              <span className="text-muted-foreground text-xs">›</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="w-full flex items-center justify-between px-4 py-3.5 active:bg-muted transition-colors"
+          >
+            <span className="text-sm font-medium text-foreground">Obserwuje</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold">{followCounts?.following ?? 0}</span>
+              <span className="text-muted-foreground text-xs">›</span>
+            </div>
+          </button>
         </div>
 
         {/* Invites */}
