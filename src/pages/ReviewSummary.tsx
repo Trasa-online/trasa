@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Share2, Clock } from "lucide-react";
+import { ArrowLeft, Camera, X, Share2 } from "lucide-react";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -287,11 +287,6 @@ const ReviewSummary = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold leading-tight truncate">{pin.place_name}</p>
-                      {pin.suggested_time && (
-                        <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <Clock className="h-3 w-3" /> {pin.suggested_time}
-                        </p>
-                      )}
                     </div>
                   </div>
                 );

@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import UserSearchDrawer from "@/components/social/UserSearchDrawer";
 
 // ── InviteSlot ────────────────────────────────────────────────────────────────
 
@@ -113,7 +112,6 @@ const TravelerProfile = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [searchOpen, setSearchOpen] = useState(false);
 
   const handleAvatarUpload = async (file: File) => {
     if (!user) return;
@@ -249,7 +247,7 @@ const TravelerProfile = () => {
         {/* Followers / following */}
         <div className="bg-card border border-border/40 rounded-2xl overflow-hidden">
           <button
-            onClick={() => setSearchOpen(true)}
+            onClick={() => navigate("/search")}
             className="w-full flex items-center justify-between px-4 py-3.5 active:bg-muted transition-colors border-b border-border/30"
           >
             <span className="text-sm font-medium text-foreground">Obserwujący</span>
@@ -259,7 +257,7 @@ const TravelerProfile = () => {
             </div>
           </button>
           <button
-            onClick={() => setSearchOpen(true)}
+            onClick={() => navigate("/search")}
             className="w-full flex items-center justify-between px-4 py-3.5 active:bg-muted transition-colors"
           >
             <span className="text-sm font-medium text-foreground">Obserwuje</span>
@@ -290,7 +288,6 @@ const TravelerProfile = () => {
         )}
 
       </div>
-      <UserSearchDrawer open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 };

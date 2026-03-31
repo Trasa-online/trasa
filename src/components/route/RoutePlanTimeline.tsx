@@ -49,12 +49,6 @@ const RoutePlanTimeline = ({ days, totalDays, onMovePin }: RoutePlanTimelineProp
                       <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{pin.description}</p>
                     )}
                   </div>
-                  {/* Time */}
-                  {pin.suggested_time && (
-                    <span className="text-xs text-muted-foreground shrink-0 pt-1">
-                      {pin.suggested_time}
-                    </span>
-                  )}
                   {/* Reorder arrows */}
                   {onMovePin && (
                     <div className="flex flex-col gap-0.5 shrink-0 pt-0.5">

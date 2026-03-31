@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -8,13 +7,11 @@ import { Sparkles, Mic, BookOpen, UserPlus, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
 import FeedActivityCard from "@/components/social/FeedActivityCard";
-import UserSearchDrawer from "@/components/social/UserSearchDrawer";
 
 const Home = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation("home");
-  const [searchOpen, setSearchOpen] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -33,7 +30,7 @@ const Home = () => {
   }, [loading, user, profile, navigate]);
 
   // Feed: people I follow
-  const { data: followingIds = [] } = useQuery({
+  const { data: followingIds = [], isLoading: loadingFollowing } = useQuery({
     queryKey: ["following-ids", user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -69,7 +66,7 @@ const Home = () => {
     enabled: followingIds.length > 0,
   });
 
-  if (loading) return null;
+  if (loading || loadingFollowing) return null;
 
   // ── Landing for unauthenticated ──
   if (!user) {
@@ -131,7 +128,7 @@ const Home = () => {
           <div className="flex items-center justify-between pt-2 pb-4">
             <h1 className="text-xl font-black tracking-tight">Aktywność</h1>
             <button
-              onClick={() => setSearchOpen(true)}
+              onClick={() => navigate("/search")}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-xs font-semibold text-muted-foreground"
             >
               <Users className="h-3.5 w-3.5" />
@@ -157,7 +154,6 @@ const Home = () => {
             </div>
           )}
         </div>
-        <UserSearchDrawer open={searchOpen} onClose={() => setSearchOpen(false)} />
       </>
     );
   }
@@ -190,7 +186,7 @@ const Home = () => {
           </div>
 
           <button
-            onClick={() => setSearchOpen(true)}
+            onClick={() => navigate("/search")}
             className="w-full py-3.5 rounded-2xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] transition-all text-white font-bold text-base shadow-lg shadow-orange-600/20"
           >
             Dodaj znajomych
@@ -206,7 +202,6 @@ const Home = () => {
           </button>
         )}
       </div>
-      <UserSearchDrawer open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 };

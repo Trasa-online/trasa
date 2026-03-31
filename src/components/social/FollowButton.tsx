@@ -45,7 +45,8 @@ export default function FollowButton({ targetUserId, initialIsFollowing, classNa
       toast.error("Nie udało się zaktualizować obserwowania");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["following-ids", user?.id] });
+      // refetchQueries actively triggers refetch (not just marks stale)
+      queryClient.refetchQueries({ queryKey: ["following-ids", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["is-following", user?.id, targetUserId] });
       queryClient.invalidateQueries({ queryKey: ["follow-counts"] });
       queryClient.invalidateQueries({ queryKey: ["profile-follow-counts", targetUserId] });
