@@ -84,39 +84,35 @@ const Home = () => {
   const firstName = (profile as any)?.first_name;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-5 pb-24">
-      <div className="w-full max-w-sm flex flex-col items-center gap-8">
-
-        {/* Logo card */}
-        <div className="w-full bg-card border border-border/40 rounded-3xl p-10 flex flex-col items-center gap-5 shadow-sm">
-          <img src="/icon-192.png" alt="TRASA" className="w-20 h-20 rounded-2xl" style={{ boxShadow: "1px 1px 4px rgba(0,0,0,0.1)" }} />
-          <div className="text-center">
-            <h1 className="text-3xl font-black tracking-tight">TRASA</h1>
-            {firstName && (
-              <p className="text-sm text-muted-foreground mt-1">
-                {t("greeting_with_name", { name: firstName })}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={() => navigate("/plan")}
-            className="w-full py-4 rounded-2xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] transition-all text-white font-bold text-base shadow-lg shadow-orange-600/20"
-          >
-            + {t("add_plan")}
-          </button>
+    <div className="flex-1 flex flex-col px-4 pt-3 pb-4 gap-3">
+      {/* Main card — fills remaining height */}
+      <div className="flex-1 w-full bg-card border border-border/40 rounded-3xl flex flex-col items-center justify-center gap-6 px-8 py-10">
+        <img src="/icon-192.png" alt="TRASA" className="w-20 h-20 rounded-2xl" style={{ boxShadow: "1px 1px 4px rgba(0,0,0,0.1)" }} />
+        <div className="text-center">
+          <h1 className="text-3xl font-black tracking-tight">TRASA</h1>
+          {firstName && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {t("greeting_with_name", { name: firstName })}
+            </p>
+          )}
         </div>
-
-        {/* Admin shortcut */}
-        {user.email === "nat.maz98@gmail.com" && (
-          <button
-            onClick={() => navigate("/admin/routes")}
-            className="text-xs bg-orange-600/10 text-orange-600 font-semibold px-4 py-2 rounded-full"
-          >
-            🗺️ Trasy wzorcowe
-          </button>
-        )}
-
+        <button
+          onClick={() => navigate("/plan")}
+          className="w-full py-4 rounded-2xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] transition-all text-white font-bold text-base shadow-lg shadow-orange-600/20"
+        >
+          + {t("add_plan")}
+        </button>
       </div>
+
+      {/* Admin shortcut */}
+      {user.email === "nat.maz98@gmail.com" && (
+        <button
+          onClick={() => navigate("/admin/routes")}
+          className="self-center text-xs bg-orange-600/10 text-orange-600 font-semibold px-4 py-2 rounded-full"
+        >
+          🗺️ Trasy wzorcowe
+        </button>
+      )}
     </div>
   );
 };

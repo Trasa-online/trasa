@@ -100,9 +100,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background">
       <TopBar onOrbClick={handleOrbClick} />
-      <main className="max-w-lg mx-auto">
+      <main className="flex-1 flex flex-col max-w-lg mx-auto w-full">
         {children}
       </main>
       {user && <BottomNav />}

@@ -146,7 +146,7 @@ const MyTrips = () => {
       <div className="flex-1 overflow-y-auto pb-24">
 
         {/* Header */}
-        <div className="px-5 pt-safe-4 pb-0 max-w-lg mx-auto">
+        <div className="px-5 pt-2 pb-0 max-w-lg mx-auto">
           <h1 className="text-xl font-black tracking-tight pt-3 pb-2">Moje trasy</h1>
 
           {/* Tabs */}
