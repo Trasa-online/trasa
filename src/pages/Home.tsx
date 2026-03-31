@@ -43,19 +43,19 @@ const Home = () => {
         .eq("follower_id", user.id);
 
       const followingIds = (followRows ?? []).map(r => r.following_id as string);
-      if (followingIds.length === 0) return { followingIds: [], items: [] };
 
-      // Step 2: their routes
+      // Step 2: routes from followed users + own routes
+      const feedUserIds = [...new Set([...followingIds, user.id])];
       const { data: routes } = await supabase
         .from("routes")
         .select("id, city, created_at, ai_summary, user_id, review_photos")
-        .in("user_id", followingIds)
+        .in("user_id", feedUserIds)
         .order("created_at", { ascending: false })
         .limit(30);
 
       if (!routes || routes.length === 0) return { followingIds, items: [] };
 
-      // Step 3: their profiles
+      // Step 3: profiles for all actors
       const actorIds = [...new Set(routes.map(r => r.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
@@ -127,14 +127,13 @@ const Home = () => {
   }
 
   const firstName = (profile as any)?.first_name;
-  const followingIds = feed?.followingIds ?? [];
   const feedItems = feed?.items ?? [];
 
-  // ── Feed view (has following) ──
-  if (followingIds.length > 0) {
+  // ── Feed view (own routes + following) ──
+  if (feedLoading || feedItems.length > 0) {
     return (
-      <div className="flex-1 flex flex-col px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
-        <div className="flex items-center justify-between pt-2 pb-4">
+      <div className="flex-1 flex flex-col pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
+        <div className="flex items-center justify-between pt-2 pb-2 px-4">
           <h1 className="text-xl font-black tracking-tight">Aktywność</h1>
           <button
             onClick={() => navigate("/search")}
@@ -147,14 +146,6 @@ const Home = () => {
 
         {feedLoading ? (
           <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">Ładowanie...</div>
-        ) : feedItems.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
-            <Users className="h-10 w-10 text-muted-foreground/30" />
-            <div>
-              <p className="font-semibold text-sm">Nikt jeszcze nie dodał trasy</p>
-              <p className="text-xs text-muted-foreground mt-1">Gdy znajomi opublikują trasę, pojawi się tutaj.</p>
-            </div>
-          </div>
         ) : (
           <div className="divide-y divide-border/30">
             {feedItems.map(({ route, actor }) => (
@@ -166,7 +157,7 @@ const Home = () => {
     );
   }
 
-  // ── Empty social hub (no following yet) ──
+  // ── Empty state (no routes at all yet) ──
   return (
     <div className="flex-1 flex flex-col px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] gap-3">
       <div className="flex-1 w-full bg-card border border-border/40 rounded-3xl flex flex-col items-center justify-center gap-6 px-8 py-10">
