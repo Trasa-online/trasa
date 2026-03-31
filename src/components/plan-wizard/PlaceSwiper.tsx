@@ -58,7 +58,7 @@ const CATEGORY_LABELS: Record<PlaceCategory, string> = {
 };
 
 const CATEGORY_COLORS: Record<PlaceCategory, string> = {
-  restaurant: "bg-orange-500/20 text-orange-400",
+  restaurant: "bg-orange-600/20 text-orange-400",
   cafe: "bg-amber-500/20 text-amber-400",
   museum: "bg-violet-500/20 text-violet-400",
   park: "bg-emerald-500/20 text-emerald-400",
@@ -350,7 +350,7 @@ const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: MatchModalProps) => {
         <div className="w-full flex flex-col gap-2.5">
           <button
             onClick={onConfirm}
-            className="w-full py-3.5 rounded-2xl bg-orange-500 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-500/25"
+            className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
           >
             Sprawdzam trasę
             <ArrowRight className="h-4 w-4" />
@@ -448,7 +448,7 @@ const EmptyState = ({
         <div className="flex justify-center py-8">
           <div className="flex gap-1.5">
             {[0, 1, 2].map(i => (
-              <div key={i} className="h-2 w-2 rounded-full bg-orange-500 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+              <div key={i} className="h-2 w-2 rounded-full bg-orange-600 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
             ))}
           </div>
         </div>
@@ -476,7 +476,7 @@ const EmptyState = ({
             {/* Matched place pills */}
             <div className="flex flex-wrap gap-1.5">
               {route.matchedNames.map(name => (
-                <span key={name} className="text-xs bg-orange-500/10 text-orange-600 px-2.5 py-1 rounded-full font-medium">
+                <span key={name} className="text-xs bg-orange-600/10 text-orange-600 px-2.5 py-1 rounded-full font-medium">
                   {name}
                 </span>
               ))}
@@ -505,7 +505,7 @@ const EmptyState = ({
           "w-full py-3.5 rounded-2xl text-sm font-semibold active:scale-[0.97] transition-transform",
           matchedRoutes.length > 0
             ? "border border-border text-muted-foreground bg-card mt-1"
-            : "bg-orange-500 text-white shadow-lg shadow-orange-500/25"
+            : "bg-orange-600 text-white shadow-lg shadow-orange-600/25"
         )}
       >
         {matchedRoutes.length > 0
@@ -751,7 +751,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="h-2 w-2 rounded-full bg-orange-500 animate-bounce"
+              className="h-2 w-2 rounded-full bg-orange-600 animate-bounce"
               style={{ animationDelay: `${i * 0.15}s` }}
             />
           ))}
@@ -870,7 +870,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
 
         <button
           onClick={handleLike}
-          className="h-16 w-16 rounded-full bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30 active:scale-90 transition-transform"
+          className="h-16 w-16 rounded-full bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/30 active:scale-90 transition-transform"
         >
           <Heart className="h-7 w-7 text-white fill-white" />
         </button>

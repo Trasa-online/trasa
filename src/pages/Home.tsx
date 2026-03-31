@@ -278,7 +278,7 @@ const Home = () => {
           <div className="flex justify-end mb-2">
             <button
               onClick={() => navigate("/admin/routes")}
-              className="text-xs bg-orange-500/10 text-orange-600 font-semibold px-3 py-1.5 rounded-full"
+              className="text-xs bg-orange-600/10 text-orange-600 font-semibold px-3 py-1.5 rounded-full"
             >
               🗺️ Trasy wzorcowe
             </button>
@@ -298,7 +298,7 @@ const Home = () => {
             >
               {tab === "aktywne" ? t("tabs.active") : tab === "next-up" ? t("tabs.upcoming") : "Dziennik"}
               {activeTab === tab && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-full" />
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-600 rounded-full" />
               )}
             </button>
           ))}
@@ -423,7 +423,7 @@ const Home = () => {
               navigate("/plan");
             }}
             size="lg"
-            className="w-full rounded-full text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20"
+            className="w-full rounded-full text-base font-semibold bg-orange-600 hover:bg-orange-700 text-white border-0 shadow-lg shadow-orange-600/20"
           >
             {t("add_plan")}
           </Button>
@@ -469,7 +469,7 @@ const Home = () => {
                   setDebriefBlockRoute(null);
                 }
               }}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
+              className="bg-orange-600 hover:bg-orange-700 text-white"
             >
               Podsumuj dzień
             </AlertDialogAction>

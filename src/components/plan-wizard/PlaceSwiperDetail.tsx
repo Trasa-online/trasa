@@ -358,8 +358,8 @@ const PlaceSwiperDetail = ({
                 {/* Usage stat — only show when at least 1 route used it */}
                 {usageCount !== null && usageCount > 0 && (
                   <div className="flex items-center gap-2.5 py-3 px-4 bg-muted/50 rounded-2xl">
-                    <div className="h-9 w-9 rounded-full bg-orange-500/15 flex items-center justify-center shrink-0">
-                      <Users className="h-4.5 w-4.5 text-orange-500" />
+                    <div className="h-9 w-9 rounded-full bg-orange-600/15 flex items-center justify-center shrink-0">
+                      <Users className="h-4.5 w-4.5 text-orange-600" />
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-foreground">
@@ -475,7 +475,7 @@ const PlaceSwiperDetail = ({
                 </button>
                 <button
                   onClick={handleLike}
-                  className="flex-[2] flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold text-sm shadow-lg shadow-orange-500/30 active:scale-[0.97] transition-transform"
+                  className="flex-[2] flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-500 text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-[0.97] transition-transform"
                 >
                   <Heart className="h-4 w-4 fill-white" />
                   Chcę tu być

@@ -284,8 +284,8 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
         <div className="flex-1 flex flex-col gap-4">
           <div className="rounded-2xl border border-border bg-card p-4 space-y-1">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
-                <MapPin className="h-5 w-5 text-orange-500" />
+              <div className="w-10 h-10 rounded-xl bg-orange-600/10 flex items-center justify-center shrink-0">
+                <MapPin className="h-5 w-5 text-orange-600" />
               </div>
               <div className="min-w-0">
                 <p className="font-semibold text-base leading-tight">{preview.place_name}</p>
@@ -296,7 +296,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
 
           <button
             onClick={() => onAdd(preview)}
-            className="w-full h-12 rounded-full bg-orange-500 text-white text-base font-semibold shadow-lg shadow-orange-500/20 active:opacity-80 transition-opacity flex items-center justify-center gap-2"
+            className="w-full h-12 rounded-full bg-orange-600 text-white text-base font-semibold shadow-lg shadow-orange-600/20 active:opacity-80 transition-opacity flex items-center justify-center gap-2"
           >
             <Plus className="h-4 w-4" />
             Dodaj do trasy

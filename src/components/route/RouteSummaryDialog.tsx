@@ -216,7 +216,7 @@ const RouteSummaryDialog = ({
         {/* Header */}
         <div className="flex-shrink-0 flex items-start justify-between px-5 pb-4">
           <div>
-            <p className="text-xs font-medium text-orange-500 uppercase tracking-wide mb-0.5">Twoja trasa</p>
+            <p className="text-xs font-medium text-orange-600 uppercase tracking-wide mb-0.5">Twoja trasa</p>
             <h2 className="text-2xl font-black leading-tight">{plan.city}</h2>
             <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
               {dateLabel && <span>{dateLabel}</span>}
@@ -262,7 +262,7 @@ const RouteSummaryDialog = ({
                       <div key={idx} className="flex items-start gap-3.5">
                         {/* Stepper */}
                         <div className="flex flex-col items-center shrink-0 pt-0.5">
-                          <div className="h-7 w-7 rounded-full bg-orange-500 flex items-center justify-center text-[11px] font-bold text-white shadow-sm shadow-orange-500/30">
+                          <div className="h-7 w-7 rounded-full bg-orange-600 flex items-center justify-center text-[11px] font-bold text-white shadow-sm shadow-orange-600/30">
                             {idx + 1}
                           </div>
                           {!isLast && (
@@ -305,7 +305,7 @@ const RouteSummaryDialog = ({
           <button
             onClick={saveRoute}
             disabled={saving}
-            className="w-full py-4 rounded-2xl bg-orange-500 text-white font-bold text-base disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 active:scale-[0.98] transition-transform"
+            className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-orange-600/25 active:scale-[0.98] transition-transform"
           >
             {saving
               ? <><Loader2 className="h-4 w-4 animate-spin" />Zapisuję...</>

@@ -322,7 +322,7 @@ const ReviewSummary = () => {
         <button
           onClick={handleShare}
           disabled={sharing}
-          className="w-full py-4 rounded-2xl bg-orange-500 text-white font-bold text-base active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
+          className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-orange-600/20"
         >
           <Share2 className="h-4 w-4" />
           {sharing ? "Tworzę link…" : "Poleć tę trasę"}

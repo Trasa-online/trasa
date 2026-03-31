@@ -48,7 +48,7 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
             cell: "flex-1 text-center p-0",
             day: "h-10 w-full rounded-full text-sm font-medium hover:bg-muted transition-colors aria-selected:opacity-100",
             day_selected: "bg-foreground text-background hover:bg-foreground hover:text-background focus:bg-foreground focus:text-background rounded-full",
-            day_today: "font-bold text-orange-500",
+            day_today: "font-bold text-orange-600",
             day_outside: "opacity-30",
             day_disabled: "opacity-20 cursor-not-allowed",
           }}
@@ -71,7 +71,7 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
           onClick={() => selected && onConfirm(selected)}
           disabled={!selected}
           size="lg"
-          className="w-full rounded-full text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20 disabled:opacity-40"
+          className="w-full rounded-full text-base font-semibold bg-orange-600 hover:bg-orange-700 text-white border-0 shadow-lg shadow-orange-600/20 disabled:opacity-40"
         >
           Dalej
         </Button>

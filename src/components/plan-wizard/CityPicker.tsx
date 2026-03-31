@@ -159,7 +159,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
         <Button
           onClick={() => onConfirm(CITIES[selectedIndex])}
           size="lg"
-          className="w-full rounded-full text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20"
+          className="w-full rounded-full text-base font-semibold bg-orange-600 hover:bg-orange-700 text-white border-0 shadow-lg shadow-orange-600/20"
         >
           Dalej
         </Button>

@@ -226,7 +226,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
         >
           {markerPos && (
             <AdvancedMarker position={markerPos}>
-              <div className="w-5 h-5 bg-orange-500 rounded-full border-2 border-white shadow-lg" />
+              <div className="w-5 h-5 bg-orange-600 rounded-full border-2 border-white shadow-lg" />
             </AdvancedMarker>
           )}
           <MapPanner pos={markerPos} />
@@ -262,7 +262,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
                   onClick={() => { setPinMode((v) => !v); setShowSuggestions(false); }}
                   className={cn(
                     "shrink-0 transition-colors",
-                    pinMode ? "text-orange-500" : "text-muted-foreground"
+                    pinMode ? "text-orange-600" : "text-muted-foreground"
                   )}
                 >
                   <MapPin className="h-4 w-4" />
@@ -300,7 +300,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
           size="lg"
           disabled={!selected}
           onClick={() => selected && onConfirm(selected.name)}
-          className="w-full rounded-full text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20 disabled:opacity-40"
+          className="w-full rounded-full text-base font-semibold bg-orange-600 hover:bg-orange-700 text-white border-0 shadow-lg shadow-orange-600/20 disabled:opacity-40"
         >
           Dalej
         </Button>

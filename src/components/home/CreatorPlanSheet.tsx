@@ -51,7 +51,7 @@ export default function CreatorPlanSheet({ plan, open, onOpenChange, onPersonali
           {plan.thumbnail_url ? (
             <img src={plan.thumbnail_url} alt={plan.title} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-orange-500/20 to-violet-500/20" />
+            <div className="w-full h-full bg-gradient-to-br from-orange-600/20 to-violet-500/20" />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
 
@@ -186,7 +186,7 @@ export default function CreatorPlanSheet({ plan, open, onOpenChange, onPersonali
         {/* CTA */}
         <div className="p-4 pb-safe flex-shrink-0 border-t border-border/40">
           <Button
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white border-0"
+            className="w-full bg-orange-600 hover:bg-orange-700 text-white border-0"
             size="lg"
             onClick={() => {
               onOpenChange(false);

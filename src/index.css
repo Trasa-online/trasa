@@ -17,28 +17,32 @@ All colors MUST be HSL.
     --popover: 0 0% 99%;
     --popover-foreground: 0 0% 0%;
 
-    --primary: 19 84% 45%;
+    /* ── Primary — orange (#EA580C = orange-600) ── */
+    --primary: 21 90% 48%;
     --primary-foreground: 0 0% 100%;
 
+    /* ── Secondary — light gray ── */
     --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 0%;
+    --secondary-foreground: 0 0% 9%;
 
+    /* ── Neutrals ── */
     --muted: 0 0% 94%;
     --muted-foreground: 0 0% 35%;
 
     --accent: 0 0% 94%;
     --accent-foreground: 0 0% 0%;
 
-    --destructive: 0 84.2% 60.2%;
+    /* ── Semantic ── */
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 0 0% 78%;
     --input: 0 0% 89%;
-    --ring: 19 84% 45%;
+    --ring: 21 90% 48%;
 
+    /* ── Tertiary — amber/gold ── */
     --star: 45 100% 51%;
     --star-empty: 0 0% 85%;
-
     --cta-accent: 45 100% 51%;
     --cta-accent-foreground: 0 0% 0%;
 
@@ -58,7 +62,7 @@ All colors MUST be HSL.
 
 /* Orb flowing gradient animation */
 .orb-gradient {
-  background: linear-gradient(135deg, #F9662B, #FF8C42, #D45113, #F9662B);
+  background: linear-gradient(135deg, #EA580C, #FB923C, #C2410C, #EA580C);
   background-size: 300% 300%;
   animation: orb-flow 4s ease infinite;
 }

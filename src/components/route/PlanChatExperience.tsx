@@ -1073,7 +1073,7 @@ else if(coords.length===1)map.setView(coords[0],15);
                 <h2 className="font-semibold flex-1">Trasa na mapie</h2>
                 {mapsAppUrl && (
                   <a href={mapsAppUrl} target="_blank" rel="noopener noreferrer"
-                    className="text-xs text-orange-500 font-medium flex items-center gap-1">
+                    className="text-xs text-orange-600 font-medium flex items-center gap-1">
                     Otwórz <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
@@ -1092,7 +1092,7 @@ else if(coords.length===1)map.setView(coords[0],15);
               <div className="shrink-0 px-4 py-3 border-t border-border/40 space-y-1.5 max-h-44 overflow-y-auto">
                 {allPins.map((p, i) => (
                   <div key={i} className="flex items-center gap-2 text-sm">
-                    <div className="h-5 w-5 rounded-full bg-orange-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                    <div className="h-5 w-5 rounded-full bg-orange-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
                       {i + 1}
                     </div>
                     <span className="font-medium truncate flex-1">{p.place_name}</span>

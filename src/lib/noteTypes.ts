@@ -42,7 +42,7 @@ export const NOTE_TYPES = {
     icon: AlertTriangle,
     bgColor: 'bg-orange-50 dark:bg-orange-950/30',
     borderColor: 'border-orange-200 dark:border-orange-800',
-    iconColor: 'text-orange-500',
+    iconColor: 'text-orange-600',
     labelColor: 'text-orange-600 dark:text-orange-400',
     hoverBg: 'hover:bg-orange-50 dark:hover:bg-orange-950/30',
     hoverBorder: 'hover:border-orange-300 dark:hover:border-orange-700',

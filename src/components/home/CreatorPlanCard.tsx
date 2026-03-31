@@ -66,7 +66,7 @@ export default function CreatorPlanCard({ plan, onClick }: CreatorPlanCardProps)
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-orange-500/20 to-violet-500/20" />
+          <div className="w-full h-full bg-gradient-to-br from-orange-600/20 to-violet-500/20" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
 
@@ -160,7 +160,7 @@ export default function CreatorPlanCard({ plan, onClick }: CreatorPlanCardProps)
 
       {/* CTA footer */}
       <div className="px-4 pb-4">
-        <div className="w-full text-center text-xs font-semibold text-orange-500 py-2 rounded-xl border border-orange-500/30 bg-orange-500/5">
+        <div className="w-full text-center text-xs font-semibold text-orange-600 py-2 rounded-xl border border-orange-600/30 bg-orange-600/5">
           Personalizuj plan →
         </div>
       </div>

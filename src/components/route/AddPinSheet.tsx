@@ -213,7 +213,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
               {t.count !== undefined && t.count > 0 && (
                 <span className={cn(
                   "h-4 min-w-[16px] px-0.5 rounded-full flex items-center justify-center text-[10px] font-bold",
-                  tab === t.id ? "bg-background/20 text-background" : "bg-orange-500 text-white"
+                  tab === t.id ? "bg-background/20 text-background" : "bg-orange-600 text-white"
                 )}>
                   {t.count}
                 </span>
@@ -244,7 +244,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                       disabled={addingName === name}
                       className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted/40 active:scale-[0.98] transition-all text-left"
                     >
-                      <div className="flex-shrink-0 h-9 w-9 rounded-full bg-orange-500/10 flex items-center justify-center text-lg">
+                      <div className="flex-shrink-0 h-9 w-9 rounded-full bg-orange-600/10 flex items-center justify-center text-lg">
                         {CATEGORY_EMOJI[dbPlace?.category ?? ""] ?? "📍"}
                       </div>
                       <div className="flex-1 min-w-0">
