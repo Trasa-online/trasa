@@ -94,7 +94,7 @@ const ReviewSummary = () => {
     if (!files.length || !routeId || !user) return;
     setUploading(true);
     const newUrls: string[] = [];
-    for (const file of files.slice(0, 6 - photos.length)) {
+    for (const file of files.slice(0, 15 - photos.length)) {
       try {
         const compressed = await compressImage(file, 1200, 1200, 0.8);
         const path = `${user.id}/${routeId}/review_${Date.now()}.jpg`;
@@ -220,7 +220,7 @@ const ReviewSummary = () => {
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Zdjęcia
             </p>
-            {photos.length > 0 && photos.length < 6 && (
+            {photos.length > 0 && photos.length < 15 && (
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
@@ -244,7 +244,7 @@ const ReviewSummary = () => {
                   </button>
                 </div>
               ))}
-              {photos.length < 6 && (
+              {photos.length < 15 && (
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
