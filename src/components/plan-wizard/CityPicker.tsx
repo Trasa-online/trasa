@@ -4,7 +4,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const CITIES = ["Kraków", "Budapeszt", "Warszawa", "Wrocław", "Poznań", "Gdańsk"];
+const CITY_POOLS = {
+  polska: ["Kraków", "Warszawa", "Gdańsk", "Wrocław", "Poznań", "Zakopane", "Łódź", "Katowice"],
+  zagranica: ["Budapeszt", "Praga", "Wiedeń", "Barcelona", "Rzym", "Lizbona", "Amsterdam", "Paryż", "Berlin", "Dubrownik"],
+};
+
 const ITEM_HEIGHT = 80;
 const VISIBLE_ITEMS = 5;
 const CONTAINER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
@@ -15,27 +19,37 @@ interface CityPickerProps {
 }
 
 const CityPicker = ({ onConfirm }: CityPickerProps) => {
+  const [region, setRegion] = useState<"polska" | "zagranica">("polska");
+  const cities = CITY_POOLS[region];
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [notifyEmail, setNotifyEmail] = useState("");
   const [notifyCity, setNotifyCity] = useState("");
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Scroll to initial position
+  // Reset drum to top when region changes
+  useEffect(() => {
+    setSelectedIndex(0);
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: 0, behavior: "smooth" });
+  }, [region]);
+
+  // Scroll to initial position on mount
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollTop = selectedIndex * ITEM_HEIGHT;
+    el.scrollTop = 0;
   }, []);
 
   const handleScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
     const rawIndex = el.scrollTop / ITEM_HEIGHT;
-    const clamped = Math.max(0, Math.min(CITIES.length - 1, Math.round(rawIndex)));
+    const clamped = Math.max(0, Math.min(cities.length - 1, Math.round(rawIndex)));
     setSelectedIndex(clamped);
 
-    // Snap after scroll settles
     if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
     scrollTimeout.current = setTimeout(() => {
       el.scrollTo({ top: clamped * ITEM_HEIGHT, behavior: "smooth" });
@@ -50,14 +64,8 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
   };
 
   const handleNotify = () => {
-    if (!notifyCity.trim()) {
-      toast.error("Wpisz nazwę miasta");
-      return;
-    }
-    if (!notifyEmail.includes("@")) {
-      toast.error("Podaj prawidłowy adres email");
-      return;
-    }
+    if (!notifyCity.trim()) { toast.error("Wpisz nazwę miasta"); return; }
+    if (!notifyEmail.includes("@")) { toast.error("Podaj prawidłowy adres email"); return; }
     toast.success(`Dzięki! Gdy ${notifyCity} będzie dostępne, damy Ci znać.`);
     setNotifyCity("");
     setNotifyEmail("");
@@ -65,10 +73,39 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
 
   return (
     <div className="flex flex-col h-full">
+
+      {/* Region toggle */}
+      <div className="flex items-center justify-center pt-5 pb-2">
+        <div className="flex gap-1 p-1 rounded-full bg-muted">
+          <button
+            onClick={() => setRegion("polska")}
+            className={cn(
+              "px-5 py-1.5 rounded-full text-sm font-semibold transition-all",
+              region === "polska"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground"
+            )}
+          >
+            🇵🇱 Polska
+          </button>
+          <button
+            onClick={() => setRegion("zagranica")}
+            className={cn(
+              "px-5 py-1.5 rounded-full text-sm font-semibold transition-all",
+              region === "zagranica"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground"
+            )}
+          >
+            🌍 Zagranica
+          </button>
+        </div>
+      </div>
+
       {/* Drum picker */}
       <div className="flex-1 flex flex-col items-center justify-center">
         <div className="relative w-full" style={{ height: CONTAINER_HEIGHT }}>
-          {/* Center highlight line */}
+          {/* Center highlight */}
           <div
             className="absolute left-0 right-0 pointer-events-none z-10"
             style={{
@@ -89,10 +126,9 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
               msOverflowStyle: "none",
             }}
           >
-            {/* Top padding */}
             <div style={{ height: PADDING }} />
 
-            {CITIES.map((city, i) => {
+            {cities.map((city, i) => {
               const distance = Math.abs(i - selectedIndex);
               return (
                 <div
@@ -112,7 +148,6 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
               );
             })}
 
-            {/* Bottom padding */}
             <div style={{ height: PADDING }} />
           </div>
         </div>
@@ -120,9 +155,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
 
       {/* "Not your city?" banner */}
       <div className="mx-5 mb-4 px-4 py-3 rounded-2xl bg-background border border-border space-y-2 shadow-sm">
-        <p className="text-xs font-semibold text-foreground">
-          Nie widzisz swojego miasta?
-        </p>
+        <p className="text-xs font-semibold text-foreground">Nie widzisz swojego miasta?</p>
         <div className="flex gap-2">
           <Input
             type="text"
@@ -140,12 +173,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
             className="h-8 text-xs flex-1"
             onKeyDown={(e) => e.key === "Enter" && handleNotify()}
           />
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleNotify}
-            className="h-8 text-xs px-3 shrink-0"
-          >
+          <Button size="sm" variant="outline" onClick={handleNotify} className="h-8 text-xs px-3 shrink-0">
             Wyślij
           </Button>
         </div>
@@ -157,7 +185,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
       {/* CTA */}
       <div className="px-5 pb-safe-4 pb-6">
         <Button
-          onClick={() => onConfirm(CITIES[selectedIndex])}
+          onClick={() => onConfirm(cities[selectedIndex])}
           size="lg"
           className="w-full rounded-full text-base font-semibold bg-orange-600 hover:bg-orange-700 text-white border-0 shadow-lg shadow-orange-600/20"
         >
