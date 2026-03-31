@@ -14,6 +14,21 @@ export default {
     },
     extend: {
       colors: {
+        // Toned-down orange: same hue, lower saturation + lightness
+        // Replaces Tailwind's vivid orange-600 (#ea580c) with a darker burnt orange
+        orange: {
+          50:  "hsl(30, 70%, 97%)",
+          100: "hsl(27, 65%, 92%)",
+          200: "hsl(25, 60%, 83%)",
+          300: "hsl(23, 62%, 69%)",
+          400: "hsl(22, 65%, 55%)",
+          500: "hsl(21, 70%, 44%)",
+          600: "hsl(21, 72%, 36%)",  // was #ea580c — now darker, less vivid
+          700: "hsl(21, 74%, 28%)",
+          800: "hsl(21, 70%, 22%)",
+          900: "hsl(21, 68%, 17%)",
+          950: "hsl(22, 72%, 10%)",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
