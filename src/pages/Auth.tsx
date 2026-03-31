@@ -104,39 +104,30 @@ const Auth = () => {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Hero */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-6">
-        <h1 className="text-5xl font-black tracking-tight mb-2">TRASA</h1>
-        <p className="text-muted-foreground text-center text-sm max-w-[280px]">
+        {/* Logo mark */}
+        <div className="w-14 h-14 rounded-2xl bg-orange-600 flex items-center justify-center mb-4 shadow-lg shadow-orange-600/25">
+          <span className="text-white font-black text-xl tracking-tight">T</span>
+        </div>
+        <h1 className="text-4xl font-black tracking-tight mb-1.5">TRASA</h1>
+        <p className="text-muted-foreground text-center text-sm max-w-[260px] leading-relaxed mb-8">
           {t("description")}
         </p>
-        {/* Feature pills */}
-        <div className="flex flex-wrap gap-1.5 justify-center mt-4 mb-8">
-          {([
-            t("pills.beta"),
-            t("pills.planner"),
-            t("pills.journal"),
-            t("pills.map"),
-          ]).map((f) => (
-            <span key={f} className="text-xs bg-card border border-border rounded-full px-3 py-1 text-muted-foreground">
-              {f}
-            </span>
-          ))}
-        </div>
 
         {/* Tabs */}
         <div className="w-full max-w-sm">
-          <div className="flex rounded-xl border border-border overflow-hidden mb-6">
+          <div className="flex rounded-2xl bg-muted p-1 mb-6">
             <button
               onClick={() => setMode("login")}
-              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                mode === "login" ? "bg-foreground text-background" : "bg-card text-muted-foreground hover:text-foreground"
+              className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${
+                mode === "login" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {t("tabs.login")}
             </button>
             <button
               onClick={() => setMode("register")}
-              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                mode === "register" ? "bg-foreground text-background" : "bg-card text-muted-foreground hover:text-foreground"
+              className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${
+                mode === "register" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {t("tabs.register")}
@@ -169,7 +160,7 @@ const Auth = () => {
                   className="bg-card"
                 />
               </div>
-              <Button type="submit" className="w-full rounded-full" disabled={loading}>
+              <Button type="submit" className="w-full rounded-2xl py-6 bg-orange-600 hover:bg-orange-700 text-white font-bold text-base" disabled={loading}>
                 {loading ? t("logging_in") : t("login_btn")}
               </Button>
             </form>
@@ -241,7 +232,7 @@ const Auth = () => {
                   {t("terms_app")}
                 </span>
               </label>
-              <Button type="submit" className="w-full rounded-full" disabled={loading}>
+              <Button type="submit" className="w-full rounded-2xl py-6 bg-orange-600 hover:bg-orange-700 text-white font-bold text-base" disabled={loading}>
                 {loading ? t("registering") : t("register_btn")}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
