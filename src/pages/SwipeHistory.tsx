@@ -91,16 +91,16 @@ const SwipeHistory = () => {
         {/* Explore CTA */}
         <button
           onClick={() => navigate("/plan")}
-          className="w-full bg-orange-600 rounded-3xl px-5 py-5 flex items-center gap-4 mb-5 active:scale-[0.98] transition-transform shadow-lg shadow-orange-600/20"
+          className="w-full bg-card border-2 border-orange-600 rounded-3xl px-5 py-5 flex items-center gap-4 mb-5 active:scale-[0.98] transition-transform"
         >
-          <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
-            <Compass className="h-6 w-6 text-white" />
+          <div className="h-12 w-12 rounded-2xl bg-orange-600/10 flex items-center justify-center flex-shrink-0">
+            <Compass className="h-6 w-6 text-orange-600" />
           </div>
           <div className="flex-1 text-left">
-            <p className="text-white font-bold text-base leading-tight">Odkrywaj miejsca</p>
-            <p className="text-white/70 text-sm mt-0.5">Przeglądaj i lajkuj polecane przez twórców</p>
+            <p className="text-foreground font-bold text-base leading-tight">Odkrywaj miejsca</p>
+            <p className="text-muted-foreground text-sm mt-0.5">Przeglądaj i lajkuj polecane przez twórców</p>
           </div>
-          <ChevronRight className="h-5 w-5 text-white/60 flex-shrink-0" />
+          <ChevronRight className="h-5 w-5 text-orange-600 flex-shrink-0" />
         </button>
 
         {/* Tabs */}
