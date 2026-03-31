@@ -27,6 +27,9 @@ import Onboarding from "./pages/Onboarding";
 import SetPassword from "./pages/SetPassword";
 import Admin from "./pages/Admin";
 import TravelerProfile from "./pages/TravelerProfile";
+import MyTrips from "./pages/MyTrips";
+import Journal from "./pages/Journal";
+import SwipeHistory from "./pages/SwipeHistory";
 import EditPlan from "./pages/EditPlan";
 import ReviewSummary from "./pages/ReviewSummary";
 import PlanWizard from "./pages/PlanWizard";
@@ -55,6 +58,9 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/moje-trasy" element={<AppLayout><MyTrips /></AppLayout>} />
+          <Route path="/dziennik" element={<AppLayout><Journal /></AppLayout>} />
+          <Route path="/historia" element={<AppLayout><SwipeHistory /></AppLayout>} />
           <Route path="/moj-profil" element={<AppLayout><TravelerProfile /></AppLayout>} />
           <Route path="/edit-plan" element={<EditPlan />} />
           <Route path="/review-summary" element={<ReviewSummary />} />
