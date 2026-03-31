@@ -19,8 +19,9 @@ interface CityPickerProps {
 }
 
 const CityPicker = ({ onConfirm }: CityPickerProps) => {
-  const [region, setRegion] = useState<"polska" | "zagranica">("polska");
-  const cities = CITY_POOLS[region];
+  // Toggle hidden for now — architecture preserved for future use
+  // const [region, setRegion] = useState<"polska" | "zagranica">("polska");
+  const cities = [...CITY_POOLS.polska].sort((a, b) => a.localeCompare(b, "pl"));
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -74,33 +75,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
   return (
     <div className="flex flex-col h-full">
 
-      {/* Region toggle */}
-      <div className="flex items-center justify-center pt-5 pb-2">
-        <div className="flex gap-1 p-1 rounded-full bg-muted">
-          <button
-            onClick={() => setRegion("polska")}
-            className={cn(
-              "px-5 py-1.5 rounded-full text-sm font-semibold transition-all",
-              region === "polska"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground"
-            )}
-          >
-            🇵🇱 Polska
-          </button>
-          <button
-            onClick={() => setRegion("zagranica")}
-            className={cn(
-              "px-5 py-1.5 rounded-full text-sm font-semibold transition-all",
-              region === "zagranica"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground"
-            )}
-          >
-            🌍 Zagranica
-          </button>
-        </div>
-      </div>
+      {/* Region toggle — hidden for now, preserved for future use */}
 
       {/* Drum picker */}
       <div className="flex-1 flex flex-col items-center justify-center">
