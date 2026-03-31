@@ -9,6 +9,7 @@ interface FeedRoute {
   city: string;
   created_at: string;
   ai_summary?: string | null;
+  review_photos?: string[] | null;
 }
 
 interface FeedActor {
@@ -26,48 +27,65 @@ interface FeedActivityCardProps {
 export default function FeedActivityCard({ route, actor }: FeedActivityCardProps) {
   const navigate = useNavigate();
   const displayName = actor.first_name || actor.username || "Ktoś";
-  const timeAgo = formatDistanceToNow(new Date(route.created_at), { addSuffix: true, locale: pl });
+  const timeAgo = formatDistanceToNow(new Date(route.created_at), { addSuffix: false, locale: pl });
+  const photos = route.review_photos ?? [];
+
+  const goToProfile = () => actor.username && navigate(`/profil/${actor.username}`);
+  const goToRoute = () => navigate(`/route/${route.id}`);
 
   return (
-    <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
-      {/* Actor row */}
-      <div className="flex items-center gap-3 px-4 pt-3.5 pb-2.5">
-        <button onClick={() => actor.username && navigate(`/profil/${actor.username}`)}>
-          <Avatar className="h-9 w-9">
+    <div className="flex gap-3 px-4 py-4">
+      {/* Left column: avatar + thread line */}
+      <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+        <button onClick={goToProfile}>
+          <Avatar className="h-10 w-10">
             <AvatarImage src={actor.avatar_url || ""} />
             <AvatarFallback className="bg-orange-100 text-orange-600 text-sm font-bold">
               {displayName.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
         </button>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm leading-tight">
-            <button
-              onClick={() => actor.username && navigate(`/profil/${actor.username}`)}
-              className="font-semibold hover:underline"
-            >
-              {displayName}
-            </button>
-            <span className="text-muted-foreground"> dodał(a) trasę</span>
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">{timeAgo}</p>
-        </div>
+        <div className="w-px flex-1 min-h-[24px] bg-border/50" />
       </div>
 
-      {/* City pill */}
-      <div className="px-4 pb-3">
-        <div className="flex items-center gap-1.5 mb-2">
-          <MapPin className="h-3.5 w-3.5 text-orange-600" />
-          <span className="text-base font-bold">{route.city}</span>
+      {/* Right column: content */}
+      <div className="flex-1 min-w-0 pb-2">
+        {/* Header */}
+        <div className="flex items-baseline justify-between gap-2 mb-1">
+          <button onClick={goToProfile} className="font-semibold text-sm leading-tight hover:underline truncate">
+            {displayName}
+          </button>
+          <span className="text-xs text-muted-foreground flex-shrink-0">{timeAgo}</span>
         </div>
+
+        {/* City */}
+        <div className="flex items-center gap-1 mb-1.5">
+          <MapPin className="h-3 w-3 text-orange-600 flex-shrink-0" />
+          <span className="text-sm font-medium">{route.city}</span>
+        </div>
+
+        {/* Summary */}
         {route.ai_summary && (
-          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-3">
+          <p className="text-sm text-foreground/80 leading-relaxed mb-2.5 line-clamp-3">
             {route.ai_summary}
           </p>
         )}
+
+        {/* Photos */}
+        {photos.length > 0 && (
+          <div className={`grid gap-1.5 mb-3 ${photos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+            {photos.slice(0, 2).map((url, i) => (
+              <div key={i} className="rounded-2xl overflow-hidden bg-muted aspect-square">
+                <img src={url} alt="" className="w-full h-full object-cover" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* CTA */}
         <button
-          onClick={() => navigate(`/route/${route.id}`)}
-          className="w-full py-2 rounded-xl bg-muted text-sm font-semibold text-foreground active:bg-muted/70 transition-colors"
+          onClick={goToRoute}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           Zobacz trasę →
         </button>

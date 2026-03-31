@@ -48,7 +48,7 @@ const Home = () => {
       // Step 2: their routes
       const { data: routes } = await supabase
         .from("routes")
-        .select("id, city, created_at, ai_summary, user_id")
+        .select("id, city, created_at, ai_summary, user_id, review_photos")
         .in("user_id", followingIds)
         .order("created_at", { ascending: false })
         .limit(30);
@@ -156,7 +156,7 @@ const Home = () => {
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="divide-y divide-border/30">
             {feedItems.map(({ route, actor }) => (
               <FeedActivityCard key={route.id} route={route as any} actor={actor as any} />
             ))}
