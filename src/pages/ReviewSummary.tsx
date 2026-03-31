@@ -270,19 +270,17 @@ const ReviewSummary = () => {
         </div>
 
         {/* ── Visibility toggle ── */}
-        <div className="px-5 pt-4 pb-4 border-b border-border/30 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {isPublic ? <Globe className="h-4 w-4 text-orange-600" /> : <Lock className="h-4 w-4 text-muted-foreground" />}
-            <div>
-              <p className="text-sm font-semibold">{isPublic ? "Publiczne" : "Prywatne"}</p>
-              <p className="text-xs text-muted-foreground">{isPublic ? "Widoczne na feedzie znajomych" : "Tylko dla Ciebie"}</p>
-            </div>
+        <div className="px-5 pt-4 pb-4 border-b border-border/30 flex items-center gap-3">
+          {isPublic ? <Globe className="h-4 w-4 text-orange-600 flex-shrink-0" /> : <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">{isPublic ? "Publiczne" : "Prywatne"}</p>
+            <p className="text-xs text-muted-foreground">{isPublic ? "Widoczne na feedzie znajomych" : "Tylko dla Ciebie"}</p>
           </div>
           <button
             onClick={() => togglePublic(!isPublic)}
-            className={`relative w-12 h-6 rounded-full transition-colors ${isPublic ? "bg-orange-600" : "bg-muted-foreground/30"}`}
+            className={`flex-shrink-0 relative w-11 h-6 rounded-full transition-colors duration-200 ${isPublic ? "bg-orange-600" : "bg-muted-foreground/30"}`}
           >
-            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isPublic ? "translate-x-6" : "translate-x-0.5"}`} />
+            <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${isPublic ? "translate-x-5" : "translate-x-0"}`} />
           </button>
         </div>
 
