@@ -24,15 +24,26 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
   const [loading, setLoading] = useState(false);
   const [details, setDetails] = useState<any>(null);
 
+  const [cachedPhotoUrl, setCachedPhotoUrl] = useState<string | null>(null);
+
   useEffect(() => {
     if (!open) return;
     if (!pin.latitude || !pin.longitude) return;
     setLoading(true);
     setDetails(null);
+    setCachedPhotoUrl(null);
     supabase.functions.invoke("google-places-proxy", {
       body: { placeName: pin.place_name, latitude: pin.latitude, longitude: pin.longitude },
-    }).then(({ data, error }) => {
-      if (!error && data?.result) setDetails(data.result);
+    }).then(async ({ data, error }) => {
+      if (!error && data?.result) {
+        setDetails(data.result);
+        // Cache first photo
+        const ref = data.result.photos?.[0]?.photo_reference;
+        if (ref) {
+          const url = await getCachedPhotoUrl(ref, 600);
+          if (url) setCachedPhotoUrl(url);
+        }
+      }
       setLoading(false);
     });
   }, [open, pin.id]);
