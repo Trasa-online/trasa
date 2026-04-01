@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Compass, Heart, ThumbsDown, X, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
@@ -23,6 +24,7 @@ const SwipeHistory = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"liked" | "skipped">("liked");
+  const [detailPlace, setDetailPlace] = useState<any | null>(null);
 
   const { data: reactions = [], isLoading } = useQuery({
     queryKey: ["place-reactions", user?.id],
@@ -67,7 +69,8 @@ const SwipeHistory = () => {
 
   return (
     <div className="flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
-      <h1 className="text-xl font-black tracking-tight pt-2 pb-4">Eksploruj</h1>
+      <h1 className="text-xl font-black tracking-tight pt-2 pb-4">Odkrywaj</h1>
+      <p className="text-sm text-muted-foreground mb-2 -mt-2">Wybierz miejsca, z których stworzymy przyszłe plany.</p>
 
       {/* Explore CTA */}
       <button
@@ -136,13 +139,16 @@ const SwipeHistory = () => {
               <div className="rounded-2xl bg-card border border-border/50 overflow-hidden divide-y divide-border/20">
                 {cityPlaces.map((p: any) => (
                   <div key={p.id} className="flex items-center gap-3 py-2.5 px-4">
-                    <div className="h-12 w-12 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+                    <div
+                      className="h-12 w-12 rounded-xl overflow-hidden bg-muted flex-shrink-0 cursor-pointer"
+                      onClick={() => setDetailPlace(p)}
+                    >
                       {p.photo_url
                         ? <img src={p.photo_url} alt="" className="w-full h-full object-cover" />
                         : <div className="w-full h-full flex items-center justify-center text-xl">{CATEGORY_EMOJI[p.category ?? ""] ?? "📍"}</div>
                       }
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setDetailPlace(p)}>
                       <p className="text-sm font-semibold leading-tight truncate">{p.place_name}</p>
                       {p.category && (
                         <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-muted text-[11px] text-muted-foreground font-medium">
@@ -173,6 +179,27 @@ const SwipeHistory = () => {
           ))}
         </div>
       )}
+
+      <PlaceSwiperDetail
+        open={detailPlace !== null}
+        onOpenChange={(v) => { if (!v) setDetailPlace(null); }}
+        place={detailPlace ? {
+          id: detailPlace.place_id ?? detailPlace.id,
+          place_name: detailPlace.place_name,
+          category: detailPlace.category,
+          city: detailPlace.city,
+          address: "",
+          latitude: detailPlace.latitude ?? 0,
+          longitude: detailPlace.longitude ?? 0,
+          rating: 0,
+          photo_url: detailPlace.photo_url ?? "",
+          vibe_tags: [],
+          description: "",
+        } : null}
+        city={detailPlace?.city}
+        onLike={() => setDetailPlace(null)}
+        onSkip={() => setDetailPlace(null)}
+      />
     </div>
   );
 };
