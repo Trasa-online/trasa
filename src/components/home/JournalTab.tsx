@@ -70,6 +70,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
                 src={thumb}
                 alt=""
                 className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(entry.id + "_fallback"); }}
               />
               {/* Gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
