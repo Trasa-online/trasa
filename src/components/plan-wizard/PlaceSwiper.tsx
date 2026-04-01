@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import { supabase } from "@/integrations/supabase/client";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
+import { getCachedPhotoUrl } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -106,20 +107,20 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
 
   const GRADIENT_BG = ["from-slate-700 to-slate-900", "from-stone-700 to-stone-900", "from-zinc-700 to-zinc-900"];
 
-  // Prefetch Google Places photos + enrich missing card data when card is top or next-in-line
+  // Prefetch Google Places data + cache 1 photo when card is top or next-in-line
   useEffect(() => {
     if (offset > 1 || !GOOGLE_MAPS_API_KEY) return;
     supabase.functions
       .invoke("google-places-proxy", {
         body: { placeName: place.place_name, latitude: place.latitude, longitude: place.longitude, city },
       })
-      .then(({ data }) => {
-        const refs: string[] = (data?.result?.photos ?? [])
-          .slice(0, 5)
-          .map((p: { photo_reference: string }) =>
-            `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${p.photo_reference}&key=${GOOGLE_MAPS_API_KEY}`
-          );
-        if (refs.length > 0) setPhotoUrls(refs);
+      .then(async ({ data }) => {
+        // Cache first photo only
+        const ref = data?.result?.photos?.[0]?.photo_reference;
+        if (ref) {
+          const url = await getCachedPhotoUrl(ref, 800);
+          if (url) setPhotoUrls([url]);
+        }
         if (!place.rating && data?.result?.rating) setGoogleRating(data.result.rating);
         if (!place.address && data?.result?.formatted_address) setGoogleAddress(data.result.formatted_address);
         if (!place.description) {

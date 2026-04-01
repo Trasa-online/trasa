@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
 const ALLOWED_ORIGINS = ["https://trasa.lovable.app", "http://localhost:8080"];
 
 const BASE = "https://maps.googleapis.com/maps/api";
@@ -23,7 +25,7 @@ function namesSimilar(a: string, b: string): boolean {
       .filter(w => w.length > 2);
   const ta = tokenize(a);
   const tb = tokenize(b);
-  if (ta.length === 0 || tb.length === 0) return true; // can't validate, allow
+  if (ta.length === 0 || tb.length === 0) return true;
   return ta.some(t => tb.some(t2 => t2.includes(t) || t.includes(t2)));
 }
 
@@ -48,6 +50,79 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
+
+    // ─── Cache photo action ─────────────────────────────────────────────
+    if (body.action === "cache-photo") {
+      const { photo_reference, maxwidth = 800 } = body;
+      if (!photo_reference) {
+        return new Response(JSON.stringify({ error: "Missing photo_reference" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const sb = createClient(supabaseUrl, serviceRoleKey);
+
+      // Check cache first
+      const { data: cached } = await sb
+        .from("place_photo_cache")
+        .select("public_url")
+        .eq("photo_reference", photo_reference)
+        .maybeSingle();
+
+      if (cached?.public_url) {
+        return new Response(JSON.stringify({ public_url: cached.public_url }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Download from Google
+      const googleUrl = `${BASE}/place/photo?maxwidth=${maxwidth}&photo_reference=${photo_reference}&key=${apiKey}`;
+      const photoRes = await fetch(googleUrl, { redirect: "follow" });
+      if (!photoRes.ok) {
+        return new Response(JSON.stringify({ error: "Failed to fetch photo from Google" }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const contentType = photoRes.headers.get("content-type") ?? "image/jpeg";
+      const ext = contentType.includes("png") ? "png" : "jpg";
+      const photoBytes = new Uint8Array(await photoRes.arrayBuffer());
+
+      // Upload to Supabase Storage
+      const storagePath = `photos/${crypto.randomUUID()}.${ext}`;
+      const { error: uploadErr } = await sb.storage
+        .from("place-photos")
+        .upload(storagePath, photoBytes, { contentType, upsert: false });
+
+      if (uploadErr) {
+        console.error("Storage upload error:", uploadErr);
+        return new Response(JSON.stringify({ error: "Storage upload failed" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: publicUrlData } = sb.storage
+        .from("place-photos")
+        .getPublicUrl(storagePath);
+
+      const publicUrl = publicUrlData.publicUrl;
+
+      // Save to cache table
+      await sb.from("place_photo_cache").insert({
+        photo_reference,
+        storage_path: storagePath,
+        public_url: publicUrl,
+      });
+
+      return new Response(JSON.stringify({ public_url: publicUrl }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // City autocomplete (returns cities/regions only)
     if (body.action === "citysearch") {

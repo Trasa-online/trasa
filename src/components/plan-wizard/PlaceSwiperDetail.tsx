@@ -4,6 +4,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { getCachedPhotoUrl } from "@/lib/placePhotos";
 import type { MockPlace } from "./PlaceSwiper";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -35,8 +36,6 @@ interface Creator {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const getPhotoUrl = (ref: string, maxWidth = 800) =>
-  `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${ref}&key=${GOOGLE_MAPS_API_KEY}`;
 
 const AVATAR_COLORS = [
   "#e85d04", "#2d6a4f", "#9d4edd", "#1d3557",
@@ -132,6 +131,7 @@ const PlaceSwiperDetail = ({
   const [usageCount, setUsageCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
+  const [cachedPhoto, setCachedPhoto] = useState<string | null>(null);
   const swipeStartX = useRef<number | null>(null);
 
   useEffect(() => {
@@ -140,6 +140,7 @@ const PlaceSwiperDetail = ({
       setCreators([]);
       setUsageCount(null);
       setActivePhoto(0);
+      setCachedPhoto(null);
       return;
     }
 
@@ -156,8 +157,16 @@ const PlaceSwiperDetail = ({
             city: city ?? place.city,
           },
         })
-        .then(({ data }) => {
-          if (data?.result) setDetail(data.result);
+        .then(async ({ data }) => {
+          if (data?.result) {
+            setDetail(data.result);
+            // Cache first photo
+            const ref = data.result.photos?.[0]?.photo_reference;
+            if (ref) {
+              const url = await getCachedPhotoUrl(ref, 800);
+              if (url) setCachedPhoto(url);
+            }
+          }
         })
         .catch(() => {});
 
@@ -203,12 +212,8 @@ const PlaceSwiperDetail = ({
   };
 
   const photos: string[] = [];
-  if (place?.photo_url) photos.push(place.photo_url);
-  if (detail?.photos) {
-    detail.photos.slice(0, 5).forEach((p) => {
-      photos.push(getPhotoUrl(p.photo_reference));
-    });
-  }
+  if (cachedPhoto) photos.push(cachedPhoto);
+  else if (place?.photo_url) photos.push(place.photo_url);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

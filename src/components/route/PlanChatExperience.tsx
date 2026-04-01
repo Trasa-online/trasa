@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { type PlanPin } from "./DayPinList";
 import AddPinSheet from "./AddPinSheet";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
+import { getCachedPhotoUrl } from "@/lib/placePhotos";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -216,9 +217,12 @@ function LargeCarouselCard({
       .invoke("google-places-proxy", {
         body: { placeName: pin.place_name, latitude: pin.latitude || undefined, longitude: pin.longitude || undefined },
       })
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         const ref = data?.result?.photos?.[0]?.photo_reference;
-        if (ref) setFetchedPhoto(`https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${ref}&key=${GOOGLE_MAPS_API_KEY}`);
+        if (ref) {
+          const url = await getCachedPhotoUrl(ref, 800);
+          if (url) setFetchedPhoto(url);
+        }
       })
       .catch(() => {});
   }, [pin.place_name]);

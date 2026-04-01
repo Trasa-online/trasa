@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Star, MapPin, ExternalLink, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
+import { getCachedPhotoUrl } from "@/lib/placePhotos";
 
 interface Pin {
   id: string;
@@ -24,21 +24,30 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
   const [loading, setLoading] = useState(false);
   const [details, setDetails] = useState<any>(null);
 
+  const [cachedPhotoUrl, setCachedPhotoUrl] = useState<string | null>(null);
+
   useEffect(() => {
     if (!open) return;
     if (!pin.latitude || !pin.longitude) return;
     setLoading(true);
     setDetails(null);
+    setCachedPhotoUrl(null);
     supabase.functions.invoke("google-places-proxy", {
       body: { placeName: pin.place_name, latitude: pin.latitude, longitude: pin.longitude },
-    }).then(({ data, error }) => {
-      if (!error && data?.result) setDetails(data.result);
+    }).then(async ({ data, error }) => {
+      if (!error && data?.result) {
+        setDetails(data.result);
+        // Cache first photo
+        const ref = data.result.photos?.[0]?.photo_reference;
+        if (ref) {
+          const url = await getCachedPhotoUrl(ref, 600);
+          if (url) setCachedPhotoUrl(url);
+        }
+      }
       setLoading(false);
     });
   }, [open, pin.id]);
 
-  const photoUrl = (ref: string) =>
-    `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photo_reference=${ref}&key=${GOOGLE_MAPS_API_KEY}`;
 
   const mapsUrl = pin.latitude && pin.longitude
     ? `https://maps.google.com/?q=${pin.latitude},${pin.longitude}`
@@ -65,17 +74,14 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
 
         {!loading && details && (
           <div className="space-y-5 pb-6">
-            {/* Photos */}
-            {details.photos?.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-1 snap-x">
-                {details.photos.slice(0, 6).map((photo: any, i: number) => (
-                  <img
-                    key={i}
-                    src={photoUrl(photo.photo_reference)}
-                    alt={pin.place_name}
-                    className="h-44 w-64 object-cover rounded-2xl flex-shrink-0 snap-start"
-                  />
-                ))}
+            {/* Main photo */}
+            {cachedPhotoUrl && (
+              <div className="-mx-6 px-6 pb-1">
+                <img
+                  src={cachedPhotoUrl}
+                  alt={pin.place_name}
+                  className="h-48 w-full object-cover rounded-2xl"
+                />
               </div>
             )}
 

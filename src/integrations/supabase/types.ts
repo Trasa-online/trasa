@@ -939,6 +939,30 @@ export type Database = {
         }
         Relationships: []
       }
+      place_photo_cache: {
+        Row: {
+          created_at: string
+          id: string
+          photo_reference: string
+          public_url: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          photo_reference: string
+          public_url: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          photo_reference?: string
+          public_url?: string
+          storage_path?: string
+        }
+        Relationships: []
+      }
       places: {
         Row: {
           address: string | null
