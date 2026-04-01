@@ -598,6 +598,13 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
       .then(() => {});
   };
 
+  const trackAndRebalance = (place: MockPlace) => {
+    const group = getGroupForCategory(place.category);
+    const updated = [...recentLikedGroups, group];
+    setRecentLikedGroups(updated);
+    rebalanceQueue(updated);
+  };
+
   const handleLike = () => {
     const top = displayQueue[0];
     if (!top) return;
@@ -606,6 +613,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
     setAllPlaces(prev => prev.filter(p => p.id !== top.id));
     setQueue(prev => prev.filter(p => p.id !== top.id));
     saveReaction(top, "liked");
+    trackAndRebalance(top);
   };
 
   const handleSkip = () => {
