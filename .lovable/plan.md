@@ -1,48 +1,61 @@
 
 
-## Analiza i sugestie
+## Optymalizacja kosztów Google Places Photos
 
-### Znalezione problemy
+### Obecne koszty (per otwarcie szczegółów miejsca)
 
-1. **`super_liked` nie zapisuje się w bazie** — tabela `user_place_reactions` ma CHECK constraint `reaction IN ('liked', 'skipped')`, ale kod wysyła `'super_liked'`. Upsert po cichu failuje.
+| Wywołanie | Koszt |
+|-----------|-------|
+| Find Place | $0.017 |
+| Place Details | $0.017 |
+| Photos (do 6 szt.) | 6 × $0.007 = **$0.042** |
+| **Razem** | **~$0.076** |
 
-2. **Brak akcji kończącej** — jedyny sposób to: (a) przejrzeć wszystkie karty do końca, (b) kliknąć mały link "X wybranych · Zaplanuj trasę" na dole. Nie ma przycisku "Zakończ odkrywanie" ani podsumowania.
+Zdjęcia stanowią **55% kosztu** każdego otwarcia.
 
-3. **Wcześniej polajkowane miejsca nie są filtrowane** — jeśli user wraca do eksploracji tego samego miasta, zobaczy znowu miejsca które już ocenił.
+Dodatkowo zdjęcia pobierane są w: PlaceSwiper (do 5), PlanChatExperience (1-2), UpcomingTripCard (1).
 
-### Proponowane zmiany
+### Po optymalizacji (1 zdjęcie + cache w Supabase Storage)
 
-#### 1. Naprawić CHECK constraint (migracja)
-Dodać `'super_liked'` do dozwolonych wartości w `user_place_reactions.reaction`.
+| Wywołanie | Koszt |
+|-----------|-------|
+| Find Place | $0.017 |
+| Place Details | $0.017 |
+| Photo (1 szt., pierwsze pobranie) | $0.007 |
+| Photo (kolejne wyświetlenia) | **$0.00** |
+| **Razem — pierwsze** | **~$0.041** |
+| **Razem — kolejne** | **~$0.034** |
 
-#### 2. Dodać widoczny przycisk "Zakończ" / podsumowanie
-- W dolnym pasku akcji (obok guzików skip/like), gdy `likedPlaces.length >= 3`, pokazać wyraźny przycisk "Zaplanuj trasę" zamiast małego tekstu.
-- Alternatywnie: sticky footer z licznikiem wybranych i CTA.
+**Oszczędność: 46-55% na każde wyświetlenie.** Przy 100 unikalnych miejscach jednorazowy koszt zdjęć spada z ~$4.20 (6 zdjęć × 100) do ~$0.70 (1 zdjęcie × 100), a każde kolejne wyświetlenie = $0.
 
-#### 3. Filtrować wcześniej ocenione miejsca
-- Przy ładowaniu `places`, pobrać też `user_place_reactions` usera dla danego miasta.
-- Odfiltrować z kolejki miejsca, które user już ocenił (chyba że wraca z explicit stanem).
+### Plan implementacji
 
-#### 4. Opcja "Zakończ bez planowania"
-- Dodać guzik "Zakończ" w headerze, który zapisuje reakcje i wraca do `/discover` (SwipeHistory) — user może wrócić do planowania później.
+**1. Migracja SQL**
+- Tabela `place_photo_cache` (photo_reference → public_url w Storage)
+- Bucket `place-photos` (publiczny, read-only dla anonów)
 
-### Szczegóły techniczne
+**2. Edge Function `google-places-proxy` — nowa akcja `cache-photo`**
+- Sprawdza cache → jeśli jest, zwraca URL z Storage
+- Jeśli brak: pobiera 1 zdjęcie z Google, uploaduje do `place-photos`, zapisuje w tabeli, zwraca URL
 
-**Migracja:**
-```sql
-ALTER TABLE public.user_place_reactions
-  DROP CONSTRAINT user_place_reactions_reaction_check;
-ALTER TABLE public.user_place_reactions
-  ADD CONSTRAINT user_place_reactions_reaction_check
-  CHECK (reaction IN ('liked', 'skipped', 'super_liked'));
-```
+**3. Helper `src/lib/placePhotos.ts`**
+- Funkcja `getCachedPhotoUrl(photoRef, maxWidth)` — woła edge function, zwraca URL z cache
 
-**PlaceSwiper.tsx:**
-- W `useEffect` ładującym `places`, dodać zapytanie do `user_place_reactions` i wykluczyć już ocenione `place_id`.
-- Zamienić mały link "X wybranych · Zaplanuj trasę" na widoczny sticky CTA gdy `likedCount >= 1`.
-- Dodać przycisk "Zakończ" w headerze nawigujący do `/discover`.
+**4. Aktualizacja 5 komponentów — wszędzie 1 zdjęcie zamiast wielu**
+- `PlaceDetailSheet.tsx` — 1 zdjęcie główne (zamiast 6)
+- `PlaceSwiper.tsx` — 1 zdjęcie (zamiast 5)
+- `PlaceSwiperDetail.tsx` — 1 zdjęcie (zamiast 5)
+- `PlanChatExperience.tsx` — bez zmian (już 1)
+- `UpcomingTripCard.tsx` — bez zmian (już 1)
 
-**Pliki do edycji:**
-- Nowa migracja SQL (1 plik)
-- `src/components/plan-wizard/PlaceSwiper.tsx` — filtrowanie + UI kończące
+### Strategia biznesowa
+Ograniczenie do 1 zdjęcia dla zwykłych miejsc tworzy naturalną wartość dodaną dla **wizytówki premium** — biznesy mogą wykupić pełną galerię zdjęć (uploadowaną przez nich, zero kosztów Google API).
+
+### Pliki do utworzenia/edycji
+1. Nowa migracja SQL (tabela + bucket + RLS)
+2. `supabase/functions/google-places-proxy/index.ts` — akcja `cache-photo`
+3. `src/lib/placePhotos.ts` (nowy)
+4. `src/components/home/PlaceDetailSheet.tsx`
+5. `src/components/plan-wizard/PlaceSwiper.tsx`
+6. `src/components/plan-wizard/PlaceSwiperDetail.tsx`
 
