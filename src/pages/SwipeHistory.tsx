@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,6 +31,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 const SwipeHistory = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"liked" | "super_liked" | "skipped">("liked");
   const [detailPlace, setDetailPlace] = useState<any | null>(null);
@@ -39,6 +40,21 @@ const SwipeHistory = () => {
   const [cityMenuOpen, setCityMenuOpen] = useState(false);
   const selectedCountry = COUNTRIES.find(c => c.code === countryCode)!;
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+
+  // Auto-select country/city when navigating from exploration
+  useEffect(() => {
+    const fromCity = (location.state as any)?.fromCity;
+    if (!fromCity) return;
+    const cityLower = fromCity.toLowerCase();
+    for (const country of COUNTRIES) {
+      const match = country.cities.find(c => c.toLowerCase() === cityLower);
+      if (match) {
+        setCountryCode(country.code as ActiveCountryCode);
+        if (country.cities.length > 1) setSelectedCity(match);
+        break;
+      }
+    }
+  }, [location.state]);
 
   // Reset city when country changes
   const handleCountryChange = (code: ActiveCountryCode) => {

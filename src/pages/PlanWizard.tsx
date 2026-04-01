@@ -73,7 +73,7 @@ const PlanWizard = () => {
             {step === 4 ? (
               <div className="flex items-center gap-1 -mr-1">
                 <button
-                  onClick={() => navigate("/historia")}
+                  onClick={() => navigate("/historia", { state: { fromCity: city } })}
                   className="text-sm text-muted-foreground font-medium px-2 py-1"
                 >
                   Zakończ
