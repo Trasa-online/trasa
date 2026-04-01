@@ -4,6 +4,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { getCachedPhotoUrl } from "@/lib/placePhotos";
 import type { MockPlace } from "./PlaceSwiper";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
