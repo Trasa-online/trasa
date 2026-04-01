@@ -9,5 +9,10 @@
   "language": "Language",
   "toast_saved": "Profile updated!",
   "toast_avatar_error": "Error uploading photo",
-  "push_notifications": "Push notifications"
+  "push_notifications": "Push notifications",
+  "cookies_analytics": "Analytics & recordings",
+  "cookies_desc": "Google Analytics and Microsoft Clarity",
+  "cookies_granted": "Cookie consent saved",
+  "cookies_denied": "Analytics cookies disabled",
+  "terms": "Terms & privacy policy"
 }

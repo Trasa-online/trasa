@@ -10,5 +10,10 @@
   "language": "Język",
   "toast_saved": "Profil zaktualizowany!",
   "toast_avatar_error": "Błąd podczas przesyłania zdjęcia",
-  "push_notifications": "Powiadomienia push"
+  "push_notifications": "Powiadomienia push",
+  "cookies_analytics": "Analityka i nagrania",
+  "cookies_desc": "Google Analytics i Microsoft Clarity",
+  "cookies_granted": "Zgoda na cookies zapisana",
+  "cookies_denied": "Cookies analityczne wyłączone",
+  "terms": "Regulamin i polityka prywatności"
 }
