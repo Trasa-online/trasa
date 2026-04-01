@@ -48,8 +48,6 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
     });
   }, [open, pin.id]);
 
-  const photoUrl = (ref: string) =>
-    `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photo_reference=${ref}&key=${GOOGLE_MAPS_API_KEY}`;
 
   const mapsUrl = pin.latitude && pin.longitude
     ? `https://maps.google.com/?q=${pin.latitude},${pin.longitude}`
