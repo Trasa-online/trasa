@@ -74,17 +74,14 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
 
         {!loading && details && (
           <div className="space-y-5 pb-6">
-            {/* Photos */}
-            {details.photos?.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-1 snap-x">
-                {details.photos.slice(0, 6).map((photo: any, i: number) => (
-                  <img
-                    key={i}
-                    src={photoUrl(photo.photo_reference)}
-                    alt={pin.place_name}
-                    className="h-44 w-64 object-cover rounded-2xl flex-shrink-0 snap-start"
-                  />
-                ))}
+            {/* Main photo */}
+            {cachedPhotoUrl && (
+              <div className="-mx-6 px-6 pb-1">
+                <img
+                  src={cachedPhotoUrl}
+                  alt={pin.place_name}
+                  className="h-48 w-full object-cover rounded-2xl"
+                />
               </div>
             )}
 
