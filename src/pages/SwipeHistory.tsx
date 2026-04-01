@@ -61,7 +61,7 @@ const SwipeHistory = () => {
     setCountryCode(code);
     setSelectedCity(null);
     setCountryMenuOpen(false);
-  };;
+  };
 
   const { data: reactions = [], isLoading } = useQuery({
     queryKey: ["place-reactions", user?.id],

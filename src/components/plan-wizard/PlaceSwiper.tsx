@@ -805,7 +805,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
           {city} · {format(date, "d MMM")}
         </span>
         <span className="text-xs text-muted-foreground">
-          {likedPlaces.length > 0 ? `${likedPlaces.length} wybranych` : ""}
+          {(likedPlaces.length + superLikedPlaces.length) > 0 ? `${likedPlaces.length + superLikedPlaces.length} wybranych` : ""}
         </span>
       </div>
 
