@@ -4,6 +4,7 @@ import { format, differenceInDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
+import { getCachedPhotoUrl } from "@/lib/placePhotos";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌿",
