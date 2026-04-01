@@ -84,22 +84,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { placeName, latitude, longitude } = body;
+    const { placeName, latitude, longitude, city } = body;
+    const hasCoords = latitude && longitude && latitude !== 0 && longitude !== 0;
 
     // Step 1: Find place_id
+    const searchQuery = city ? `${placeName} ${city}` : placeName;
+    const locationBias = hasCoords ? `&locationbias=point:${latitude},${longitude}` : "";
     const findRes = await fetch(
-      `${BASE}/place/findplacefromtext/json?input=${encodeURIComponent(placeName)}&inputtype=textquery&locationbias=point:${latitude},${longitude}&fields=place_id&key=${apiKey}`
+      `${BASE}/place/findplacefromtext/json?input=${encodeURIComponent(searchQuery)}&inputtype=textquery${locationBias}&fields=place_id&key=${apiKey}`
     );
     const findData = await findRes.json();
     let placeId = findData.candidates?.[0]?.place_id;
 
-    // Step 2: Fallback nearby search
+    // Step 2: Fallback — nearby search (only when coords available) or text search
     if (!placeId) {
-      const nearbyRes = await fetch(
-        `${BASE}/place/nearbysearch/json?location=${latitude},${longitude}&radius=100&keyword=${encodeURIComponent(placeName)}&key=${apiKey}&language=pl`
-      );
-      const nearbyData = await nearbyRes.json();
-      placeId = nearbyData.results?.[0]?.place_id;
+      if (hasCoords) {
+        const nearbyRes = await fetch(
+          `${BASE}/place/nearbysearch/json?location=${latitude},${longitude}&radius=100&keyword=${encodeURIComponent(placeName)}&key=${apiKey}&language=pl`
+        );
+        const nearbyData = await nearbyRes.json();
+        placeId = nearbyData.results?.[0]?.place_id;
+      } else {
+        const textRes = await fetch(
+          `${BASE}/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${apiKey}&language=pl`
+        );
+        const textData = await textRes.json();
+        placeId = textData.results?.[0]?.place_id;
+      }
     }
 
     if (!placeId) {
@@ -117,17 +128,19 @@ Deno.serve(async (req) => {
 
     const result = detailData.result;
     if (result) {
-      // Validate: found place must be within 3 km of the AI-provided coordinates
-      const foundLat = result.geometry?.location?.lat;
-      const foundLng = result.geometry?.location?.lng;
-      if (foundLat !== undefined && foundLng !== undefined) {
-        const dist = distanceKm(latitude, longitude, foundLat, foundLng);
-        if (dist > 3) {
-          console.warn(`Place "${result.name}" found ${dist.toFixed(1)} km away from requested coords — rejecting`);
-          return new Response(JSON.stringify({ error: "Place not found near provided coordinates" }), {
-            status: 404,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+      // Distance validation only when we have valid coords
+      if (hasCoords) {
+        const foundLat = result.geometry?.location?.lat;
+        const foundLng = result.geometry?.location?.lng;
+        if (foundLat !== undefined && foundLng !== undefined) {
+          const dist = distanceKm(latitude, longitude, foundLat, foundLng);
+          if (dist > 3) {
+            console.warn(`Place "${result.name}" found ${dist.toFixed(1)} km away from requested coords — rejecting`);
+            return new Response(JSON.stringify({ error: "Place not found near provided coordinates" }), {
+              status: 404,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
         }
       }
 

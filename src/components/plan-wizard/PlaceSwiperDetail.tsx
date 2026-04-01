@@ -114,6 +114,7 @@ interface PlaceSwiperDetailProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   place: MockPlace | null;
+  city?: string;
   onLike: () => void;
   onSkip: () => void;
 }
@@ -122,6 +123,7 @@ const PlaceSwiperDetail = ({
   open,
   onOpenChange,
   place,
+  city,
   onLike,
   onSkip,
 }: PlaceSwiperDetailProps) => {
@@ -151,6 +153,7 @@ const PlaceSwiperDetail = ({
             placeName: place.place_name,
             latitude: place.latitude,
             longitude: place.longitude,
+            city: city ?? place.city,
           },
         })
         .then(({ data }) => {

@@ -86,6 +86,7 @@ const CATEGORY_DIVERSITY = 2; // minimum different categories
 
 interface SwipeCardProps {
   place: MockPlace;
+  city: string;
   onLike: () => void;
   onSkip: () => void;
   onTap: () => void;
@@ -94,7 +95,7 @@ interface SwipeCardProps {
 }
 
 
-const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardProps) => {
+const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeCardProps) => {
   const [imgFailed, setImgFailed] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<string[]>(place.photo_url ? [place.photo_url] : []);
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -110,7 +111,7 @@ const SwipeCard = ({ place, onLike, onSkip, onTap, isTop, offset }: SwipeCardPro
     if (offset > 1 || !GOOGLE_MAPS_API_KEY) return;
     supabase.functions
       .invoke("google-places-proxy", {
-        body: { placeName: place.place_name, latitude: place.latitude, longitude: place.longitude },
+        body: { placeName: place.place_name, latitude: place.latitude, longitude: place.longitude, city },
       })
       .then(({ data }) => {
         const refs: string[] = (data?.result?.photos ?? [])
@@ -838,6 +839,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
                     <SwipeCard
                       key={place.id}
                       place={place}
+                      city={city}
                       onLike={handleLike}
                       onSkip={handleSkip}
                       onTap={() => handleTap(place)}
