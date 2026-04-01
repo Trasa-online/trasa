@@ -79,8 +79,8 @@ const SwipeHistory = () => {
   });
 
   const countryCities = selectedCountry.cities;
-  const activeCities = selectedCity ? [selectedCity] : countryCities;
-  const countryReactions = reactions.filter((r: any) => activeCities.includes(r.city));
+  const activeCitiesLower = (selectedCity ? [selectedCity] : countryCities).map(c => c.toLowerCase());
+  const countryReactions = reactions.filter((r: any) => activeCitiesLower.includes(r.city?.toLowerCase()));
   const filtered = countryReactions.filter((r: any) => r.reaction === tab);
   const likedCount = countryReactions.filter((r: any) => r.reaction === "liked").length;
   const skippedCount = countryReactions.filter((r: any) => r.reaction === "skipped").length;
