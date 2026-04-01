@@ -46,33 +46,34 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
   return (
     <>
       <header className="sticky top-0 z-50 bg-background border-b border-border/40 px-4 pt-safe-4 pb-2 flex items-center justify-between">
-        {/* Bell — left */}
-        <button
-          onClick={() => setNotifOpen(true)}
-          className="relative h-9 w-9 flex items-center justify-center text-muted-foreground"
-          aria-label="Powiadomienia"
-        >
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 h-3.5 min-w-3.5 rounded-full bg-orange-600 text-white text-[8px] font-bold flex items-center justify-center px-1 leading-none">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </button>
+        {/* Left: Avatar + Bell */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate("/moj-profil")}
+            className="flex items-center justify-center"
+            aria-label="Mój profil"
+          >
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={profile?.avatar_url || ""} />
+              <AvatarFallback className="bg-orange-100 text-orange-600 text-sm font-bold">
+                {profile?.first_name ? profile.first_name.charAt(0).toUpperCase() : "?"}
+              </AvatarFallback>
+            </Avatar>
+          </button>
 
-        {/* Avatar */}
-        <button
-          onClick={() => navigate("/moj-profil")}
-          className="flex items-center justify-center"
-          aria-label="Mój profil"
-        >
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={profile?.avatar_url || ""} />
-            <AvatarFallback className="bg-orange-100 text-orange-600 text-sm font-bold">
-              {profile?.first_name ? profile.first_name.charAt(0).toUpperCase() : "?"}
-            </AvatarFallback>
-          </Avatar>
-        </button>
+          <button
+            onClick={() => setNotifOpen(true)}
+            className="relative h-9 w-9 flex items-center justify-center text-muted-foreground"
+            aria-label="Powiadomienia"
+          >
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 h-3.5 min-w-3.5 rounded-full bg-orange-600 text-white text-[8px] font-bold flex items-center justify-center px-1 leading-none">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
 
         {/* Orb logo — right */}
         <button
