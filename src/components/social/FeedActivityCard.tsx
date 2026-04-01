@@ -44,23 +44,28 @@ interface FeedActor {
 }
 
 function PhotoSlider({ photos }: { photos: string[] }) {
-  if (photos.length === 1) {
+  const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
+  const valid = photos.filter(url => url && typeof url === "string" && url.trim() !== "" && !failedUrls.has(url));
+
+  if (valid.length === 0) return null;
+
+  if (valid.length === 1) {
     return (
       <div className="rounded-2xl overflow-hidden bg-muted aspect-[4/3] mb-2.5">
-        <img src={photos[0]} alt="" className="w-full h-full object-cover" />
+        <img src={valid[0]} alt="" className="w-full h-full object-cover" onError={() => setFailedUrls(s => new Set(s).add(valid[0]))} />
       </div>
     );
   }
 
   return (
     <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-2.5 -mr-4 pr-4">
-      {photos.map((url, i) => (
+      {valid.map((url, i) => (
         <div
           key={i}
           className="flex-shrink-0 rounded-2xl overflow-hidden bg-muted aspect-[3/4]"
           style={{ width: "72%" }}
         >
-          <img src={url} alt="" className="w-full h-full object-cover" />
+          <img src={url} alt="" className="w-full h-full object-cover" onError={() => setFailedUrls(s => new Set(s).add(url))} />
         </div>
       ))}
     </div>
