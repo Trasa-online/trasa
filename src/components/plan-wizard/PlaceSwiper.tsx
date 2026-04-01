@@ -908,7 +908,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
       {(likedPlaces.length + superLikedPlaces.length > 0) && !showAddPlace && (
         <div className="px-4 pb-3 shrink-0 flex gap-2">
           <button
-            onClick={() => navigate("/historia")}
+            onClick={() => navigate("/historia", { state: { fromCity: city } })}
             className="flex-1 py-3 rounded-2xl border border-border/60 bg-card text-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
           >
             Zakończ
