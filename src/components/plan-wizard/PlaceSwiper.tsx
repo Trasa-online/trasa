@@ -99,6 +99,8 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
   const [dragging, setDragging] = useState(false);
   const [googleRating, setGoogleRating] = useState<number | null>(null);
   const [googleAddress, setGoogleAddress] = useState<string | null>(null);
+  const [googleDescription, setGoogleDescription] = useState<string | null>(null);
+  const [googleTags, setGoogleTags] = useState<string[] | null>(null);
   const pointerStart = useRef<{ x: number; y: number; t: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -120,12 +122,32 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
         if (refs.length > 0) setPhotoUrls(refs);
         if (!place.rating && data?.result?.rating) setGoogleRating(data.result.rating);
         if (!place.address && data?.result?.formatted_address) setGoogleAddress(data.result.formatted_address);
+        if (!place.description) {
+          const summary = data?.result?.editorial_summary?.overview;
+          if (summary) setGoogleDescription(summary);
+        }
+        if (!place.vibe_tags?.length) {
+          const TYPES_MAP: Record<string, string> = {
+            bakery: "piekarnia", cafe: "kawa", bar: "bar", restaurant: "restauracja",
+            tourist_attraction: "atrakcja", museum: "muzeum", park: "park",
+            art_gallery: "galeria", night_club: "nocne życie", spa: "spa",
+            shopping_mall: "zakupy", store: "sklep", church: "kościół",
+            beach: "plaża", lodging: "nocleg", gym: "sport", library: "biblioteka",
+          };
+          const tags = (data?.result?.types ?? [])
+            .map((t: string) => TYPES_MAP[t])
+            .filter(Boolean)
+            .slice(0, 3) as string[];
+          if (tags.length) setGoogleTags(tags);
+        }
       })
       .catch(() => {});
   }, [offset, place.place_name, place.latitude, place.longitude]);
 
   const displayRating = place.rating || googleRating;
   const displayAddress = place.address || googleAddress;
+  const displayDescription = place.description || googleDescription;
+  const displayTags = place.vibe_tags?.length ? place.vibe_tags : (googleTags ?? []);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!isTop) return;
@@ -274,12 +296,12 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
         </div>
 
         {/* Description */}
-        <p className="text-white/75 text-sm leading-snug">{place.description}</p>
+        {displayDescription && <p className="text-white/75 text-sm leading-snug">{displayDescription}</p>}
 
         {/* Vibe tags + info button row */}
         <div className="flex items-center justify-between gap-2 pt-0.5">
           <div className="flex gap-1.5 flex-wrap">
-            {(place.vibe_tags ?? []).map((tag) => (
+            {displayTags.map((tag) => (
               <span key={tag} className="text-[11px] text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
                 {tag}
               </span>

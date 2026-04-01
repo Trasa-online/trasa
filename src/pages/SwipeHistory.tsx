@@ -36,7 +36,16 @@ const SwipeHistory = () => {
   const [detailPlace, setDetailPlace] = useState<any | null>(null);
   const [countryCode, setCountryCode] = useState<ActiveCountryCode>("PL");
   const [countryMenuOpen, setCountryMenuOpen] = useState(false);
+  const [cityMenuOpen, setCityMenuOpen] = useState(false);
   const selectedCountry = COUNTRIES.find(c => c.code === countryCode)!;
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+
+  // Reset city when country changes
+  const handleCountryChange = (code: ActiveCountryCode) => {
+    setCountryCode(code);
+    setSelectedCity(null);
+    setCountryMenuOpen(false);
+  };;
 
   const { data: reactions = [], isLoading } = useQuery({
     queryKey: ["place-reactions", user?.id],
@@ -70,7 +79,8 @@ const SwipeHistory = () => {
   });
 
   const countryCities = selectedCountry.cities;
-  const countryReactions = reactions.filter((r: any) => countryCities.includes(r.city));
+  const activeCities = selectedCity ? [selectedCity] : countryCities;
+  const countryReactions = reactions.filter((r: any) => activeCities.includes(r.city));
   const filtered = countryReactions.filter((r: any) => r.reaction === tab);
   const likedCount = countryReactions.filter((r: any) => r.reaction === "liked").length;
   const skippedCount = countryReactions.filter((r: any) => r.reaction === "skipped").length;
@@ -90,7 +100,7 @@ const SwipeHistory = () => {
       {/* Explore CTA */}
       <button
         onClick={() => navigate("/plan", { state: { exploreMode: true } })}
-        className="group w-full bg-card border border-border/50 rounded-3xl px-5 py-5 flex items-center gap-4 mb-5 active:scale-[0.98] transition-transform"
+        className="group w-full bg-card border border-border/40 rounded-3xl px-5 py-5 flex items-center gap-4 mb-5 active:scale-[0.98] transition-transform shadow-sm"
       >
         <div className="h-12 w-12 rounded-2xl bg-orange-600/10 flex items-center justify-center flex-shrink-0">
           <Compass className="h-6 w-6 text-orange-600" />
@@ -102,42 +112,82 @@ const SwipeHistory = () => {
         <ChevronRight className="h-5 w-5 text-orange-600 flex-shrink-0 transition-transform duration-300 group-active:translate-x-1 group-hover:translate-x-1" />
       </button>
 
-      {/* Country selector */}
-      <div className="flex justify-center mb-4 relative">
-        <button
-          onClick={() => setCountryMenuOpen(o => !o)}
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border/50 shadow-sm text-sm font-semibold transition-colors active:bg-muted"
-        >
-          <span className="text-lg leading-none">{selectedCountry.flag}</span>
-          <span>{selectedCountry.name}</span>
-          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", countryMenuOpen && "rotate-180")} />
-        </button>
-        {countryMenuOpen && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setCountryMenuOpen(false)} />
-            <div className="absolute top-full mt-2 z-20 bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden min-w-[200px]">
-              {COUNTRIES.map(country => (
-                <button
-                  key={country.code}
-                  onClick={() => { setCountryCode(country.code as ActiveCountryCode); setCountryMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-muted transition-colors text-left"
-                >
-                  <span className="text-lg leading-none">{country.flag}</span>
-                  <span className="flex-1">{country.name}</span>
-                  {country.code === countryCode && <Check className="h-4 w-4 text-orange-600" />}
-                </button>
-              ))}
-            </div>
-          </>
+      {/* Country + City selectors */}
+      <div className="flex gap-2 justify-center mb-4">
+        {/* Country */}
+        <div className="relative">
+          <button
+            onClick={() => { setCountryMenuOpen(o => !o); setCityMenuOpen(false); }}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border/50 shadow-sm text-sm font-semibold transition-colors active:bg-muted"
+          >
+            <span className="text-lg leading-none">{selectedCountry.flag}</span>
+            <span>{selectedCountry.name}</span>
+            <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", countryMenuOpen && "rotate-180")} />
+          </button>
+          {countryMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setCountryMenuOpen(false)} />
+              <div className="absolute top-full mt-2 z-20 bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden min-w-[180px]">
+                {COUNTRIES.map(country => (
+                  <button
+                    key={country.code}
+                    onClick={() => handleCountryChange(country.code as ActiveCountryCode)}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-muted transition-colors text-left"
+                  >
+                    <span className="text-lg leading-none">{country.flag}</span>
+                    <span className="flex-1">{country.name}</span>
+                    {country.code === countryCode && <Check className="h-4 w-4 text-orange-600" />}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* City */}
+        {countryCities.length > 1 && (
+          <div className="relative">
+            <button
+              onClick={() => { setCityMenuOpen(o => !o); setCountryMenuOpen(false); }}
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border/50 shadow-sm text-sm font-semibold transition-colors active:bg-muted"
+            >
+              <span>{selectedCity ?? "Wszystkie"}</span>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", cityMenuOpen && "rotate-180")} />
+            </button>
+            {cityMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setCityMenuOpen(false)} />
+                <div className="absolute top-full mt-2 z-20 bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden min-w-[160px]">
+                  <button
+                    onClick={() => { setSelectedCity(null); setCityMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-muted transition-colors text-left"
+                  >
+                    <span className="flex-1">Wszystkie</span>
+                    {selectedCity === null && <Check className="h-4 w-4 text-orange-600" />}
+                  </button>
+                  {countryCities.map(city => (
+                    <button
+                      key={city}
+                      onClick={() => { setSelectedCity(city); setCityMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-muted transition-colors text-left"
+                    >
+                      <span className="flex-1">{city}</span>
+                      {selectedCity === city && <Check className="h-4 w-4 text-orange-600" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-none -mx-4 px-4">
         <button
           onClick={() => setTab("liked")}
           className={cn(
-            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors",
+            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors shrink-0",
             tab === "liked" ? "bg-rose-500 text-white" : "bg-card border border-border/50 text-muted-foreground"
           )}
         >
@@ -152,7 +202,7 @@ const SwipeHistory = () => {
         <button
           onClick={() => setTab("super_liked")}
           className={cn(
-            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors",
+            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors shrink-0",
             tab === "super_liked" ? "bg-yellow-400 text-white" : "bg-card border border-border/50 text-muted-foreground"
           )}
         >
@@ -167,7 +217,7 @@ const SwipeHistory = () => {
         <button
           onClick={() => setTab("skipped")}
           className={cn(
-            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors",
+            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors shrink-0",
             tab === "skipped" ? "bg-foreground text-background" : "bg-card border border-border/50 text-muted-foreground"
           )}
         >
