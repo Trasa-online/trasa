@@ -904,15 +904,17 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
         </button>
       </div>
 
-      {/* Small text proceed link */}
+      {/* Proceed CTA */}
       {(likedPlaces.length + superLikedPlaces.length > 0) && !showAddPlace && (
-        <button
-          onClick={handleProceed}
-          className="pb-3 text-center text-xs text-muted-foreground active:opacity-70 transition-opacity shrink-0"
-        >
-          {likedPlaces.length + superLikedPlaces.length} {(likedPlaces.length + superLikedPlaces.length) === 1 ? "wybrane" : "wybranych"} ·{" "}
-          <span className="text-foreground font-medium">Zaplanuj trasę</span>
-        </button>
+        <div className="px-4 pb-3 shrink-0">
+          <button
+            onClick={handleProceed}
+            className="w-full py-3 rounded-2xl bg-orange-600 text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+          >
+            Zaplanuj trasę · {likedPlaces.length + superLikedPlaces.length} {(likedPlaces.length + superLikedPlaces.length) === 1 ? "miejsce" : "miejsc"}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
       )}
 
       {/* Detail sheet */}
