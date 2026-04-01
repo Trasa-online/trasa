@@ -113,7 +113,7 @@ const SwipeHistory = () => {
       </button>
 
       {/* Country + City selectors */}
-      <div className="flex gap-2 justify-center mb-4">
+      <div className="flex gap-2 justify-start mb-4">
         {/* Country */}
         <div className="relative">
           <button
@@ -187,14 +187,14 @@ const SwipeHistory = () => {
         <button
           onClick={() => setTab("liked")}
           className={cn(
-            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors shrink-0",
-            tab === "liked" ? "bg-rose-500 text-white" : "bg-card border border-border/50 text-muted-foreground"
+            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors shrink-0 border",
+            tab === "liked" ? "border-rose-500 text-rose-500 bg-rose-500/10" : "border-border/50 bg-card text-muted-foreground"
           )}
         >
-          <Heart className={cn("h-3.5 w-3.5", tab === "liked" && "fill-current")} />
+          <Heart className={cn("h-3.5 w-3.5", tab === "liked" && "fill-rose-500")} />
           Polubione
           {likedCount > 0 && (
-            <span className={cn("rounded-full px-1.5 text-[10px] font-bold", tab === "liked" ? "bg-white/20" : "bg-muted")}>
+            <span className={cn("rounded-full px-1.5 text-[10px] font-bold", tab === "liked" ? "bg-rose-500/15" : "bg-muted")}>
               {likedCount}
             </span>
           )}
@@ -202,14 +202,14 @@ const SwipeHistory = () => {
         <button
           onClick={() => setTab("super_liked")}
           className={cn(
-            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors shrink-0",
-            tab === "super_liked" ? "bg-yellow-400 text-white" : "bg-card border border-border/50 text-muted-foreground"
+            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors shrink-0 border",
+            tab === "super_liked" ? "border-yellow-500 text-yellow-600 bg-yellow-500/10" : "border-border/50 bg-card text-muted-foreground"
           )}
         >
-          <Star className={cn("h-3.5 w-3.5", tab === "super_liked" && "fill-current")} />
+          <Star className={cn("h-3.5 w-3.5", tab === "super_liked" && "fill-yellow-500 text-yellow-500")} />
           Super
           {superLikedCount > 0 && (
-            <span className={cn("rounded-full px-1.5 text-[10px] font-bold", tab === "super_liked" ? "bg-white/20" : "bg-muted")}>
+            <span className={cn("rounded-full px-1.5 text-[10px] font-bold", tab === "super_liked" ? "bg-yellow-500/15" : "bg-muted")}>
               {superLikedCount}
             </span>
           )}
@@ -217,14 +217,14 @@ const SwipeHistory = () => {
         <button
           onClick={() => setTab("skipped")}
           className={cn(
-            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors shrink-0",
-            tab === "skipped" ? "bg-foreground text-background" : "bg-card border border-border/50 text-muted-foreground"
+            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors shrink-0 border",
+            tab === "skipped" ? "border-foreground/50 text-foreground bg-foreground/5" : "border-border/50 bg-card text-muted-foreground"
           )}
         >
           <ThumbsDown className="h-3.5 w-3.5" />
           Odrzucone
           {skippedCount > 0 && (
-            <span className={cn("rounded-full px-1.5 text-[10px] font-bold", tab === "skipped" ? "bg-white/20" : "bg-muted")}>
+            <span className={cn("rounded-full px-1.5 text-[10px] font-bold", tab === "skipped" ? "bg-foreground/10" : "bg-muted")}>
               {skippedCount}
             </span>
           )}

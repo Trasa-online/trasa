@@ -906,10 +906,16 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
 
       {/* Proceed CTA */}
       {(likedPlaces.length + superLikedPlaces.length > 0) && !showAddPlace && (
-        <div className="px-4 pb-3 shrink-0">
+        <div className="px-4 pb-3 shrink-0 flex gap-2">
+          <button
+            onClick={() => navigate("/historia")}
+            className="flex-1 py-3 rounded-2xl border border-border/60 bg-card text-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+          >
+            Zakończ
+          </button>
           <button
             onClick={handleProceed}
-            className="w-full py-3 rounded-2xl bg-orange-600 text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+            className="flex-[2] py-3 rounded-2xl bg-orange-600 text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
           >
             Zaplanuj trasę · {likedPlaces.length + superLikedPlaces.length} {(likedPlaces.length + superLikedPlaces.length) === 1 ? "miejsce" : "miejsc"}
             <ArrowRight className="h-4 w-4" />
