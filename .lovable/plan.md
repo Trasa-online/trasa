@@ -1,37 +1,48 @@
 
 
-## Problem
+## Analiza i sugestie
 
-Supabase invite links (PKCE flow) redirect to `/set-password?code=XXXXX`. The current `SetPassword` page only listens for `onAuthStateChange` events and checks existing sessions, but never calls `supabase.auth.exchangeCodeForSession(code)` to process the PKCE code from the URL. As a result, the session is never established and the page stays on "Weryfikacja linku..." forever.
+### Znalezione problemy
 
-## Solution
+1. **`super_liked` nie zapisuje się w bazie** — tabela `user_place_reactions` ma CHECK constraint `reaction IN ('liked', 'skipped')`, ale kod wysyła `'super_liked'`. Upsert po cichu failuje.
 
-Update `SetPassword.tsx` to detect `code` query parameter from the URL and exchange it for a session using `supabase.auth.exchangeCodeForSession()`.
+2. **Brak akcji kończącej** — jedyny sposób to: (a) przejrzeć wszystkie karty do końca, (b) kliknąć mały link "X wybranych · Zaplanuj trasę" na dole. Nie ma przycisku "Zakończ odkrywanie" ani podsumowania.
 
-## Technical Details
+3. **Wcześniej polajkowane miejsca nie są filtrowane** — jeśli user wraca do eksploracji tego samego miasta, zobaczy znowu miejsca które już ocenił.
 
-### File: `src/pages/SetPassword.tsx`
+### Proponowane zmiany
 
-In the `useEffect`, add logic to:
+#### 1. Naprawić CHECK constraint (migracja)
+Dodać `'super_liked'` do dozwolonych wartości w `user_place_reactions.reaction`.
 
-1. Read the `code` query parameter from `window.location.search` (using `URLSearchParams`)
-2. If `code` exists, call `supabase.auth.exchangeCodeForSession(code)` 
-3. On success, set `ready = true`
-4. On error, show a toast with an error message and optionally redirect to `/auth`
-5. Also handle the hash fragment flow (for older Supabase configs) as a fallback — keep the existing `onAuthStateChange` listener
+#### 2. Dodać widoczny przycisk "Zakończ" / podsumowanie
+- W dolnym pasku akcji (obok guzików skip/like), gdy `likedPlaces.length >= 3`, pokazać wyraźny przycisk "Zaplanuj trasę" zamiast małego tekstu.
+- Alternatywnie: sticky footer z licznikiem wybranych i CTA.
 
-The updated useEffect will look conceptually like:
+#### 3. Filtrować wcześniej ocenione miejsca
+- Przy ładowaniu `places`, pobrać też `user_place_reactions` usera dla danego miasta.
+- Odfiltrować z kolejki miejsca, które user już ocenił (chyba że wraca z explicit stanem).
 
-```text
-useEffect:
-  1. Set up onAuthStateChange listener (existing, keep as fallback)
-  2. Check for ?code= in URL params
-     - If found: call exchangeCodeForSession(code)
-       - Success -> setReady(true)
-       - Error -> show toast, redirect to /auth
-  3. Check existing session (existing, keep as fallback)
+#### 4. Opcja "Zakończ bez planowania"
+- Dodać guzik "Zakończ" w headerze, który zapisuje reakcje i wraca do `/discover` (SwipeHistory) — user może wrócić do planowania później.
+
+### Szczegóły techniczne
+
+**Migracja:**
+```sql
+ALTER TABLE public.user_place_reactions
+  DROP CONSTRAINT user_place_reactions_reaction_check;
+ALTER TABLE public.user_place_reactions
+  ADD CONSTRAINT user_place_reactions_reaction_check
+  CHECK (reaction IN ('liked', 'skipped', 'super_liked'));
 ```
 
-Additionally, add a timeout (e.g. 10 seconds) so that if neither the code exchange nor the auth event fires, the user sees an error message instead of waiting forever on "Weryfikacja linku...".
+**PlaceSwiper.tsx:**
+- W `useEffect` ładującym `places`, dodać zapytanie do `user_place_reactions` i wykluczyć już ocenione `place_id`.
+- Zamienić mały link "X wybranych · Zaplanuj trasę" na widoczny sticky CTA gdy `likedCount >= 1`.
+- Dodać przycisk "Zakończ" w headerze nawigujący do `/discover`.
 
-No database changes or edge function changes needed.
+**Pliki do edycji:**
+- Nowa migracja SQL (1 plik)
+- `src/components/plan-wizard/PlaceSwiper.tsx` — filtrowanie + UI kończące
+
