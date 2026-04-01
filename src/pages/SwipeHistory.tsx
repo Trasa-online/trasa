@@ -113,7 +113,7 @@ const SwipeHistory = () => {
       </button>
 
       {/* Country + City selectors */}
-      <div className="flex gap-2 justify-center mb-4">
+      <div className="flex gap-2 justify-start mb-4">
         {/* Country */}
         <div className="relative">
           <button
