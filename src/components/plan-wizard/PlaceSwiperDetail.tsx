@@ -155,8 +155,16 @@ const PlaceSwiperDetail = ({
             city: city ?? place.city,
           },
         })
-        .then(({ data }) => {
-          if (data?.result) setDetail(data.result);
+        .then(async ({ data }) => {
+          if (data?.result) {
+            setDetail(data.result);
+            // Cache first photo
+            const ref = data.result.photos?.[0]?.photo_reference;
+            if (ref) {
+              const url = await getCachedPhotoUrl(ref, 800);
+              if (url) setCachedPhoto(url);
+            }
+          }
         })
         .catch(() => {});
 
