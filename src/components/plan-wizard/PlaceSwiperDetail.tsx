@@ -211,12 +211,8 @@ const PlaceSwiperDetail = ({
   };
 
   const photos: string[] = [];
-  if (place?.photo_url) photos.push(place.photo_url);
-  if (detail?.photos) {
-    detail.photos.slice(0, 5).forEach((p) => {
-      photos.push(getPhotoUrl(p.photo_reference));
-    });
-  }
+  if (cachedPhoto) photos.push(cachedPhoto);
+  else if (place?.photo_url) photos.push(place.photo_url);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
