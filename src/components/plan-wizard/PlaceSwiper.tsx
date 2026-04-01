@@ -484,6 +484,17 @@ interface PlaceSwiperProps {
   onAddPlaceClose?: () => void;
 }
 
+// Category groups for diversity balancing
+const FOOD_CATEGORIES = new Set<string>(["restaurant", "cafe", "bar"]);
+const CULTURE_CATEGORIES = new Set<string>(["museum", "gallery", "monument"]);
+const CATEGORY_GROUPS: Set<string>[] = [FOOD_CATEGORIES, CULTURE_CATEGORIES];
+
+function getGroupForCategory(cat: string): Set<string> | null {
+  return CATEGORY_GROUPS.find(g => g.has(cat)) ?? null;
+}
+
+const DIVERSITY_THRESHOLD = 2; // after 2 consecutive likes from same group, deprioritize
+
 const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -499,6 +510,8 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
   const [detailOpen, setDetailOpen] = useState(false);
   const [matchedRoutes, setMatchedRoutes] = useState<MatchedRoute[]>([]);
   const [loadingExamples, setLoadingExamples] = useState(false);
+  // Track consecutive likes per category group
+  const [recentLikedGroups, setRecentLikedGroups] = useState<(Set<string> | null)[]>([]);
   const showAddPlace = showAddPlaceProp;
   const setShowAddPlace = (v: boolean) => { if (!v) onAddPlaceClose?.(); };
 
@@ -524,6 +537,36 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
         setLoading(false);
       });
   }, [city]);
+
+  // Reorder queue when a category group has been liked too many times consecutively
+  const rebalanceQueue = (newRecentGroups: (Set<string> | null)[]) => {
+    // Count consecutive recent likes from the same group (last N)
+    const lastN = newRecentGroups.slice(-DIVERSITY_THRESHOLD);
+    if (lastN.length < DIVERSITY_THRESHOLD) return;
+
+    const lastGroup = lastN[lastN.length - 1];
+    if (!lastGroup) return;
+
+    // Check if all last N are from the same group
+    const allSame = lastN.every(g => g === lastGroup);
+    if (!allSame) return;
+
+    // Deprioritize: move cards from this group to the back of the queue
+    setQueue(prev => {
+      const fromGroup: MockPlace[] = [];
+      const others: MockPlace[] = [];
+      for (const p of prev) {
+        if (lastGroup.has(p.category)) {
+          fromGroup.push(p);
+        } else {
+          others.push(p);
+        }
+      }
+      // Only rebalance if there are non-group cards to show
+      if (others.length === 0) return prev;
+      return [...others, ...fromGroup];
+    });
+  };
 
   const isSearching = searchQuery.trim().length >= 2;
   const displayQueue = isSearching
