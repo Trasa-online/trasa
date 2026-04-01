@@ -51,11 +51,12 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   return (
     <div className="space-y-3 pb-2">
       {entries.map((entry) => {
-        const thumb = entry.review_photos?.[0] ?? getRandomPinPlaceholder(entry.id);
+        const validPhotos = (entry.review_photos ?? []).filter((url: any) => !!url && typeof url === "string" && url.trim() !== "");
+        const thumb = validPhotos[0] ?? getRandomPinPlaceholder(entry.id);
         const dateLabel = entry.start_date
           ? format(new Date(entry.start_date), "d MMMM yyyy", { locale: pl })
           : "";
-        const hasUserPhoto = !!entry.review_photos?.[0];
+        const hasUserPhoto = validPhotos.length > 0;
 
         return (
           <button

@@ -99,7 +99,7 @@ export default function FeedActivityCard({ route, actor }: { route: FeedRoute; a
 
   const displayName = actor.username || actor.first_name || "Ktoś";
   const timeAgo = formatDistanceToNow(new Date(route.created_at), { addSuffix: false, locale: pl });
-  const photos = route.review_photos ?? [];
+  const photos = (route.review_photos ?? []).filter((url): url is string => !!url && typeof url === "string" && url.trim() !== "");
   const pins = (route.pins ?? []).filter(p => p.place_name);
 
   const likedBy = (route.likes ?? []).map(l => l.user_id);
