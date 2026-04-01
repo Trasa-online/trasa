@@ -55,6 +55,7 @@ interface PlanChatExperienceProps {
   likedPlaces?: string[];
   likedPlacesData?: { place_name: string; category: string; description: string; latitude?: number; longitude?: number }[];
   skippedPlaces?: string[];
+  superLikedPlaces?: string[];
   idealDay?: string;
   initialUserMessage?: string;
   initialPlan?: RoutePlan;
@@ -463,7 +464,7 @@ function getCurrentTimeContext(): { current_time: string; current_date: string }
   };
 }
 
-const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlacesData, skippedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt }: PlanChatExperienceProps) => {
+const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlacesData, skippedPlaces, superLikedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt }: PlanChatExperienceProps) => {
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
   const [input, setInput] = useState("");
@@ -668,6 +669,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
             force_plan: isSubsequentDay ? false : true,
             liked_places: likedPlaces,
             skipped_places: skippedPlaces?.length ? skippedPlaces : undefined,
+            super_liked_places: superLikedPlaces?.length ? superLikedPlaces : undefined,
             ideal_day: idealDay || undefined,
             starting_location: preferences.startingLocation || undefined,
             ...getCurrentTimeContext(),
@@ -747,7 +749,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
 
     try {
       const response = await supabase.functions.invoke("plan-route", {
-        body: { preferences, messages: newMessages, current_plan: plan, liked_places: likedPlaces, skipped_places: skippedPlaces?.length ? skippedPlaces : undefined, ideal_day: idealDay || undefined, ...getCurrentTimeContext() },
+        body: { preferences, messages: newMessages, current_plan: plan, liked_places: likedPlaces, skipped_places: skippedPlaces?.length ? skippedPlaces : undefined, super_liked_places: superLikedPlaces?.length ? superLikedPlaces : undefined, ideal_day: idealDay || undefined, ...getCurrentTimeContext() },
       });
 
       if (response.error) throw new Error(response.error.message);
@@ -772,7 +774,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
           : newMessages;
         try {
           const planResponse = await supabase.functions.invoke("plan-route", {
-            body: { preferences, messages: apiMessages2, current_plan: plan, force_plan: true, liked_places: likedPlaces, skipped_places: skippedPlaces?.length ? skippedPlaces : undefined, ...getCurrentTimeContext() },
+            body: { preferences, messages: apiMessages2, current_plan: plan, force_plan: true, liked_places: likedPlaces, skipped_places: skippedPlaces?.length ? skippedPlaces : undefined, super_liked_places: superLikedPlaces?.length ? superLikedPlaces : undefined, ...getCurrentTimeContext() },
           });
           if (!planResponse.error && planResponse.data?.plan) {
             if (planResponse.data.memory_used) setMemoryUsed(true);
@@ -797,7 +799,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
             : newMessages;
           try {
             const planResponse = await supabase.functions.invoke("plan-route", {
-              body: { preferences, messages: apiMessages2, current_plan: plan, force_plan: true, liked_places: likedPlaces, skipped_places: skippedPlaces?.length ? skippedPlaces : undefined, ...getCurrentTimeContext() },
+              body: { preferences, messages: apiMessages2, current_plan: plan, force_plan: true, liked_places: likedPlaces, skipped_places: skippedPlaces?.length ? skippedPlaces : undefined, super_liked_places: superLikedPlaces?.length ? superLikedPlaces : undefined, ...getCurrentTimeContext() },
             });
             if (!planResponse.error && planResponse.data?.plan) {
               enrichPlanWithInstagram(planResponse.data.plan, preferences.city || "", supabase).then(enriched => setPlan(enriched));

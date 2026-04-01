@@ -97,12 +97,14 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
   const [photoIdx, setPhotoIdx] = useState(0);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [googleRating, setGoogleRating] = useState<number | null>(null);
+  const [googleAddress, setGoogleAddress] = useState<string | null>(null);
   const pointerStart = useRef<{ x: number; y: number; t: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const GRADIENT_BG = ["from-slate-700 to-slate-900", "from-stone-700 to-stone-900", "from-zinc-700 to-zinc-900"];
 
-  // Prefetch Google Places photos when card is top or next-in-line
+  // Prefetch Google Places photos + enrich missing card data when card is top or next-in-line
   useEffect(() => {
     if (offset > 1 || !GOOGLE_MAPS_API_KEY) return;
     supabase.functions
@@ -116,9 +118,14 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
             `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${p.photo_reference}&key=${GOOGLE_MAPS_API_KEY}`
           );
         if (refs.length > 0) setPhotoUrls(refs);
+        if (!place.rating && data?.result?.rating) setGoogleRating(data.result.rating);
+        if (!place.address && data?.result?.formatted_address) setGoogleAddress(data.result.formatted_address);
       })
       .catch(() => {});
   }, [offset, place.place_name, place.latitude, place.longitude]);
+
+  const displayRating = place.rating || googleRating;
+  const displayAddress = place.address || googleAddress;
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!isTop) return;
@@ -249,17 +256,21 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
 
         {/* Meta row */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1">
-            <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
-            <span className="text-white/90 text-sm font-medium">{place.rating}</span>
-          </div>
+          {displayRating ? (
+            <div className="flex items-center gap-1">
+              <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
+              <span className="text-white/90 text-sm font-medium">{displayRating}</span>
+            </div>
+          ) : null}
           {place.price_level && (
             <span className="text-white/60 text-sm">{PRICE_DOTS(place.price_level)}</span>
           )}
-          <div className="flex items-center gap-1">
-            <MapPin className="h-3 w-3 text-white/50" />
-            <span className="text-white/60 text-xs truncate">{place.address?.split(",")[0]}</span>
-          </div>
+          {displayAddress && (
+            <div className="flex items-center gap-1">
+              <MapPin className="h-3 w-3 text-white/50" />
+              <span className="text-white/60 text-xs truncate">{displayAddress.split(",")[0]}</span>
+            </div>
+          )}
         </div>
 
         {/* Description */}
@@ -636,6 +647,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
 
   const handlePickRoute = (route: RouteExample) => {
     const selectedIndex = matchedRoutes.findIndex(r => r.id === route.id);
+    const allLiked = [...likedPlaces, ...superLikedPlaces];
     navigate("/create", {
       state: {
         city,
@@ -650,9 +662,10 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
           pins: r.pins,
         })),
         selectedRouteIndex: selectedIndex,
-        likedPlaceNames: likedPlaces.map(p => p.place_name),
+        likedPlaceNames: allLiked.map(p => p.place_name),
         skippedPlaceNames: skippedPlaces.map(p => p.place_name),
-        likedPlacesData: likedPlaces.map(p => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude })),
+        likedPlacesData: allLiked.map(p => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude })),
+        superLikedPlaceNames: superLikedPlaces.map(p => p.place_name),
       },
     });
   };
@@ -766,17 +779,17 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
         </button>
 
         <button
-          onClick={handleSuperLike}
-          className="h-14 w-14 rounded-full border-2 border-yellow-400 bg-card flex items-center justify-center shadow-sm active:scale-90 transition-transform"
-        >
-          <Star className="h-6 w-6 text-yellow-400 fill-yellow-400" />
-        </button>
-
-        <button
           onClick={handleSkip}
           className="h-14 w-14 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform"
         >
           <X className="h-6 w-6 text-muted-foreground" />
+        </button>
+
+        <button
+          onClick={handleSuperLike}
+          className="h-14 w-14 rounded-full border-2 border-yellow-400 bg-card flex items-center justify-center shadow-sm active:scale-90 transition-transform"
+        >
+          <Star className="h-6 w-6 text-yellow-400 fill-yellow-400" />
         </button>
 
         <button
@@ -795,12 +808,12 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
       </div>
 
       {/* Small text proceed link */}
-      {likedPlaces.length > 0 && !showAddPlace && (
+      {(likedPlaces.length + superLikedPlaces.length > 0) && !showAddPlace && (
         <button
           onClick={handleProceed}
           className="pb-3 text-center text-xs text-muted-foreground active:opacity-70 transition-opacity shrink-0"
         >
-          {likedPlaces.length} {likedPlaces.length === 1 ? "wybrane" : "wybranych"} ·{" "}
+          {likedPlaces.length + superLikedPlaces.length} {(likedPlaces.length + superLikedPlaces.length) === 1 ? "wybrane" : "wybranych"} ·{" "}
           <span className="text-foreground font-medium">Zaplanuj trasę</span>
         </button>
       )}

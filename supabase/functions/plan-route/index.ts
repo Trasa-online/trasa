@@ -94,7 +94,7 @@ function buildRouteExamplesContext(examples: any[]): string {
   return `## 🏆 WZORCOWE TRASY (zatwierdzone przez redakcję TRASA)\nPoniższe trasy zostały ocenione jako idealne dla Krakowa. Planuj w podobnym rytmie, logice geograficznej i strukturze dnia:\n\n${lines.join("\n\n")}`;
 }
 
-function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string): string {
+function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string, superLikedPlaces?: string[]): string {
   const isNightlife = preferences.priorities.includes("nightlife") || (userProfile?.travel_interests ?? []).includes("nightlife");
   const timeInfo = currentTime ? `- Aktualna godzina: ${currentTime} — planuj miejsca dostępne od tej pory, nie zaczynaj od miejsc które są już zamknięte lub których opening hours zaczyna się wcześniej` : "";
   const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}${currentTime ? " (dziś)" : ""}` : "";
@@ -347,7 +347,7 @@ ZASADY FORMATU:
 - "Usuń Z" → usuń, sprawdź kulminację (H3) → WYEMITUJ pełny plan
 - NIE regeneruj całego planu strukturalnie — tylko zmień to co user prosił
 - NIE mów "za chwilę", "przygotowuję", "zaktualizuję" — po prostu zrób to i pokaż plan
-- Komentarz do zmiany: MAX 1 zdanie przed blokiem planu${likedPlaces?.length ? `\n\n## 🎯 MIEJSCA DO UWZGLĘDNIENIA\nUżytkownik chce odwiedzić te miejsca — koniecznie wstaw je w plan:\n${likedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${skippedPlaces?.length ? `\n\n## ❌ MIEJSCA DO POMINIĘCIA\nUżytkownik świadomie odrzucił te miejsca podczas przeglądania — NIE wstawiaj ich do planu ani nie proponuj podobnych:\n${skippedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${idealDay ? `\n\n## 💭 JAK WYGLĄDA IDEALNY DZIEŃ UŻYTKOWNIKA\n${idealDay}\n\nDopasuj styl, tempo i dobór miejsc do tej wizji.` : ""}
+- Komentarz do zmiany: MAX 1 zdanie przed blokiem planu${superLikedPlaces?.length ? `\n\n## ⭐ MIEJSCA OBOWIĄZKOWE (SUPER LIKE)\nUżytkownik oznaczył te miejsca jako MUST-HAVE — MUSZĄ znaleźć się w planie bez wyjątku:\n${superLikedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${likedPlaces?.length ? `\n\n## 🎯 MIEJSCA DO UWZGLĘDNIENIA\nUżytkownik chce odwiedzić te miejsca — koniecznie wstaw je w plan:\n${likedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${skippedPlaces?.length ? `\n\n## ❌ MIEJSCA DO POMINIĘCIA\nUżytkownik świadomie odrzucił te miejsca podczas przeglądania — NIE wstawiaj ich do planu ani nie proponuj podobnych:\n${skippedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${idealDay ? `\n\n## 💭 JAK WYGLĄDA IDEALNY DZIEŃ UŻYTKOWNIKA\n${idealDay}\n\nDopasuj styl, tempo i dobór miejsc do tej wizji.` : ""}
 ${scrapedPlacesContext ? `\n\n${scrapedPlacesContext}` : ""}${routeExamplesContext ? `\n\n${routeExamplesContext}` : ""}
 ## SZYBKIE ODPOWIEDZI (OBOWIĄZKOWE)
 Na końcu KAŻDEJ wiadomości dodaj dokładnie ten blok:
@@ -372,7 +372,7 @@ serve(async (req) => {
   }
 
   try {
-    const { preferences, messages: userMessages, current_plan, force_plan, liked_places, skipped_places, ideal_day, current_time, current_date } = await req.json();
+    const { preferences, messages: userMessages, current_plan, force_plan, liked_places, skipped_places, super_liked_places, ideal_day, current_time, current_date } = await req.json();
 
     if (!preferences || !userMessages) {
       return new Response(
@@ -676,7 +676,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     }
 
     const isToday = current_date && preferences.startDate && preferences.startDate === current_date;
-    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined);
+    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined, super_liked_places ?? undefined);
 
     // Call AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

@@ -34,6 +34,7 @@ const PlanWizard = () => {
 
   const handleBack = () => {
     if (step === 1) navigate("/");
+    else if (exploreMode && step === 4) setStep(1);
     else setStep((s) => (s - 1) as Step);
   };
 

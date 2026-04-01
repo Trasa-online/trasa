@@ -3,9 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Compass, Heart, ThumbsDown, X, ChevronRight, Star } from "lucide-react";
+import { Compass, Heart, ThumbsDown, X, ChevronRight, Star, Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+
+type Country = { code: string; flag: string; name: string; cities: string[] };
+type ActiveCountryCode = "PL" | "HU" | "MT";
+
+const COUNTRIES: Country[] = [
+  { code: "PL", flag: "🇵🇱", name: "Polska", cities: ["Kraków", "Łódź", "Poznań", "Trójmiasto", "Warszawa", "Wrocław"] },
+  { code: "HU", flag: "🇭🇺", name: "Węgry", cities: ["Budapeszt"] },
+  { code: "MT", flag: "🇲🇹", name: "Malta", cities: ["Valletta"] },
+];
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
@@ -25,6 +34,9 @@ const SwipeHistory = () => {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"liked" | "super_liked" | "skipped">("liked");
   const [detailPlace, setDetailPlace] = useState<any | null>(null);
+  const [countryCode, setCountryCode] = useState<ActiveCountryCode>("PL");
+  const [countryMenuOpen, setCountryMenuOpen] = useState(false);
+  const selectedCountry = COUNTRIES.find(c => c.code === countryCode)!;
 
   const { data: reactions = [], isLoading } = useQuery({
     queryKey: ["place-reactions", user?.id],
@@ -57,10 +69,12 @@ const SwipeHistory = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["place-reactions", user?.id] }),
   });
 
-  const filtered = reactions.filter((r: any) => r.reaction === tab);
-  const likedCount = reactions.filter((r: any) => r.reaction === "liked").length;
-  const skippedCount = reactions.filter((r: any) => r.reaction === "skipped").length;
-  const superLikedCount = reactions.filter((r: any) => r.reaction === "super_liked").length;
+  const countryCities = selectedCountry.cities;
+  const countryReactions = reactions.filter((r: any) => countryCities.includes(r.city));
+  const filtered = countryReactions.filter((r: any) => r.reaction === tab);
+  const likedCount = countryReactions.filter((r: any) => r.reaction === "liked").length;
+  const skippedCount = countryReactions.filter((r: any) => r.reaction === "skipped").length;
+  const superLikedCount = countryReactions.filter((r: any) => r.reaction === "super_liked").length;
 
   const byCity = filtered.reduce<Record<string, any[]>>((acc, p: any) => {
     if (!acc[p.city]) acc[p.city] = [];
@@ -76,7 +90,7 @@ const SwipeHistory = () => {
       {/* Explore CTA */}
       <button
         onClick={() => navigate("/plan", { state: { exploreMode: true } })}
-        className="w-full bg-card border-2 border-orange-600 rounded-3xl px-5 py-5 flex items-center gap-4 mb-5 active:scale-[0.98] transition-transform"
+        className="group w-full bg-card border border-border/50 rounded-3xl px-5 py-5 flex items-center gap-4 mb-5 active:scale-[0.98] transition-transform"
       >
         <div className="h-12 w-12 rounded-2xl bg-orange-600/10 flex items-center justify-center flex-shrink-0">
           <Compass className="h-6 w-6 text-orange-600" />
@@ -85,8 +99,38 @@ const SwipeHistory = () => {
           <p className="text-foreground font-bold text-base leading-tight">Odkrywaj miejsca</p>
           <p className="text-muted-foreground text-sm mt-0.5">Zaplanuj podróż do wybranego miasta</p>
         </div>
-        <ChevronRight className="h-5 w-5 text-orange-600 flex-shrink-0" />
+        <ChevronRight className="h-5 w-5 text-orange-600 flex-shrink-0 transition-transform duration-300 group-active:translate-x-1 group-hover:translate-x-1" />
       </button>
+
+      {/* Country selector */}
+      <div className="flex justify-center mb-4 relative">
+        <button
+          onClick={() => setCountryMenuOpen(o => !o)}
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border/50 shadow-sm text-sm font-semibold transition-colors active:bg-muted"
+        >
+          <span className="text-lg leading-none">{selectedCountry.flag}</span>
+          <span>{selectedCountry.name}</span>
+          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", countryMenuOpen && "rotate-180")} />
+        </button>
+        {countryMenuOpen && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setCountryMenuOpen(false)} />
+            <div className="absolute top-full mt-2 z-20 bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden min-w-[200px]">
+              {COUNTRIES.map(country => (
+                <button
+                  key={country.code}
+                  onClick={() => { setCountryCode(country.code as ActiveCountryCode); setCountryMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-muted transition-colors text-left"
+                >
+                  <span className="text-lg leading-none">{country.flag}</span>
+                  <span className="flex-1">{country.name}</span>
+                  {country.code === countryCode && <Check className="h-4 w-4 text-orange-600" />}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-4">

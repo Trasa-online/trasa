@@ -32,7 +32,7 @@ const CreateRoute = () => {
   const location = useLocation();
   const wizardState = (location.state as {
     city?: string; date?: string; startingLocation?: string; fromTemplate?: boolean; routeId?: string;
-    initialPlan?: any; likedPlaceNames?: string[]; skippedPlaceNames?: string[];
+    initialPlan?: any; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; superLikedPlaceNames?: string[];
     likedPlacesData?: { place_name: string; category: string; description: string; latitude?: number; longitude?: number }[];
     matchedRoutes?: MatchedRouteStub[]; selectedRouteIndex?: number;
   } | null);
@@ -56,6 +56,7 @@ const CreateRoute = () => {
   const wizardLikedPlaces = wizardState?.likedPlaceNames ?? [];
   const wizardSkippedPlaces = wizardState?.skippedPlaceNames ?? [];
   const wizardLikedPlacesData = wizardState?.likedPlacesData ?? [];
+  const wizardSuperLikedPlaces = wizardState?.superLikedPlaceNames ?? [];
   const [likedPlaces, setLikedPlaces] = useState<string[]>(wizardLikedPlaces);
   const [idealDay] = useState("");
 
@@ -137,6 +138,7 @@ const CreateRoute = () => {
           likedPlaces={likedPlaces}
           likedPlacesData={wizardLikedPlacesData}
           skippedPlaces={wizardSkippedPlaces}
+          superLikedPlaces={wizardSuperLikedPlaces}
           idealDay={idealDay}
           initialUserMessage={initialUserMessage}
           initialPlan={templateInitialPlan ?? undefined}
