@@ -131,6 +131,8 @@ const PlaceSwiperDetail = ({
   const [usageCount, setUsageCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
+  const [cachedPhoto, setCachedPhoto] = useState<string | null>(null);
+  const swipeStartX = useRef<number | null>(null);
   const swipeStartX = useRef<number | null>(null);
 
   useEffect(() => {
