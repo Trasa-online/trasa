@@ -203,6 +203,10 @@ Deno.serve(async (req) => {
 
     const result = detailData.result;
     if (result) {
+      // Limit photos to 1 to reduce costs
+      if (result.photos?.length > 1) {
+        result.photos = [result.photos[0]];
+      }
       // Distance validation only when we have valid coords
       if (hasCoords) {
         const foundLat = result.geometry?.location?.lat;
