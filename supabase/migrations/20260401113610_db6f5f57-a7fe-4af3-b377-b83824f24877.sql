@@ -1,0 +1,2 @@
+ALTER TABLE public.user_place_reactions DROP CONSTRAINT IF EXISTS user_place_reactions_reaction_check;
+ALTER TABLE public.user_place_reactions ADD CONSTRAINT user_place_reactions_reaction_check CHECK (reaction IN ('liked', 'skipped', 'super_liked'));

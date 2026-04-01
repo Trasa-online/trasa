@@ -517,26 +517,49 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
 
   useEffect(() => {
     setLoading(true);
-    (supabase as any)
-      .from("places")
-      .select("*")
-      .ilike("city", city)
-      .eq("is_active", true)
-      .then(({ data }: { data: MockPlace[] | null }) => {
-        if (data?.length) {
-          setAllPlaces(data);
-          const likedSet = new Set(initialLikedPlaceNames.map(n => n.toLowerCase()));
-          const skippedSet = new Set(initialSkippedPlaceNames.map(n => n.toLowerCase()));
-          const liked = data.filter(p => likedSet.has(p.place_name.toLowerCase()));
-          const skipped = data.filter(p => skippedSet.has(p.place_name.toLowerCase()));
-          const remaining = data.filter(p => !likedSet.has(p.place_name.toLowerCase()) && !skippedSet.has(p.place_name.toLowerCase()));
-          if (liked.length) setLikedPlaces(liked);
-          if (skipped.length) setSkippedPlaces(skipped);
-          setQueue([...remaining].sort(() => Math.random() - 0.5));
+    const fetchPlaces = async () => {
+      const { data } = await (supabase as any)
+        .from("places")
+        .select("*")
+        .ilike("city", city)
+        .eq("is_active", true);
+
+      if (!data?.length) { setLoading(false); return; }
+
+      // Fetch already-rated place IDs for this user+city
+      let ratedPlaceIds = new Set<string>();
+      if (user) {
+        const { data: reactions } = await (supabase as any)
+          .from("user_place_reactions")
+          .select("place_id")
+          .eq("user_id", user.id)
+          .ilike("city", city);
+        if (reactions?.length) {
+          ratedPlaceIds = new Set(reactions.map((r: { place_id: string }) => r.place_id));
         }
-        setLoading(false);
+      }
+
+      const likedSet = new Set(initialLikedPlaceNames.map(n => n.toLowerCase()));
+      const skippedSet = new Set(initialSkippedPlaceNames.map(n => n.toLowerCase()));
+      const liked = data.filter((p: MockPlace) => likedSet.has(p.place_name.toLowerCase()));
+      const skipped = data.filter((p: MockPlace) => skippedSet.has(p.place_name.toLowerCase()));
+
+      // Filter out places user already rated (unless they come from explicit return state)
+      const hasReturnState = initialLikedPlaceNames.length > 0 || initialSkippedPlaceNames.length > 0;
+      const remaining = data.filter((p: MockPlace) => {
+        if (likedSet.has(p.place_name.toLowerCase()) || skippedSet.has(p.place_name.toLowerCase())) return false;
+        if (!hasReturnState && ratedPlaceIds.has(p.id)) return false;
+        return true;
       });
-  }, [city]);
+
+      setAllPlaces(data);
+      if (liked.length) setLikedPlaces(liked);
+      if (skipped.length) setSkippedPlaces(skipped);
+      setQueue([...remaining].sort(() => Math.random() - 0.5));
+      setLoading(false);
+    };
+    fetchPlaces();
+  }, [city, user]);
 
   // Reorder queue when a category group has been liked too many times consecutively
   const rebalanceQueue = (newRecentGroups: (Set<string> | null)[]) => {
