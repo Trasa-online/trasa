@@ -3,13 +3,13 @@ import { NavLink } from "@/components/NavLink";
 import { Map, Compass, BookOpen, Home, Plus } from "lucide-react";
 
 const LEFT_ITEMS = [
-  { to: "/moje-trasy", end: false, icon: Map,     label: "Trasy"    },
-  { to: "/historia",   end: false, icon: Compass,  label: "Eksploruj" },
+  { to: "/",           end: true,   icon: Home,    label: "Główna"   },
+  { to: "/historia",   end: false,  icon: Compass, label: "Eksploruj" },
 ];
 
 const RIGHT_ITEMS = [
   { to: "/dziennik",   end: false,  icon: BookOpen, label: "Dziennik" },
-  { to: "/",           end: true,   icon: Home,     label: "Feed"     },
+  { to: "/moje-trasy", end: false,  icon: Map,      label: "Trasy"    },
 ];
 
 const BottomNav = () => {
