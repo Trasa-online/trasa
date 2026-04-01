@@ -8,6 +8,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import RouteMapSheet from "./RouteMapSheet";
+import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
@@ -65,18 +67,19 @@ function PhotoSlider({ photos }: { photos: string[] }) {
   );
 }
 
-function PinsSummary({ pins }: { pins: FeedPin[] }) {
+function PinsSummary({ pins, onPinClick }: { pins: FeedPin[]; onPinClick: (pin: FeedPin) => void }) {
   const sorted = [...pins].sort((a, b) => (a.pin_order ?? 0) - (b.pin_order ?? 0));
   return (
     <div className="flex gap-1.5 overflow-x-auto scrollbar-hide mb-2.5 -mx-1 px-1">
       {sorted.map((pin, i) => (
-        <div
+        <button
           key={i}
-          className="flex items-center gap-1 bg-muted rounded-full px-2.5 py-1 flex-shrink-0"
+          onClick={() => onPinClick(pin)}
+          className="flex items-center gap-1 bg-muted rounded-full px-2.5 py-1 flex-shrink-0 active:bg-muted/70 transition-colors"
         >
           <span className="text-[11px]">{CATEGORY_EMOJI[pin.category ?? ""] ?? "📍"}</span>
           <span className="text-[11px] font-medium text-foreground/80 whitespace-nowrap">{pin.place_name}</span>
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -87,6 +90,7 @@ export default function FeedActivityCard({ route, actor }: { route: FeedRoute; a
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [mapOpen, setMapOpen] = useState(false);
+  const [detailPin, setDetailPin] = useState<FeedPin | null>(null);
 
   const displayName = actor.username || actor.first_name || "Ktoś";
   const timeAgo = formatDistanceToNow(new Date(route.created_at), { addSuffix: false, locale: pl });
@@ -178,7 +182,7 @@ export default function FeedActivityCard({ route, actor }: { route: FeedRoute; a
           {photos.length > 0 && <PhotoSlider photos={photos} />}
 
           {/* Pins summary */}
-          {pins.length > 0 && <PinsSummary pins={pins} />}
+          {pins.length > 0 && <PinsSummary pins={pins} onPinClick={setDetailPin} />}
 
           {/* Action bar */}
           <div className="flex items-center gap-5 mt-1">
@@ -201,6 +205,26 @@ export default function FeedActivityCard({ route, actor }: { route: FeedRoute; a
       </div>
 
       <RouteMapSheet city={route.city} pins={route.pins ?? []} open={mapOpen} onOpenChange={setMapOpen} />
+
+      <PlaceSwiperDetail
+        open={detailPin !== null}
+        onOpenChange={(v) => { if (!v) setDetailPin(null); }}
+        place={detailPin ? ({
+          id: detailPin.place_name,
+          place_name: detailPin.place_name,
+          category: detailPin.category as any,
+          city: route.city,
+          address: "",
+          latitude: detailPin.latitude ?? 0,
+          longitude: detailPin.longitude ?? 0,
+          rating: 0,
+          photo_url: "",
+          vibe_tags: [],
+          description: "",
+        } satisfies MockPlace) : null}
+        onLike={() => setDetailPin(null)}
+        onSkip={() => setDetailPin(null)}
+      />
     </>
   );
 }

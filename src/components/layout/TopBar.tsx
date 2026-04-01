@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Bell } from "lucide-react";
 import NotificationsDrawer from "./NotificationsDrawer";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const TopBar = (_props: { onOrbClick?: () => void }) => {
   const navigate = useNavigate();
@@ -26,6 +27,20 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
     refetchInterval: 60_000,
   });
 
+  const { data: profile } = useQuery({
+    queryKey: ["profile-topbar", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("avatar_url, first_name")
+        .eq("id", user.id)
+        .single();
+      return data;
+    },
+    enabled: !!user,
+  });
+
   if (!user) return null;
 
   return (
@@ -43,6 +58,20 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
+        </button>
+
+        {/* Avatar */}
+        <button
+          onClick={() => navigate("/moj-profil")}
+          className="flex items-center justify-center"
+          aria-label="Mój profil"
+        >
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={profile?.avatar_url || ""} />
+            <AvatarFallback className="bg-orange-100 text-orange-600 text-sm font-bold">
+              {profile?.first_name ? profile.first_name.charAt(0).toUpperCase() : "?"}
+            </AvatarFallback>
+          </Avatar>
         </button>
 
         {/* Orb logo — right */}

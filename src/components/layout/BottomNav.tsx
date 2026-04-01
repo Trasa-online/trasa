@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
-import { Map, Compass, BookOpen, User, Plus } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { Map, Compass, BookOpen, Home, Plus } from "lucide-react";
 
 const LEFT_ITEMS = [
   { to: "/moje-trasy", end: false, icon: Map,     label: "Trasy"    },
@@ -9,13 +8,12 @@ const LEFT_ITEMS = [
 ];
 
 const RIGHT_ITEMS = [
-  { to: "/dziennik",   end: false, icon: BookOpen, label: "Dziennik" },
+  { to: "/dziennik",   end: false,  icon: BookOpen, label: "Dziennik" },
+  { to: "/",           end: true,   icon: Home,     label: "Feed"     },
 ];
 
 const BottomNav = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const profileTo = user ? "/moj-profil" : "/auth";
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/40 z-50 pb-safe">
@@ -68,19 +66,6 @@ const BottomNav = () => {
           </NavLink>
         ))}
 
-        {/* Profile */}
-        <NavLink
-          to={profileTo}
-          className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-          activeClassName="text-orange-600"
-        >
-          {({ isActive }) => (
-            <>
-              <User className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
-              <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Profil</span>
-            </>
-          )}
-        </NavLink>
 
       </div>
     </nav>
