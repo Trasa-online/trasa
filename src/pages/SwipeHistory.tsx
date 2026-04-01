@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Compass, Heart, ThumbsDown, X, ChevronRight } from "lucide-react";
+import { Compass, Heart, ThumbsDown, X, ChevronRight, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 
@@ -23,7 +23,7 @@ const SwipeHistory = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"liked" | "skipped">("liked");
+  const [tab, setTab] = useState<"liked" | "super_liked" | "skipped">("liked");
   const [detailPlace, setDetailPlace] = useState<any | null>(null);
 
   const { data: reactions = [], isLoading } = useQuery({
@@ -60,6 +60,7 @@ const SwipeHistory = () => {
   const filtered = reactions.filter((r: any) => r.reaction === tab);
   const likedCount = reactions.filter((r: any) => r.reaction === "liked").length;
   const skippedCount = reactions.filter((r: any) => r.reaction === "skipped").length;
+  const superLikedCount = reactions.filter((r: any) => r.reaction === "super_liked").length;
 
   const byCity = filtered.reduce<Record<string, any[]>>((acc, p: any) => {
     if (!acc[p.city]) acc[p.city] = [];
@@ -105,6 +106,21 @@ const SwipeHistory = () => {
           )}
         </button>
         <button
+          onClick={() => setTab("super_liked")}
+          className={cn(
+            "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors",
+            tab === "super_liked" ? "bg-yellow-400 text-white" : "bg-card border border-border/50 text-muted-foreground"
+          )}
+        >
+          <Star className={cn("h-3.5 w-3.5", tab === "super_liked" && "fill-current")} />
+          Super
+          {superLikedCount > 0 && (
+            <span className={cn("rounded-full px-1.5 text-[10px] font-bold", tab === "super_liked" ? "bg-white/20" : "bg-muted")}>
+              {superLikedCount}
+            </span>
+          )}
+        </button>
+        <button
           onClick={() => setTab("skipped")}
           className={cn(
             "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors",
@@ -128,6 +144,8 @@ const SwipeHistory = () => {
         <div className="flex flex-col items-center py-12 text-center gap-2">
           {tab === "liked"
             ? <><Heart className="h-8 w-8 text-muted-foreground/30" /><p className="text-sm text-muted-foreground">Brak polubionych miejsc</p></>
+            : tab === "super_liked"
+            ? <><Star className="h-8 w-8 text-muted-foreground/30" /><p className="text-sm text-muted-foreground">Brak super polubionych miejsc</p></>
             : <><ThumbsDown className="h-8 w-8 text-muted-foreground/30" /><p className="text-sm text-muted-foreground">Brak odrzuconych miejsc</p></>
           }
         </div>

@@ -460,7 +460,8 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
   const [loading, setLoading] = useState(true);
   const [likedPlaces, setLikedPlaces] = useState<MockPlace[]>([]);
   const [skippedPlaces, setSkippedPlaces] = useState<MockPlace[]>([]);
-  const [history, setHistory] = useState<{ place: MockPlace; wasLiked: boolean }[]>([]);
+  const [superLikedPlaces, setSuperLikedPlaces] = useState<MockPlace[]>([]);
+  const [history, setHistory] = useState<{ place: MockPlace; reaction: "liked" | "skipped" | "super_liked" }[]>([]);
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [matchedRoutes, setMatchedRoutes] = useState<MatchedRoute[]>([]);
@@ -496,7 +497,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
     ? allPlaces.filter(p => p.place_name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
     : queue;
 
-  const saveReaction = (place: MockPlace, reaction: "liked" | "skipped") => {
+  const saveReaction = (place: MockPlace, reaction: "liked" | "skipped" | "super_liked") => {
     if (!user) return;
     (supabase as any)
       .from("user_place_reactions")
@@ -524,7 +525,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
   const handleLike = () => {
     const top = displayQueue[0];
     if (!top) return;
-    setHistory(prev => [...prev, { place: top, wasLiked: true }]);
+    setHistory(prev => [...prev, { place: top, reaction: "liked" }]);
     setLikedPlaces(prev => [...prev, top]);
     setAllPlaces(prev => prev.filter(p => p.id !== top.id));
     setQueue(prev => prev.filter(p => p.id !== top.id));
@@ -534,11 +535,21 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
   const handleSkip = () => {
     const top = displayQueue[0];
     if (!top) return;
-    setHistory(prev => [...prev, { place: top, wasLiked: false }]);
+    setHistory(prev => [...prev, { place: top, reaction: "skipped" }]);
     setSkippedPlaces(prev => [...prev, top]);
     setAllPlaces(prev => prev.filter(p => p.id !== top.id));
     setQueue(prev => prev.filter(p => p.id !== top.id));
     saveReaction(top, "skipped");
+  };
+
+  const handleSuperLike = () => {
+    const top = displayQueue[0];
+    if (!top) return;
+    setHistory(prev => [...prev, { place: top, reaction: "super_liked" }]);
+    setSuperLikedPlaces(prev => [...prev, top]);
+    setAllPlaces(prev => prev.filter(p => p.id !== top.id));
+    setQueue(prev => prev.filter(p => p.id !== top.id));
+    saveReaction(top, "super_liked");
   };
 
   const handleUndo = () => {
@@ -546,9 +557,12 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
     if (!last) return;
     setHistory(prev => prev.slice(0, -1));
     setQueue(prev => [last.place, ...prev]);
-    if (last.wasLiked) {
+    setAllPlaces(prev => [last.place, ...prev]);
+    if (last.reaction === "liked") {
       setLikedPlaces(prev => prev.filter(p => p.id !== last.place.id));
-    } else {
+    } else if (last.reaction === "super_liked") {
+      setSuperLikedPlaces(prev => prev.filter(p => p.id !== last.place.id));
+    } else if (last.reaction === "skipped") {
       setSkippedPlaces(prev => prev.filter(p => p.id !== last.place.id));
     }
     deleteReaction(last.place.id);
@@ -560,14 +574,16 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
   };
 
   const handleProceed = () => {
+    const allLiked = [...likedPlaces, ...superLikedPlaces];
     navigate("/create", {
       state: {
         city,
         date: date.toISOString(),
         startingLocation: startingLocation || undefined,
-        likedPlaceNames: likedPlaces.map((p) => p.place_name),
+        likedPlaceNames: allLiked.map((p) => p.place_name),
         skippedPlaceNames: skippedPlaces.map((p) => p.place_name),
-        likedPlacesData: likedPlaces.map((p) => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude })),
+        likedPlacesData: allLiked.map((p) => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude })),
+        superLikedPlaceNames: superLikedPlaces.map((p) => p.place_name),
       },
     });
   };
@@ -747,6 +763,13 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
           className="h-12 w-12 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform disabled:opacity-25"
         >
           <RotateCcw className="h-4 w-4 text-muted-foreground" />
+        </button>
+
+        <button
+          onClick={handleSuperLike}
+          className="h-14 w-14 rounded-full border-2 border-yellow-400 bg-card flex items-center justify-center shadow-sm active:scale-90 transition-transform"
+        >
+          <Star className="h-6 w-6 text-yellow-400 fill-yellow-400" />
         </button>
 
         <button

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 // ── InviteSlot ────────────────────────────────────────────────────────────────
 
@@ -112,6 +113,7 @@ const TravelerProfile = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
 
   const handleAvatarUpload = async (file: File) => {
     if (!user) return;
@@ -176,6 +178,31 @@ const TravelerProfile = () => {
         supabase.from("followers").select("*", { count: "exact", head: true }).eq("follower_id", user!.id),
       ]);
       return { followers: followers ?? 0, following: following ?? 0 };
+    },
+    enabled: !!user,
+  });
+
+  const { data: followersList = [] } = useQuery({
+    queryKey: ["followers-list", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("followers")
+        .select("follower_id, profiles!followers_follower_id_fkey(username, first_name, avatar_url)")
+        .eq("following_id", user.id);
+      return (data ?? []) as any[];
+    },
+    enabled: !!user,
+  });
+  const { data: followingList = [] } = useQuery({
+    queryKey: ["following-list", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("followers")
+        .select("following_id, profiles!followers_following_id_fkey(username, first_name, avatar_url)")
+        .eq("follower_id", user.id);
+      return (data ?? []) as any[];
     },
     enabled: !!user,
   });
@@ -247,7 +274,7 @@ const TravelerProfile = () => {
         {/* Followers / following */}
         <div className="bg-card border border-border/40 rounded-2xl overflow-hidden">
           <button
-            onClick={() => navigate("/search")}
+            onClick={() => setFollowSheet("followers")}
             className="w-full flex items-center justify-between px-4 py-3.5 active:bg-muted transition-colors border-b border-border/30"
           >
             <span className="text-sm font-medium text-foreground">Obserwujący</span>
@@ -257,7 +284,7 @@ const TravelerProfile = () => {
             </div>
           </button>
           <button
-            onClick={() => navigate("/search")}
+            onClick={() => setFollowSheet("following")}
             className="w-full flex items-center justify-between px-4 py-3.5 active:bg-muted transition-colors"
           >
             <span className="text-sm font-medium text-foreground">Obserwuje</span>
@@ -288,6 +315,37 @@ const TravelerProfile = () => {
         )}
 
       </div>
+
+      <Sheet open={followSheet !== null} onOpenChange={(v) => { if (!v) setFollowSheet(null); }}>
+        <SheetContent side="bottom" className="h-[60dvh] flex flex-col rounded-t-2xl">
+          <SheetHeader className="pb-3 border-b border-border/20">
+            <SheetTitle>{followSheet === "followers" ? "Obserwujący" : "Obserwuje"}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto py-2">
+            {(followSheet === "followers" ? followersList : followingList).length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Brak użytkowników</p>
+            ) : (
+              <div className="space-y-1">
+                {(followSheet === "followers" ? followersList : followingList).map((item: any) => {
+                  const profile = item.profiles;
+                  const name = profile?.first_name || profile?.username || "Użytkownik";
+                  return (
+                    <div key={item.follower_id ?? item.following_id} className="flex items-center gap-3 px-4 py-2.5">
+                      <div className="h-9 w-9 rounded-full bg-orange-100 flex items-center justify-center text-sm font-bold text-orange-600 shrink-0">
+                        {name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{name}</p>
+                        {profile?.username && <p className="text-xs text-muted-foreground">@{profile.username}</p>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
