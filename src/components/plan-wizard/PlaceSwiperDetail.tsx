@@ -133,7 +133,6 @@ const PlaceSwiperDetail = ({
   const [activePhoto, setActivePhoto] = useState(0);
   const [cachedPhoto, setCachedPhoto] = useState<string | null>(null);
   const swipeStartX = useRef<number | null>(null);
-  const swipeStartX = useRef<number | null>(null);
 
   useEffect(() => {
     if (!open || !place) {
