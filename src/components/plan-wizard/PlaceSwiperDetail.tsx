@@ -140,6 +140,7 @@ const PlaceSwiperDetail = ({
       setCreators([]);
       setUsageCount(null);
       setActivePhoto(0);
+      setCachedPhoto(null);
       return;
     }
 
