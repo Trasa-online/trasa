@@ -939,6 +939,33 @@ export type Database = {
         }
         Relationships: []
       }
+      place_details_cache: {
+        Row: {
+          cache_key: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          place_id: string | null
+          response: Json
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          place_id?: string | null
+          response: Json
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          place_id?: string | null
+          response?: Json
+        }
+        Relationships: []
+      }
       place_photo_cache: {
         Row: {
           created_at: string

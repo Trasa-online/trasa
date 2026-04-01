@@ -162,6 +162,36 @@ Deno.serve(async (req) => {
     const { placeName, latitude, longitude, city } = body;
     const hasCoords = latitude && longitude && latitude !== 0 && longitude !== 0;
 
+    // ─── Cache layer ──────────────────────────────────────────────────
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const sb = createClient(supabaseUrl, serviceRoleKey);
+
+    // Deterministic cache key: placeName (lowered) + coords rounded to 4 decimals
+    const roundedLat = hasCoords ? Number(latitude).toFixed(4) : "0";
+    const roundedLng = hasCoords ? Number(longitude).toFixed(4) : "0";
+    const cacheKey = `${placeName.toLowerCase().trim()}|${roundedLat}|${roundedLng}`;
+
+    // Check cache first
+    const { data: cached } = await sb
+      .from("place_details_cache")
+      .select("response, expires_at")
+      .eq("cache_key", cacheKey)
+      .maybeSingle();
+
+    if (cached && new Date(cached.expires_at) > new Date()) {
+      console.log(`Cache HIT for "${placeName}" (key: ${cacheKey})`);
+      return new Response(JSON.stringify(cached.response), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Cache miss or expired — call Google API
+    if (cached) {
+      // Delete expired entry
+      await sb.from("place_details_cache").delete().eq("cache_key", cacheKey);
+    }
+
     // Step 1: Find place_id
     const searchQuery = city ? `${placeName} ${city}` : placeName;
     const locationBias = hasCoords ? `&locationbias=point:${latitude},${longitude}` : "";
@@ -203,9 +233,9 @@ Deno.serve(async (req) => {
 
     const result = detailData.result;
     if (result) {
-      // Limit photos to 1 to reduce costs
-      if (result.photos?.length > 1) {
-        result.photos = [result.photos[0]];
+      // Limit photos to 3
+      if (result.photos?.length > 3) {
+        result.photos = result.photos.slice(0, 3);
       }
       // Distance validation only when we have valid coords
       if (hasCoords) {
@@ -231,6 +261,16 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      // Save to cache (don't await — fire and forget)
+      sb.from("place_details_cache").insert({
+        cache_key: cacheKey,
+        place_id: placeId,
+        response: detailData,
+      }).then(({ error }) => {
+        if (error) console.error("Cache insert error:", error);
+        else console.log(`Cache STORED for "${placeName}" (key: ${cacheKey})`);
+      });
     }
 
     return new Response(JSON.stringify(detailData), {
