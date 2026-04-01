@@ -171,6 +171,17 @@ const Settings = () => {
         <div className="space-y-2">
           <PushToggleSection />
 
+          <CookieConsentSection />
+
+          <Link
+            to="/terms"
+            className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+          >
+            <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span className="text-sm font-medium flex-1">{t("terms")}</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+
           {isAdmin && (
             <button
               onClick={() => navigate("/admin")}
