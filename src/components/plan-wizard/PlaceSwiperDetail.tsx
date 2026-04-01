@@ -36,8 +36,6 @@ interface Creator {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const getPhotoUrl = (ref: string, maxWidth = 800) =>
-  `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${ref}&key=${GOOGLE_MAPS_API_KEY}`;
 
 const AVATAR_COLORS = [
   "#e85d04", "#2d6a4f", "#9d4edd", "#1d3557",
