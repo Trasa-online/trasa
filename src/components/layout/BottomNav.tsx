@@ -43,7 +43,7 @@ const BottomNav = () => {
           className="flex items-center justify-center"
           aria-label="Dodaj trasę"
         >
-          <span className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/30 active:scale-95 transition-transform">
+          <span className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center active:scale-95 transition-transform">
             <Plus className="h-5 w-5 text-white stroke-[2.5px]" />
           </span>
         </button>
