@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Star, MapPin, ExternalLink, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
+import { getCachedPhotoUrl } from "@/lib/placePhotos";
 
 interface Pin {
   id: string;
