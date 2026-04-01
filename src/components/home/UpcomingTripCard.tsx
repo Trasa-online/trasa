@@ -28,9 +28,12 @@ function PinThumb({ pin, onClick }: { pin: any; onClick: () => void }) {
           ...(hasCoords ? { latitude: pin.latitude, longitude: pin.longitude } : {}),
         },
       })
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         const ref = data?.result?.photos?.[0]?.photo_reference;
-        if (ref) setPhoto(`https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${ref}&key=${GOOGLE_MAPS_API_KEY}`);
+        if (ref) {
+          const url = await getCachedPhotoUrl(ref, 400);
+          if (url) setPhoto(url);
+        }
       })
       .catch(() => {});
   }, [pin.place_name]);
