@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { getConsent, grantConsent, denyConsent } from "@/lib/consent";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, Bell, LogOut, ChevronRight } from "lucide-react";
+import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { toast } from "sonner";
@@ -23,6 +24,34 @@ function PushToggleSection() {
       <Bell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
       <span className="text-sm font-medium flex-1">{t("push_notifications")}</span>
       <Switch checked={isSubscribed} onCheckedChange={toggle} disabled={isLoading} />
+    </div>
+  );
+}
+
+function CookieConsentSection() {
+  const [consent, setConsent] = useState(getConsent());
+  const { t } = useTranslation("settings");
+
+  const handleToggle = (checked: boolean) => {
+    if (checked) {
+      grantConsent();
+      setConsent("granted");
+      toast.success(t("cookies_granted"));
+    } else {
+      denyConsent();
+      setConsent("denied");
+      toast.success(t("cookies_denied"));
+    }
+  };
+
+  return (
+    <div className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40">
+      <Cookie className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      <div className="flex-1">
+        <span className="text-sm font-medium">{t("cookies_analytics")}</span>
+        <p className="text-xs text-muted-foreground">{t("cookies_desc")}</p>
+      </div>
+      <Switch checked={consent === "granted"} onCheckedChange={handleToggle} />
     </div>
   );
 }
@@ -169,6 +198,17 @@ const Settings = () => {
         {/* Other settings */}
         <div className="space-y-2">
           <PushToggleSection />
+
+          <CookieConsentSection />
+
+          <Link
+            to="/terms"
+            className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+          >
+            <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span className="text-sm font-medium flex-1">{t("terms")}</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
 
           {isAdmin && (
             <button
