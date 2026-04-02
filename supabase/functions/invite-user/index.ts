@@ -63,7 +63,11 @@ serve(async (req) => {
       });
     }
 
-    // Generate invite link WITHOUT sending email (owner sends it manually)
+    // Try invite link first; fall back to magiclink if user already exists
+    let inviteLink: string;
+    let invitedUserId: string;
+    let isExistingUser = false;
+
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "invite",
       email,
@@ -73,23 +77,46 @@ serve(async (req) => {
       },
     });
 
-    if (linkError || !linkData?.properties?.action_link) {
+    if (linkError && linkError.message?.includes("already been registered")) {
+      // User exists — generate a magiclink instead
+      const { data: mlData, error: mlError } = await supabaseAdmin.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+        options: {
+          redirectTo: "https://trasa.lovable.app/set-password",
+        },
+      });
+
+      if (mlError || !mlData?.properties?.action_link) {
+        console.error("magiclink fallback error:", mlError);
+        return new Response(JSON.stringify({ error: "Failed to generate link for existing user" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      inviteLink = mlData.properties.action_link;
+      invitedUserId = mlData.user.id;
+      isExistingUser = true;
+    } else if (linkError || !linkData?.properties?.action_link) {
       console.error("generateLink error:", linkError);
       return new Response(JSON.stringify({ error: "Failed to generate invite link" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    } else {
+      inviteLink = linkData.properties.action_link;
+      invitedUserId = linkData.user.id;
     }
 
-    const inviteLink = linkData.properties.action_link;
-    const invitedUserId = linkData.user.id;
-
-    // Create profile for the invited user
-    await supabaseAdmin.from("profiles").upsert({
-      id: invitedUserId,
-      username,
-      onboarding_completed: false,
-    }, { onConflict: "id" });
+    // Create profile only for new users
+    if (!isExistingUser) {
+      await supabaseAdmin.from("profiles").upsert({
+        id: invitedUserId,
+        username,
+        onboarding_completed: false,
+      }, { onConflict: "id" });
+    }
 
     // Mark waitlist entry as invited
     if (waitlist_id) {
