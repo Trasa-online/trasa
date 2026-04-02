@@ -1,45 +1,22 @@
 
 
-## Cache Find Place + Place Details w Supabase
+## Napraw generowanie linku dla istniejących użytkowników
 
-### Koszt obecny vs po cache'owaniu
+### Problem
+Edge function `invite-user` wywołuje `generateLink({ type: "invite" })`, które zwraca 422 gdy email już istnieje w `auth.users`. Użytkownik `989898mon@gmail.com` ma już konto, więc nie można go "zaprosić" ponownie.
 
-| Wywołanie | Obecny koszt (każde otwarcie) | Po cache (pierwsze) | Po cache (kolejne) |
-|-----------|------|------|------|
-| Find Place | $0.017 | $0.017 | **$0.00** |
-| Place Details | $0.017 | $0.017 | **$0.00** |
-| Photos (3 szt.) | $0.021 (już cache) | $0.021 | $0.00 |
-| **Razem** | **$0.055** | **$0.055** | **$0.00** |
+### Rozwiązanie
+W `invite-user` edge function dodać fallback: jeśli `generateLink` z `type: "invite"` zwróci błąd `email_exists`, spróbować wygenerować link typu `magiclink` zamiast tego. Magic link pozwoli użytkownikowi zalogować się i ustawić hasło.
 
-Po implementacji: **każde kolejne otwarcie tego samego miejsca = $0.00.** Przy 100 unikalnych miejscach oglądanych średnio 10 razy, oszczędność ~$50 → ~$5.50.
+### Plik do edycji
+`supabase/functions/invite-user/index.ts`
 
-### Plan implementacji
+### Zmiany
+1. Po wywołaniu `generateLink({ type: "invite" })`, jeśli błąd zawiera "already been registered":
+   - Wywołaj `generateLink({ type: "magiclink", email, options: { redirectTo: "https://trasa.lovable.app/set-password" } })`
+   - Zwróć wygenerowany link tak samo jak dla nowego użytkownika
+2. Pomiń tworzenie profilu i aktualizację waitlist jeśli użytkownik już istnieje (profil prawdopodobnie już jest)
 
-**1. Migracja SQL — tabela `place_details_cache`**
-```sql
-CREATE TABLE public.place_details_cache (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  cache_key text NOT NULL UNIQUE,  -- hash z placeName+lat+lng
-  place_id text,
-  response jsonb NOT NULL,         -- pełny wynik Place Details
-  created_at timestamptz DEFAULT now(),
-  expires_at timestamptz DEFAULT now() + interval '7 days'
-);
-```
-- Cache key = deterministyczny hash z `placeName + lat + lng` (zaokrąglone do 4 miejsc)
-- TTL 7 dni — po tym czasie dane odświeżane z Google (opinie, godziny otwarcia mogą się zmienić)
-- RLS: publiczny read, insert/delete tylko service_role
-
-**2. Edge Function `google-places-proxy` — cache layer**
-- Przed wywołaniem Google API: sprawdź `place_details_cache` po `cache_key`
-- Jeśli jest i nie wygasł → zwróć `response` z cache (0 wywołań Google)
-- Jeśli brak/wygasł → wykonaj Find Place + Place Details jak teraz, zapisz wynik w cache, zwróć
-- Dotyczy głównego flow (linie 162-236), nie akcji `cache-photo`/`citysearch`/`textsearch`
-
-**3. Bez zmian na frontendzie**
-- Komponenty wywołują tę samą funkcję tak samo — cache jest transparentny po stronie edge function
-
-### Pliki do edycji
-1. Nowa migracja SQL (tabela + RLS)
-2. `supabase/functions/google-places-proxy/index.ts` — dodanie warstwy cache
+### Alternatywa
+Jeśli wolisz po prostu usunąć tego użytkownika z `auth.users` i zaprosić go od nowa — mogę to zrobić ręcznie przez panel Supabase. Ale fix w kodzie jest lepszy długoterminowo, bo ten problem może się powtórzyć.
 
