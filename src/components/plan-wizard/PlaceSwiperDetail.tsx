@@ -131,7 +131,7 @@ const PlaceSwiperDetail = ({
   const [usageCount, setUsageCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
-  const [cachedPhoto, setCachedPhoto] = useState<string | null>(null);
+  const [cachedPhotos, setCachedPhotos] = useState<string[]>([]);
   const swipeStartX = useRef<number | null>(null);
 
   useEffect(() => {
@@ -140,7 +140,7 @@ const PlaceSwiperDetail = ({
       setCreators([]);
       setUsageCount(null);
       setActivePhoto(0);
-      setCachedPhoto(null);
+      setCachedPhotos([]);
       return;
     }
 
@@ -160,12 +160,15 @@ const PlaceSwiperDetail = ({
         .then(async ({ data }) => {
           if (data?.result) {
             setDetail(data.result);
-            // Cache first photo
-            const ref = data.result.photos?.[0]?.photo_reference;
-            if (ref) {
-              const url = await getCachedPhotoUrl(ref, 800);
-              if (url) setCachedPhoto(url);
-            }
+            // Cache up to 3 photos
+            const photoRefs = (data.result.photos ?? [])
+              .slice(0, 3)
+              .map((p: any) => p.photo_reference)
+              .filter(Boolean);
+            const urls = await Promise.all(
+              photoRefs.map((ref: string) => getCachedPhotoUrl(ref, 800))
+            );
+            setCachedPhotos(urls.filter(Boolean) as string[]);
           }
         })
         .catch(() => {});
@@ -211,9 +214,9 @@ const PlaceSwiperDetail = ({
     onOpenChange(false);
   };
 
-  const photos: string[] = [];
-  if (cachedPhoto) photos.push(cachedPhoto);
-  else if (place?.photo_url) photos.push(place.photo_url);
+  const photos: string[] = cachedPhotos.length > 0
+    ? cachedPhotos
+    : place?.photo_url ? [place.photo_url] : [];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
