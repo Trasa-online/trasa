@@ -214,9 +214,9 @@ const PlaceSwiperDetail = ({
     onOpenChange(false);
   };
 
-  const photos: string[] = [];
-  if (cachedPhoto) photos.push(cachedPhoto);
-  else if (place?.photo_url) photos.push(place.photo_url);
+  const photos: string[] = cachedPhotos.length > 0
+    ? cachedPhotos
+    : place?.photo_url ? [place.photo_url] : [];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
