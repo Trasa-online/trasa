@@ -160,12 +160,15 @@ const PlaceSwiperDetail = ({
         .then(async ({ data }) => {
           if (data?.result) {
             setDetail(data.result);
-            // Cache first photo
-            const ref = data.result.photos?.[0]?.photo_reference;
-            if (ref) {
-              const url = await getCachedPhotoUrl(ref, 800);
-              if (url) setCachedPhoto(url);
-            }
+            // Cache up to 3 photos
+            const photoRefs = (data.result.photos ?? [])
+              .slice(0, 3)
+              .map((p: any) => p.photo_reference)
+              .filter(Boolean);
+            const urls = await Promise.all(
+              photoRefs.map((ref: string) => getCachedPhotoUrl(ref, 800))
+            );
+            setCachedPhotos(urls.filter(Boolean) as string[]);
           }
         })
         .catch(() => {});
