@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, Check, ArrowRight, Users } from "lucide-react";
+import { ArrowLeft, Copy, Check, ArrowRight, Users, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 function generateJoinCode(): string {
@@ -23,6 +23,7 @@ function capitalizeCity(city: string): string {
 const CreateGroupSession = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedCity, setSelectedCity] = useState("");
   const [loading, setLoading] = useState(false);
   const [createdCode, setCreatedCode] = useState<string | null>(null);
@@ -118,6 +119,14 @@ const CreateGroupSession = () => {
     }
   };
 
+  const handleDeleteSession = async (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Usunąć tę sesję? Wszyscy członkowie stracą dostęp.")) return;
+    await (supabase as any).from("group_sessions").delete().eq("id", sessionId);
+    queryClient.invalidateQueries({ queryKey: ["my-group-sessions", user?.id] });
+    toast.success("Sesja usunięta");
+  };
+
   const shareUrl = createdCode ? `${window.location.origin}/sesja/${createdCode}` : "";
 
   const handleCopy = async () => {
@@ -160,7 +169,13 @@ const CreateGroupSession = () => {
                       <p className="font-semibold text-sm">{capitalizeCity(s.city)}</p>
                       <p className="text-xs text-muted-foreground font-mono">#{s.join_code}</p>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 mr-1" />
+                    <button
+                      onClick={(e) => handleDeleteSession(s.id, e)}
+                      className="h-8 w-8 flex items-center justify-center rounded-full text-muted-foreground hover:text-red-500 active:scale-90 transition-all shrink-0"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </button>
                 ))}
                 <div className="flex items-center gap-3 pt-1">
