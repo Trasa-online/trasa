@@ -169,10 +169,10 @@ const CreateGroupSession = () => {
                       <p className="font-semibold text-sm">{capitalizeCity(s.city)}</p>
                       <p className="text-xs text-muted-foreground font-mono">#{s.join_code}</p>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 mr-1" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     <button
                       onClick={(e) => handleDeleteSession(s.id, e)}
-                      className="h-8 w-8 flex items-center justify-center rounded-full text-muted-foreground hover:text-red-500 active:scale-90 transition-all shrink-0"
+                      className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 active:scale-90 transition-transform shrink-0"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

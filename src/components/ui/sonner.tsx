@@ -10,15 +10,16 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       position="bottom-center"
-      closeButton={true}
+      closeButton={false}
+      gap={8}
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg group-[.toaster]:text-xs group-[.toaster]:py-2 group-[.toaster]:px-3 group-[.toaster]:min-h-0 group-[.toaster]:mb-16",
-          description: "group-[.toast]:text-muted-foreground group-[.toast]:text-xs",
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground group-[.toast]:text-xs group-[.toast]:px-2 group-[.toast]:py-1",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground group-[.toast]:text-xs group-[.toast]:px-2 group-[.toast]:py-1",
-          closeButton: "group-[.toast]:bg-muted/80 group-[.toast]:text-foreground group-[.toast]:border-border group-[.toast]:hover:bg-muted",
+            "group toast group-[.toaster]:bg-card group-[.toaster]:text-foreground group-[.toaster]:border group-[.toaster]:border-border/50 group-[.toaster]:shadow-xl group-[.toaster]:shadow-black/10 group-[.toaster]:text-sm group-[.toaster]:font-medium group-[.toaster]:py-4 group-[.toaster]:px-4 group-[.toaster]:rounded-2xl group-[.toaster]:mb-[calc(4rem+env(safe-area-inset-bottom,0px))]",
+          description: "group-[.toast]:text-muted-foreground group-[.toast]:text-xs group-[.toast]:font-normal",
+          success: "group-[.toaster]:border-emerald-500/20 group-[.toaster]:bg-emerald-50 dark:group-[.toaster]:bg-emerald-950/30",
+          error: "group-[.toaster]:border-red-500/20 group-[.toaster]:bg-red-50 dark:group-[.toaster]:bg-red-950/30",
+          icon: "group-[.toast]:w-5 group-[.toast]:h-5",
         },
       }}
       {...props}
