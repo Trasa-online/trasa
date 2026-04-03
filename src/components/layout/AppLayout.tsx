@@ -54,43 +54,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
     setShowOrbOverlay(true);
     if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
 
-    const elKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
-    if (!elKey) return;
-
-    // Create AudioContext synchronously in user gesture — iOS keeps it unlocked even after awaits
-    const ctx = new AudioContext();
-    audioCtxRef.current = ctx;
-    ctx.resume();
-
-    try {
-      setIsSpeaking(true);
-      const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE_ID}`, {
-        method: "POST",
-        headers: { "xi-api-key": elKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ text: greeting, model_id: "eleven_multilingual_v2", voice_settings: { stability: 0.5, similarity_boost: 0.8 } }),
-      });
-      if (res.ok) {
-        const arrayBuffer = await res.arrayBuffer();
-        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-        const source = ctx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(ctx.destination);
-        source.onended = () => {
-          setIsSpeaking(false);
-          ctx.close();
-          if (audioCtxRef.current === ctx) audioCtxRef.current = null;
-        };
-        source.start(0);
-      } else {
-        setIsSpeaking(false);
-        ctx.close();
-        if (audioCtxRef.current === ctx) audioCtxRef.current = null;
-      }
-    } catch {
-      setIsSpeaking(false);
-      ctx.close();
-      if (audioCtxRef.current === ctx) audioCtxRef.current = null;
-    }
+    // ElevenLabs disabled
   };
 
   const handleClose = () => {

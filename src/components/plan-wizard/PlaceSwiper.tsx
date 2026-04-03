@@ -483,6 +483,7 @@ interface PlaceSwiperProps {
   searchQuery?: string;
   showAddPlace?: boolean;
   onAddPlaceClose?: () => void;
+  exploreMode?: boolean;
 }
 
 // Category groups for diversity balancing
@@ -496,7 +497,7 @@ function getGroupForCategory(cat: string): Set<string> | null {
 
 const DIVERSITY_THRESHOLD = 2; // after 2 consecutive likes from same group, deprioritize
 
-const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, exploreMode = false }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -908,12 +909,14 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
       {/* Proceed CTA */}
       {(likedPlaces.length + superLikedPlaces.length > 0) && !showAddPlace && (
         <div className="px-4 pb-3 shrink-0 flex gap-2">
-          <button
-            onClick={() => navigate("/historia", { state: { fromCity: city } })}
-            className="flex-1 py-3 rounded-2xl border border-border/60 bg-card text-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-          >
-            Zakończ
-          </button>
+          {exploreMode && (
+            <button
+              onClick={() => navigate("/historia", { state: { fromCity: city } })}
+              className="flex-1 py-3 rounded-2xl border border-border/60 bg-card text-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+            >
+              Zakończ
+            </button>
+          )}
           <button
             onClick={handleProceed}
             className="flex-[2] py-3 rounded-2xl bg-orange-600 text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"

@@ -127,6 +127,7 @@ const PlanWizard = () => {
             searchQuery={searchQuery}
             showAddPlace={showAddPlace}
             onAddPlaceClose={() => setShowAddPlace(false)}
+            exploreMode={exploreMode}
           />
         )}
       </div>

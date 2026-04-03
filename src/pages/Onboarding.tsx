@@ -296,11 +296,10 @@ const Onboarding = () => {
   const [step, setStep] = useState(0);
   const [firstName, setFirstName] = useState("");
   const [gender, setGender] = useState<string>("");
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const isSpeaking = false;
   const [freeText, setFreeText] = useState("");
   const [isListening, setIsListening] = useState(false);
   const recogRef = useRef<any>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [foodSelected, setFoodSelected] = useState<Set<string>>(new Set());
   const [interestsSelected, setInterestsSelected] = useState<Set<string>>(new Set());
   const [styleSelected, setStyleSelected] = useState<Set<string>>(new Set());
@@ -309,72 +308,12 @@ const Onboarding = () => {
   const [styleCustom, setStyleCustom] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const speak = useCallback(async (text: string) => {
-    // Stop any currently playing audio
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    window.speechSynthesis?.cancel();
-
-    const elKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
-    if (elKey) {
-      try {
-        setIsSpeaking(true);
-        const res = await fetch(
-          "https://api.elevenlabs.io/v1/text-to-speech/eXpIbVcVbLo8ZJQDlDnl",
-          {
-            method: "POST",
-            headers: { "xi-api-key": elKey, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              text,
-              model_id: "eleven_multilingual_v2",
-              voice_settings: { stability: 0.5, similarity_boost: 0.8 },
-            }),
-          }
-        );
-        if (res.ok) {
-          const url = URL.createObjectURL(await res.blob());
-          const audio = new Audio(url);
-          audioRef.current = audio;
-          audio.onended = () => { setIsSpeaking(false); URL.revokeObjectURL(url); };
-          audio.onerror = () => setIsSpeaking(false);
-          await audio.play();
-          return;
-        }
-      } catch {
-        // fall through to Web Speech API
-      }
-      setIsSpeaking(false);
-    }
-
-    // Fallback: Web Speech API
-    if (!window.speechSynthesis) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = i18n.language === "pl" ? "pl-PL" : "en-US";
-    utterance.rate = 0.9;
-    utterance.pitch = 1.05;
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-    window.speechSynthesis.speak(utterance);
-  }, [i18n.language]);
-
-  const currentSpeech = step < INTRO_STEPS.length ? INTRO_STEPS[step].speech : PREFS_SPEECH;
-
-  // Best-effort auto-speak on desktop (iOS requires user gesture, handled in click handlers)
-  useEffect(() => {
-    const timer = setTimeout(() => speak(currentSpeech), 600);
-    return () => {
-      clearTimeout(timer);
-      window.speechSynthesis.cancel();
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => () => {
-    audioRef.current?.pause();
-    window.speechSynthesis?.cancel();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const speak = useCallback(async (_text: string) => {
+    // Voice disabled
   }, []);
+
+
 
   const handleToggleVoice = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
