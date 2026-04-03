@@ -130,13 +130,13 @@ const CreateGroupSession = () => {
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
                   placeholder="np. AB3X9K"
-                  className="flex-1 h-11 rounded-xl border border-border/60 bg-background px-3 text-base font-mono font-bold tracking-widest uppercase outline-none focus:border-orange-500 transition-colors placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground"
+                  className="min-w-0 flex-1 h-11 rounded-xl border border-border/60 bg-background px-3 text-base font-mono font-bold tracking-widest uppercase outline-none focus:border-orange-500 transition-colors placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground"
                   onKeyDown={(e) => e.key === "Enter" && handleJoinByCode()}
                 />
                 <button
                   onClick={handleJoinByCode}
                   disabled={joining || joinCode.trim().length < 4}
-                  className="h-11 px-4 rounded-xl bg-orange-600 text-white font-semibold text-sm flex items-center gap-1.5 active:scale-95 transition-transform disabled:opacity-40"
+                  className="shrink-0 h-11 px-4 rounded-xl bg-orange-600 text-white font-semibold text-sm flex items-center gap-1.5 active:scale-95 transition-transform disabled:opacity-40"
                 >
                   {joining ? "…" : <><span>Dołącz</span><ArrowRight className="h-4 w-4" /></>}
                 </button>
