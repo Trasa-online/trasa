@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, Check, ArrowRight } from "lucide-react";
+import { ArrowLeft, Copy, Check, ArrowRight, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -29,6 +29,29 @@ const CreateGroupSession = () => {
   const [copied, setCopied] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joining, setJoining] = useState(false);
+
+  // Active sessions the user is already a member of
+  const { data: activeSessions = [] } = useQuery({
+    queryKey: ["my-group-sessions", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data: memberRows } = await (supabase as any)
+        .from("group_session_members")
+        .select("session_id")
+        .eq("user_id", user.id);
+      if (!memberRows?.length) return [];
+      const sessionIds = memberRows.map((m: any) => m.session_id);
+      const { data: sessions } = await (supabase as any)
+        .from("group_sessions")
+        .select("id, city, join_code, created_at")
+        .in("id", sessionIds)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      return sessions || [];
+    },
+    enabled: !!user,
+  });
 
   const { data: cities = [] } = useQuery({
     queryKey: ["places-cities"],
@@ -120,6 +143,34 @@ const CreateGroupSession = () => {
       <div className="flex-1 overflow-y-auto flex flex-col px-4 py-6 gap-6">
         {!createdCode ? (
           <>
+            {/* Active sessions */}
+            {activeSessions.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">Twoje aktywne sesje</p>
+                {activeSessions.map((s: any) => (
+                  <button
+                    key={s.id}
+                    onClick={() => navigate(`/sesja/${s.join_code}`)}
+                    className="w-full flex items-center gap-3 rounded-2xl border border-border/40 bg-card p-3 text-left active:scale-[0.98] transition-transform"
+                  >
+                    <div className="h-10 w-10 rounded-full bg-orange-600/10 flex items-center justify-center shrink-0">
+                      <Users className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm">{capitalizeCity(s.city)}</p>
+                      <p className="text-xs text-muted-foreground font-mono">#{s.join_code}</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </button>
+                ))}
+                <div className="flex items-center gap-3 pt-1">
+                  <div className="flex-1 h-px bg-border/40" />
+                  <span className="text-xs text-muted-foreground">lub nowa</span>
+                  <div className="flex-1 h-px bg-border/40" />
+                </div>
+              </div>
+            )}
+
             {/* Join by code section */}
             <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
               <p className="text-sm font-semibold">Dołącz do sesji</p>
