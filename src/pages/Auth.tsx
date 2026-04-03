@@ -38,7 +38,7 @@ const Auth = () => {
         .eq("id", session.user.id)
         .single();
       // If column doesn't exist yet (migration pending), go to home directly
-      navigate(!error && profile?.onboarding_completed === false ? "/onboarding" : "/");
+      navigate("/");
     });
   }, [navigate]);
 
@@ -53,7 +53,7 @@ const Auth = () => {
         .select("onboarding_completed")
         .eq("id", data.user!.id)
         .single();
-      navigate(!profileError && profile?.onboarding_completed === false ? "/onboarding" : "/");
+      navigate("/");
     } catch (error: any) {
       toast.error(error.message || t("errors.login"));
     } finally {

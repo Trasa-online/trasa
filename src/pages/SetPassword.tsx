@@ -70,7 +70,7 @@ const SetPassword = () => {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       toast.success("Hasło ustawione!");
-      navigate("/onboarding");
+      navigate("/");
     } catch (error: any) {
       toast.error(error.message || "Nie udało się ustawić hasła.");
     } finally {
@@ -89,8 +89,9 @@ const SetPassword = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <div className="flex-1 flex flex-col items-center justify-center px-6">
-        <h1 className="text-5xl font-black tracking-tight mb-2">TRASA</h1>
-        <p className="text-muted-foreground text-center text-sm max-w-[280px] mb-8">
+        <img src="/icon-192.png" alt="TRASA" className="w-14 h-14 rounded-2xl mb-4" style={{ boxShadow: "1px 1px 4px rgba(0,0,0,0.12)" }} />
+        <h1 className="text-4xl font-black tracking-tight mb-1.5">TRASA</h1>
+        <p className="text-muted-foreground text-center text-sm max-w-[260px] leading-relaxed mb-8">
           Ustaw hasło do swojego konta, aby móc się logować.
         </p>
 
@@ -120,7 +121,7 @@ const SetPassword = () => {
               className="bg-card"
             />
           </div>
-          <Button type="submit" className="w-full rounded-full" disabled={loading}>
+          <Button type="submit" className="w-full rounded-2xl py-6 bg-orange-600 hover:bg-orange-700 text-white font-bold text-base" disabled={loading}>
             {loading ? "Zapisuję..." : "Ustaw hasło"}
           </Button>
         </form>

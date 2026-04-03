@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { trackPageView } from "@/lib/analytics";
 
 function RouteTracker() {
@@ -23,7 +23,6 @@ import DayReview from "./pages/DayReview";
 import DayPlan from "./pages/DayPlan";
 import Terms from "./pages/Terms";
 import MyRoutes from "./pages/MyRoutes";
-import Onboarding from "./pages/Onboarding";
 import SetPassword from "./pages/SetPassword";
 import Admin from "./pages/Admin";
 import TravelerProfile from "./pages/TravelerProfile";
@@ -57,7 +56,7 @@ const App = () => (
           <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
           <Route path="/day-review" element={<DayReview />} />
           <Route path="/day-plan" element={<DayPlan />} />
-          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/onboarding" element={<Navigate to="/" replace />} />
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/moje-trasy" element={<AppLayout><MyTrips /></AppLayout>} />

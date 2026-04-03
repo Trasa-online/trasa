@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Mic, BookOpen, UserPlus, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useEffect } from "react";
 import FeedActivityCard from "@/components/social/FeedActivityCard";
 
 const Home = () => {
@@ -22,12 +21,6 @@ const Home = () => {
     },
     enabled: !!user,
   });
-
-  useEffect(() => {
-    if (!loading && user && profile !== undefined && (profile as any)?.onboarding_completed === false) {
-      navigate("/onboarding");
-    }
-  }, [loading, user, profile, navigate]);
 
   // Single query: get following IDs + their routes in one go
   // No two-query chain — avoids race conditions with cache
@@ -81,7 +74,7 @@ const Home = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 max-w-sm mx-auto w-full">
         <div className="text-center mb-10">
-          <div className="h-16 w-16 rounded-full orb-gradient mx-auto mb-6" />
+          <img src="/icon-192.png" alt="TRASA" className="w-16 h-16 rounded-2xl mx-auto mb-6" style={{ boxShadow: "1px 1px 4px rgba(0,0,0,0.12)" }} />
           <h1 className="text-3xl font-black tracking-tight mb-3">TRASA</h1>
           <p className="text-lg font-semibold mb-2">{t("landing.tagline")}</p>
           <p className="text-muted-foreground text-sm max-w-[280px] mx-auto leading-relaxed">
