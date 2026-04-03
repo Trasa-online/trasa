@@ -484,6 +484,8 @@ interface PlaceSwiperProps {
   showAddPlace?: boolean;
   onAddPlaceClose?: () => void;
   exploreMode?: boolean;
+  groupSessionId?: string;
+  onGroupFinished?: () => void;
 }
 
 // Category groups for diversity balancing
@@ -497,7 +499,7 @@ function getGroupForCategory(cat: string): Set<string> | null {
 
 const DIVERSITY_THRESHOLD = 2; // after 2 consecutive likes from same group, deprioritize
 
-const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, exploreMode = false }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, exploreMode = false, groupSessionId, onGroupFinished }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -612,15 +614,36 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
         reaction,
       }, { onConflict: "user_id,place_id" })
       .then(() => {});
+    if (groupSessionId) {
+      (supabase as any)
+        .from("group_session_reactions")
+        .upsert({
+          session_id: groupSessionId,
+          user_id: user.id,
+          place_name: place.place_name,
+          place_id: place.id,
+          photo_url: place.photo_url ?? null,
+          category: place.category,
+          reaction,
+        }, { onConflict: "session_id,user_id,place_name" })
+        .then(() => {});
+    }
   };
 
-  const deleteReaction = (placeId: string) => {
+  const deleteReaction = (place: MockPlace) => {
     if (!user) return;
     (supabase as any)
       .from("user_place_reactions")
       .delete()
-      .match({ user_id: user.id, place_id: placeId })
+      .match({ user_id: user.id, place_id: place.id })
       .then(() => {});
+    if (groupSessionId) {
+      (supabase as any)
+        .from("group_session_reactions")
+        .delete()
+        .match({ session_id: groupSessionId, user_id: user.id, place_name: place.place_name })
+        .then(() => {});
+    }
   };
 
   const trackAndRebalance = (place: MockPlace) => {
@@ -675,7 +698,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
     } else if (last.reaction === "skipped") {
       setSkippedPlaces(prev => prev.filter(p => p.id !== last.place.id));
     }
-    deleteReaction(last.place.id);
+    deleteReaction(last.place);
   };
 
   const handleTap = (place: MockPlace) => {
@@ -787,6 +810,26 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
 
   // All cards swiped
   if (queue.length === 0) {
+    if (groupSessionId) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
+          <div className="text-5xl">🎉</div>
+          <div>
+            <p className="font-bold text-lg">Oceniłeś wszystkie miejsca!</p>
+            <p className="text-muted-foreground text-sm mt-1">
+              Polubiłeś {likedPlaces.length + superLikedPlaces.length} miejsc.
+              Sprawdź co dopasowaliście z grupą!
+            </p>
+          </div>
+          <button
+            onClick={onGroupFinished}
+            className="py-3 px-8 rounded-2xl bg-orange-600 text-white font-semibold text-sm active:scale-95 transition-transform"
+          >
+            Zobacz dopasowania
+          </button>
+        </div>
+      );
+    }
     return (
       <EmptyState
         likedPlaces={likedPlaces}
@@ -907,7 +950,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
       </div>
 
       {/* Proceed CTA */}
-      {(likedPlaces.length + superLikedPlaces.length > 0) && !showAddPlace && (
+      {!groupSessionId && (likedPlaces.length + superLikedPlaces.length > 0) && !showAddPlace && (
         <div className="px-4 pb-3 shrink-0 flex gap-2">
           {exploreMode && (
             <button

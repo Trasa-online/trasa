@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, X, Plus } from "lucide-react";
+import { ArrowLeft, Search, X, Plus, Users } from "lucide-react";
 import CityPicker from "@/components/plan-wizard/CityPicker";
 import StartingLocationPicker from "@/components/plan-wizard/StartingLocationPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
@@ -70,7 +70,15 @@ const PlanWizard = () => {
         ) : (
           <>
             <div className="flex-1" />
-            {step === 4 ? (
+            {step === 1 ? (
+              <button
+                onClick={() => navigate("/sesja/nowa")}
+                className="h-9 w-9 flex items-center justify-center -mr-1 shrink-0 text-muted-foreground"
+                aria-label="Sesja grupowa"
+              >
+                <Users className="h-5 w-5" />
+              </button>
+            ) : step === 4 ? (
               <div className="flex items-center gap-1 -mr-1">
                 <button
                   onClick={() => navigate("/historia", { state: { fromCity: city } })}

@@ -32,6 +32,8 @@ import SwipeHistory from "./pages/SwipeHistory";
 import EditPlan from "./pages/EditPlan";
 import ReviewSummary from "./pages/ReviewSummary";
 import PlanWizard from "./pages/PlanWizard";
+import CreateGroupSession from "./pages/CreateGroupSession";
+import GroupSession from "./pages/GroupSession";
 import UserSearch from "./pages/UserSearch";
 import AdminRoutes from "./pages/AdminRoutes";
 import SharedRoute from "./pages/SharedRoute";
@@ -66,6 +68,8 @@ const App = () => (
           <Route path="/edit-plan" element={<EditPlan />} />
           <Route path="/review-summary" element={<ReviewSummary />} />
           <Route path="/plan" element={<PlanWizard />} />
+          <Route path="/sesja/nowa" element={<CreateGroupSession />} />
+          <Route path="/sesja/:joinCode" element={<GroupSession />} />
           <Route path="/search" element={<UserSearch />} />
           <Route path="/admin/routes" element={<AdminRoutes />} />
           <Route path="/route/:id" element={<SharedRoute />} />
