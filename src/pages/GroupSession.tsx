@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, MapPin, Star, Check, Route } from "lucide-react";
+import { ArrowLeft, Users, MapPin, Star, Check, Route, UserPlus } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -146,6 +146,8 @@ const GroupSession = () => {
     }
 
     const newMatches = matches.filter(m => !prevMatchNamesRef.current!.has(m.place_name));
+    prevMatchNamesRef.current = currentNames;
+
     if (newMatches.length > 0) {
       const match = newMatches[0];
       // Find who else contributed to this match (not current user)
@@ -156,8 +158,6 @@ const GroupSession = () => {
       const t = setTimeout(() => setBannerData(null), 4000);
       return () => clearTimeout(t);
     }
-
-    prevMatchNamesRef.current = currentNames;
   }, [matches]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
@@ -372,12 +372,21 @@ const GroupSession = () => {
           <p className="font-bold text-base leading-tight">{session.city}</p>
           <p className="text-xs text-muted-foreground">{members.length} {members.length === 1 ? "osoba" : "osoby"} · #{joinCode}</p>
         </div>
-        <div className="flex -space-x-2 shrink-0">
-          {members.slice(0, 4).map((m: any) => (
-            <div key={m.user_id} className="h-7 w-7 rounded-full bg-orange-600/20 border-2 border-background flex items-center justify-center text-xs font-bold text-orange-700" title={m.profile?.first_name || m.profile?.username}>
-              {(m.profile?.first_name || m.profile?.username || "?")[0].toUpperCase()}
-            </div>
-          ))}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex -space-x-2">
+            {members.slice(0, 4).map((m: any) => (
+              <div key={m.user_id} className="h-7 w-7 rounded-full bg-orange-600/20 border-2 border-background flex items-center justify-center text-xs font-bold text-orange-700" title={m.profile?.first_name || m.profile?.username}>
+                {(m.profile?.first_name || m.profile?.username || "?")[0].toUpperCase()}
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => navigate("/search")}
+            className="h-7 w-7 rounded-full bg-muted flex items-center justify-center"
+            title="Znajdź znajomego"
+          >
+            <UserPlus className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
         </div>
       </div>
 

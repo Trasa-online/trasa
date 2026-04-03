@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, Check, ArrowRight, Users, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, Check, ArrowRight, Users, Trash2, Search, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +30,8 @@ const CreateGroupSession = () => {
   const [copied, setCopied] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joining, setJoining] = useState(false);
+  const [friendSearch, setFriendSearch] = useState("");
+  const [copiedForUser, setCopiedForUser] = useState<string | null>(null);
 
   // Active sessions the user is already a member of
   const { data: activeSessions = [] } = useQuery({
@@ -65,6 +67,30 @@ const CreateGroupSession = () => {
       return unique as string[];
     },
   });
+
+  // Load all profiles for friend search (only when session is created)
+  const { data: allProfiles = [] } = useQuery({
+    queryKey: ["all-profiles-invite", user?.id],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("profiles")
+        .select("id, username, first_name, avatar_url")
+        .neq("id", user?.id ?? "")
+        .not("username", "is", null)
+        .order("username")
+        .limit(200);
+      return (data ?? []) as { id: string; username: string; first_name: string | null; avatar_url: string | null }[];
+    },
+    enabled: !!createdCode && !!user,
+  });
+
+  const friendResults = useMemo(() => {
+    const q = friendSearch.trim().replace(/^@/, "").toLowerCase();
+    if (!q) return [];
+    return allProfiles
+      .filter(p => p.username?.toLowerCase().includes(q) || p.first_name?.toLowerCase().includes(q))
+      .slice(0, 5);
+  }, [friendSearch, allProfiles]);
 
   const handleCreate = async () => {
     if (!user) { navigate("/auth"); return; }
@@ -279,6 +305,62 @@ const CreateGroupSession = () => {
                   Kopiuj link
                 </button>
               </div>
+            </div>
+
+            {/* Friend invite search */}
+            <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-muted-foreground shrink-0" />
+                <p className="text-sm font-semibold">Zaproś znajomego po username</p>
+              </div>
+              <div className="flex items-center gap-2 bg-background border border-border/60 rounded-xl px-3 h-10">
+                <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                <input
+                  type="text"
+                  value={friendSearch}
+                  onChange={e => setFriendSearch(e.target.value)}
+                  placeholder="Szukaj @username..."
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                />
+              </div>
+              {friendResults.length > 0 && (
+                <div className="space-y-1">
+                  {friendResults.map(profile => {
+                    const initials = (profile.first_name || profile.username || "?")[0].toUpperCase();
+                    const isCopied = copiedForUser === profile.id;
+                    return (
+                      <div key={profile.id} className="flex items-center gap-3 rounded-xl bg-background p-2">
+                        <div className="h-8 w-8 rounded-full bg-orange-600/15 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
+                          {initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold leading-tight">{profile.first_name || profile.username}</p>
+                          <p className="text-xs text-muted-foreground">@{profile.username}</p>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            await navigator.clipboard.writeText(`${window.location.origin}/sesja/${createdCode}`);
+                            setCopiedForUser(profile.id);
+                            setTimeout(() => setCopiedForUser(null), 2000);
+                            toast.success(`Link skopiowany – wyślij go @${profile.username}!`);
+                          }}
+                          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-600 text-white text-xs font-semibold active:scale-95 transition-transform"
+                        >
+                          {isCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                          {isCopied ? "Skopiowano!" : "Kopiuj link"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {friendSearch.trim().length > 0 && friendResults.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-1">Nie znaleziono użytkownika</p>
+              )}
             </div>
 
             <button

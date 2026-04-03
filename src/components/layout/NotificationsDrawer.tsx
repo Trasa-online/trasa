@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Bell, Heart, MessageCircle, UserPlus, MapPin, Route } from "lucide-react";
+import { X, Bell, Heart, MessageCircle, UserPlus, MapPin, Route, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 
@@ -12,17 +12,19 @@ interface Notification {
   route_id: string | null;
   created_at: string;
   read: boolean;
+  metadata?: Record<string, string> | null;
   actor?: { username: string | null; avatar_url: string | null };
 }
 
-const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; label: (username: string) => string }> = {
-  like:           { icon: Heart,         color: "text-rose-500 bg-rose-100",     label: u => `${u} polubił(a) Twoją trasę` },
-  comment:        { icon: MessageCircle, color: "text-blue-500 bg-blue-100",     label: u => `${u} skomentował(a) Twoją trasę` },
-  follower:       { icon: UserPlus,      color: "text-violet-500 bg-violet-100", label: u => `${u} zaczął(a) Cię obserwować` },
+const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; label: (username: string, metadata?: Record<string, string> | null) => string }> = {
+  like:           { icon: Heart,         color: "text-rose-500 bg-rose-100",      label: u => `${u} polubił(a) Twoją trasę` },
+  comment:        { icon: MessageCircle, color: "text-blue-500 bg-blue-100",      label: u => `${u} skomentował(a) Twoją trasę` },
+  follower:       { icon: UserPlus,      color: "text-violet-500 bg-violet-100",  label: u => `${u} zaczął(a) Cię obserwować` },
   new_route:      { icon: Route,         color: "text-emerald-500 bg-emerald-100",label: u => `${u} dodał(a) nową trasę` },
-  route_updated:  { icon: Route,         color: "text-amber-500 bg-amber-100",   label: u => `${u} zaktualizował(a) trasę` },
-  mention:        { icon: MessageCircle, color: "text-orange-500 bg-orange-100", label: u => `${u} wspomniał(a) o Tobie` },
-  pin_visit:      { icon: MapPin,        color: "text-teal-500 bg-teal-100",     label: u => `${u} odwiedził(a) Twoje miejsce` },
+  route_updated:  { icon: Route,         color: "text-amber-500 bg-amber-100",    label: u => `${u} zaktualizował(a) trasę` },
+  mention:        { icon: MessageCircle, color: "text-orange-500 bg-orange-100",  label: u => `${u} wspomniał(a) o Tobie` },
+  pin_visit:      { icon: MapPin,        color: "text-teal-500 bg-teal-100",      label: u => `${u} odwiedził(a) Twoje miejsce` },
+  group_match:    { icon: Users,         color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} też polubił(a) ${meta?.place_name ?? "to samo miejsce"}! Match 🎉` },
 };
 
 interface Props {
@@ -39,7 +41,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
     queryFn: async () => {
       const { data } = await supabase
         .from("notifications")
-        .select("id, type, actor_id, route_id, created_at, read")
+        .select("id, type, actor_id, route_id, created_at, read, metadata")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -140,6 +142,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                 const Icon = cfg.icon;
                 const username = n.actor?.username ?? "Ktoś";
                 const timeAgo = formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: pl });
+                const labelText = cfg.label(username, n.metadata);
 
                 return (
                   <div
@@ -150,10 +153,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm leading-snug">
-                        <span className="font-semibold">@{username}</span>{" "}
-                        <span className="text-foreground/80">{cfg.label("").replace(username + " ", "")}</span>
-                      </p>
+                      <p className="text-sm leading-snug text-foreground/80">{labelText}</p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">{timeAgo}</p>
                     </div>
                     {!n.read && (

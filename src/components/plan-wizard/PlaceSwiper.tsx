@@ -541,6 +541,17 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
         if (reactions?.length) {
           ratedPlaceIds = new Set(reactions.map((r: { place_id: string }) => r.place_id));
         }
+        // Also filter out places already swiped in the group session
+        if (groupSessionId) {
+          const { data: groupReactions } = await (supabase as any)
+            .from("group_session_reactions")
+            .select("place_id")
+            .eq("session_id", groupSessionId)
+            .eq("user_id", user.id);
+          if (groupReactions?.length) {
+            for (const r of groupReactions) ratedPlaceIds.add(r.place_id);
+          }
+        }
       }
 
       const likedSet = new Set(initialLikedPlaceNames.map(n => n.toLowerCase()));
