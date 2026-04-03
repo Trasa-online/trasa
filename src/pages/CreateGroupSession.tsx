@@ -243,13 +243,27 @@ const CreateGroupSession = () => {
             <div className="rounded-2xl border border-border bg-card p-5 text-center">
               <p className="text-xs text-muted-foreground mb-2">Kod sesji</p>
               <p className="text-4xl font-black tracking-widest mb-4">{createdCode}</p>
-              <button
-                onClick={handleCopy}
-                className="w-full py-3 rounded-xl border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
-              >
-                {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
-                {copied ? "Skopiowano!" : "Kopiuj link zaproszenia"}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(createdCode!);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                    toast.success("Skopiowano kod!");
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-orange-600 text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                >
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copied ? "Skopiowano!" : "Kopiuj kod"}
+                </button>
+                <button
+                  onClick={handleCopy}
+                  className="flex-1 py-3 rounded-xl border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                >
+                  <Copy className="h-4 w-4" />
+                  Kopiuj link
+                </button>
+              </div>
             </div>
 
             <button
