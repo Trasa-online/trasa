@@ -15,13 +15,34 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["journal-entries", userId],
     queryFn: async () => {
-      const { data } = await supabase
+      // Own completed routes
+      const { data: ownRoutes } = await supabase
         .from("routes")
         .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos")
         .eq("user_id", userId)
         .eq("chat_status", "completed")
         .order("updated_at", { ascending: false });
-      return (data ?? []) as any[];
+
+      // Group routes created by others that user is a member of
+      const { data: memberRows } = await (supabase as any)
+        .from("group_session_members")
+        .select("session_id")
+        .eq("user_id", userId);
+
+      let groupRoutes: any[] = [];
+      if (memberRows?.length) {
+        const sessionIds = memberRows.map((m: any) => m.session_id);
+        const { data } = await (supabase as any)
+          .from("routes")
+          .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos")
+          .in("group_session_id", sessionIds)
+          .neq("user_id", userId)
+          .eq("chat_status", "completed")
+          .order("updated_at", { ascending: false });
+        groupRoutes = data || [];
+      }
+
+      return [...(ownRoutes ?? []), ...groupRoutes] as any[];
     },
     enabled: !!userId,
   });
