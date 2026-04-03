@@ -27,11 +27,13 @@ const CreateGroupSession = () => {
   const [selectedCity, setSelectedCity] = useState("");
   const [loading, setLoading] = useState(false);
   const [createdCode, setCreatedCode] = useState<string | null>(null);
+  const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [friendSearch, setFriendSearch] = useState("");
-  const [copiedForUser, setCopiedForUser] = useState<string | null>(null);
+  const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
+  const [inviting, setInviting] = useState<string | null>(null);
 
   // Active sessions the user is already a member of
   const { data: activeSessions = [] } = useQuery({
@@ -110,6 +112,7 @@ const CreateGroupSession = () => {
         .insert({ session_id: session.id, user_id: user.id });
 
       setCreatedCode(code);
+      setCreatedSessionId(session.id);
     } catch (e: any) {
       toast.error(e.message || "Błąd podczas tworzenia sesji");
     } finally {
@@ -331,7 +334,8 @@ const CreateGroupSession = () => {
                 <div className="space-y-1">
                   {friendResults.map(profile => {
                     const initials = (profile.first_name || profile.username || "?")[0].toUpperCase();
-                    const isCopied = copiedForUser === profile.id;
+                    const isInvited = invitedIds.has(profile.id);
+                    const isSending = inviting === profile.id;
                     return (
                       <div key={profile.id} className="flex items-center gap-3 rounded-xl bg-background p-2">
                         <div className="h-8 w-8 rounded-full bg-orange-600/15 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
@@ -342,16 +346,35 @@ const CreateGroupSession = () => {
                           <p className="text-xs text-muted-foreground">@{profile.username}</p>
                         </div>
                         <button
+                          disabled={isInvited || isSending}
                           onClick={async () => {
-                            await navigator.clipboard.writeText(`${window.location.origin}/sesja/${createdCode}`);
-                            setCopiedForUser(profile.id);
-                            setTimeout(() => setCopiedForUser(null), 2000);
-                            toast.success(`Link skopiowany – wyślij go @${profile.username}!`);
+                            if (!createdSessionId) return;
+                            setInviting(profile.id);
+                            try {
+                              const { error } = await (supabase as any).rpc("send_group_invite", {
+                                p_target_user_id: profile.id,
+                                p_session_id: createdSessionId,
+                              });
+                              if (error) throw error;
+                              setInvitedIds(prev => new Set([...prev, profile.id]));
+                              toast.success(`Zaproszenie wysłane do @${profile.username}!`);
+                            } catch (e: any) {
+                              toast.error(e.message || "Błąd podczas wysyłania zaproszenia");
+                            } finally {
+                              setInviting(null);
+                            }
                           }}
-                          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-600 text-white text-xs font-semibold active:scale-95 transition-transform"
+                          className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold active:scale-95 transition-transform disabled:opacity-60 disabled:scale-100 ${
+                            isInvited
+                              ? "border border-border/60 text-emerald-600"
+                              : "bg-orange-600 text-white"
+                          }`}
                         >
-                          {isCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                          {isCopied ? "Skopiowano!" : "Kopiuj link"}
+                          {isInvited
+                            ? <><Check className="h-3 w-3" />Zaproszono</>
+                            : isSending
+                            ? "…"
+                            : <><UserPlus className="h-3 w-3" />Zaproś</>}
                         </button>
                       </div>
                     );

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { X, Bell, Heart, MessageCircle, UserPlus, MapPin, Route, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -25,6 +26,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   mention:        { icon: MessageCircle, color: "text-orange-500 bg-orange-100",  label: u => `${u} wspomniał(a) o Tobie` },
   pin_visit:      { icon: MapPin,        color: "text-teal-500 bg-teal-100",      label: u => `${u} odwiedził(a) Twoje miejsce` },
   group_match:    { icon: Users,         color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} też polubił(a) ${meta?.place_name ?? "to samo miejsce"}! Match 🎉` },
+  group_invite:   { icon: Users,         color: "text-violet-500 bg-violet-100",  label: (u, meta) => `${u} zaprasza Cię do wspólnego matchowania w ${meta?.city ?? "sesji grupowej"}` },
 };
 
 interface Props {
@@ -35,6 +37,7 @@ interface Props {
 
 export default function NotificationsDrawer({ open, onClose, userId }: Props) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ["notifications", userId],
@@ -155,6 +158,14 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm leading-snug text-foreground/80">{labelText}</p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">{timeAgo}</p>
+                      {n.type === "group_invite" && n.metadata?.join_code && (
+                        <button
+                          onClick={() => { onClose(); navigate(`/sesja/${n.metadata!.join_code}`); }}
+                          className="mt-2 px-3 py-1.5 rounded-full bg-orange-600 text-white text-xs font-semibold active:scale-95 transition-transform"
+                        >
+                          Dołącz do sesji →
+                        </button>
+                      )}
                     </div>
                     {!n.read && (
                       <div className="flex-shrink-0 h-2 w-2 rounded-full bg-orange-600 mt-1.5" />
