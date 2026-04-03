@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, MapPin, Star, Check, Route, UserPlus } from "lucide-react";
+import { ArrowLeft, Users, MapPin, Star, Check, Route, UserPlus, Play, Clock } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,6 +49,11 @@ const GroupSession = () => {
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const prevMatchNamesRef = useRef<Set<string> | null>(null);
+
+  // ── Round state ──────────────────────────────────────────────────────────────
+  const [myRoundDone, setMyRoundDone] = useState(false);
+  const [startingRound, setStartingRound] = useState(false);
+  const [voting, setVoting] = useState(false);
 
   // ── Data queries ────────────────────────────────────────────────────────────
 
@@ -100,6 +105,37 @@ const GroupSession = () => {
     refetchInterval: 5000,
   });
 
+  // ── Current round ───────────────────────────────────────────────────────────
+
+  const { data: currentRound } = useQuery({
+    queryKey: ["group-session-round", session?.id],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("group_session_rounds")
+        .select("*")
+        .eq("session_id", session!.id)
+        .order("round_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data as { id: string; round_number: number; place_ids: string[]; status: string } | null;
+    },
+    enabled: !!session?.id,
+    refetchInterval: 3000,
+  });
+
+  const { data: roundProgress = [] } = useQuery({
+    queryKey: ["group-round-progress", session?.id, currentRound?.round_number],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("group_session_members")
+        .select("user_id, current_round_done, current_round_vote, swiping_active")
+        .eq("session_id", session!.id);
+      return data || [];
+    },
+    enabled: !!session?.id && !!currentRound,
+    refetchInterval: 3000,
+  });
+
   // ── Computed ────────────────────────────────────────────────────────────────
 
   const isMember = members.some((m: any) => m.user_id === user?.id);
@@ -134,6 +170,17 @@ const GroupSession = () => {
   }, [reactions]);
 
   const selectedMatches = matches.filter(m => !deselectedPlaces.has(m.place_name));
+
+  // ── Round computed ───────────────────────────────────────────────────────────
+
+  const myRoundProgress = roundProgress.find((m: any) => m.user_id === user?.id);
+  const mySwipingActive = myRoundProgress?.swiping_active ?? true;
+  // True when the user finished swiping this round (local flag OR DB says done)
+  const iDoneThisRound = myRoundDone || (myRoundProgress?.current_round_done ?? false);
+  const activeSwipers = roundProgress.filter((m: any) => m.swiping_active);
+  const doneCount = activeSwipers.filter((m: any) => m.current_round_done).length;
+  const isVotingPhase = currentRound?.status === "voting";
+  const myVote = myRoundProgress?.current_round_vote ?? null;
 
   // ── Match banner detection ──────────────────────────────────────────────────
 
@@ -177,6 +224,60 @@ const GroupSession = () => {
       toast.error(e.message || "Błąd podczas dołączania");
     } finally {
       setJoining(false);
+    }
+  };
+
+  const handleStartRound = async (roundNumber: number) => {
+    if (!session) return;
+    setStartingRound(true);
+    try {
+      const { error } = await (supabase as any).rpc("start_group_round", {
+        p_session_id: session.id,
+        p_round_number: roundNumber,
+      });
+      if (error) throw error;
+      setMyRoundDone(false);
+      queryClient.invalidateQueries({ queryKey: ["group-session-round", session.id] });
+      queryClient.invalidateQueries({ queryKey: ["group-round-progress", session.id] });
+    } catch (e: any) {
+      toast.error(e.message || "Błąd podczas startu rundy");
+    } finally {
+      setStartingRound(false);
+    }
+  };
+
+  const handleRoundComplete = async () => {
+    if (!session || !currentRound) return;
+    setMyRoundDone(true);
+    try {
+      await (supabase as any).rpc("complete_round_for_user", {
+        p_session_id: session.id,
+        p_round_number: currentRound.round_number,
+      });
+      queryClient.invalidateQueries({ queryKey: ["group-round-progress", session.id] });
+      queryClient.invalidateQueries({ queryKey: ["group-session-round", session.id] });
+    } catch (e: any) {
+      toast.error(e.message || "Błąd zapisu");
+    }
+  };
+
+  const handleVote = async (vote: "continue" | "finish" | "opt_out") => {
+    if (!session) return;
+    setVoting(true);
+    try {
+      const { error } = await (supabase as any).rpc("vote_on_round", {
+        p_session_id: session.id,
+        p_vote: vote,
+      });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["group-round-progress", session.id] });
+      if (vote === "finish" || vote === "opt_out") {
+        setTab("matches");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Błąd podczas głosowania");
+    } finally {
+      setVoting(false);
     }
   };
 
@@ -426,14 +527,159 @@ const GroupSession = () => {
         )}
 
         {/* ── Swipe tab ── */}
-        {tab === "swipe" && (
-          <PlaceSwiper
-            city={session.city}
-            date={new Date()}
-            groupSessionId={session.id}
-            onGroupFinished={() => setTab("matches")}
-          />
-        )}
+        {tab === "swipe" && (() => {
+          // User opted out of swiping
+          if (!mySwipingActive && myVote) {
+            return (
+              <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 text-center">
+                <p className="text-3xl">👀</p>
+                <p className="font-bold">Nie swipe'ujesz w tej rundzie</p>
+                <p className="text-sm text-muted-foreground">Twoje wcześniejsze lajki nadal liczą się do matchów.</p>
+                <button onClick={() => setTab("matches")} className="py-3 px-6 rounded-2xl bg-orange-600 text-white font-semibold text-sm">
+                  Zobacz dopasowania
+                </button>
+              </div>
+            );
+          }
+
+          // ── Decision modal (voting phase) ───────────────────────────────
+          if (isVotingPhase && !myVote) {
+            const nextRound = (currentRound?.round_number ?? 0) + 1;
+            return (
+              <div className="flex-1 flex flex-col items-center justify-center px-6 gap-5">
+                <div className="text-center">
+                  <p className="text-4xl mb-3">🏁</p>
+                  <p className="text-xl font-black">Koniec rundy {currentRound?.round_number}!</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Znaleźliście <strong>{matches.length}</strong> {matches.length === 1 ? "wspólne miejsce" : "wspólnych miejsc"}
+                  </p>
+                </div>
+
+                <div className="w-full space-y-2.5">
+                  {isCreator ? (
+                    <button
+                      onClick={() => handleStartRound(nextRound)}
+                      disabled={startingRound || voting}
+                      className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
+                    >
+                      <Play className="h-4 w-4" />
+                      {startingRound ? "Startuję…" : `Swipe'uj kolejne 20 →`}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleVote("continue")}
+                      disabled={voting}
+                      className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
+                    >
+                      {voting ? "…" : "Chcę swipe'ować dalej"}
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => handleVote("finish")}
+                    disabled={voting}
+                    className="w-full py-3.5 rounded-2xl border border-border/60 bg-card font-semibold text-sm active:scale-[0.97] transition-transform disabled:opacity-40"
+                  >
+                    Stwórz trasę z {matches.length} miejsc
+                  </button>
+
+                  <button
+                    onClick={() => handleVote("opt_out")}
+                    disabled={voting}
+                    className="w-full py-2 text-xs text-muted-foreground underline active:opacity-60"
+                  >
+                    Wyjdź z matchowania (zostań w podróży)
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          // ── Waiting for others ──────────────────────────────────────────
+          if (iDoneThisRound && !isVotingPhase) {
+            return (
+              <div className="flex-1 flex flex-col items-center justify-center px-8 gap-5 text-center">
+                <Clock className="h-10 w-10 text-muted-foreground/40" />
+                <div>
+                  <p className="font-bold text-lg">Czekam na pozostałych…</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {doneCount} / {activeSwipers.length} osób skończyło rundę {currentRound?.round_number}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  {activeSwipers.map((m: any) => {
+                    const member = members.find((mem: any) => mem.user_id === m.user_id);
+                    const done = m.current_round_done;
+                    return (
+                      <div key={m.user_id} className="flex flex-col items-center gap-1">
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors ${done ? "bg-orange-600 text-white border-orange-600" : "bg-muted text-muted-foreground border-border/40"}`}>
+                          {(member?.profile?.first_name || member?.profile?.username || "?")[0].toUpperCase()}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">{done ? "✓" : "…"}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {matches.length > 0 ? `${matches.length} matchów do tej pory` : "Brak matchów jeszcze"}
+                </p>
+              </div>
+            );
+          }
+
+          // ── No round started yet ────────────────────────────────────────
+          if (!currentRound || currentRound.status === "completed") {
+            const nextRound = (currentRound?.round_number ?? 0) + 1;
+            return (
+              <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
+                <div className="h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
+                  <Users className="h-10 w-10 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-xl font-black mb-1">
+                    {nextRound === 1 ? "Gotowi na start?" : `Runda ${nextRound}`}
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {nextRound === 1
+                      ? `${members.length} ${members.length === 1 ? "osoba" : "osoby"} w pokoju. Wszyscy zobaczycie te same 20 miejsc.`
+                      : `Kolejna pula 20 nowych miejsc. ${matches.length} matchów do tej pory.`}
+                  </p>
+                </div>
+                {isCreator ? (
+                  <button
+                    onClick={() => handleStartRound(nextRound)}
+                    disabled={startingRound}
+                    className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
+                  >
+                    <Play className="h-5 w-5" />
+                    {startingRound ? "Startuję…" : nextRound === 1 ? "Rozpocznij matchowanie" : `Runda ${nextRound} — start!`}
+                  </button>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex gap-1.5">
+                      {[0, 1, 2].map(i => (
+                        <div key={i} className="h-2 w-2 rounded-full bg-orange-600/40 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                      ))}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Czekam aż host rozpocznie rundę…</p>
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // ── Active round: show swiper ───────────────────────────────────
+          return (
+            <PlaceSwiper
+              city={session.city}
+              date={new Date()}
+              groupSessionId={session.id}
+              roundPlaceIds={currentRound.place_ids}
+              onRoundComplete={handleRoundComplete}
+              onGroupFinished={() => setTab("matches")}
+            />
+          );
+        })()}
 
         {/* ── Matches tab ── */}
         {tab === "matches" && (

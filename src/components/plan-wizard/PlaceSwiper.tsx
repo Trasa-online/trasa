@@ -486,6 +486,10 @@ interface PlaceSwiperProps {
   exploreMode?: boolean;
   groupSessionId?: string;
   onGroupFinished?: () => void;
+  /** When set, PlaceSwiper loads exactly these place IDs in this order (group round mode). */
+  roundPlaceIds?: string[];
+  /** Called when the user finishes swiping all round places (instead of showing the default empty state). */
+  onRoundComplete?: () => void;
 }
 
 // Category groups for diversity balancing
@@ -499,7 +503,7 @@ function getGroupForCategory(cat: string): Set<string> | null {
 
 const DIVERSITY_THRESHOLD = 2; // after 2 consecutive likes from same group, deprioritize
 
-const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, exploreMode = false, groupSessionId, onGroupFinished }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -522,6 +526,28 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
   useEffect(() => {
     setLoading(true);
     const fetchPlaces = async () => {
+
+      // ── Group round mode: load exactly the round's place IDs in order ──
+      if (roundPlaceIds?.length) {
+        const { data } = await (supabase as any)
+          .from("places")
+          .select("*")
+          .in("id", roundPlaceIds);
+
+        if (!data?.length) { setLoading(false); return; }
+
+        // Preserve server-defined order
+        const orderMap: Record<string, number> = {};
+        roundPlaceIds.forEach((id, i) => { orderMap[id] = i; });
+        const ordered = [...data].sort((a: MockPlace, b: MockPlace) => orderMap[a.id] - orderMap[b.id]);
+
+        setAllPlaces(ordered);
+        setQueue(ordered);
+        setLoading(false);
+        return;
+      }
+
+      // ── Normal mode ──────────────────────────────────────────────────────
       const { data } = await (supabase as any)
         .from("places")
         .select("*")
@@ -559,7 +585,6 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
       const liked = data.filter((p: MockPlace) => likedSet.has(p.place_name.toLowerCase()));
       const skipped = data.filter((p: MockPlace) => skippedSet.has(p.place_name.toLowerCase()));
 
-      // Filter out places user already rated (unless they come from explicit return state)
       const hasReturnState = initialLikedPlaceNames.length > 0 || initialSkippedPlaceNames.length > 0;
       const remaining = data.filter((p: MockPlace) => {
         if (likedSet.has(p.place_name.toLowerCase()) || skippedSet.has(p.place_name.toLowerCase())) return false;
@@ -574,7 +599,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
       setLoading(false);
     };
     fetchPlaces();
-  }, [city, user]);
+  }, [city, user, roundPlaceIds]);
 
   // Reorder queue when a category group has been liked too many times consecutively
   const rebalanceQueue = (newRecentGroups: (Set<string> | null)[]) => {
@@ -821,6 +846,11 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
 
   // All cards swiped
   if (queue.length === 0) {
+    // Round mode: hand off to GroupSession which shows waiting/decision UI
+    if (onRoundComplete) {
+      onRoundComplete();
+      return null;
+    }
     if (groupSessionId) {
       return (
         <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
@@ -858,7 +888,9 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
       {/* Progress */}
       <div className="flex items-center justify-between px-5 pb-2 shrink-0">
         <span className="text-xs text-muted-foreground">
-          {city} · {format(date, "d MMM")}
+          {roundPlaceIds?.length
+            ? `Miejsce ${roundPlaceIds.length - queue.length}/${roundPlaceIds.length}`
+            : `${city} · ${format(date, "d MMM")}`}
         </span>
         <span className="text-xs text-muted-foreground">
           {(likedPlaces.length + superLikedPlaces.length) > 0 ? `${likedPlaces.length + superLikedPlaces.length} wybranych` : ""}
