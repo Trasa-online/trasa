@@ -106,7 +106,7 @@ const GroupSession = () => {
   const isCreator = session?.created_by === user?.id;
 
   const matches: MatchItem[] = useMemo(() => {
-    if (!reactions.length || !members.length) return [];
+    if (!reactions.length || members.length < 2) return [];
     const minMatch = Math.min(2, members.length);
     const byPlace: Record<string, { users: Set<string>; data: any; hasSuperLike: boolean }> = {};
     for (const r of reactions) {
