@@ -595,6 +595,20 @@ const GroupSession = () => {
             );
           }
 
+          // ── Voted "continue", waiting for creator to start next round ──
+          if (myVote === "continue" && isVotingPhase) {
+            return (
+              <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 text-center">
+                <p className="text-3xl">👍</p>
+                <p className="font-bold text-lg">Gotowe!</p>
+                <p className="text-sm text-muted-foreground">Czekam aż host rozpocznie kolejną rundę…</p>
+                {matches.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">{matches.length} matchów do tej pory</p>
+                )}
+              </div>
+            );
+          }
+
           // ── Waiting for others ──────────────────────────────────────────
           if (iDoneThisRound && !isVotingPhase) {
             return (
