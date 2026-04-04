@@ -3,8 +3,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Compass, Heart, ThumbsDown, X, ChevronRight, Star, Check, ChevronDown } from "lucide-react";
+import { Compass, Heart, ThumbsDown, X, ChevronRight, Star, Check, ChevronDown, MapPin, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { pl } from "date-fns/locale";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 
 type Country = { code: string; flag: string; name: string; cities: string[] };
@@ -27,6 +29,8 @@ const CATEGORY_LABEL: Record<string, string> = {
   gallery: "Galeria", market: "Targ", viewpoint: "Widok",
   shopping: "Zakupy", experience: "Rozrywka",
 };
+
+type RouteEntry = { id: string; title: string | null; city: string; start_date: string | null };
 
 const SwipeHistory = () => {
   const { user } = useAuth();
@@ -77,6 +81,20 @@ const SwipeHistory = () => {
     enabled: !!user,
   });
 
+  const { data: routes = [] } = useQuery({
+    queryKey: ["user-routes-for-explore", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from("routes")
+        .select("id, title, city, start_date")
+        .eq("user_id", user.id)
+        .order("start_date", { ascending: false });
+      return (data ?? []) as RouteEntry[];
+    },
+    enabled: !!user,
+  });
+
   const toggleMutation = useMutation({
     mutationFn: async (id: string) => {
       const current = reactions.find((r: any) => r.id === id);
@@ -101,6 +119,13 @@ const SwipeHistory = () => {
   const likedCount = countryReactions.filter((r: any) => r.reaction === "liked").length;
   const skippedCount = countryReactions.filter((r: any) => r.reaction === "skipped").length;
   const superLikedCount = countryReactions.filter((r: any) => r.reaction === "super_liked").length;
+
+  // Build city → best matching route lookup (most recent route per city)
+  const routeByCity: Record<string, RouteEntry> = {};
+  for (const route of routes) {
+    const key = route.city?.toLowerCase();
+    if (key && !routeByCity[key]) routeByCity[key] = route;
+  }
 
   const byCity = filtered.reduce<Record<string, any[]>>((acc, p: any) => {
     if (!acc[p.city]) acc[p.city] = [];
@@ -260,51 +285,80 @@ const SwipeHistory = () => {
           }
         </div>
       ) : (
-        <div className="space-y-4">
-          {Object.entries(byCity).map(([city, cityPlaces]) => (
-            <div key={city}>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-1">{city}</p>
-              <div className="rounded-2xl bg-card border border-border/50 overflow-hidden divide-y divide-border/20">
-                {cityPlaces.map((p: any) => (
-                  <div key={p.id} className="flex items-center gap-3 py-2.5 px-4">
-                    <div
-                      className="h-12 w-12 rounded-xl overflow-hidden bg-muted flex-shrink-0 cursor-pointer"
-                      onClick={() => setDetailPlace(p)}
-                    >
-                      {p.photo_url
-                        ? <img src={p.photo_url} alt="" className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center text-xl">{CATEGORY_EMOJI[p.category ?? ""] ?? "📍"}</div>
-                      }
+        <div className="space-y-5">
+          {Object.entries(byCity).map(([city, cityPlaces]) => {
+            const matchedRoute = routeByCity[city.toLowerCase()];
+            return (
+              <div key={city}>
+                {/* Section header */}
+                <div className="flex items-start gap-2 mb-2 px-1">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-orange-600 flex-shrink-0 mt-px" />
+                      <p className="text-sm font-bold truncate">
+                        {matchedRoute?.title ?? city}
+                      </p>
                     </div>
-                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setDetailPlace(p)}>
-                      <p className="text-sm font-semibold leading-tight truncate">{p.place_name}</p>
-                      {p.category && (
-                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-muted text-[11px] text-muted-foreground font-medium">
-                          {CATEGORY_EMOJI[p.category]} {CATEGORY_LABEL[p.category] ?? p.category}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => toggleMutation.mutate(p.id)}
-                        className="h-8 px-2.5 rounded-full bg-muted text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5 active:bg-muted/70"
-                      >
-                        {p.reaction === "liked"
-                          ? <><ThumbsDown className="h-3 w-3" /> Odrzuć</>
-                          : <><Heart className="h-3 w-3" /> Polub</>}
-                      </button>
-                      <button
-                        onClick={() => removeMutation.mutate(p.id)}
-                        className="h-8 w-8 rounded-full bg-muted text-muted-foreground/50 flex items-center justify-center active:bg-muted/70"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+                    {matchedRoute?.start_date ? (
+                      <p className="text-xs text-muted-foreground mt-0.5 ml-5 flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {format(new Date(matchedRoute.start_date), "d MMMM yyyy", { locale: pl })}
+                        {matchedRoute.title && (
+                          <span className="text-muted-foreground/60">· {city}</span>
+                        )}
+                      </p>
+                    ) : matchedRoute?.title ? (
+                      <p className="text-xs text-muted-foreground mt-0.5 ml-5">{city}</p>
+                    ) : null}
                   </div>
-                ))}
+                  <span className="text-xs text-muted-foreground/60 shrink-0 mt-1">
+                    {cityPlaces.length} {cityPlaces.length === 1 ? "miejsce" : cityPlaces.length < 5 ? "miejsca" : "miejsc"}
+                  </span>
+                </div>
+
+                {/* Places card */}
+                <div className="rounded-2xl bg-card border border-border/50 overflow-hidden divide-y divide-border/20">
+                  {cityPlaces.map((p: any) => (
+                    <div key={p.id} className="flex items-center gap-3 py-2.5 px-4">
+                      <div
+                        className="h-12 w-12 rounded-xl overflow-hidden bg-muted flex-shrink-0 cursor-pointer"
+                        onClick={() => setDetailPlace(p)}
+                      >
+                        {p.photo_url
+                          ? <img src={p.photo_url} alt="" className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center text-xl">{CATEGORY_EMOJI[p.category ?? ""] ?? "📍"}</div>
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setDetailPlace(p)}>
+                        <p className="text-sm font-semibold leading-tight truncate">{p.place_name}</p>
+                        {p.category && (
+                          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-muted text-[11px] text-muted-foreground font-medium">
+                            {CATEGORY_EMOJI[p.category]} {CATEGORY_LABEL[p.category] ?? p.category}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => toggleMutation.mutate(p.id)}
+                          className="h-8 px-2.5 rounded-full bg-muted text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5 active:bg-muted/70"
+                        >
+                          {p.reaction === "liked"
+                            ? <><ThumbsDown className="h-3 w-3" /> Odrzuć</>
+                            : <><Heart className="h-3 w-3" /> Polub</>}
+                        </button>
+                        <button
+                          onClick={() => removeMutation.mutate(p.id)}
+                          className="h-8 w-8 rounded-full bg-muted text-muted-foreground/50 flex items-center justify-center active:bg-muted/70"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
