@@ -10,6 +10,7 @@ import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -537,8 +538,9 @@ const GroupSession = () => {
           </div>
         )}
 
-        {/* ── Swipe tab ── */}
-        {tab === "swipe" && (() => {
+        {/* ── Swipe tab — always mounted so PlaceSwiper state survives tab switches ── */}
+        <div className={cn("flex-1 flex flex-col overflow-hidden", tab !== "swipe" && "hidden")}>
+        {(() => {
           // User opted out of swiping
           if (!mySwipingActive && myVote) {
             return (
@@ -567,36 +569,52 @@ const GroupSession = () => {
                 </div>
 
                 <div className="w-full space-y-2.5">
-                  {isCreator ? (
-                    <button
-                      onClick={() => handleStartRound(nextRound)}
-                      disabled={startingRound || voting}
-                      className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
-                    >
-                      <Play className="h-4 w-4" />
-                      {startingRound ? "Startuję…" : `Swipe'uj kolejne 20 →`}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleVote("continue")}
-                      disabled={voting}
-                      className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
-                    >
-                      {voting ? "…" : "Chcę swipe'ować dalej"}
-                    </button>
-                  )}
-
+                  {/* Continue — creator starts next round immediately; non-creator votes and waits */}
                   <button
-                    onClick={() => handleVote("finish")}
-                    disabled={voting}
+                    onClick={async () => {
+                      if (isCreator) {
+                        // Record vote + start round atomically from host perspective
+                        setStartingRound(true);
+                        try {
+                          await (supabase as any).rpc("vote_on_round", { p_session_id: session.id, p_vote: "continue" });
+                          await (supabase as any).rpc("start_group_round", { p_session_id: session.id, p_round_number: nextRound });
+                          setMyRoundDone(false);
+                          queryClient.invalidateQueries({ queryKey: ["group-session-round", session.id] });
+                          queryClient.invalidateQueries({ queryKey: ["group-round-progress", session.id] });
+                        } catch (e: any) {
+                          toast.error(e.message || "Błąd podczas startu rundy");
+                        } finally {
+                          setStartingRound(false);
+                        }
+                      } else {
+                        handleVote("continue");
+                      }
+                    }}
+                    disabled={startingRound || voting}
+                    className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
+                  >
+                    <Play className="h-4 w-4" />
+                    {startingRound
+                      ? "Startuję…"
+                      : isCreator
+                        ? `Runda ${nextRound} — start!`
+                        : "Chcę swipe'ować dalej"}
+                  </button>
+
+                  {/* Finish — both creator and non-creator can go to matches */}
+                  <button
+                    onClick={() => { handleVote("finish"); setTab("matches"); }}
+                    disabled={voting || startingRound}
                     className="w-full py-3.5 rounded-2xl border border-border/60 bg-card font-semibold text-sm active:scale-[0.97] transition-transform disabled:opacity-40"
                   >
-                    Stwórz trasę z {matches.length} miejsc
+                    {matches.length > 0
+                      ? `Stwórz trasę z ${matches.length} ${matches.length === 1 ? "miejsca" : "miejsc"}`
+                      : "Zakończ i przejdź do dopasowań"}
                   </button>
 
                   <button
                     onClick={() => handleVote("opt_out")}
-                    disabled={voting}
+                    disabled={voting || startingRound}
                     className="w-full py-2 text-xs text-muted-foreground underline active:opacity-60"
                   >
                     Wyjdź z matchowania (zostań w podróży)
@@ -705,6 +723,7 @@ const GroupSession = () => {
             />
           );
         })()}
+        </div>{/* end always-mounted swipe tab */}
 
         {/* ── Matches tab ── */}
         {tab === "matches" && (
