@@ -4,7 +4,7 @@ import { format, differenceInDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
-import { getCachedPhotoUrl } from "@/lib/placePhotos";
+import { getPhotoUrl } from "@/lib/placePhotos";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌿",
@@ -28,10 +28,10 @@ function PinThumb({ pin, onClick }: { pin: any; onClick: () => void }) {
           ...(hasCoords ? { latitude: pin.latitude, longitude: pin.longitude } : {}),
         },
       })
-      .then(async ({ data }) => {
+      .then(({ data }) => {
         const ref = data?.result?.photos?.[0]?.photo_reference;
         if (ref) {
-          const url = await getCachedPhotoUrl(ref, 400);
+          const url = getPhotoUrl(ref, 400);
           if (url) setPhoto(url);
         }
       })

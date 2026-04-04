@@ -364,64 +364,14 @@ function renderBubble(text: string) {
   );
 }
 
-async function enrichPlanWithInstagram(plan: RoutePlan, city: string, sb: typeof supabase): Promise<RoutePlan> {
+async function enrichPlanWithPhotos(plan: RoutePlan, sb: typeof supabase): Promise<RoutePlan> {
   try {
-    // Step 1: scraped_places enrichment (optional — graceful if empty)
-    const { data: scraped } = await sb
-      .from("scraped_places")
-      .select("place_name, thumbnail_url, post_url, creator_name, source_platform, description")
-      .ilike("city", `%${city}%`);
-
-    const pool = (scraped ?? []).filter(sp => sp.post_url);
-
-    function pinKeywords(pinName: string): string[] {
-      return pinName.toLowerCase().split(/[\s,.\-/()]+/)
-        .filter(w => w.length >= 4)
-        .filter(w => !["lunch", "dinner", "kolacja", "obiad", "przy", "restaurant"].includes(w));
-    }
-
-    function findMatches(pinName: string) {
-      if (!pool.length) return [];
-      const keywords = pinKeywords(pinName);
-      if (!keywords.length) return [];
-      return pool.filter(sp => keywords.some(kw => (sp.description ?? "").toLowerCase().includes(kw)));
-    }
-
-    let rrIdx = 0;
-    const instagramEnriched: RoutePlan = {
-      ...plan,
-      days: plan.days.map(day => ({
-        ...day,
-        pins: day.pins.map(pin => {
-          let matches = findMatches(pin.place_name);
-          if (matches.length < 2 && pool.length > 0) {
-            const extras: typeof pool = [];
-            for (let i = 0; i < 2 && extras.length < 2 - matches.length; i++) {
-              const candidate = pool[(rrIdx + i) % pool.length];
-              if (!matches.includes(candidate)) extras.push(candidate);
-            }
-            rrIdx = (rrIdx + 2) % pool.length;
-            matches = [...matches, ...extras];
-          }
-          if (!matches.length) return pin;
-          const creators = matches.slice(0, 5).map(m => ({
-            platform: (m.source_platform ?? "instagram") as "instagram" | "tiktok" | "youtube",
-            name: m.creator_name ?? "",
-            thumbnailUrl: m.thumbnail_url ?? "",
-            postUrl: m.post_url ?? "",
-            description: m.description ?? undefined,
-          }));
-          return { ...pin, creator: creators[0], creators };
-        }),
-      })),
-    };
-
     // Fetch Google Places photos for all pins without a photoUrl
-    const allPins = instagramEnriched.days.flatMap(d => d.pins);
-    const needsPhoto = allPins.filter(p => !p.photoUrl && p.latitude && p.longitude);
+    const allPins = plan.days.flatMap((d: any) => d.pins);
+    const needsPhoto = allPins.filter((p: any) => !p.photoUrl && p.latitude && p.longitude);
     if (needsPhoto.length > 0) {
       const results = await Promise.allSettled(
-        needsPhoto.map(pin =>
+        needsPhoto.map((pin: any) =>
           sb.functions.invoke("google-places-proxy", {
             body: { placeName: pin.place_name, latitude: pin.latitude, longitude: pin.longitude },
           }).then(({ data }) => {
@@ -442,10 +392,10 @@ async function enrichPlanWithInstagram(plan: RoutePlan, city: string, sb: typeof
         }
       }
       return {
-        ...instagramEnriched,
-        days: instagramEnriched.days.map(day => ({
+        ...plan,
+        days: plan.days.map((day: any) => ({
           ...day,
-          pins: day.pins.map(pin => ({
+          pins: day.pins.map((pin: any) => ({
             ...pin,
             photoUrl: pin.photoUrl || photoMap.get(pin.place_name) || undefined,
           })),
@@ -453,7 +403,7 @@ async function enrichPlanWithInstagram(plan: RoutePlan, city: string, sb: typeof
       };
     }
 
-    return instagramEnriched;
+    return plan;
   } catch { return plan; }
 }
 
@@ -649,7 +599,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
   // Initialize: if initialPlan provided (template fork) → skip AI; else generate
   useEffect(() => {
     if (initialPlan) {
-      enrichPlanWithInstagram(initialPlan, preferences.city || "", supabase).then(enriched => setPlan(enriched));
+      enrichPlanWithPhotos(initialPlan, supabase).then(enriched => setPlan(enriched));
       setMessages([{ role: "assistant", content: `Oto Twój plan w **${preferences.city}** 🗺️\n\nMogę go dostosować do Twoich potrzeb — powiedz co zmienić!` }]);
       setInitializing(false);
       return;
@@ -692,7 +642,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
               : [];
 
           if (data?.plan) {
-            enrichPlanWithInstagram(data.plan, preferences.city || "", supabase).then(enriched => setPlan(enriched));
+            enrichPlanWithPhotos(data.plan, supabase).then(enriched => setPlan(enriched));
             setMessages([...userMsgEntry, { role: "assistant", content: cleanMessage || fallbackIntro }]);
           } else {
             // Day 2+: only greeting returned, no plan yet — show greeting + skeleton
@@ -767,7 +717,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
       }
 
       if (data.plan) {
-        enrichPlanWithInstagram(data.plan, preferences.city || "", supabase).then(enriched => setPlan(enriched));
+        enrichPlanWithPhotos(data.plan, supabase).then(enriched => setPlan(enriched));
         setSnap("half"); // show updated plan
         setLoading(false);
       } else if (data.preparing_plan) {
@@ -784,7 +734,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
             if (planResponse.data.memory_used) setMemoryUsed(true);
             const { cleanMessage: cm } = parseSuggestions(planResponse.data.message ?? "");
             if (cm) setMessages(prev => [...prev, { role: "assistant", content: cm }]);
-            enrichPlanWithInstagram(planResponse.data.plan, preferences.city || "", supabase).then(enriched => setPlan(enriched));
+            enrichPlanWithPhotos(planResponse.data.plan, supabase).then(enriched => setPlan(enriched));
             setSnap("half");
           }
         } catch (planErr) {
@@ -806,7 +756,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
               body: { preferences, messages: apiMessages2, current_plan: plan, force_plan: true, liked_places: likedPlaces, skipped_places: skippedPlaces?.length ? skippedPlaces : undefined, super_liked_places: superLikedPlaces?.length ? superLikedPlaces : undefined, ...getCurrentTimeContext() },
             });
             if (!planResponse.error && planResponse.data?.plan) {
-              enrichPlanWithInstagram(planResponse.data.plan, preferences.city || "", supabase).then(enriched => setPlan(enriched));
+              enrichPlanWithPhotos(planResponse.data.plan, supabase).then(enriched => setPlan(enriched));
               setSnap("half");
             }
           } catch (planErr) {

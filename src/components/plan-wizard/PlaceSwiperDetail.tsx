@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Star, MapPin, Loader2, Heart, Users, Instagram } from "lucide-react";
+import { X, Star, MapPin, Loader2, Heart, Users } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { getCachedPhotoUrl } from "@/lib/placePhotos";
+import { getPhotoUrl } from "@/lib/placePhotos";
 import type { MockPlace } from "./PlaceSwiper";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -27,22 +27,7 @@ interface PlaceDetail {
   }[];
 }
 
-interface Creator {
-  creator_name: string;
-  thumbnail_url: string | null;
-  post_url: string;
-  description: string;
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-
-const AVATAR_COLORS = [
-  "#e85d04", "#2d6a4f", "#9d4edd", "#1d3557",
-  "#c77dff", "#f4a261", "#f97316", "#0077b6",
-];
-const nameColor = (name: string) =>
-  AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
 
 const getPriceSymbol = (level?: number) => {
   if (!level) return null;
@@ -67,46 +52,6 @@ const Stars = ({ rating }: { rating: number }) => (
   </div>
 );
 
-// ─── Creator card ─────────────────────────────────────────────────────────────
-
-const CreatorCard = ({ creator }: { creator: Creator }) => {
-  const [imgFailed, setImgFailed] = useState(false);
-  const color = nameColor(creator.creator_name);
-
-  return (
-    <div className="flex gap-3 items-start">
-      {creator.thumbnail_url && !imgFailed ? (
-        <img
-          src={creator.thumbnail_url}
-          alt={creator.creator_name}
-          className="h-10 w-10 rounded-full object-cover shrink-0"
-          onError={() => setImgFailed(true)}
-        />
-      ) : (
-        <div
-          className="h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-          style={{ backgroundColor: color }}
-        >
-          {creator.creator_name.replace("@", "").charAt(0).toUpperCase()}
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <Instagram className="h-3 w-3 text-pink-500" />
-          <span className="text-sm font-semibold text-foreground">
-            {creator.creator_name}
-          </span>
-        </div>
-        {creator.description && (
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
-            "{creator.description}"
-          </p>
-        )}
-      </div>
-    </div>
-  );
-};
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface PlaceSwiperDetailProps {
@@ -127,20 +72,18 @@ const PlaceSwiperDetail = ({
   onSkip,
 }: PlaceSwiperDetailProps) => {
   const [detail, setDetail] = useState<PlaceDetail | null>(null);
-  const [creators, setCreators] = useState<Creator[]>([]);
   const [usageCount, setUsageCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
-  const [cachedPhotos, setCachedPhotos] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<string[]>([]);
   const swipeStartX = useRef<number | null>(null);
 
   useEffect(() => {
     if (!open || !place) {
       setDetail(null);
-      setCreators([]);
       setUsageCount(null);
       setActivePhoto(0);
-      setCachedPhotos([]);
+      setPhotos([]);
       return;
     }
 
@@ -157,18 +100,14 @@ const PlaceSwiperDetail = ({
             city: city ?? place.city,
           },
         })
-        .then(async ({ data }) => {
+        .then(({ data }) => {
           if (data?.result) {
             setDetail(data.result);
-            // Cache up to 3 photos
-            const photoRefs = (data.result.photos ?? [])
+            const urls = (data.result.photos ?? [])
               .slice(0, 3)
-              .map((p: any) => p.photo_reference)
-              .filter(Boolean);
-            const urls = await Promise.all(
-              photoRefs.map((ref: string) => getCachedPhotoUrl(ref, 800))
-            );
-            setCachedPhotos(urls.filter(Boolean) as string[]);
+              .map((p: any) => getPhotoUrl(p.photo_reference, 800))
+              .filter(Boolean) as string[];
+            if (urls.length > 0) setPhotos(urls);
           }
         })
         .catch(() => {});
@@ -180,24 +119,7 @@ const PlaceSwiperDetail = ({
         .ilike("place_name", `%${place.place_name}%`)
         .then(({ count }) => { setUsageCount(count ?? 0); }, () => setUsageCount(0));
 
-      // 3. Creator posts from scraped_places (keyword match on description)
-      const words = place.place_name
-        .split(/\s+/)
-        .filter((w) => w.length >= 4);
-      const creatorsPromise: Promise<void> = (async () => {
-        if (words.length === 0) return;
-        try {
-          const orFilter = words.map((w) => `description.ilike.%${w}%`).join(",");
-          const { data } = await (supabase as any)
-            .from("scraped_places")
-            .select("creator_name, thumbnail_url, post_url, description")
-            .or(orFilter)
-            .limit(5);
-          setCreators((data as Creator[]) ?? []);
-        } catch { /* ignore */ }
-      })();
-
-      await Promise.allSettled([placesPromise, usagePromise, creatorsPromise]);
+      await Promise.allSettled([placesPromise, usagePromise]);
       setLoading(false);
     };
 
@@ -214,9 +136,7 @@ const PlaceSwiperDetail = ({
     onOpenChange(false);
   };
 
-  const photos: string[] = cachedPhotos.length > 0
-    ? cachedPhotos
-    : place?.photo_url ? [place.photo_url] : [];
+  const displayPhotos = photos.length > 0 ? photos : (place?.photo_url ? [place.photo_url] : []);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -238,20 +158,20 @@ const PlaceSwiperDetail = ({
                 if (swipeStartX.current === null) return;
                 const dx = e.changedTouches[0].clientX - swipeStartX.current;
                 swipeStartX.current = null;
-                if (Math.abs(dx) > 40 && photos.length > 1) {
-                  if (dx < 0) setActivePhoto(n => Math.min(photos.length - 1, n + 1));
+                if (Math.abs(dx) > 40 && displayPhotos.length > 1) {
+                  if (dx < 0) setActivePhoto(n => Math.min(displayPhotos.length - 1, n + 1));
                   else setActivePhoto(n => Math.max(0, n - 1));
                 }
               }}
             >
-              {photos.length > 0 ? (
+              {displayPhotos.length > 0 ? (
                 <>
                   <img
-                    src={photos[activePhoto]}
+                    src={displayPhotos[activePhoto]}
                     alt={place.place_name}
                     className="w-full h-full object-cover"
                     onError={() => {
-                      if (activePhoto < photos.length - 1)
+                      if (activePhoto < displayPhotos.length - 1)
                         setActivePhoto((n) => n + 1);
                     }}
                   />
@@ -259,9 +179,9 @@ const PlaceSwiperDetail = ({
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
 
                   {/* Photo dots */}
-                  {photos.length > 1 && (
+                  {displayPhotos.length > 1 && (
                     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                      {photos.map((_, i) => (
+                      {displayPhotos.map((_, i) => (
                         <button
                           key={i}
                           onClick={() => setActivePhoto(i)}
@@ -283,7 +203,7 @@ const PlaceSwiperDetail = ({
                   />
                   <button
                     className="absolute right-0 inset-y-0 w-1/3"
-                    onClick={() => setActivePhoto((n) => Math.min(photos.length - 1, n + 1))}
+                    onClick={() => setActivePhoto((n) => Math.min(displayPhotos.length - 1, n + 1))}
                   />
                 </>
               ) : loading ? (
@@ -439,20 +359,6 @@ const PlaceSwiperDetail = ({
                         Więcej opinii na Google
                       </a>
                     )}
-                  </div>
-                )}
-
-                {/* Creators */}
-                {creators.length > 0 && (
-                  <div>
-                    <h3 className="text-base font-bold text-foreground mb-3">
-                      Polecają
-                    </h3>
-                    <div className="space-y-3">
-                      {creators.map((c, i) => (
-                        <CreatorCard key={i} creator={c} />
-                      ))}
-                    </div>
                   </div>
                 )}
 

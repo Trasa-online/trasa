@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import { supabase } from "@/integrations/supabase/client";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
-import { getCachedPhotoUrl } from "@/lib/placePhotos";
+import { getPhotoUrl } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -114,11 +114,10 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
       .invoke("google-places-proxy", {
         body: { placeName: place.place_name, latitude: place.latitude, longitude: place.longitude, city },
       })
-      .then(async ({ data }) => {
-        // Cache first photo only
+      .then(({ data }) => {
         const ref = data?.result?.photos?.[0]?.photo_reference;
         if (ref) {
-          const url = await getCachedPhotoUrl(ref, 800);
+          const url = getPhotoUrl(ref, 800);
           if (url) setPhotoUrls([url]);
         }
         if (!place.rating && data?.result?.rating) setGoogleRating(data.result.rating);
