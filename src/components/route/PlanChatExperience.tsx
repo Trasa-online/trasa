@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { type PlanPin } from "./DayPinList";
 import AddPinSheet from "./AddPinSheet";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
-import { getCachedPhotoUrl } from "@/lib/placePhotos";
+import { getPhotoUrl } from "@/lib/placePhotos";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
