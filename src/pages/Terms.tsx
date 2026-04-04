@@ -28,7 +28,8 @@ const Terms = () => {
           <p className="text-muted-foreground">
             Aby korzystać z Aplikacji, wymagana jest rejestracja z podaniem adresu e-mail i hasła. Użytkownik
             zobowiązuje się podać prawdziwe dane i chronić dostęp do swojego konta. Konto jest przeznaczone wyłącznie
-            do użytku osobistego. Minimalny wiek do rejestracji to 13 lat.
+            do użytku osobistego. Minimalny wiek do rejestracji wynosi <strong>16 lat</strong> (zgodnie z art. 8 RODO
+            oraz polską ustawą o ochronie danych osobowych). Osoby poniżej 16 roku życia nie mogą korzystać z Aplikacji.
           </p>
         </section>
 
@@ -45,14 +46,23 @@ const Terms = () => {
           <h2 className="font-bold text-base mb-2">4. Ochrona danych osobowych (RODO)</h2>
           <p className="text-muted-foreground">
             Administratorem danych osobowych jest Operator. Dane zbierane przez Aplikację obejmują: adres e-mail,
-            nazwę użytkownika, historię tras i odwiedzonych miejsc, treści rozmów z asystentem AI (przechowywane
-            wyłącznie w celu polepszenia jakości planowania). Dane są przetwarzane na podstawie zgody użytkownika
-            (art. 6 ust. 1 lit. a RODO) oraz w celu wykonania umowy (art. 6 ust. 1 lit. b RODO).
+            nazwę użytkownika, historię tras i odwiedzonych miejsc, preferencje podróżnicze, treści rozmów
+            z asystentem AI. Dane są przetwarzane na podstawie zgody (art. 6 ust. 1 lit. a RODO) oraz
+            w celu wykonania umowy (art. 6 ust. 1 lit. b RODO).
           </p>
           <p className="text-muted-foreground mt-2">
-            Użytkownik ma prawo do: dostępu do swoich danych, ich poprawienia, usunięcia („prawo do bycia
-            zapomnianym"), przenoszenia danych, wniesienia skargi do UODO. Aby skorzystać z tych praw, należy
-            skontaktować się z Operatorem przez ustawienia aplikacji.
+            <strong>Profilowanie AI (art. 22 RODO):</strong> Aplikacja tworzy spersonalizowany profil preferencji
+            podróżniczych na podstawie Twoich reakcji na miejsca, historii tras i rozmów z asystentem. Profilowanie
+            odbywa się wyłącznie za Twoją wyraźną zgodą udzieloną podczas konfiguracji konta. Możesz wycofać tę
+            zgodę w dowolnym momencie w Ustawieniach — nie wpłynie to na wcześniejsze przetwarzanie danych.
+          </p>
+          <p className="text-muted-foreground mt-2">
+            <strong>Prawo do usunięcia konta:</strong> możesz trwale usunąć swoje konto i wszystkie powiązane
+            dane bezpośrednio z poziomu Ustawień → „Usuń konto". Operacja jest nieodwracalna.
+          </p>
+          <p className="text-muted-foreground mt-2">
+            Przysługują Ci prawa do: dostępu do danych, ich poprawienia, usunięcia, przenoszenia,
+            sprzeciwu wobec przetwarzania oraz wniesienia skargi do UODO (uodo.gov.pl).
           </p>
         </section>
 
@@ -148,7 +158,7 @@ const Terms = () => {
         </section>
 
         <p className="text-xs text-muted-foreground pt-4 border-t border-border/40">
-          Ostatnia aktualizacja: marzec 2026
+          Ostatnia aktualizacja: kwiecień 2026
         </p>
       </div>
     </div>

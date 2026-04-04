@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText } from "lucide-react";
+import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { toast } from "sonner";
@@ -52,6 +52,61 @@ function CookieConsentSection() {
         <p className="text-xs text-muted-foreground">{t("cookies_desc")}</p>
       </div>
       <Switch checked={consent === "granted"} onCheckedChange={handleToggle} />
+    </div>
+  );
+}
+
+function DeleteAccountButton({ onDeleted }: { onDeleted: () => void }) {
+  const [confirm, setConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const { error } = await supabase.rpc("delete_current_user_account" as any);
+      if (error) throw error;
+      onDeleted();
+    } catch {
+      toast.error("Nie udało się usunąć konta. Spróbuj ponownie.");
+      setDeleting(false);
+      setConfirm(false);
+    }
+  };
+
+  if (!confirm) {
+    return (
+      <button
+        onClick={() => setConfirm(true)}
+        className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+      >
+        <Trash2 className="h-4 w-4 text-destructive flex-shrink-0" />
+        <span className="text-sm font-medium text-destructive flex-1">Usuń konto</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4 space-y-3">
+      <p className="text-sm font-semibold text-destructive">Usunąć konto na stałe?</p>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        Wszystkie Twoje trasy, piny, preferencje i dane zostaną trwale usunięte. Tej operacji nie można cofnąć.
+      </p>
+      <div className="flex gap-2">
+        <button
+          onClick={() => setConfirm(false)}
+          disabled={deleting}
+          className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm font-medium"
+        >
+          Anuluj
+        </button>
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="flex-1 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-semibold disabled:opacity-50"
+        >
+          {deleting ? "Usuwam…" : "Usuń na stałe"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -231,6 +286,8 @@ const Settings = () => {
             <LogOut className="h-4 w-4 text-destructive flex-shrink-0" />
             <span className="text-sm font-medium text-destructive flex-1">{t("logout")}</span>
           </button>
+
+          <DeleteAccountButton onDeleted={() => { signOut(); navigate("/"); }} />
         </div>
 
       </div>

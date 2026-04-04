@@ -307,6 +307,7 @@ const Onboarding = () => {
   const [interestsCustom, setInterestsCustom] = useState<string[]>([]);
   const [styleCustom, setStyleCustom] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [profilingConsent, setProfilingConsent] = useState(false);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const speak = useCallback(async (_text: string) => {
@@ -368,7 +369,9 @@ const Onboarding = () => {
           ...(freeText.trim() ? [freeText.trim()] : []),
         ],
         onboarding_completed: true,
-      }).eq("id", user.id);
+        profiling_consent: profilingConsent,
+        ...(profilingConsent ? { profiling_consent_at: new Date().toISOString() } : {}),
+      } as any).eq("id", user.id);
 
       queryClient.setQueryData(["profile", user.id], (old: any) =>
         old ? { ...old, onboarding_completed: true } : old
@@ -555,6 +558,18 @@ const Onboarding = () => {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-5 pt-4 pb-safe-4 flex flex-col gap-2">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={profilingConsent}
+            onChange={e => setProfilingConsent(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-border accent-orange-600 shrink-0"
+          />
+          <span className="text-xs text-muted-foreground leading-relaxed">
+            Zgadzam się na tworzenie spersonalizowanego profilu preferencji przez AI
+            (art. 22 RODO). Możesz wycofać zgodę w Ustawieniach.
+          </span>
+        </label>
         <Button
           onClick={() => handleSave(false)}
           disabled={saving}
