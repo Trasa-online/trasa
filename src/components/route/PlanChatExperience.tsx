@@ -220,7 +220,7 @@ function LargeCarouselCard({
       .then(async ({ data }) => {
         const ref = data?.result?.photos?.[0]?.photo_reference;
         if (ref) {
-          const url = await getCachedPhotoUrl(ref, 800);
+          const url = getPhotoUrl(ref, 800);
           if (url) setFetchedPhoto(url);
         }
       })

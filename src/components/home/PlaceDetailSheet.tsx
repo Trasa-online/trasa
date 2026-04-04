@@ -40,7 +40,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
         // Cache first photo
         const ref = data.result.photos?.[0]?.photo_reference;
         if (ref) {
-          const url = await getCachedPhotoUrl(ref, 600);
+          const url = getPhotoUrl(ref, 600);
           if (url) setCachedPhotoUrl(url);
         }
       }
