@@ -637,18 +637,20 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
 
   const saveReaction = (place: MockPlace, reaction: "liked" | "skipped" | "super_liked") => {
     if (!user) return;
-    (supabase as any)
-      .from("user_place_reactions")
-      .upsert({
-        user_id: user.id,
-        place_id: place.id,
-        place_name: place.place_name,
-        city: place.city,
-        category: place.category,
-        photo_url: place.photo_url ?? null,
-        reaction,
-      }, { onConflict: "user_id,place_id" })
-      .then(() => {});
+    if (!groupSessionId) {
+      (supabase as any)
+        .from("user_place_reactions")
+        .upsert({
+          user_id: user.id,
+          place_id: place.id,
+          place_name: place.place_name,
+          city: place.city,
+          category: place.category,
+          photo_url: place.photo_url ?? null,
+          reaction,
+        }, { onConflict: "user_id,place_id" })
+        .then(() => {});
+    }
     if (groupSessionId) {
       (supabase as any)
         .from("group_session_reactions")
@@ -667,11 +669,13 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
 
   const deleteReaction = (place: MockPlace) => {
     if (!user) return;
-    (supabase as any)
-      .from("user_place_reactions")
-      .delete()
-      .match({ user_id: user.id, place_id: place.id })
-      .then(() => {});
+    if (!groupSessionId) {
+      (supabase as any)
+        .from("user_place_reactions")
+        .delete()
+        .match({ user_id: user.id, place_id: place.id })
+        .then(() => {});
+    }
     if (groupSessionId) {
       (supabase as any)
         .from("group_session_reactions")
