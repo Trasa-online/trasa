@@ -684,8 +684,8 @@ const GroupSession = () => {
                   </p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {nextRound === 1
-                      ? `${members.length} ${members.length === 1 ? "osoba" : "osoby"} w pokoju. Wszyscy zobaczycie te same 20 miejsc.`
-                      : `Kolejna pula 20 nowych miejsc. ${matches.length} matchów do tej pory.`}
+                      ? `${members.length} ${members.length === 1 ? "osoba" : "osoby"} w pokoju. Wszyscy zobaczycie te same 10 miejsc.`
+                      : `Kolejna pula 10 nowych miejsc. ${matches.length} matchów do tej pory.`}
                   </p>
                 </div>
                 {isCreator ? (
