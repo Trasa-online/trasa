@@ -427,6 +427,193 @@ export type Database = {
           },
         ]
       }
+      group_session_members: {
+        Row: {
+          current_round_done: boolean | null
+          current_round_vote: string | null
+          finished_at: string | null
+          joined_at: string | null
+          session_id: string
+          swiping_active: boolean | null
+          user_id: string
+        }
+        Insert: {
+          current_round_done?: boolean | null
+          current_round_vote?: string | null
+          finished_at?: string | null
+          joined_at?: string | null
+          session_id: string
+          swiping_active?: boolean | null
+          user_id: string
+        }
+        Update: {
+          current_round_done?: boolean | null
+          current_round_vote?: string | null
+          finished_at?: string | null
+          joined_at?: string | null
+          session_id?: string
+          swiping_active?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_session_members_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "group_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_session_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_session_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_session_reactions: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          photo_url: string | null
+          place_id: string | null
+          place_name: string
+          reaction: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          photo_url?: string | null
+          place_id?: string | null
+          place_name: string
+          reaction: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          photo_url?: string | null
+          place_id?: string | null
+          place_name?: string
+          reaction?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_session_reactions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "group_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_session_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_user_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_session_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_session_rounds: {
+        Row: {
+          created_at: string | null
+          id: string
+          place_ids: string[]
+          round_number: number
+          session_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          place_ids?: string[]
+          round_number?: number
+          session_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          place_ids?: string[]
+          round_number?: number
+          session_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_session_rounds_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "group_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_sessions: {
+        Row: {
+          city: string
+          created_at: string | null
+          created_by: string
+          id: string
+          join_code: string
+          status: string
+        }
+        Insert: {
+          city: string
+          created_at?: string | null
+          created_by: string
+          id?: string
+          join_code: string
+          status?: string
+        }
+        Update: {
+          city?: string
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          join_code?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_sessions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_user_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_sessions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       likes: {
         Row: {
           created_at: string | null
@@ -527,6 +714,7 @@ export type Database = {
           comment_id: string | null
           created_at: string | null
           id: string
+          metadata: Json | null
           read: boolean | null
           route_id: string | null
           type: Database["public"]["Enums"]["notification_type"]
@@ -537,6 +725,7 @@ export type Database = {
           comment_id?: string | null
           created_at?: string | null
           id?: string
+          metadata?: Json | null
           read?: boolean | null
           route_id?: string | null
           type: Database["public"]["Enums"]["notification_type"]
@@ -547,6 +736,7 @@ export type Database = {
           comment_id?: string | null
           created_at?: string | null
           id?: string
+          metadata?: Json | null
           read?: boolean | null
           route_id?: string | null
           type?: Database["public"]["Enums"]["notification_type"]
@@ -1055,6 +1245,8 @@ export type Database = {
           first_name: string | null
           id: string
           onboarding_completed: boolean | null
+          profiling_consent: boolean | null
+          profiling_consent_at: string | null
           travel_interests: string[] | null
           username: string
         }
@@ -1068,6 +1260,8 @@ export type Database = {
           first_name?: string | null
           id: string
           onboarding_completed?: boolean | null
+          profiling_consent?: boolean | null
+          profiling_consent_at?: string | null
           travel_interests?: string[] | null
           username: string
         }
@@ -1081,6 +1275,8 @@ export type Database = {
           first_name?: string | null
           id?: string
           onboarding_completed?: boolean | null
+          profiling_consent?: boolean | null
+          profiling_consent_at?: string | null
           travel_interests?: string[] | null
           username?: string
         }
@@ -1412,6 +1608,7 @@ export type Database = {
           end_date: string | null
           folder_id: string | null
           folder_order: number | null
+          group_session_id: string | null
           id: string
           intent: Json | null
           is_shared: boolean | null
@@ -1441,6 +1638,7 @@ export type Database = {
           end_date?: string | null
           folder_id?: string | null
           folder_order?: number | null
+          group_session_id?: string | null
           id?: string
           intent?: Json | null
           is_shared?: boolean | null
@@ -1470,6 +1668,7 @@ export type Database = {
           end_date?: string | null
           folder_id?: string | null
           folder_order?: number | null
+          group_session_id?: string | null
           id?: string
           intent?: Json | null
           is_shared?: boolean | null
@@ -1493,6 +1692,13 @@ export type Database = {
             columns: ["folder_id"]
             isOneToOne: false
             referencedRelation: "route_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routes_group_session_id_fkey"
+            columns: ["group_session_id"]
+            isOneToOne: false
+            referencedRelation: "group_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -1887,6 +2093,11 @@ export type Database = {
       }
     }
     Functions: {
+      complete_round_for_user: {
+        Args: { p_round_number: number; p_session_id: string }
+        Returns: undefined
+      }
+      delete_current_user_account: { Args: never; Returns: undefined }
       find_nearby_canonical_pin: {
         Args: { radius_meters?: number; search_lat: number; search_lng: number }
         Returns: string
@@ -1894,6 +2105,14 @@ export type Database = {
       find_original_pin_creator: {
         Args: { p_latitude: number; p_longitude: number }
         Returns: string
+      }
+      generate_round_pool: {
+        Args: {
+          p_pool_size?: number
+          p_round_number: number
+          p_session_id: string
+        }
+        Returns: string[]
       }
       get_canonical_pin_stats: {
         Args: { pin_id: string }
@@ -1958,6 +2177,18 @@ export type Database = {
           restored_pin_ids: string[]
         }[]
       }
+      send_group_invite: {
+        Args: { p_session_id: string; p_target_user_id: string }
+        Returns: undefined
+      }
+      start_group_round: {
+        Args: { p_round_number?: number; p_session_id: string }
+        Returns: string
+      }
+      vote_on_round: {
+        Args: { p_session_id: string; p_vote: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"
@@ -1971,6 +2202,8 @@ export type Database = {
         | "route_updated"
         | "visit_comment"
         | "discovery_used"
+        | "group_match"
+        | "group_invite"
       trip_type: "planning" | "ongoing" | "completed"
     }
     CompositeTypes: {
@@ -2110,6 +2343,8 @@ export const Constants = {
         "route_updated",
         "visit_comment",
         "discovery_used",
+        "group_match",
+        "group_invite",
       ],
       trip_type: ["planning", "ongoing", "completed"],
     },
