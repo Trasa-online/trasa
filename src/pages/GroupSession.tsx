@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, MapPin, Star, Check, Route, UserPlus, Play, Clock } from "lucide-react";
+import { ArrowLeft, Users, MapPin, Star, Check, Route, UserPlus, Play, Clock, CalendarDays } from "lucide-react";
+import { format } from "date-fns";
+import { pl } from "date-fns/locale";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -65,7 +67,7 @@ const GroupSession = () => {
         .select("*")
         .eq("join_code", joinCode)
         .maybeSingle();
-      return data as { id: string; city: string; created_by: string; join_code: string } | null;
+      return data as { id: string; city: string; created_by: string; join_code: string; trip_date: string | null } | null;
     },
     enabled: !!joinCode,
   });
@@ -340,6 +342,7 @@ const GroupSession = () => {
           day_number: 1,
           group_session_id: session.id,
           title: `Grupowa trasa · ${session.city}`,
+          ...(session.trip_date ? { start_date: session.trip_date } : {}),
         })
         .select()
         .single();
@@ -364,7 +367,7 @@ const GroupSession = () => {
       });
       await (supabase as any).from("pins").insert(pins);
 
-      navigate(`/day-plan?id=${route.id}`);
+      navigate(`/day-plan?route=${route.id}`);
     } catch (e: any) {
       toast.error(e.message || "Błąd podczas tworzenia trasy");
     } finally {
@@ -471,7 +474,15 @@ const GroupSession = () => {
         </button>
         <div className="flex-1 min-w-0">
           <p className="font-bold text-base leading-tight">{session.city}</p>
-          <p className="text-xs text-muted-foreground">{members.length} {members.length === 1 ? "osoba" : "osoby"} · #{joinCode}</p>
+          <p className="text-xs text-muted-foreground">
+            {members.length} {members.length === 1 ? "osoba" : "osoby"} · #{joinCode}
+            {session.trip_date && (
+              <span className="ml-1.5 inline-flex items-center gap-0.5">
+                · <CalendarDays className="h-3 w-3 inline mx-0.5" />
+                {format(new Date(session.trip_date), "d MMM", { locale: pl })}
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex -space-x-2">
@@ -686,7 +697,7 @@ const GroupSession = () => {
           return (
             <PlaceSwiper
               city={session.city}
-              date={new Date()}
+              date={session.trip_date ? new Date(session.trip_date) : new Date()}
               groupSessionId={session.id}
               roundPlaceIds={currentRound.place_ids}
               onRoundComplete={handleRoundComplete}

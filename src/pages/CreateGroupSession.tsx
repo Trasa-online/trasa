@@ -1,10 +1,13 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, Check, ArrowRight, Users, Trash2, Search, UserPlus } from "lucide-react";
+import { ArrowLeft, Copy, Check, ArrowRight, Users, Trash2, Search, UserPlus, CalendarDays } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { pl } from "date-fns/locale";
+import { Calendar } from "@/components/ui/calendar";
 
 function generateJoinCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -25,6 +28,8 @@ const CreateGroupSession = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedCity, setSelectedCity] = useState("");
+  const [tripDate, setTripDate] = useState<Date | undefined>(undefined);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
@@ -102,7 +107,12 @@ const CreateGroupSession = () => {
       const code = generateJoinCode();
       const { data: session, error } = await (supabase as any)
         .from("group_sessions")
-        .insert({ city: selectedCity, created_by: user.id, join_code: code })
+        .insert({
+          city: selectedCity,
+          created_by: user.id,
+          join_code: code,
+          ...(tripDate ? { trip_date: format(tripDate, "yyyy-MM-dd") } : {}),
+        })
         .select()
         .single();
       if (error) throw error;
@@ -243,6 +253,40 @@ const CreateGroupSession = () => {
               <div className="flex-1 h-px bg-border/40" />
               <span className="text-xs text-muted-foreground">lub stwórz nową</span>
               <div className="flex-1 h-px bg-border/40" />
+            </div>
+
+            {/* Trip date */}
+            <div>
+              <p className="text-sm font-semibold mb-3">Data wyjazdu <span className="font-normal text-muted-foreground">(opcjonalnie)</span></p>
+              <button
+                onClick={() => setDatePickerOpen(o => !o)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors w-full ${
+                  tripDate ? "border-orange-500 text-orange-600 bg-orange-500/5" : "border-border/60 bg-card text-muted-foreground"
+                }`}
+              >
+                <CalendarDays className="h-4 w-4 shrink-0" />
+                <span className="flex-1 text-left">
+                  {tripDate ? format(tripDate, "d MMMM yyyy", { locale: pl }) : "Kiedy planujecie wyjazd?"}
+                </span>
+                {tripDate && (
+                  <span
+                    onClick={(e) => { e.stopPropagation(); setTripDate(undefined); }}
+                    className="text-xs text-muted-foreground hover:text-foreground px-1"
+                  >✕</span>
+                )}
+              </button>
+              {datePickerOpen && (
+                <div className="mt-2 rounded-2xl border border-border/40 bg-card overflow-hidden">
+                  <Calendar
+                    mode="single"
+                    selected={tripDate}
+                    onSelect={(d) => { setTripDate(d); setDatePickerOpen(false); }}
+                    disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))}
+                    locale={pl}
+                    className="rounded-2xl"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Create session */}
