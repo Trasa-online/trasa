@@ -59,8 +59,8 @@ interface PlaceSwiperDetailProps {
   onOpenChange: (open: boolean) => void;
   place: MockPlace | null;
   city?: string;
-  onLike: () => void;
-  onSkip: () => void;
+  onLike?: () => void;
+  onSkip?: () => void;
 }
 
 const PlaceSwiperDetail = ({

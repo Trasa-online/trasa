@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { type PlanPin } from "./DayPinList";
 import AddPinSheet from "./AddPinSheet";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
-import { getCachedPhotoUrl } from "@/lib/placePhotos";
+import { getPhotoUrl } from "@/lib/placePhotos";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -220,7 +220,7 @@ function LargeCarouselCard({
       .then(async ({ data }) => {
         const ref = data?.result?.photos?.[0]?.photo_reference;
         if (ref) {
-          const url = await getCachedPhotoUrl(ref, 800);
+          const url = getPhotoUrl(ref, 800);
           if (url) setFetchedPhoto(url);
         }
       })

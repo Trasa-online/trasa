@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Star, MapPin, ExternalLink, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getCachedPhotoUrl } from "@/lib/placePhotos";
+import { getPhotoUrl } from "@/lib/placePhotos";
 
 interface Pin {
   id: string;
@@ -40,7 +40,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
         // Cache first photo
         const ref = data.result.photos?.[0]?.photo_reference;
         if (ref) {
-          const url = await getCachedPhotoUrl(ref, 600);
+          const url = getPhotoUrl(ref, 600);
           if (url) setCachedPhotoUrl(url);
         }
       }
