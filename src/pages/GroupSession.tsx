@@ -11,6 +11,7 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { MOCK_MODE } from "@/lib/mockPlaces";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -57,6 +58,9 @@ const GroupSession = () => {
   const [myRoundDone, setMyRoundDone] = useState(false);
   const [startingRound, setStartingRound] = useState(false);
   const [voting, setVoting] = useState(false);
+  // Mock mode: local round state (no SQL functions needed)
+  const [mockRoundNumber, setMockRoundNumber] = useState<number | null>(null);
+  const [mockIsVoting, setMockIsVoting] = useState(false);
 
   // ── Data queries ────────────────────────────────────────────────────────────
 
@@ -182,7 +186,14 @@ const GroupSession = () => {
   const iDoneThisRound = myRoundDone || (myRoundProgress?.current_round_done ?? false);
   const activeSwipers = roundProgress.filter((m: any) => m.swiping_active);
   const doneCount = activeSwipers.filter((m: any) => m.current_round_done).length;
-  const isVotingPhase = currentRound?.status === "voting";
+  // In mock mode, use local state instead of DB round
+  const effectiveRound = MOCK_MODE
+    ? (mockRoundNumber !== null
+        ? { id: "mock", round_number: mockRoundNumber, place_ids: [] as string[], status: mockIsVoting ? "voting" : "active" }
+        : null)
+    : currentRound;
+
+  const isVotingPhase = effectiveRound?.status === "voting";
   const myVote = myRoundProgress?.current_round_vote ?? null;
 
   // ── Match banner detection ──────────────────────────────────────────────────
@@ -234,14 +245,20 @@ const GroupSession = () => {
     if (!session) return;
     setStartingRound(true);
     try {
-      const { error } = await (supabase as any).rpc("start_group_round", {
-        p_session_id: session.id,
-        p_round_number: roundNumber,
-      });
-      if (error) throw error;
-      setMyRoundDone(false);
-      queryClient.invalidateQueries({ queryKey: ["group-session-round", session.id] });
-      queryClient.invalidateQueries({ queryKey: ["group-round-progress", session.id] });
+      if (MOCK_MODE) {
+        setMockRoundNumber(roundNumber);
+        setMockIsVoting(false);
+        setMyRoundDone(false);
+      } else {
+        const { error } = await (supabase as any).rpc("start_group_round", {
+          p_session_id: session.id,
+          p_round_number: roundNumber,
+        });
+        if (error) throw error;
+        setMyRoundDone(false);
+        queryClient.invalidateQueries({ queryKey: ["group-session-round", session.id] });
+        queryClient.invalidateQueries({ queryKey: ["group-round-progress", session.id] });
+      }
     } catch (e: any) {
       toast.error(e.message || "Błąd podczas startu rundy");
     } finally {
@@ -250,8 +267,13 @@ const GroupSession = () => {
   };
 
   const handleRoundComplete = async () => {
-    if (!session || !currentRound) return;
+    if (!session) return;
     setMyRoundDone(true);
+    if (MOCK_MODE) {
+      setMockIsVoting(true);
+      return;
+    }
+    if (!currentRound) return;
     try {
       await (supabase as any).rpc("complete_round_for_user", {
         p_session_id: session.id,
@@ -557,12 +579,12 @@ const GroupSession = () => {
 
           // ── Decision modal (voting phase) ───────────────────────────────
           if (isVotingPhase && !myVote) {
-            const nextRound = (currentRound?.round_number ?? 0) + 1;
+            const nextRound = (effectiveRound?.round_number ?? 0) + 1;
             return (
               <div className="flex-1 flex flex-col items-center justify-center px-6 gap-5">
                 <div className="text-center">
                   <p className="text-4xl mb-3">🏁</p>
-                  <p className="text-xl font-black">Koniec rundy {currentRound?.round_number}!</p>
+                  <p className="text-xl font-black">Koniec rundy {effectiveRound?.round_number}!</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     Znaleźliście <strong>{matches.length}</strong> {matches.length === 1 ? "wspólne miejsce" : "wspólnych miejsc"}
                   </p>
@@ -573,19 +595,7 @@ const GroupSession = () => {
                   <button
                     onClick={async () => {
                       if (isCreator) {
-                        // Record vote + start round atomically from host perspective
-                        setStartingRound(true);
-                        try {
-                          await (supabase as any).rpc("vote_on_round", { p_session_id: session.id, p_vote: "continue" });
-                          await (supabase as any).rpc("start_group_round", { p_session_id: session.id, p_round_number: nextRound });
-                          setMyRoundDone(false);
-                          queryClient.invalidateQueries({ queryKey: ["group-session-round", session.id] });
-                          queryClient.invalidateQueries({ queryKey: ["group-round-progress", session.id] });
-                        } catch (e: any) {
-                          toast.error(e.message || "Błąd podczas startu rundy");
-                        } finally {
-                          setStartingRound(false);
-                        }
+                        await handleStartRound(nextRound);
                       } else {
                         handleVote("continue");
                       }
@@ -646,7 +656,7 @@ const GroupSession = () => {
                 <div>
                   <p className="font-bold text-lg">Czekam na pozostałych…</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {doneCount} / {activeSwipers.length} osób skończyło rundę {currentRound?.round_number}
+                    {doneCount} / {activeSwipers.length} osób skończyło rundę {effectiveRound?.round_number}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -671,8 +681,8 @@ const GroupSession = () => {
           }
 
           // ── No round started yet ────────────────────────────────────────
-          if (!currentRound || currentRound.status === "completed") {
-            const nextRound = (currentRound?.round_number ?? 0) + 1;
+          if (!effectiveRound || effectiveRound.status === "completed") {
+            const nextRound = (effectiveRound?.round_number ?? 0) + 1;
             return (
               <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
                 <div className="h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
@@ -717,7 +727,7 @@ const GroupSession = () => {
               city={session.city}
               date={session.trip_date ? new Date(session.trip_date) : new Date()}
               groupSessionId={session.id}
-              roundPlaceIds={currentRound.place_ids}
+              roundPlaceIds={MOCK_MODE ? undefined : effectiveRound.place_ids}
               onRoundComplete={handleRoundComplete}
               onGroupFinished={() => setTab("matches")}
             />

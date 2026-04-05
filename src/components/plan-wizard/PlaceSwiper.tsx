@@ -530,8 +530,9 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
       // ── Mock mode: use local data, zero API/DB cost ──────────────────────
       if (MOCK_MODE) {
         const mocks = getMockPlaces(city);
-        const pool = roundPlaceIds?.length ? mocks.slice(0, roundPlaceIds.length) : mocks;
-        const shuffled = [...pool].sort(() => Math.random() - 0.5);
+        // In group sessions, show 10 places per round; solo = all
+        const limit = groupSessionId ? 10 : mocks.length;
+        const shuffled = [...mocks.slice(0, limit)].sort(() => Math.random() - 0.5);
         setAllPlaces(shuffled);
         setQueue(shuffled);
         setLoading(false);

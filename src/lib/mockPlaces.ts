@@ -1,6 +1,6 @@
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 
-export const MOCK_MODE = import.meta.env.VITE_MOCK_PLACES === "true";
+export const MOCK_MODE = true; // TODO: zmień na false przed launche'm
 
 // Free deterministic photos — no API key, no billing
 const pic = (seed: string) => `https://picsum.photos/seed/${seed}/800/600`;
