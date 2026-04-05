@@ -773,6 +773,13 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
     });
   };
 
+  // Notify parent when round is complete (must be in effect, not render)
+  useEffect(() => {
+    if (queue.length === 0 && !loading && onRoundComplete) {
+      onRoundComplete();
+    }
+  }, [queue.length, loading]);
+
   // Fetch + match route_examples when queue runs out
   useEffect(() => {
     if (queue.length > 0 || loading || likedPlaces.length === 0) return;
@@ -862,9 +869,8 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
 
   // All cards swiped
   if (queue.length === 0) {
-    // Round mode: hand off to GroupSession which shows waiting/decision UI
+    // Round mode: onRoundComplete is called via useEffect above; just render nothing
     if (onRoundComplete) {
-      onRoundComplete();
       return null;
     }
     if (groupSessionId) {
