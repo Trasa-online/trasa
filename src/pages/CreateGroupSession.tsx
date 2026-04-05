@@ -275,31 +275,19 @@ const CreateGroupSession = () => {
                   >✕</span>
                 )}
               </button>
-            </div>
-
-            {/* Calendar overlay */}
-            {datePickerOpen && (
-              <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={() => setDatePickerOpen(false)}>
-                <div className="absolute inset-0 bg-black/40" />
-                <div
-                  className="relative bg-background rounded-t-3xl px-4 pt-3 pb-8"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <div className="flex justify-center mb-3">
-                    <div className="h-1 w-10 rounded-full bg-border" />
-                  </div>
-                  <p className="text-sm font-semibold text-center mb-2">Wybierz datę wyjazdu</p>
+              {datePickerOpen && (
+                <div className="mt-2 rounded-2xl border border-border/40 bg-card overflow-hidden flex justify-center">
                   <Calendar
                     mode="single"
                     selected={tripDate}
                     onSelect={(d) => { setTripDate(d); setDatePickerOpen(false); }}
                     disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))}
                     locale={pl}
-                    className="mx-auto"
+                    className="rounded-2xl"
                   />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Create session */}
             <div>
