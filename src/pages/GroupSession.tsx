@@ -591,44 +591,54 @@ const GroupSession = () => {
                 </div>
 
                 <div className="w-full space-y-2.5">
-                  {/* Continue — creator starts next round immediately; non-creator votes and waits */}
-                  <button
-                    onClick={async () => {
-                      if (isCreator || MOCK_MODE) {
-                        await handleStartRound(nextRound);
-                      } else {
-                        handleVote("continue");
-                      }
-                    }}
-                    disabled={startingRound || voting}
-                    className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
-                  >
-                    <Play className="h-4 w-4" />
-                    {startingRound
-                      ? "Startuję…"
-                      : isCreator
-                        ? `Runda ${nextRound} — start!`
-                        : "Chcę swipe'ować dalej"}
-                  </button>
+                  {isCreator || MOCK_MODE ? (
+                    <>
+                      {/* Creator: start next round */}
+                      <button
+                        onClick={() => handleStartRound(nextRound)}
+                        disabled={startingRound}
+                        className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
+                      >
+                        <Play className="h-4 w-4" />
+                        {startingRound ? "Startuję…" : `Runda ${nextRound} — start!`}
+                      </button>
 
-                  {/* Finish — both creator and non-creator can go to matches */}
-                  <button
-                    onClick={() => { handleVote("finish"); setTab("matches"); }}
-                    disabled={voting || startingRound}
-                    className="w-full py-3.5 rounded-2xl border border-border/60 bg-card font-semibold text-sm active:scale-[0.97] transition-transform disabled:opacity-40"
-                  >
-                    {matches.length > 0
-                      ? `Stwórz trasę z ${matches.length} ${matches.length === 1 ? "miejsca" : "miejsc"}`
-                      : "Zakończ i przejdź do dopasowań"}
-                  </button>
+                      {/* Creator: go to matches / create route */}
+                      <button
+                        onClick={() => { handleVote("finish"); setTab("matches"); }}
+                        disabled={voting || startingRound}
+                        className="w-full py-3.5 rounded-2xl border border-border/60 bg-card font-semibold text-sm active:scale-[0.97] transition-transform disabled:opacity-40"
+                      >
+                        {matches.length > 0
+                          ? `Przejdź do dopasowań (${matches.length})`
+                          : "Zakończ i przejdź do dopasowań"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Participant: vote to continue */}
+                      <button
+                        onClick={() => handleVote("continue")}
+                        disabled={voting}
+                        className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
+                      >
+                        <Play className="h-4 w-4" />
+                        {voting ? "…" : "Przechodzę do kolejnej rundy"}
+                      </button>
 
-                  <button
-                    onClick={() => handleVote("opt_out")}
-                    disabled={voting || startingRound}
-                    className="w-full py-2 text-xs text-muted-foreground underline active:opacity-60"
-                  >
-                    Wyjdź z matchowania (zostań w podróży)
-                  </button>
+                      {/* Participant: opt out */}
+                      <button
+                        onClick={() => handleVote("opt_out")}
+                        disabled={voting}
+                        className="w-full py-3.5 rounded-2xl border border-border/60 bg-card font-semibold text-sm active:scale-[0.97] transition-transform disabled:opacity-40"
+                      >
+                        Wychodzę z matchowania
+                      </button>
+                      <p className="text-xs text-muted-foreground text-center -mt-1">
+                        zostaję w podróży i widzę dopasowania
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             );
@@ -683,6 +693,36 @@ const GroupSession = () => {
           // ── No round started yet ────────────────────────────────────────
           if (!effectiveRound || effectiveRound.status === "completed") {
             const nextRound = (effectiveRound?.round_number ?? 0) + 1;
+
+            if (!isCreator && !MOCK_MODE) {
+              // Participant waiting screen
+              return (
+                <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
+                  <div className="h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
+                    <Users className="h-10 w-10 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-xl font-black mb-1">
+                      {nextRound === 1 ? "Zaraz zaczniemy!" : `Runda ${nextRound} — chwilka`}
+                    </p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {nextRound === 1
+                        ? "Organizator sesji za chwilę rozpocznie matchowanie. Przygotuj się!"
+                        : `Czekam aż organizator uruchomi kolejną rundę. ${matches.length > 0 ? `${matches.length} matchów do tej pory.` : ""}`}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex gap-1.5">
+                      {[0, 1, 2].map(i => (
+                        <div key={i} className="h-2 w-2 rounded-full bg-orange-600/40 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Czekam na organizatora…</p>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
                 <div className="h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
@@ -698,25 +738,14 @@ const GroupSession = () => {
                       : `Kolejna pula 10 nowych miejsc. ${matches.length} matchów do tej pory.`}
                   </p>
                 </div>
-                {(isCreator || MOCK_MODE) ? (
-                  <button
-                    onClick={() => handleStartRound(nextRound)}
-                    disabled={startingRound}
-                    className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
-                  >
-                    <Play className="h-5 w-5" />
-                    {startingRound ? "Startuję…" : nextRound === 1 ? "Rozpocznij matchowanie" : `Runda ${nextRound} — start!`}
-                  </button>
-                ) : (
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="flex gap-1.5">
-                      {[0, 1, 2].map(i => (
-                        <div key={i} className="h-2 w-2 rounded-full bg-orange-600/40 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-                      ))}
-                    </div>
-                    <p className="text-sm text-muted-foreground">Czekam aż host rozpocznie rundę…</p>
-                  </div>
-                )}
+                <button
+                  onClick={() => handleStartRound(nextRound)}
+                  disabled={startingRound}
+                  className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
+                >
+                  <Play className="h-5 w-5" />
+                  {startingRound ? "Startuję…" : nextRound === 1 ? "Rozpocznij matchowanie" : `Runda ${nextRound} — start!`}
+                </button>
               </div>
             );
           }
@@ -834,8 +863,8 @@ const GroupSession = () => {
               )}
             </div>
 
-            {/* Create route button (pinned at bottom) */}
-            {matches.length > 0 && (
+            {/* Create route button — creator only */}
+            {isCreator && matches.length > 0 && (
               <div className="px-4 py-3 shrink-0 border-t border-border/20">
                 <button
                   onClick={handleCreateRoute}
