@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import type { MockPlace } from "./PlaceSwiper";
+import { MOCK_MODE, MOCK_PLACE_DETAIL } from "@/lib/mockPlaces";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -90,6 +91,15 @@ const PlaceSwiperDetail = ({
     setLoading(true);
 
     const fetchAll = async () => {
+      // ── Mock mode: skip Google Places API entirely ──
+      if (MOCK_MODE) {
+        setDetail({ ...MOCK_PLACE_DETAIL, name: place.place_name } as any);
+        setPhotos([place.photo_url].filter(Boolean) as string[]);
+        setUsageCount(0);
+        setLoading(false);
+        return;
+      }
+
       // 1. Google Places details
       const placesPromise = supabase.functions
         .invoke("google-places-proxy", {

@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
+import { MOCK_MODE, getMockPlaces } from "@/lib/mockPlaces";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -525,6 +526,17 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
   useEffect(() => {
     setLoading(true);
     const fetchPlaces = async () => {
+
+      // ── Mock mode: use local data, zero API/DB cost ──────────────────────
+      if (MOCK_MODE) {
+        const mocks = getMockPlaces(city);
+        const pool = roundPlaceIds?.length ? mocks.slice(0, roundPlaceIds.length) : mocks;
+        const shuffled = [...pool].sort(() => Math.random() - 0.5);
+        setAllPlaces(shuffled);
+        setQueue(shuffled);
+        setLoading(false);
+        return;
+      }
 
       // ── Group round mode: load exactly the round's place IDs in order ──
       if (roundPlaceIds?.length) {
