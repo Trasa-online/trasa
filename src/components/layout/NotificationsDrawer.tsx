@@ -46,6 +46,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
         .from("notifications")
         .select("id, type, actor_id, route_id, created_at, read, metadata")
         .eq("user_id", userId)
+        .neq("type", "group_match")
         .order("created_at", { ascending: false })
         .limit(50);
 

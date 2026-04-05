@@ -275,19 +275,31 @@ const CreateGroupSession = () => {
                   >✕</span>
                 )}
               </button>
-              {datePickerOpen && (
-                <div className="mt-2 rounded-2xl border border-border/40 bg-card overflow-hidden">
+            </div>
+
+            {/* Calendar overlay */}
+            {datePickerOpen && (
+              <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={() => setDatePickerOpen(false)}>
+                <div className="absolute inset-0 bg-black/40" />
+                <div
+                  className="relative bg-background rounded-t-3xl px-4 pt-3 pb-8"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div className="flex justify-center mb-3">
+                    <div className="h-1 w-10 rounded-full bg-border" />
+                  </div>
+                  <p className="text-sm font-semibold text-center mb-2">Wybierz datę wyjazdu</p>
                   <Calendar
                     mode="single"
                     selected={tripDate}
                     onSelect={(d) => { setTripDate(d); setDatePickerOpen(false); }}
                     disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))}
                     locale={pl}
-                    className="rounded-2xl"
+                    className="mx-auto"
                   />
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Create session */}
             <div>
@@ -363,16 +375,15 @@ const CreateGroupSession = () => {
               <div className="flex items-center gap-2 bg-background border border-border/60 rounded-xl px-3 h-10">
                 <Search className="h-4 w-4 text-muted-foreground shrink-0" />
                 <input
-                  type="text"
+                  type="search"
                   value={friendSearch}
                   onChange={e => setFriendSearch(e.target.value)}
                   placeholder="Szukaj @username..."
-                  autoComplete="new-password"
+                  autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="off"
                   spellCheck={false}
-                  inputMode="search"
-                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
                 />
               </div>
               {friendResults.length > 0 && (
