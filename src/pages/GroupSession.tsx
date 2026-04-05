@@ -594,7 +594,7 @@ const GroupSession = () => {
                   {/* Continue — creator starts next round immediately; non-creator votes and waits */}
                   <button
                     onClick={async () => {
-                      if (isCreator) {
+                      if (isCreator || MOCK_MODE) {
                         await handleStartRound(nextRound);
                       } else {
                         handleVote("continue");
@@ -698,7 +698,7 @@ const GroupSession = () => {
                       : `Kolejna pula 10 nowych miejsc. ${matches.length} matchów do tej pory.`}
                   </p>
                 </div>
-                {isCreator ? (
+                {(isCreator || MOCK_MODE) ? (
                   <button
                     onClick={() => handleStartRound(nextRound)}
                     disabled={startingRound}
