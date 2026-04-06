@@ -244,29 +244,15 @@ const GroupSession = () => {
     if (!session) return;
     setStartingRound(true);
     try {
-      if (MOCK_MODE) {
-        setMockRoundNumber(roundNumber);
-        setMockIsVoting(false);
-        setMyRoundDone(false);
-        // Also upsert a DB round so other participants can see the round started
-        await (supabase as any).from("group_session_rounds").upsert({
-          session_id: session.id,
-          round_number: roundNumber,
-          place_ids: [],
-          status: "active",
-        }, { onConflict: "session_id,round_number" });
-        queryClient.invalidateQueries({ queryKey: ["group-session-round", session.id] });
-        queryClient.invalidateQueries({ queryKey: ["group-round-progress", session.id] });
-      } else {
-        const { error } = await (supabase as any).rpc("start_group_round", {
-          p_session_id: session.id,
-          p_round_number: roundNumber,
-        });
-        if (error) throw error;
-        setMyRoundDone(false);
-        queryClient.invalidateQueries({ queryKey: ["group-session-round", session.id] });
-        queryClient.invalidateQueries({ queryKey: ["group-round-progress", session.id] });
-      }
+      const { error } = await (supabase as any).rpc("start_group_round", {
+        p_session_id: session.id,
+        p_round_number: roundNumber,
+      });
+      if (error) throw error;
+      setMyRoundDone(false);
+      if (MOCK_MODE) { setMockRoundNumber(roundNumber); setMockIsVoting(false); }
+      queryClient.invalidateQueries({ queryKey: ["group-session-round", session.id] });
+      queryClient.invalidateQueries({ queryKey: ["group-round-progress", session.id] });
     } catch (e: any) {
       toast.error(e.message || "Błąd podczas startu rundy");
     } finally {
@@ -277,10 +263,7 @@ const GroupSession = () => {
   const handleRoundComplete = async () => {
     if (!session) return;
     setMyRoundDone(true);
-    if (MOCK_MODE) {
-      setMockIsVoting(true);
-      return;
-    }
+    if (MOCK_MODE) setMockIsVoting(true);
     if (!currentRound) return;
     try {
       await (supabase as any).rpc("complete_round_for_user", {

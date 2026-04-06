@@ -52,12 +52,13 @@ const ReviewSummary = () => {
     queryKey: ["review-summary-participants", route?.group_session_id],
     queryFn: async () => {
       if (!route?.group_session_id) return [];
-      const { data: groupRoutes } = await supabase
-        .from("routes")
+      // Use group_session_members — always populated when users join
+      const { data: members } = await (supabase as any)
+        .from("group_session_members")
         .select("user_id")
-        .eq("group_session_id", route.group_session_id);
-      if (!groupRoutes?.length) return [];
-      const userIds = [...new Set(groupRoutes.map((r: any) => r.user_id))];
+        .eq("session_id", route.group_session_id);
+      if (!members?.length) return [];
+      const userIds = members.map((m: any) => m.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, username, first_name, avatar_url")
@@ -250,7 +251,7 @@ const ReviewSummary = () => {
             <p className="text-white/70 text-base font-medium mt-0.5">{dayLabel}</p>
           )}
           {/* Group participant avatars */}
-          {groupParticipants.length > 1 && (
+          {groupParticipants.length > 0 && (
             <div className="flex items-center gap-2 mt-3">
               <div className="flex -space-x-2">
                 {groupParticipants.slice(0, 5).map((p) => (
