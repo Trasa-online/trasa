@@ -50,7 +50,7 @@ const Home = () => {
         .from("routes")
         .select("id, city, created_at, ai_summary, user_id, review_photos, likes(user_id), pins(place_name, category, pin_order, latitude, longitude)")
         .in("user_id", feedUserIds)
-        .neq("trip_type", "planning")
+        .eq("is_shared", true)
         .order("created_at", { ascending: false })
         .limit(30);
 

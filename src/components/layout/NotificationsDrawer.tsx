@@ -26,7 +26,8 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   mention:        { icon: MessageCircle, color: "text-orange-500 bg-orange-100",  label: u => `${u} wspomniał(a) o Tobie` },
   pin_visit:      { icon: MapPin,        color: "text-teal-500 bg-teal-100",      label: u => `${u} odwiedził(a) Twoje miejsce` },
   group_match:    { icon: Users,         color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} też polubił(a) ${meta?.place_name ?? "to samo miejsce"}! Match 🎉` },
-  group_invite:   { icon: Users,         color: "text-violet-500 bg-violet-100",  label: (u, meta) => `${u} zaprasza Cię do wspólnego matchowania w ${meta?.city ?? "sesji grupowej"}` },
+  group_invite:       { icon: Users,  color: "text-violet-500 bg-violet-100",  label: (u, meta) => `${u} zaprasza Cię do wspólnego matchowania w ${meta?.city ?? "sesji grupowej"}` },
+  group_route_ready:  { icon: Route, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} stworzył(a) trasę${meta?.city ? ` w ${meta.city}` : ""} — sprawdź!` },
 };
 
 interface Props {
@@ -200,6 +201,14 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                           className="mt-2 px-3 py-1.5 rounded-full bg-orange-600 text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           Dołącz do sesji →
+                        </button>
+                      )}
+                      {n.type === "group_route_ready" && (
+                        <button
+                          onClick={() => { onClose(); navigate("/moje-podroze"); }}
+                          className="mt-2 px-3 py-1.5 rounded-full bg-orange-600 text-white text-xs font-semibold active:scale-95 transition-transform"
+                        >
+                          Zobacz trasę →
                         </button>
                       )}
                     </div>
