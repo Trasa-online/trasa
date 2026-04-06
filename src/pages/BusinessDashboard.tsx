@@ -282,6 +282,17 @@ const BusinessDashboard = () => {
     window.location.replace("/auth");
   };
 
+  const sendTestEvent = async () => {
+    if (!placeId) return;
+    const { error } = await (supabase as any).from("place_events").insert({
+      place_id: placeId,
+      event_type: "view",
+      user_id: user?.id ?? null,
+    });
+    if (error) toast.error("Błąd: " + error.message);
+    else { toast.success("Testowe zdarzenie wysłane!"); await loadData(); }
+  };
+
   if (loading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -323,7 +334,7 @@ const BusinessDashboard = () => {
 
       <div className={`p-4 space-y-4 max-w-2xl mx-auto ${isDirty ? "pb-28" : "pb-4"}`}>
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3 relative">
           {[
             { icon: BarChart2, value: stats.views, label: "Wyświetlenia" },
             { icon: MapPin, value: stats.onRoutes, label: "Na trasach" },
@@ -337,6 +348,12 @@ const BusinessDashboard = () => {
             </div>
           ))}
         </div>
+        <button
+          onClick={sendTestEvent}
+          className="text-[11px] text-muted-foreground underline underline-offset-2 text-center w-full"
+        >
+          Wyślij testowe zdarzenie
+        </button>
 
         {/* Swipe card preview */}
         <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-3">

@@ -185,7 +185,7 @@ const CreateGroupSession = () => {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <span className="font-bold text-base">Grupowe matchowanie</span>
+        <span className="font-bold text-base">Grupowe parowanie</span>
       </div>
 
       <div className="flex-1 overflow-y-auto flex flex-col px-4 py-6 gap-6">

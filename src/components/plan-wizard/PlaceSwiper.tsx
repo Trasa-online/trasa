@@ -811,6 +811,11 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
     setQueue(prev => prev.filter(p => p.id !== top.id));
     saveReaction(top, "liked");
     trackAndRebalance(top);
+    // Track add_to_route for real (non-mock) places
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (UUID_RE.test(top.id)) {
+      (supabase as any).from("place_events").insert({ place_id: top.id, event_type: "add_to_route", user_id: user?.id ?? null });
+    }
   };
 
   const handleSkip = () => {

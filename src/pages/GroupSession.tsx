@@ -414,7 +414,7 @@ const GroupSession = () => {
         <p className="text-4xl">👋</p>
         <p className="font-bold text-lg">Zaloguj się, żeby dołączyć</p>
         <p className="text-sm text-muted-foreground">
-          Twój znajomy zaprasza Cię do wspólnego matchowania miejsc w <strong>{session.city}</strong>.
+          Twój znajomy zaprasza Cię do wspólnego parowania miejsc w <strong>{session.city}</strong>.
         </p>
         <button onClick={() => navigate("/auth")} className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base">
           Zaloguj się
@@ -439,7 +439,7 @@ const GroupSession = () => {
             <Users className="h-10 w-10 text-orange-600" />
           </div>
           <div>
-            <p className="text-xl font-black mb-1">Grupowe matchowanie</p>
+            <p className="text-xl font-black mb-1">Grupowe parowanie</p>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Swipe'ujcie miejsca w <strong>{session.city}</strong> niezależnie i sprawdźcie, co Was łączy!
             </p>
@@ -620,7 +620,7 @@ const GroupSession = () => {
                         disabled={voting}
                         className="w-full py-3.5 rounded-2xl border border-border/60 bg-card font-semibold text-sm active:scale-[0.97] transition-transform disabled:opacity-40"
                       >
-                        Wychodzę z matchowania
+                        Wychodzę z parowania
                       </button>
                       <p className="text-xs text-muted-foreground text-center -mt-1">
                         zostaję w podróży i widzę dopasowania
@@ -695,7 +695,7 @@ const GroupSession = () => {
                     </p>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       {nextRound === 1
-                        ? "Organizator sesji za chwilę rozpocznie matchowanie. Przygotuj się!"
+                        ? "Organizator sesji za chwilę rozpocznie parowanie. Przygotuj się!"
                         : `Czekam aż organizator uruchomi kolejną rundę. ${matches.length > 0 ? `${matches.length} matchów do tej pory.` : ""}`}
                     </p>
                   </div>
@@ -732,7 +732,7 @@ const GroupSession = () => {
                   className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
                 >
                   <Play className="h-5 w-5" />
-                  {startingRound ? "Startuję…" : nextRound === 1 ? "Rozpocznij matchowanie" : `Runda ${nextRound} — start!`}
+                  {startingRound ? "Startuję…" : nextRound === 1 ? "Rozpocznij parowanie" : `Runda ${nextRound} — start!`}
                 </button>
               </div>
             );
