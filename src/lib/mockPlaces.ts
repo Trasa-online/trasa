@@ -276,6 +276,21 @@ export const MOCK_PLACES: MockPlace[] = [
   },
 ];
 
+export const MOCK_BUSINESS_POSTS = [
+  {
+    id: "mock-post-1",
+    description: "Właśnie wjechała nowa karta sezonowa ☕ Latte z lawendą i macha cold brew — dostępne od dziś!",
+    photo_urls: ["https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=600&q=80"],
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), // 3h temu
+  },
+  {
+    id: "mock-post-2",
+    description: "Happy hour dziś od 16:00 do 18:00 — wszystkie drinki w cenie 1+1. Zapraszamy! 🎉",
+    photo_urls: [],
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 dni temu
+  },
+];
+
 export function getMockPlaces(city: string): MockPlace[] {
   const cityLower = city.toLowerCase();
   return MOCK_PLACES.filter(p => p.city.toLowerCase() === cityLower);

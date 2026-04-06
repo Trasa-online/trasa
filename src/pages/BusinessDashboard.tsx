@@ -70,6 +70,7 @@ const BusinessDashboard = () => {
   const [eventEndsAt, setEventEndsAt] = useState("");
 
   const [uploading, setUploading] = useState<string | null>(null); // which slot is uploading
+  const [isDirty, setIsDirty] = useState(false);
 
   // Posts state
   const [posts, setPosts] = useState<BusinessPost[]>([]);
@@ -123,6 +124,7 @@ const BusinessDashboard = () => {
     setEventDescription(profileData.event_description ?? "");
     setEventStartsAt(profileData.event_starts_at ?? "");
     setEventEndsAt(profileData.event_ends_at ?? "");
+    setIsDirty(false);
 
     const since = new Date();
     since.setDate(since.getDate() - 30);
@@ -160,6 +162,7 @@ const BusinessDashboard = () => {
     try {
       const url = await uploadFile(file, "logo");
       setLogoUrl(url);
+      setIsDirty(true);
     } catch { toast.error("Nie udało się przesłać logo"); }
     setUploading(null);
   };
@@ -171,6 +174,7 @@ const BusinessDashboard = () => {
     try {
       const url = await uploadFile(file, "cover");
       setCoverImageUrl(url);
+      setIsDirty(true);
     } catch { toast.error("Nie udało się przesłać zdjęcia okładkowego"); }
     setUploading(null);
   };
@@ -184,6 +188,7 @@ const BusinessDashboard = () => {
     try {
       const urls = await Promise.all(toUpload.map(f => uploadFile(f, "gallery")));
       setGalleryUrls(prev => [...prev, ...urls]);
+      setIsDirty(true);
     } catch { toast.error("Nie udało się przesłać zdjęć"); }
     setUploading(null);
     e.target.value = "";
@@ -191,6 +196,7 @@ const BusinessDashboard = () => {
 
   const removeGalleryPhoto = (idx: number) => {
     setGalleryUrls(prev => prev.filter((_, i) => i !== idx));
+    setIsDirty(true);
   };
 
   const handlePostPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -251,7 +257,7 @@ const BusinessDashboard = () => {
       })
       .eq("place_id", placeId);
     if (error) toast.error("Nie udało się zapisać zmian");
-    else toast.success("Zmiany zapisane!");
+    else { toast.success("Zmiany zapisane!"); setIsDirty(false); }
     setSaving(false);
   };
 
@@ -315,7 +321,7 @@ const BusinessDashboard = () => {
         </button>
       </div>
 
-      <div className="p-4 space-y-4 max-w-2xl mx-auto">
+      <div className={`p-4 space-y-4 max-w-2xl mx-auto ${isDirty ? "pb-28" : "pb-4"}`}>
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
           {[
@@ -493,23 +499,23 @@ const BusinessDashboard = () => {
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dane kontaktowe</p>
           <div className="space-y-1">
             <Label htmlFor="business_name">Nazwa firmy</Label>
-            <Input id="business_name" value={businessName} onChange={e => setBusinessName(e.target.value)} />
+            <Input id="business_name" value={businessName} onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="phone">Telefon</Label>
-            <Input id="phone" value={phone} onChange={e => setPhone(e.target.value)} type="tel" />
+            <Input id="phone" value={phone} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
           </div>
           <div className="space-y-1">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" value={email} onChange={e => setEmail(e.target.value)} type="email" />
+            <Input id="email" value={email} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
           </div>
           <div className="space-y-1">
             <Label htmlFor="website">Strona WWW</Label>
-            <Input id="website" value={website} onChange={e => setWebsite(e.target.value)} type="url" />
+            <Input id="website" value={website} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
           </div>
           <div className="space-y-1">
             <Label htmlFor="booking_url">URL rezerwacji</Label>
-            <Input id="booking_url" value={bookingUrl} onChange={e => setBookingUrl(e.target.value)} type="url" />
+            <Input id="booking_url" value={bookingUrl} onChange={e => { setBookingUrl(e.target.value); setIsDirty(true); }} type="url" />
           </div>
 
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Opis</p>
@@ -517,7 +523,7 @@ const BusinessDashboard = () => {
             <textarea
               rows={3}
               value={description}
-              onChange={e => setDescription(e.target.value)}
+              onChange={e => { setDescription(e.target.value); setIsDirty(true); }}
               placeholder="Opisz swój lokal..."
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />
@@ -535,7 +541,7 @@ const BusinessDashboard = () => {
             <Input
               id="event_title"
               value={eventTitle}
-              onChange={e => setEventTitle(e.target.value)}
+              onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }}
               placeholder="np. Drinki 1+1 do 20:00"
             />
           </div>
@@ -545,7 +551,7 @@ const BusinessDashboard = () => {
               id="event_description"
               rows={2}
               value={eventDescription}
-              onChange={e => setEventDescription(e.target.value)}
+              onChange={e => { setEventDescription(e.target.value); setIsDirty(true); }}
               placeholder="Szczegóły wydarzenia..."
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />
@@ -553,23 +559,14 @@ const BusinessDashboard = () => {
           <div className="space-y-3">
             <div className="space-y-1">
               <Label htmlFor="event_starts_at">Od</Label>
-              <Input id="event_starts_at" value={eventStartsAt} onChange={e => setEventStartsAt(e.target.value)} type="date" className="w-full" />
+              <Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" />
             </div>
             <div className="space-y-1">
               <Label htmlFor="event_ends_at">Do</Label>
-              <Input id="event_ends_at" value={eventEndsAt} onChange={e => setEventEndsAt(e.target.value)} type="date" className="w-full" />
+              <Input id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" />
             </div>
           </div>
         </div>
-
-        <button
-          onClick={handleSave}
-          disabled={saving || uploading !== null}
-          className="w-full py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-          Zapisz zmiany
-        </button>
 
         {/* Posts / Feed */}
         <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
@@ -666,6 +663,20 @@ const BusinessDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Sticky save bar — only when dirty */}
+      {isDirty && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 px-4 pb-safe-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent">
+          <button
+            onClick={handleSave}
+            disabled={saving || uploading !== null}
+            className="w-full max-w-2xl mx-auto flex py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 items-center justify-center gap-2"
+          >
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            Zapisz zmiany
+          </button>
+        </div>
+      )}
     </div>
   );
 };

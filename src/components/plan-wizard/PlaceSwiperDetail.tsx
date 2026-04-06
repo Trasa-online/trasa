@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import type { MockPlace } from "./PlaceSwiper";
-import { MOCK_MODE, MOCK_PLACE_DETAIL } from "@/lib/mockPlaces";
+import { MOCK_MODE, MOCK_PLACE_DETAIL, MOCK_BUSINESS_POSTS } from "@/lib/mockPlaces";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 
@@ -106,15 +106,19 @@ const PlaceSwiperDetail = ({
         setDetail({ ...MOCK_PLACE_DETAIL, name: place.place_name } as any);
         setPhotos([place.photo_url].filter(Boolean) as string[]);
         setUsageCount(0);
-        // Fetch real posts even in mock mode (place_id is real UUID only for non-mock places)
-        if (place.businessLogoUrl !== undefined && !place.id.startsWith("mock-")) {
-          const { data } = await (supabase as any)
-            .from("business_posts")
-            .select("id, description, photo_urls, created_at")
-            .eq("place_id", place.id)
-            .order("created_at", { ascending: false })
-            .limit(10);
-          if (data) setBusinessPosts(data);
+        // Business posts: use mock data for mock places, real fetch for real UUIDs
+        if (place.businessLogoUrl !== undefined) {
+          if (place.id.startsWith("mock-")) {
+            setBusinessPosts(MOCK_BUSINESS_POSTS);
+          } else {
+            const { data } = await (supabase as any)
+              .from("business_posts")
+              .select("id, description, photo_urls, created_at")
+              .eq("place_id", place.id)
+              .order("created_at", { ascending: false })
+              .limit(10);
+            if (data) setBusinessPosts(data);
+          }
         }
         setLoading(false);
         return;
