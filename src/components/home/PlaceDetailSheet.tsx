@@ -29,7 +29,12 @@ interface BusinessProfile {
   owner_user_id: string | null;
   business_name: string;
   is_active: boolean;
-  promo_title: string | null;
+  logo_url: string | null;
+  gallery_urls: string[];
+  event_title: string | null;
+  event_description: string | null;
+  event_starts_at: string | null;
+  event_ends_at: string | null;
 }
 
 const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) => {
@@ -64,7 +69,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
       // Load business profile
       (supabase as any)
         .from("business_profiles")
-        .select("id, place_id, owner_user_id, business_name, is_active, promo_title")
+        .select("id, place_id, owner_user_id, business_name, is_active, logo_url, gallery_urls, event_title, event_description, event_starts_at, event_ends_at")
         .eq("place_id", pin.place_id)
         .maybeSingle()
         .then(({ data }: { data: BusinessProfile | null }) => {
@@ -250,20 +255,61 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
           </div>
         )}
 
-        {/* Premium business badge */}
-        {businessProfile && businessProfile.is_active && (
-          <div className="mx-4 mt-3 mb-2 p-3 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-              <span className="text-sm">⭐</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-amber-800">Miejsce premium</p>
-              {businessProfile.promo_title && (
-                <p className="text-xs text-amber-700 truncate">{businessProfile.promo_title}</p>
+        {/* Business owner section */}
+        {businessProfile?.is_active && (() => {
+          const hasEvent = businessProfile.event_title && businessProfile.event_ends_at
+            ? new Date(businessProfile.event_ends_at) >= new Date()
+            : !!businessProfile.event_title;
+          const hasGallery = (businessProfile.gallery_urls ?? []).length > 0;
+          if (!hasEvent && !hasGallery && !businessProfile.logo_url) return null;
+
+          return (
+            <div className="mt-4 mb-2 space-y-3">
+              {/* Owner header */}
+              <div className="flex items-center gap-2.5 px-1">
+                {businessProfile.logo_url ? (
+                  <img src={businessProfile.logo_url} className="w-7 h-7 rounded-full object-cover border border-border/40" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs">⭐</span>
+                  </div>
+                )}
+                <p className="text-xs font-semibold text-foreground">{businessProfile.business_name}</p>
+                <span className="ml-auto text-[10px] font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Zweryfikowany</span>
+              </div>
+
+              {/* Current event */}
+              {hasEvent && (
+                <div className="rounded-xl border border-amber-200/60 bg-amber-50 p-3 space-y-1">
+                  <p className="text-xs font-bold text-amber-800">🎉 {businessProfile.event_title}</p>
+                  {businessProfile.event_description && (
+                    <p className="text-xs text-amber-700 leading-relaxed">{businessProfile.event_description}</p>
+                  )}
+                  {businessProfile.event_starts_at && businessProfile.event_ends_at && (
+                    <p className="text-[10px] text-amber-600 mt-1">
+                      {new Date(businessProfile.event_starts_at).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}
+                      {" – "}
+                      {new Date(businessProfile.event_ends_at).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Gallery */}
+              {hasGallery && (
+                <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                  {(businessProfile.gallery_urls ?? []).map((url, i) => (
+                    <img
+                      key={i}
+                      src={url}
+                      className="h-24 w-24 flex-shrink-0 rounded-xl object-cover"
+                    />
+                  ))}
+                </div>
               )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Manage / Claim section */}
         {pin.place_id && user && (

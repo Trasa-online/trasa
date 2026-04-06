@@ -39,8 +39,10 @@ const BusinessDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
+  const [placeCategory, setPlaceCategory] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats>({ views: 0, onRoutes: 0, clicks: 0 });
   const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Form state
   const [businessName, setBusinessName] = useState("");
@@ -84,6 +86,10 @@ const BusinessDashboard = () => {
     if (profileData.owner_user_id !== user.id && !isAdmin) {
       setAccessDenied(true); setLoading(false); return;
     }
+
+    // Fetch place category
+    const { data: placeData } = await supabase.from("places").select("category").eq("id", placeId).maybeSingle();
+    setPlaceCategory((placeData as any)?.category ?? null);
 
     setProfile(profileData as BusinessProfile);
     setBusinessName(profileData.business_name ?? "");
@@ -249,6 +255,61 @@ const BusinessDashboard = () => {
               <p className="text-[10px] text-muted-foreground">ostatnie 30 dni</p>
             </div>
           ))}
+        </div>
+
+        {/* Swipe card preview */}
+        <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Podgląd wizytówki</p>
+            <button
+              onClick={() => setShowPreview(v => !v)}
+              className="text-xs text-orange-600 font-semibold active:opacity-60"
+            >
+              {showPreview ? "Ukryj" : "Pokaż"}
+            </button>
+          </div>
+          {showPreview && (
+            <div className="relative w-full" style={{ aspectRatio: "3/4", maxHeight: 360 }}>
+              <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-lg">
+                {/* Background */}
+                {coverImageUrl ? (
+                  <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-800 to-orange-600" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                {/* Business badge */}
+                {(eventTitle || logoUrl) && (
+                  <div className="absolute top-3 right-3 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    ✦ Wizytówka
+                  </div>
+                )}
+
+                {/* Bottom content */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1.5">
+                  {logoUrl && (
+                    <img src={logoUrl} className="w-8 h-8 rounded-full object-cover border-2 border-white/30 mb-1" />
+                  )}
+                  <p className="text-white font-black text-xl leading-tight">{businessName || "Nazwa lokalu"}</p>
+                  <p className="text-white/70 text-sm">
+                    {[placeCategory, "@trasa"].filter(Boolean).join(" · ")}
+                  </p>
+                  {description && (
+                    <p className="text-white/60 text-xs leading-relaxed line-clamp-2">{description}</p>
+                  )}
+                  {eventTitle && (
+                    <div className="inline-flex items-center gap-1 bg-amber-500/80 backdrop-blur-sm rounded-full px-2.5 py-1 text-white text-xs font-semibold">
+                      🎉 {eventTitle}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          {!showPreview && (
+            <p className="text-xs text-muted-foreground">Kliknij "Pokaż" aby zobaczyć jak wygląda Twoja wizytówka w swiperze.</p>
+          )}
         </div>
 
         {/* Photos */}
