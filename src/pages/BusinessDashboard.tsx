@@ -197,8 +197,24 @@ const BusinessDashboard = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/auth";
+    // Clear Supabase session from all storage
+    const clearStorage = () => {
+      [localStorage, sessionStorage].forEach(store => {
+        Object.keys(store)
+          .filter(k => k.startsWith("sb-"))
+          .forEach(k => store.removeItem(k));
+      });
+    };
+
+    try {
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise(res => setTimeout(res, 3000)), // timeout fallback
+      ]);
+    } catch {}
+
+    clearStorage();
+    window.location.replace("/auth");
   };
 
   if (loading) return (
