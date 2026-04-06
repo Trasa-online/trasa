@@ -269,8 +269,10 @@ export const MOCK_PLACES: MockPlace[] = [
     longitude: 19.9373,
     rating: 4.7,
     photo_url: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80",
-    vibe_tags: ["kawa", "klimat", "slow", "✦ biznes"],
+    vibe_tags: ["kawa", "klimat", "slow"],
     description: "Najlepsza kawiarnia w Krakowie. Świetne espresso i domowe ciasta.",
+    businessLogoUrl: "", // pusty string = pokaż orb placeholder
+    businessEventTitle: "Happy hour 16:00–18:00, drinki 1+1",
   },
 ];
 

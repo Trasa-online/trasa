@@ -26,6 +26,9 @@ export interface MockPlace {
   photo_url: string;
   vibe_tags: string[];
   description: string;
+  // Business profile fields (optional)
+  businessLogoUrl?: string;
+  businessEventTitle?: string;
 }
 
 export type PlaceCategory =
@@ -316,6 +319,13 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
         )}
       </div>
 
+      {/* Business badge — top right */}
+      {place.businessLogoUrl !== undefined && (
+        <div className="absolute top-4 right-4 z-10 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+          ✦ Wizytówka
+        </div>
+      )}
+
       {/* Like / Skip indicators */}
       {isTop && (
         <>
@@ -336,10 +346,24 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
 
       {/* Content */}
       <div className="absolute bottom-0 left-0 right-0 p-5 space-y-2">
-        {/* Category */}
-        <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full", CATEGORY_COLORS[place.category])}>
-          {CATEGORY_LABELS[place.category]}
-        </span>
+        {/* Category (hidden for business cards — replaced by logo row) */}
+        {place.businessLogoUrl === undefined && (
+          <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full", CATEGORY_COLORS[place.category])}>
+            {CATEGORY_LABELS[place.category]}
+          </span>
+        )}
+
+        {/* Business logo row */}
+        {place.businessLogoUrl !== undefined && (
+          <div className="flex items-center gap-2">
+            {place.businessLogoUrl ? (
+              <img src={place.businessLogoUrl} className="w-8 h-8 rounded-full object-cover border-2 border-white/30" />
+            ) : (
+              <div className="w-8 h-8 rounded-full flex-shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            )}
+            <span className="text-white/70 text-xs">{CATEGORY_LABELS[place.category]} · @trasa</span>
+          </div>
+        )}
 
         {/* Name */}
         <h2 className="text-2xl font-black text-white leading-tight">{place.place_name}</h2>
@@ -365,6 +389,13 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
 
         {/* Description */}
         {displayDescription && <p className="text-white/75 text-sm leading-snug">{displayDescription}</p>}
+
+        {/* Business event pill */}
+        {place.businessEventTitle && (
+          <div className="inline-flex items-center gap-1.5 bg-amber-500/90 backdrop-blur-sm rounded-full px-3 py-1.5 text-white text-xs font-semibold">
+            🎉 {place.businessEventTitle}
+          </div>
+        )}
 
         {/* Vibe tags + info button row */}
         <div className="flex items-center justify-between gap-2 pt-0.5">
