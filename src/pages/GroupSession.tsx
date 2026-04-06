@@ -55,6 +55,7 @@ const GroupSession = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [showRouteSummary, setShowRouteSummary] = useState(false);
   const [routePlan, setRoutePlan] = useState<{ city: string; days: { day_number: number; pins: any[] }[] } | null>(null);
+  const [routeProposed, setRouteProposed] = useState(false);
   const prevMatchNamesRef = useRef<Set<string> | null>(null);
 
   // ── Round state ──────────────────────────────────────────────────────────────
@@ -577,7 +578,7 @@ const GroupSession = () => {
                 </div>
 
                 <div className="w-full space-y-2.5">
-                  {isCreator || MOCK_MODE ? (
+                  {isCreator ? (
                     <>
                       {/* Creator: start next round */}
                       <button
@@ -589,7 +590,7 @@ const GroupSession = () => {
                         {startingRound ? "Startuję…" : `Runda ${nextRound} — start!`}
                       </button>
 
-                      {/* Creator: go to matches / create route */}
+                      {/* Creator: finish and go to matches */}
                       <button
                         onClick={() => { handleVote("finish"); setTab("matches"); }}
                         disabled={voting || startingRound}
@@ -602,15 +603,18 @@ const GroupSession = () => {
                     </>
                   ) : (
                     <>
-                      {/* Participant: vote to continue */}
-                      <button
-                        onClick={() => handleVote("continue")}
-                        disabled={voting}
-                        className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
-                      >
-                        <Play className="h-4 w-4" />
-                        {voting ? "…" : "Przechodzę do kolejnej rundy"}
-                      </button>
+                      {/* Participant: waiting for creator to decide */}
+                      <div className="w-full py-5 flex flex-col items-center gap-3 text-center">
+                        <div className="flex gap-1.5">
+                          {[0, 1, 2].map(i => (
+                            <div key={i} className="h-2 w-2 rounded-full bg-orange-600/40 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                          ))}
+                        </div>
+                        <p className="text-sm text-muted-foreground">Czekam na decyzję organizatora…</p>
+                        {matches.length > 0 && (
+                          <p className="text-xs text-muted-foreground">{matches.length} matchów do tej pory</p>
+                        )}
+                      </div>
 
                       {/* Participant: opt out */}
                       <button
@@ -680,7 +684,7 @@ const GroupSession = () => {
           if (!effectiveRound || effectiveRound.status === "completed") {
             const nextRound = (effectiveRound?.round_number ?? 0) + 1;
 
-            if (!isCreator && !MOCK_MODE) {
+            if (!isCreator) {
               // Participant waiting screen
               return (
                 <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
@@ -849,19 +853,38 @@ const GroupSession = () => {
               )}
             </div>
 
-            {/* Create route button — creator only */}
-            {isCreator && matches.length > 0 && (
+            {/* Route action bar — admin creates, participants propose/wait */}
+            {matches.length > 0 && (
               <div className="px-4 py-3 shrink-0 border-t border-border/20">
-                <button
-                  onClick={handleCreateRoute}
-                  disabled={creatingRoute || selectedMatches.length === 0}
-                  className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform disabled:opacity-40"
-                >
-                  <Route className="h-4 w-4" />
-                  {creatingRoute
-                    ? "Tworzę trasę…"
-                    : `Stwórz trasę · ${selectedMatches.length} ${selectedMatches.length === 1 ? "miejsce" : "miejsc"}`}
-                </button>
+                {isCreator ? (
+                  <button
+                    onClick={handleCreateRoute}
+                    disabled={creatingRoute || selectedMatches.length === 0}
+                    className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform disabled:opacity-40"
+                  >
+                    <Route className="h-4 w-4" />
+                    {creatingRoute
+                      ? "Tworzę trasę…"
+                      : `Stwórz trasę · ${selectedMatches.length} ${selectedMatches.length === 1 ? "miejsce" : "miejsc"}`}
+                  </button>
+                ) : routeProposed ? (
+                  <div className="w-full py-3 flex flex-col items-center gap-2 text-center">
+                    <div className="flex gap-1.5">
+                      {[0, 1, 2].map(i => (
+                        <div key={i} className="h-2 w-2 rounded-full bg-orange-600/40 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                      ))}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Czekam aż organizator stworzy trasę…</p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setRouteProposed(true)}
+                    className="w-full py-3.5 rounded-2xl border border-orange-600/40 text-orange-600 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+                  >
+                    <Route className="h-4 w-4" />
+                    Zaproponuj stworzenie trasy
+                  </button>
+                )}
               </div>
             )}
           </div>
