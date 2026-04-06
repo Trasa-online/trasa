@@ -21,6 +21,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [honeypot, setHoneypot] = useState("");
   const [formOpenedAt] = useState(() => Date.now());
+  const [businessMode, setBusinessMode] = useState(false);
   const navigate = useNavigate();
 
   // Pick up referral code from URL (?ref=CODE) or landing page (localStorage)
@@ -121,6 +122,54 @@ const Auth = () => {
         </p>
 
         <div className="w-full max-w-sm">
+          {businessMode ? (
+            <>
+              <button
+                onClick={() => setBusinessMode(false)}
+                className="flex items-center gap-1 text-sm text-muted-foreground mb-5 active:opacity-60"
+              >
+                ← Wróć
+              </button>
+              <p className="text-base font-bold mb-1">Panel biznesowy</p>
+              <p className="text-xs text-muted-foreground mb-5">Zaloguj się kontem powiązanym z Twoim lokalem.</p>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="biz-email">{t("fields.email")}</Label>
+                  <Input
+                    id="biz-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder={t("fields.email_placeholder")}
+                    className="bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="biz-password">{t("fields.password")}</Label>
+                  <Input
+                    id="biz-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    placeholder={t("fields.password_placeholder")}
+                    className="bg-card"
+                  />
+                </div>
+                <Button type="submit" className="w-full rounded-2xl py-6 bg-orange-600 hover:bg-orange-700 text-white font-bold text-base" disabled={loading}>
+                  {loading ? t("logging_in") : "Zaloguj się do panelu"}
+                </Button>
+              </form>
+              <p className="text-xs text-muted-foreground text-center mt-5 leading-relaxed">
+                Nie masz jeszcze konta?{" "}
+                <a href="mailto:kontakt@trasa.app" className="underline text-foreground">
+                  Napisz do nas
+                </a>
+              </p>
+            </>
+          ) : (
+          <>
           {/* Login / Register tabs */}
           <div className="flex rounded-2xl bg-muted p-1 mb-6">
             <button
@@ -262,13 +311,14 @@ const Auth = () => {
           <p className="text-xs text-muted-foreground text-center mt-6">
             Jesteś właścicielem lokalu?{" "}
             <button
-              onClick={() => setMode("login")}
+              onClick={() => setBusinessMode(true)}
               className="underline text-foreground font-medium"
             >
-              Zaloguj się
+              Zaloguj się do panelu
             </button>
-            {" "}i przejdź do panelu biznesowego.
           </p>
+          </>
+          )}
         </div>
       </div>
 
