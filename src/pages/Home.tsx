@@ -1,4 +1,5 @@
 import { useNavigate, Link } from "react-router-dom";
+import { useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,8 +24,14 @@ const Home = () => {
   });
 
   // Single query: get following IDs + their routes in one go
+  // Pull-to-refresh state
+  const touchStartY = useRef<number>(0);
+  const [pulling, setPulling] = useState(false);
+  const [pullDist, setPullDist] = useState(0);
+  const PULL_THRESHOLD = 64;
+
   // No two-query chain — avoids race conditions with cache
-  const { data: feed, isLoading: feedLoading } = useQuery({
+  const { data: feed, isLoading: feedLoading, refetch: refetchFeed } = useQuery({
     queryKey: ["social-feed-v2", user?.id],
     queryFn: async () => {
       if (!user) return { followingIds: [], items: [] };
@@ -124,8 +131,43 @@ const Home = () => {
 
   // ── Feed view (own routes + following) ──
   if (feedLoading || feedItems.length > 0) {
+    const handleTouchStart = (e: React.TouchEvent) => {
+      touchStartY.current = e.touches[0].clientY;
+    };
+    const handleTouchMove = (e: React.TouchEvent) => {
+      const el = e.currentTarget as HTMLElement;
+      if (el.scrollTop > 0) return;
+      const dist = Math.max(0, e.touches[0].clientY - touchStartY.current);
+      setPullDist(Math.min(dist, PULL_THRESHOLD * 1.5));
+    };
+    const handleTouchEnd = async () => {
+      if (pullDist >= PULL_THRESHOLD) {
+        setPulling(true);
+        await refetchFeed();
+        setPulling(false);
+      }
+      setPullDist(0);
+    };
+
     return (
-      <div className="flex-1 flex flex-col pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
+      <div
+        className="flex-1 flex flex-col pt-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Pull indicator */}
+        {pullDist > 0 && (
+          <div
+            className="flex items-center justify-center text-muted-foreground transition-all"
+            style={{ height: pullDist, opacity: pullDist / PULL_THRESHOLD }}
+          >
+            <div className={`h-5 w-5 rounded-full border-2 border-orange-600 border-t-transparent ${pulling ? "animate-spin" : ""}`}
+              style={{ transform: `rotate(${(pullDist / PULL_THRESHOLD) * 360}deg)` }}
+            />
+          </div>
+        )}
+
         <div className="flex items-center justify-between pt-2 pb-2 px-4">
           <h1 className="text-xl font-black tracking-tight">Aktywność</h1>
           <button

@@ -21,7 +21,7 @@ const Admin = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"waitlist" | "referrals">("waitlist");
+  const [tab, setTab] = useState<"waitlist" | "referrals" | "cities">("waitlist");
 
   // Waitlist state
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
@@ -30,6 +30,10 @@ const Admin = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [generatedLinks, setGeneratedLinks] = useState<Record<string, string>>({});
   const [deleting, setDeleting] = useState<string | null>(null);
+
+  // Cities state
+  const [cityRequests, setCityRequests] = useState<Array<{ city_name: string; count: number }>>([]);
+  const [fetchingCities, setFetchingCities] = useState(false);
 
   // Referrals state
   const [referrals, setReferrals] = useState<Array<{
@@ -58,6 +62,7 @@ const Admin = () => {
         setIsAdmin(true);
         loadWaitlist();
         loadReferrals();
+        loadCityRequests();
       });
   }, [user, loading, navigate]);
 
@@ -79,6 +84,24 @@ const Admin = () => {
       console.error("Failed to load waitlist:", err);
     }
     setFetchingList(false);
+  };
+
+  const loadCityRequests = async () => {
+    setFetchingCities(true);
+    const { data } = await (supabase as any)
+      .from("city_requests")
+      .select("city_name")
+      .order("city_name");
+    if (data) {
+      const counts: Record<string, number> = {};
+      for (const row of data) counts[row.city_name] = (counts[row.city_name] ?? 0) + 1;
+      setCityRequests(
+        Object.entries(counts)
+          .map(([city_name, count]) => ({ city_name, count }))
+          .sort((a, b) => b.count - a.count)
+      );
+    }
+    setFetchingCities(false);
   };
 
   const loadReferrals = async () => {
@@ -163,7 +186,7 @@ const Admin = () => {
 
       {/* Tabs */}
       <div className="flex border-b border-border/40">
-        {(["waitlist", "referrals"] as const).map(t => (
+        {(["waitlist", "referrals", "cities"] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -171,7 +194,7 @@ const Admin = () => {
               tab === t ? "border-b-2 border-foreground text-foreground" : "text-muted-foreground"
             }`}
           >
-            {t === "waitlist" ? "Oczekujący" : "Zaproszenia"}
+            {t === "waitlist" ? "Oczekujący" : t === "referrals" ? "Zaproszenia" : "Miasta"}
           </button>
         ))}
       </div>
@@ -314,6 +337,27 @@ const Admin = () => {
                   </div>
                 );
               })}
+            </div>
+          )
+        )}
+        {/* ── Cities Tab ── */}
+        {tab === "cities" && (
+          fetchingCities ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : cityRequests.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-12">Brak zgłoszeń miast.</p>
+          ) : (
+            <div className="space-y-2">
+              {cityRequests.map(({ city_name, count }) => (
+                <div key={city_name} className="flex items-center justify-between border border-border rounded-xl px-4 py-3 bg-card">
+                  <p className="text-sm font-semibold">{city_name}</p>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400">
+                    {count}×
+                  </span>
+                </div>
+              ))}
             </div>
           )
         )}

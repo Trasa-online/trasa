@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ChevronDown, Check } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 // ── Country / city data ────────────────────────────────────────────────────
 // comingSoon: true = shown grayed out, not selectable
@@ -75,8 +77,8 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [notifyEmail, setNotifyEmail] = useState("");
   const [notifyCity, setNotifyCity] = useState("");
+  const { user } = useAuth();
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset drum when country changes
@@ -119,11 +121,11 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
   const selectedCity = cities[selectedIndex];
   const isComingSoon = !!selectedCity?.comingSoon;
 
-  const handleNotify = () => {
+  const handleNotify = async () => {
     if (!notifyCity.trim()) { toast.error("Wpisz nazwę miasta"); return; }
-    if (!notifyEmail.includes("@")) { toast.error("Podaj prawidłowy adres email"); return; }
+    await supabase.from("city_requests" as any).insert({ user_id: user?.id ?? null, city_name: notifyCity.trim() });
     toast.success(`Dzięki! Gdy ${notifyCity} będzie dostępne, damy Ci znać.`);
-    setNotifyCity(""); setNotifyEmail("");
+    setNotifyCity("");
   };
 
   return (
@@ -213,12 +215,11 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
       <div className="mx-5 mb-4 px-4 py-3 rounded-2xl bg-background border border-border space-y-2 shadow-sm">
         <p className="text-xs font-semibold text-foreground">Nie widzisz swojego miasta?</p>
         <div className="flex gap-2">
-          <Input type="text" placeholder="Nazwa miasta" value={notifyCity} onChange={e => setNotifyCity(e.target.value)} className="h-8 text-xs flex-1" onKeyDown={e => e.key === "Enter" && handleNotify()} />
-          <Input type="email" placeholder="Twój email" value={notifyEmail} onChange={e => setNotifyEmail(e.target.value)} className="h-8 text-xs flex-1" onKeyDown={e => e.key === "Enter" && handleNotify()} />
+          <Input type="text" placeholder="Wpisz nazwę miasta" value={notifyCity} onChange={e => setNotifyCity(e.target.value)} className="h-8 text-xs flex-1" onKeyDown={e => e.key === "Enter" && handleNotify()} />
           <Button size="sm" variant="outline" onClick={handleNotify} className="h-8 text-xs px-3 shrink-0">Wyślij</Button>
         </div>
         <p className="text-[10px] text-foreground/60 leading-relaxed">
-          Podając email zgadzasz się na jednorazowe powiadomienie, gdy Twoje miasto pojawi się w aplikacji. Nie wysyłamy spamu.
+          Damy Ci znać, gdy Twoje miasto pojawi się w aplikacji.
         </p>
       </div>
 

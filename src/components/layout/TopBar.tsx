@@ -20,7 +20,8 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
         .from("notifications")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .eq("read", false);
+        .eq("read", false)
+        .neq("type", "group_match");
       return count ?? 0;
     },
     enabled: !!user,
