@@ -198,7 +198,7 @@ const BusinessDashboard = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/auth");
+    window.location.href = "/auth";
   };
 
   if (loading) return (
@@ -475,13 +475,12 @@ const BusinessDashboard = () => {
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />
           </div>
-          <div className="flex gap-3 items-end">
-            <div className="flex-1 space-y-1">
+          <div className="space-y-3">
+            <div className="space-y-1">
               <Label htmlFor="event_starts_at">Od</Label>
               <Input id="event_starts_at" value={eventStartsAt} onChange={e => setEventStartsAt(e.target.value)} type="date" className="w-full" />
             </div>
-            <span className="text-muted-foreground text-sm pb-2">→</span>
-            <div className="flex-1 space-y-1">
+            <div className="space-y-1">
               <Label htmlFor="event_ends_at">Do</Label>
               <Input id="event_ends_at" value={eventEndsAt} onChange={e => setEventEndsAt(e.target.value)} type="date" className="w-full" />
             </div>
