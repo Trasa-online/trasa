@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Globe, Lock } from "lucide-react";
+import { Globe, Lock, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface JournalTabProps {
   userId: string;
@@ -12,6 +14,8 @@ interface JournalTabProps {
 
 const JournalTab = ({ userId }: JournalTabProps) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["journal-entries", userId],
@@ -43,10 +47,27 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         groupRoutes = data || [];
       }
 
-      return [...(ownRoutes ?? []), ...groupRoutes] as any[];
+      return [
+        ...(ownRoutes ?? []).map((r: any) => ({ ...r, is_own: true })),
+        ...groupRoutes.map((r: any) => ({ ...r, is_own: false })),
+      ] as any[];
     },
     enabled: !!userId,
   });
+
+  const handleDelete = async (e: React.MouseEvent, entry: any) => {
+    e.stopPropagation();
+    if (!confirm(`Usunąć trasę "${entry.city}"? Tego nie można cofnąć.`)) return;
+    setDeletingId(entry.id);
+    const { error } = await supabase.from("routes").delete().eq("id", entry.id);
+    if (error) {
+      toast.error("Nie udało się usunąć trasy");
+    } else {
+      toast.success("Trasa usunięta");
+      queryClient.invalidateQueries({ queryKey: ["journal-entries", userId] });
+    }
+    setDeletingId(null);
+  };
 
   if (isLoading) {
     return (
@@ -81,10 +102,10 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         const hasUserPhoto = validPhotos.length > 0;
 
         return (
-          <button
+          <div
             key={entry.id}
             onClick={() => navigate(`/review-summary?route=${entry.id}`)}
-            className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform"
+            className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform cursor-pointer"
           >
             {/* Cover photo */}
             <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
@@ -113,12 +134,26 @@ const JournalTab = ({ userId }: JournalTabProps) => {
                   : <Globe className="h-3 w-3 text-white/80" />
                 }
               </div>
-              {/* "Twoje zdjęcie" badge if user uploaded a photo */}
-              {hasUserPhoto && (
-                <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-[10px] text-white/90">
-                  📷 Twoje zdjęcie
-                </div>
-              )}
+              {/* Top-right: photo badge or delete button */}
+              <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                {hasUserPhoto && (
+                  <div className="bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-[10px] text-white/90">
+                    📷 Twoje zdjęcie
+                  </div>
+                )}
+                {entry.is_own && (
+                  <button
+                    onClick={(e) => handleDelete(e, entry)}
+                    disabled={deletingId === entry.id}
+                    className="h-7 w-7 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-full text-white/80 hover:text-white hover:bg-black/60 transition-colors disabled:opacity-50"
+                  >
+                    {deletingId === entry.id
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <Trash2 className="h-3.5 w-3.5" />
+                    }
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Text below photo */}
@@ -136,7 +171,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
                 )}
               </div>
             )}
-          </button>
+          </div>
         );
       })}
     </div>
