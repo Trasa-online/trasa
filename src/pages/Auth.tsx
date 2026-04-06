@@ -117,21 +117,25 @@ const Auth = () => {
           style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
         />
         <h1 className="text-4xl font-black tracking-tight mb-1.5">TRASA</h1>
-        <p className="text-muted-foreground text-center text-sm max-w-[260px] leading-relaxed mb-6">
-          {t("description")}
-        </p>
+        {businessMode ? (
+          <p className="text-muted-foreground text-center text-sm max-w-[280px] leading-relaxed mb-6">
+            Panel biznesowy — zaloguj się kontem powiązanym z Twoim lokalem.
+          </p>
+        ) : (
+          <p className="text-muted-foreground text-center text-sm max-w-[260px] leading-relaxed mb-6">
+            {t("description")}
+          </p>
+        )}
 
         <div className="w-full max-w-sm">
           {businessMode ? (
             <>
               <button
                 onClick={() => setBusinessMode(false)}
-                className="flex items-center gap-1 text-sm text-muted-foreground mb-5 active:opacity-60"
+                className="flex items-center gap-1 text-sm text-muted-foreground mb-6 active:opacity-60"
               >
                 ← Wróć
               </button>
-              <p className="text-base font-bold mb-1">Panel biznesowy</p>
-              <p className="text-xs text-muted-foreground mb-5">Zaloguj się kontem powiązanym z Twoim lokalem.</p>
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="biz-email">{t("fields.email")}</Label>
