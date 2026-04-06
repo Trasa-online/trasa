@@ -1,21 +1,35 @@
 import { Phone, Globe, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BusinessData } from "./mockBusinessData";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BusinessActionButtonsProps {
   business: BusinessData;
+  placeId?: string | null;
 }
 
-const BusinessActionButtons = ({ business }: BusinessActionButtonsProps) => {
-  const handleCall = () => {
+const BusinessActionButtons = ({ business, placeId }: BusinessActionButtonsProps) => {
+  const trackEvent = async (type: string) => {
+    if (!placeId) return;
+    await (supabase as any).from("place_events").insert({
+      place_id: placeId,
+      event_type: type,
+      user_id: null,
+    });
+  };
+
+  const handleCall = async () => {
+    await trackEvent("click_phone");
     window.location.href = `tel:${business.phone}`;
   };
 
-  const handleWebsite = () => {
+  const handleWebsite = async () => {
+    await trackEvent("click_website");
     window.open(business.website, "_blank");
   };
 
-  const handleBooking = () => {
+  const handleBooking = async () => {
+    await trackEvent("click_booking");
     window.open(business.booking_url, "_blank");
   };
 

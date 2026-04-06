@@ -38,6 +38,7 @@ import AdminRoutes from "./pages/AdminRoutes";
 import SharedRoute from "./pages/SharedRoute";
 import JoinPage from "./pages/JoinPage";
 import PublicProfile from "./pages/PublicProfile";
+import BusinessDashboard from "./pages/BusinessDashboard";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,7 @@ const App = () => (
           <Route path="/route/:id" element={<SharedRoute />} />
           <Route path="/join/:code" element={<JoinPage />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
+          <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

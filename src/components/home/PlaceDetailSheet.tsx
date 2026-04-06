@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Star, MapPin, ExternalLink, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPhotoUrl } from "@/lib/placePhotos";
@@ -12,6 +14,7 @@ interface Pin {
   latitude?: number | null;
   longitude?: number | null;
   suggested_time?: string | null;
+  place_id?: string | null;
 }
 
 interface PlaceDetailSheetProps {
@@ -20,14 +23,55 @@ interface PlaceDetailSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface BusinessProfile {
+  id: string;
+  place_id: string;
+  owner_user_id: string | null;
+  business_name: string;
+  is_active: boolean;
+  promo_title: string | null;
+}
+
 const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [details, setDetails] = useState<any>(null);
-
   const [cachedPhotoUrl, setCachedPhotoUrl] = useState<string | null>(null);
+  const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
+
+  // Claim form state
+  const [showClaimForm, setShowClaimForm] = useState(false);
+  const [claimEmail, setClaimEmail] = useState("");
+  const [claimPhone, setClaimPhone] = useState("");
+  const [claimMessage, setClaimMessage] = useState("");
+  const [submittingClaim, setSubmittingClaim] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+
+    setBusinessProfile(null);
+    setShowClaimForm(false);
+
+    // Track view event
+    if (pin.place_id) {
+      (supabase as any).from("place_events").insert({
+        place_id: pin.place_id,
+        event_type: "view",
+        user_id: user?.id ?? null,
+      });
+
+      // Load business profile
+      (supabase as any)
+        .from("business_profiles")
+        .select("id, place_id, owner_user_id, business_name, is_active, promo_title")
+        .eq("place_id", pin.place_id)
+        .maybeSingle()
+        .then(({ data }: { data: BusinessProfile | null }) => {
+          if (data) setBusinessProfile(data);
+        });
+    }
+
     if (!pin.latitude || !pin.longitude) return;
     setLoading(true);
     setDetails(null);
@@ -37,7 +81,6 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
     }).then(async ({ data, error }) => {
       if (!error && data?.result) {
         setDetails(data.result);
-        // Cache first photo
         const ref = data.result.photos?.[0]?.photo_reference;
         if (ref) {
           const url = getPhotoUrl(ref, 600);
@@ -48,6 +91,26 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
     });
   }, [open, pin.id]);
 
+  const handleSubmitClaim = async () => {
+    if (!pin.place_id || !user || !claimEmail) return;
+    setSubmittingClaim(true);
+    const { error } = await (supabase as any).from("business_claims").insert({
+      place_id: pin.place_id,
+      user_id: user.id,
+      contact_email: claimEmail,
+      contact_phone: claimPhone || null,
+      message: claimMessage || null,
+    });
+    if (error) {
+      setSubmittingClaim(false);
+      return;
+    }
+    setShowClaimForm(false);
+    setClaimEmail("");
+    setClaimPhone("");
+    setClaimMessage("");
+    setSubmittingClaim(false);
+  };
 
   const mapsUrl = pin.latitude && pin.longitude
     ? `https://maps.google.com/?q=${pin.latitude},${pin.longitude}`
@@ -184,6 +247,84 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
               <span className="flex-1">Szukaj w Google Maps</span>
               <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
             </a>
+          </div>
+        )}
+
+        {/* Premium business badge */}
+        {businessProfile && businessProfile.is_active && (
+          <div className="mx-4 mt-3 mb-2 p-3 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm">⭐</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-amber-800">Miejsce premium</p>
+              {businessProfile.promo_title && (
+                <p className="text-xs text-amber-700 truncate">{businessProfile.promo_title}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Manage / Claim section */}
+        {pin.place_id && user && (
+          <div className="px-4 pb-4 mt-2">
+            {businessProfile?.owner_user_id === user.id ? (
+              <button
+                onClick={() => navigate(`/biznes/${pin.place_id}`)}
+                className="w-full text-sm text-center text-orange-600 font-semibold py-2.5 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors"
+              >
+                Zarządzaj wizytówką →
+              </button>
+            ) : (
+              !showClaimForm ? (
+                <button
+                  onClick={() => setShowClaimForm(true)}
+                  className="w-full text-xs text-center text-muted-foreground py-2 hover:text-foreground transition-colors"
+                >
+                  Jesteś właścicielem tego miejsca? Przejmij wizytówkę
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-foreground">Przejmij wizytówkę</p>
+                  <input
+                    type="email"
+                    placeholder="E-mail kontaktowy *"
+                    value={claimEmail}
+                    onChange={(e) => setClaimEmail(e.target.value)}
+                    className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Telefon (opcjonalnie)"
+                    value={claimPhone}
+                    onChange={(e) => setClaimPhone(e.target.value)}
+                    className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <textarea
+                    placeholder="Wiadomość (opcjonalnie)"
+                    rows={2}
+                    value={claimMessage}
+                    onChange={(e) => setClaimMessage(e.target.value)}
+                    className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowClaimForm(false)}
+                      className="flex-1 text-sm py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors"
+                    >
+                      Anuluj
+                    </button>
+                    <button
+                      onClick={handleSubmitClaim}
+                      disabled={submittingClaim || !claimEmail}
+                      className="flex-1 text-sm py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors disabled:opacity-50"
+                    >
+                      {submittingClaim ? "Wysyłam..." : "Wyślij zgłoszenie"}
+                    </button>
+                  </div>
+                </div>
+              )
+            )}
           </div>
         )}
       </SheetContent>

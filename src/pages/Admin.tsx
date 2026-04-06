@@ -17,11 +17,23 @@ interface WaitlistEntry {
   has_account?: boolean;
 }
 
+interface BusinessClaim {
+  id: string;
+  place_id: string;
+  user_id: string;
+  contact_email: string;
+  contact_phone: string | null;
+  message: string | null;
+  status: string;
+  created_at: string;
+  places: { place_name: string; city: string } | null;
+}
+
 const Admin = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"waitlist" | "referrals" | "cities">("waitlist");
+  const [tab, setTab] = useState<"waitlist" | "referrals" | "cities" | "businesses">("waitlist");
 
   // Waitlist state
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
@@ -47,6 +59,12 @@ const Admin = () => {
   }>>([]);
   const [fetchingReferrals, setFetchingReferrals] = useState(false);
 
+  // Business claims state
+  const [claims, setClaims] = useState<BusinessClaim[]>([]);
+  const [fetchingClaims, setFetchingClaims] = useState(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+
   useEffect(() => {
     if (loading) return;
     if (!user) { navigate("/auth"); return; }
@@ -63,6 +81,7 @@ const Admin = () => {
         loadWaitlist();
         loadReferrals();
         loadCityRequests();
+        loadClaims();
       });
   }, [user, loading, navigate]);
 
@@ -127,6 +146,38 @@ const Admin = () => {
     setFetchingReferrals(false);
   };
 
+  const loadClaims = async () => {
+    setFetchingClaims(true);
+    const { data } = await (supabase as any)
+      .from("business_claims")
+      .select("id, place_id, user_id, contact_email, contact_phone, message, status, created_at, places(place_name, city)")
+      .order("created_at", { ascending: false });
+    setClaims(data ?? []);
+    setFetchingClaims(false);
+  };
+
+  const handleApproveClaim = async (claim: BusinessClaim) => {
+    setApprovingId(claim.id);
+    await (supabase as any).from("business_profiles").upsert({
+      place_id: claim.place_id,
+      owner_user_id: claim.user_id,
+      business_name: claim.places?.place_name ?? "Mój biznes",
+      is_active: true,
+    });
+    await (supabase as any).from("business_claims").update({ status: "approved" }).eq("id", claim.id);
+    setApprovingId(null);
+    loadClaims();
+    toast.success("Zatwierdzono claim");
+  };
+
+  const handleRejectClaim = async (claim: BusinessClaim) => {
+    setRejectingId(claim.id);
+    await (supabase as any).from("business_claims").update({ status: "rejected" }).eq("id", claim.id);
+    setRejectingId(null);
+    loadClaims();
+    toast.success("Odrzucono");
+  };
+
   const handleInvite = async (entry: WaitlistEntry) => {
     setInviting(entry.id);
     try {
@@ -169,6 +220,19 @@ const Admin = () => {
 
   if (loading || isAdmin === null) return null;
 
+  const tabLabels: Record<string, string> = {
+    waitlist: "Oczekujący",
+    referrals: "Zaproszenia",
+    cities: "Miasta",
+    businesses: "Biznesy",
+  };
+
+  const sortedClaims = [...claims].sort((a, b) => {
+    if (a.status === "pending" && b.status !== "pending") return -1;
+    if (a.status !== "pending" && b.status === "pending") return 1;
+    return 0;
+  });
+
   return (
     <div className="min-h-screen bg-background">
       <div className="flex items-center gap-3 px-4 pt-safe-4 pb-4 border-b border-border/40">
@@ -186,7 +250,7 @@ const Admin = () => {
 
       {/* Tabs */}
       <div className="flex border-b border-border/40">
-        {(["waitlist", "referrals", "cities"] as const).map(t => (
+        {(["waitlist", "referrals", "cities", "businesses"] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -194,7 +258,7 @@ const Admin = () => {
               tab === t ? "border-b-2 border-foreground text-foreground" : "text-muted-foreground"
             }`}
           >
-            {t === "waitlist" ? "Oczekujący" : t === "referrals" ? "Zaproszenia" : "Miasta"}
+            {tabLabels[t]}
           </button>
         ))}
       </div>
@@ -340,6 +404,7 @@ const Admin = () => {
             </div>
           )
         )}
+
         {/* ── Cities Tab ── */}
         {tab === "cities" && (
           fetchingCities ? (
@@ -356,6 +421,76 @@ const Admin = () => {
                   <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400">
                     {count}×
                   </span>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+
+        {/* ── Businesses Tab ── */}
+        {tab === "businesses" && (
+          fetchingClaims ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : sortedClaims.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-12">Brak zgłoszeń biznesowych.</p>
+          ) : (
+            <div className="space-y-3">
+              {sortedClaims.map(claim => (
+                <div key={claim.id} className="border border-border rounded-xl p-4 bg-card space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">
+                        {claim.places?.place_name ?? claim.place_id}
+                      </p>
+                      {claim.places?.city && (
+                        <p className="text-xs text-muted-foreground">{claim.places.city}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {claim.contact_email}
+                        {claim.contact_phone && ` · ${claim.contact_phone}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(claim.created_at), "dd.MM.yyyy HH:mm")}
+                      </p>
+                    </div>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                      claim.status === "pending"
+                        ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                        : claim.status === "approved"
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                    }`}>
+                      {claim.status === "pending" ? "Oczekuje" : claim.status === "approved" ? "Zatwierdzono" : "Odrzucono"}
+                    </span>
+                  </div>
+                  {claim.message && (
+                    <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+                      {claim.message}
+                    </p>
+                  )}
+                  {claim.status === "pending" && (
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+                        onClick={() => handleRejectClaim(claim)}
+                        disabled={rejectingId === claim.id || approvingId === claim.id}
+                      >
+                        {rejectingId === claim.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Odrzuć"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
+                        onClick={() => handleApproveClaim(claim)}
+                        disabled={approvingId === claim.id || rejectingId === claim.id}
+                      >
+                        {approvingId === claim.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Zatwierdź"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
