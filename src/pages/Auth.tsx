@@ -64,6 +64,17 @@ const Auth = () => {
         return;
       }
 
+      // Check if this is a business-only account
+      const { data: bp } = await (supabase as any)
+        .from("business_profiles")
+        .select("place_id")
+        .eq("owner_user_id", data.user!.id)
+        .maybeSingle();
+      if (bp?.place_id) {
+        navigate(`/biznes/${bp.place_id}`);
+        return;
+      }
+
       navigate("/");
     } catch (error: any) {
       toast.error(error.message || t("errors.login"));

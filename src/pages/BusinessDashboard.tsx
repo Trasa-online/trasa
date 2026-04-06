@@ -217,7 +217,7 @@ const BusinessDashboard = () => {
   return (
     <div className="min-h-screen bg-background pb-12">
       {/* Header — no back button, just title + logout */}
-      <div className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b border-border/40 px-4 py-3 flex items-center">
+      <div className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b border-border/40 px-4 pt-safe-4 pb-3 flex items-center">
         <div
           className="w-7 h-7 rounded-full mr-3 flex-shrink-0"
           style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
@@ -475,14 +475,15 @@ const BusinessDashboard = () => {
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
+          <div className="flex gap-3 items-end">
+            <div className="flex-1 space-y-1">
               <Label htmlFor="event_starts_at">Od</Label>
-              <Input id="event_starts_at" value={eventStartsAt} onChange={e => setEventStartsAt(e.target.value)} type="date" />
+              <Input id="event_starts_at" value={eventStartsAt} onChange={e => setEventStartsAt(e.target.value)} type="date" className="w-full" />
             </div>
-            <div className="space-y-1">
+            <span className="text-muted-foreground text-sm pb-2">→</span>
+            <div className="flex-1 space-y-1">
               <Label htmlFor="event_ends_at">Do</Label>
-              <Input id="event_ends_at" value={eventEndsAt} onChange={e => setEventEndsAt(e.target.value)} type="date" />
+              <Input id="event_ends_at" value={eventEndsAt} onChange={e => setEventEndsAt(e.target.value)} type="date" className="w-full" />
             </div>
           </div>
         </div>
