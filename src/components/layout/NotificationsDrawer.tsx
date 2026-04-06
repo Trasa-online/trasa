@@ -69,6 +69,26 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
     enabled: open && !!userId,
   });
 
+  const deleteOneMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await supabase.from("notifications").delete().eq("id", id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
+      queryClient.invalidateQueries({ queryKey: ["notifications-unread", userId] });
+    },
+  });
+
+  const clearAllMutation = useMutation({
+    mutationFn: async () => {
+      await supabase.from("notifications").delete().eq("user_id", userId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
+      queryClient.invalidateQueries({ queryKey: ["notifications-unread", userId] });
+    },
+  });
+
   const markReadMutation = useMutation({
     mutationFn: async () => {
       const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
@@ -115,6 +135,15 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
               </span>
             )}
           </h2>
+          {notifications.length > 0 && (
+            <button
+              onClick={() => clearAllMutation.mutate()}
+              disabled={clearAllMutation.isPending}
+              className="text-xs text-muted-foreground font-medium mr-2 active:opacity-60"
+            >
+              Wyczyść
+            </button>
+          )}
           <button
             onClick={onClose}
             className="h-8 w-8 rounded-full bg-muted flex items-center justify-center"
@@ -174,9 +203,17 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                         </button>
                       )}
                     </div>
-                    {!n.read && (
-                      <div className="flex-shrink-0 h-2 w-2 rounded-full bg-orange-600 mt-1.5" />
-                    )}
+                    <div className="flex-shrink-0 flex flex-col items-center gap-1.5 ml-1">
+                      {!n.read && (
+                        <div className="h-2 w-2 rounded-full bg-orange-600 mt-1.5" />
+                      )}
+                      <button
+                        onClick={() => deleteOneMutation.mutate(n.id)}
+                        className="h-6 w-6 rounded-full bg-muted flex items-center justify-center active:bg-muted/80"
+                      >
+                        <X className="h-3 w-3 text-muted-foreground" />
+                      </button>
+                    </div>
                   </div>
                 );
               })}

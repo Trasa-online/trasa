@@ -46,6 +46,26 @@ const ReviewSummary = () => {
     enabled: !!routeId && !!user,
   });
 
+  // Group session: fetch all participants
+  const { data: groupParticipants = [] } = useQuery({
+    queryKey: ["review-summary-participants", route?.group_session_id],
+    queryFn: async () => {
+      if (!route?.group_session_id) return [];
+      const { data: groupRoutes } = await supabase
+        .from("routes")
+        .select("user_id")
+        .eq("group_session_id", route.group_session_id);
+      if (!groupRoutes?.length) return [];
+      const userIds = [...new Set(groupRoutes.map((r: any) => r.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, first_name, avatar_url")
+        .in("id", userIds);
+      return (profiles ?? []) as { id: string; username: string | null; first_name: string | null; avatar_url: string | null }[];
+    },
+    enabled: !!route?.group_session_id,
+  });
+
   // Group session: fetch other participants' photos
   const { data: groupPhotos = [] } = useQuery({
     queryKey: ["review-summary-group-photos", route?.group_session_id],
@@ -223,6 +243,33 @@ const ReviewSummary = () => {
           </h1>
           {dayLabel && (
             <p className="text-white/70 text-base font-medium mt-0.5">{dayLabel}</p>
+          )}
+          {/* Group participant avatars */}
+          {groupParticipants.length > 1 && (
+            <div className="flex items-center gap-2 mt-3">
+              <div className="flex -space-x-2">
+                {groupParticipants.slice(0, 5).map((p) => (
+                  <div
+                    key={p.id}
+                    className="h-7 w-7 rounded-full border-2 border-white/60 overflow-hidden bg-orange-500 flex items-center justify-center text-white text-[10px] font-bold"
+                  >
+                    {p.avatar_url ? (
+                      <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      (p.first_name || p.username || "?")[0].toUpperCase()
+                    )}
+                  </div>
+                ))}
+                {groupParticipants.length > 5 && (
+                  <div className="h-7 w-7 rounded-full border-2 border-white/60 bg-black/50 flex items-center justify-center text-white text-[9px] font-bold">
+                    +{groupParticipants.length - 5}
+                  </div>
+                )}
+              </div>
+              <span className="text-white/70 text-xs font-medium">
+                {groupParticipants.length} uczestników
+              </span>
+            </div>
           )}
         </div>
       </div>

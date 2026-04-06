@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown, ChevronUp, Map as MapIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Send, Mic, MicOff, Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -278,7 +278,7 @@ function LargeCarouselCard({
               disabled={isFirst}
               className="h-7 w-7 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center disabled:opacity-25 active:bg-black/80 transition-colors"
             >
-              <ChevronUp className="h-3.5 w-3.5 text-white" />
+              <ChevronLeft className="h-3.5 w-3.5 text-white" />
             </button>
             <button
               onPointerDown={e => e.stopPropagation()}
@@ -286,7 +286,7 @@ function LargeCarouselCard({
               disabled={isLast}
               className="h-7 w-7 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center disabled:opacity-25 active:bg-black/80 transition-colors"
             >
-              <ChevronDown className="h-3.5 w-3.5 text-white" />
+              <ChevronRight className="h-3.5 w-3.5 text-white" />
             </button>
           </div>
         )}

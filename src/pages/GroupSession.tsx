@@ -12,7 +12,6 @@ import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MOCK_MODE, getMockPlaces } from "@/lib/mockPlaces";
-import RouteSummaryDialog from "@/components/route/RouteSummaryDialog";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -53,8 +52,6 @@ const GroupSession = () => {
   const [deselectedPlaces, setDeselectedPlaces] = useState<Set<string>>(new Set());
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [showRouteSummary, setShowRouteSummary] = useState(false);
-  const [routePlan, setRoutePlan] = useState<{ city: string; days: { day_number: number; pins: any[] }[] } | null>(null);
   const [routeProposed, setRouteProposed] = useState(false);
   const prevMatchNamesRef = useRef<Set<string> | null>(null);
 
@@ -376,8 +373,14 @@ const GroupSession = () => {
         };
       });
 
-      setRoutePlan({ city: session.city, days: [{ day_number: 1, pins }] });
-      setShowRouteSummary(true);
+      navigate("/create", {
+        state: {
+          fromTemplate: true,
+          city: session.city,
+          date: session.trip_date ?? null,
+          initialPlan: { city: session.city, days: [{ day_number: 1, pins }] },
+        },
+      });
     } catch (e: any) {
       toast.error(e.message || "Błąd podczas tworzenia trasy");
     } finally {
@@ -898,22 +901,6 @@ const GroupSession = () => {
         onOpenChange={setDetailOpen}
       />
 
-      {/* Route summary dialog */}
-      {routePlan && (
-        <RouteSummaryDialog
-          open={showRouteSummary}
-          onOpenChange={setShowRouteSummary}
-          plan={routePlan}
-          preferences={{
-            numDays: 1,
-            pace: "mixed",
-            priorities: [],
-            startDate: session?.trip_date ?? null,
-            planningMode: "text",
-          }}
-          messages={[]}
-        />
-      )}
     </div>
   );
 };
