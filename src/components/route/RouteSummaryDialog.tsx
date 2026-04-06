@@ -38,6 +38,7 @@ interface RouteSummaryDialogProps {
   plan: RoutePlan;
   preferences: TripPreferences;
   messages: ChatMessage[];
+  groupSession?: { sessionId: string; otherMemberIds: string[] };
 }
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -53,6 +54,7 @@ const RouteSummaryDialog = ({
   plan,
   preferences,
   messages,
+  groupSession,
 }: RouteSummaryDialogProps) => {
   const [saving, setSaving] = useState(false);
   const { user } = useAuth();
@@ -98,24 +100,27 @@ const RouteSummaryDialog = ({
           ? format(addDays(startDate, day.day_number - 1), "yyyy-MM-dd")
           : null;
 
+        const routePayload = {
+          title: plan.days.length > 1
+            ? `${plan.city} — Dzień ${day.day_number}`
+            : `${plan.city}`,
+          city: plan.city,
+          status: "draft",
+          trip_type: "planning" as const,
+          folder_id: folderId,
+          folder_order: day.day_number - 1,
+          day_number: day.day_number,
+          start_date: dayDate,
+          end_date: plan.days.length === 1 && endDate ? format(endDate, "yyyy-MM-dd") : dayDate,
+          pace: preferences.pace,
+          priorities: preferences.priorities,
+          is_shared: false,
+          ...(groupSession ? { group_session_id: groupSession.sessionId } : {}),
+        };
+
         const { data: route, error: routeError } = await supabase
           .from("routes")
-          .insert({
-            user_id: user.id,
-            title: plan.days.length > 1
-              ? `${plan.city} — Dzień ${day.day_number}`
-              : `${plan.city}`,
-            city: plan.city,
-            status: "draft",
-            trip_type: "planning" as const,
-            folder_id: folderId,
-            folder_order: day.day_number - 1,
-            day_number: day.day_number,
-            start_date: dayDate,
-            end_date: plan.days.length === 1 && endDate ? format(endDate, "yyyy-MM-dd") : dayDate,
-            pace: preferences.pace,
-            priorities: preferences.priorities,
-          })
+          .insert({ user_id: user.id, ...routePayload })
           .select()
           .single();
 
@@ -147,6 +152,34 @@ const RouteSummaryDialog = ({
           current_phase: 7,
           completed_at: new Date().toISOString(),
         }]);
+
+        // Save the same route for all other group session participants
+        if (groupSession?.otherMemberIds?.length && day.day_number === 1) {
+          for (const memberId of groupSession.otherMemberIds) {
+            const { data: memberRoute } = await supabase
+              .from("routes")
+              .insert({ user_id: memberId, ...routePayload })
+              .select("id")
+              .single();
+            if (memberRoute && day.pins.length > 0) {
+              await supabase.from("pins").insert(
+                day.pins.map((pin, idx) => ({
+                  route_id: memberRoute.id,
+                  place_name: pin.place_name,
+                  address: pin.address,
+                  description: pin.description,
+                  pin_order: idx,
+                  latitude: pin.latitude,
+                  longitude: pin.longitude,
+                  suggested_time: pin.suggested_time,
+                  category: pin.category,
+                  original_creator_id: user.id,
+                  place_id: pin.place_id ?? null,
+                }))
+              );
+            }
+          }
+        }
       }
 
       // Submit to route_examples as candidate (silent)

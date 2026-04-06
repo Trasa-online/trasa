@@ -369,6 +369,11 @@ const GroupSession = () => {
           city: session.city,
           date: session.trip_date ?? null,
           initialPlan: { city: session.city, days: [{ day_number: 1, pins }] },
+          backTo: `/sesja/${joinCode}`,
+          groupSession: {
+            sessionId: session.id,
+            otherMemberIds: members.filter((m: any) => m.user_id !== user.id).map((m: any) => m.user_id),
+          },
         },
       });
     } catch (e: any) {

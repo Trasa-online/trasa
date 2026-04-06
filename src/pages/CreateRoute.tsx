@@ -35,6 +35,8 @@ const CreateRoute = () => {
     initialPlan?: any; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; superLikedPlaceNames?: string[];
     likedPlacesData?: { place_name: string; category: string; description: string; latitude?: number; longitude?: number }[];
     matchedRoutes?: MatchedRouteStub[]; selectedRouteIndex?: number;
+    backTo?: string;
+    groupSession?: { sessionId: string; otherMemberIds: string[] };
   } | null);
   const matchedRoutes = wizardState?.matchedRoutes ?? [];
   const [altIndex, setAltIndex] = useState(wizardState?.selectedRouteIndex ?? 0);
@@ -108,8 +110,9 @@ const CreateRoute = () => {
       <div className="flex items-center gap-3 px-4 pt-safe-4 pb-4 border-b border-border/40 flex-shrink-0">
         <button
           onClick={() => {
-            const hasSwipeContext = currentCity && wizardState?.date;
-            if (hasSwipeContext) {
+            if (wizardState?.backTo) {
+              navigate(wizardState.backTo);
+            } else if (currentCity && wizardState?.date) {
               navigate("/plan", {
                 state: {
                   step: 3,
@@ -155,6 +158,7 @@ const CreateRoute = () => {
           plan={finalPlan}
           preferences={preferences}
           messages={finalMessages}
+          groupSession={wizardState?.groupSession}
         />
       )}
     </div>
