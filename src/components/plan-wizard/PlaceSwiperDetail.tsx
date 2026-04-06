@@ -295,6 +295,35 @@ const PlaceSwiperDetail = ({
                   ))}
                 </div>
 
+                {/* Business owner section */}
+                {place.businessLogoUrl !== undefined && (
+                  <div className="space-y-3 rounded-2xl border border-amber-200/60 bg-amber-50/60 dark:bg-amber-950/20 p-4">
+                    {/* Owner header */}
+                    <div className="flex items-center gap-2.5">
+                      {place.businessLogoUrl ? (
+                        <img src={place.businessLogoUrl} className="w-8 h-8 rounded-full object-cover border border-border/40 shrink-0" />
+                      ) : (
+                        <div
+                          className="w-8 h-8 rounded-full shrink-0"
+                          style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-foreground leading-tight truncate">{place.place_name}</p>
+                        <p className="text-[11px] text-amber-700 font-medium">Zweryfikowana wizytówka ✦</p>
+                      </div>
+                    </div>
+
+                    {/* Current event */}
+                    {place.businessEventTitle && (
+                      <div className="rounded-xl bg-amber-500/15 border border-amber-300/40 px-3 py-2.5 space-y-0.5">
+                        <p className="text-xs font-bold text-amber-900 dark:text-amber-300">🎉 Aktualne wydarzenie</p>
+                        <p className="text-sm text-amber-800 dark:text-amber-200 leading-snug">{place.businessEventTitle}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Usage stat — only show when at least 1 route used it */}
                 {usageCount !== null && usageCount > 0 && (
                   <div className="flex items-center gap-2.5 py-3 px-4 bg-muted/50 rounded-2xl">
