@@ -5,7 +5,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { pl } from "date-fns/locale";
+
+interface BusinessPost {
+  id: string;
+  place_id: string;
+  description: string | null;
+  photo_urls: string[];
+  created_at: string;
+}
 
 interface BusinessProfile {
   id: string;
@@ -61,9 +71,17 @@ const BusinessDashboard = () => {
 
   const [uploading, setUploading] = useState<string | null>(null); // which slot is uploading
 
+  // Posts state
+  const [posts, setPosts] = useState<BusinessPost[]>([]);
+  const [postDescription, setPostDescription] = useState("");
+  const [postPhotos, setPostPhotos] = useState<string[]>([]);
+  const [postPhotoUploading, setPostPhotoUploading] = useState(false);
+  const [submittingPost, setSubmittingPost] = useState(false);
+
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const postPhotoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user || !placeId) return;
@@ -118,6 +136,12 @@ const BusinessDashboard = () => {
         clicks: events.filter(e => ["click_phone", "click_website", "click_booking"].includes(e.event_type)).length,
       });
     }
+
+    // Fetch posts
+    const { data: postsData } = await (supabase as any)
+      .from("business_posts").select("*").eq("place_id", placeId).order("created_at", { ascending: false });
+    if (postsData) setPosts(postsData as BusinessPost[]);
+
     setLoading(false);
   };
 
@@ -167,6 +191,41 @@ const BusinessDashboard = () => {
 
   const removeGalleryPhoto = (idx: number) => {
     setGalleryUrls(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handlePostPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    setPostPhotoUploading(true);
+    try {
+      const urls = await Promise.all(files.slice(0, 4 - postPhotos.length).map(f => uploadFile(f, "posts")));
+      setPostPhotos(prev => [...prev, ...urls]);
+    } catch { toast.error("Nie udało się przesłać zdjęcia"); }
+    setPostPhotoUploading(false);
+    e.target.value = "";
+  };
+
+  const handleAddPost = async () => {
+    if (!placeId || (!postDescription.trim() && postPhotos.length === 0)) return;
+    setSubmittingPost(true);
+    const { data, error } = await (supabase as any)
+      .from("business_posts")
+      .insert({ place_id: placeId, description: postDescription.trim() || null, photo_urls: postPhotos })
+      .select()
+      .single();
+    if (error) { toast.error("Nie udało się dodać posta"); }
+    else {
+      setPosts(prev => [data as BusinessPost, ...prev]);
+      setPostDescription("");
+      setPostPhotos([]);
+      toast.success("Post dodany!");
+    }
+    setSubmittingPost(false);
+  };
+
+  const handleDeletePost = async (id: string) => {
+    await (supabase as any).from("business_posts").delete().eq("id", id);
+    setPosts(prev => prev.filter(p => p.id !== id));
   };
 
   const handleSave = async () => {
@@ -511,6 +570,101 @@ const BusinessDashboard = () => {
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
           Zapisz zmiany
         </button>
+
+        {/* Posts / Feed */}
+        <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Posty</p>
+          <p className="text-xs text-muted-foreground -mt-2">
+            Aktualizacje, nowości, zdjęcia — widoczne dla odwiedzających w Twojej wizytówce.
+          </p>
+
+          {/* New post form */}
+          <div className="space-y-3 border border-border/60 rounded-xl p-3">
+            <textarea
+              rows={3}
+              value={postDescription}
+              onChange={e => setPostDescription(e.target.value)}
+              placeholder="Co nowego w Twoim lokalu?"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+            />
+
+            {/* Post photo previews */}
+            {postPhotos.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {postPhotos.map((url, idx) => (
+                  <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden">
+                    <img src={url} className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => setPostPhotos(prev => prev.filter((_, i) => i !== idx))}
+                      className="absolute top-0.5 right-0.5 h-4 w-4 rounded-full bg-black/60 flex items-center justify-center"
+                    >
+                      <X className="h-2.5 w-2.5 text-white" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => postPhotoInputRef.current?.click()}
+                disabled={postPhotos.length >= 4}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1.5 rounded-full bg-muted active:opacity-60 disabled:opacity-40"
+              >
+                {postPhotoUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+                Zdjęcia
+              </button>
+              <input
+                ref={postPhotoInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handlePostPhotoUpload}
+              />
+              <button
+                onClick={handleAddPost}
+                disabled={submittingPost || (!postDescription.trim() && postPhotos.length === 0)}
+                className="ml-auto flex items-center gap-1.5 text-xs bg-orange-500 text-white px-3 py-1.5 rounded-full font-semibold active:opacity-70 disabled:opacity-40"
+              >
+                {submittingPost ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                Opublikuj
+              </button>
+            </div>
+          </div>
+
+          {/* Posts feed */}
+          {posts.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">Brak postów — dodaj pierwszy!</p>
+          )}
+          <div className="space-y-3">
+            {posts.map(post => (
+              <div key={post.id} className="border border-border/50 rounded-xl p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  {post.description && (
+                    <p className="text-sm leading-relaxed flex-1">{post.description}</p>
+                  )}
+                  <button
+                    onClick={() => handleDeletePost(post.id)}
+                    className="flex-shrink-0 h-6 w-6 rounded-full bg-muted flex items-center justify-center active:opacity-60"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                </div>
+                {post.photo_urls.length > 0 && (
+                  <div className={`grid gap-1.5 ${post.photo_urls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                    {post.photo_urls.map((url, idx) => (
+                      <img key={idx} src={url} className="w-full rounded-lg object-cover aspect-square" />
+                    ))}
+                  </div>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: pl })}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

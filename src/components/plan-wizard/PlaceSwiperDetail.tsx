@@ -6,8 +6,17 @@ import { cn } from "@/lib/utils";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import type { MockPlace } from "./PlaceSwiper";
 import { MOCK_MODE, MOCK_PLACE_DETAIL } from "@/lib/mockPlaces";
+import { formatDistanceToNow } from "date-fns";
+import { pl } from "date-fns/locale";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface BusinessPost {
+  id: string;
+  description: string | null;
+  photo_urls: string[];
+  created_at: string;
+}
 
 interface PlaceDetail {
   place_id?: string;
@@ -76,6 +85,7 @@ const PlaceSwiperDetail = ({
   const [loading, setLoading] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [businessPosts, setBusinessPosts] = useState<BusinessPost[]>([]);
   const swipeStartX = useRef<number | null>(null);
 
   useEffect(() => {
@@ -84,6 +94,7 @@ const PlaceSwiperDetail = ({
       setUsageCount(null);
       setActivePhoto(0);
       setPhotos([]);
+      setBusinessPosts([]);
       return;
     }
 
@@ -95,6 +106,16 @@ const PlaceSwiperDetail = ({
         setDetail({ ...MOCK_PLACE_DETAIL, name: place.place_name } as any);
         setPhotos([place.photo_url].filter(Boolean) as string[]);
         setUsageCount(0);
+        // Fetch real posts even in mock mode (place_id is real UUID only for non-mock places)
+        if (place.businessLogoUrl !== undefined && !place.id.startsWith("mock-")) {
+          const { data } = await (supabase as any)
+            .from("business_posts")
+            .select("id, description, photo_urls, created_at")
+            .eq("place_id", place.id)
+            .order("created_at", { ascending: false })
+            .limit(10);
+          if (data) setBusinessPosts(data);
+        }
         setLoading(false);
         return;
       }
@@ -128,7 +149,18 @@ const PlaceSwiperDetail = ({
         .ilike("place_name", `%${place.place_name}%`)
         .then(({ count }) => { setUsageCount(count ?? 0); }, () => setUsageCount(0));
 
-      await Promise.allSettled([placesPromise, usagePromise]);
+      // 3. Business posts (if this is a business card)
+      const postsPromise = place.businessLogoUrl !== undefined
+        ? (supabase as any)
+            .from("business_posts")
+            .select("id, description, photo_urls, created_at")
+            .eq("place_id", place.id)
+            .order("created_at", { ascending: false })
+            .limit(10)
+            .then(({ data }: { data: BusinessPost[] | null }) => { if (data) setBusinessPosts(data); })
+        : Promise.resolve();
+
+      await Promise.allSettled([placesPromise, usagePromise, postsPromise]);
       setLoading(false);
     };
 
@@ -321,6 +353,30 @@ const PlaceSwiperDetail = ({
                         <p className="text-sm text-amber-800 dark:text-amber-200 leading-snug">{place.businessEventTitle}</p>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Business posts feed */}
+                {place.businessLogoUrl !== undefined && businessPosts.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-bold text-foreground">Od właściciela</p>
+                    {businessPosts.map(post => (
+                      <div key={post.id} className="border border-border/50 rounded-2xl p-3 space-y-2.5">
+                        {post.description && (
+                          <p className="text-sm leading-relaxed text-foreground/90">{post.description}</p>
+                        )}
+                        {post.photo_urls.length > 0 && (
+                          <div className={`grid gap-1.5 ${post.photo_urls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                            {post.photo_urls.map((url, idx) => (
+                              <img key={idx} src={url} className="w-full rounded-xl object-cover aspect-square" />
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-[11px] text-muted-foreground">
+                          {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: pl })}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 )}
 
