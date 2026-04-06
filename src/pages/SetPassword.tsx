@@ -89,7 +89,10 @@ const SetPassword = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <div className="flex-1 flex flex-col items-center justify-center px-6">
-        <img src="/icon-192.png" alt="TRASA" className="w-14 h-14 rounded-2xl mb-4" style={{ boxShadow: "1px 1px 4px rgba(0,0,0,0.12)" }} />
+        <div
+          className="w-14 h-14 rounded-full mb-4"
+          style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
+        />
         <h1 className="text-4xl font-black tracking-tight mb-1.5">TRASA</h1>
         <p className="text-muted-foreground text-center text-sm max-w-[260px] leading-relaxed mb-8">
           Ustaw hasło do swojego konta, aby móc się logować.

@@ -82,7 +82,10 @@ const Home = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 max-w-sm mx-auto w-full">
         <div className="text-center mb-10">
-          <img src="/icon-192.png" alt="TRASA" className="w-16 h-16 rounded-2xl mx-auto mb-6" style={{ boxShadow: "1px 1px 4px rgba(0,0,0,0.12)" }} />
+          <div
+            className="w-16 h-16 rounded-full mx-auto mb-6"
+            style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
+          />
           <h1 className="text-3xl font-black tracking-tight mb-3">TRASA</h1>
           <p className="text-lg font-semibold mb-2">{t("landing.tagline")}</p>
           <p className="text-muted-foreground text-sm max-w-[280px] mx-auto leading-relaxed">

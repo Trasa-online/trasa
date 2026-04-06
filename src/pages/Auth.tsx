@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
 type Mode = "login" | "register";
+type UserType = "user" | "business";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -21,6 +22,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [honeypot, setHoneypot] = useState("");
   const [formOpenedAt] = useState(() => Date.now());
+  const [userType, setUserType] = useState<UserType>("user");
   const navigate = useNavigate();
 
   // Pick up referral code from URL (?ref=CODE) or landing page (localStorage)
@@ -110,15 +112,77 @@ const Auth = () => {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Hero */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-6">
-        {/* Logo mark */}
-        <img src="/icon-192.png" alt="TRASA" className="w-14 h-14 rounded-2xl mb-4" style={{ boxShadow: "1px 1px 4px rgba(0,0,0,0.12)" }} />
+        {/* Logo mark — orb without background */}
+        <div
+          className="w-14 h-14 rounded-full mb-4"
+          style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
+        />
         <h1 className="text-4xl font-black tracking-tight mb-1.5">TRASA</h1>
-        <p className="text-muted-foreground text-center text-sm max-w-[260px] leading-relaxed mb-8">
+        <p className="text-muted-foreground text-center text-sm max-w-[260px] leading-relaxed mb-6">
           {t("description")}
         </p>
 
-        {/* Tabs */}
+        {/* User type tabs */}
         <div className="w-full max-w-sm">
+          <div className="flex rounded-2xl bg-muted p-1 mb-4">
+            <button
+              onClick={() => setUserType("user")}
+              className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${
+                userType === "user" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Jestem użytkownikiem
+            </button>
+            <button
+              onClick={() => setUserType("business")}
+              className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${
+                userType === "business" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Jestem firmą
+            </button>
+          </div>
+
+          {userType === "business" ? (
+            <div className="space-y-4">
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="biz-email">{t("fields.email")}</Label>
+                  <Input
+                    id="biz-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder={t("fields.email_placeholder")}
+                    className="bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="biz-password">{t("fields.password")}</Label>
+                  <Input
+                    id="biz-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    placeholder={t("fields.password_placeholder")}
+                    className="bg-card"
+                  />
+                </div>
+                <Button type="submit" className="w-full rounded-2xl py-6 bg-orange-600 hover:bg-orange-700 text-white font-bold text-base" disabled={loading}>
+                  {loading ? t("logging_in") : "Zaloguj się do panelu"}
+                </Button>
+              </form>
+              <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                Nie masz jeszcze konta biznesowego?{" "}
+                <a href="mailto:kontakt@trasa.app" className="underline text-foreground">
+                  Skontaktuj się z nami
+                </a>
+              </p>
+            </div>
+          ) : (
+          <>
           <div className="flex rounded-2xl bg-muted p-1 mb-6">
             <button
               onClick={() => setMode("login")}
@@ -253,6 +317,8 @@ const Auth = () => {
                 {t("beta_notice")}
               </p>
             </form>
+          )}
+          </>
           )}
         </div>
       </div>
