@@ -402,6 +402,15 @@ const CreateGroupSession = () => {
                               if (error) throw error;
                               setInvitedIds(prev => new Set([...prev, profile.id]));
                               toast.success(`Zaproszenie wysłane do @${profile.username}!`);
+                              // Send push notification
+                              supabase.functions.invoke("send-push", {
+                                body: {
+                                  user_id: profile.id,
+                                  title: "Zaproszenie do sesji 🗺️",
+                                  body: `${user?.user_metadata?.first_name || "Ktoś"} zaprasza Cię do sesji w ${capitalizeCity(selectedCity)}`,
+                                  url: `/sesja/${createdCode}`,
+                                },
+                              });
                             } catch (e: any) {
                               toast.error(e.message || "Błąd podczas wysyłania zaproszenia");
                             } finally {

@@ -192,7 +192,7 @@ const Settings = () => {
   const displayName = firstName || username || "";
 
   return (
-    <div className="min-h-screen bg-background pb-10">
+    <div className="min-h-screen bg-background pb-[calc(3rem+env(safe-area-inset-bottom,0px))]">
       <PageHeader title={t("title")} showBack />
 
       <div className="p-4 space-y-6 max-w-lg mx-auto">

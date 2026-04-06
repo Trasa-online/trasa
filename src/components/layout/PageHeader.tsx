@@ -33,7 +33,7 @@ export const PageHeader = ({
 
   return (
     <div className="sticky top-0 z-10 bg-background border-b border-border">
-      <div className="flex items-center justify-between px-4 pt-safe-4 pb-4">
+      <div className="flex items-center justify-between px-4 pt-safe pb-3">
         <div className="flex items-center gap-3">
           {showBack && (
             <Button
