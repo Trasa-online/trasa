@@ -2,14 +2,40 @@ import { useEffect } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { trackPageView } from "@/lib/analytics";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 function RouteTracker() {
   const location = useLocation();
   useEffect(() => {
     trackPageView(location.pathname + location.search);
   }, [location]);
+  return null;
+}
+
+// Redirects business-only accounts away from the regular app
+function BusinessGuard() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!user) return;
+    if (location.pathname.startsWith("/biznes") || location.pathname === "/auth") return;
+
+    (async () => {
+      const { data: adminRow } = await supabase
+        .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
+      if (adminRow) return; // admins can go anywhere
+
+      const { data: bp } = await (supabase as any)
+        .from("business_profiles").select("place_id").eq("owner_user_id", user.id).maybeSingle();
+      if (bp?.place_id) navigate(`/biznes/${bp.place_id}`, { replace: true });
+    })();
+  }, [user, location.pathname]);
+
   return null;
 }
 import CookieBanner from "./components/CookieBanner";
@@ -48,6 +74,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <RouteTracker />
+        <BusinessGuard />
         <CookieBanner />
         <Routes>
           <Route path="/auth" element={<Auth />} />
