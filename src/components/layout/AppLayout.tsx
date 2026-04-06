@@ -69,7 +69,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       <main className="flex-1 flex flex-col max-w-lg mx-auto w-full">
         {children}
       </main>
-      {user && <BottomNav />}
+      {user && <BottomNav onPlusClick={handleOrbClick} />}
       {showOrbOverlay && (
         <OrbOverlay
           isSpeaking={isSpeaking}

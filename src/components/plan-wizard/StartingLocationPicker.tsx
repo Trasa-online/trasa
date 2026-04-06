@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Search, X, MapPin, Plus, Minus } from "lucide-react";
+import { Search, X, Plus, Minus } from "lucide-react";
 import { APIProvider, Map, AdvancedMarker, useMapsLibrary, useMap } from "@vis.gl/react-google-maps";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
-import { cn } from "@/lib/utils";
 
 const MAX_DISTANCE_KM = 40;
 
@@ -80,7 +79,6 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [markerPos, setMarkerPos] = useState<{ lat: number; lng: number } | null>(null);
-  const [pinMode, setPinMode] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -185,17 +183,14 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
     setSuggestions([]);
     setShowSuggestions(false);
     setMarkerPos(null);
-    setPinMode(false);
     setLocationError(null);
   };
 
   const handleMapClick = useCallback((e: any) => {
-    if (!pinMode) return;
     const lat = e.detail?.latLng?.lat;
     const lng = e.detail?.latLng?.lng;
     if (lat == null || lng == null) return;
     const pos = { lat, lng };
-    setPinMode(false);
     setLocationError(null);
     if (!isWithinCity(pos)) {
       setLocationError(`To miejsce jest poza ${city}. Zaznacz punkt w obrębie miasta.`);
@@ -203,7 +198,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
     }
     setMarkerPos(pos);
     reverseGeocode(pos);
-  }, [pinMode, reverseGeocode, isWithinCity, city]);
+  }, [reverseGeocode, isWithinCity, city]);
 
   return (
     <div className="flex flex-col h-full">
@@ -225,7 +220,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
           gestureHandling="greedy"
           disableDefaultUI
           mapId="starting-location"
-          style={{ width: "100%", height: "100%", cursor: pinMode ? "crosshair" : "grab" }}
+          style={{ width: "100%", height: "100%", cursor: "crosshair" }}
           onClick={handleMapClick}
         >
           {markerPos && (
@@ -236,13 +231,6 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
           <MapPanner pos={markerPos} />
           <ZoomControls />
         </Map>
-
-        {/* Pin mode banner */}
-        {pinMode && (
-          <div className="absolute bottom-16 left-3 right-3 z-10 bg-foreground text-background text-sm font-medium text-center py-2.5 rounded-xl shadow-lg">
-            Stuknij w mapę aby zaznaczyć punkt
-          </div>
-        )}
 
         {/* Search input overlay */}
         <div className="absolute top-3 left-3 right-3 z-10">
@@ -257,19 +245,9 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
                 placeholder="Hotel, ulica, dzielnica…"
                 className="flex-1 text-base bg-transparent outline-none placeholder:text-muted-foreground"
               />
-              {query.length > 0 ? (
+              {query.length > 0 && (
                 <button onClick={handleClear} className="shrink-0 text-muted-foreground">
                   <X className="h-4 w-4" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => { setPinMode((v) => !v); setShowSuggestions(false); }}
-                  className={cn(
-                    "shrink-0 transition-colors",
-                    pinMode ? "text-orange-600" : "text-muted-foreground"
-                  )}
-                >
-                  <MapPin className="h-4 w-4" />
                 </button>
               )}
             </div>

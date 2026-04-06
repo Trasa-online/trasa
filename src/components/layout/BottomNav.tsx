@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { Map, Compass, BookOpen, Home, Plus } from "lucide-react";
 
@@ -12,8 +11,7 @@ const RIGHT_ITEMS = [
   { to: "/moje-trasy", end: false,  icon: Map,      label: "Trasy"    },
 ];
 
-const BottomNav = () => {
-  const navigate = useNavigate();
+const BottomNav = ({ onPlusClick }: { onPlusClick?: () => void }) => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/40 z-50 pb-safe">
@@ -39,7 +37,7 @@ const BottomNav = () => {
 
         {/* Center FAB */}
         <button
-          onClick={() => navigate("/plan")}
+          onClick={onPlusClick}
           className="flex items-center justify-center"
           aria-label="Dodaj trasę"
         >
