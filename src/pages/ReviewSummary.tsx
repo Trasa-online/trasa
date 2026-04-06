@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Camera, X, Share2, Globe, Lock, Star } from "lucide-react";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
@@ -20,6 +20,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
 const ReviewSummary = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const routeId = searchParams.get("route");
 
@@ -121,7 +122,11 @@ const ReviewSummary = () => {
 
   const togglePublic = async (val: boolean) => {
     setIsPublic(val);
-    if (routeId) await supabase.from("routes").update({ is_shared: val } as any).eq("id", routeId);
+    if (routeId) {
+      await supabase.from("routes").update({ is_shared: val } as any).eq("id", routeId);
+      queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
+      queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+    }
   };
 
   const saveNarrative = useCallback((value: string) => {

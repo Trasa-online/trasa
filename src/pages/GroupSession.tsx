@@ -187,12 +187,10 @@ const GroupSession = () => {
   const iDoneThisRound = myRoundDone || (myRoundProgress?.current_round_done ?? false);
   const activeSwipers = roundProgress.filter((m: any) => m.swiping_active);
   const doneCount = activeSwipers.filter((m: any) => m.current_round_done).length;
-  // In mock mode, use local state instead of DB round
-  const effectiveRound = MOCK_MODE
-    ? (mockRoundNumber !== null
-        ? { id: "mock", round_number: mockRoundNumber, place_ids: [] as string[], status: mockIsVoting ? "voting" : "active" }
-        : null)
-    : currentRound;
+  // Always use DB round for multi-user coordination; mockRoundNumber is only a fallback for solo dev testing
+  const effectiveRound = currentRound ?? (MOCK_MODE && mockRoundNumber !== null
+    ? { id: "mock", round_number: mockRoundNumber, place_ids: [] as string[], status: mockIsVoting ? "voting" : "active" }
+    : null);
 
   const isVotingPhase = effectiveRound?.status === "voting";
   const myVote = myRoundProgress?.current_round_vote ?? null;
@@ -250,6 +248,15 @@ const GroupSession = () => {
         setMockRoundNumber(roundNumber);
         setMockIsVoting(false);
         setMyRoundDone(false);
+        // Also upsert a DB round so other participants can see the round started
+        await (supabase as any).from("group_session_rounds").upsert({
+          session_id: session.id,
+          round_number: roundNumber,
+          place_ids: [],
+          status: "active",
+        }, { onConflict: "session_id,round_number" });
+        queryClient.invalidateQueries({ queryKey: ["group-session-round", session.id] });
+        queryClient.invalidateQueries({ queryKey: ["group-round-progress", session.id] });
       } else {
         const { error } = await (supabase as any).rpc("start_group_round", {
           p_session_id: session.id,

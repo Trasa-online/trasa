@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
+import { Globe, Lock } from "lucide-react";
 
 interface JournalTabProps {
   userId: string;
@@ -18,7 +19,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       // Own completed routes
       const { data: ownRoutes } = await supabase
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos")
+        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, is_shared")
         .eq("user_id", userId)
         .eq("chat_status", "completed")
         .order("updated_at", { ascending: false });
@@ -104,6 +105,13 @@ const JournalTab = ({ userId }: JournalTabProps) => {
                 {dateLabel && (
                   <p className="text-white/70 text-xs mt-0.5">{dateLabel}</p>
                 )}
+              </div>
+              {/* Privacy badge */}
+              <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm rounded-full p-1.5">
+                {entry.is_shared === false
+                  ? <Lock className="h-3 w-3 text-white/80" />
+                  : <Globe className="h-3 w-3 text-white/80" />
+                }
               </div>
               {/* "Twoje zdjęcie" badge if user uploaded a photo */}
               {hasUserPhoto && (
