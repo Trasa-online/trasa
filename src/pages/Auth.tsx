@@ -49,11 +49,21 @@ const Auth = () => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("onboarding_completed")
-        .eq("id", data.user!.id)
-        .single();
+
+      if (businessMode) {
+        const { data: bp } = await supabase
+          .from("business_profiles")
+          .select("place_id")
+          .eq("owner_user_id", data.user!.id)
+          .single();
+        if (bp?.place_id) {
+          navigate(`/biznes/${bp.place_id}`);
+          return;
+        }
+        toast.error("Nie znaleziono panelu biznesowego dla tego konta.");
+        return;
+      }
+
       navigate("/");
     } catch (error: any) {
       toast.error(error.message || t("errors.login"));
