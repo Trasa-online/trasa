@@ -257,6 +257,21 @@ export const MOCK_PLACES: MockPlace[] = [
     vibe_tags: ["architektura", "UNESCO", "events"],
     description: "Modernistyczna hala z 1913 r. wpisana na listę UNESCO — ikona wrocławskiej architektury.",
   },
+
+  // ── Kawiarnia Testowa (business profile demo) ────────────────────────────────
+  {
+    id: "mock-krakow-biznes-1",
+    place_name: "Kawiarnia Testowa",
+    category: "cafe",
+    city: "Kraków",
+    address: "Rynek Główny 1, 31-042 Kraków",
+    latitude: 50.0617,
+    longitude: 19.9373,
+    rating: 4.7,
+    photo_url: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80",
+    vibe_tags: ["kawa", "klimat", "slow", "✦ biznes"],
+    description: "Najlepsza kawiarnia w Krakowie. Świetne espresso i domowe ciasta.",
+  },
 ];
 
 export function getMockPlaces(city: string): MockPlace[] {
