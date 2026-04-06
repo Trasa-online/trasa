@@ -11,7 +11,8 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { MOCK_MODE } from "@/lib/mockPlaces";
+import { MOCK_MODE, getMockPlaces } from "@/lib/mockPlaces";
+import RouteSummaryDialog from "@/components/route/RouteSummaryDialog";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,8 @@ const GroupSession = () => {
   const [deselectedPlaces, setDeselectedPlaces] = useState<Set<string>>(new Set());
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [showRouteSummary, setShowRouteSummary] = useState(false);
+  const [routePlan, setRoutePlan] = useState<{ city: string; days: { day_number: number; pins: any[] }[] } | null>(null);
   const prevMatchNamesRef = useRef<Set<string> | null>(null);
 
   // ── Round state ──────────────────────────────────────────────────────────────
@@ -343,54 +346,37 @@ const GroupSession = () => {
     if (selectedMatches.length === 0) { toast.error("Zaznacz co najmniej jedno miejsce"); return; }
     setCreatingRoute(true);
     try {
-      // Look up coordinates from places table
-      const placeNames = selectedMatches.map(m => m.place_name);
-      const { data: dbPlaces } = await (supabase as any)
-        .from("places")
-        .select("place_name, latitude, longitude, address, description")
-        .ilike("city", session.city)
-        .in("place_name", placeNames);
+      // Look up coordinates
       const coordsMap: Record<string, any> = {};
-      for (const p of (dbPlaces || [])) coordsMap[p.place_name] = p;
+      if (MOCK_MODE) {
+        for (const p of getMockPlaces(session.city)) coordsMap[p.place_name] = p;
+      } else {
+        const placeNames = selectedMatches.map(m => m.place_name);
+        const { data: dbPlaces } = await (supabase as any)
+          .from("places")
+          .select("place_name, latitude, longitude, address, description")
+          .ilike("city", session.city)
+          .in("place_name", placeNames);
+        for (const p of (dbPlaces || [])) coordsMap[p.place_name] = p;
+      }
 
-      // Insert route
-      const { data: route, error: routeErr } = await (supabase as any)
-        .from("routes")
-        .insert({
-          user_id: user.id,
-          city: session.city,
-          status: "draft",
-          chat_status: "completed",
-          trip_type: "planning",
-          day_number: 1,
-          group_session_id: session.id,
-          title: `Grupowa trasa · ${session.city}`,
-          ...(session.trip_date ? { start_date: session.trip_date } : {}),
-        })
-        .select()
-        .single();
-      if (routeErr) throw routeErr;
-
-      // Insert pins
       const pins = selectedMatches.map((m, idx) => {
         const db = coordsMap[m.place_name];
         return {
-          route_id: route.id,
           place_name: m.place_name,
-          category: m.category,
-          description: db?.description || "",
           address: db?.address || "",
+          description: db?.description || "",
+          suggested_time: "",
+          duration_minutes: 60,
+          category: m.category,
           latitude: db?.latitude || 0,
           longitude: db?.longitude || 0,
-          pin_order: idx + 1,
           day_number: 1,
-          suggested_time: null,
-          duration_minutes: 60,
         };
       });
-      await (supabase as any).from("pins").insert(pins);
 
-      navigate(`/day-plan?route=${route.id}`);
+      setRoutePlan({ city: session.city, days: [{ day_number: 1, pins }] });
+      setShowRouteSummary(true);
     } catch (e: any) {
       toast.error(e.message || "Błąd podczas tworzenia trasy");
     } finally {
@@ -888,6 +874,23 @@ const GroupSession = () => {
         open={detailOpen}
         onOpenChange={setDetailOpen}
       />
+
+      {/* Route summary dialog */}
+      {routePlan && (
+        <RouteSummaryDialog
+          open={showRouteSummary}
+          onOpenChange={setShowRouteSummary}
+          plan={routePlan}
+          preferences={{
+            numDays: 1,
+            pace: "mixed",
+            priorities: [],
+            startDate: session?.trip_date ?? null,
+            planningMode: "text",
+          }}
+          messages={[]}
+        />
+      )}
     </div>
   );
 };

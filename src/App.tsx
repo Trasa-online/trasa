@@ -20,7 +20,6 @@ import CreateRoute from "./pages/CreateRoute";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import DayReview from "./pages/DayReview";
-import DayPlan from "./pages/DayPlan";
 import Terms from "./pages/Terms";
 import MyRoutes from "./pages/MyRoutes";
 import SetPassword from "./pages/SetPassword";
@@ -57,7 +56,6 @@ const App = () => (
           <Route path="/my-routes" element={<AppLayout><MyRoutes /></AppLayout>} />
           <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
           <Route path="/day-review" element={<DayReview />} />
-          <Route path="/day-plan" element={<DayPlan />} />
           <Route path="/onboarding" element={<Navigate to="/" replace />} />
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/admin" element={<Admin />} />

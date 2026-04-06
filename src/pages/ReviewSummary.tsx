@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Share2, Globe, Lock } from "lucide-react";
+import { ArrowLeft, Camera, X, Share2, Globe, Lock, Star } from "lucide-react";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -38,12 +38,42 @@ const ReviewSummary = () => {
       if (!routeId || !user) return null;
       const { data } = await supabase
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative, is_shared")
+        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative, is_shared, group_session_id")
         .eq("id", routeId)
         .single();
       return data as any;
     },
     enabled: !!routeId && !!user,
+  });
+
+  // Group session: fetch other participants' photos
+  const { data: groupPhotos = [] } = useQuery({
+    queryKey: ["review-summary-group-photos", route?.group_session_id],
+    queryFn: async () => {
+      if (!route?.group_session_id || !user) return [];
+      // Get all routes in the same group session (excluding current)
+      const { data: groupRoutes } = await supabase
+        .from("routes")
+        .select("id, user_id, review_photos")
+        .eq("group_session_id", route.group_session_id)
+        .neq("id", routeId);
+      if (!groupRoutes?.length) return [];
+      // Fetch profiles for those users
+      const userIds = [...new Set(groupRoutes.map((r: any) => r.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, first_name, avatar_url")
+        .in("id", userIds);
+      const profileMap = Object.fromEntries((profiles ?? []).map((p: any) => [p.id, p]));
+      return groupRoutes.flatMap((r: any) =>
+        (r.review_photos ?? []).map((url: string) => ({
+          url,
+          userId: r.user_id,
+          username: profileMap[r.user_id]?.first_name || profileMap[r.user_id]?.username || "Uczestnik",
+        }))
+      );
+    },
+    enabled: !!route?.group_session_id,
   });
 
 
@@ -115,6 +145,12 @@ const ReviewSummary = () => {
 
   const removePhoto = async (url: string) => {
     const updated = photos.filter(p => p !== url);
+    setPhotos(updated);
+    await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
+  };
+
+  const setCoverPhoto = async (url: string) => {
+    const updated = [url, ...photos.filter(p => p !== url)];
     setPhotos(updated);
     await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
   };
@@ -231,11 +267,26 @@ const ReviewSummary = () => {
             )}
           </div>
 
+          {/* My photos */}
           {photos.length > 0 ? (
             <div className="flex gap-2.5 overflow-x-auto px-5 scrollbar-none pb-1">
-              {photos.map((url) => (
+              {photos.map((url, idx) => (
                 <div key={url} className="relative flex-shrink-0 w-32 h-32 rounded-2xl overflow-hidden shadow-sm">
                   <img src={url} alt="" className="w-full h-full object-cover" />
+                  {idx !== 0 && (
+                    <button
+                      onClick={() => setCoverPhoto(url)}
+                      title="Ustaw jako okładkę"
+                      className="absolute bottom-1.5 left-1.5 bg-black/60 backdrop-blur-sm rounded-full p-1"
+                    >
+                      <Star className="h-3 w-3 text-white" />
+                    </button>
+                  )}
+                  {idx === 0 && (
+                    <div className="absolute bottom-1.5 left-1.5 bg-orange-600/90 rounded-full px-1.5 py-0.5 text-[9px] font-bold text-white">
+                      Okładka
+                    </div>
+                  )}
                   <button
                     onClick={() => removePhoto(url)}
                     className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm rounded-full p-1"
@@ -264,6 +315,32 @@ const ReviewSummary = () => {
               <Camera className="h-5 w-5" />
               <span className="text-sm">{uploading ? "Dodawanie…" : "Dodaj zdjęcia z tego dnia"}</span>
             </button>
+          )}
+
+          {/* Group participants' photos */}
+          {groupPhotos.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-5 mb-3">
+                Zdjęcia uczestników
+              </p>
+              <div className="flex gap-2.5 overflow-x-auto px-5 scrollbar-none pb-1">
+                {groupPhotos.map((item, idx) => (
+                  <div key={`${item.url}-${idx}`} className="relative flex-shrink-0 w-32 rounded-2xl overflow-hidden shadow-sm">
+                    <img src={item.url} alt="" className="w-full h-32 object-cover" />
+                    <div className="px-1.5 py-1 bg-card/80 backdrop-blur-sm">
+                      <p className="text-[10px] font-medium text-foreground/70 truncate">{item.username}</p>
+                    </div>
+                    <button
+                      onClick={() => setCoverPhoto(item.url)}
+                      title="Ustaw jako moją okładkę"
+                      className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm rounded-full p-1"
+                    >
+                      <Star className="h-3 w-3 text-white" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />

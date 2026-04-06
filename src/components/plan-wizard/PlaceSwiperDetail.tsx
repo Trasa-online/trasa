@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Star, MapPin, Loader2, Heart, Users } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { getPhotoUrl } from "@/lib/placePhotos";
@@ -372,21 +371,6 @@ const PlaceSwiperDetail = ({
                   </div>
                 )}
 
-                {/* Interactive map */}
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground mb-2">
-                    Lokalizacja
-                  </h3>
-                  <div className="rounded-2xl overflow-hidden border border-border/40 h-52">
-                    <iframe
-                      src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(place.place_name)}${place.latitude && place.longitude ? `&center=${place.latitude},${place.longitude}&zoom=16` : ""}`}
-                      className="w-full h-full border-0"
-                      loading="lazy"
-                      allowFullScreen
-                      referrerPolicy="no-referrer-when-downgrade"
-                    />
-                  </div>
-                </div>
               </div>
             </div>
 

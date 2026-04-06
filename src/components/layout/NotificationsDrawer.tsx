@@ -161,7 +161,13 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       <p className="text-[11px] text-muted-foreground mt-0.5">{timeAgo}</p>
                       {n.type === "group_invite" && n.metadata?.join_code && (
                         <button
-                          onClick={() => { onClose(); navigate(`/sesja/${n.metadata!.join_code}`); }}
+                          onClick={async () => {
+                            await supabase.from("notifications").delete().eq("id", n.id);
+                            queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
+                            queryClient.invalidateQueries({ queryKey: ["notifications-unread", userId] });
+                            onClose();
+                            navigate(`/sesja/${n.metadata!.join_code}`);
+                          }}
                           className="mt-2 px-3 py-1.5 rounded-full bg-orange-600 text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           Dołącz do sesji →
