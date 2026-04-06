@@ -80,6 +80,73 @@ const CATEGORY_COLORS: Record<PlaceCategory, string> = {
 const PRICE_DOTS = (level?: number) =>
   level ? "·".repeat(level) + "·".repeat(4 - level).replace(/·/g, "○") : null;
 
+const MATCH_THRESHOLD = 5;        // minimum likes to show bingo banner
+const MATCH_THRESHOLD_REPEAT = 11; // re-show banner after dismissal
+const CATEGORY_DIVERSITY = 2;     // minimum different categories
+
+// ─── Bingo banner ─────────────────────────────────────────────────────────────
+
+const CATEGORY_EMOJI_MAP: Record<string, string> = {
+  restaurant: "🍽️", cafe: "☕", museum: "🏛️", bar: "🍺",
+  nightlife: "🎶", monument: "🏰", walk: "🚶", park: "🌿",
+  shopping: "🛍️", church: "⛪", gallery: "🖼️", market: "🏪",
+  viewpoint: "🌅", experience: "🎭", club: "🎵",
+};
+
+const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: {
+  likedPlaces: MockPlace[];
+  onConfirm: () => void;
+  onDismiss: () => void;
+}) => {
+  const orbs = likedPlaces.slice(0, 3);
+  const extra = likedPlaces.length - 3;
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-safe-6 pb-6 flex flex-col items-center gap-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+        <div className="flex items-center justify-center gap-3">
+          {orbs.map((p) => (
+            <div key={p.id} className="flex flex-col items-center gap-2">
+              <div className="h-14 w-14 rounded-full bg-gradient-to-br from-orange-400/20 to-amber-400/20 border border-orange-300/30 flex items-center justify-center text-2xl shadow-sm">
+                {CATEGORY_EMOJI_MAP[p.category] ?? "📍"}
+              </div>
+            </div>
+          ))}
+          {extra > 0 && (
+            <div className="h-14 w-14 rounded-full bg-muted border border-border flex items-center justify-center">
+              <span className="text-sm font-bold text-muted-foreground">+{extra}</span>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col items-center gap-1 w-full">
+          {orbs.map((p) => (
+            <p key={p.id} className="text-sm font-medium text-foreground">{p.place_name}</p>
+          ))}
+          {extra > 0 && <p className="text-xs text-muted-foreground mt-0.5">i {extra} więcej</p>}
+        </div>
+        <div className="text-center space-y-1">
+          <p className="text-2xl font-black text-foreground">Bingo!</p>
+          <p className="text-sm text-muted-foreground">Mamy dla Ciebie trasę.</p>
+        </div>
+        <div className="w-full flex flex-col gap-2.5">
+          <button
+            onClick={onConfirm}
+            className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
+          >
+            Sprawdzam trasę
+            <ArrowRight className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onDismiss}
+            className="w-full py-3 rounded-2xl border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
+          >
+            Wróć do przeglądania
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── SwipeCard ────────────────────────────────────────────────────────────────
 
 interface SwipeCardProps {
@@ -518,6 +585,8 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
   const [detailOpen, setDetailOpen] = useState(false);
   const [matchedRoutes, setMatchedRoutes] = useState<MatchedRoute[]>([]);
   const [loadingExamples, setLoadingExamples] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
   // Track consecutive likes per category group
   const [recentLikedGroups, setRecentLikedGroups] = useState<(Set<string> | null)[]>([]);
   const showAddPlace = showAddPlaceProp;
@@ -780,6 +849,27 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
     }
   }, [queue.length, loading]);
 
+  // Show bingo banner when threshold reached
+  useEffect(() => {
+    if (groupSessionId) return; // not in group mode
+    const uniqueCategories = new Set(likedPlaces.map((p) => p.category)).size;
+    if (bannerDismissed) {
+      if (likedPlaces.length >= MATCH_THRESHOLD_REPEAT && uniqueCategories >= CATEGORY_DIVERSITY) {
+        setBannerDismissed(false);
+        setShowBanner(true);
+      }
+      return;
+    }
+    if (likedPlaces.length >= MATCH_THRESHOLD && uniqueCategories >= CATEGORY_DIVERSITY) {
+      setShowBanner(true);
+    }
+  }, [likedPlaces, bannerDismissed, groupSessionId]);
+
+  const handleBannerDismiss = () => {
+    setShowBanner(false);
+    setBannerDismissed(true);
+  };
+
   // Fetch + match route_examples when queue runs out
   useEffect(() => {
     if (queue.length > 0 || loading || likedPlaces.length === 0) return;
@@ -906,6 +996,15 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
+
+      {/* Bingo banner */}
+      {showBanner && (
+        <MatchModal
+          likedPlaces={likedPlaces}
+          onConfirm={handleProceed}
+          onDismiss={handleBannerDismiss}
+        />
+      )}
 
       {/* Progress */}
       <div className="flex items-center justify-between px-5 pb-2 shrink-0">
