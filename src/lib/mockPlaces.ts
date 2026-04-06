@@ -273,6 +273,10 @@ export const MOCK_PLACES: MockPlace[] = [
     description: "Najlepsza kawiarnia w Krakowie. Świetne espresso i domowe ciasta.",
     businessLogoUrl: "", // pusty string = pokaż orb placeholder
     businessEventTitle: "Happy hour 16:00–18:00, drinki 1+1",
+    galleryPhotos: [
+      "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&q=80",
+      "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=800&q=80",
+    ],
   },
 ];
 

@@ -104,7 +104,7 @@ const PlaceSwiperDetail = ({
       // ── Mock mode: skip Google Places API entirely ──
       if (MOCK_MODE) {
         setDetail({ ...MOCK_PLACE_DETAIL, name: place.place_name } as any);
-        setPhotos([place.photo_url].filter(Boolean) as string[]);
+        setPhotos([place.photo_url, ...(place.galleryPhotos ?? [])].filter(Boolean) as string[]);
         setUsageCount(0);
         // Business posts: use mock data for mock places, real fetch for real UUIDs
         if (place.businessLogoUrl !== undefined) {

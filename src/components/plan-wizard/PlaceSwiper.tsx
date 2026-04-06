@@ -29,6 +29,7 @@ export interface MockPlace {
   // Business profile fields (optional)
   businessLogoUrl?: string;
   businessEventTitle?: string;
+  galleryPhotos?: string[]; // extra photos shown in carousel (swipe card + detail)
 }
 
 export type PlaceCategory =
@@ -165,7 +166,9 @@ interface SwipeCardProps {
 
 const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeCardProps) => {
   const [imgFailed, setImgFailed] = useState(false);
-  const [photoUrls, setPhotoUrls] = useState<string[]>(place.photo_url ? [place.photo_url] : []);
+  const [photoUrls, setPhotoUrls] = useState<string[]>(
+    [place.photo_url, ...(place.galleryPhotos ?? [])].filter(Boolean) as string[]
+  );
   const [photoIdx, setPhotoIdx] = useState(0);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -319,12 +322,6 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
         )}
       </div>
 
-      {/* Business badge — top right */}
-      {place.businessLogoUrl !== undefined && (
-        <div className="absolute top-4 right-4 z-10 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
-          ✦ Wizytówka
-        </div>
-      )}
 
       {/* Like / Skip indicators */}
       {isTop && (
