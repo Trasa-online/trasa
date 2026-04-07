@@ -9,7 +9,15 @@ import { toast } from "sonner";
 import { format, addDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import type { PlanPin } from "./DayPinList";
-import RouteMap from "@/components/RouteMap";
+import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
+
+const buildStaticMapUrl = (pins: { latitude: number; longitude: number }[]) => {
+  if (!GOOGLE_MAPS_API_KEY || pins.length === 0) return null;
+  const markers = pins.slice(0, 10)
+    .map((p, i) => `markers=color:0xea580c%7Clabel:${i + 1}%7C${p.latitude},${p.longitude}`)
+    .join("&");
+  return `https://maps.googleapis.com/maps/api/staticmap?size=800x352&scale=2&${markers}&key=${GOOGLE_MAPS_API_KEY}`;
+};
 
 interface RoutePlan {
   city: string;
@@ -280,7 +288,15 @@ const RouteSummaryDialog = ({
           {/* Map */}
           {allMapPins.length > 0 && (
             <div className="px-5 mb-5">
-              <RouteMap pins={allMapPins} className="h-44 rounded-2xl" />
+              {buildStaticMapUrl(allMapPins) ? (
+                <img
+                  src={buildStaticMapUrl(allMapPins)!}
+                  alt="Mapa trasy"
+                  className="w-full h-44 rounded-2xl object-cover"
+                />
+              ) : (
+                <div className="w-full h-44 rounded-2xl bg-muted" />
+              )}
             </div>
           )}
 
