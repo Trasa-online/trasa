@@ -89,6 +89,17 @@ const BusinessDashboard = () => {
     loadData();
   }, [user, placeId]);
 
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
   const loadData = async () => {
     if (!placeId || !user) return;
     setLoading(true);
@@ -224,14 +235,23 @@ const BusinessDashboard = () => {
       setPosts(prev => [data as BusinessPost, ...prev]);
       setPostDescription("");
       setPostPhotos([]);
+      if (postPhotoInputRef.current) postPhotoInputRef.current.value = "";
       toast.success("Post dodany!");
     }
     setSubmittingPost(false);
   };
 
   const handleDeletePost = async (id: string) => {
-    await (supabase as any).from("business_posts").delete().eq("id", id);
+    // Optimistic remove
     setPosts(prev => prev.filter(p => p.id !== id));
+    const { error } = await (supabase as any).from("business_posts").delete().eq("id", id);
+    if (error) {
+      toast.error("Nie udało się usunąć posta");
+      // Rollback — reload posts
+      const { data } = await (supabase as any)
+        .from("business_posts").select("*").eq("place_id", placeId).order("created_at", { ascending: false });
+      if (data) setPosts(data as BusinessPost[]);
+    }
   };
 
   const handleSave = async () => {
