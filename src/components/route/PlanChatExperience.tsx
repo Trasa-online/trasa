@@ -1014,10 +1014,15 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
           const mapsAppUrl = allPins.length > 0
             ? `https://www.google.com/maps/dir/${allPins.map(p => `${p.latitude},${p.longitude}`).join("/")}`
             : "";
-          const pinsJson = JSON.stringify(allPins.map((p, i) => ({
-            lat: p.latitude, lng: p.longitude,
-            name: p.place_name, time: p.suggested_time || "", index: i + 1,
-          })));
+          // Build per-day counters for pin numbering
+          const dayCounts = new Map<number, number>();
+          const pinsJson = JSON.stringify(allPins.map(p => {
+            const d = p.day_number ?? 1;
+            const n = (dayCounts.get(d) ?? 0) + 1;
+            dayCounts.set(d, n);
+            return { lat: p.latitude, lng: p.longitude, name: p.place_name, time: p.suggested_time || "", index: n, day: d };
+          }));
+          const isMultiDay = plan.days.length > 1;
           const leafletHtml = `<!DOCTYPE html><html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -1026,24 +1031,48 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
 *{margin:0;padding:0;box-sizing:border-box}
 body{height:100vh;overflow:hidden}
 #map{height:100vh;width:100%}
-.pm{background:#f97316;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:-apple-system,sans-serif;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.pm{color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:-apple-system,sans-serif;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 .leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.15)}
 .leaflet-popup-content{margin:10px 14px}
 .pn{font-size:13px;font-weight:600;font-family:-apple-system,sans-serif}
 .pt{font-size:11px;color:#888;margin-top:2px;font-family:-apple-system,sans-serif}
-</style></head><body><div id="map"></div>
+${isMultiDay ? `
+#legend{position:absolute;bottom:10px;left:10px;z-index:1000;display:flex;flex-direction:column;gap:4px}
+.leg{background:rgba(255,255,255,.92);backdrop-filter:blur(4px);border-radius:20px;padding:3px 10px 3px 7px;font-size:11px;font-weight:600;font-family:-apple-system,sans-serif;display:flex;align-items:center;gap:6px;border:1px solid rgba(0,0,0,.08)}
+.legdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+` : ''}
+</style></head><body><div id="map"></div>${isMultiDay ? '<div id="legend"></div>' : ''}
 <script>
 const pins=${pinsJson};
+const DAY_COLORS=['#ea580c','#2563eb','#16a34a','#7c3aed','#d97706'];
+function dayColor(d){return DAY_COLORS[(d-1)%DAY_COLORS.length];}
 const map=L.map('map',{zoomControl:true,attributionControl:false});
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
+${isMultiDay ? `
+const byDay={};
+pins.forEach(p=>{if(!byDay[p.day])byDay[p.day]=[];byDay[p.day].push(p);});
+Object.entries(byDay).forEach(([d,dPins])=>{
+  const col=dayColor(Number(d));
+  const coords=dPins.map(p=>[p.lat,p.lng]);
+  if(coords.length>1)L.polyline(coords,{color:col,weight:3,opacity:.65,dashArray:'8 6'}).addTo(map);
+});
+const legEl=document.getElementById('legend');
+Object.keys(byDay).sort((a,b)=>a-b).forEach(d=>{
+  const col=dayColor(Number(d));
+  legEl.innerHTML+='<div class="leg"><div class="legdot" style="background:'+col+'"></div>Dzień '+d+'</div>';
+});
+` : `
 const coords=pins.map(p=>[p.lat,p.lng]);
-if(coords.length>1)L.polyline(coords,{color:'#f97316',weight:3,opacity:.6,dashArray:'7 5'}).addTo(map);
+if(coords.length>1)L.polyline(coords,{color:'#ea580c',weight:3,opacity:.65,dashArray:'8 6'}).addTo(map);
+`}
 pins.forEach(p=>{
-  const icon=L.divIcon({className:'',html:'<div class="pm">'+p.index+'</div>',iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-18]});
+  const col=dayColor(p.day||1);
+  const icon=L.divIcon({className:'',html:'<div class="pm" style="background:'+col+'">'+p.index+'</div>',iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-18]});
   L.marker([p.lat,p.lng],{icon}).bindPopup('<div class="pn">'+p.name+'</div>'+(p.time?'<div class="pt">'+p.time+'</div>':'')).addTo(map);
 });
-if(coords.length>1)map.fitBounds(coords,{padding:[50,50]});
-else if(coords.length===1)map.setView(coords[0],15);
+const allCoords=pins.map(p=>[p.lat,p.lng]);
+if(allCoords.length>1)map.fitBounds(allCoords,{padding:[50,50]});
+else if(allCoords.length===1)map.setView(allCoords[0],15);
 <\/script></body></html>`;
           return (
             <div className="absolute inset-0 bg-background z-30 flex flex-col">
@@ -1070,16 +1099,32 @@ else if(coords.length===1)map.setView(coords[0],15);
                   <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Brak danych mapy</div>
                 )}
               </div>
-              <div className="shrink-0 px-4 py-3 border-t border-border/40 space-y-1.5 max-h-44 overflow-y-auto">
-                {allPins.map((p, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    <div className="h-5 w-5 rounded-full bg-orange-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
-                      {i + 1}
+              <div className="shrink-0 px-4 py-3 border-t border-border/40 max-h-44 overflow-y-auto space-y-1">
+                {plan.days.map((day, di) => {
+                  const dayPins = day.pins.filter(p => p.latitude && p.longitude);
+                  if (dayPins.length === 0) return null;
+                  const color = ['#ea580c','#2563eb','#16a34a','#7c3aed','#d97706'][(day.day_number - 1) % 5];
+                  return (
+                    <div key={day.day_number}>
+                      {plan.days.length > 1 && (
+                        <div className="flex items-center gap-2 py-1.5" style={di > 0 ? { marginTop: '6px' } : {}}>
+                          <div className="h-px flex-1 bg-border/60" />
+                          <span className="text-[10px] font-bold uppercase tracking-wide px-1" style={{ color }}>Dzień {day.day_number}</span>
+                          <div className="h-px flex-1 bg-border/60" />
+                        </div>
+                      )}
+                      {dayPins.map((p, pi) => (
+                        <div key={pi} className="flex items-center gap-2 text-sm py-0.5">
+                          <div className="h-5 w-5 rounded-full text-white flex items-center justify-center text-[10px] font-bold shrink-0" style={{ background: color }}>
+                            {pi + 1}
+                          </div>
+                          <span className="font-medium truncate flex-1">{p.place_name}</span>
+                          {p.suggested_time && <span className="text-muted-foreground text-xs shrink-0">{p.suggested_time}</span>}
+                        </div>
+                      ))}
                     </div>
-                    <span className="font-medium truncate flex-1">{p.place_name}</span>
-                    {p.suggested_time && <span className="text-muted-foreground text-xs shrink-0">{p.suggested_time}</span>}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
