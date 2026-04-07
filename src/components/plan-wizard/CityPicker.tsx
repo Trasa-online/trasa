@@ -26,7 +26,7 @@ const COUNTRIES: Country[] = [
     code: "PL", flag: "🇵🇱", name: "Polska",
     cities: [
       { name: "Kraków" },
-      { name: "Łódź",       comingSoon: true },
+      { name: "Łódź" },
       { name: "Poznań",     comingSoon: true },
       { name: "Trójmiasto", comingSoon: true },
       { name: "Warszawa",   comingSoon: true },
