@@ -60,7 +60,14 @@ const RouteSummaryDialog = ({
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const startDate = preferences.startDate ? new Date(preferences.startDate) : null;
+  const days = plan.days ?? [];
+
+  let startDate: Date | null = null;
+  try {
+    startDate = preferences.startDate ? new Date(preferences.startDate) : null;
+    if (startDate && isNaN(startDate.getTime())) startDate = null;
+  } catch { startDate = null; }
+
   const endDate = startDate && preferences.numDays > 1
     ? addDays(startDate, preferences.numDays - 1)
     : startDate;
@@ -69,8 +76,8 @@ const RouteSummaryDialog = ({
     ? format(startDate, "d MMM yyyy", { locale: pl })
     : null;
 
-  const totalPins = plan.days.reduce((s, d) => s + d.pins.length, 0);
-  const isMultiDay = plan.days.length > 1;
+  const totalPins = days.reduce((s, d) => s + (d.pins?.length ?? 0), 0);
+  const isMultiDay = days.length > 1;
 
   const saveRoute = useCallback(async () => {
     if (!user || saving) return;
@@ -79,7 +86,7 @@ const RouteSummaryDialog = ({
     try {
       let folderId: string | null = null;
 
-      if (plan.days.length > 1) {
+      if (days.length > 1) {
         const { data: folder, error: folderError } = await supabase
           .from("route_folders")
           .insert({
@@ -95,13 +102,13 @@ const RouteSummaryDialog = ({
         folderId = folder.id;
       }
 
-      for (const day of plan.days) {
+      for (const day of days) {
         const dayDate = startDate
           ? format(addDays(startDate, day.day_number - 1), "yyyy-MM-dd")
           : null;
 
         const routePayload = {
-          title: plan.days.length > 1
+          title: days.length > 1
             ? `${plan.city} — Dzień ${day.day_number}`
             : `${plan.city}`,
           city: plan.city,
@@ -111,7 +118,7 @@ const RouteSummaryDialog = ({
           folder_order: day.day_number - 1,
           day_number: day.day_number,
           start_date: dayDate,
-          end_date: plan.days.length === 1 && endDate ? format(endDate, "yyyy-MM-dd") : dayDate,
+          end_date: days.length === 1 && endDate ? format(endDate, "yyyy-MM-dd") : dayDate,
           pace: preferences.pace,
           priorities: preferences.priorities,
           is_shared: false,
@@ -126,9 +133,9 @@ const RouteSummaryDialog = ({
 
         if (routeError) throw routeError;
 
-        if (day.pins.length > 0) {
+        if ((day.pins?.length ?? 0) > 0) {
           const { error: pinsError } = await supabase.from("pins").insert(
-            day.pins.map((pin, idx) => ({
+            (day.pins ?? []).map((pin, idx) => ({
               route_id: route.id,
               place_name: pin.place_name,
               address: pin.address,
@@ -161,9 +168,9 @@ const RouteSummaryDialog = ({
               .insert({ user_id: memberId, ...routePayload })
               .select("id")
               .single();
-            if (memberRoute && day.pins.length > 0) {
+            if (memberRoute && (day.pins?.length ?? 0) > 0) {
               await supabase.from("pins").insert(
-                day.pins.map((pin, idx) => ({
+                (day.pins ?? []).map((pin, idx) => ({
                   route_id: memberRoute.id,
                   place_name: pin.place_name,
                   address: pin.address,
@@ -193,7 +200,7 @@ const RouteSummaryDialog = ({
         return "mix";
       };
       const personalityType = inferPersonality(preferences.priorities ?? [], preferences.pace ?? "mixed");
-      const examplePins = plan.days[0]?.pins.map(p => ({
+      const examplePins = (days[0]?.pins ?? []).map(p => ({
         place_name: p.place_name,
         category: p.category,
         suggested_time: p.suggested_time,
@@ -221,8 +228,8 @@ const RouteSummaryDialog = ({
     }
   }, [user, saving, plan, preferences, messages, startDate, endDate, navigate, onOpenChange, toast]);
 
-  const allMapPins = plan.days.flatMap((d) =>
-    d.pins.filter(p => p.latitude && p.longitude && p.latitude !== 0).map((p, pi) => ({
+  const allMapPins = days.flatMap((d) =>
+    (d.pins ?? []).filter(p => p.latitude && p.longitude && p.latitude !== 0).map((p, pi) => ({
       latitude: p.latitude,
       longitude: p.longitude,
       place_name: p.place_name,
@@ -256,7 +263,7 @@ const RouteSummaryDialog = ({
               {dateLabel && <span>{dateLabel}</span>}
               {dateLabel && <span>·</span>}
               <span>{totalPins} miejsc</span>
-              {isMultiDay && <><span>·</span><span>{plan.days.length} dni</span></>}
+              {isMultiDay && <><span>·</span><span>{days.length} dni</span></>}
             </div>
           </div>
           <button
@@ -279,7 +286,7 @@ const RouteSummaryDialog = ({
 
           {/* Timeline */}
           <div className="px-5 pb-4 space-y-6">
-            {plan.days.map((day) => (
+            {days.map((day) => (
               <div key={day.day_number}>
                 {isMultiDay && (
                   <div className="flex items-center gap-2 mb-4">
@@ -290,8 +297,8 @@ const RouteSummaryDialog = ({
                   </div>
                 )}
                 <div className="space-y-0">
-                  {day.pins.map((pin, idx) => {
-                    const isLast = idx === day.pins.length - 1;
+                  {(day.pins ?? []).map((pin, idx) => {
+                    const isLast = idx === (day.pins?.length ?? 0) - 1;
                     return (
                       <div key={idx} className="flex items-start gap-3.5">
                         {/* Stepper */}

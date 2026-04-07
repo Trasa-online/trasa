@@ -1010,14 +1010,16 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
 
         {/* ── Map overlay ─────────────────────────────────────────────────── */}
         {showMap && plan && (() => {
-          const allPins = plan.days.flatMap(d => d.pins).filter(p => p.latitude && p.longitude);
+          // Preserve day_number from parent day object (not from pin, which may not have it)
+          const allPins = plan.days.flatMap(d =>
+            (d.pins ?? []).filter(p => p.latitude && p.longitude).map(p => ({ ...p, _day: d.day_number }))
+          );
           const mapsAppUrl = allPins.length > 0
             ? `https://www.google.com/maps/dir/${allPins.map(p => `${p.latitude},${p.longitude}`).join("/")}`
             : "";
-          // Build per-day counters for pin numbering
           const dayCounts = new Map<number, number>();
           const pinsJson = JSON.stringify(allPins.map(p => {
-            const d = p.day_number ?? 1;
+            const d = p._day;
             const n = (dayCounts.get(d) ?? 0) + 1;
             dayCounts.set(d, n);
             return { lat: p.latitude, lng: p.longitude, name: p.place_name, time: p.suggested_time || "", index: n, day: d };
@@ -1119,7 +1121,7 @@ else if(allCoords.length===1)map.setView(allCoords[0],15);
               </div>
               <div className="shrink-0 px-4 py-3 border-t border-border/40 max-h-44 overflow-y-auto space-y-1">
                 {plan.days.map((day, di) => {
-                  const dayPins = day.pins.filter(p => p.latitude && p.longitude);
+                  const dayPins = (day.pins ?? []).filter(p => p.latitude && p.longitude);
                   if (dayPins.length === 0) return null;
                   const color = ['#ea580c','#2563eb','#16a34a','#7c3aed','#d97706'][(day.day_number - 1) % 5];
                   return (
