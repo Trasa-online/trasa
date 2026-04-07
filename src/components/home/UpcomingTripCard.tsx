@@ -66,9 +66,10 @@ interface UpcomingTripCardProps {
   trip: any;
   onDelete: () => void;
   onPinTap: (pin: any) => void;
+  onEdit: (trip: any) => void;
 }
 
-const UpcomingTripCard = ({ trip, onDelete, onPinTap }: UpcomingTripCardProps) => {
+const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCardProps) => {
   const todayMidnight = new Date();
   todayMidnight.setHours(0, 0, 0, 0);
   const daysUntil = differenceInDays(new Date(trip.startDate), todayMidnight);
@@ -165,6 +166,14 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap }: UpcomingTripCardProps) =
           ))}
         </div>
       )}
+
+      {/* ── Edit CTA ── */}
+      <button
+        onClick={() => onEdit(trip)}
+        className="w-full py-3 rounded-2xl border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform"
+      >
+        Dostosuj plan →
+      </button>
     </div>
   );
 };

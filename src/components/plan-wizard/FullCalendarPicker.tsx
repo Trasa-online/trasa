@@ -9,9 +9,22 @@ interface FullCalendarPickerProps {
   onConfirm: (date: Date, numDays: number) => void;
 }
 
+const MAX_DAYS = 3;
+
 const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
   const [range, setRange] = useState<DateRange | undefined>();
   const [month, setMonth] = useState(new Date());
+
+  const handleSelect = (newRange: DateRange | undefined) => {
+    if (newRange?.from && newRange?.to) {
+      const days = differenceInCalendarDays(newRange.to, newRange.from) + 1;
+      if (days > MAX_DAYS) {
+        setRange({ from: newRange.from, to: addDays(newRange.from, MAX_DAYS - 1) });
+        return;
+      }
+    }
+    setRange(newRange);
+  };
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -38,7 +51,7 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
         <Calendar
           mode="range"
           selected={range}
-          onSelect={setRange}
+          onSelect={handleSelect}
           month={month}
           onMonthChange={setMonth}
           disabled={(date) => date < today}
@@ -99,7 +112,7 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
           </div>
         ) : (
           <div className="mb-4 text-center">
-            <p className="text-sm text-muted-foreground">Wybierz dzień wyjazdu</p>
+            <p className="text-sm text-muted-foreground">Wybierz dzień wyjazdu (max. {MAX_DAYS} dni)</p>
           </div>
         )}
 

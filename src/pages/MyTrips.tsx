@@ -271,6 +271,29 @@ const MyTrips = () => {
                       trip={trip}
                       onDelete={() => setDeletingTrip(trip)}
                       onPinTap={setSelectedNextUpPin}
+                      onEdit={(t) => {
+                        const firstRoute = [...t.routes].sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0))[0];
+                        const folderId = firstRoute?.folder_id;
+                        const initialPlan = {
+                          city: t.city,
+                          days: [...t.routes]
+                            .sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0))
+                            .map((r: any) => ({
+                              day_number: r.day_number || 1,
+                              pins: [...(r.pins || [])].sort((a: any, b: any) => a.pin_order - b.pin_order),
+                            })),
+                        };
+                        navigate("/create", {
+                          state: {
+                            city: t.city,
+                            date: t.startDate,
+                            numDays: t.routes.length,
+                            initialPlan,
+                            backTo: "/my-trips",
+                            ...(folderId ? { folderId } : {}),
+                          },
+                        });
+                      }}
                     />
                   ))}
                 </div>

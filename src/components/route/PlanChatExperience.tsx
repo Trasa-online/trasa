@@ -1036,40 +1036,58 @@ body{height:100vh;overflow:hidden}
 .leaflet-popup-content{margin:10px 14px}
 .pn{font-size:13px;font-weight:600;font-family:-apple-system,sans-serif}
 .pt{font-size:11px;color:#888;margin-top:2px;font-family:-apple-system,sans-serif}
-${isMultiDay ? `
-#legend{position:absolute;bottom:10px;left:10px;z-index:1000;display:flex;flex-direction:column;gap:4px}
-.leg{background:rgba(255,255,255,.92);backdrop-filter:blur(4px);border-radius:20px;padding:3px 10px 3px 7px;font-size:11px;font-weight:600;font-family:-apple-system,sans-serif;display:flex;align-items:center;gap:6px;border:1px solid rgba(0,0,0,.08)}
-.legdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-` : ''}
-</style></head><body><div id="map"></div>${isMultiDay ? '<div id="legend"></div>' : ''}
+#chips{position:absolute;top:10px;right:10px;z-index:1000;display:flex;flex-direction:column;gap:5px}
+.chip{background:rgba(255,255,255,.95);backdrop-filter:blur(4px);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;font-family:-apple-system,sans-serif;border:2px solid transparent;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 1px 6px rgba(0,0,0,.15);transition:all .15s}
+.chip.active{border-color:currentColor}
+.chipdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+</style></head><body><div id="map"></div><div id="chips"></div>
 <script>
 const pins=${pinsJson};
 const DAY_COLORS=['#ea580c','#2563eb','#16a34a','#7c3aed','#d97706'];
 function dayColor(d){return DAY_COLORS[(d-1)%DAY_COLORS.length];}
 const map=L.map('map',{zoomControl:true,attributionControl:false});
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
-${isMultiDay ? `
 const byDay={};
 pins.forEach(p=>{if(!byDay[p.day])byDay[p.day]=[];byDay[p.day].push(p);});
+const dayLayers={};
 Object.entries(byDay).forEach(([d,dPins])=>{
   const col=dayColor(Number(d));
+  const group=L.layerGroup().addTo(map);
   const coords=dPins.map(p=>[p.lat,p.lng]);
-  if(coords.length>1)L.polyline(coords,{color:col,weight:3,opacity:.65,dashArray:'8 6'}).addTo(map);
+  if(coords.length>1)L.polyline(coords,{color:col,weight:3,opacity:.65,dashArray:'8 6'}).addTo(group);
+  dPins.forEach(p=>{
+    const icon=L.divIcon({className:'',html:'<div class="pm" style="background:'+col+'">'+p.index+'</div>',iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-18]});
+    L.marker([p.lat,p.lng],{icon}).bindPopup('<div class="pn">'+p.name+'</div>'+(p.time?'<div class="pt">'+p.time+'</div>':'')).addTo(group);
+  });
+  dayLayers[d]=group;
 });
-const legEl=document.getElementById('legend');
+${isMultiDay ? `
+let activeDay=null;
+const chipsEl=document.getElementById('chips');
 Object.keys(byDay).sort((a,b)=>a-b).forEach(d=>{
   const col=dayColor(Number(d));
-  legEl.innerHTML+='<div class="leg"><div class="legdot" style="background:'+col+'"></div>Dzień '+d+'</div>';
+  const chip=document.createElement('button');
+  chip.className='chip';
+  chip.style.color=col;
+  chip.innerHTML='<div class="chipdot" style="background:'+col+'"></div>Dzień '+d;
+  chip.dataset.day=d;
+  chip.onclick=()=>{
+    if(activeDay===d){
+      activeDay=null;
+      Object.values(dayLayers).forEach(g=>map.addLayer(g));
+      document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    } else {
+      activeDay=d;
+      Object.entries(dayLayers).forEach(([k,g])=>{k===d?map.addLayer(g):map.removeLayer(g);});
+      document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('active',c.dataset.day===d));
+      const coords=byDay[d].map(p=>[p.lat,p.lng]);
+      if(coords.length>1)map.fitBounds(coords,{padding:[60,60]});
+      else if(coords.length===1)map.setView(coords[0],15);
+    }
+  };
+  chipsEl.appendChild(chip);
 });
-` : `
-const coords=pins.map(p=>[p.lat,p.lng]);
-if(coords.length>1)L.polyline(coords,{color:'#ea580c',weight:3,opacity:.65,dashArray:'8 6'}).addTo(map);
-`}
-pins.forEach(p=>{
-  const col=dayColor(p.day||1);
-  const icon=L.divIcon({className:'',html:'<div class="pm" style="background:'+col+'">'+p.index+'</div>',iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-18]});
-  L.marker([p.lat,p.lng],{icon}).bindPopup('<div class="pn">'+p.name+'</div>'+(p.time?'<div class="pt">'+p.time+'</div>':'')).addTo(map);
-});
+` : ''}
 const allCoords=pins.map(p=>[p.lat,p.lng]);
 if(allCoords.length>1)map.fitBounds(allCoords,{padding:[50,50]});
 else if(allCoords.length===1)map.setView(allCoords[0],15);
@@ -1543,8 +1561,10 @@ else if(allCoords.length===1)map.setView(allCoords[0],15);
                       {/* Large card carousel — fills available height */}
                       <div className="flex-1 min-h-0 overflow-hidden py-2">
                         <div ref={carouselRef} className="h-full flex gap-3 overflow-x-auto px-[10vw] snap-x snap-mandatory scrollbar-none">
-                          {plan.days.flatMap((day) =>
-                            day.pins.map((pin, idx) => (
+                          {plan.days.flatMap((day, dayIdx) => {
+                            const DAY_COLORS = ['#ea580c','#2563eb','#16a34a','#7c3aed','#d97706'];
+                            const color = DAY_COLORS[(day.day_number - 1) % DAY_COLORS.length];
+                            const cards = day.pins.map((pin, idx) => (
                               <LargeCarouselCard
                                 key={`${day.day_number}-${pin.place_name}`}
                                 pin={pin}
@@ -1556,8 +1576,21 @@ else if(allCoords.length===1)map.setView(allCoords[0],15);
                                 isFirst={idx === 0}
                                 isLast={idx === day.pins.length - 1}
                               />
-                            ))
-                          )}
+                            ));
+                            if (plan.days.length > 1 && dayIdx > 0) {
+                              return [
+                                <div key={`divider-${day.day_number}`} className="flex-shrink-0 w-10 h-full flex flex-col items-center justify-center snap-center gap-2 select-none">
+                                  <div className="flex-1 w-px" style={{ background: color, opacity: 0.25 }} />
+                                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color, writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                                    Dzień {day.day_number}
+                                  </span>
+                                  <div className="flex-1 w-px" style={{ background: color, opacity: 0.25 }} />
+                                </div>,
+                                ...cards,
+                              ];
+                            }
+                            return cards;
+                          })}
                           {/* Add pin button — same height as cards */}
                           <button
                             onClick={() => setAddPinDay(plan.days[plan.days.length - 1].day_number)}
