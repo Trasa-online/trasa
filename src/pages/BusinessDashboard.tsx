@@ -158,7 +158,12 @@ const BusinessDashboard = () => {
     setLoading(false);
   };
 
+  const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"];
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
   const uploadFile = async (file: File, folder: string): Promise<string> => {
+    if (!ALLOWED_MIME.includes(file.type)) throw new Error("Niedozwolony format pliku (dozwolone: JPG, PNG, WEBP)");
+    if (file.size > MAX_FILE_SIZE) throw new Error("Plik jest za duży (max 5 MB)");
     const ext = file.name.split(".").pop() ?? "jpg";
     const path = `${placeId}/${folder}/${Date.now()}.${ext}`;
     const { data, error } = await supabase.storage.from("business-photos").upload(path, file, { upsert: true });
@@ -242,6 +247,7 @@ const BusinessDashboard = () => {
   };
 
   const handleDeletePost = async (id: string) => {
+    if (!window.confirm("Usunąć ten post? Tej operacji nie można cofnąć.")) return;
     // Optimistic remove
     setPosts(prev => prev.filter(p => p.id !== id));
     const { error } = await (supabase as any).from("business_posts").delete().eq("id", id);
@@ -256,6 +262,10 @@ const BusinessDashboard = () => {
 
   const handleSave = async () => {
     if (!placeId) return;
+    if (eventStartsAt && eventEndsAt && eventEndsAt < eventStartsAt) {
+      toast.error("Data końca wydarzenia nie może być wcześniejsza niż data początku");
+      return;
+    }
     setSaving(true);
     const { error } = await (supabase as any)
       .from("business_profiles")
@@ -536,23 +546,24 @@ const BusinessDashboard = () => {
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dane kontaktowe</p>
           <div className="space-y-1">
             <Label htmlFor="business_name">Nazwa firmy</Label>
-            <Input id="business_name" value={businessName} onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }} />
+            <Input id="business_name" value={businessName} maxLength={80} onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }} />
+            <p className="text-[11px] text-muted-foreground text-right">{businessName.length}/80</p>
           </div>
           <div className="space-y-1">
             <Label htmlFor="phone">Telefon</Label>
-            <Input id="phone" value={phone} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
+            <Input id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
           </div>
           <div className="space-y-1">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" value={email} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
+            <Input id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
           </div>
           <div className="space-y-1">
             <Label htmlFor="website">Strona WWW</Label>
-            <Input id="website" value={website} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
+            <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
           </div>
           <div className="space-y-1">
             <Label htmlFor="booking_url">URL rezerwacji</Label>
-            <Input id="booking_url" value={bookingUrl} onChange={e => { setBookingUrl(e.target.value); setIsDirty(true); }} type="url" />
+            <Input id="booking_url" value={bookingUrl} maxLength={200} onChange={e => { setBookingUrl(e.target.value); setIsDirty(true); }} type="url" />
           </div>
 
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Opis</p>
@@ -560,10 +571,12 @@ const BusinessDashboard = () => {
             <textarea
               rows={3}
               value={description}
+              maxLength={500}
               onChange={e => { setDescription(e.target.value); setIsDirty(true); }}
               placeholder="Opisz swój lokal..."
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />
+            <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
           </div>
         </div>
 
@@ -578,9 +591,11 @@ const BusinessDashboard = () => {
             <Input
               id="event_title"
               value={eventTitle}
+              maxLength={80}
               onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }}
               placeholder="np. Drinki 1+1 do 20:00"
             />
+            <p className="text-[11px] text-muted-foreground text-right">{eventTitle.length}/80</p>
           </div>
           <div className="space-y-1">
             <Label htmlFor="event_description">Opis</Label>
@@ -588,10 +603,12 @@ const BusinessDashboard = () => {
               id="event_description"
               rows={2}
               value={eventDescription}
+              maxLength={300}
               onChange={e => { setEventDescription(e.target.value); setIsDirty(true); }}
               placeholder="Szczegóły wydarzenia..."
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />
+            <p className="text-[11px] text-muted-foreground text-right">{eventDescription.length}/300</p>
           </div>
           <div className="space-y-3">
             <div className="space-y-1">
@@ -617,10 +634,12 @@ const BusinessDashboard = () => {
             <textarea
               rows={3}
               value={postDescription}
+              maxLength={600}
               onChange={e => setPostDescription(e.target.value)}
               placeholder="Co nowego w Twoim lokalu?"
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />
+            <p className="text-[11px] text-muted-foreground text-right -mt-2">{postDescription.length}/600</p>
 
             {/* Post photo previews */}
             {postPhotos.length > 0 && (

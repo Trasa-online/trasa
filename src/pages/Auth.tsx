@@ -51,11 +51,11 @@ const Auth = () => {
       if (error) throw error;
 
       if (businessMode) {
-        const { data: bp } = await supabase
+        const { data: bp } = await (supabase as any)
           .from("business_profiles")
           .select("place_id")
           .eq("owner_user_id", data.user!.id)
-          .single();
+          .maybeSingle();
         if (bp?.place_id) {
           navigate(`/biznes/${bp.place_id}`);
           return;
