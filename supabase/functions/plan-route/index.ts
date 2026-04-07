@@ -94,13 +94,19 @@ function buildRouteExamplesContext(examples: any[]): string {
   return `## 🏆 WZORCOWE TRASY (zatwierdzone przez redakcję TRASA)\nPoniższe trasy zostały ocenione jako idealne dla Krakowa. Planuj w podobnym rytmie, logice geograficznej i strukturze dnia:\n\n${lines.join("\n\n")}`;
 }
 
-function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string, superLikedPlaces?: string[]): string {
+function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string, superLikedPlaces?: string[], previousDayPlaces?: string[], previousDayCategoryCounts?: Record<string, number>): string {
   const isNightlife = preferences.priorities.includes("nightlife") || (userProfile?.travel_interests ?? []).includes("nightlife");
   const timeInfo = currentTime ? `- Aktualna godzina: ${currentTime} — planuj miejsca dostępne od tej pory, nie zaczynaj od miejsc które są już zamknięte lub których opening hours zaczyna się wcześniej` : "";
   const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}${currentTime ? " (dziś)" : ""}` : "";
   const cityInfo = preferences.city?.trim() ? `- Destynacja: ${preferences.city.trim()}` : "";
-  const dayInfo = preferences.dayNumber ? `- Planowany dzień: Dzień ${preferences.dayNumber}` : "";
-  const startInfo = preferences.startingLocation?.trim() ? `- Punkt startowy / nocleg: ${preferences.startingLocation.trim()} — zacznij trasę od tego miejsca i kończ w okolicy` : "";
+  const dayInfo = preferences.dayNumber
+    ? `- Planowany dzień: Dzień ${preferences.dayNumber} z ${preferences.numDays}`
+    : "";
+  const startInfo = preferences.startingLocation?.trim()
+    ? `- Punkt startowy / nocleg: ${preferences.startingLocation.trim()} — zacznij trasę od tego miejsca${preferences.numDays > 1 ? " i kończ każdy dzień w pobliżu noclegu lub węzła komunikacyjnego" : " i kończ w okolicy"}`
+    : preferences.numDays > 1
+    ? "- Nocleg: nieznany — kończ każdy dzień w pobliżu centrum lub węzła komunikacyjnego"
+    : "";
   const cityKnown = !!preferences.city?.trim();
   const cityName = preferences.city?.trim() ?? "";
 
@@ -159,7 +165,9 @@ ${cityKnown ? `\n## ⚠️ KLUCZOWA ZASADA\nUser wpisał już destynację: „${
 ### Faza 1 — START
 ${cityKnown
   ? `Destynacja znana (${cityName}). System wysłał już powitanie. Odpowiadaj na pytania usera i zmierzaj do generowania planu.`
-  : `Zapytaj w jednej krótkiej wiadomości:\n1. Gdzie jedziesz?\n2. Czy masz już jakieś plany lub są miejsca, które koniecznie chcesz odwiedzić?\n3. Od której do której godziny mam zaplanować Twój dzień?\n${preferences.numDays > 1 ? "4. W której części miasta masz nocleg?" : ""}\nMax 2 zdania wstępu + pytania jako lista.`}
+  : preferences.numDays > 1
+  ? `Zapytaj w jednej krótkiej wiadomości:\n1. Gdzie jedziesz?\n2. W której części miasta / dzielnicy masz nocleg? (kluczowe do układania dni)\n3. Czy masz już zaplanowane jakieś miejsca lub rzeczy które koniecznie chcesz zobaczyć?\n4. Od której do której godziny planujesz aktywność każdego dnia?\nMax 2 zdania wstępu + pytania jako lista.`
+  : `Zapytaj w jednej krótkiej wiadomości:\n1. Gdzie jedziesz?\n2. Czy masz już jakieś plany lub są miejsca, które koniecznie chcesz odwiedzić?\n3. Od której do której godziny mam zaplanować Twój dzień?\nMax 2 zdania wstępu + pytania jako lista.`}
 
 ### Faza 2 — DOPRECYZOWANIE (opcjonalna)
 Jeśli brakuje przedziału godzinowego dnia lub kluczowego kontekstu — dopytaj JEDNYM pytaniem.
@@ -263,6 +271,24 @@ H_NL3. OGRANICZONE MUZEA
 - Max 1 muzeum w planie nocnym — dzień jest krótszy bo noc jest długa
 - Priorytet: spacery po mieście, kawiarnie, widoki, zabytkowe dzielnice — szybkie, wizualne, energetyczne
 
+` : ""}${preferences.numDays > 1 ? `### H14. MULTI-DAY — ZASADY CAŁEJ PODRÓŻY (OBOWIĄZKOWE)
+
+**Koniec dnia blisko noclegu/transportu:**
+- Ostatnie 1-2 miejsca każdego dnia (oprócz ostatniego dnia) powinny być geograficznie blisko noclegu lub dworca/przystanku
+- Nie kończ dnia 2 km od noclegu — user musi jeszcze dotrzeć na miejsce
+
+**Różnorodność dni:**
+- Każdy dzień musi mieć inną "energię": np. Dzień 1 = historyczne centrum, Dzień 2 = dzielnica lokalna + outdoor, Dzień 3 = muzea + zakupy
+- NIE kopiuj struktury dziennej z poprzedniego dnia
+- Dzielnice: staraj się aby każdy dzień skupiał się w innej części miasta
+
+**Logika pierwszego dnia:**
+- Dzień 1: miejsca bliżej centrum / przystępne dla zmęczonego przyjazdem turysty, unikaj dalekich wycieczek
+- Ostatni dzień: plan elastyczny — uwzględnij możliwość wcześniejszego wyjazdu, nie planuj muzeum na 16:00
+
+**Poinformuj usera o strukturze:**
+Gdy generujesz pierwszy plan dla całej podróży, dodaj PRZED blokiem planu JEDEN krótki akapit (2-3 zdania) jak rozłożyłeś poszczególne dni (np. "Dzień 1 — Stare Miasto, Dzień 2 — Kazimierz i Podgórze, Dzień 3 — Nowa Huta").
+
 ` : ""}### H12. ADAPTACJA POGODOWA
 Jeśli user wspomni o pogodzie lub możesz wnioskować z daty/miejsca:
 - Deszcz: zamień spacery outdoor → muzeum / galeria / kryty market
@@ -347,7 +373,17 @@ ZASADY FORMATU:
 - "Usuń Z" → usuń, sprawdź kulminację (H3) → WYEMITUJ pełny plan
 - NIE regeneruj całego planu strukturalnie — tylko zmień to co user prosił
 - NIE mów "za chwilę", "przygotowuję", "zaktualizuję" — po prostu zrób to i pokaż plan
-- Komentarz do zmiany: MAX 1 zdanie przed blokiem planu${superLikedPlaces?.length ? `\n\n## ⭐ MIEJSCA OBOWIĄZKOWE (SUPER LIKE)\nUżytkownik oznaczył te miejsca jako MUST-HAVE — MUSZĄ znaleźć się w planie bez wyjątku:\n${superLikedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${likedPlaces?.length ? `\n\n## 🎯 MIEJSCA DO UWZGLĘDNIENIA\nUżytkownik chce odwiedzić te miejsca — koniecznie wstaw je w plan:\n${likedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${skippedPlaces?.length ? `\n\n## ❌ MIEJSCA DO POMINIĘCIA\nUżytkownik świadomie odrzucił te miejsca podczas przeglądania — NIE wstawiaj ich do planu ani nie proponuj podobnych:\n${skippedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${idealDay ? `\n\n## 💭 JAK WYGLĄDA IDEALNY DZIEŃ UŻYTKOWNIKA\n${idealDay}\n\nDopasuj styl, tempo i dobór miejsc do tej wizji.` : ""}
+- Komentarz do zmiany: MAX 1 zdanie przed blokiem planu${superLikedPlaces?.length ? `\n\n## ⭐ MIEJSCA OBOWIĄZKOWE (SUPER LIKE)\nUżytkownik oznaczył te miejsca jako MUST-HAVE — MUSZĄ znaleźć się w planie bez wyjątku:\n${superLikedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${likedPlaces?.length ? `\n\n## 🎯 MIEJSCA DO UWZGLĘDNIENIA\nUżytkownik chce odwiedzić te miejsca — koniecznie wstaw je w plan:\n${likedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${(() => {
+  const allExcluded = [...(skippedPlaces ?? []), ...(previousDayPlaces ?? [])];
+  if (!allExcluded.length) return "";
+  const skippedSection = (skippedPlaces?.length ?? 0) > 0
+    ? `Odrzucone przez usera (nie wstawiaj ani podobnych):\n${skippedPlaces!.map(p => `- ${p}`).join("\n")}`
+    : "";
+  const prevSection = (previousDayPlaces?.length ?? 0) > 0
+    ? `Już odwiedzone w poprzednich dniach tej podróży (NIE powtarzaj):\n${previousDayPlaces!.map(p => `- ${p}`).join("\n")}`
+    : "";
+  return `\n\n## ❌ MIEJSCA DO POMINIĘCIA\n${[skippedSection, prevSection].filter(Boolean).join("\n\n")}`;
+})()}${previousDayCategoryCounts && Object.keys(previousDayCategoryCounts).length > 0 ? `\n\n## ⚖️ BALANS KATEGORII (MULTI-DAY)\nW poprzednich dniach użytkownik odwiedził już:\n${Object.entries(previousDayCategoryCounts).map(([cat, count]) => `- ${cat}: ${count}x`).join("\n")}\n\nZASADY:\n- Unikaj kategorii z liczbą ≥2 chyba że user tego wymaga\n- Max 1 muzeum na całą podróż (już odwiedzone = 0 dziś)\n- Urozmaicaj: jeśli poprzedni dzień był intensywny kulturalnie → dziś więcej outdoor/jedzenia\n- Nie rób identycznej struktury dnia (landmark → lunch → muzeum → kawiarnia → kolacja) każdego dnia` : ""}${idealDay ? `\n\n## 💭 JAK WYGLĄDA IDEALNY DZIEŃ UŻYTKOWNIKA\n${idealDay}\n\nDopasuj styl, tempo i dobór miejsc do tej wizji.` : ""}
 ${scrapedPlacesContext ? `\n\n${scrapedPlacesContext}` : ""}${routeExamplesContext ? `\n\n${routeExamplesContext}` : ""}
 ## SZYBKIE ODPOWIEDZI (OBOWIĄZKOWE)
 Na końcu KAŻDEJ wiadomości dodaj dokładnie ten blok:
@@ -431,22 +467,42 @@ serve(async (req) => {
 
     const MAX_MESSAGES = 10;
 
-    // ── Fetch AAR from previous days (needed for first message too) ──
+    // ── Fetch AAR + pins from previous days ──
     let previousDaysContext = "";
+    let previousDayPlaces: string[] = [];
+    let previousDayCategoryCounts: Record<string, number> = {};
+
     if (preferences.folderId && preferences.dayNumber && preferences.dayNumber > 1) {
       try {
         const { data: prevRoutes } = await supabase
           .from("routes")
-          .select("day_number, ai_summary, ai_highlight, ai_tip")
+          .select("id, day_number, ai_summary, ai_highlight, ai_tip")
           .eq("folder_id", preferences.folderId)
           .lt("day_number", preferences.dayNumber)
-          .not("ai_summary", "is", null)
           .order("day_number", { ascending: true });
+
         if (prevRoutes?.length) {
-          previousDaysContext = buildPreviousDaysBlock(prevRoutes as any);
+          const withAAR = prevRoutes.filter((r: any) => r.ai_summary);
+          if (withAAR.length) previousDaysContext = buildPreviousDaysBlock(withAAR as any);
+
+          // Fetch pins from all previous day routes
+          const prevRouteIds = prevRoutes.map((r: any) => r.id);
+          const { data: prevPins } = await supabase
+            .from("pins")
+            .select("place_name, category")
+            .in("route_id", prevRouteIds);
+
+          if (prevPins?.length) {
+            previousDayPlaces = (prevPins as any[]).map((p: any) => p.place_name).filter(Boolean);
+            for (const pin of prevPins as any[]) {
+              if (pin.category) {
+                previousDayCategoryCounts[pin.category] = (previousDayCategoryCounts[pin.category] ?? 0) + 1;
+              }
+            }
+          }
         }
       } catch (err) {
-        console.error("Failed to fetch previous days AAR:", err);
+        console.error("Failed to fetch previous days context:", err);
       }
     }
 
@@ -676,7 +732,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     }
 
     const isToday = current_date && preferences.startDate && preferences.startDate === current_date;
-    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined, super_liked_places ?? undefined);
+    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined, super_liked_places ?? undefined, previousDayPlaces.length > 0 ? previousDayPlaces : undefined, Object.keys(previousDayCategoryCounts).length > 0 ? previousDayCategoryCounts : undefined);
 
     // Call AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

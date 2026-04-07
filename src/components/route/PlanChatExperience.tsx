@@ -846,6 +846,31 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
     setDetailPin(prev => prev ? { ...prev, pinIndex: direction === "up" ? pinIndex - 1 : pinIndex + 1 } : prev);
   };
 
+  const handleMovePinToDay = (fromDay: number, pinIndex: number, toDay: number) => {
+    setPlan(prev => {
+      if (!prev) return prev;
+      let movedPin: PlanPin | null = null;
+      const days = prev.days.map(d => {
+        if (d.day_number === fromDay) {
+          const pins = [...d.pins];
+          [movedPin] = pins.splice(pinIndex, 1);
+          return { ...d, pins };
+        }
+        return d;
+      });
+      if (!movedPin) return prev;
+      const pinWithNewDay = { ...movedPin, day_number: toDay };
+      return {
+        ...prev,
+        days: days.map(d =>
+          d.day_number === toDay
+            ? { ...d, pins: [...d.pins, pinWithNewDay] }
+            : d
+        ),
+      };
+    });
+  };
+
   const handleConfirm = () => {
     if (plan) onPlanReady(plan, messages);
   };
@@ -1355,6 +1380,28 @@ else if(coords.length===1)map.setView(coords[0],15);
                       );
                     })() : (
                       <div className="px-5 pb-6 pt-2 space-y-2">
+                        {/* Move to day — only for multi-day trips */}
+                        {plan.days.length > 1 && (
+                          <div className="flex gap-2 flex-wrap">
+                            {plan.days
+                              .filter(d => d.day_number !== detailPin.dayNumber)
+                              .map(d => (
+                                <button
+                                  key={d.day_number}
+                                  onClick={() => {
+                                    handleMovePinToDay(detailPin.dayNumber, detailPin.pinIndex, d.day_number);
+                                    setDetailPin(null);
+                                    setDetailExtra(null);
+                                    setShowSwapOptions(false);
+                                    setSnap("half");
+                                  }}
+                                  className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground"
+                                >
+                                  Przenieś → Dzień {d.day_number}
+                                </button>
+                              ))}
+                          </div>
+                        )}
                         <div className="flex gap-2">
                           <button
                             onClick={() => { handleRemovePin(detailPin.dayNumber, detailPin.pinIndex); setDetailPin(null); setDetailExtra(null); setShowSwapOptions(false); setSnap("half"); }}
@@ -1392,6 +1439,28 @@ else if(coords.length===1)map.setView(coords[0],15);
               ) : (
                 /* ── Carousel view ── */
                 <>
+                  {/* Day tabs — shown only for multi-day plans */}
+                  {plan.days.length > 1 && (
+                    <div className="flex gap-1.5 px-4 pt-2 pb-1 flex-shrink-0 overflow-x-auto scrollbar-none">
+                      {plan.days.map(d => (
+                        <button
+                          key={d.day_number}
+                          onClick={() => {
+                            const idx = plan.days.flatMap(day => day.pins.map((_, pi) => ({ day: day.day_number, pi }))).findIndex(x => x.day === d.day_number);
+                            if (idx >= 0 && carouselRef.current) {
+                              const cardWidth = carouselRef.current.scrollWidth / (plan.days.flatMap(day => day.pins).length + 1);
+                              const offset = plan.days.slice(0, d.day_number - 1).reduce((s, dd) => s + dd.pins.length, 0);
+                              carouselRef.current.scrollTo({ left: offset * cardWidth, behavior: "smooth" });
+                            }
+                          }}
+                          className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors bg-foreground text-background border-transparent"
+                        >
+                          Dzień {d.day_number}
+                          <span className="ml-1 opacity-60">· {d.pins.length}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   {memoryUsed && (
                     <div className="flex items-center gap-2 px-4 py-2 border-b border-border/40 flex-shrink-0">
                       <Brain className="h-3.5 w-3.5 text-muted-foreground shrink-0" />

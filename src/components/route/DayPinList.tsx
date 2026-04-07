@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, GripVertical, Plus, Footprints, RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
+import { Trash2, GripVertical, Plus, Footprints, RefreshCw, ChevronUp, ChevronDown, MoveRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface PlanPin {
@@ -42,6 +42,7 @@ interface DayPinListProps {
   onPinClick?: (pin: PlanPin) => void;
   onAddPin?: (dayNumber: number) => void;
   onAlternatives?: (pin: PlanPin, pinIndex: number) => void;
+  onMoveToDay?: (fromDay: number, pinIndex: number, toDay: number) => void;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -69,6 +70,7 @@ const DayPinList = ({
   onPinClick,
   onAddPin,
   onAlternatives,
+  onMoveToDay,
 }: DayPinListProps) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -237,6 +239,28 @@ const DayPinList = ({
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                   </button>
+                )}
+
+                {/* Move to day — only for multi-day trips */}
+                {onMoveToDay && totalDays > 1 && (
+                  <div className="flex-shrink-0 flex flex-col gap-0.5">
+                    {Array.from({ length: totalDays }, (_, i) => i + 1)
+                      .filter(d => d !== dayNumber)
+                      .map(targetDay => (
+                        <button
+                          key={targetDay}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onMoveToDay(dayNumber, index, targetDay);
+                          }}
+                          className="flex items-center gap-0.5 text-[10px] text-muted-foreground/60 hover:text-foreground hover:bg-muted px-1 py-0.5 rounded transition-colors"
+                          title={`Przenieś do dnia ${targetDay}`}
+                        >
+                          <MoveRight className="h-3 w-3" />
+                          <span>D{targetDay}</span>
+                        </button>
+                      ))}
+                  </div>
                 )}
 
                 {/* Delete */}

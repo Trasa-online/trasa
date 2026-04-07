@@ -572,6 +572,7 @@ const EmptyState = ({
 interface PlaceSwiperProps {
   city: string;
   date: Date;
+  numDays?: number;
   startingLocation?: string;
   initialLikedPlaceNames?: string[];
   initialSkippedPlaceNames?: string[];
@@ -598,7 +599,7 @@ function getGroupForCategory(cat: string): Set<string> | null {
 
 const DIVERSITY_THRESHOLD = 2; // after 2 consecutive likes from same group, deprioritize
 
-const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -866,6 +867,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
       state: {
         city,
         date: date.toISOString(),
+        numDays,
         startingLocation: startingLocation || undefined,
         likedPlaceNames: allLiked.map((p) => p.place_name),
         skippedPlaceNames: skippedPlaces.map((p) => p.place_name),
@@ -956,6 +958,7 @@ const PlaceSwiper = ({ city, date, startingLocation = "", initialLikedPlaceNames
       state: {
         city,
         date: date.toISOString(),
+        numDays,
         startingLocation: startingLocation || undefined,
         fromTemplate: true,
         initialPlan: buildPlan(route),

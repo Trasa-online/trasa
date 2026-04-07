@@ -8,7 +8,7 @@ import PlanChatExperience from "@/components/route/PlanChatExperience";
 import RouteSummaryDialog from "@/components/route/RouteSummaryDialog";
 
 interface TripPreferences {
-  numDays: 1;
+  numDays: number;
   pace: "active" | "calm" | "mixed";
   priorities: string[];
   startDate: string | null;
@@ -31,7 +31,7 @@ const CreateRoute = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const wizardState = (location.state as {
-    city?: string; date?: string; startingLocation?: string; fromTemplate?: boolean; routeId?: string;
+    city?: string; date?: string; numDays?: number; startingLocation?: string; fromTemplate?: boolean; routeId?: string;
     initialPlan?: any; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; superLikedPlaceNames?: string[];
     likedPlacesData?: { place_name: string; category: string; description: string; latitude?: number; longitude?: number }[];
     matchedRoutes?: MatchedRouteStub[]; selectedRouteIndex?: number;
@@ -76,7 +76,7 @@ const CreateRoute = () => {
 
   const wizardDate = wizardState?.date ? new Date(wizardState.date) : undefined;
   const [preferences] = useState<TripPreferences>({
-    numDays: 1,
+    numDays: wizardState?.numDays ?? 1,
     pace: "mixed",
     priorities: [],
     startDate: wizardDate ? wizardDate.toISOString().slice(0, 10) : null,
@@ -107,30 +107,60 @@ const CreateRoute = () => {
   return (
     <div className="h-[100dvh] bg-background flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-safe-4 pb-4 border-b border-border/40 flex-shrink-0">
-        <button
-          onClick={() => {
-            if (wizardState?.backTo) {
-              navigate(wizardState.backTo);
-            } else if (currentCity && wizardState?.date) {
-              navigate("/plan", {
-                state: {
-                  step: 3,
-                  city: currentCity,
-                  date: wizardState?.date,
-                  likedPlaceNames: wizardLikedPlaces,
-                  skippedPlaceNames: wizardSkippedPlaces,
-                },
-              });
-            } else {
-              navigate("/");
-            }
-          }}
-          className="p-1"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-lg font-semibold">{t("planning_title")}</h1>
+      <div className="flex-shrink-0 border-b border-border/40">
+        <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3">
+          <button
+            onClick={() => {
+              if (wizardState?.backTo) {
+                navigate(wizardState.backTo);
+              } else if (currentCity && wizardState?.date) {
+                navigate("/plan", {
+                  state: {
+                    step: 3,
+                    city: currentCity,
+                    date: wizardState?.date,
+                    likedPlaceNames: wizardLikedPlaces,
+                    skippedPlaceNames: wizardSkippedPlaces,
+                  },
+                });
+              } else {
+                navigate("/");
+              }
+            }}
+            className="p-1"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base font-semibold truncate">
+              {currentCity || t("planning_title")}
+            </h1>
+            {preferences.numDays > 1 && dayNumber && (
+              <p className="text-xs text-muted-foreground">
+                Dzień {dayNumber} z {preferences.numDays}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Day tabs — shown when editing an existing multi-day trip */}
+        {folderId && preferences.numDays > 1 && dayNumber && (
+          <div className="flex gap-1.5 px-4 pb-2 overflow-x-auto scrollbar-none">
+            {Array.from({ length: preferences.numDays }, (_, i) => i + 1).map(d => (
+              <button
+                key={d}
+                onClick={() => navigate(`/create?trip=${folderId}&day=${d}`, { state: wizardState })}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                  d === dayNumber
+                    ? "bg-foreground text-background border-transparent"
+                    : "bg-transparent text-muted-foreground border-border hover:text-foreground"
+                }`}
+              >
+                Dzień {d}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 min-h-0">

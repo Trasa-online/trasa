@@ -17,6 +17,7 @@ const PlanWizard = () => {
   const [city, setCity] = useState(returnState?.city ?? "");
   const [startingLocation, setStartingLocation] = useState("");
   const [date, setDate] = useState<Date | null>(returnState?.date ? new Date(returnState.date) : null);
+  const [numDays, setNumDays] = useState(1);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddPlace, setShowAddPlace] = useState(false);
@@ -123,12 +124,13 @@ const PlanWizard = () => {
           />
         )}
         {step === 3 && (
-          <FullCalendarPicker onConfirm={(selectedDate) => { setDate(selectedDate); setStep(4); }} />
+          <FullCalendarPicker onConfirm={(selectedDate, days) => { setDate(selectedDate); setNumDays(days); setStep(4); }} />
         )}
         {step === 4 && date && (
           <PlaceSwiper
             city={city}
             date={date}
+            numDays={numDays}
             startingLocation={startingLocation}
             initialLikedPlaceNames={returnLiked}
             initialSkippedPlaceNames={returnSkipped}
