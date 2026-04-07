@@ -615,7 +615,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
   const [matchedRoutes, setMatchedRoutes] = useState<MatchedRoute[]>([]);
   const [loadingExamples, setLoadingExamples] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [bannerDismissCount, setBannerDismissCount] = useState(0);
   // Track consecutive likes per category group
   const [recentLikedGroups, setRecentLikedGroups] = useState<(Set<string> | null)[]>([]);
   const showAddPlace = showAddPlaceProp;
@@ -888,21 +888,17 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
   useEffect(() => {
     if (groupSessionId) return; // not in group mode
     const uniqueCategories = new Set(likedPlaces.map((p) => p.category)).size;
-    if (bannerDismissed) {
-      if (likedPlaces.length >= MATCH_THRESHOLD_REPEAT && uniqueCategories >= CATEGORY_DIVERSITY) {
-        setBannerDismissed(false);
-        setShowBanner(true);
-      }
-      return;
-    }
-    if (likedPlaces.length >= MATCH_THRESHOLD && uniqueCategories >= CATEGORY_DIVERSITY) {
+    if (bannerDismissCount >= 2) return; // never show again after two dismissals
+    if (bannerDismissCount === 0 && likedPlaces.length >= MATCH_THRESHOLD && uniqueCategories >= CATEGORY_DIVERSITY) {
+      setShowBanner(true);
+    } else if (bannerDismissCount === 1 && likedPlaces.length >= MATCH_THRESHOLD_REPEAT && uniqueCategories >= CATEGORY_DIVERSITY) {
       setShowBanner(true);
     }
-  }, [likedPlaces, bannerDismissed, groupSessionId]);
+  }, [likedPlaces, bannerDismissCount, groupSessionId]);
 
   const handleBannerDismiss = () => {
     setShowBanner(false);
-    setBannerDismissed(true);
+    setBannerDismissCount(c => c + 1);
   };
 
   // Fetch + match route_examples when queue runs out

@@ -221,13 +221,14 @@ const RouteSummaryDialog = ({
     }
   }, [user, saving, plan, preferences, messages, startDate, endDate, navigate, onOpenChange, toast]);
 
-  const allMapPins = plan.days.flatMap((d, di) =>
+  const allMapPins = plan.days.flatMap((d) =>
     d.pins.filter(p => p.latitude && p.longitude && p.latitude !== 0).map((p, pi) => ({
       latitude: p.latitude,
       longitude: p.longitude,
       place_name: p.place_name,
       address: p.address,
-      pin_order: plan.days.slice(0, di).reduce((s, dd) => s + dd.pins.length, 0) + pi,
+      pin_order: pi,
+      day_number: d.day_number,
     }))
   );
 

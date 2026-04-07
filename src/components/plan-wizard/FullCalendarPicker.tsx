@@ -1,18 +1,17 @@
 import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays, addDays } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Minus, Plus } from "lucide-react";
+import type { DateRange } from "react-day-picker";
 
 interface FullCalendarPickerProps {
   onConfirm: (date: Date, numDays: number) => void;
 }
 
 const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
-  const [selected, setSelected] = useState<Date | undefined>();
+  const [range, setRange] = useState<DateRange | undefined>();
   const [month, setMonth] = useState(new Date());
-  const [numDays, setNumDays] = useState(1);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -21,15 +20,25 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
     month.getFullYear() === today.getFullYear() &&
     month.getMonth() === today.getMonth();
 
+  const startDate = range?.from;
+  const endDate = range?.to;
+  const numDays = startDate && endDate
+    ? differenceInCalendarDays(endDate, startDate) + 1
+    : startDate ? 1 : 0;
   const nights = numDays - 1;
+
+  const handleConfirm = () => {
+    if (!startDate) return;
+    onConfirm(startDate, numDays);
+  };
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-2 pt-4" style={{ height: 420 }}>
+      <div className="px-2 pt-2">
         <Calendar
-          mode="single"
-          selected={selected}
-          onSelect={setSelected}
+          mode="range"
+          selected={range}
+          onSelect={setRange}
           month={month}
           onMonthChange={setMonth}
           disabled={(date) => date < today}
@@ -49,9 +58,12 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
             head_row: "flex w-full",
             head_cell: "text-muted-foreground rounded-md flex-1 font-semibold text-[0.85rem] text-center py-2",
             row: "flex w-full mt-2",
-            cell: "flex-1 text-center p-0",
+            cell: "flex-1 text-center p-0 relative",
             day: "h-10 w-full rounded-full text-sm font-medium hover:bg-muted transition-colors aria-selected:opacity-100",
-            day_selected: "bg-foreground text-background hover:bg-foreground hover:text-background focus:bg-foreground focus:text-background rounded-full",
+            day_selected: "bg-foreground text-background hover:bg-foreground hover:text-background focus:bg-foreground focus:text-background",
+            day_range_start: "rounded-l-full rounded-r-none bg-foreground text-background",
+            day_range_end: "rounded-r-full rounded-l-none bg-foreground text-background",
+            day_range_middle: "rounded-none bg-foreground/10 text-foreground aria-selected:bg-foreground/10 aria-selected:text-foreground",
             day_today: "font-bold text-orange-600",
             day_outside: "opacity-30",
             day_disabled: "opacity-20 cursor-not-allowed",
@@ -59,54 +71,41 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
         />
       </div>
 
-      {/* Number of days selector */}
-      <div className="px-5 pt-2 pb-3">
-        <div className="flex items-center justify-between bg-card border border-border rounded-2xl px-4 py-3">
-          <div>
-            <p className="text-sm font-semibold text-foreground">Liczba dni</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {numDays === 1
-                ? "Jednodniowy wypad"
-                : `${numDays} dni · ${nights} ${nights === 1 ? "noc" : nights < 5 ? "noce" : "nocy"}`}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setNumDays(d => Math.max(1, d - 1))}
-              disabled={numDays <= 1}
-              className="h-8 w-8 rounded-full border border-border flex items-center justify-center text-foreground disabled:opacity-30 active:bg-muted transition-colors"
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <span className="text-xl font-bold w-5 text-center">{numDays}</span>
-            <button
-              onClick={() => setNumDays(d => Math.min(7, d + 1))}
-              disabled={numDays >= 7}
-              className="h-8 w-8 rounded-full border border-border flex items-center justify-center text-foreground disabled:opacity-30 active:bg-muted transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {selected && (
-        <div className="px-5 pb-2 text-center">
-          <p className="text-sm text-muted-foreground">
-            {format(selected, "d MMMM yyyy", { locale: pl })}
-            {numDays > 1 && (
-              <span className="font-semibold text-foreground">
-                {" — "}{numDays} {numDays < 5 ? "dni" : "dni"}
-              </span>
+      {/* Summary */}
+      <div className="px-5 pt-3 pb-3 flex-1 flex flex-col justify-end">
+        {startDate ? (
+          <div className="mb-4 text-center">
+            {endDate && numDays > 1 ? (
+              <>
+                <p className="text-base font-semibold text-foreground">
+                  {format(startDate, "d MMM", { locale: pl })}
+                  {" — "}
+                  {format(endDate, "d MMM yyyy", { locale: pl })}
+                </p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {numDays} {numDays < 5 ? "dni" : "dni"} · {nights} {nights === 1 ? "noc" : nights < 5 ? "noce" : "nocy"}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-base font-semibold text-foreground">
+                  {format(startDate, "d MMMM yyyy", { locale: pl })}
+                </p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Kliknij drugi dzień, żeby wybrać zakres
+                </p>
+              </>
             )}
-          </p>
-        </div>
-      )}
+          </div>
+        ) : (
+          <div className="mb-4 text-center">
+            <p className="text-sm text-muted-foreground">Wybierz dzień wyjazdu</p>
+          </div>
+        )}
 
-      <div className="px-5 pb-safe-4 pb-6">
         <Button
-          onClick={() => selected && onConfirm(selected, numDays)}
-          disabled={!selected}
+          onClick={handleConfirm}
+          disabled={!startDate}
           size="lg"
           className="w-full rounded-full text-base font-semibold bg-orange-600 hover:bg-orange-700 text-white border-0 shadow-lg shadow-orange-600/20 disabled:opacity-40"
         >
