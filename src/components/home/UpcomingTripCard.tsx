@@ -1,7 +1,15 @@
 import { useState, useEffect } from "react";
 import { Trash2, MapPin, Clock } from "lucide-react";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, isValid, parseISO } from "date-fns";
 import { pl } from "date-fns/locale";
+
+// Safe date parse — always returns a valid Date or null
+function safeDate(val: string | null | undefined): Date | null {
+  if (!val) return null;
+  // Try ISO string first (e.g. "2026-04-20"), then fallback
+  const d = typeof val === "string" && val.includes("T") ? new Date(val) : parseISO(val);
+  return isValid(d) ? d : null;
+}
 import { supabase } from "@/integrations/supabase/client";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { getPhotoUrl } from "@/lib/placePhotos";
@@ -72,9 +80,11 @@ interface UpcomingTripCardProps {
 const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCardProps) => {
   const todayMidnight = new Date();
   todayMidnight.setHours(0, 0, 0, 0);
-  const daysUntil = differenceInDays(new Date(trip.startDate), todayMidnight);
 
-  const sortedRoutes = [...trip.routes].sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0));
+  const startDateObj = safeDate(trip.startDate);
+  const daysUntil = startDateObj ? differenceInDays(startDateObj, todayMidnight) : null;
+
+  const sortedRoutes = [...(trip.routes || [])].sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0));
   const allPins = sortedRoutes.flatMap((r: any) =>
     [...(r.pins || [])].sort((a: any, b: any) => (a.pin_order || 0) - (b.pin_order || 0))
   );
@@ -88,14 +98,16 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
       ).join("&")}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off&key=${GOOGLE_MAPS_API_KEY}`
     : null;
 
-  const countdownLabel = daysUntil === 0
+  const countdownLabel = daysUntil === null
+    ? null
+    : daysUntil === 0
     ? "Dzisiaj! 🔥"
     : daysUntil === 1
     ? "Jutro! 🔥"
     : `Za ${daysUntil} dni 🔥`;
 
-  const dateLabel = trip.startDate
-    ? format(new Date(trip.startDate), "d MMM", { locale: pl })
+  const dateLabel = startDateObj
+    ? format(startDateObj, "d MMM", { locale: pl })
     : null;
 
   return (
@@ -114,9 +126,11 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
 
         {/* Top row: countdown + delete */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-          <span className="bg-orange-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm shadow-orange-600/30">
-            {countdownLabel}
-          </span>
+          {countdownLabel && (
+            <span className="bg-orange-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm shadow-orange-600/30">
+              {countdownLabel}
+            </span>
+          )}
           <button
             onClick={onDelete}
             className="h-8 w-8 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform"
@@ -153,8 +167,9 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
       {sortedRoutes.map((route: any, routeIdx: number) => {
         const dayPins = [...(route.pins || [])].sort((a: any, b: any) => (a.pin_order || 0) - (b.pin_order || 0));
         if (dayPins.length === 0) return null;
-        const dayDate = route.start_date
-          ? format(new Date(route.start_date), "EEE, d MMM", { locale: pl })
+        const routeDateObj = safeDate(route.start_date);
+        const dayDate = routeDateObj
+          ? format(routeDateObj, "EEE, d MMM", { locale: pl })
           : null;
         return (
           <div key={route.id} className="space-y-2">

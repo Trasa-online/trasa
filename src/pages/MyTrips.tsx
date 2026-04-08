@@ -6,7 +6,17 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, isValid, parseISO } from "date-fns";
+
+function safeDate(val: string | null | undefined): Date | null {
+  if (!val) return null;
+  const d = typeof val === "string" && val.includes("T") ? new Date(val) : parseISO(val);
+  return isValid(d) ? d : null;
+}
+function safeDiff(val: string | null | undefined, ref: Date): number | null {
+  const d = safeDate(val);
+  return d ? differenceInDays(d, ref) : null;
+}
 import RoutePreviewModal from "@/components/route/RoutePreviewModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
@@ -137,8 +147,8 @@ const MyTrips = () => {
   const todayMidnight = new Date();
   todayMidnight.setHours(0, 0, 0, 0);
   const trips = getTrips();
-  const activeTrips = trips.filter(tr => !tr.startDate || differenceInDays(new Date(tr.startDate), todayMidnight) <= 0);
-  const upcomingTrips = trips.filter(tr => tr.startDate && differenceInDays(new Date(tr.startDate), todayMidnight) > 0);
+  const activeTrips = trips.filter(tr => { const d = safeDiff(tr.startDate, todayMidnight); return d === null || d <= 0; });
+  const upcomingTrips = trips.filter(tr => { const d = safeDiff(tr.startDate, todayMidnight); return d !== null && d > 0; });
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -186,10 +196,12 @@ const MyTrips = () => {
                 <div className="space-y-2.5">
                   {activeTrips.map((trip, idx) => {
                     const accent = ACCENTS[idx % ACCENTS.length];
-                    const dateStr = trip.startDate
-                      ? trip.endDate && trip.endDate !== trip.startDate
-                        ? `${format(new Date(trip.startDate), "dd")}-${format(new Date(trip.endDate), "dd/MM/yy")}`
-                        : format(new Date(trip.startDate), "dd/MM/yy")
+                    const startD = safeDate(trip.startDate);
+                    const endD = safeDate(trip.endDate);
+                    const dateStr = startD
+                      ? endD && trip.endDate !== trip.startDate
+                        ? `${format(startD, "dd")}-${format(endD, "dd/MM/yy")}`
+                        : format(startD, "dd/MM/yy")
                       : "";
                     const priorityLabels = (trip.priorities as string[])
                       .slice(0, 3)
