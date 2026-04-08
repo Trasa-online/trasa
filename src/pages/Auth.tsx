@@ -129,19 +129,28 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className={`min-h-screen flex flex-col ${businessMode ? "bg-blue-950" : "bg-background"}`}>
       {/* Hero */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-6">
-        {/* Logo mark — orb without background */}
+        {/* Logo mark */}
         <div
           className="w-14 h-14 rounded-full mb-4"
-          style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
+          style={{
+            background: businessMode
+              ? "radial-gradient(circle at 35% 35%, #60a5fa, #2563eb 60%, #1d4ed8)"
+              : "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
+          }}
         />
-        <h1 className="text-4xl font-black tracking-tight mb-1.5">TRASA</h1>
+        <h1 className={`text-4xl font-black tracking-tight mb-1.5 ${businessMode ? "text-white" : ""}`}>TRASA</h1>
         {businessMode ? (
-          <p className="text-muted-foreground text-center text-sm max-w-[280px] leading-relaxed mb-6">
-            Panel biznesowy — zaloguj się kontem powiązanym z Twoim lokalem.
-          </p>
+          <>
+            <span className="mb-3 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold tracking-wide uppercase">
+              Panel Biznesowy
+            </span>
+            <p className="text-blue-300/70 text-center text-sm max-w-[280px] leading-relaxed mb-6">
+              Zaloguj się kontem powiązanym z Twoim lokalem.
+            </p>
+          </>
         ) : (
           <p className="text-muted-foreground text-center text-sm max-w-[260px] leading-relaxed mb-6">
             {t("description")}
@@ -153,13 +162,13 @@ const Auth = () => {
             <>
               <button
                 onClick={() => setBusinessMode(false)}
-                className="flex items-center gap-1 text-sm text-muted-foreground mb-6 active:opacity-60"
+                className="flex items-center gap-1 text-sm text-blue-400 mb-6 active:opacity-60"
               >
                 ← Wróć
               </button>
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="biz-email">{t("fields.email")}</Label>
+                  <Label htmlFor="biz-email" className="text-blue-200">{t("fields.email")}</Label>
                   <Input
                     id="biz-email"
                     type="email"
@@ -167,11 +176,11 @@ const Auth = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder={t("fields.email_placeholder")}
-                    className="bg-card"
+                    className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="biz-password">{t("fields.password")}</Label>
+                  <Label htmlFor="biz-password" className="text-blue-200">{t("fields.password")}</Label>
                   <Input
                     id="biz-password"
                     type="password"
@@ -179,16 +188,16 @@ const Auth = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     placeholder={t("fields.password_placeholder")}
-                    className="bg-card"
+                    className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
                   />
                 </div>
-                <Button type="submit" className="w-full rounded-2xl py-6 bg-orange-600 hover:bg-orange-700 text-white font-bold text-base" disabled={loading}>
+                <Button type="submit" className="w-full rounded-2xl py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border-0" disabled={loading}>
                   {loading ? t("logging_in") : "Zaloguj się do panelu"}
                 </Button>
               </form>
-              <p className="text-xs text-muted-foreground text-center mt-5 leading-relaxed">
+              <p className="text-xs text-blue-400/70 text-center mt-5 leading-relaxed">
                 Nie masz jeszcze konta?{" "}
-                <a href="mailto:kontakt@trasa.app" className="underline text-foreground">
+                <a href="mailto:kontakt@trasa.app" className="underline text-blue-300">
                   Napisz do nas
                 </a>
               </p>
