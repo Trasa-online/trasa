@@ -722,18 +722,28 @@ const GroupSession = () => {
                   </p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {nextRound === 1
-                      ? `${members.length} ${members.length === 1 ? "osoba" : "osoby"} w pokoju. Wszyscy zobaczycie te same 10 miejsc.`
+                      ? members.length < 2
+                        ? "Czekaj aż co najmniej jedna osoba dołączy do sesji."
+                        : `${members.length} ${members.length === 1 ? "osoba" : "osoby"} w pokoju. Wszyscy zobaczycie te same 10 miejsc.`
                       : `Kolejna pula 10 nowych miejsc. ${matches.length} matchów do tej pory.`}
                   </p>
                 </div>
-                <button
-                  onClick={() => handleStartRound(nextRound)}
-                  disabled={startingRound}
-                  className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
-                >
-                  <Play className="h-5 w-5" />
-                  {startingRound ? "Startuję…" : nextRound === 1 ? "Rozpocznij parowanie" : `Runda ${nextRound} — start!`}
-                </button>
+                {nextRound === 1 && members.length < 2 ? (
+                  <div className="w-full py-3 rounded-2xl border border-border/40 bg-muted/50 text-center space-y-2">
+                    <p className="text-sm font-semibold text-muted-foreground">Udostępnij kod sesji</p>
+                    <p className="text-2xl font-black tracking-widest">{joinCode}</p>
+                    <p className="text-xs text-muted-foreground">Gdy znajomy dołączy, będziesz mógł rozpocząć</p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleStartRound(nextRound)}
+                    disabled={startingRound}
+                    className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
+                  >
+                    <Play className="h-5 w-5" />
+                    {startingRound ? "Startuję…" : nextRound === 1 ? "Rozpocznij parowanie" : `Runda ${nextRound} — start!`}
+                  </button>
+                )}
               </div>
             );
           }

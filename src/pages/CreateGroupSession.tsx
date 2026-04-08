@@ -392,18 +392,17 @@ const CreateGroupSession = () => {
                         <button
                           disabled={isInvited || isSending}
                           onClick={async () => {
-                            if (!createdSessionId) return;
+                            if (!createdSessionId || !createdCode) return;
                             setInviting(profile.id);
                             try {
-                              const { error } = await (supabase as any).rpc("send_group_invite", {
-                                p_target_user_id: profile.id,
-                                p_session_id: createdSessionId,
-                              });
-                              if (error) throw error;
+                              await navigator.clipboard.writeText(
+                                `${window.location.origin}/sesja/${createdCode}`
+                              );
                               setInvitedIds(prev => new Set([...prev, profile.id]));
-                              toast.success(`Zaproszenie wysłane do @${profile.username}!`);
-                            } catch (e: any) {
-                              toast.error(e.message || "Błąd podczas wysyłania zaproszenia");
+                              toast.success(`Link skopiowany! Wyślij go @${profile.username}.`);
+                            } catch {
+                              setInvitedIds(prev => new Set([...prev, profile.id]));
+                              toast.success(`Zaproszono @${profile.username} — wyślij im kod: ${createdCode}`);
                             } finally {
                               setInviting(null);
                             }
