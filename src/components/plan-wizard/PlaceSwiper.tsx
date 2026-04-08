@@ -27,6 +27,7 @@ export interface MockPlace {
   vibe_tags: string[];
   description: string;
   // Business profile fields (optional)
+  businessPlan?: 'zero' | 'basic' | 'premium';
   businessLogoUrl?: string;
   businessEventTitle?: string;
   galleryPhotos?: string[]; // extra photos shown in carousel (swipe card + detail)
@@ -403,7 +404,7 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
               </span>
             ))}
           </div>
-          {isTop && (
+          {isTop && place.businessPlan !== 'zero' && (
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => { e.stopPropagation(); onTap(); }}
@@ -599,6 +600,23 @@ function getGroupForCategory(cat: string): Set<string> | null {
 
 const DIVERSITY_THRESHOLD = 2; // after 2 consecutive likes from same group, deprioritize
 
+// Maps raw DB row (with nested business_profiles) to MockPlace fields
+function enrichWithBusinessProfile(p: any): MockPlace {
+  const bp = Array.isArray(p.business_profiles) ? p.business_profiles[0] : p.business_profiles;
+  if (!bp) return p as MockPlace;
+  const plan: 'zero' | 'basic' | 'premium' = bp.plan ?? 'zero';
+  return {
+    ...p,
+    businessPlan: plan,
+    // basic+: override photo with business cover if set
+    photo_url: (plan === 'basic' || plan === 'premium') && bp.cover_image_url ? bp.cover_image_url : p.photo_url,
+    // premium only: logo row + event pill + gallery
+    businessLogoUrl: plan === 'premium' ? (bp.logo_url ?? '') : undefined,
+    businessEventTitle: plan === 'premium' ? (bp.event_title ?? undefined) : undefined,
+    galleryPhotos: plan === 'premium' ? (bp.gallery_urls ?? []) : [],
+  } as MockPlace;
+}
+
 const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -641,7 +659,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
       if (roundPlaceIds?.length) {
         const { data } = await (supabase as any)
           .from("places")
-          .select("*")
+          .select("*, business_profiles(plan, logo_url, cover_image_url, event_title, gallery_urls)")
           .in("id", roundPlaceIds);
 
         if (!data?.length) { setLoading(false); return; }
@@ -649,7 +667,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
         // Preserve server-defined order
         const orderMap: Record<string, number> = {};
         roundPlaceIds.forEach((id, i) => { orderMap[id] = i; });
-        const ordered = [...data].sort((a: MockPlace, b: MockPlace) => orderMap[a.id] - orderMap[b.id]);
+        const ordered = [...data]
+          .sort((a: any, b: any) => orderMap[a.id] - orderMap[b.id])
+          .map(enrichWithBusinessProfile);
 
         setAllPlaces(ordered);
         setQueue(ordered);
@@ -660,7 +680,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
       // ── Normal mode ──────────────────────────────────────────────────────
       const { data } = await (supabase as any)
         .from("places")
-        .select("*")
+        .select("*, business_profiles(plan, logo_url, cover_image_url, event_title, gallery_urls)")
         .ilike("city", city)
         .eq("is_active", true);
 
@@ -690,19 +710,20 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
         }
       }
 
+      const enriched = (data as any[]).map(enrichWithBusinessProfile);
       const likedSet = new Set(initialLikedPlaceNames.map(n => n.toLowerCase()));
       const skippedSet = new Set(initialSkippedPlaceNames.map(n => n.toLowerCase()));
-      const liked = data.filter((p: MockPlace) => likedSet.has(p.place_name.toLowerCase()));
-      const skipped = data.filter((p: MockPlace) => skippedSet.has(p.place_name.toLowerCase()));
+      const liked = enriched.filter((p) => likedSet.has(p.place_name.toLowerCase()));
+      const skipped = enriched.filter((p) => skippedSet.has(p.place_name.toLowerCase()));
 
       const hasReturnState = initialLikedPlaceNames.length > 0 || initialSkippedPlaceNames.length > 0;
-      const remaining = data.filter((p: MockPlace) => {
+      const remaining = enriched.filter((p) => {
         if (likedSet.has(p.place_name.toLowerCase()) || skippedSet.has(p.place_name.toLowerCase())) return false;
         if (!hasReturnState && ratedPlaceIds.has(p.id)) return false;
         return true;
       });
 
-      setAllPlaces(data);
+      setAllPlaces(enriched);
       if (liked.length) setLikedPlaces(liked);
       if (skipped.length) setSkippedPlaces(skipped);
       setQueue([...remaining].sort(() => Math.random() - 0.5));
@@ -857,6 +878,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
   };
 
   const handleTap = (place: MockPlace) => {
+    if (place.businessPlan === 'zero') return; // zero-plan: no detail
     setDetailPlace(place);
     setDetailOpen(true);
   };
@@ -1139,7 +1161,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
 
         <button
           onClick={() => displayQueue[0] && handleTap(displayQueue[0])}
-          className="h-14 w-14 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform"
+          disabled={!displayQueue[0] || displayQueue[0].businessPlan === 'zero'}
+          className="h-14 w-14 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30"
         >
           <ChevronUp className="h-5 w-5 text-muted-foreground" />
         </button>

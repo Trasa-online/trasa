@@ -22,11 +22,25 @@ const PLACE_TAGS = [
   "Hotel", "Sklep", "Park", "Kościół", "Punkt widokowy", "Atrakcja turystyczna", "Inne",
 ];
 
+type BizPlan = 'zero' | 'basic' | 'premium';
+
+const PLAN_LABELS: Record<BizPlan, string> = {
+  zero: 'Zero',
+  basic: 'Basic',
+  premium: 'Premium',
+};
+const PLAN_COLORS: Record<BizPlan, string> = {
+  zero: 'bg-muted text-muted-foreground',
+  basic: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  premium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+};
+
 interface BusinessProfile {
   id: string;
   place_id: string;
   owner_user_id: string | null;
   business_name: string;
+  plan: BizPlan;
   logo_url: string | null;
   cover_image_url: string | null;
   gallery_urls: string[];
@@ -77,6 +91,10 @@ const BusinessDashboard = () => {
   const [eventDescription, setEventDescription] = useState("");
   const [eventStartsAt, setEventStartsAt] = useState("");
   const [eventEndsAt, setEventEndsAt] = useState("");
+
+  const [plan, setPlan] = useState<BizPlan>('zero');
+  const [previewTab, setPreviewTab] = useState<'basic' | 'premium'>('basic');
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
 
   const [uploading, setUploading] = useState<string | null>(null); // which slot is uploading
   const [isDirty, setIsDirty] = useState(false);
@@ -131,6 +149,7 @@ const BusinessDashboard = () => {
     setPlaceCategory((placeData as any)?.category ?? null);
 
     setProfile(profileData as BusinessProfile);
+    setPlan((profileData.plan ?? 'zero') as BizPlan);
     setBusinessName(profileData.business_name ?? "");
     setPhone(profileData.phone ?? "");
     setEmail(profileData.email ?? "");
@@ -361,9 +380,12 @@ const BusinessDashboard = () => {
           <p className="text-sm font-bold leading-tight truncate">{profile.business_name}</p>
           <p className="text-[11px] text-muted-foreground">Panel biznesowy</p>
         </div>
+        <span className={`mr-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${PLAN_COLORS[plan]}`}>
+          {PLAN_LABELS[plan]}
+        </span>
         {profile.is_verified && (
           <span className="mr-3 text-[10px] font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-            Zweryfikowany
+            ✓ Zweryfikowany
           </span>
         )}
         <button
@@ -376,118 +398,201 @@ const BusinessDashboard = () => {
       </div>
 
       <div className={`p-4 space-y-4 max-w-2xl mx-auto ${isDirty ? "pb-28" : "pb-4"}`}>
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 relative">
-          {[
-            { icon: BarChart2, value: stats.views, label: "Wyświetlenia" },
-            { icon: MapPin, value: stats.onRoutes, label: "Na trasach" },
-            { icon: MousePointerClick, value: stats.clicks, label: "Kliknięcia" },
-          ].map(({ icon: Icon, value, label }) => (
-            <div key={label} className="bg-card border border-border/40 rounded-2xl p-3 text-center">
-              <Icon className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
-              <p className="text-xl font-bold">{value}</p>
-              <p className="text-xs font-medium text-foreground">{label}</p>
-              <p className="text-[10px] text-muted-foreground">ostatnie 30 dni</p>
+        {/* Stats — premium only */}
+        {plan === 'premium' ? (
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { icon: BarChart2, value: stats.views, label: "Wyświetlenia" },
+                { icon: MapPin, value: stats.onRoutes, label: "Na trasach" },
+                { icon: MousePointerClick, value: stats.clicks, label: "Kliknięcia" },
+              ].map(({ icon: Icon, value, label }) => (
+                <div key={label} className="bg-card border border-border/40 rounded-2xl p-3 text-center">
+                  <Icon className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
+                  <p className="text-xl font-bold">{value}</p>
+                  <p className="text-xs font-medium text-foreground">{label}</p>
+                  <p className="text-[10px] text-muted-foreground">ostatnie 30 dni</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <button
-          onClick={sendTestEvent}
-          className="text-[11px] text-muted-foreground underline underline-offset-2 text-center w-full"
-        >
-          Wyślij testowe zdarzenie
-        </button>
-
-        {/* Swipe card preview */}
-        <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Podgląd wizytówki</p>
-            <button
-              onClick={() => setShowPreview(v => !v)}
-              className="text-xs text-orange-600 font-semibold active:opacity-60"
-            >
-              {showPreview ? "Ukryj" : "Pokaż"}
+            <button onClick={sendTestEvent} className="text-[11px] text-muted-foreground underline underline-offset-2 text-center w-full">
+              Wyślij testowe zdarzenie
             </button>
+          </>
+        ) : (
+          <div className="relative rounded-2xl border border-dashed border-border/60 p-4 overflow-hidden">
+            <div className="grid grid-cols-3 gap-3 opacity-30 pointer-events-none select-none">
+              {[
+                { icon: BarChart2, label: "Wyświetlenia" },
+                { icon: MapPin, label: "Na trasach" },
+                { icon: MousePointerClick, label: "Kliknięcia" },
+              ].map(({ icon: Icon, label }) => (
+                <div key={label} className="bg-card border border-border/40 rounded-2xl p-3 text-center">
+                  <Icon className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
+                  <p className="text-xl font-bold">—</p>
+                  <p className="text-xs font-medium">{label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
+              <span className="text-lg">🔒</span>
+              <p className="text-xs font-semibold">Analityka dostępna w planie Premium</p>
+            </div>
           </div>
-          {showPreview && (
-            <div className="relative w-full" style={{ aspectRatio: "3/4", maxHeight: 360 }}>
-              <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-lg">
-                {/* Background */}
-                {coverImageUrl ? (
-                  <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-orange-800 to-orange-600" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        )}
 
-                {/* Business badge */}
-                {(eventTitle || logoUrl) && (
-                  <div className="absolute top-3 right-3 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    ✦ Wizytówka
+        {/* Swipe card preview — tabs Basic / Premium */}
+        <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Podgląd wizytówki</p>
+
+          {/* Tabs */}
+          <div className="flex rounded-xl bg-muted p-0.5 gap-0.5">
+            {(['basic', 'premium'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => {
+                  if (tab === 'premium' && plan === 'basic') {
+                    setShowUpgradeBanner(true);
+                  }
+                  setPreviewTab(tab);
+                }}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  previewTab === tab ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab === 'basic' ? '✦ Basic' : '★ Premium'}
+                {tab === 'premium' && plan !== 'premium' && (
+                  <span className="ml-1 text-[9px] font-bold bg-amber-400 text-amber-900 px-1 py-0.5 rounded-full">PRO</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Card preview */}
+          <div className="relative w-full" style={{ aspectRatio: "3/4", maxHeight: 340 }}>
+            <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-lg">
+              {/* Background */}
+              {coverImageUrl ? (
+                <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-800 to-orange-600" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+              {/* Bottom content */}
+              <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1.5">
+                {previewTab === 'premium' && logoUrl && (
+                  <img src={logoUrl} className="w-8 h-8 rounded-full object-cover border-2 border-white/30 mb-1" />
+                )}
+                <p className="text-white font-black text-xl leading-tight">{businessName || "Nazwa lokalu"}</p>
+                <p className="text-white/70 text-sm">{[placeCategory, "@trasa"].filter(Boolean).join(" · ")}</p>
+                {previewTab === 'premium' && description && (
+                  <p className="text-white/60 text-xs leading-relaxed line-clamp-2">{description}</p>
+                )}
+                {previewTab === 'premium' && eventTitle && (
+                  <div className="inline-flex items-center gap-1 bg-amber-500/80 backdrop-blur-sm rounded-full px-2.5 py-1 text-white text-xs font-semibold">
+                    🎉 {eventTitle}
                   </div>
                 )}
-
-                {/* Bottom content */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1.5">
-                  {logoUrl && (
-                    <img src={logoUrl} className="w-8 h-8 rounded-full object-cover border-2 border-white/30 mb-1" />
-                  )}
-                  <p className="text-white font-black text-xl leading-tight">{businessName || "Nazwa lokalu"}</p>
-                  <p className="text-white/70 text-sm">
-                    {[placeCategory, "@trasa"].filter(Boolean).join(" · ")}
-                  </p>
-                  {description && (
-                    <p className="text-white/60 text-xs leading-relaxed line-clamp-2">{description}</p>
-                  )}
-                  {eventTitle && (
-                    <div className="inline-flex items-center gap-1 bg-amber-500/80 backdrop-blur-sm rounded-full px-2.5 py-1 text-white text-xs font-semibold">
-                      🎉 {eventTitle}
-                    </div>
-                  )}
-                </div>
               </div>
+
+              {/* Basic label */}
+              {previewTab === 'basic' && (
+                <div className="absolute top-3 left-3 bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  ✦ Basic
+                </div>
+              )}
+              {previewTab === 'premium' && (
+                <div className="absolute top-3 left-3 bg-amber-500/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  ★ Premium
+                </div>
+              )}
+
+              {/* Premium locked overlay */}
+              {previewTab === 'premium' && plan !== 'premium' && (
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
+                  <span className="text-2xl">🔒</span>
+                  <p className="text-white font-bold text-sm text-center px-6">Plan Premium</p>
+                  <p className="text-white/70 text-xs text-center px-8 leading-relaxed">Logo, galeria, opisy, wydarzenia i analityka</p>
+                  <button
+                    onClick={() => setShowUpgradeBanner(true)}
+                    className="mt-2 px-4 py-2 rounded-xl bg-amber-500 text-white text-xs font-bold active:opacity-80"
+                  >
+                    Dowiedz się więcej →
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-          {!showPreview && (
-            <p className="text-xs text-muted-foreground">Kliknij "Pokaż" aby zobaczyć jak wygląda Twoja wizytówka w swiperze.</p>
-          )}
+          </div>
+
+          <p className="text-[11px] text-muted-foreground text-center">
+            {previewTab === 'basic'
+              ? "Basic: zdjęcie główne + dane kontaktowe"
+              : "Premium: logo, galeria, wydarzenia, posty, analityka"}
+          </p>
         </div>
 
-        {/* Photos */}
+        {/* Upgrade banner */}
+        {showUpgradeBanner && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-bold text-sm">★ Przejdź na Premium</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  Odblokuj logo, galerię do 10 zdjęć, wydarzenia, posty i pełną analitykę.
+                </p>
+              </div>
+              <button onClick={() => setShowUpgradeBanner(false)} className="text-muted-foreground mt-0.5 active:opacity-60">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <a
+              href="mailto:kontakt@trasa.app?subject=Upgrade do Premium"
+              className="flex items-center justify-center w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm active:opacity-80"
+            >
+              Napisz do nas → kontakt@trasa.app
+            </a>
+          </div>
+        )}
+
+        {/* Photos — gated by plan */}
+        {plan === 'zero' ? null : (
         <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Zdjęcia</p>
 
-          {/* Logo + Cover row */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Logo */}
-            <div>
-              <p className="text-xs font-medium mb-1.5">Logo</p>
-              <button
-                onClick={() => logoInputRef.current?.click()}
-                className="relative w-full aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70"
-              >
-                {uploading === "logo" ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                ) : logoUrl ? (
-                  <>
-                    <img src={logoUrl} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                      <ImagePlus className="h-5 w-5 text-white" />
+          {/* Cover (basic + premium) */}
+          <div className={plan === 'premium' ? "grid grid-cols-2 gap-3" : ""}>
+            {/* Logo — premium only */}
+            {plan === 'premium' && (
+              <div>
+                <p className="text-xs font-medium mb-1.5">Logo</p>
+                <button
+                  onClick={() => logoInputRef.current?.click()}
+                  className="relative w-full aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70"
+                >
+                  {uploading === "logo" ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  ) : logoUrl ? (
+                    <>
+                      <img src={logoUrl} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <ImagePlus className="h-5 w-5 text-white" />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                      <Plus className="h-6 w-6" />
+                      <span className="text-[11px]">Dodaj logo</span>
                     </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                    <Plus className="h-6 w-6" />
-                    <span className="text-[11px]">Dodaj logo</span>
-                  </div>
-                )}
-              </button>
-              <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-            </div>
+                  )}
+                </button>
+                <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+              </div>
+            )}
 
             {/* Cover */}
             <div>
-              <p className="text-xs font-medium mb-1.5">Okładka</p>
+              <p className="text-xs font-medium mb-1.5">Zdjęcie główne</p>
               <button
                 onClick={() => coverInputRef.current?.click()}
                 className="relative w-full aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70"
@@ -504,7 +609,7 @@ const BusinessDashboard = () => {
                 ) : (
                   <div className="flex flex-col items-center gap-1 text-muted-foreground">
                     <Plus className="h-6 w-6" />
-                    <span className="text-[11px]">Dodaj okładkę</span>
+                    <span className="text-[11px]">Dodaj zdjęcie</span>
                   </div>
                 )}
               </button>
@@ -512,116 +617,132 @@ const BusinessDashboard = () => {
             </div>
           </div>
 
-          {/* Gallery */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-xs font-medium">Galeria</p>
-              <p className="text-[11px] text-muted-foreground">{galleryUrls.length}/{MAX_GALLERY}</p>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {galleryUrls.map((url, idx) => (
-                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted">
-                  <img src={url} className="w-full h-full object-cover" />
+          {/* Gallery — premium only */}
+          {plan === 'premium' && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-xs font-medium">Galeria dodatkowa</p>
+                <p className="text-[11px] text-muted-foreground">{galleryUrls.length}/{MAX_GALLERY}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {galleryUrls.map((url, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted">
+                    <img src={url} className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => removeGalleryPhoto(idx)}
+                      className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70"
+                    >
+                      <X className="h-3 w-3 text-white" />
+                    </button>
+                  </div>
+                ))}
+                {galleryUrls.length < MAX_GALLERY && (
                   <button
-                    onClick={() => removeGalleryPhoto(idx)}
-                    className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70"
+                    onClick={() => galleryInputRef.current?.click()}
+                    className="aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70"
                   >
-                    <X className="h-3 w-3 text-white" />
+                    {uploading === "gallery" ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    ) : (
+                      <Plus className="h-6 w-6 text-muted-foreground" />
+                    )}
                   </button>
-                </div>
-              ))}
-              {galleryUrls.length < MAX_GALLERY && (
-                <button
-                  onClick={() => galleryInputRef.current?.click()}
-                  className="aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70"
-                >
-                  {uploading === "gallery" ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                  ) : (
-                    <Plus className="h-6 w-6 text-muted-foreground" />
-                  )}
-                </button>
-              )}
+                )}
+              </div>
+              <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
             </div>
-            <input
-              ref={galleryInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={handleGalleryUpload}
-            />
-          </div>
+          )}
         </div>
+        )}
 
         {/* Contact */}
         <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dane kontaktowe</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dane lokalu</p>
           <div className="space-y-1">
-            <Label htmlFor="business_name">Nazwa firmy</Label>
+            <Label htmlFor="business_name">Nazwa</Label>
             <Input id="business_name" value={businessName} maxLength={80} onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }} />
             <p className="text-[11px] text-muted-foreground text-right">{businessName.length}/80</p>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="phone">Telefon</Label>
-            <Input id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="website">Strona WWW</Label>
-            <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="booking_url">URL rezerwacji</Label>
-            <Input id="booking_url" value={bookingUrl} maxLength={200} onChange={e => { setBookingUrl(e.target.value); setIsDirty(true); }} type="url" />
           </div>
           <div className="space-y-1">
             <Label htmlFor="address">Adres</Label>
             <Input id="address" value={address} maxLength={150} placeholder="np. ul. Floriańska 12, Kraków" onChange={e => { setAddress(e.target.value); setIsDirty(true); }} />
           </div>
 
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Typ miejsca</p>
-          <div className="flex flex-wrap gap-2">
-            {PLACE_TAGS.map(tag => {
-              const active = tags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => {
-                    setTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag]);
-                    setIsDirty(true);
-                  }}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
-                    active
-                      ? "bg-orange-600 border-orange-600 text-white"
-                      : "bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground"
-                  }`}
-                >
-                  {tag}
-                </button>
-              );
-            })}
-          </div>
+          {/* Below fields: basic + premium only */}
+          {plan !== 'zero' && (
+            <>
+              <div className="space-y-1">
+                <Label htmlFor="phone">Telefon</Label>
+                <Input id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="website">Strona WWW</Label>
+                <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="booking_url">URL rezerwacji</Label>
+                <Input id="booking_url" value={bookingUrl} maxLength={200} onChange={e => { setBookingUrl(e.target.value); setIsDirty(true); }} type="url" />
+              </div>
 
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Opis</p>
-          <div className="space-y-1">
-            <textarea
-              rows={3}
-              value={description}
-              maxLength={500}
-              onChange={e => { setDescription(e.target.value); setIsDirty(true); }}
-              placeholder="Opisz swój lokal..."
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-            />
-            <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
-          </div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Typ miejsca</p>
+              <div className="flex flex-wrap gap-2">
+                {PLACE_TAGS.map(tag => {
+                  const active = tags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => { setTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag]); setIsDirty(true); }}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                        active
+                          ? "bg-orange-600 border-orange-600 text-white"
+                          : "bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground"
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {plan === 'premium' && (
+                <>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Opis</p>
+                  <div className="space-y-1">
+                    <textarea
+                      rows={3}
+                      value={description}
+                      maxLength={500}
+                      onChange={e => { setDescription(e.target.value); setIsDirty(true); }}
+                      placeholder="Opisz swój lokal..."
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                    />
+                    <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {plan === 'zero' && (
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded-xl px-3 py-2">
+              Przejdź na plan Basic, aby dodać dane kontaktowe i typ miejsca.
+            </p>
+          )}
         </div>
 
-        {/* Events */}
+        {/* Events — premium only */}
+        {plan !== 'premium' ? (
+          <div className="relative rounded-2xl border border-dashed border-border/60 p-4 text-center space-y-1.5">
+            <span className="text-xl">🎉</span>
+            <p className="text-xs font-semibold">Wydarzenia i promocje — plan Premium</p>
+            <p className="text-[11px] text-muted-foreground">Happy hour, koncerty, oferty specjalne widoczne w swiperze.</p>
+          </div>
+        ) : (
         <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Obecne wydarzenia</p>
           <p className="text-xs text-muted-foreground -mt-2">
@@ -662,8 +783,16 @@ const BusinessDashboard = () => {
             </div>
           </div>
         </div>
+        )}
 
-        {/* Posts / Feed */}
+        {/* Posts / Feed — premium only */}
+        {plan !== 'premium' ? (
+          <div className="relative rounded-2xl border border-dashed border-border/60 p-4 text-center space-y-1.5">
+            <span className="text-xl">📸</span>
+            <p className="text-xs font-semibold">Posty i feed — plan Premium</p>
+            <p className="text-[11px] text-muted-foreground">Publikuj aktualizacje, nowości i zdjęcia widoczne w Twojej wizytówce.</p>
+          </div>
+        ) : (
         <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Posty</p>
           <p className="text-xs text-muted-foreground -mt-2">
@@ -759,6 +888,7 @@ const BusinessDashboard = () => {
             ))}
           </div>
         </div>
+        )}
       </div>
 
       {/* Sticky save bar — only when dirty */}
