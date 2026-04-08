@@ -19,13 +19,15 @@ interface WaitlistEntry {
 
 interface BusinessClaim {
   id: string;
-  place_id: string;
+  place_id: string | null;
   user_id: string;
   contact_email: string;
   contact_phone: string | null;
   message: string | null;
   status: string;
   created_at: string;
+  business_name: string | null;
+  place_name_text: string | null;
   places: { place_name: string; city: string } | null;
 }
 
@@ -150,7 +152,7 @@ const Admin = () => {
     setFetchingClaims(true);
     const { data } = await (supabase as any)
       .from("business_claims")
-      .select("id, place_id, user_id, contact_email, contact_phone, message, status, created_at, places(place_name, city)")
+      .select("id, place_id, user_id, contact_email, contact_phone, message, status, created_at, business_name, place_name_text, places(place_name, city)")
       .order("created_at", { ascending: false });
     setClaims(data ?? []);
     setFetchingClaims(false);
@@ -161,7 +163,7 @@ const Admin = () => {
     await (supabase as any).from("business_profiles").upsert({
       place_id: claim.place_id,
       owner_user_id: claim.user_id,
-      business_name: claim.places?.place_name ?? "Mój biznes",
+      business_name: claim.business_name ?? claim.places?.place_name ?? "Mój biznes",
       is_active: true,
     });
     await (supabase as any).from("business_claims").update({ status: "approved" }).eq("id", claim.id);
@@ -442,10 +444,12 @@ const Admin = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm truncate">
-                        {claim.places?.place_name ?? claim.place_id}
+                        {claim.business_name ?? claim.places?.place_name ?? claim.place_id ?? "—"}
                       </p>
-                      {claim.places?.city && (
-                        <p className="text-xs text-muted-foreground">{claim.places.city}</p>
+                      {(claim.place_name_text || claim.places?.city) && (
+                        <p className="text-xs text-muted-foreground">
+                          {claim.place_name_text ?? claim.places?.city}
+                        </p>
                       )}
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {claim.contact_email}

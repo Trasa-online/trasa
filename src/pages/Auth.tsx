@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
 type Mode = "login" | "register";
+type BizMode = "login" | "register";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -22,6 +23,13 @@ const Auth = () => {
   const [honeypot, setHoneypot] = useState("");
   const [formOpenedAt] = useState(() => Date.now());
   const [businessMode, setBusinessMode] = useState(false);
+  const [bizMode, setBizMode] = useState<BizMode>("login");
+  // Business registration fields
+  const [bizName, setBizName] = useState("");
+  const [bizPlace, setBizPlace] = useState("");
+  const [bizPhone, setBizPhone] = useState("");
+  const [bizMessage, setBizMessage] = useState("");
+  const [bizDone, setBizDone] = useState(false);
   const navigate = useNavigate();
 
   // Pick up referral code from URL (?ref=CODE) or landing page (localStorage)
@@ -42,6 +50,38 @@ const Auth = () => {
       navigate("/");
     });
   }, [navigate]);
+
+  const handleBizRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bizName.trim()) { toast.error("Podaj nazwę firmy"); return; }
+    if (!bizPlace.trim()) { toast.error("Podaj nazwę lokalu / miejsca"); return; }
+    setLoading(true);
+    try {
+      // Create auth account
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+      const userId = data.user?.id;
+      if (!userId) throw new Error("Brak ID użytkownika");
+
+      // Submit claim
+      const { error: claimError } = await (supabase as any).from("business_claims").insert({
+        user_id: userId,
+        contact_email: email,
+        contact_phone: bizPhone.trim() || null,
+        business_name: bizName.trim(),
+        place_name_text: bizPlace.trim(),
+        message: bizMessage.trim() || null,
+        status: "pending",
+      });
+      if (claimError) throw claimError;
+
+      setBizDone(true);
+    } catch (err: any) {
+      toast.error(err.message || "Błąd rejestracji");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,46 +201,158 @@ const Auth = () => {
           {businessMode ? (
             <>
               <button
-                onClick={() => setBusinessMode(false)}
+                onClick={() => { setBusinessMode(false); setBizMode("login"); setBizDone(false); }}
                 className="flex items-center gap-1 text-sm text-blue-400 mb-6 active:opacity-60"
               >
                 ← Wróć
               </button>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="biz-email" className="text-blue-200">{t("fields.email")}</Label>
-                  <Input
-                    id="biz-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder={t("fields.email_placeholder")}
-                    className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
-                  />
+
+              {/* Biz tabs */}
+              <div className="flex rounded-2xl bg-blue-900/60 p-1 mb-6">
+                <button
+                  onClick={() => setBizMode("login")}
+                  className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${
+                    bizMode === "login" ? "bg-blue-600 text-white shadow-sm" : "text-blue-300 hover:text-white"
+                  }`}
+                >
+                  Zaloguj się
+                </button>
+                <button
+                  onClick={() => setBizMode("register")}
+                  className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${
+                    bizMode === "register" ? "bg-blue-600 text-white shadow-sm" : "text-blue-300 hover:text-white"
+                  }`}
+                >
+                  Zarejestruj lokal
+                </button>
+              </div>
+
+              {bizMode === "login" ? (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="biz-email" className="text-blue-200">{t("fields.email")}</Label>
+                    <Input
+                      id="biz-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      placeholder={t("fields.email_placeholder")}
+                      className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="biz-password" className="text-blue-200">{t("fields.password")}</Label>
+                    <Input
+                      id="biz-password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      placeholder={t("fields.password_placeholder")}
+                      className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full rounded-2xl py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border-0" disabled={loading}>
+                    {loading ? t("logging_in") : "Zaloguj się do panelu"}
+                  </Button>
+                </form>
+              ) : bizDone ? (
+                <div className="text-center py-8 space-y-3">
+                  <p className="text-4xl">🎉</p>
+                  <p className="text-white font-bold text-lg">Zgłoszenie wysłane!</p>
+                  <p className="text-blue-300 text-sm leading-relaxed">
+                    Sprawdzimy Twoje zgłoszenie i skontaktujemy się na <strong>{email}</strong>.
+                    Zazwyczaj odpowiadamy w ciągu 24 godzin.
+                  </p>
+                  <button
+                    onClick={() => { setBizDone(false); setBizMode("login"); }}
+                    className="text-sm text-blue-400 underline pt-2"
+                  >
+                    Wróć do logowania
+                  </button>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="biz-password" className="text-blue-200">{t("fields.password")}</Label>
-                  <Input
-                    id="biz-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder={t("fields.password_placeholder")}
-                    className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
-                  />
-                </div>
-                <Button type="submit" className="w-full rounded-2xl py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border-0" disabled={loading}>
-                  {loading ? t("logging_in") : "Zaloguj się do panelu"}
-                </Button>
-              </form>
-              <p className="text-xs text-blue-400/70 text-center mt-5 leading-relaxed">
-                Nie masz jeszcze konta?{" "}
-                <a href="mailto:kontakt@trasa.app" className="underline text-blue-300">
-                  Napisz do nas
-                </a>
-              </p>
+              ) : (
+                <form onSubmit={handleBizRegister} className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="biz-name" className="text-blue-200">Nazwa firmy / sieci</Label>
+                    <Input
+                      id="biz-name"
+                      type="text"
+                      value={bizName}
+                      onChange={(e) => setBizName(e.target.value)}
+                      required
+                      placeholder="np. Kawiarnia Stara Kamienica"
+                      className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="biz-place" className="text-blue-200">Nazwa lokalu / miejsca</Label>
+                    <Input
+                      id="biz-place"
+                      type="text"
+                      value={bizPlace}
+                      onChange={(e) => setBizPlace(e.target.value)}
+                      required
+                      placeholder="np. Stara Kamienica – Kraków Stare Miasto"
+                      className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="biz-reg-email" className="text-blue-200">{t("fields.email")}</Label>
+                    <Input
+                      id="biz-reg-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      placeholder={t("fields.email_placeholder")}
+                      className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="biz-reg-password" className="text-blue-200">{t("fields.password")}</Label>
+                    <Input
+                      id="biz-reg-password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      placeholder={t("fields.password_placeholder")}
+                      className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="biz-phone" className="text-blue-200">Telefon kontaktowy <span className="text-blue-400/60 font-normal">(opcjonalnie)</span></Label>
+                    <Input
+                      id="biz-phone"
+                      type="tel"
+                      value={bizPhone}
+                      onChange={(e) => setBizPhone(e.target.value)}
+                      placeholder="+48 600 000 000"
+                      className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="biz-message" className="text-blue-200">Wiadomość <span className="text-blue-400/60 font-normal">(opcjonalnie)</span></Label>
+                    <textarea
+                      id="biz-message"
+                      value={bizMessage}
+                      onChange={(e) => setBizMessage(e.target.value)}
+                      placeholder="Coś jeszcze, co chcesz nam powiedzieć..."
+                      rows={2}
+                      className="w-full rounded-xl px-3 py-2 text-sm bg-blue-900/50 border border-blue-700/60 text-white placeholder:text-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full rounded-2xl py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border-0" disabled={loading}>
+                    {loading ? "Wysyłam..." : "Wyślij zgłoszenie"}
+                  </Button>
+                  <p className="text-xs text-blue-400/60 text-center leading-relaxed">
+                    Po weryfikacji otrzymasz dostęp do panelu zarządzania swoim lokalem.
+                  </p>
+                </form>
+              )}
             </>
           ) : (
           <>
