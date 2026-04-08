@@ -1,27 +1,129 @@
--- Migration: seed places for Łódź
+-- Migration: seed places for Łódź (~150 places)
 -- 2026-04-08
 
 INSERT INTO public.places (city, place_name, category, address, latitude, longitude, rating, price_level, vibe_tags, description, best_time) VALUES
 
 -- ── CAFES ────────────────────────────────────────────────────
 
+('Łódź', 'Magnetofon Cafe', 'cafe',
+ 'ul. Roosevelta 3, Łódź', 51.7681, 19.4578, 4.6, 2,
+ ARRAY['specialty coffee', 'winylem', 'vintage'],
+ 'Specialty kawiarnia z winylami i klimatem lat 80. Jedne z najlepszych kaw w Łodzi.',
+ ARRAY['morning', 'afternoon']),
+
 ('Łódź', 'Cafe Malarnia', 'cafe',
- 'ul. Piotrkowska 86, Łódź', 51.7694, 19.4560, 4.6, 2,
+ 'ul. Piotrkowska 86, Łódź', 51.7694, 19.4560, 4.5, 2,
  ARRAY['artystyczna', 'klimatyczna', 'piotrkowska'],
  'Klimatyczna kawiarnia w kamienicy przy Piotrkowskiej z klimatem artystycznej Łodzi.',
  ARRAY['morning', 'afternoon']),
 
-('Łódź', 'Magnetofon Cafe', 'cafe',
- 'ul. Roosevelta 3, Łódź', 51.7681, 19.4578, 4.5, 2,
- ARRAY['specialty coffee', 'vintage', 'klimatyczna'],
- 'Specialty kawiarnia z winylami i klimatem lat 80. Jedna z najlepszych kaw w Łodzi.',
- ARRAY['morning', 'afternoon']),
-
 ('Łódź', 'Cafe Strych', 'cafe',
  'ul. Piotrkowska 102, Łódź', 51.7703, 19.4558, 4.4, 2,
- ARRAY['studencka', 'przytulna', 'tanie jedzenie'],
+ ARRAY['studencka', 'przytulna', 'poddasze'],
  'Przytulna kawiarnia na poddaszu kamienicy przy Piotrkowskiej. Popularna wśród studentów i artystów.',
  ARRAY['morning', 'afternoon', 'evening']),
+
+('Łódź', 'Pożegnanie z Afryką', 'cafe',
+ 'ul. Piotrkowska 87, Łódź', 51.7694, 19.4558, 4.4, 2,
+ ARRAY['herbata', 'kawa', 'egzotyczna'],
+ 'Popularny łańcuch z ogromnym wyborem herbat i kaw z całego świata. Przytulne wnętrze.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', '9 Gram Coffee', 'cafe',
+ 'ul. Nawrot 16, Łódź', 51.7671, 19.4620, 4.7, 2,
+ ARRAY['specialty coffee', 'minimalistyczna', 'barista'],
+ 'Jeden z najlepszych specialty coffee barów w Łodzi — precyzyjne parzenie i świadomy barista.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Karma Coffee', 'cafe',
+ 'ul. Struga 14, Łódź', 51.7701, 19.4601, 4.5, 2,
+ ARRAY['specialty coffee', 'spokojne', 'klimatyczne'],
+ 'Kameralna kawiarnia specialty z miłą atmosferą i starannie dobranymi ziarnami.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Kawiarnia Literacka', 'cafe',
+ 'ul. Traugutta 18, Łódź', 51.7651, 19.4573, 4.4, 1,
+ ARRAY['książki', 'cisza', 'przytulna'],
+ 'Kawiarnia przy bibliotece — idealne miejsce na kawę z książką w spokojnej atmosferze.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Dobra Porcja', 'cafe',
+ 'ul. Gdańska 32, Łódź', 51.7792, 19.4571, 4.5, 2,
+ ARRAY['śniadania', 'brunch', 'wegańskie opcje'],
+ 'Popularne miejsce na pyszny brunch i kawę — wiele opcji wegańskich i wegetariańskich.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Bawełniana Kawiarnia', 'cafe',
+ 'ul. Piotrkowska 152, Łódź', 51.7740, 19.4554, 4.4, 2,
+ ARRAY['industrialna', 'łódzka tożsamość', 'brunch'],
+ 'Kawiarnia nawiązująca do łódzkiej tradycji włókienniczej — bawełniane motywy i domowa kuchnia.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'House of Teas', 'cafe',
+ 'ul. Piotrkowska 64, Łódź', 51.7680, 19.4562, 4.3, 2,
+ ARRAY['herbata', 'spokój', 'wschód'],
+ 'Specjalistyczny sklep i herbaciarnia z szerokim wyborem herbat z Azji i świata.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Cafe Zielona Gęś', 'cafe',
+ 'ul. Więckowskiego 5, Łódź', 51.7735, 19.4526, 4.5, 2,
+ ARRAY['artystyczna', 'galeria', 'klimatyczna'],
+ 'Kawiarnia połączona z galerią sztuki. Dobra kawa, wystawy i świetna atmosfera.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Social Club', 'cafe',
+ 'ul. Wigury 15, Łódź', 51.7658, 19.4545, 4.4, 2,
+ ARRAY['coworking', 'specialty', 'spokojne'],
+ 'Kawiarnia-coworking chętnie odwiedzana przez freelancerów i studentów. Dobra kawa i Wi-Fi.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Cafe Szafa', 'cafe',
+ 'ul. 6 Sierpnia 12, Łódź', 51.7614, 19.4524, 4.4, 2,
+ ARRAY['vintage', 'retro', 'urokliwa'],
+ 'Urokliwa kawiarnia z vintage meblami i domową atmosferą blisko Manufaktury.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Mango Cafe', 'cafe',
+ 'ul. Piotrkowska 77, Łódź', 51.7688, 19.4559, 4.3, 2,
+ ARRAY['kolorowa', 'soki', 'egzotyczna'],
+ 'Jasna kawiarnia z egzotycznymi sokami, smoothie i kawą. Energetyczne wnętrze.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Łódź Kaliska — kawiarnia', 'cafe',
+ 'ul. Piotrkowska 102, Łódź', 51.7703, 19.4558, 4.3, 2,
+ ARRAY['kultowe', 'artystyczne', 'piotrkowska'],
+ 'Kultowe miejsce – w dzień kawiarnia z artystyczną duszą, wieczorem jeden z bardziej znanych barów Łodzi.',
+ ARRAY['morning', 'afternoon', 'evening']),
+
+('Łódź', 'Fabryczna Cafe', 'cafe',
+ 'ul. Ogrodowa 17, Łódź', 51.7720, 19.4487, 4.4, 2,
+ ARRAY['manufaktura', 'industrialna', 'śniadania'],
+ 'Kawiarnia w sercu Manufaktury — idealne miejsce na przerwę przy zwiedzaniu kompleksu.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Pasaż Kawiarniany', 'cafe',
+ 'ul. Piotrkowska 37, Łódź', 51.7663, 19.4563, 4.3, 2,
+ ARRAY['pasaż', 'historyczna', 'centrum'],
+ 'Kawiarnia w zabytkowym pasażu kamienicznym — klimatyczne wnętrze i dobra kawa.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Kameleon Cafe', 'cafe',
+ 'ul. Piotrkowska 49, Łódź', 51.7670, 19.4561, 4.3, 2,
+ ARRAY['centrum', 'przytulna', 'lunch'],
+ 'Klasyczna kawiarnia przy Piotrkowskiej, ulubione miejsce na lunch lub popołudniową kawę.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Spółdzielnia Ogniwo', 'cafe',
+ 'ul. Próchnika 7, Łódź', 51.7723, 19.4551, 4.6, 2,
+ ARRAY['spółdzielcza', 'aktywistyczna', 'dobra kawa'],
+ 'Spółdzielcza kawiarnia z misją. Świetna specialty kawa, ciasta i przyjazna społeczność.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Cafe 6/12', 'cafe',
+ 'ul. 6 Sierpnia 1, Łódź', 51.7609, 19.4519, 4.5, 2,
+ ARRAY['nowoczesna', 'brunch', 'wypiek'],
+ 'Nowoczesna kawiarnia z naciskiem na jakość — rzemieślnicze wypieki i specialty kawa.',
+ ARRAY['morning', 'afternoon']),
 
 -- ── RESTAURANTS ──────────────────────────────────────────────
 
@@ -34,13 +136,151 @@ INSERT INTO public.places (city, place_name, category, address, latitude, longit
 ('Łódź', 'Anatewka', 'restaurant',
  'ul. 6 Sierpnia 2, Łódź', 51.7610, 19.4520, 4.6, 2,
  ARRAY['żydowska', 'klimatyczna', 'tradycyjna'],
- 'Restauracja żydowska przy Manufakturze. Żydowskie przysmaki w klimatycznym wnętrzu.',
+ 'Restauracja żydowska przy Manufakturze z żydowskimi przysmakami w klimatycznym wnętrzu.',
  ARRAY['afternoon', 'evening']),
 
 ('Łódź', 'Presto Ristorante', 'restaurant',
  'ul. Piotrkowska 67, Łódź', 51.7683, 19.4561, 4.5, 2,
  ARRAY['włoska', 'pizza', 'makaron'],
- 'Sprawdzona włoska restauracja przy Piotrkowskiej z autentycznymi smakami.',
+ 'Sprawdzona włoska restauracja przy Piotrkowskiej z autentycznymi smakami i świeżym makaronem.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Tandem — Bar Mleczny', 'restaurant',
+ 'ul. Więckowskiego 57, Łódź', 51.7756, 19.4519, 4.5, 1,
+ ARRAY['bar mleczny', 'polska kuchnia', 'tanie'],
+ 'Kultowy bar mleczny z pyszną domową kuchnią polską w absurdalnie niskich cenach.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Momo Łódź', 'restaurant',
+ 'ul. Piotrkowska 75, Łódź', 51.7687, 19.4559, 4.5, 2,
+ ARRAY['wegańska', 'wegetariańska', 'zdrowe'],
+ 'Wegańska i wegetariańska restauracja serwująca smaczne, kolorowe dania z naturalnych składników.',
+ ARRAY['morning', 'afternoon', 'evening']),
+
+('Łódź', 'Szama Bar', 'restaurant',
+ 'ul. Struga 30, Łódź', 51.7706, 19.4608, 4.4, 1,
+ ARRAY['street food', 'casual', 'szybkie'],
+ 'Casual bar z pysznym jedzeniem ulicznym i ciekawymi burgerami w niskich cenach.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Mañana', 'restaurant',
+ 'ul. Piotrkowska 100, Łódź', 51.7702, 19.4558, 4.4, 2,
+ ARRAY['meksykańska', 'tacos', 'kolorowa'],
+ 'Meksykańska restauracja z autentycznymi tacos, burrito i margaritami.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Green Way Łódź', 'restaurant',
+ 'ul. Piotrkowska 80, Łódź', 51.7691, 19.4559, 4.3, 1,
+ ARRAY['wegetariańska', 'zdrowe', 'bar'],
+ 'Popularny wegetariański bar z szerokimi opcjami zdrowymi dla każdego.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Rodeo Drive Steak House', 'restaurant',
+ 'ul. Piotrkowska 3, Łódź', 51.7648, 19.4566, 4.5, 3,
+ ARRAY['steki', 'mięsna', 'premium'],
+ 'Steakhouse z doskonałymi kawałkami mięsa i klimatem Dzikiego Zachodu.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Zielona Kuchnia', 'restaurant',
+ 'ul. Zachodnia 70, Łódź', 51.7688, 19.4489, 4.5, 2,
+ ARRAY['sezonowa', 'polska', 'domowa'],
+ 'Restauracja oparta na sezonowych składnikach lokalnych dostawców. Polska kuchnia z charakterem.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Biała Sobota', 'restaurant',
+ 'ul. Roosevelta 16, Łódź', 51.7685, 19.4584, 4.6, 2,
+ ARRAY['brunch', 'śniadania', 'nowoczesna'],
+ 'Modna restauracja z doskonałym brunchem i nowoczesnym podejściem do polskiej kuchni.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Sashimi Restaurant', 'restaurant',
+ 'ul. Nawrot 12, Łódź', 51.7670, 19.4617, 4.5, 3,
+ ARRAY['japońska', 'sushi', 'świeże ryby'],
+ 'Elegancka restauracja sushi z świeżymi rybami i nowoczesną japońską kuchnią.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Tel Aviv Food', 'restaurant',
+ 'ul. Piotrkowska 90, Łódź', 51.7697, 19.4558, 4.5, 2,
+ ARRAY['izraelska', 'hummus', 'falafel'],
+ 'Izraelski street food z doskonałym hummusem, falafelem i shakshuka.',
+ ARRAY['morning', 'afternoon', 'evening']),
+
+('Łódź', 'Restauracja Jarema', 'restaurant',
+ 'ul. Piotrkowska 69, Łódź', 51.7684, 19.4560, 4.4, 2,
+ ARRAY['kresowa', 'tradycyjna', 'polska'],
+ 'Restauracja z kuchnią kresową — żurek, pierogi, bigos i inne polskie smaki.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Dal Campionissimo', 'restaurant',
+ 'ul. Gdańska 18, Łódź', 51.7785, 19.4568, 4.5, 2,
+ ARRAY['włoska', 'pizza', 'autentyczna'],
+ 'Autentyczna włoska pizzeria prowadzona przez Włochów — cienkie ciasto i tradycyjne składniki.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Same Fusy', 'restaurant',
+ 'ul. Próchnika 2, Łódź', 51.7721, 19.4549, 4.4, 2,
+ ARRAY['wegańska', 'śniadania', 'hipsterska'],
+ 'Modna restauracja śniadaniowa z wegańskim menu i autorskimi sokami.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Willy''s Diner', 'restaurant',
+ 'ul. Piotrkowska 120, Łódź', 51.7713, 19.4556, 4.3, 2,
+ ARRAY['burgery', 'american', 'casual'],
+ 'Klimatyczny diner w stylu amerykańskim z solidnymi burgerami i frytkami.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Łódź Delicje', 'restaurant',
+ 'ul. Piotrkowska 112, Łódź', 51.7708, 19.4557, 4.4, 2,
+ ARRAY['polska', 'rzemieślnicza', 'sezonowa'],
+ 'Nowoczesna restauracja polska serwująca dania oparte na rzemieślniczych polskich produktach.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Chimera Łódź', 'restaurant',
+ 'ul. Sienkiewicza 40, Łódź', 51.7672, 19.4591, 4.4, 2,
+ ARRAY['polska', 'tradycyjna', 'klimatyczna'],
+ 'Klimatyczna restauracja polska z bogatym menu tradycyjnych dań i dobrym winem.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Lunch Bar Bombaj', 'restaurant',
+ 'ul. Legionów 10, Łódź', 51.7703, 19.4540, 4.3, 1,
+ ARRAY['indyjska', 'tanie', 'lunch'],
+ 'Tani i smaczny lunch bar z indyjskim curry, dhalami i ryżem. Popularny wśród studentów.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Kuchnia Chińska Golden Dragon', 'restaurant',
+ 'ul. Kilińskiego 50, Łódź', 51.7748, 19.4644, 4.2, 1,
+ ARRAY['chińska', 'tanie', 'azjatycka'],
+ 'Sprawdzona chińska restauracja z bogatym menu i przystępnymi cenami.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Mleczarnia Jerozolimska', 'restaurant',
+ 'ul. Nawrot 34, Łódź', 51.7676, 19.4628, 4.5, 2,
+ ARRAY['żydowska', 'nabiał', 'historyczna'],
+ 'Restauracja nawiązująca do łódzkiej tradycji żydowskiej z nabiałowymi daniami i klimatem.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Szałwia Restaurant', 'restaurant',
+ 'ul. Piotrkowska 61, Łódź', 51.7678, 19.4561, 4.5, 2,
+ ARRAY['nowoczesna', 'polska', 'kreatywna'],
+ 'Nowoczesna restauracja z kreatywnym podejściem do polskiej kuchni i świetnym winem.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Nowy Świat Piekarnia', 'cafe',
+ 'ul. Nowy Świat 2, Łódź', 51.7743, 19.4527, 4.6, 1,
+ ARRAY['piekarnia', 'rzemieślnicza', 'śniadania'],
+ 'Rzemieślnicza piekarnia z doskonałym chlebem na zakwasie, ciastami i kawą.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Ramen Ichiban', 'restaurant',
+ 'ul. Piotrkowska 138, Łódź', 51.7728, 19.4556, 4.5, 2,
+ ARRAY['japońska', 'ramen', 'azjatycka'],
+ 'Autentyczny ramen bar z głębokimi bulionami i świeżymi składnikami.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Vegan Rascal', 'restaurant',
+ 'ul. Gdańska 10, Łódź', 51.7779, 19.4565, 4.5, 2,
+ ARRAY['wegańska', 'nowoczesna', 'smaczna'],
+ 'Wegańska restauracja udowadniająca, że roślinne jedzenie może być smakowite i kreatywne.',
  ARRAY['afternoon', 'evening']),
 
 -- ── BARS ─────────────────────────────────────────────────────
@@ -57,62 +297,664 @@ INSERT INTO public.places (city, place_name, category, address, latitude, longit
  'Bar jazzowy w stylu retro z świetnymi koktajlami i żywą muzyką jazzową.',
  ARRAY['evening']),
 
+('Łódź', 'Łódź Kaliska — bar', 'bar',
+ 'ul. Piotrkowska 102, Łódź', 51.7703, 19.4558, 4.4, 2,
+ ARRAY['kultowe', 'artystyczne', 'provokacyjne'],
+ 'Legendarny artystyczny bar przy Piotrkowskiej — kontrowersyjny, imprezowy, kultowy.',
+ ARRAY['evening']),
+
+('Łódź', 'Bunkier', 'bar',
+ 'ul. Gdańska 80, Łódź', 51.7820, 19.4575, 4.3, 2,
+ ARRAY['alternative', 'rockowe', 'podziemne'],
+ 'Alternatywny bar z podziemnym klimatem i sceną dla niezależnych artystów.',
+ ARRAY['evening']),
+
+('Łódź', 'Tajna Organizacja', 'bar',
+ 'ul. Piotrkowska 60, Łódź', 51.7678, 19.4562, 4.5, 2,
+ ARRAY['speakeasy', 'koktajle', 'kameralne'],
+ 'Klimatyczny bar speakeasy ukryty za niepozornymi drzwiami. Doskonałe koktajle barmanów-artystów.',
+ ARRAY['evening']),
+
+('Łódź', 'Kontrabas Jazz Bar', 'bar',
+ 'ul. Piotrkowska 76, Łódź', 51.7688, 19.4560, 4.6, 2,
+ ARRAY['jazz', 'muzyka na żywo', 'eleganckie'],
+ 'Jeden z najlepszych łódzkich barów jazzowych. Muzyka na żywo i dobry drink.',
+ ARRAY['evening']),
+
+('Łódź', 'Cień Bar', 'bar',
+ 'ul. Narutowicza 38, Łódź', 51.7669, 19.4518, 4.3, 2,
+ ARRAY['undergroundowe', 'niezależne', 'klimatyczne'],
+ 'Undergroundowy bar z niezależną sceną muzyczną i artystyczną atmosferą.',
+ ARRAY['evening']),
+
+('Łódź', 'Charlie Bar Kino', 'bar',
+ 'ul. Piotrkowska 203, Łódź', 51.7804, 19.4546, 4.4, 2,
+ ARRAY['kino-bar', 'artystyczne', 'kultowe'],
+ 'Bar przy kinie Charlie — jedno z ulubionych miejsc łódzkich twórców i miłośników kina.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Niebieski Blues Bar', 'bar',
+ 'ul. Piotrkowska 77, Łódź', 51.7688, 19.4559, 4.4, 2,
+ ARRAY['blues', 'muzyka na żywo', 'klimatyczne'],
+ 'Bar bluesowy z regularnie organizowanymi koncertami i klimatem Nowego Orleanu.',
+ ARRAY['evening']),
+
+('Łódź', 'Mleczarnia Bar', 'bar',
+ 'ul. Traugutta 5, Łódź', 51.7647, 19.4569, 4.3, 2,
+ ARRAY['retro', 'tanie drinki', 'studenckie'],
+ 'Kultowy studencki bar w klimacie retro z tanimi drinkami i niepretensjonalną atmosferą.',
+ ARRAY['evening']),
+
+('Łódź', 'Dada Bar', 'bar',
+ 'ul. Moniuszki 5, Łódź', 51.7721, 19.4589, 4.3, 2,
+ ARRAY['artystyczne', 'dadaizm', 'awangarda'],
+ 'Bar inspirowany ruchem dadaizmu — artystyczny chaos, dobre drinki i oryginalny wystrój.',
+ ARRAY['evening']),
+
+('Łódź', 'PiwPaw Łódź', 'bar',
+ 'ul. Piotrkowska 7, Łódź', 51.7649, 19.4565, 4.5, 2,
+ ARRAY['craft beer', 'piwo rzemieślnicze', 'szeroki wybór'],
+ 'Bar z ogromnym wyborem polskich i zagranicznych piw rzemieślniczych na kranach.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Browar Lubicz', 'bar',
+ 'ul. Lubicz 49, Łódź', 51.7657, 19.4531, 4.4, 2,
+ ARRAY['craft beer', 'lokalny browar', 'piwo'],
+ 'Lokalny browar rzemieślniczy z własnym piwem warowanym na miejscu.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Hops & Story', 'bar',
+ 'ul. Zielona 10, Łódź', 51.7738, 19.4588, 4.4, 2,
+ ARRAY['craft beer', 'przyjazne', 'nowoczesne'],
+ 'Nowoczesny craft beer bar z przyjazną atmosferą i regularnie rotującą listą kranów.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Bar pod Telegrafem', 'bar',
+ 'ul. Piotrkowska 93, Łódź', 51.7699, 19.4558, 4.2, 1,
+ ARRAY['kultowe', 'stare łódź', 'tanie drinki'],
+ 'Jeden z najstarszych barów przy Piotrkowskiej. Kawał łódzkiej historii w starym klimacie.',
+ ARRAY['afternoon', 'evening']),
+
+-- ── NIGHTLIFE ────────────────────────────────────────────────
+
+('Łódź', 'Club Fabryka', 'nightlife',
+ 'ul. Ogrodowa 17, Łódź', 51.7716, 19.4485, 4.2, 2,
+ ARRAY['klub', 'EDM', 'manufaktura'],
+ 'Klub w kompleksie Manufaktury — głośna muzyka, tłumy i dobra zabawa do rana.',
+ ARRAY['evening']),
+
+('Łódź', 'Lordi Club', 'nightlife',
+ 'ul. Kilińskiego 68, Łódź', 51.7754, 19.4650, 4.1, 2,
+ ARRAY['klub', 'imprezy', 'tancparkiet'],
+ 'Popularny klub nocny z dużym parkietem i regularnie organizowanymi imprezami.',
+ ARRAY['evening']),
+
+('Łódź', 'Wytwórnia — wydarzenia', 'nightlife',
+ 'ul. Łąkowa 29, Łódź', 51.7669, 19.4491, 4.6, 2,
+ ARRAY['koncerty', 'festiwale', 'kultowe'],
+ 'Kultowy klub i venue eventowe — największe imprezy muzyczne i festiwale w Łodzi.',
+ ARRAY['evening']),
+
+('Łódź', 'Piotrkowska 217', 'nightlife',
+ 'ul. Piotrkowska 217, Łódź', 51.7811, 19.4542, 4.3, 2,
+ ARRAY['imprezy', 'clubbing', 'nocne życie'],
+ 'Popularne miejsce łódzkiego nocnego życia — bary i klub w jednym.',
+ ARRAY['evening']),
+
+('Łódź', 'SF Club', 'nightlife',
+ 'ul. Piotrkowska 82, Łódź', 51.7692, 19.4559, 4.0, 2,
+ ARRAY['klub', 'tańce', 'piotrkowska'],
+ 'Klub przy Piotrkowskiej z różnorodnymi wieczorami tematycznymi.',
+ ARRAY['evening']),
+
 -- ── MUSEUMS ──────────────────────────────────────────────────
 
 ('Łódź', 'Muzeum Sztuki ms2', 'museum',
- 'ul. Ogrodowa 19, Łódź', 51.7719, 19.4489, 4.6, 1,
+ 'ul. Ogrodowa 19, Łódź', 51.7719, 19.4489, 4.7, 1,
  ARRAY['sztuka współczesna', 'awangarda', 'must-see'],
- 'Jedno z najważniejszych muzeów sztuki nowoczesnej w Polsce. Kolekcja awangardy światowej klasy.',
+ 'Jedno z najważniejszych muzeów sztuki nowoczesnej w Polsce w budynku dawnej fabryki Poznańskiego.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Muzeum Sztuki ms1', 'museum',
+ 'ul. Więckowskiego 36, Łódź', 51.7756, 19.4519, 4.6, 1,
+ ARRAY['sztuka moderna', 'awangarda', 'historyczna kolekcja'],
+ 'Jedna z najstarszych kolekcji sztuki nowoczesnej w Polsce — awangarda lat 20. i 30. XX w.',
  ARRAY['morning', 'afternoon']),
 
 ('Łódź', 'Centralne Muzeum Włókiennictwa', 'museum',
- 'ul. Piotrkowska 282, Łódź', 51.7887, 19.4542, 4.5, 1,
- ARRAY['historia', 'przemysłowe', 'unikalne'],
- 'Muzeum w zabytkowej fabryce włókienniczej — historia przemysłowej Łodzi i tkanin z całego świata.',
+ 'ul. Piotrkowska 282, Łódź', 51.7887, 19.4542, 4.6, 1,
+ ARRAY['historia', 'przemysłowe', 'włókiennictwo', 'unikalne'],
+ 'Muzeum w zabytkowej Białej Fabryce — historia przemysłowej Łodzi i tkanin z całego świata.',
  ARRAY['morning', 'afternoon']),
 
 ('Łódź', 'EC1 Łódź — Miasto Kultury', 'museum',
  'ul. Targowa 1/3, Łódź', 51.7752, 19.4693, 4.7, 1,
- ARRAY['industrialne', 'nauka', 'architektura'],
- 'Dawna elektrownia przebudowana na centrum kultury z planetarium i interaktywnymi wystawami.',
+ ARRAY['industrialne', 'nauka', 'planetarium', 'architektura'],
+ 'Dawna elektrownia przebudowana na centrum kultury z planetarium, interaktywnymi wystawami i centrum nauki.',
  ARRAY['morning', 'afternoon', 'evening']),
 
--- ── PARKS & VIEWPOINTS ───────────────────────────────────────
+('Łódź', 'Muzeum Kinematografii', 'museum',
+ 'pl. Zwycięstwa 1, Łódź', 51.7705, 19.4480, 4.7, 1,
+ ARRAY['kino', 'historia', 'łódzka szkoła filmowa', 'pałac'],
+ 'Muzeum w pałacu fabrykanta Scheiblera — historia polskiego kina i Łódzkiej Szkoły Filmowej.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Muzeum Miasta Łodzi', 'museum',
+ 'ul. Ogrodowa 15, Łódź', 51.7718, 19.4480, 4.6, 1,
+ ARRAY['historia miasta', 'pałac Poznańskiego', 'must-see'],
+ 'Muzeum w pałacu Izraela Poznańskiego — historia Łodzi i jej przemysłowych magnatów.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Muzeum Tradycji Niepodległościowych', 'museum',
+ 'ul. Gdańska 13, Łódź', 51.7783, 19.4566, 4.4, 1,
+ ARRAY['historia', 'patriotyzm', 'II wojna światowa'],
+ 'Muzeum prezentujące losy Łodzi w czasie II wojny światowej i walkę o niepodległość.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Muzeum Geologiczne', 'museum',
+ 'ul. Narutowicza 56, Łódź', 51.7683, 19.4527, 4.3, 1,
+ ARRAY['geologia', 'minerały', 'rodzinne'],
+ 'Muzeum z bogatą kolekcją minerałów i skał — świetne dla dzieci i miłośników nauk przyrodniczych.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Galeria Atlas Sztuki', 'gallery',
+ 'ul. Piotrkowska 114, Łódź', 51.7710, 19.4557, 4.5, 1,
+ ARRAY['galeria', 'sztuka współczesna', 'wernisaże'],
+ 'Prywatna galeria sztuki z regularnie zmieniającymi się wystawami polskich i zagranicznych artystów.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Galeria Wschodnia', 'gallery',
+ 'ul. Wschodnia 29, Łódź', 51.7620, 19.4478, 4.4, 1,
+ ARRAY['niezależna galeria', 'awangarda', 'performanse'],
+ 'Niezależna galeria artystyczna z performansami, instalacjami i wernisażami niszowej sztuki.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Lokal_30', 'gallery',
+ 'ul. Tymienieckiego 3, Łódź', 51.7636, 19.4551, 4.4, 1,
+ ARRAY['galeria', 'fotografia', 'nowoczesna'],
+ 'Galeria koncentrująca się na fotografii i sztukach wizualnych z polskimi fotografami.',
+ ARRAY['afternoon']),
+
+('Łódź', 'OFF Piotrkowska — galerie', 'gallery',
+ 'ul. Piotrkowska 138, Łódź', 51.7728, 19.4556, 4.6, 1,
+ ARRAY['off', 'dizajn', 'kreatywne'],
+ 'Kompleks artystycznych przestrzeni z galeriami, studioami i pracowniami projektantów.',
+ ARRAY['morning', 'afternoon', 'evening']),
+
+-- ── MONUMENTS & WALKS ────────────────────────────────────────
+
+('Łódź', 'ul. Piotrkowska', 'walk',
+ 'ul. Piotrkowska, Łódź', 51.7694, 19.4558, 4.8, 1,
+ ARRAY['must-see', 'deptak', 'ikona', 'historia'],
+ 'Najdłuższa ulica handlowa w Polsce — serce Łodzi. Kamienice, murale, kawiarnie i historia przez 4,2 km.',
+ ARRAY['morning', 'afternoon', 'evening']),
+
+('Łódź', 'Manufaktura', 'experience',
+ 'ul. Ogrodowa 17, Łódź', 51.7720, 19.4487, 4.7, 2,
+ ARRAY['must-see', 'fabryka', 'shopping', 'historia', 'architektura'],
+ 'Dawna fabryka Izraela Poznańskiego zamieniona w centrum handlowo-kulturalne. Architektura robi wrażenie.',
+ ARRAY['morning', 'afternoon', 'evening']),
+
+('Łódź', 'Księży Młyn', 'walk',
+ 'ul. Przędzalniana 72, Łódź', 51.7645, 19.4720, 4.6, 1,
+ ARRAY['industrialne', 'murale', 'historia', 'rewitalizacja'],
+ 'Zabytkowe osiedle robotnicze z XIX w. przy dawnej fabryce Scheiblera. Klimatyczne murale i industrialna architektura.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'OFF Piotrkowska', 'experience',
+ 'ul. Piotrkowska 138, Łódź', 51.7728, 19.4556, 4.7, 2,
+ ARRAY['must-see', 'hipsterskie', 'kreatywne', 'food court'],
+ 'Najbardziej kultowy off-space w Łodzi — dizajnerskie sklepy, galerie, restauracje i food trucki w dawnej fabryce.',
+ ARRAY['morning', 'afternoon', 'evening']),
+
+('Łódź', 'Radiostacja — dawna Radiostacja Wojskowa', 'monument',
+ 'ul. Srebrzyńska 1, Łódź', 51.7742, 19.4110, 4.5, 1,
+ ARRAY['industrialne', 'maszty', 'historia'],
+ 'Zabytkowa radiostacja wojskowa z imponującymi stalowymi masztami — jedyna taka w Polsce.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Pasaż Róży', 'walk',
+ 'ul. Piotrkowska 3, Łódź', 51.7648, 19.4566, 4.6, 1,
+ ARRAY['mozaika', 'instagramowe', 'zabytkowe'],
+ 'Zabytkowy pasaż ozdobiony mozaiką Joanny Rajkowskiej — jedno z najbardziej fotografowanych miejsc w Łodzi.',
+ ARRAY['morning', 'afternoon', 'evening']),
+
+('Łódź', 'Pałac Herbsta', 'monument',
+ 'ul. Przędzalniana 72, Łódź', 51.7643, 19.4718, 4.6, 1,
+ ARRAY['pałac', 'historia', 'architektura', 'ekspozycja'],
+ 'Zabytkowy pałac fabrykanta Herbsta z oryginalnym wyposażeniem XIX-wiecznym. Część muzeum ms.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Pałac Poznańskiego', 'monument',
+ 'ul. Ogrodowa 15, Łódź', 51.7718, 19.4480, 4.7, 1,
+ ARRAY['pałac', 'must-see', 'architektura', 'eklektyzm'],
+ 'Monumentalny eklektyczny pałac przemysłowca Izraela Poznańskiego — architektura robi wrażenie.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Stara Synagoga — pomnik', 'monument',
+ 'ul. Wolborska 20, Łódź', 51.7642, 19.4607, 4.3, 1,
+ ARRAY['żydowska historia', 'upamiętnienie', 'refleksja'],
+ 'Miejsce po starej synagodze z pomnikiem upamiętniającym łódzką społeczność żydowską.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Pomnik Walki i Męczeństwa — Radogoszcz', 'monument',
+ 'ul. Zgierska 147, Łódź', 51.8003, 19.4543, 4.5, 1,
+ ARRAY['historia', 'upamiętnienie', 'II WŚ'],
+ 'Miejsce martyrologii — dawny obóz przejściowy z okresu II WŚ z wzruszającym muzeum i pomnikiem.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Ulica Włókiennicza', 'walk',
+ 'ul. Włókiennicza, Łódź', 51.7670, 19.4530, 4.3, 1,
+ ARRAY['murale', 'industrialne', 'street art'],
+ 'Ulica z imponującymi muralami na poprzemysłowych kamienicach — spacer przez łódzki street art.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Aleja Gwiazd Łódź', 'walk',
+ 'ul. Piotrkowska (środek), Łódź', 51.7680, 19.4560, 4.4, 1,
+ ARRAY['kino', 'gwiazdy', 'deptak'],
+ 'Łódzka Aleja Gwiazd przy Piotrkowskiej — odciski dłoni i gwiazdy polskiego kina.',
+ ARRAY['morning', 'afternoon', 'evening']),
+
+('Łódź', 'Murale Łódź Murals', 'walk',
+ 'różne lokalizacje, Łódź', 51.7650, 19.4590, 4.7, 1,
+ ARRAY['street art', 'murale', 'must-see', 'artystyczne'],
+ 'Łódź to stolica murali w Polsce — ogromne, profesjonalne dzieła znanych artystów na kamienicach całego miasta.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Stary Rynek Łódzki', 'walk',
+ 'Stary Rynek, Łódź', 51.7774, 19.4527, 4.2, 1,
+ ARRAY['historyczne', 'stare miasto', 'klimatyczne'],
+ 'Najstarsza część Łodzi ze zrekonstruowanym rynkiem — spokojne miejsce z dala od Piotrkowskiej.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Ośrodek Propagandy Sztuki', 'monument',
+ 'ul. Więckowskiego 36, Łódź', 51.7756, 19.4519, 4.4, 1,
+ ARRAY['zabytek', 'architektura', 'historia sztuki'],
+ 'Zabytkowy budynek z lat 30. — modernistyczna perełka architektoniczna i siedziba muzeum ms1.',
+ ARRAY['morning', 'afternoon']),
+
+-- ── PARKS ────────────────────────────────────────────────────
 
 ('Łódź', 'Park im. Józefa Piłsudskiego', 'park',
- 'al. Unii Lubelskiej 7, Łódź', 51.7558, 19.4552, 4.5, 1,
- ARRAY['zielona', 'spacer', 'jezioro'],
- 'Największy park w Łodzi z jeziorem Arturówek. Idealne miejsce na spacer i odpoczynek.',
+ 'al. Unii Lubelskiej 7, Łódź', 51.7558, 19.4552, 4.6, 1,
+ ARRAY['zielona', 'spacer', 'jezioro', 'rodzinne'],
+ 'Największy park w Łodzi z jeziorem i alejkami. Idealne miejsce na spacer i odpoczynek.',
  ARRAY['morning', 'afternoon']),
 
 ('Łódź', 'Park Źródliska', 'park',
  'ul. Piłsudskiego 15, Łódź', 51.7648, 19.4590, 4.4, 1,
- ARRAY['historyczny', 'spacer', 'centrum'],
+ ARRAY['historyczny', 'spacer', 'centrum', 'fontanny'],
  'Zabytkowy park w centrum Łodzi z fontannami i alejkami. Idealne na popołudniowy spacer.',
  ARRAY['morning', 'afternoon']),
 
--- ── MONUMENTS & EXPERIENCE ───────────────────────────────────
-
-('Łódź', 'ul. Piotrkowska', 'walk',
- 'ul. Piotrkowska, Łódź', 51.7694, 19.4558, 4.8, 1,
- ARRAY['must-see', 'deptak', 'ikona'],
- 'Najdłuższa ulica handlowa w Polsce — serce Łodzi. Kamienice, murale, kawiarnie i historia.',
- ARRAY['morning', 'afternoon', 'evening']),
-
-('Łódź', 'Manufaktura', 'shopping',
- 'ul. Ogrodowa 17, Łódź', 51.7720, 19.4487, 4.7, 2,
- ARRAY['must-see', 'fabryka', 'shopping', 'historia'],
- 'Dawna fabryka Izraela Poznańskiego zamieniona w centrum handlowo-kulturalne. Architektura robi wrażenie.',
- ARRAY['morning', 'afternoon', 'evening']),
-
-('Łódź', 'Muzeum Kinematografii', 'museum',
- 'pl. Zwycięstwa 1, Łódź', 51.7705, 19.4480, 4.6, 1,
- ARRAY['kino', 'historia', 'unikalne'],
- 'Muzeum w pałacu fabrykanta Scheiblera. Historia polskiego kina i Łódzkiej Szkoły Filmowej.',
+('Łódź', 'Park na Zdrowiu', 'park',
+ 'ul. Sanitariuszek 8, Łódź', 51.7452, 19.4618, 4.5, 1,
+ ARRAY['jezioro', 'plaża', 'sport', 'rodzinne'],
+ 'Duży park z jeziorem i plażą — popularne miejsce do kąpania się latem i aktywnego wypoczynku.',
  ARRAY['morning', 'afternoon']),
 
-('Łódź', 'Księży Młyn', 'walk',
- 'ul. Przędzalniana 72, Łódź', 51.7645, 19.4720, 4.5, 1,
- ARRAY['industrialne', 'murale', 'historia'],
- 'Zabytkowe osiedle robotnicze z XIX w. przy dawnej fabryce Scheiblera. Klimatyczne murale i industrialna architektura.',
+('Łódź', 'Las Łagiewnicki', 'park',
+ 'ul. Łagiewnicka 234, Łódź', 51.7430, 19.4325, 4.7, 1,
+ ARRAY['las', 'przyroda', 'trekkingowe', 'ucieczka z miasta'],
+ 'Największy las miejski w Europie — idealne miejsce na piesze wycieczki i kontakt z naturą.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Ogród Botaniczny Łódź', 'park',
+ 'ul. Krzemieniecka 36, Łódź', 51.7297, 19.4253, 4.6, 1,
+ ARRAY['botaniczny', 'rośliny', 'cisza', 'edukacja'],
+ 'Piękny ogród botaniczny z bogatą kolekcją roślin — raj dla miłośników przyrody i fotografii.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Park Helenów', 'park',
+ 'ul. Zgierska 68, Łódź', 51.7910, 19.4532, 4.4, 1,
+ ARRAY['historyczny', 'spacer', 'staw'],
+ 'Jeden z najstarszych parków Łodzi ze stawem i starymi drzewami — spokojny i malowniczy.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Arturówek', 'park',
+ 'ul. Skrzydlata 57, Łódź', 51.8168, 19.4602, 4.5, 1,
+ ARRAY['jeziora', 'plaża', 'lato', 'rodzinne'],
+ 'Kompleks trzech jezior w północnej Łodzi — popularne miejsce letnie z plażami i zielenią.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Park 3 Maja', 'park',
+ 'ul. Żwirki 1, Łódź', 51.7693, 19.4412, 4.3, 1,
+ ARRAY['centrum', 'spacer', 'cisza'],
+ 'Nieduży park w zachodniej części centrum — zielona oaza w pobliżu Piotrkowskiej.',
+ ARRAY['morning', 'afternoon']),
+
+-- ── CHURCHES ─────────────────────────────────────────────────
+
+('Łódź', 'Katedra Łódzka pw. Stanisława Kostki', 'church',
+ 'ul. Piotrkowska 265, Łódź', 51.7871, 19.4546, 4.6, 1,
+ ARRAY['katedra', 'neogotyk', 'historia'],
+ 'Neogotycka katedra przy Piotrkowskiej — siedziba diecezji łódzkiej z imponującym wnętrzem.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Kościół Zesłania Ducha Świętego', 'church',
+ 'ul. Ogrodowa 22, Łódź', 51.7721, 19.4490, 4.5, 1,
+ ARRAY['neogotyk', 'czerwona cegła', 'industrialne'],
+ 'Neogotycki kościół z czerwonej cegły przy Manufakturze — imponująca architektura wśród fabryk.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Kościół Ewangelicko-Augsburski', 'church',
+ 'ul. Piotrkowska 283, Łódź', 51.7873, 19.4545, 4.4, 1,
+ ARRAY['ewangelicki', 'historia', 'niemieccy osadnicy'],
+ 'Zabytkowy kościół ewangelicki świadczący o wielokulturowej historii łódzkich osadników.',
+ ARRAY['morning', 'afternoon']),
+
+-- ── SHOPPING / EXPERIENCE ────────────────────────────────────
+
+('Łódź', 'Łódź Designer Outlet', 'shopping',
+ 'ul. Rzgowska 70, Łódź', 51.7268, 19.4681, 4.4, 2,
+ ARRAY['outlet', 'marki', 'fashion'],
+ 'Outlet z popularnymi markami odzieżowymi w obniżonych cenach.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Bazaar 22', 'shopping',
+ 'ul. Roosevelta 17, Łódź', 51.7686, 19.4583, 4.5, 2,
+ ARRAY['vintage', 'second hand', 'design'],
+ 'Designerski bazaar z vintage odzieżą, hand made i lokalnym dizajnem. Łódzki Portobello.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Pasaż Schillera', 'shopping',
+ 'ul. Piotrkowska 157, Łódź', 51.7745, 19.4553, 4.3, 1,
+ ARRAY['pasaż', 'historyczne', 'butiki'],
+ 'Zabytkowy pasaż handlowy z niezależnymi butikamii i galeriami.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Antykwariat Kwadrat', 'shopping',
+ 'ul. Piotrkowska 98, Łódź', 51.7700, 19.4558, 4.4, 1,
+ ARRAY['antyki', 'stare książki', 'unikaty'],
+ 'Klimatyczny antykwariat z starymi książkami, grafikami i łódzkimi pamiątkami.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Galeria Łódzka', 'shopping',
+ 'ul. Piłsudskiego 12, Łódź', 51.7649, 19.4585, 4.2, 2,
+ ARRAY['centrum handlowe', 'centrum', 'marki'],
+ 'Duże centrum handlowe w centrum miasta z szeroką ofertą sklepów i restauracji.',
+ ARRAY['morning', 'afternoon', 'evening']),
+
+('Łódź', 'Surowiec — sklep vintage', 'shopping',
+ 'ul. Narutowicza 19, Łódź', 51.7660, 19.4512, 4.5, 2,
+ ARRAY['vintage', 'second hand', 'unikalna moda'],
+ 'Jeden z najlepszych sklepów vintage w Łodzi — starannie wyselekcjonowana odzież i akcesoria.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Targ Śniadaniowy Łódź', 'experience',
+ 'ul. Ogrodowa 17 (Manufaktura), Łódź', 51.7720, 19.4487, 4.6, 2,
+ ARRAY['targ', 'śniadanie', 'lokalni producenci', 'weekendowe'],
+ 'Weekendowy targ śniadaniowy z produktami lokalnych producentów, śniadaniami i kawą na świeżym powietrzu.',
+ ARRAY['morning']),
+
+('Łódź', 'Łódź Fabryczna — dworzec', 'experience',
+ 'ul. Składowa 30, Łódź', 51.7778, 19.4647, 4.5, 1,
+ ARRAY['architektura', 'nowoczesna', 'dworzec'],
+ 'Nowoczesny dworzec kolejowy z imponującą architekturą — jeden z najnowocześniejszych dworców w Polsce.',
+ ARRAY['morning', 'afternoon', 'evening']),
+
+('Łódź', 'Escape Room Łódź', 'experience',
+ 'ul. Piotrkowska 50, Łódź', 51.7671, 19.4561, 4.5, 2,
+ ARRAY['escape room', 'zabawa', 'grupowe'],
+ 'Popularne escape roomy w centrum Łodzi — świetna zabawa dla grup i par.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Multikino Łódź — Manufaktura', 'experience',
+ 'ul. Ogrodowa 17, Łódź', 51.7718, 19.4486, 4.3, 2,
+ ARRAY['kino', 'filmy', 'manufaktura'],
+ 'Duże kino w Manufakturze z wieloma salami i najnowszymi premierami.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Kino Charlie', 'experience',
+ 'ul. Piotrkowska 203, Łódź', 51.7804, 19.4546, 4.6, 1,
+ ARRAY['kino studyjne', 'festiwalowe', 'artystyczne'],
+ 'Kultowe łódzkie kino studyjne z festiwalowym klimatem i kultowymi seansami.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Fabryka Pizzy', 'experience',
+ 'ul. Piotrkowska 148, Łódź', 51.7737, 19.4555, 4.4, 2,
+ ARRAY['pizza', 'nowoczesna', 'piotrkowska'],
+ 'Popularna restauracja pizzowa z otwartą kuchnią i pyszną pizzą na cienkim cieście.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Brodacz — Barber Shop', 'experience',
+ 'ul. Piotrkowska 42, Łódź', 51.7666, 19.4562, 4.5, 2,
+ ARRAY['barber', 'styl', 'grooming'],
+ 'Stylowy barber shop z klimatem retro — strzyżenie i pielęgnacja brody na poziomie.',
+ ARRAY['morning', 'afternoon']),
+
+-- ── VIEWPOINTS ───────────────────────────────────────────────
+
+('Łódź', 'EC1 — Taras Widokowy', 'viewpoint',
+ 'ul. Targowa 1/3, Łódź', 51.7753, 19.4694, 4.6, 1,
+ ARRAY['panorama', 'widok na miasto', 'industrialne'],
+ 'Taras widokowy na szczycie dawnej elektrowni EC1 z panoramą Łodzi.',
+ ARRAY['morning', 'afternoon', 'evening']),
+
+('Łódź', 'Wieża Kościoła Metodystów', 'viewpoint',
+ 'ul. Gdańska 94, Łódź', 51.7827, 19.4576, 4.3, 1,
+ ARRAY['wieża', 'panorama', 'historyczna'],
+ 'Wieża zabytkowego kościoła metodystów z widokiem na okolicę.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Hotel Andels — rooftop bar', 'viewpoint',
+ 'ul. Ogrodowa 17, Łódź', 51.7717, 19.4485, 4.5, 3,
+ ARRAY['rooftop', 'widok', 'koktajle', 'manufaktura'],
+ 'Rooftop bar hotelu Andels z pięknym widokiem na Manufakturę i okolicę.',
+ ARRAY['afternoon', 'evening']),
+
+-- ── MARKETS ──────────────────────────────────────────────────
+
+('Łódź', 'Targ Bałucki', 'market',
+ 'ul. Rybna 2, Łódź', 51.7775, 19.4516, 4.2, 1,
+ ARRAY['bazar', 'pchli targ', 'klimat'],
+ 'Tradycyjny targ miejski z prawdziwym klimatem łódzkiego Bałut — okazje i lokalne produkty.',
+ ARRAY['morning']),
+
+('Łódź', 'Pchli Targ Manufaktura', 'market',
+ 'ul. Ogrodowa 17, Łódź', 51.7720, 19.4487, 4.4, 1,
+ ARRAY['pchli targ', 'vintage', 'antyki'],
+ 'Weekendowy pchli targ na placu Manufaktury z vintage przedmiotami, antykami i rękodziełem.',
+ ARRAY['morning']),
+
+('Łódź', 'Łódź Food Trucks — OFF Piotrkowska', 'market',
+ 'ul. Piotrkowska 138, Łódź', 51.7728, 19.4556, 4.6, 2,
+ ARRAY['street food', 'food trucks', 'różnorodne'],
+ 'Skupisko food trucków przy OFF Piotrkowska — kuchnie z całego świata w jednym miejscu.',
+ ARRAY['afternoon', 'evening']),
+
+-- ── DODATKOWE KAWIARNIE ───────────────────────────────────────
+
+('Łódź', 'Poranki Łódź', 'cafe',
+ 'ul. Legionów 28, Łódź', 51.7715, 19.4541, 4.5, 2,
+ ARRAY['śniadania', 'specialty coffee', 'jasne wnętrze'],
+ 'Jasna kawiarnia śniadaniowa z doskonałą kawą i lekkimi daniami na dobry początek dnia.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Coffeedesk Roastery', 'cafe',
+ 'ul. Piotrkowska 225, Łódź', 51.7816, 19.4543, 4.6, 2,
+ ARRAY['palarnia kawy', 'specialty', 'edukacja'],
+ 'Własna palarnia kawy z degustacjami i warsztatami parzenia — raj dla miłośników specialty.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Café Sowa', 'cafe',
+ 'ul. Piotrkowska 67, Łódź', 51.7683, 19.4561, 4.3, 1,
+ ARRAY['ciastka', 'klasyczna', 'rodzinna'],
+ 'Klasyczna łódzka kawiarnia znana z domowych ciast i przytulnej atmosfery.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Kolonialna Kawa', 'cafe',
+ 'ul. Rewolucji 1905r. 33, Łódź', 51.7728, 19.4477, 4.4, 2,
+ ARRAY['specialty', 'kolonialny klimat', 'przytulna'],
+ 'Klimatyczna kawiarnia specialty z kolonialnymi akcentami i wyjątkową ofertą kaw single origin.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Herbaciarnia Orientalna', 'cafe',
+ 'ul. Nawrot 29, Łódź', 51.7674, 19.4625, 4.4, 2,
+ ARRAY['herbata', 'wschód', 'ceremonja'],
+ 'Orientalna herbaciarnia z szerokim wyborem herbat z Chin, Japonii i Tajwanu.',
+ ARRAY['morning', 'afternoon']),
+
+-- ── DODATKOWE RESTAURACJE ────────────────────────────────────
+
+('Łódź', 'Balkoniko', 'restaurant',
+ 'ul. Piotrkowska 62, Łódź', 51.7679, 19.4562, 4.5, 2,
+ ARRAY['balkon', 'widok na Piotrkowską', 'polska kuchnia'],
+ 'Restauracja z balkonem z widokiem na Piotrkowską — polska kuchnia i letnie wieczory na tarasie.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Beirut Hummus & Music Bar', 'restaurant',
+ 'ul. Piotrkowska 28, Łódź', 51.7659, 19.4563, 4.5, 2,
+ ARRAY['libańska', 'hummus', 'muzyka na żywo'],
+ 'Klimatyczny lokal libański z autentycznym hummusem i regularną muzyką na żywo.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Sfinks', 'restaurant',
+ 'ul. Piotrkowska 37, Łódź', 51.7663, 19.4563, 4.2, 2,
+ ARRAY['egipska', 'kebab', 'shisha'],
+ 'Egipska restauracja z pysznym kebabem, sziszą i klimatem Bliskiego Wschodu.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Łódź Fusion', 'restaurant',
+ 'ul. Kilińskiego 44, Łódź', 51.7745, 19.4638, 4.4, 3,
+ ARRAY['fusion', 'kreatywna', 'nowoczesna'],
+ 'Kreatywna restauracja fusion łącząca kuchnię polską z azjatyckimi technikami gotowania.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Trattoria Wrocławska', 'restaurant',
+ 'ul. Wrocławska 14, Łódź', 51.7696, 19.4479, 4.3, 2,
+ ARRAY['włoska', 'osiedlowa', 'pasta'],
+ 'Kameralna włoska trattoria z domowym makaronem i autorskimi sosami.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Gospoda Staropolska', 'restaurant',
+ 'ul. Piotrkowska 55, Łódź', 51.7674, 19.4561, 4.3, 2,
+ ARRAY['staropolska', 'tradycyjna', 'obiad'],
+ 'Klasyczna polska gospoda z tradycyjnymi daniami jak żurek, flaki i pierogi ruskie.',
+ ARRAY['morning', 'afternoon']),
+
+-- ── DODATKOWE BARY ───────────────────────────────────────────
+
+('Łódź', 'Absurd Bar', 'bar',
+ 'ul. Piotrkowska 31, Łódź', 51.7661, 19.4563, 4.3, 2,
+ ARRAY['absurdalny wystrój', 'klimatyczne', 'koktajle'],
+ 'Bar ze zaskakującym wystrojem i fantazyjnymi koktajlami. Nigdy nie wiesz czego się spodziewać.',
+ ARRAY['evening']),
+
+('Łódź', 'Jaś i Małgosia Bar', 'bar',
+ 'ul. Piotrkowska 44, Łódź', 51.7668, 19.4562, 4.2, 1,
+ ARRAY['bajkowy', 'tanie drinki', 'studenckie'],
+ 'Bajkowy, kolorowy bar z tanimi drinkami i studencką atmosferą.',
+ ARRAY['evening']),
+
+('Łódź', 'Craft Republic', 'bar',
+ 'ul. Więckowskiego 23, Łódź', 51.7743, 19.4522, 4.5, 2,
+ ARRAY['craft beer', 'szeroki wybór', 'nowoczesne'],
+ 'Nowoczesny bar z szeroką selekcją craft beer z polskich i zagranicznych browarów.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Bambus Bar', 'bar',
+ 'ul. Jaracza 43, Łódź', 51.7638, 19.4586, 4.3, 2,
+ ARRAY['egzotyczne drinki', 'tropikalne', 'koktajle'],
+ 'Tropikalny bar koktajlowy z egzotycznymi drinkami i atmosferą dalekiej wyspy.',
+ ARRAY['evening']),
+
+-- ── DODATKOWE DOŚWIADCZENIA / SPACERY ───────────────────────
+
+('Łódź', 'Centrum Nauki i Techniki EC1', 'experience',
+ 'ul. Targowa 1/3, Łódź', 51.7750, 19.4692, 4.7, 2,
+ ARRAY['nauka', 'interaktywne', 'rodzinne', 'dzieci'],
+ 'Interaktywne centrum nauki w dawnej elektrowni — eksperymenty i pokazy dla dzieci i dorosłych.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Łódzkie Centrum Designu', 'experience',
+ 'ul. Targowa 35, Łódź', 51.7736, 19.4666, 4.4, 1,
+ ARRAY['design', 'wystawy', 'kreatywne'],
+ 'Centrum designu z wystawami i warsztatami promującymi łódzką scenę projektową.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Spacer industrialny — Północ Łódź', 'walk',
+ 'ul. Ogrodowa, Łódź', 51.7730, 19.4490, 4.5, 1,
+ ARRAY['industrialne', 'historia', 'architektura fabryczna'],
+ 'Trasa spacerowa przez dawne łódzkie fabryki i rezydencje fabrykantów — żywy rozdział historii przemysłu.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Muzeum Farmacji', 'museum',
+ 'ul. Piotrkowska 63, Łódź', 51.7679, 19.4561, 4.3, 1,
+ ARRAY['historia medycyny', 'unikalne', 'apteka'],
+ 'Unikalne muzeum farmacji w zabytkowej aptece z kolekcją historycznych leków i sprzętów.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Łódź Cartography Studio', 'experience',
+ 'ul. Piotrkowska 96, Łódź', 51.7700, 19.4558, 4.4, 2,
+ ARRAY['warsztaty', 'kreatywne', 'unikalne'],
+ 'Studio oferujące warsztaty twórcze i unikalne pamiątki z Łodzi dla miłośników designu.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Festiwal Światła — lokalizacje', 'experience',
+ 'ul. Piotrkowska, Łódź', 51.7680, 19.4560, 4.9, 1,
+ ARRAY['festiwal', 'light show', 'must-see'],
+ 'Corocznie organizowany Festiwal Światła Łódź — spektakularne iluminacje na fasadach kamienic.',
+ ARRAY['evening']),
+
+('Łódź', 'Trasa po muralach — Śródmieście', 'walk',
+ 'ul. Kilińskiego, Łódź', 51.7748, 19.4644, 4.6, 1,
+ ARRAY['street art', 'murale', 'pieszo'],
+ 'Samoguided spacer po największych i najpiękniejszych muralach w centrum Łodzi.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Termy Łódź — SPA', 'experience',
+ 'ul. Ustronna 8, Łódź', 51.7389, 19.4189, 4.6, 3,
+ ARRAY['SPA', 'relaks', 'baseny', 'wellness'],
+ 'Największy aquapark i kompleks SPA w Łodzi — baseny, sauny i strefa wellness.',
+ ARRAY['morning', 'afternoon', 'evening']),
+
+('Łódź', 'Restauracja Ósemka', 'restaurant',
+ 'ul. Piotrkowska 8, Łódź', 51.7650, 19.4565, 4.4, 2,
+ ARRAY['polska', 'centrum', 'nowoczesna'],
+ 'Nowoczesna restauracja w samym centrum Piotrkowskiej z sezonową kartą dań.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Bar Spółdzielczy', 'bar',
+ 'ul. Gdańska 50, Łódź', 51.7805, 19.4572, 4.3, 1,
+ ARRAY['niezależny', 'alternatywa', 'klimatyczne'],
+ 'Niezależny bar spółdzielczy z muzyką alternatywną i tanią piwem.',
+ ARRAY['evening']),
+
+('Łódź', 'Muzeum Walk Rewolucji 1905 r.', 'museum',
+ 'ul. Ogrodowa 15, Łódź', 51.7718, 19.4480, 4.2, 1,
+ ARRAY['historia', 'rewolucja', 'robotnicy'],
+ 'Ekspozycja poświęcona robotniczej rewolucji 1905 roku — ważny rozdział historii Łodzi.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Plaża Miejska Łódź', 'park',
+ 'ul. Rzgowska 247, Łódź', 51.7210, 19.4521, 4.3, 1,
+ ARRAY['plaża', 'lato', 'relaks', 'siatkówka'],
+ 'Letnia plaża miejska z piaskiem, leżakami i boiskami do siatkówki plażowej.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Cafe Impresja', 'cafe',
+ 'ul. Sienkiewicza 61, Łódź', 51.7680, 19.4598, 4.4, 2,
+ ARRAY['artystyczna', 'wystawy', 'kameralna'],
+ 'Kameralna kawiarnia z galerią sztuki i regularnie zmieniającymi się wystawami lokalnych artystów.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Craft Beer Lab', 'bar',
+ 'ul. Próchnika 14, Łódź', 51.7727, 19.4554, 4.5, 2,
+ ARRAY['craft beer', 'laboratoria smaków', 'degustacje'],
+ 'Specjalistyczny craft beer bar z regularnie organizowanymi degustacjami i prezentacjami browarów.',
+ ARRAY['afternoon', 'evening']),
+
+('Łódź', 'Łódzki Ogród Zoologiczny', 'experience',
+ 'ul. Konstantynowska 8/10, Łódź', 51.7512, 19.4158, 4.4, 2,
+ ARRAY['zoo', 'zwierzęta', 'rodzinne', 'dzieci'],
+ 'Jeden z największych ogrodów zoologicznych w Polsce — ponad 3000 zwierząt z całego świata.',
+ ARRAY['morning', 'afternoon']),
+
+('Łódź', 'Biblioteka Miejska — Czytaj w Ogrodzie', 'experience',
+ 'ul. Gdańska 100, Łódź', 51.7833, 19.4578, 4.4, 1,
+ ARRAY['ogród', 'czytanie', 'relaks', 'sezonowe'],
+ 'Ogród biblioteki z leżakami i kolekcją książek do czytania na świeżym powietrzu latem.',
  ARRAY['morning', 'afternoon']);
+
+
