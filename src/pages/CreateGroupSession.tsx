@@ -431,8 +431,17 @@ const CreateGroupSession = () => {
             </div>
 
             <button
-              onClick={() => navigate(`/sesja/${createdCode}`)}
-              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform"
+              onClick={() => {
+                if (invitedIds.size === 0) {
+                  toast.error("Zaproś co najmniej jedną osobę", {
+                    description: "Parowanie grupowe wymaga minimum 2 uczestników.",
+                  });
+                  return;
+                }
+                navigate(`/sesja/${createdCode}`);
+              }}
+              disabled={invitedIds.size === 0}
+              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 disabled:scale-100"
             >
               Zacznij swipe'ować
             </button>

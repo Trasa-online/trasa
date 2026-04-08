@@ -34,12 +34,12 @@ const COUNTRIES: Country[] = [
     ],
   },
   {
-    code: "HU", flag: "🇭🇺", name: "Węgry",
-    cities: [{ name: "Budapeszt" }],
+    code: "HU", flag: "🇭🇺", name: "Węgry", comingSoon: true,
+    cities: [{ name: "Budapeszt", comingSoon: true }],
   },
   {
-    code: "MT", flag: "🇲🇹", name: "Malta",
-    cities: [{ name: "Valletta" }],
+    code: "MT", flag: "🇲🇹", name: "Malta", comingSoon: true,
+    cities: [{ name: "Valletta", comingSoon: true }],
   },
   {
     code: "ES", flag: "🇪🇸", name: "Hiszpania", comingSoon: true,
@@ -55,7 +55,7 @@ const COUNTRIES: Country[] = [
   },
 ];
 
-type ActiveCountryCode = "PL" | "HU" | "MT";
+type ActiveCountryCode = "PL";
 
 // ── Drum constants ─────────────────────────────────────────────────────────
 
