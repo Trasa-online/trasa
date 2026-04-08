@@ -149,23 +149,38 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
         </div>
       </div>
 
-      {/* ── Pin photo strip ── */}
-      <div className="flex gap-3 overflow-x-auto pb-1 -mx-5 px-5 scrollbar-none snap-x">
-        {allPins.slice(0, 8).map((pin: any, idx: number) => (
-          <PinThumb key={idx} pin={pin} onClick={() => onPinTap(pin)} />
-        ))}
-      </div>
-
-      {/* ── Multi-day day labels (if needed) ── */}
-      {isMultiDay && (
-        <div className="flex gap-2 flex-wrap">
-          {sortedRoutes.map((route: any) => (
-            <span key={route.id} className="text-xs bg-muted text-muted-foreground px-2.5 py-1 rounded-full">
-              Dzień {route.day_number} · {(route.pins || []).length} miejsc
-            </span>
-          ))}
-        </div>
-      )}
+      {/* ── Per-day sections ── */}
+      {sortedRoutes.map((route: any, routeIdx: number) => {
+        const dayPins = [...(route.pins || [])].sort((a: any, b: any) => (a.pin_order || 0) - (b.pin_order || 0));
+        if (dayPins.length === 0) return null;
+        const dayDate = route.start_date
+          ? format(new Date(route.start_date), "EEE, d MMM", { locale: pl })
+          : null;
+        return (
+          <div key={route.id} className="space-y-2">
+            {/* Day header */}
+            <div className="flex items-center gap-2">
+              {isMultiDay && (
+                <span className="text-[11px] font-bold bg-foreground text-background px-2 py-0.5 rounded-full">
+                  Dzień {route.day_number || routeIdx + 1}
+                </span>
+              )}
+              {dayDate && (
+                <span className="text-xs text-muted-foreground">{dayDate}</span>
+              )}
+              <span className="text-xs text-muted-foreground">
+                · {dayPins.length} {dayPins.length === 1 ? "miejsce" : dayPins.length < 5 ? "miejsca" : "miejsc"}
+              </span>
+            </div>
+            {/* Photo strip */}
+            <div className="flex gap-3 overflow-x-auto pb-1 -mx-5 px-5 scrollbar-none snap-x">
+              {dayPins.slice(0, 6).map((pin: any, idx: number) => (
+                <PinThumb key={idx} pin={pin} onClick={() => onPinTap(pin)} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
 
       {/* ── Edit CTA ── */}
       <button
