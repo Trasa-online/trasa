@@ -1,10 +1,9 @@
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, Navigate } from "react-router-dom";
 import { useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Sparkles, Mic, BookOpen, UserPlus, Users } from "lucide-react";
+import { UserPlus, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import FeedActivityCard from "@/components/social/FeedActivityCard";
 
@@ -77,58 +76,8 @@ const Home = () => {
 
   if (loading) return null;
 
-  // ── Landing for unauthenticated ──
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 max-w-sm mx-auto w-full">
-        <div className="text-center mb-10">
-          <div
-            className="w-16 h-16 rounded-full mx-auto mb-6"
-            style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
-          />
-          <h1 className="text-3xl font-black tracking-tight mb-3">TRASA</h1>
-          <p className="text-lg font-semibold mb-2">{t("landing.tagline")}</p>
-          <p className="text-muted-foreground text-sm max-w-[280px] mx-auto leading-relaxed">
-            {t("landing.description")}
-          </p>
-        </div>
-        <div className="w-full space-y-2.5 mb-10">
-          <div className="flex items-start gap-3 rounded-2xl bg-card border border-border/50 p-4">
-            <Sparkles className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
-            <div>
-              <p className="text-sm font-semibold">{t("landing.feature1_title")}</p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{t("landing.feature1_desc")}</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3 rounded-2xl bg-card border border-border/50 p-4">
-            <Mic className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
-            <div>
-              <p className="text-sm font-semibold">{t("landing.feature2_title")}</p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{t("landing.feature2_desc")}</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3 rounded-2xl bg-card border border-border/50 p-4">
-            <BookOpen className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
-            <div>
-              <p className="text-sm font-semibold">{t("landing.feature3_title")}</p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{t("landing.feature3_desc")}</p>
-            </div>
-          </div>
-        </div>
-        <div className="w-full space-y-2">
-          <Button onClick={() => navigate("/auth?tab=register")} size="lg" className="w-full rounded-full text-base font-semibold">
-            {t("landing.start_free")}
-          </Button>
-          <Button onClick={() => navigate("/auth")} variant="outline" size="lg" className="w-full rounded-full text-base font-medium bg-card">
-            {t("landing.login")}
-          </Button>
-        </div>
-        <p className="text-center text-xs text-muted-foreground mt-8">
-          <Link to="/terms" className="underline">{t("landing.terms")}</Link>
-        </p>
-      </div>
-    );
-  }
+  // ── Redirect unauthenticated users straight to auth ──
+  if (!user) return <Navigate to="/auth" replace />;
 
   const firstName = (profile as any)?.first_name;
   const feedItems = feed?.items ?? [];
