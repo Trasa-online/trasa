@@ -17,6 +17,11 @@ interface BusinessPost {
   created_at: string;
 }
 
+const PLACE_TAGS = [
+  "Restauracja", "Kawiarnia", "Bar", "Klub nocny", "Muzeum", "Galeria",
+  "Hotel", "Sklep", "Park", "Kościół", "Punkt widokowy", "Atrakcja turystyczna", "Inne",
+];
+
 interface BusinessProfile {
   id: string;
   place_id: string;
@@ -30,6 +35,8 @@ interface BusinessProfile {
   website: string | null;
   booking_url: string | null;
   description: string | null;
+  address: string | null;
+  tags: string[] | null;
   is_verified: boolean;
   event_title: string | null;
   event_description: string | null;
@@ -60,6 +67,8 @@ const BusinessDashboard = () => {
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
   const [bookingUrl, setBookingUrl] = useState("");
+  const [address, setAddress] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
@@ -127,6 +136,8 @@ const BusinessDashboard = () => {
     setEmail(profileData.email ?? "");
     setWebsite(profileData.website ?? "");
     setBookingUrl(profileData.booking_url ?? "");
+    setAddress(profileData.address ?? "");
+    setTags(profileData.tags ?? []);
     setDescription(profileData.description ?? "");
     setLogoUrl(profileData.logo_url ?? "");
     setCoverImageUrl(profileData.cover_image_url ?? "");
@@ -275,6 +286,8 @@ const BusinessDashboard = () => {
         email: email || null,
         website: website || null,
         booking_url: bookingUrl || null,
+        address: address || null,
+        tags: tags.length > 0 ? tags : null,
         description: description || null,
         logo_url: logoUrl || null,
         cover_image_url: coverImageUrl || null,
@@ -564,6 +577,34 @@ const BusinessDashboard = () => {
           <div className="space-y-1">
             <Label htmlFor="booking_url">URL rezerwacji</Label>
             <Input id="booking_url" value={bookingUrl} maxLength={200} onChange={e => { setBookingUrl(e.target.value); setIsDirty(true); }} type="url" />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="address">Adres</Label>
+            <Input id="address" value={address} maxLength={150} placeholder="np. ul. Floriańska 12, Kraków" onChange={e => { setAddress(e.target.value); setIsDirty(true); }} />
+          </div>
+
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Typ miejsca</p>
+          <div className="flex flex-wrap gap-2">
+            {PLACE_TAGS.map(tag => {
+              const active = tags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => {
+                    setTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag]);
+                    setIsDirty(true);
+                  }}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                    active
+                      ? "bg-orange-600 border-orange-600 text-white"
+                      : "bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground"
+                  }`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
           </div>
 
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Opis</p>
