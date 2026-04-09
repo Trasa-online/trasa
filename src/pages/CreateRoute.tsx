@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { parseISO, isValid } from "date-fns";
 import { ArrowLeft } from "lucide-react";
 import PlanChatExperience from "@/components/route/PlanChatExperience";
 import RouteSummaryDialog from "@/components/route/RouteSummaryDialog";
@@ -74,7 +75,11 @@ const CreateRoute = () => {
       });
   }, [creatorPlanId]);
 
-  const wizardDate = wizardState?.date ? new Date(wizardState.date) : undefined;
+  const wizardDate: Date | undefined = (() => {
+    if (!wizardState?.date) return undefined;
+    const d = parseISO(wizardState.date);
+    return isValid(d) ? d : undefined;
+  })();
   const [preferences] = useState<TripPreferences>({
     numDays: wizardState?.numDays ?? 1,
     pace: "mixed",

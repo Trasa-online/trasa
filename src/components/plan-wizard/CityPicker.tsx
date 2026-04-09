@@ -123,7 +123,8 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
 
   const handleNotify = async () => {
     if (!notifyCity.trim()) { toast.error("Wpisz nazwę miasta"); return; }
-    await supabase.from("city_requests" as any).insert({ user_id: user?.id ?? null, city_name: notifyCity.trim() });
+    const { error } = await (supabase as any).from("city_requests").insert({ user_id: user?.id ?? null, city_name: notifyCity.trim() });
+    if (error) { toast.error("Nie udało się wysłać zgłoszenia"); return; }
     toast.success(`Dzięki! Gdy ${notifyCity} będzie dostępne, damy Ci znać.`);
     setNotifyCity("");
   };
