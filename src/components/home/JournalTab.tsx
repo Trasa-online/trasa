@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
-import { format } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Globe, Lock, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -59,12 +59,15 @@ const JournalTab = ({ userId }: JournalTabProps) => {
     e.stopPropagation();
     if (!confirm(`Usunąć trasę "${entry.city}"? Tego nie można cofnąć.`)) return;
     setDeletingId(entry.id);
-    const { error } = await supabase.from("routes").delete().eq("id", entry.id);
-    if (error) {
-      toast.error("Nie udało się usunąć trasy");
-    } else {
+    try {
+      await supabase.from("pins").delete().eq("route_id", entry.id);
+      await (supabase as any).from("chat_sessions").delete().eq("route_id", entry.id);
+      const { error } = await supabase.from("routes").delete().eq("id", entry.id);
+      if (error) throw error;
       toast.success("Trasa usunięta");
       queryClient.invalidateQueries({ queryKey: ["journal-entries", userId] });
+    } catch {
+      toast.error("Nie udało się usunąć trasy");
     }
     setDeletingId(null);
   };
@@ -96,9 +99,8 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       {entries.map((entry) => {
         const validPhotos = (entry.review_photos ?? []).filter((url: any) => !!url && typeof url === "string" && url.trim() !== "");
         const thumb = validPhotos[0] ?? getRandomPinPlaceholder(entry.id);
-        const dateLabel = entry.start_date
-          ? format(new Date(entry.start_date), "d MMMM yyyy", { locale: pl })
-          : "";
+        const _d = entry.start_date ? parseISO(entry.start_date) : null;
+        const dateLabel = _d && isValid(_d) ? format(_d, "d MMMM yyyy", { locale: pl }) : "";
         const hasUserPhoto = validPhotos.length > 0;
 
         return (
