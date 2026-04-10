@@ -58,15 +58,6 @@ const GroupSession = () => {
   // ── Round state ──────────────────────────────────────────────────────────────
   const [myRoundDone, setMyRoundDone] = useState(false);
   const prevRoundIdRef = useRef<string | null>(null);
-
-  // Reset local myRoundDone when a NEW round starts (handles the non-creator case
-  // where setMyRoundDone(false) is never called because they didn't click "start").
-  useEffect(() => {
-    if (currentRound?.id && currentRound.id !== prevRoundIdRef.current) {
-      prevRoundIdRef.current = currentRound.id;
-      setMyRoundDone(false);
-    }
-  }, [currentRound?.id]);
   const [startingRound, setStartingRound] = useState(false);
   const [voting, setVoting] = useState(false);
   // Mock mode: local round state (no SQL functions needed)
@@ -153,6 +144,16 @@ const GroupSession = () => {
     enabled: !!session?.id && !!currentRound,
     refetchInterval: 3000,
   });
+
+  // Reset local myRoundDone when a NEW round starts (handles the non-creator case
+  // where setMyRoundDone(false) is never called because they didn't click "start").
+  // Must be placed AFTER currentRound query to avoid TDZ ReferenceError.
+  useEffect(() => {
+    if (currentRound?.id && currentRound.id !== prevRoundIdRef.current) {
+      prevRoundIdRef.current = currentRound.id;
+      setMyRoundDone(false);
+    }
+  }, [currentRound?.id]);
 
   // ── Computed ────────────────────────────────────────────────────────────────
 
