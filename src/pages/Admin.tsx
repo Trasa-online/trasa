@@ -35,7 +35,13 @@ const Admin = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"waitlist" | "referrals" | "cities" | "businesses">("waitlist");
+  const [tab, setTab] = useState<"waitlist" | "referrals" | "cities" | "businesses" | "photos">("waitlist");
+
+  // Photos enrichment state
+  const [enrichCity, setEnrichCity] = useState("Łódź");
+  const [enrichLimit, setEnrichLimit] = useState(50);
+  const [enriching, setEnriching] = useState(false);
+  const [enrichResult, setEnrichResult] = useState<{ updated: number; skipped: number; errors: string[] } | null>(null);
 
   // Waitlist state
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
@@ -222,10 +228,27 @@ const Admin = () => {
 
   if (loading || isAdmin === null) return null;
 
+  const handleEnrichPhotos = async () => {
+    setEnriching(true);
+    setEnrichResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("enrich-place-photos", {
+        body: { city: enrichCity, limit: enrichLimit },
+      });
+      if (error) throw error;
+      setEnrichResult(data);
+      toast.success(`Zaktualizowano ${data.updated} miejsc`);
+    } catch (e: any) {
+      toast.error(e.message || "Błąd podczas enrichmentu");
+    }
+    setEnriching(false);
+  };
+
   const tabLabels: Record<string, string> = {
     waitlist: "Oczekujący",
     referrals: "Zaproszenia",
     cities: "Miasta",
+    photos: "Zdjęcia",
     businesses: "Biznesy",
   };
 
@@ -252,7 +275,7 @@ const Admin = () => {
 
       {/* Tabs */}
       <div className="flex border-b border-border/40">
-        {(["waitlist", "referrals", "cities", "businesses"] as const).map(t => (
+        {(["waitlist", "referrals", "cities", "businesses", "photos"] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -499,6 +522,56 @@ const Admin = () => {
               ))}
             </div>
           )
+        )}
+        {/* ── Photos Tab ── */}
+        {tab === "photos" && (
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Pobiera zdjęcia z Google Places dla miejsc bez <code>photo_url</code> i aktualizuje bazę.
+            </p>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground block mb-1">Miasto</label>
+                <input
+                  value={enrichCity}
+                  onChange={e => setEnrichCity(e.target.value)}
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-card"
+                  placeholder="np. Łódź"
+                />
+              </div>
+              <div className="w-24">
+                <label className="text-xs text-muted-foreground block mb-1">Limit</label>
+                <input
+                  type="number"
+                  value={enrichLimit}
+                  onChange={e => setEnrichLimit(Number(e.target.value))}
+                  min={1} max={100}
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-card"
+                />
+              </div>
+            </div>
+            <Button
+              onClick={handleEnrichPhotos}
+              disabled={enriching || !enrichCity}
+              className="w-full"
+            >
+              {enriching ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Trwa pobieranie…</> : "🖼️ Uzupełnij zdjęcia"}
+            </Button>
+            {enrichResult && (
+              <div className="rounded-xl border border-border bg-card p-4 space-y-1 text-sm">
+                <p>✅ Zaktualizowano: <strong>{enrichResult.updated}</strong></p>
+                <p>⏭️ Pominięto (brak w Google): <strong>{enrichResult.skipped}</strong></p>
+                {enrichResult.errors.length > 0 && (
+                  <details className="mt-2">
+                    <summary className="text-xs text-red-500 cursor-pointer">Błędy ({enrichResult.errors.length})</summary>
+                    <ul className="mt-1 space-y-0.5">
+                      {enrichResult.errors.map((e, i) => <li key={i} className="text-xs text-muted-foreground">{e}</li>)}
+                    </ul>
+                  </details>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

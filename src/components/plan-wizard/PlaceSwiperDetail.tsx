@@ -200,7 +200,15 @@ const PlaceSwiperDetail = ({
         className="h-[92vh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden"
       >
         {/* Close pill */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 w-10 h-1 bg-foreground/20 rounded-full" />
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 w-10 h-1 bg-foreground/20 rounded-full" />
+
+        {/* Floating close button — always on top, never scrolls away */}
+        <button
+          onClick={() => onOpenChange(false)}
+          className="absolute top-4 right-4 z-30 h-9 w-9 rounded-full bg-background/90 backdrop-blur-sm border border-border/40 shadow-md flex items-center justify-center"
+        >
+          <X className="h-4 w-4 text-foreground" />
+        </button>
 
         {!place ? null : (
           <>
@@ -269,13 +277,6 @@ const PlaceSwiperDetail = ({
                 <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900" />
               )}
 
-              {/* Close button */}
-              <button
-                onClick={() => onOpenChange(false)}
-                className="absolute top-4 right-4 h-8 w-8 rounded-full bg-black/40 flex items-center justify-center"
-              >
-                <X className="h-4 w-4 text-white" />
-              </button>
               {/* Google Maps link */}
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.place_name} ${place.address ?? ""}`)}`}
