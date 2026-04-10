@@ -59,6 +59,7 @@ import ReviewSummary from "./pages/ReviewSummary";
 import PlanWizard from "./pages/PlanWizard";
 import CreateGroupSession from "./pages/CreateGroupSession";
 import GroupSession from "./pages/GroupSession";
+import QuickPlanReview from "./pages/QuickPlanReview";
 import UserSearch from "./pages/UserSearch";
 import AdminRoutes from "./pages/AdminRoutes";
 import SharedRoute from "./pages/SharedRoute";
@@ -101,6 +102,7 @@ const App = () => (
           <Route path="/route/:id" element={<SharedRoute />} />
           <Route path="/join/:code" element={<JoinPage />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
+          <Route path="/quick-plan-review" element={<QuickPlanReview />} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -26,7 +26,7 @@ const BottomNav = () => {
 
         {/* Center FAB */}
         <button
-          onClick={() => navigate("/plan")}
+          onClick={() => navigate("/sesja/nowa")}
           className="flex items-center justify-center"
           aria-label="Dodaj trasę"
         >

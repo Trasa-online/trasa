@@ -111,6 +111,7 @@ const CreateGroupSession = () => {
           city: selectedCity,
           created_by: user.id,
           join_code: code,
+          expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
           ...(tripDate ? { trip_date: format(tripDate, "yyyy-MM-dd") } : {}),
         })
         .select()

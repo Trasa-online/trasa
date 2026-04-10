@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, MapPin, Star, Check, Route, UserPlus, Play, Clock, CalendarDays } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -363,17 +363,14 @@ const GroupSession = () => {
         };
       });
 
-      navigate("/create", {
+      navigate("/quick-plan-review", {
         state: {
-          fromTemplate: true,
           city: session.city,
           date: session.trip_date ?? null,
-          initialPlan: { city: session.city, days: [{ day_number: 1, pins }] },
+          pins,
+          sessionId: session.id,
+          memberIds: members.filter((m: any) => m.user_id !== user.id).map((m: any) => m.user_id),
           backTo: `/sesja/${joinCode}`,
-          groupSession: {
-            sessionId: session.id,
-            otherMemberIds: members.filter((m: any) => m.user_id !== user.id).map((m: any) => m.user_id),
-          },
         },
       });
     } catch (e: any) {
@@ -461,10 +458,10 @@ const GroupSession = () => {
           )}
           <button
             onClick={handleJoin}
-            disabled={joining || members.length >= 4}
+            disabled={joining || members.length >= 10}
             className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
           >
-            {joining ? "Dołączam…" : members.length >= 4 ? "Sesja pełna (max 4)" : "Dołącz i zacznij swipe'ować"}
+            {joining ? "Dołączam…" : members.length >= 10 ? "Sesja pełna (max 10)" : "Dołącz i zacznij swipe'ować"}
           </button>
         </div>
       </div>
@@ -487,7 +484,7 @@ const GroupSession = () => {
             {session.trip_date && (
               <span className="ml-1.5 inline-flex items-center gap-0.5">
                 · <CalendarDays className="h-3 w-3 inline mx-0.5" />
-                {format(new Date(session.trip_date), "d MMM", { locale: pl })}
+                {(() => { const d = parseISO(session.trip_date!); return isValid(d) ? format(d, "d MMM", { locale: pl }) : null; })()}
               </span>
             )}
           </p>
