@@ -77,13 +77,25 @@ const CreateGroupSession = () => {
   const { data: allProfiles = [] } = useQuery({
     queryKey: ["all-profiles-invite", user?.id],
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      // Fetch business owner IDs to exclude them from invite list
+      const { data: bizOwners } = await (supabase as any)
+        .from("business_profiles")
+        .select("owner_user_id");
+      const bizIds: string[] = (bizOwners ?? []).map((b: any) => b.owner_user_id).filter(Boolean);
+
+      let query = (supabase as any)
         .from("profiles")
         .select("id, username, first_name, avatar_url")
         .neq("id", user?.id ?? "")
         .not("username", "is", null)
         .order("username")
         .limit(200);
+
+      if (bizIds.length > 0) {
+        query = query.not("id", "in", `(${bizIds.join(",")})`);
+      }
+
+      const { data } = await query;
       return (data ?? []) as { id: string; username: string; first_name: string | null; avatar_url: string | null }[];
     },
     enabled: !!createdCode && !!user,

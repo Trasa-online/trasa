@@ -192,6 +192,14 @@ const GroupSession = () => {
     ? { id: "mock", round_number: mockRoundNumber, place_ids: [] as string[], status: mockIsVoting ? "voting" : "active" }
     : null);
 
+  // Stabilize place_ids reference so PlaceSwiper doesn't re-init on every 3-second poll.
+  // Only update the ref when the round ID actually changes.
+  const stableRoundPlaceIds = useMemo(
+    () => MOCK_MODE ? undefined : effectiveRound?.place_ids,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [effectiveRound?.id],
+  );
+
   const isVotingPhase = effectiveRound?.status === "voting";
   const myVote = myRoundProgress?.current_round_vote ?? null;
 
@@ -751,7 +759,7 @@ const GroupSession = () => {
               city={session.city}
               date={session.trip_date ? new Date(session.trip_date) : new Date()}
               groupSessionId={session.id}
-              roundPlaceIds={MOCK_MODE ? undefined : effectiveRound.place_ids}
+              roundPlaceIds={stableRoundPlaceIds}
               onRoundComplete={handleRoundComplete}
               onGroupFinished={() => setTab("matches")}
             />
