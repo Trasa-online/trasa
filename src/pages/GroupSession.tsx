@@ -46,10 +46,6 @@ const GroupSession = () => {
   const queryClient = useQueryClient();
 
   const [tab, setTab] = useState<"swipe" | "matches">("swipe");
-  // Switch to matches tab automatically when session is completed
-  useEffect(() => {
-    if (session?.status === "completed") setTab("matches");
-  }, [session?.status]);
   const [joining, setJoining] = useState(false);
   const [bannerData, setBannerData] = useState<BannerData | null>(null);
   const [deselectedPlaces, setDeselectedPlaces] = useState<Set<string>>(new Set());
@@ -156,6 +152,12 @@ const GroupSession = () => {
       setMyRoundDone(false);
     }
   }, [currentRound?.id]);
+
+  // Switch to matches tab automatically when session is completed.
+  // Must be placed AFTER session query to avoid TDZ ReferenceError.
+  useEffect(() => {
+    if (session?.status === "completed") setTab("matches");
+  }, [session?.status]);
 
   // ── Computed ────────────────────────────────────────────────────────────────
 
