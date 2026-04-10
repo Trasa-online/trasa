@@ -203,12 +203,14 @@ const PlaceSwiperDetail = ({
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 w-10 h-1 bg-foreground/20 rounded-full" />
 
         {/* Floating close button — always on top, never scrolls away */}
-        <button
-          onClick={() => onOpenChange(false)}
-          className="absolute top-4 right-4 z-30 h-9 w-9 rounded-full bg-background/90 backdrop-blur-sm border border-border/40 shadow-md flex items-center justify-center"
-        >
-          <X className="h-4 w-4 text-foreground" />
-        </button>
+        <div className="absolute top-4 right-4 z-30">
+          <button
+            onClick={() => onOpenChange(false)}
+            className="h-9 w-9 rounded-full bg-background/90 backdrop-blur-sm border border-border/40 shadow-md flex items-center justify-center"
+          >
+            <X className="h-4 w-4 text-foreground" />
+          </button>
+        </div>
 
         {!place ? null : (
           <>
