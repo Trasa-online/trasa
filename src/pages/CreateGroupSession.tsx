@@ -340,20 +340,24 @@ const CreateGroupSession = () => {
                 <Bell className="h-4 w-4 text-orange-600 shrink-0" />
                 <p className="text-sm font-semibold">Wyślij powiadomienie</p>
               </div>
+              {/* Hidden fake fields — trick iOS into not showing Face ID */}
+              <input type="text" aria-hidden="true" className="hidden" autoComplete="username" tabIndex={-1} readOnly />
+              <input type="password" aria-hidden="true" className="hidden" autoComplete="current-password" tabIndex={-1} readOnly />
               <div className="flex items-center gap-2 bg-background border border-border/60 rounded-xl px-3 h-10">
                 <Search className="h-4 w-4 text-muted-foreground shrink-0" />
                 <input
-                  type="search"
+                  type="text"
+                  inputMode="search"
                   value={friendSearch}
                   onChange={e => setFriendSearch(e.target.value)}
                   placeholder="Szukaj @username..."
-                  autoComplete="new-password"
+                  autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="off"
                   spellCheck={false}
                   data-form-type="other"
                   data-lpignore="true"
-                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                 />
               </div>
               {friendResults.length > 0 && (
