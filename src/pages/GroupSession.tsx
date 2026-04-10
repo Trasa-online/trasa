@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, MapPin, Star, Check, Route, UserPlus, Play, Clock, CalendarDays } from "lucide-react";
+import { ArrowLeft, Users, MapPin, Star, Check, UserPlus, Play, Clock, CalendarDays } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -47,12 +47,10 @@ const GroupSession = () => {
 
   const [tab, setTab] = useState<"swipe" | "matches">("swipe");
   const [joining, setJoining] = useState(false);
-  const [creatingRoute, setCreatingRoute] = useState(false);
   const [bannerData, setBannerData] = useState<BannerData | null>(null);
   const [deselectedPlaces, setDeselectedPlaces] = useState<Set<string>>(new Set());
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [routeProposed, setRouteProposed] = useState(false);
   const prevMatchNamesRef = useRef<Set<string> | null>(null);
 
   // ── Round state ──────────────────────────────────────────────────────────────
@@ -188,7 +186,6 @@ const GroupSession = () => {
     return stats;
   }, [reactions]);
 
-  const selectedMatches = matches.filter(m => !deselectedPlaces.has(m.place_name));
 
   // ── Round computed ───────────────────────────────────────────────────────────
 
@@ -348,56 +345,6 @@ const GroupSession = () => {
     setDetailOpen(true);
   };
 
-  const handleCreateRoute = async () => {
-    if (!user || !session) return;
-    if (selectedMatches.length === 0) { toast.error("Zaznacz co najmniej jedno miejsce"); return; }
-    setCreatingRoute(true);
-    try {
-      // Look up coordinates
-      const coordsMap: Record<string, any> = {};
-      if (MOCK_MODE) {
-        for (const p of getMockPlaces(session.city)) coordsMap[p.place_name] = p;
-      } else {
-        const placeNames = selectedMatches.map(m => m.place_name);
-        const { data: dbPlaces } = await (supabase as any)
-          .from("places")
-          .select("place_name, latitude, longitude, address, description")
-          .ilike("city", session.city)
-          .in("place_name", placeNames);
-        for (const p of (dbPlaces || [])) coordsMap[p.place_name] = p;
-      }
-
-      const pins = selectedMatches.map((m, idx) => {
-        const db = coordsMap[m.place_name];
-        return {
-          place_name: m.place_name,
-          address: db?.address || "",
-          description: db?.description || "",
-          suggested_time: "",
-          duration_minutes: 60,
-          category: m.category,
-          latitude: db?.latitude || 0,
-          longitude: db?.longitude || 0,
-          day_number: 1,
-        };
-      });
-
-      navigate("/quick-plan-review", {
-        state: {
-          city: session.city,
-          date: session.trip_date ?? null,
-          pins,
-          sessionId: session.id,
-          memberIds: members.filter((m: any) => m.user_id !== user.id).map((m: any) => m.user_id),
-          backTo: `/sesja/${joinCode}`,
-        },
-      });
-    } catch (e: any) {
-      toast.error(e.message || "Błąd podczas tworzenia trasy");
-    } finally {
-      setCreatingRoute(false);
-    }
-  };
 
   // ── Loading / error states ──────────────────────────────────────────────────
 
@@ -812,8 +759,7 @@ const GroupSession = () => {
               ) : (
                 <>
                   <p className="text-xs text-muted-foreground mb-3">
-                    {matches.length} {matches.length === 1 ? "miejsce" : "miejsc"}
-                    {isCreator ? " · zaznacz miejsca do trasy" : " · lubiane przez co najmniej 2 osoby"}
+                    {matches.length} {matches.length === 1 ? "wspólne miejsce" : "wspólnych miejsc"} · polubione przez co najmniej 2 osoby
                   </p>
 
                   <div className="space-y-2">
@@ -877,40 +823,15 @@ const GroupSession = () => {
               )}
             </div>
 
-            {/* Route action bar — admin creates, participants propose/wait */}
-            {matches.length > 0 && (
-              <div className="px-4 py-3 shrink-0 border-t border-border/20">
-                {isCreator ? (
-                  <button
-                    onClick={handleCreateRoute}
-                    disabled={creatingRoute || selectedMatches.length === 0}
-                    className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform disabled:opacity-40"
-                  >
-                    <Route className="h-4 w-4" />
-                    {creatingRoute
-                      ? "Tworzę trasę…"
-                      : `Stwórz trasę · ${selectedMatches.length} ${selectedMatches.length === 1 ? "miejsce" : "miejsc"}`}
-                  </button>
-                ) : routeProposed ? (
-                  <div className="w-full py-3 flex flex-col items-center gap-2 text-center">
-                    <div className="flex gap-1.5">
-                      {[0, 1, 2].map(i => (
-                        <div key={i} className="h-2 w-2 rounded-full bg-orange-600/40 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-                      ))}
-                    </div>
-                    <p className="text-sm text-muted-foreground">Czekam aż organizator stworzy trasę…</p>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setRouteProposed(true)}
-                    className="w-full py-3.5 rounded-2xl border border-orange-600/40 text-orange-600 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-                  >
-                    <Route className="h-4 w-4" />
-                    Zaproponuj stworzenie trasy
-                  </button>
-                )}
-              </div>
-            )}
+            {/* Finish button */}
+            <div className="px-4 py-3 shrink-0 border-t border-border/20">
+              <button
+                onClick={() => navigate("/")}
+                className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.97] transition-transform"
+              >
+                Zakończ parowanie
+              </button>
+            </div>
           </div>
         )}
       </div>
