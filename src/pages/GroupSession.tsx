@@ -46,6 +46,10 @@ const GroupSession = () => {
   const queryClient = useQueryClient();
 
   const [tab, setTab] = useState<"swipe" | "matches">("swipe");
+  // Switch to matches tab automatically when session is completed
+  useEffect(() => {
+    if (session?.status === "completed") setTab("matches");
+  }, [session?.status]);
   const [joining, setJoining] = useState(false);
   const [bannerData, setBannerData] = useState<BannerData | null>(null);
   const [deselectedPlaces, setDeselectedPlaces] = useState<Set<string>>(new Set());
@@ -72,7 +76,7 @@ const GroupSession = () => {
         .select("*")
         .eq("join_code", joinCode)
         .maybeSingle();
-      return data as { id: string; city: string; created_by: string; join_code: string; trip_date: string | null } | null;
+      return data as { id: string; city: string; created_by: string; join_code: string; trip_date: string | null; status: string | null } | null;
     },
     enabled: !!joinCode,
   });
@@ -458,9 +462,13 @@ const GroupSession = () => {
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex -space-x-2">
             {members.slice(0, 4).map((m: any) => (
-              <div key={m.user_id} className="h-7 w-7 rounded-full bg-orange-600/20 border-2 border-background flex items-center justify-center text-xs font-bold text-orange-700" title={m.profile?.first_name || m.profile?.username}>
-                {(m.profile?.first_name || m.profile?.username || "?")[0].toUpperCase()}
-              </div>
+              m.profile?.avatar_url ? (
+                <img key={m.user_id} src={m.profile.avatar_url} alt={m.profile?.first_name || m.profile?.username || "?"} className="h-7 w-7 rounded-full border-2 border-background object-cover" title={m.profile?.first_name || m.profile?.username} />
+              ) : (
+                <div key={m.user_id} className="h-7 w-7 rounded-full bg-orange-600/20 border-2 border-background flex items-center justify-center text-xs font-bold text-orange-700" title={m.profile?.first_name || m.profile?.username}>
+                  {(m.profile?.first_name || m.profile?.username || "?")[0].toUpperCase()}
+                </div>
+              )
             ))}
           </div>
           <button
@@ -734,9 +742,13 @@ const GroupSession = () => {
               <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none">
                 {members.map((m: any) => (
                   <div key={m.user_id} className="flex items-center gap-2 rounded-2xl border border-border/40 bg-card px-3 py-2 shrink-0">
-                    <div className="h-7 w-7 rounded-full bg-orange-600/15 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
-                      {(m.profile?.first_name || m.profile?.username || "?")[0].toUpperCase()}
-                    </div>
+                    {m.profile?.avatar_url ? (
+                      <img src={m.profile.avatar_url} alt={m.profile?.first_name || m.profile?.username || "?"} className="h-7 w-7 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="h-7 w-7 rounded-full bg-orange-600/15 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
+                        {(m.profile?.first_name || m.profile?.username || "?")[0].toUpperCase()}
+                      </div>
+                    )}
                     <div>
                       <p className="text-xs font-semibold leading-tight">{m.profile?.first_name || m.profile?.username || "Użytkownik"}</p>
                       <p className="text-[10px] text-muted-foreground">{memberStats[m.user_id] ?? 0} polubionych</p>
@@ -826,7 +838,16 @@ const GroupSession = () => {
             {/* Finish button */}
             <div className="px-4 py-3 shrink-0 border-t border-border/20">
               <button
-                onClick={() => navigate("/")}
+                onClick={async () => {
+                  const selectedMatches = matches.filter(m => !deselectedPlaces.has(m.place_name));
+                  if (session) {
+                    await (supabase as any)
+                      .from("group_sessions")
+                      .update({ status: "completed", match_count: selectedMatches.length })
+                      .eq("id", session.id);
+                  }
+                  navigate("/");
+                }}
                 className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.97] transition-transform"
               >
                 Zakończ parowanie

@@ -157,15 +157,16 @@ const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: {
 interface SwipeCardProps {
   place: MockPlace;
   city: string;
-  onLike: () => void;
+  onLike: (photoUrl?: string) => void;
   onSkip: () => void;
   onTap: () => void;
+  onPhotoFetched?: (placeId: string, photoUrl: string) => void;
   isTop: boolean;
   offset: number; // 0 = top, 1 = second, 2 = third
 }
 
 
-const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeCardProps) => {
+const SwipeCard = ({ place, city, onLike, onSkip, onTap, onPhotoFetched, isTop, offset }: SwipeCardProps) => {
   const [imgFailed, setImgFailed] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<string[]>(
     [place.photo_url, ...(place.galleryPhotos ?? [])].filter(Boolean) as string[]
@@ -193,7 +194,10 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
         const ref = data?.result?.photos?.[0]?.photo_reference;
         if (ref) {
           const url = getPhotoUrl(ref, 800);
-          if (url) setPhotoUrls([url]);
+          if (url) {
+            setPhotoUrls([url]);
+            onPhotoFetched?.(place.id, url);
+          }
         }
         if (!place.rating && data?.result?.rating) setGoogleRating(data.result.rating);
         if (!place.address && data?.result?.formatted_address) setGoogleAddress(data.result.formatted_address);
@@ -262,7 +266,7 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, isTop, offset }: SwipeC
       return;
     }
     if (dragX > 80) {
-      onLike();
+      onLike(photoUrls[photoIdx] || undefined);
     } else if (dragX < -80) {
       onSkip();
     }
@@ -767,8 +771,11 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
     ? allPlaces.filter(p => p.place_name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
     : queue;
 
-  const saveReaction = (place: MockPlace, reaction: "liked" | "skipped" | "super_liked") => {
+  const photoUrlOverrides = useRef<Record<string, string>>({});
+
+  const saveReaction = (place: MockPlace, reaction: "liked" | "skipped" | "super_liked", overridePhotoUrl?: string) => {
     if (!user) return;
+    const photoUrl = overridePhotoUrl ?? photoUrlOverrides.current[place.id] ?? place.photo_url ?? null;
     if (!groupSessionId) {
       (supabase as any)
         .from("user_place_reactions")
@@ -778,7 +785,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
           place_name: place.place_name,
           city: place.city,
           category: place.category,
-          photo_url: place.photo_url ?? null,
+          photo_url: photoUrl,
           reaction,
         }, { onConflict: "user_id,place_id" })
         .then(() => {});
@@ -791,7 +798,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
           user_id: user.id,
           place_name: place.place_name,
           place_id: place.id,
-          photo_url: place.photo_url ?? null,
+          photo_url: photoUrl,
           category: place.category,
           reaction,
         }, { onConflict: "session_id,user_id,place_name" })
@@ -824,14 +831,14 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
     rebalanceQueue(updated);
   };
 
-  const handleLike = () => {
+  const handleLike = (overridePhotoUrl?: string) => {
     const top = displayQueue[0];
     if (!top) return;
     setHistory(prev => [...prev, { place: top, reaction: "liked" }]);
     setLikedPlaces(prev => [...prev, top]);
     setAllPlaces(prev => prev.filter(p => p.id !== top.id));
     setQueue(prev => prev.filter(p => p.id !== top.id));
-    saveReaction(top, "liked");
+    saveReaction(top, "liked", overridePhotoUrl);
     trackAndRebalance(top);
     // Track add_to_route for real (non-mock) places
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1115,9 +1122,10 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
                       key={place.id}
                       place={place}
                       city={city}
-                      onLike={handleLike}
+                      onLike={(photoUrl) => handleLike(photoUrl)}
                       onSkip={handleSkip}
                       onTap={() => handleTap(place)}
+                      onPhotoFetched={(id, url) => { photoUrlOverrides.current[id] = url; }}
                       isTop={offset === 0}
                       offset={offset}
                     />
@@ -1153,7 +1161,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
         </button>
 
         <button
-          onClick={handleLike}
+          onClick={() => handleLike()}
           className="h-16 w-16 rounded-full bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/30 active:scale-90 transition-transform"
         >
           <Heart className="h-7 w-7 text-white fill-white" />

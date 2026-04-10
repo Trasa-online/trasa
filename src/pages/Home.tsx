@@ -23,10 +23,10 @@ const Home = () => {
       const sessionIds = memberRows.map((m: any) => m.session_id);
       const { data: sessions } = await (supabase as any)
         .from("group_sessions")
-        .select("id, city, join_code, trip_date, created_at")
+        .select("id, city, join_code, trip_date, created_at, status, match_count")
         .in("id", sessionIds)
         .order("created_at", { ascending: false })
-        .limit(5);
+        .limit(10);
       return (sessions || []).filter((s: any) => {
         if (!s.created_at) return true;
         const created = parseISO(s.created_at);
@@ -72,13 +72,14 @@ const Home = () => {
         </button>
       </div>
 
-      {/* Active sessions */}
+      {/* Sessions list */}
       {activeSessions.length > 0 && (
         <div className="mt-6 space-y-2">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
-            Aktywne sesje
+            Twoje sesje
           </p>
           {activeSessions.map((s: any) => {
+            const isCompleted = s.status === "completed";
             const tripDateObj = s.trip_date ? parseISO(s.trip_date) : null;
             const dateLabel = tripDateObj && isValid(tripDateObj)
               ? format(tripDateObj, "d MMM", { locale: pl })
@@ -91,20 +92,32 @@ const Home = () => {
               <button
                 key={s.id}
                 onClick={() => navigate(`/sesja/${s.join_code}`)}
-                className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-card border border-border/50 active:scale-[0.98] transition-transform text-left"
+                className={`w-full flex items-center gap-3 p-3.5 rounded-2xl bg-card border active:scale-[0.98] transition-transform text-left ${isCompleted ? "border-border/30 opacity-80" : "border-border/50"}`}
               >
-                <div className="h-9 w-9 rounded-xl bg-orange-600/10 flex items-center justify-center shrink-0">
-                  <Users className="h-4 w-4 text-orange-600" />
+                <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${isCompleted ? "bg-emerald-500/10" : "bg-orange-600/10"}`}>
+                  <Users className={`h-4 w-4 ${isCompleted ? "text-emerald-600" : "text-orange-600"}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold leading-tight">{s.city}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold leading-tight">{s.city}</p>
+                    {isCompleted && (
+                      <span className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded-full">
+                        Zakończone
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 mt-0.5">
-                    {dateLabel && (
+                    {isCompleted && s.match_count > 0 && (
+                      <span className="text-xs text-emerald-600 font-medium">
+                        {s.match_count} {s.match_count === 1 ? "wspólne miejsce" : s.match_count < 5 ? "wspólne miejsca" : "wspólnych miejsc"}
+                      </span>
+                    )}
+                    {!isCompleted && dateLabel && (
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         <CalendarDays className="h-3 w-3" />{dateLabel}
                       </span>
                     )}
-                    {agoLabel && (
+                    {!isCompleted && agoLabel && (
                       <span className="text-xs text-muted-foreground">{agoLabel}</span>
                     )}
                     <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">

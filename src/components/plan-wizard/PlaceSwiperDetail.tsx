@@ -68,8 +68,8 @@ interface PlaceSwiperDetailProps {
   onOpenChange: (open: boolean) => void;
   place: MockPlace | null;
   city?: string;
-  onLike?: () => void;
-  onSkip?: () => void;
+  onLike?: (() => void) | undefined;
+  onSkip?: (() => void) | undefined;
 }
 
 const PlaceSwiperDetail = ({
@@ -182,12 +182,12 @@ const PlaceSwiperDetail = ({
   }, [open, place]);
 
   const handleLike = () => {
-    onLike();
+    onLike?.();
     onOpenChange(false);
   };
 
   const handleSkip = () => {
-    onSkip();
+    onSkip?.();
     onOpenChange(false);
   };
 
@@ -290,7 +290,7 @@ const PlaceSwiperDetail = ({
 
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto">
-              <div className="px-5 pt-4 pb-32 space-y-6">
+              <div className={`px-5 pt-4 space-y-6 ${(onLike || onSkip) ? "pb-32" : "pb-8"}`}>
                 {/* Name + meta */}
                 <div>
                   <h2 className="text-2xl font-black text-foreground leading-tight">
@@ -473,25 +473,27 @@ const PlaceSwiperDetail = ({
               </div>
             </div>
 
-            {/* Sticky like/skip */}
-            <div className="absolute bottom-0 left-0 right-0 pb-safe-6 pb-6 pt-4 px-6 bg-gradient-to-t from-background via-background to-transparent">
-              <div className="flex gap-3">
-                <button
-                  onClick={handleSkip}
-                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-border bg-card text-muted-foreground font-semibold text-sm active:scale-[0.97] transition-transform"
-                >
-                  <X className="h-4 w-4" />
-                  Pomiń
-                </button>
-                <button
-                  onClick={handleLike}
-                  className="flex-[2] flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-500 text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-[0.97] transition-transform"
-                >
-                  <Heart className="h-4 w-4 fill-white" />
-                  Chcę tu być
-                </button>
+            {/* Sticky like/skip — only shown when launched from swipe view */}
+            {(onLike || onSkip) && (
+              <div className="absolute bottom-0 left-0 right-0 pb-safe-6 pb-6 pt-4 px-6 bg-gradient-to-t from-background via-background to-transparent">
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSkip}
+                    className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-border bg-card text-muted-foreground font-semibold text-sm active:scale-[0.97] transition-transform"
+                  >
+                    <X className="h-4 w-4" />
+                    Pomiń
+                  </button>
+                  <button
+                    onClick={handleLike}
+                    className="flex-[2] flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-500 text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-[0.97] transition-transform"
+                  >
+                    <Heart className="h-4 w-4 fill-white" />
+                    Chcę tu być
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </>
         )}
       </SheetContent>
