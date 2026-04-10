@@ -189,7 +189,14 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, onPhotoFetched, isTop, 
     if (offset > 1 || !GOOGLE_MAPS_API_KEY) return;
     supabase.functions
       .invoke("google-places-proxy", {
-        body: { placeName: place.place_name, latitude: place.latitude, longitude: place.longitude, city },
+        body: {
+          placeName: place.place_name,
+          latitude: place.latitude,
+          longitude: place.longitude,
+          city,
+          googlePlaceId: (place as any).google_place_id ?? null,
+          placeDbId: place.id,
+        },
       })
       .then(({ data }) => {
         const ref = data?.result?.photos?.[0]?.photo_reference;

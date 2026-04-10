@@ -86,62 +86,71 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { placeName, latitude, longitude, city } = body;
+    const { placeName, latitude, longitude, city, googlePlaceId: bodyPlaceId, placeDbId } = body;
     const hasCoords = latitude && longitude && latitude !== 0 && longitude !== 0;
 
-    // ─── Cache layer ──────────────────────────────────────────────────
+    // ─── Supabase client (for cache + auto-saving place_id) ───────────
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, serviceRoleKey);
 
-    // Deterministic cache key: placeName (lowered) + coords rounded to 4 decimals
-    const roundedLat = hasCoords ? Number(latitude).toFixed(4) : "0";
-    const roundedLng = hasCoords ? Number(longitude).toFixed(4) : "0";
-    const cacheKey = `${placeName.toLowerCase().trim()}|${roundedLat}|${roundedLng}`;
+    // ─── Fast path: known Google Place ID ────────────────────────────
+    // If the caller already knows the Place ID (stored in places.google_place_id),
+    // skip the unreliable text-search step entirely.
+    let placeId: string | undefined = bodyPlaceId || undefined;
 
-    // Check cache first
-    const { data: cached } = await sb
-      .from("place_details_cache")
-      .select("response, expires_at")
-      .eq("cache_key", cacheKey)
-      .maybeSingle();
-
-    if (cached && new Date(cached.expires_at) > new Date()) {
-      console.log(`Cache HIT for "${placeName}" (key: ${cacheKey})`);
-      return new Response(JSON.stringify(cached.response), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Cache miss or expired — call Google API
-    if (cached) {
-      // Delete expired entry
-      await sb.from("place_details_cache").delete().eq("cache_key", cacheKey);
-    }
-
-    // Step 1: Find place_id
-    const searchQuery = city ? `${placeName} ${city}` : placeName;
-    const locationBias = hasCoords ? `&locationbias=point:${latitude},${longitude}` : "";
-    const findRes = await fetch(
-      `${BASE}/place/findplacefromtext/json?input=${encodeURIComponent(searchQuery)}&inputtype=textquery${locationBias}&fields=place_id&key=${apiKey}`
-    );
-    const findData = await findRes.json();
-    let placeId = findData.candidates?.[0]?.place_id;
-
-    // Step 2: Fallback — nearby search (only when coords available) or text search
     if (!placeId) {
-      if (hasCoords) {
-        const nearbyRes = await fetch(
-          `${BASE}/place/nearbysearch/json?location=${latitude},${longitude}&radius=100&keyword=${encodeURIComponent(placeName)}&key=${apiKey}&language=pl`
-        );
-        const nearbyData = await nearbyRes.json();
-        placeId = nearbyData.results?.[0]?.place_id;
-      } else {
-        const textRes = await fetch(
-          `${BASE}/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${apiKey}&language=pl`
-        );
-        const textData = await textRes.json();
-        placeId = textData.results?.[0]?.place_id;
+      // ─── Cache layer ──────────────────────────────────────────────
+      const roundedLat = hasCoords ? Number(latitude).toFixed(4) : "0";
+      const roundedLng = hasCoords ? Number(longitude).toFixed(4) : "0";
+      const cacheKey = `${placeName.toLowerCase().trim()}|${roundedLat}|${roundedLng}`;
+
+      const { data: cached } = await sb
+        .from("place_details_cache")
+        .select("response, expires_at, place_id")
+        .eq("cache_key", cacheKey)
+        .maybeSingle();
+
+      if (cached && new Date(cached.expires_at) > new Date()) {
+        console.log(`Cache HIT for "${placeName}" (key: ${cacheKey})`);
+        // Opportunistically persist place_id back to places table if not yet saved
+        if (cached.place_id && placeDbId) {
+          sb.from("places").update({ google_place_id: cached.place_id }).eq("id", placeDbId)
+            .then(() => {});
+        }
+        return new Response(JSON.stringify(cached.response), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (cached) {
+        await sb.from("place_details_cache").delete().eq("cache_key", cacheKey);
+      }
+
+      // Step 1: Find place_id by text search
+      const searchQuery = city ? `${placeName} ${city}` : placeName;
+      const locationBias = hasCoords ? `&locationbias=point:${latitude},${longitude}` : "";
+      const findRes = await fetch(
+        `${BASE}/place/findplacefromtext/json?input=${encodeURIComponent(searchQuery)}&inputtype=textquery${locationBias}&fields=place_id&key=${apiKey}`
+      );
+      const findData = await findRes.json();
+      placeId = findData.candidates?.[0]?.place_id;
+
+      // Step 2: Fallback — nearby search or text search
+      if (!placeId) {
+        if (hasCoords) {
+          const nearbyRes = await fetch(
+            `${BASE}/place/nearbysearch/json?location=${latitude},${longitude}&radius=100&keyword=${encodeURIComponent(placeName)}&key=${apiKey}&language=pl`
+          );
+          const nearbyData = await nearbyRes.json();
+          placeId = nearbyData.results?.[0]?.place_id;
+        } else {
+          const textRes = await fetch(
+            `${BASE}/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${apiKey}&language=pl`
+          );
+          const textData = await textRes.json();
+          placeId = textData.results?.[0]?.place_id;
+        }
       }
     }
 
@@ -152,7 +161,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Step 3: Place details (reviews_sort=newest for latest reviews)
+    // Step 3: Place details
     const detailRes = await fetch(
       `${BASE}/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,price_level,types,formatted_address,photos,reviews,geometry,opening_hours,editorial_summary&reviews_sort=newest&language=pl&key=${apiKey}`
     );
@@ -160,44 +169,56 @@ Deno.serve(async (req) => {
 
     const result = detailData.result;
     if (result) {
-      // Limit photos to 3
       if (result.photos?.length > 3) {
         result.photos = result.photos.slice(0, 3);
       }
-      // Distance validation only when we have valid coords
-      if (hasCoords) {
-        const foundLat = result.geometry?.location?.lat;
-        const foundLng = result.geometry?.location?.lng;
-        if (foundLat !== undefined && foundLng !== undefined) {
-          const dist = distanceKm(latitude, longitude, foundLat, foundLng);
-          if (dist > 3) {
-            console.warn(`Place "${result.name}" found ${dist.toFixed(1)} km away from requested coords — rejecting`);
-            return new Response(JSON.stringify({ error: "Place not found near provided coordinates" }), {
-              status: 404,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+
+      // Skip name/distance validation when we were given the Place ID directly
+      if (!bodyPlaceId) {
+        if (hasCoords) {
+          const foundLat = result.geometry?.location?.lat;
+          const foundLng = result.geometry?.location?.lng;
+          if (foundLat !== undefined && foundLng !== undefined) {
+            const dist = distanceKm(latitude, longitude, foundLat, foundLng);
+            if (dist > 3) {
+              console.warn(`Place "${result.name}" found ${dist.toFixed(1)} km away — rejecting`);
+              return new Response(JSON.stringify({ error: "Place not found near provided coordinates" }), {
+                status: 404,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
           }
+        }
+
+        if (!namesSimilar(placeName, result.name ?? "")) {
+          console.warn(`Name mismatch: requested "${placeName}", got "${result.name}" — rejecting`);
+          return new Response(JSON.stringify({ error: "Place name mismatch" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
       }
 
-      // Validate: found place name should share at least one token with the requested name
-      if (!namesSimilar(placeName, result.name ?? "")) {
-        console.warn(`Name mismatch: requested "${placeName}", got "${result.name}" — rejecting`);
-        return new Response(JSON.stringify({ error: "Place name mismatch" }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Save to cache (don't await — fire and forget)
+      // Save to cache (fire and forget)
+      const roundedLat2 = hasCoords ? Number(latitude).toFixed(4) : "0";
+      const roundedLng2 = hasCoords ? Number(longitude).toFixed(4) : "0";
+      const cacheKey2 = `${placeName.toLowerCase().trim()}|${roundedLat2}|${roundedLng2}`;
       sb.from("place_details_cache").insert({
-        cache_key: cacheKey,
+        cache_key: cacheKey2,
         place_id: placeId,
         response: detailData,
       }).then(({ error }) => {
         if (error) console.error("Cache insert error:", error);
-        else console.log(`Cache STORED for "${placeName}" (key: ${cacheKey})`);
       });
+
+      // Auto-save google_place_id back to places table for future fast-path lookups
+      if (placeDbId) {
+        sb.from("places").update({ google_place_id: placeId }).eq("id", placeDbId)
+          .then(({ error }) => {
+            if (error) console.error("places update error:", error);
+            else console.log(`Saved google_place_id for "${placeName}": ${placeId}`);
+          });
+      }
     }
 
     return new Response(JSON.stringify(detailData), {
