@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, Check, ArrowRight, Users, Trash2, Search, UserPlus, CalendarDays } from "lucide-react";
+import { ArrowLeft, Copy, Check, ArrowRight, Users, Trash2, Search, UserPlus, CalendarDays, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +18,6 @@ function generateJoinCode(): string {
   return code;
 }
 
-// Normalize city name capitalization from DB
 function capitalizeCity(city: string): string {
   return city.charAt(0).toUpperCase() + city.slice(1);
 }
@@ -33,14 +32,14 @@ const CreateGroupSession = () => {
   const [loading, setLoading] = useState(false);
   const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [friendSearch, setFriendSearch] = useState("");
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
   const [inviting, setInviting] = useState<string | null>(null);
 
-  // Active sessions the user is already a member of
   const { data: activeSessions = [] } = useQuery({
     queryKey: ["my-group-sessions", user?.id],
     queryFn: async () => {
@@ -75,7 +74,6 @@ const CreateGroupSession = () => {
     },
   });
 
-  // Load all profiles for friend search (only when session is created)
   const { data: allProfiles = [] } = useQuery({
     queryKey: ["all-profiles-invite", user?.id],
     queryFn: async () => {
@@ -137,7 +135,6 @@ const CreateGroupSession = () => {
     if (code.length < 4) { toast.error("Wpisz kod sesji"); return; }
     setJoining(true);
     try {
-      // Check session exists
       const { data: session, error } = await (supabase as any)
         .from("group_sessions")
         .select("id, city")
@@ -146,7 +143,6 @@ const CreateGroupSession = () => {
       if (error) throw error;
       if (!session) { toast.error("Nie znaleziono sesji z tym kodem"); setJoining(false); return; }
 
-      // Join (ignore duplicate error — user may already be a member)
       await (supabase as any)
         .from("group_session_members")
         .upsert({ session_id: session.id, user_id: user.id }, { onConflict: "session_id,user_id", ignoreDuplicates: true });
@@ -167,14 +163,25 @@ const CreateGroupSession = () => {
     toast.success("Sesja usunięta");
   };
 
-  const shareUrl = createdCode ? `${window.location.origin}/sesja/${createdCode}` : "";
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast.success("Skopiowano link!");
+  const handleInvite = async (profile: { id: string; username: string }) => {
+    if (!createdSessionId) return;
+    setInviting(profile.id);
+    try {
+      const { error } = await (supabase as any).rpc("send_group_invite", {
+        p_target_user_id: profile.id,
+        p_session_id: createdSessionId,
+      });
+      if (error) throw error;
+      setInvitedIds(prev => new Set([...prev, profile.id]));
+      toast.success(`Zaproszenie wysłane do @${profile.username} 🔔`);
+    } catch (e: any) {
+      toast.error("Nie udało się wysłać zaproszenia", { description: e?.message });
+    } finally {
+      setInviting(null);
+    }
   };
+
+  const shareUrl = createdCode ? `${window.location.origin}/sesja/${createdCode}` : "";
 
   return (
     <div className="flex flex-col h-screen bg-background max-w-lg mx-auto">
@@ -192,41 +199,7 @@ const CreateGroupSession = () => {
       <div className="flex-1 overflow-y-auto flex flex-col px-4 py-6 gap-6">
         {!createdCode ? (
           <>
-            {/* Active sessions */}
-            {activeSessions.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-semibold">Twoje aktywne sesje</p>
-                {activeSessions.map((s: any) => (
-                  <button
-                    key={s.id}
-                    onClick={() => navigate(`/sesja/${s.join_code}`)}
-                    className="w-full flex items-center gap-3 rounded-2xl border border-border/40 bg-card p-3 text-left active:scale-[0.98] transition-transform"
-                  >
-                    <div className="h-10 w-10 rounded-full bg-orange-600/10 flex items-center justify-center shrink-0">
-                      <Users className="h-5 w-5 text-orange-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">{capitalizeCity(s.city)}</p>
-                      <p className="text-xs text-muted-foreground font-mono">#{s.join_code}</p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <button
-                      onClick={(e) => handleDeleteSession(s.id, e)}
-                      className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 active:scale-90 transition-transform shrink-0"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </button>
-                ))}
-                <div className="flex items-center gap-3 pt-1">
-                  <div className="flex-1 h-px bg-border/40" />
-                  <span className="text-xs text-muted-foreground">lub nowa</span>
-                  <div className="flex-1 h-px bg-border/40" />
-                </div>
-              </div>
-            )}
-
-            {/* Join by code section */}
+            {/* Join by code — TOP */}
             <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
               <p className="text-sm font-semibold">Dołącz do sesji</p>
               <p className="text-xs text-muted-foreground">Masz kod od znajomego? Wpisz go poniżej.</p>
@@ -290,7 +263,7 @@ const CreateGroupSession = () => {
               )}
             </div>
 
-            {/* Create session */}
+            {/* City picker */}
             <div>
               <p className="text-sm font-semibold mb-3">Wybierz miasto</p>
               <div className="flex flex-wrap gap-2">
@@ -317,49 +290,55 @@ const CreateGroupSession = () => {
             >
               {loading ? "Tworzę sesję…" : "Stwórz sesję grupową"}
             </button>
+
+            {/* Active sessions — BOTTOM */}
+            {activeSessions.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="flex-1 h-px bg-border/40" />
+                  <span className="text-xs text-muted-foreground">twoje aktywne sesje</span>
+                  <div className="flex-1 h-px bg-border/40" />
+                </div>
+                {activeSessions.map((s: any) => (
+                  <button
+                    key={s.id}
+                    onClick={() => navigate(`/sesja/${s.join_code}`)}
+                    className="w-full flex items-center gap-3 rounded-2xl border border-border/40 bg-card p-3 text-left active:scale-[0.98] transition-transform"
+                  >
+                    <div className="h-10 w-10 rounded-full bg-orange-600/10 flex items-center justify-center shrink-0">
+                      <Users className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm">{capitalizeCity(s.city)}</p>
+                      <p className="text-xs text-muted-foreground font-mono">#{s.join_code}</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <button
+                      onClick={(e) => handleDeleteSession(s.id, e)}
+                      className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 active:scale-90 transition-transform shrink-0"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </button>
+                ))}
+              </div>
+            )}
           </>
         ) : (
           <>
-            <div className="text-center py-4">
-              <p className="text-5xl mb-4">🎉</p>
-              <p className="text-xl font-black mb-1">Sesja gotowa!</p>
+            <div className="text-center py-2">
+              <p className="text-xl font-black mb-1">Zaproś znajomych</p>
               <p className="text-sm text-muted-foreground">
-                Wyślij link znajomym, żeby dołączyli i razem swipe'owali miejsca w{" "}
+                Wyślij znajomym powiadomienie, żeby dołączyli i razem swipe'owali w{" "}
                 <strong>{capitalizeCity(selectedCity)}</strong>.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-border bg-card p-5 text-center">
-              <p className="text-xs text-muted-foreground mb-2">Kod sesji</p>
-              <p className="text-4xl font-black tracking-widest mb-4">{createdCode}</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={async () => {
-                    await navigator.clipboard.writeText(createdCode!);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                    toast.success("Skopiowano kod!");
-                  }}
-                  className="flex-1 py-3 rounded-xl bg-orange-600 text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
-                >
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {copied ? "Skopiowano!" : "Kopiuj kod"}
-                </button>
-                <button
-                  onClick={handleCopy}
-                  className="flex-1 py-3 rounded-xl border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
-                >
-                  <Copy className="h-4 w-4" />
-                  Kopiuj link
-                </button>
-              </div>
-            </div>
-
-            {/* Friend invite search */}
+            {/* Friend invite — PRIMARY */}
             <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
               <div className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4 text-muted-foreground shrink-0" />
-                <p className="text-sm font-semibold">Zaproś znajomego po username</p>
+                <Bell className="h-4 w-4 text-orange-600 shrink-0" />
+                <p className="text-sm font-semibold">Wyślij powiadomienie</p>
               </div>
               <div className="flex items-center gap-2 bg-background border border-border/60 rounded-xl px-3 h-10">
                 <Search className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -392,22 +371,7 @@ const CreateGroupSession = () => {
                         </div>
                         <button
                           disabled={isInvited || isSending}
-                          onClick={async () => {
-                            if (!createdSessionId || !createdCode) return;
-                            setInviting(profile.id);
-                            try {
-                              await navigator.clipboard.writeText(
-                                `${window.location.origin}/sesja/${createdCode}`
-                              );
-                              setInvitedIds(prev => new Set([...prev, profile.id]));
-                              toast.success(`Link skopiowany! Wyślij go @${profile.username}.`);
-                            } catch {
-                              setInvitedIds(prev => new Set([...prev, profile.id]));
-                              toast.success(`Zaproszono @${profile.username} — wyślij im kod: ${createdCode}`);
-                            } finally {
-                              setInviting(null);
-                            }
-                          }}
+                          onClick={() => handleInvite(profile)}
                           className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold active:scale-95 transition-transform disabled:opacity-60 disabled:scale-100 ${
                             isInvited
                               ? "border border-border/60 text-emerald-600"
@@ -430,18 +394,41 @@ const CreateGroupSession = () => {
               )}
             </div>
 
+            {/* Share code — SECONDARY */}
+            <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Lub udostępnij kod</p>
+              <p className="text-3xl font-black tracking-widest text-center py-1">{createdCode}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(createdCode!);
+                    setCodeCopied(true);
+                    setTimeout(() => setCodeCopied(false), 2000);
+                    toast.success("Skopiowano kod!");
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                >
+                  {codeCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {codeCopied ? "Skopiowano!" : "Kopiuj kod"}
+                </button>
+                <button
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(shareUrl);
+                    setLinkCopied(true);
+                    setTimeout(() => setLinkCopied(false), 2000);
+                    toast.success("Skopiowano link!");
+                  }}
+                  className="flex-1 py-2.5 rounded-xl border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                >
+                  {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {linkCopied ? "Skopiowano!" : "Kopiuj link"}
+                </button>
+              </div>
+            </div>
+
             <button
-              onClick={() => {
-                if (invitedIds.size === 0) {
-                  toast.error("Zaproś co najmniej jedną osobę", {
-                    description: "Parowanie grupowe wymaga minimum 2 uczestników.",
-                  });
-                  return;
-                }
-                navigate(`/sesja/${createdCode}`);
-              }}
-              disabled={invitedIds.size === 0}
-              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 disabled:scale-100"
+              onClick={() => navigate(`/sesja/${createdCode}`)}
+              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform"
             >
               Zacznij swipe'ować
             </button>
