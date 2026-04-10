@@ -1673,6 +1673,7 @@ else if(allCoords.length===1)map.setView(allCoords[0],15);
           onOpenChange={(o) => !o && setAddPinDay(null)}
           cityContext={preferences.city}
           likedPlaces={likedPlaces}
+          restrictToLiked={!!likedPlacesData?.length}
           existingPinNames={plan?.days.flatMap(d => d.pins).map(p => p.place_name)}
           onPinAdd={(pin) => {
             setPlan(prev => prev ? {

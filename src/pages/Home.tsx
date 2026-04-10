@@ -53,26 +53,27 @@ const Home = () => {
       if (!members?.length) return [];
       const memberCount = members.length;
       const memberIds = members.map((m: any) => m.user_id);
-      // Get reactions (like or superlike) for this session from all members
+      // Get reactions (liked or super_liked) for this session from all members
       const { data: reactions } = await (supabase as any)
         .from("group_session_reactions")
-        .select("place_name, reaction, user_id, places(photo_url, category)")
+        .select("place_name, reaction, user_id, photo_url, category")
         .eq("session_id", previewSessionId)
-        .in("reaction", ["like", "superlike"])
+        .in("reaction", ["liked", "super_liked"])
         .in("user_id", memberIds);
       if (!reactions?.length) return [];
       // Group by place_name, count unique users
       const map = new Map<string, { place_name: string; photo_url: string | null; category: string; users: Set<string>; hasSuperLike: boolean }>();
       for (const r of reactions) {
         const key = r.place_name;
-        if (!map.has(key)) map.set(key, { place_name: key, photo_url: r.places?.photo_url ?? null, category: r.places?.category ?? "", users: new Set(), hasSuperLike: false });
+        if (!map.has(key)) map.set(key, { place_name: key, photo_url: r.photo_url ?? null, category: r.category ?? "", users: new Set(), hasSuperLike: false });
         const entry = map.get(key)!;
         entry.users.add(r.user_id);
-        if (r.reaction === "superlike") entry.hasSuperLike = true;
+        if (r.reaction === "super_liked") entry.hasSuperLike = true;
       }
-      // Only places liked by ALL members
+      const minMatch = Math.min(2, memberCount);
       return Array.from(map.values())
-        .filter(p => p.users.size >= memberCount)
+        .filter(p => p.users.size >= minMatch)
+        .sort((a, b) => (b.hasSuperLike ? 1 : 0) - (a.hasSuperLike ? 1 : 0) || b.users.size - a.users.size)
         .map(p => ({ place_name: p.place_name, photo_url: p.photo_url, category: p.category, hasSuperLike: p.hasSuperLike }));
     },
     enabled: !!previewSessionId,
@@ -131,7 +132,7 @@ const Home = () => {
             return (
               <button
                 key={s.id}
-                onClick={() => isCompleted ? setPreviewSessionId(s.id) : navigate(`/sesja/${s.join_code}`)}
+                onClick={() => setPreviewSessionId(s.id)}
                 className={`w-full flex items-center gap-3 p-3.5 rounded-2xl bg-card border active:scale-[0.98] transition-transform text-left ${isCompleted ? "border-border/30 opacity-80" : "border-border/50"}`}
               >
                 <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${isCompleted ? "bg-emerald-500/10" : "bg-orange-600/10"}`}>
@@ -172,43 +173,57 @@ const Home = () => {
         </div>
       )}
 
-      {/* Completed session preview */}
-      <Sheet open={!!previewSessionId} onOpenChange={(open) => { if (!open) setPreviewSessionId(null); }}>
-        <SheetContent side="bottom" className="rounded-t-2xl max-h-[75vh] flex flex-col">
-          <SheetHeader className="pb-2">
-            <SheetTitle className="text-base font-bold">
-              Wspólne miejsca
-              {matchedPlaces.length > 0 && (
-                <span className="ml-2 text-sm font-normal text-muted-foreground">({matchedPlaces.length})</span>
-              )}
-            </SheetTitle>
-          </SheetHeader>
-          <div className="overflow-y-auto flex-1 space-y-2 pb-4">
-            {matchedPlaces.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Brak wspólnych miejsc</p>
-            ) : (
-              matchedPlaces.map((p: any) => (
-                <div key={p.place_name} className="flex items-center gap-3 p-3 rounded-xl bg-muted/40">
-                  {p.photo_url ? (
-                    <img src={p.photo_url} alt={p.place_name} className="h-12 w-12 rounded-lg object-cover shrink-0" />
-                  ) : (
-                    <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                      <MapPin className="h-5 w-5 text-muted-foreground" />
+      {/* Session preview sheet */}
+      {(() => {
+        const previewSession = activeSessions.find((s: any) => s.id === previewSessionId);
+        const isCompletedPreview = previewSession?.status === "completed";
+        return (
+          <Sheet open={!!previewSessionId} onOpenChange={(open) => { if (!open) setPreviewSessionId(null); }}>
+            <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] flex flex-col">
+              <SheetHeader className="pb-2">
+                <SheetTitle className="text-base font-bold">
+                  {previewSession?.city} — dopasowania
+                  {matchedPlaces.length > 0 && (
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">({matchedPlaces.length})</span>
+                  )}
+                </SheetTitle>
+              </SheetHeader>
+              <div className="overflow-y-auto flex-1 space-y-2">
+                {matchedPlaces.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">Brak wspólnych miejsc jeszcze</p>
+                ) : (
+                  matchedPlaces.map((p: any) => (
+                    <div key={p.place_name} className="flex items-center gap-3 p-3 rounded-xl bg-muted/40">
+                      {p.photo_url ? (
+                        <img src={p.photo_url} alt={p.place_name} className="h-12 w-12 rounded-lg object-cover shrink-0" />
+                      ) : (
+                        <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                          <MapPin className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{p.place_name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{p.category}</p>
+                      </div>
+                      {p.hasSuperLike && <span className="text-base">⭐</span>}
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{p.place_name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{p.category}</p>
-                  </div>
-                  {p.hasSuperLike && (
-                    <span className="text-base">⭐</span>
-                  )}
+                  ))
+                )}
+              </div>
+              {!isCompletedPreview && previewSession && (
+                <div className="pt-3 pb-1 shrink-0">
+                  <button
+                    onClick={() => { setPreviewSessionId(null); navigate(`/sesja/${previewSession.join_code}`); }}
+                    className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.97] transition-transform"
+                  >
+                    Wejdź do sesji →
+                  </button>
                 </div>
-              ))
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+              )}
+            </SheetContent>
+          </Sheet>
+        );
+      })()}
 
       {/* Admin shortcut */}
       {user.email === "nat.maz98@gmail.com" && (

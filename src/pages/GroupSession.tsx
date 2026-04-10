@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, MapPin, Star, Check, UserPlus, Play, Clock, CalendarDays } from "lucide-react";
+import { ArrowLeft, Users, MapPin, Star, Check, UserPlus, Play, Clock, CalendarDays, Copy, Share2 } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -61,6 +62,8 @@ const GroupSession = () => {
   // Mock mode: local round state (no SQL functions needed)
   const [mockRoundNumber, setMockRoundNumber] = useState<number | null>(null);
   const [mockIsVoting, setMockIsVoting] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // ── Data queries ────────────────────────────────────────────────────────────
 
@@ -474,9 +477,9 @@ const GroupSession = () => {
             ))}
           </div>
           <button
-            onClick={() => navigate("/search")}
+            onClick={() => setInviteOpen(true)}
             className="h-7 w-7 rounded-full bg-muted flex items-center justify-center"
-            title="Znajdź znajomego"
+            title="Zaproś do sesji"
           >
             <UserPlus className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
@@ -886,6 +889,41 @@ const GroupSession = () => {
           </div>
         )}
       </div>
+
+      {/* Invite sheet */}
+      <Sheet open={inviteOpen} onOpenChange={setInviteOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl pb-8">
+          <SheetHeader className="pb-4">
+            <SheetTitle>Zaproś do sesji</SheetTitle>
+          </SheetHeader>
+          <p className="text-sm text-muted-foreground mb-3">Podaj znajomemu kod sesji lub wyślij link:</p>
+          <div className="flex items-center justify-center gap-3 py-4 rounded-2xl bg-muted mb-4">
+            <span className="text-3xl font-black tracking-widest">{joinCode}</span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(joinCode ?? "");
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border border-border/50 bg-card text-sm font-semibold active:scale-[0.97] transition-transform"
+            >
+              <Copy className="h-4 w-4" />
+              {copied ? "Skopiowano!" : "Kopiuj kod"}
+            </button>
+            {typeof navigator.share === "function" && (
+              <button
+                onClick={() => navigator.share({ title: "Dołącz do mojej sesji w TRASA", text: `Dołącz używając kodu: ${joinCode}`, url: `${window.location.origin}/sesja/${joinCode}` })}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-orange-600 text-white text-sm font-semibold active:scale-[0.97] transition-transform"
+              >
+                <Share2 className="h-4 w-4" />
+                Udostępnij
+              </button>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Place detail sheet */}
       <PlaceSwiperDetail

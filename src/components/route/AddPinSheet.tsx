@@ -12,6 +12,7 @@ interface AddPinSheetProps {
   cityContext: string;
   likedPlaces?: string[];
   existingPinNames?: string[];
+  restrictToLiked?: boolean;
 }
 
 type Tab = "liked" | "search" | "category" | "manual";
@@ -60,11 +61,11 @@ function dbPlaceToPin(p: DbPlace): PlanPin {
   };
 }
 
-const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = [], existingPinNames = [] }: AddPinSheetProps) => {
+const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = [], existingPinNames = [], restrictToLiked = false }: AddPinSheetProps) => {
   const existingSet = new Set(existingPinNames.map(n => n.toLowerCase()));
   const availableLiked = likedPlaces.filter(n => !existingSet.has(n.toLowerCase()));
 
-  const defaultTab: Tab = availableLiked.length > 0 ? "liked" : "search";
+  const defaultTab: Tab = restrictToLiked ? "liked" : (availableLiked.length > 0 ? "liked" : "search");
   const [tab, setTab] = useState<Tab>(defaultTab);
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<DbPlace[]>([]);
@@ -191,12 +192,15 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
         <SheetHeader className="text-left pb-2 flex-shrink-0">
           <SheetTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
-            Dodaj punkt
+            {restrictToLiked ? "Dodaj wspólne miejsce" : "Dodaj punkt"}
           </SheetTitle>
+          {restrictToLiked && (
+            <p className="text-xs text-muted-foreground mt-0.5">Tylko miejsca polubione przez wszystkich uczestników</p>
+          )}
         </SheetHeader>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-3 flex-shrink-0 overflow-x-auto pb-0.5">
+        <div className={cn("flex gap-1 mb-3 flex-shrink-0 overflow-x-auto pb-0.5", restrictToLiked && "hidden")}>
           {tabs.map(t => (
             <button
               key={t.id}
