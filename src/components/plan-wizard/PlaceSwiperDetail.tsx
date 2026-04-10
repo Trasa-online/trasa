@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Star, MapPin, Loader2, Heart, Users } from "lucide-react";
+import { X, Star, MapPin, Loader2, Heart } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -81,7 +81,7 @@ const PlaceSwiperDetail = ({
   onSkip,
 }: PlaceSwiperDetailProps) => {
   const [detail, setDetail] = useState<PlaceDetail | null>(null);
-  const [usageCount, setUsageCount] = useState<number | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -91,7 +91,7 @@ const PlaceSwiperDetail = ({
   useEffect(() => {
     if (!open || !place) {
       setDetail(null);
-      setUsageCount(null);
+
       setActivePhoto(0);
       setPhotos([]);
       setBusinessPosts([]);
@@ -115,7 +115,7 @@ const PlaceSwiperDetail = ({
       if (MOCK_MODE) {
         setDetail({ ...MOCK_PLACE_DETAIL, name: place.place_name } as any);
         setPhotos([place.photo_url, ...(place.galleryPhotos ?? [])].filter(Boolean) as string[]);
-        setUsageCount(0);
+
         // Business posts: use mock data for mock places, real fetch for real UUIDs
         if (place.businessLogoUrl !== undefined) {
           if (place.id.startsWith("mock-")) {
@@ -161,7 +161,7 @@ const PlaceSwiperDetail = ({
         .from("pins")
         .select("id", { count: "exact", head: true })
         .ilike("place_name", `%${place.place_name}%`)
-        .then(({ count }) => { setUsageCount(count ?? 0); }, () => setUsageCount(0));
+        .then(() => {});
 
       // 3. Business posts (if this is a business card)
       const postsPromise = place.businessLogoUrl !== undefined
@@ -395,20 +395,6 @@ const PlaceSwiperDetail = ({
                   </div>
                 )}
 
-                {/* Usage stat — only show when at least 1 route used it */}
-                {usageCount !== null && usageCount > 0 && (
-                  <div className="flex items-center gap-2.5 py-3 px-4 bg-muted/50 rounded-2xl">
-                    <div className="h-9 w-9 rounded-full bg-orange-600/15 flex items-center justify-center shrink-0">
-                      <Users className="h-4.5 w-4.5 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {`${usageCount} ${usageCount === 1 ? "trasa" : usageCount < 5 ? "trasy" : "tras"} w TRASA`}
-                      </p>
-                      <p className="text-xs text-muted-foreground">tyle razy dodano to miejsce do planów</p>
-                    </div>
-                  </div>
-                )}
 
                 {/* Loading skeleton */}
                 {loading && !detail && (
