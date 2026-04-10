@@ -16,7 +16,7 @@ function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): num
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-/** Returns true if the two names share at least one meaningful token (len > 2) */
+/** Returns true if the two names share at least one exact token (len > 2) */
 function namesSimilar(a: string, b: string): boolean {
   const tokenize = (s: string) =>
     s.toLowerCase()
@@ -24,9 +24,9 @@ function namesSimilar(a: string, b: string): boolean {
       .split(/\s+/)
       .filter(w => w.length > 2);
   const ta = tokenize(a);
-  const tb = tokenize(b);
-  if (ta.length === 0 || tb.length === 0) return true;
-  return ta.some(t => tb.some(t2 => t2.includes(t) || t.includes(t2)));
+  const tb = new Set(tokenize(b));
+  if (ta.length === 0 || tb.size === 0) return true;
+  return ta.some(t => tb.has(t));
 }
 
 Deno.serve(async (req) => {
