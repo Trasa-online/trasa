@@ -838,7 +838,35 @@ const GroupSession = () => {
             </div>
 
             {/* Finish button */}
-            <div className="px-4 py-3 shrink-0 border-t border-border/20">
+            <div className="px-4 py-3 shrink-0 border-t border-border/20 space-y-2">
+              {matches.length > 0 && (
+                <button
+                  onClick={async () => {
+                    const selectedMatches = matches.filter(m => !deselectedPlaces.has(m.place_name));
+                    if (session) {
+                      await (supabase as any)
+                        .from("group_sessions")
+                        .update({ status: "completed", match_count: selectedMatches.length })
+                        .eq("id", session.id);
+                    }
+                    navigate("/create", {
+                      state: {
+                        city: session?.city ?? "",
+                        date: session?.trip_date ?? undefined,
+                        likedPlacesData: selectedMatches.map(m => ({
+                          place_name: m.place_name,
+                          category: m.category,
+                          description: "",
+                        })),
+                        backTo: `/sesja/${session?.join_code}`,
+                      },
+                    });
+                  }}
+                  className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.97] transition-transform"
+                >
+                  Przejdź do tworzenia trasy →
+                </button>
+              )}
               <button
                 onClick={async () => {
                   const selectedMatches = matches.filter(m => !deselectedPlaces.has(m.place_name));
@@ -850,7 +878,7 @@ const GroupSession = () => {
                   }
                   navigate("/");
                 }}
-                className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.97] transition-transform"
+                className={`w-full py-3 rounded-2xl font-semibold text-sm active:scale-[0.97] transition-transform ${matches.length > 0 ? "border border-border/50 text-muted-foreground bg-card" : "bg-orange-600 text-white"}`}
               >
                 Zakończ parowanie
               </button>
