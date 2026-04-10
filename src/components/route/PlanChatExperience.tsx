@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -132,9 +131,6 @@ function parseSuggestions(message: string): { cleanMessage: string; suggestions:
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const hasVoiceSupport =
-  typeof window !== "undefined" &&
-  ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌿",
@@ -351,18 +347,6 @@ function PlanSkeleton({ numDays }: { numDays: number }) {
   );
 }
 
-function renderBubble(text: string) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return (
-    <>
-      {parts.map((part, i) =>
-        part.startsWith("**") && part.endsWith("**")
-          ? <strong key={i}>{part.slice(2, -2)}</strong>
-          : part
-      )}
-    </>
-  );
-}
 
 async function enrichPlanWithPhotos(plan: RoutePlan, sb: typeof supabase): Promise<RoutePlan> {
   try {
@@ -423,7 +407,6 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
   const [plan, setPlan] = useState<RoutePlan | null>(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [listening, setListening] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [preparingPlan, setPreparingPlan] = useState(false);
   const [memoryUsed, setMemoryUsed] = useState(false);
@@ -497,14 +480,11 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
   }, [showSwapOptions, likedPlaces, likedPlacesData, plan, detailPin]);
 
   // Sheet snap state
-  const [snap, setSnap] = useState<SnapState>("half");
+  const [snap, setSnap] = useState<SnapState>("full");
   const [dragH, setDragH] = useState<number | null>(null);
   const dragStartY = useRef(0);
   const dragStartH = useRef(0);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<any>(null);
   const sendMessageRef = useRef<(text?: string) => void>(() => {});
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -523,12 +503,6 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
 
   const sheetHeight = dragH ?? getSnapPx(snap, containerH || undefined);
 
-  // Scroll chat to bottom on new messages
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
 
   // Fetch Google Places details + scraped Instagram posts when a pin is opened
   useEffect(() => {
@@ -684,7 +658,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
 
   const handleDragEnd = () => {
     const h = dragH ?? getSnapPx(snap);
-    const nearest = (["peek", "half", "full"] as SnapState[])
+    const nearest = (["half", "full"] as SnapState[])
       .sort((a, b) => Math.abs(getSnapPx(a, containerH || undefined) - h) - Math.abs(getSnapPx(b, containerH || undefined) - h))[0];
     setSnap(nearest);
     setDragH(null);
@@ -782,40 +756,6 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
 
   // Keep ref in sync so voice callbacks always call the latest sendMessage
   sendMessageRef.current = sendMessage;
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  const toggleVoice = () => {
-    if (listening) { recognitionRef.current?.stop(); setListening(false); return; }
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SpeechRecognition) return;
-    const recognition = new SpeechRecognition();
-    recognition.lang = "pl-PL";
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results).map((r: any) => r[0].transcript).join("");
-      setInput(transcript);
-      if (event.results[event.results.length - 1].isFinal) setTimeout(() => sendMessageRef.current(transcript), 300);
-    };
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
-    recognition.start();
-    recognitionRef.current = recognition;
-    setListening(true);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-    const el = e.target;
-    el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 120) + "px";
-  };
 
   const handleRemovePin = (dayNumber: number, pinIndex: number) => {
     setPlan(prev => prev ? {
@@ -963,50 +903,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
       {/* ── Chat area + Bottom sheet ─────────────────────────────────────── */}
       <div ref={chatContainerRef} className="flex-1 relative min-h-0">
 
-        {/* Chat messages (absolute fill, padded bottom for sheet) */}
-        <div
-          ref={scrollRef}
-          className="absolute inset-0 overflow-y-auto"
-          style={{ paddingBottom: `${sheetHeight + 12}px` }}
-        >
-          <div className="px-4 pt-4 space-y-4">
-            {messages.map((msg, i) => {
-              const bubbles = msg.role === "assistant"
-                ? msg.content.split(/\n\n+/).map(s => s.trim()).filter(s => s && !s.startsWith("<suggestions>"))
-                : [msg.content];
-              return (
-                <div key={i} className={cn("flex flex-col gap-1", msg.role === "user" ? "items-end" : "items-start")}>
-                  {bubbles.map((bubble, j) => (
-                    <div
-                      key={j}
-                      className={cn(
-                        "max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed",
-                        msg.role === "user"
-                          ? "bg-foreground text-background rounded-br-md"
-                          : "bg-card text-foreground rounded-bl-md"
-                      )}
-                    >
-                      {msg.role === "assistant" ? renderBubble(bubble) : bubble}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-
-            {/* Typing indicator */}
-            {loading && !preparingPlan && (
-              <div className="flex justify-start">
-                <div className="bg-card rounded-2xl rounded-bl-md px-4 py-3">
-                  <div className="flex gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Chat messages hidden — plan-only mode */}
 
         {/* ── Map overlay ─────────────────────────────────────────────────── */}
         {showMap && plan && (() => {
@@ -1097,9 +994,6 @@ else if(allCoords.length===1)map.setView(allCoords[0],15);
           return (
             <div className="absolute inset-0 bg-background z-30 flex flex-col">
               <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 shrink-0">
-                <button onClick={() => setShowMap(false)} className="h-8 w-8 flex items-center justify-center">
-                  <ArrowLeft className="h-5 w-5" />
-                </button>
                 <h2 className="font-semibold flex-1">Trasa na mapie</h2>
                 {mapsAppUrl && (
                   <a href={mapsAppUrl} target="_blank" rel="noopener noreferrer"
@@ -1169,7 +1063,7 @@ else if(allCoords.length===1)map.setView(allCoords[0],15);
               onPointerCancel={handleDragEnd}
               onClick={() => {
                 if (dragH !== null) return;
-                setSnap(s => s === "peek" ? "half" : s === "half" ? "full" : "peek");
+                setSnap(s => s === "full" ? "half" : "full");
               }}
             />
             <div className="w-10 h-1 rounded-full bg-muted-foreground/25" />
@@ -1627,44 +1521,6 @@ else if(allCoords.length===1)map.setView(allCoords[0],15);
         </div>
       </div>
 
-      {/* ── Sticky input area ────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-2 min-h-[56px]" style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom, 8px))" }}>
-        <div className="flex items-center gap-2 max-w-lg mx-auto">
-          {hasVoiceSupport && (
-            <button
-              type="button"
-              onClick={toggleVoice}
-              className={cn(
-                "flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition-colors",
-                listening ? "bg-destructive text-destructive-foreground animate-pulse" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-            </button>
-          )}
-          <div className="flex-1 relative flex items-center">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Chcesz coś zmienić?"
-              rows={1}
-              disabled={loading}
-              className="w-full resize-none rounded-2xl border border-border/60 bg-card px-4 py-2.5 pr-12 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 disabled:opacity-50"
-              style={{ maxHeight: "100px" }}
-            />
-            <Button
-              size="icon"
-              onClick={() => sendMessage()}
-              disabled={!input.trim() || loading}
-              className="absolute right-1.5 bottom-1.5 h-8 w-8 rounded-xl flex-shrink-0"
-            >
-              <Send className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
-      </div>
 
       {/* ── Add pin sheet ─────────────────────────────────────────────────── */}
       {addPinDay !== null && (

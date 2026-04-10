@@ -2,8 +2,8 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ArrowRight, CalendarDays, MapPin } from "lucide-react";
-import { parseISO, isValid, format, formatDistanceToNow } from "date-fns";
+import { Users, ArrowRight, CalendarDays, MapPin, ChevronRight } from "lucide-react";
+import { parseISO, isValid, format, formatDistanceToNow, isToday, isFuture } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -79,6 +79,24 @@ const Home = () => {
     enabled: !!previewSessionId,
   });
 
+  // Upcoming / active routes
+  const { data: upcomingRoute } = useQuery({
+    queryKey: ["upcoming-route", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from("routes")
+        .select("id, city, title, start_date, trip_type, pins(*)")
+        .eq("user_id", user.id)
+        .in("trip_type", ["planning", "ongoing"])
+        .order("start_date", { ascending: true, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+      return data ?? null;
+    },
+    enabled: !!user,
+  });
+
   if (loading) return null;
   if (!user) return <Navigate to="/auth" replace />;
 
@@ -112,6 +130,58 @@ const Home = () => {
           Zaplanuj razem
         </button>
       </div>
+
+      {/* Upcoming route card */}
+      {upcomingRoute && (() => {
+        const pins: any[] = (upcomingRoute as any).pins ?? [];
+        const sortedPins = [...pins].sort((a, b) => (a.suggested_time ?? "").localeCompare(b.suggested_time ?? ""));
+        const dateObj = upcomingRoute.start_date ? parseISO(upcomingRoute.start_date) : null;
+        const isOngoing = upcomingRoute.trip_type === "ongoing";
+        const dateLabel = dateObj && isValid(dateObj)
+          ? isToday(dateObj) ? "Dzisiaj" : isFuture(dateObj) ? format(dateObj, "d MMM", { locale: pl }) : format(dateObj, "d MMM", { locale: pl })
+          : null;
+        return (
+          <div className="mt-6">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2">
+              {isOngoing ? "Aktywna trasa" : "Nadchodząca trasa"}
+            </p>
+            <button
+              onClick={() => navigate(`/moje-wyprawy`)}
+              className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform"
+            >
+              <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-base leading-tight">{upcomingRoute.title || upcomingRoute.city}</p>
+                  {dateLabel && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <CalendarDays className="h-3 w-3 text-muted-foreground" />
+                      <span className={`text-xs font-medium ${isOngoing || (dateObj && isToday(dateObj)) ? "text-orange-600" : "text-muted-foreground"}`}>{dateLabel}</span>
+                      <span className="text-xs text-muted-foreground">· {sortedPins.length} miejsc</span>
+                    </div>
+                  )}
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </div>
+              {sortedPins.length > 0 && (
+                <div className="px-4 pb-3 space-y-1">
+                  {sortedPins.slice(0, 4).map((pin: any, i: number) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="h-5 w-5 rounded-full bg-orange-600/15 flex items-center justify-center shrink-0">
+                        <span className="text-[10px] font-bold text-orange-700">{i + 1}</span>
+                      </div>
+                      <span className="text-sm font-medium truncate flex-1">{pin.place_name}</span>
+                      {pin.suggested_time && <span className="text-xs text-muted-foreground shrink-0">{pin.suggested_time}</span>}
+                    </div>
+                  ))}
+                  {sortedPins.length > 4 && (
+                    <p className="text-xs text-muted-foreground pl-7">+{sortedPins.length - 4} więcej</p>
+                  )}
+                </div>
+              )}
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Sessions list */}
       {activeSessions.length > 0 && (
