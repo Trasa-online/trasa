@@ -169,7 +169,8 @@ interface SwipeCardProps {
 const SwipeCard = ({ place, city, onLike, onSkip, onTap, onPhotoFetched, isTop, offset }: SwipeCardProps) => {
   const [imgFailed, setImgFailed] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<string[]>(
-    [place.photo_url, ...(place.galleryPhotos ?? [])].filter(Boolean) as string[]
+    [place.photo_url, ...(place.galleryPhotos ?? [])]
+      .filter((u): u is string => !!u && !u.includes("picsum") && !u.includes("lorem"))
   );
   const [photoIdx, setPhotoIdx] = useState(0);
   const [dragX, setDragX] = useState(0);
