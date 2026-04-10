@@ -347,10 +347,12 @@ const CreateGroupSession = () => {
                   value={friendSearch}
                   onChange={e => setFriendSearch(e.target.value)}
                   placeholder="Szukaj @username..."
-                  autoComplete="off"
+                  autoComplete="new-password"
                   autoCorrect="off"
                   autoCapitalize="off"
                   spellCheck={false}
+                  data-form-type="other"
+                  data-lpignore="true"
                   className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
                 />
               </div>
