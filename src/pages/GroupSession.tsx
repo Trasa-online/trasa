@@ -185,7 +185,7 @@ const GroupSession = () => {
   };
 
   // Fetch 20 random places for current active category
-  const { data: categoryPlaceIds = [] } = useQuery({
+  const { data: categoryPlaceIds = [], isLoading: placesLoading } = useQuery({
     queryKey: ["category-places", session?.city, currentCategory],
     queryFn: async () => {
       if (!currentCategory || !session?.city) return [];
@@ -643,15 +643,37 @@ const GroupSession = () => {
             );
           }
 
-          // ── Loading places ───────────────────────────────────────────────
-          return (
-            <div className="flex-1 flex flex-col items-center justify-center gap-3">
-              <div className="flex gap-1.5">
-                {[0, 1, 2].map(i => (
-                  <div key={i} className="h-2 w-2 rounded-full bg-orange-600 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-                ))}
+          // ── Still fetching ───────────────────────────────────────────────
+          if (placesLoading) {
+            return (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3">
+                <div className="flex gap-1.5">
+                  {[0, 1, 2].map(i => (
+                    <div key={i} className="h-2 w-2 rounded-full bg-orange-600 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground">Ładowanie miejsc…</p>
               </div>
-              <p className="text-sm text-muted-foreground">Ładowanie miejsc…</p>
+            );
+          }
+
+          // ── No places for this category in this city ─────────────────────
+          return (
+            <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 text-center">
+              <p className="text-3xl">😕</p>
+              <p className="font-bold">Brak miejsc w tej kategorii</p>
+              <p className="text-sm text-muted-foreground">
+                Nie mamy jeszcze miejsc z kategorii{" "}
+                <strong>{CATEGORY_LABELS[currentCategory!] ?? currentCategory}</strong> dla {session.city}.
+              </p>
+              {isCreator && (
+                <button
+                  onClick={handleCategoryComplete}
+                  className="py-3 px-6 rounded-2xl bg-orange-600 text-white font-semibold text-sm active:scale-[0.97] transition-transform"
+                >
+                  Przejdź do następnej kategorii
+                </button>
+              )}
             </div>
           );
         })()}
