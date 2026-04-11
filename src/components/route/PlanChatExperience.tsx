@@ -991,10 +991,23 @@ Object.keys(byDay).sort((a,b)=>a-b).forEach(d=>{
 const allCoords=pins.map(p=>[p.lat,p.lng]);
 if(allCoords.length>1)map.fitBounds(allCoords,{padding:[50,50]});
 else if(allCoords.length===1)map.setView(allCoords[0],15);
+window.addEventListener('message',function(e){
+  if(e.data&&e.data.type==='flyTo'){map.flyTo([e.data.lat,e.data.lng],17,{duration:0.6});}
+});
 <\/script></body></html>`;
+          const iframeRef = { current: null as HTMLIFrameElement | null };
+          const flyTo = (lat: number, lng: number) => {
+            iframeRef.current?.contentWindow?.postMessage({ type: "flyTo", lat, lng }, "*");
+          };
           return (
             <div className="absolute inset-0 bg-background z-30 flex flex-col">
               <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 shrink-0">
+                <button
+                  onClick={() => setShowMap(false)}
+                  className="h-8 w-8 flex items-center justify-center -ml-1 shrink-0"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
                 <h2 className="font-semibold flex-1">Trasa na mapie</h2>
                 {mapsAppUrl && (
                   <a href={mapsAppUrl} target="_blank" rel="noopener noreferrer"
@@ -1006,6 +1019,7 @@ else if(allCoords.length===1)map.setView(allCoords[0],15);
               <div className="flex-1 relative">
                 {allPins.length > 0 ? (
                   <iframe
+                    ref={(el) => { iframeRef.current = el; }}
                     srcDoc={leafletHtml}
                     className="absolute inset-0 w-full h-full border-0"
                     sandbox="allow-scripts"
@@ -1014,11 +1028,13 @@ else if(allCoords.length===1)map.setView(allCoords[0],15);
                   <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Brak danych mapy</div>
                 )}
               </div>
-              <div className="shrink-0 px-4 py-3 border-t border-border/40 max-h-44 overflow-y-auto space-y-1">
+              <div className="shrink-0 px-4 py-3 border-t border-border/40 max-h-52 overflow-y-auto space-y-1">
                 {plan.days.map((day, di) => {
-                  const dayPins = (day.pins ?? []).filter(p => p.latitude && p.longitude);
-                  if (dayPins.length === 0) return null;
+                  const allDayPins = day.pins ?? [];
+                  if (allDayPins.length === 0) return null;
                   const color = ['#ea580c','#2563eb','#16a34a','#7c3aed','#d97706'][(day.day_number - 1) % 5];
+                  // Count only pins with coords for numbering (matches map markers)
+                  let mapIndex = 0;
                   return (
                     <div key={day.day_number}>
                       {plan.days.length > 1 && (
@@ -1028,15 +1044,25 @@ else if(allCoords.length===1)map.setView(allCoords[0],15);
                           <div className="h-px flex-1 bg-border/60" />
                         </div>
                       )}
-                      {dayPins.map((p, pi) => (
-                        <div key={pi} className="flex items-center gap-2 text-sm py-0.5">
-                          <div className="h-5 w-5 rounded-full text-white flex items-center justify-center text-[10px] font-bold shrink-0" style={{ background: color }}>
-                            {pi + 1}
-                          </div>
-                          <span className="font-medium truncate flex-1">{p.place_name}</span>
-                          {p.suggested_time && <span className="text-muted-foreground text-xs shrink-0">{p.suggested_time}</span>}
-                        </div>
-                      ))}
+                      {allDayPins.map((p, pi) => {
+                        const hasCoords = !!(p.latitude && p.longitude);
+                        if (hasCoords) mapIndex++;
+                        const idx = hasCoords ? mapIndex : null;
+                        return (
+                          <button
+                            key={pi}
+                            onClick={() => hasCoords && flyTo(p.latitude!, p.longitude!)}
+                            className={`w-full flex items-center gap-2 text-sm py-1 rounded-lg px-1 text-left transition-colors ${hasCoords ? "active:bg-muted/60" : "opacity-50 cursor-default"}`}
+                          >
+                            <div className="h-5 w-5 rounded-full text-white flex items-center justify-center text-[10px] font-bold shrink-0" style={{ background: hasCoords ? color : '#aaa' }}>
+                              {idx ?? "–"}
+                            </div>
+                            <span className="font-medium truncate flex-1">{p.place_name}</span>
+                            {p.suggested_time && <span className="text-muted-foreground text-xs shrink-0">{p.suggested_time}</span>}
+                            {!hasCoords && <span className="text-[10px] text-muted-foreground shrink-0">brak lokalizacji</span>}
+                          </button>
+                        );
+                      })}
                     </div>
                   );
                 })}
