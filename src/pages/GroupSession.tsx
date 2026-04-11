@@ -56,9 +56,8 @@ const GroupSession = () => {
   const [copied, setCopied] = useState(false);
 
   // ── Category state ───────────────────────────────────────────────────────────
-  const [myCategoryDone, setMyCategoryDone] = useState(false);
-  const [advancingCategory, setAdvancingCategory] = useState(false);
-  const prevCategoryRef = useRef<string | null>(null);
+  const [activeCategoryForSwiping, setActiveCategoryForSwiping] = useState<string | null>(null);
+  const [settingActiveCategory, setSettingActiveCategory] = useState(false);
 
   // ── Data queries ────────────────────────────────────────────────────────────
 
@@ -153,48 +152,32 @@ const GroupSession = () => {
 
   const sessionCategories: string[] = (session as any)?.categories ?? [];
   const currentCategoryIndex: number = (session as any)?.current_category_index ?? 0;
-  const currentCategory: string | null = sessionCategories[currentCategoryIndex] ?? null;
-  const allCategoriesDone = currentCategoryIndex >= sessionCategories.length && sessionCategories.length > 0;
+  const adminPickedCategory: string | null = sessionCategories[currentCategoryIndex] ?? null;
   const myMemberData = members.find((m: any) => m.user_id === user?.id);
-  const iMyCategoryDone = myCategoryDone || (myMemberData?.categories_done ?? []).includes(currentCategory ?? "");
-  const allMembersDoneCategory = members.length >= 2 &&
-    currentCategory !== null &&
-    members.every((m: any) => (m.categories_done ?? []).includes(currentCategory));
+  const myDoneCategories: string[] = myMemberData?.categories_done ?? [];
+  const allMyDone = sessionCategories.length > 0 && sessionCategories.every(c => myDoneCategories.includes(c));
 
   const CATEGORY_EMOJI: Record<string, string> = {
     breakfast: "🥐", cafe: "☕", restaurant: "🍽️", museum: "🏛️", park: "🌿",
     bar: "🍺", monument: "🏰", experience: "🎪", market: "🛒",
   };
 
-  // Reset local done flag when category advances
-  useEffect(() => {
-    if (currentCategory && currentCategory !== prevCategoryRef.current) {
-      prevCategoryRef.current = currentCategory;
-      setMyCategoryDone(false);
-    }
-  }, [currentCategory]);
-
-  // Auto-switch to matches when all categories done
-  useEffect(() => {
-    if (allCategoriesDone) setTab("matches");
-  }, [allCategoriesDone]);
-
-  // Fetch 15 random places for current category
+  // Fetch 20 random places for the category the user tapped
   const { data: categoryPlaceIds = [] } = useQuery({
-    queryKey: ["category-places", session?.city, currentCategory],
+    queryKey: ["category-places", session?.city, activeCategoryForSwiping],
     queryFn: async () => {
-      if (!currentCategory || !session?.city) return [];
+      if (!activeCategoryForSwiping || !session?.city) return [];
       const { data } = await (supabase as any)
         .from("places")
         .select("id")
         .ilike("city", session.city)
-        .eq("category", currentCategory)
+        .eq("category", activeCategoryForSwiping)
         .eq("is_active", true)
-        .limit(60);
+        .limit(80);
       const shuffled = (data || []).sort(() => Math.random() - 0.5);
-      return shuffled.slice(0, 15).map((p: any) => p.id as string);
+      return shuffled.slice(0, 20).map((p: any) => p.id as string);
     },
-    enabled: !!currentCategory && !!session?.city,
+    enabled: !!activeCategoryForSwiping && !!session?.city,
     staleTime: Infinity,
   });
 
@@ -244,25 +227,28 @@ const GroupSession = () => {
   };
 
   const handleCategoryComplete = async () => {
-    if (!session || !currentCategory) return;
-    setMyCategoryDone(true);
+    if (!session || !activeCategoryForSwiping) return;
+    const updated = [...new Set([...myDoneCategories, activeCategoryForSwiping])];
     await (supabase as any)
       .from("group_session_members")
-      .update({ categories_done: [...(myMemberData?.categories_done ?? []), currentCategory] })
+      .update({ categories_done: updated })
       .eq("session_id", session.id)
       .eq("user_id", user!.id);
     queryClient.invalidateQueries({ queryKey: ["group-session-members", session.id] });
+    setActiveCategoryForSwiping(null);
   };
 
-  const handleNextCategory = async () => {
+  const handleSetActiveCategory = async (catId: string) => {
     if (!session || !isCreator) return;
-    setAdvancingCategory(true);
+    const idx = sessionCategories.indexOf(catId);
+    if (idx === -1) return;
+    setSettingActiveCategory(true);
     await (supabase as any)
       .from("group_sessions")
-      .update({ current_category_index: currentCategoryIndex + 1 })
+      .update({ current_category_index: idx })
       .eq("id", session.id);
     queryClient.invalidateQueries({ queryKey: ["group-session", joinCode] });
-    setAdvancingCategory(false);
+    setSettingActiveCategory(false);
   };
 
   const togglePlace = (placeName: string) => {
@@ -392,24 +378,25 @@ const GroupSession = () => {
     <div className="flex flex-col h-screen bg-background max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-        <button onClick={() => navigate(-1)} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0">
+        <button
+          onClick={() => activeCategoryForSwiping ? setActiveCategoryForSwiping(null) : navigate(-1)}
+          className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="font-bold text-base leading-tight">{session.city}</p>
-            {currentCategory && !allCategoriesDone && (
+            {activeCategoryForSwiping && (
               <span className="text-sm font-semibold text-orange-600">
-                {CATEGORY_EMOJI[currentCategory] ?? ""} {CATEGORY_LABELS[currentCategory] ?? currentCategory}
+                {CATEGORY_EMOJI[activeCategoryForSwiping] ?? ""} {CATEGORY_LABELS[activeCategoryForSwiping] ?? activeCategoryForSwiping}
               </span>
             )}
           </div>
           <p className="text-xs text-muted-foreground">
             {members.length} {members.length === 1 ? "osoba" : "osoby"} · #{joinCode}
             {sessionCategories.length > 0 && (
-              <span className="ml-1.5">
-                · {Math.min(currentCategoryIndex + 1, sessionCategories.length)}/{sessionCategories.length}
-              </span>
+              <span className="ml-1.5">· {myDoneCategories.length}/{sessionCategories.length} kategorii</span>
             )}
             {session.trip_date && (
               <span className="ml-1.5 inline-flex items-center gap-0.5">
@@ -478,120 +465,18 @@ const GroupSession = () => {
 
         {/* ── Swipe tab — always mounted so PlaceSwiper state survives tab switches ── */}
         <div className={cn("flex-1 flex flex-col overflow-hidden", tab !== "swipe" && "hidden")}>
-        {(() => {
-          // No categories configured
-          if (!sessionCategories.length) {
-            return (
-              <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 text-center">
-                <p className="text-3xl">⚙️</p>
-                <p className="font-bold">Brak kategorii</p>
-                <p className="text-sm text-muted-foreground">Organizator nie wybrał żadnych kategorii dla tej sesji.</p>
-              </div>
-            );
-          }
-
-          // All categories done
-          if (allCategoriesDone) {
-            return (
-              <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 text-center">
-                <p className="text-3xl">🎉</p>
-                <p className="font-bold text-lg">Wszystkie kategorie przejrzane!</p>
-                <button onClick={() => setTab("matches")} className="py-3 px-6 rounded-2xl bg-orange-600 text-white font-semibold text-sm">
-                  Zobacz dopasowania
-                </button>
-              </div>
-            );
-          }
-
-          // Waiting for others to finish current category
-          if (iMyCategoryDone && !allMembersDoneCategory) {
-            return (
-              <div className="flex-1 flex flex-col items-center justify-center px-8 gap-5 text-center">
-                <p className="text-3xl">⏳</p>
-                <div>
-                  <p className="font-bold text-lg">Czekam na pozostałych…</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Inni przeglądają {CATEGORY_EMOJI[currentCategory!] ?? ""} {CATEGORY_LABELS[currentCategory!] ?? currentCategory}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  {members.map((m: any) => {
-                    const done = (m.categories_done ?? []).includes(currentCategory);
-                    return (
-                      <div key={m.user_id} className="flex flex-col items-center gap-1">
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors ${done ? "bg-orange-600 text-white border-orange-600" : "bg-muted text-muted-foreground border-border/40"}`}>
-                          {(m.profile?.first_name || m.profile?.username || "?")[0].toUpperCase()}
-                        </div>
-                        <span className="text-[10px] text-muted-foreground">{done ? "✓" : "…"}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                {matches.length > 0 && (
-                  <p className="text-xs text-muted-foreground">{matches.length} matchów do tej pory</p>
-                )}
-              </div>
-            );
-          }
-
-          // All members done with this category
-          if (allMembersDoneCategory) {
-            return (
-              <div className="flex-1 flex flex-col items-center justify-center px-6 gap-5 text-center">
-                <div>
-                  <p className="text-4xl mb-2">✅</p>
-                  <p className="text-xl font-black">Kategoria gotowa!</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Wszyscy przejrzeli {CATEGORY_EMOJI[currentCategory!] ?? ""} {CATEGORY_LABELS[currentCategory!] ?? currentCategory}
-                  </p>
-                  {matches.length > 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {matches.length} {matches.length === 1 ? "dopasowanie" : "dopasowań"} do tej pory
-                    </p>
-                  )}
-                </div>
-                {isCreator ? (
-                  <button
-                    onClick={handleNextCategory}
-                    disabled={advancingCategory}
-                    className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
-                  >
-                    {advancingCategory
-                      ? "Przechodzę…"
-                      : currentCategoryIndex + 1 < sessionCategories.length
-                        ? `Następna: ${CATEGORY_EMOJI[sessionCategories[currentCategoryIndex + 1]] ?? ""} ${CATEGORY_LABELS[sessionCategories[currentCategoryIndex + 1]] ?? sessionCategories[currentCategoryIndex + 1]}`
-                        : "Zakończ parowanie →"}
-                  </button>
-                ) : (
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="flex gap-1.5">
-                      {[0, 1, 2].map(i => (
-                        <div key={i} className="h-2 w-2 rounded-full bg-orange-600/40 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-                      ))}
-                    </div>
-                    <p className="text-sm text-muted-foreground">Czekam aż organizator przejdzie dalej…</p>
-                  </div>
-                )}
-              </div>
-            );
-          }
-
-          // Active category: show swiper
-          if (!iMyCategoryDone && categoryPlaceIds.length > 0) {
-            return (
-              <PlaceSwiper
-                city={session.city}
-                date={session.trip_date ? new Date(session.trip_date) : new Date()}
-                groupSessionId={session.id}
-                roundPlaceIds={categoryPlaceIds}
-                onRoundComplete={handleCategoryComplete}
-                onGroupFinished={() => setTab("matches")}
-              />
-            );
-          }
-
-          // Loading places
-          return (
+        {activeCategoryForSwiping ? (
+          // ── Active swiper for chosen category ──────────────────────────
+          categoryPlaceIds.length > 0 ? (
+            <PlaceSwiper
+              city={session.city}
+              date={session.trip_date ? new Date(session.trip_date) : new Date()}
+              groupSessionId={session.id}
+              roundPlaceIds={categoryPlaceIds}
+              onRoundComplete={handleCategoryComplete}
+              onGroupFinished={() => { handleCategoryComplete(); }}
+            />
+          ) : (
             <div className="flex-1 flex flex-col items-center justify-center gap-3">
               <div className="flex gap-1.5">
                 {[0, 1, 2].map(i => (
@@ -600,8 +485,97 @@ const GroupSession = () => {
               </div>
               <p className="text-sm text-muted-foreground">Ładowanie miejsc…</p>
             </div>
-          );
-        })()}
+          )
+        ) : (
+          // ── Category list ───────────────────────────────────────────────
+          <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4 space-y-2">
+            {!sessionCategories.length ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                <p className="text-3xl">⚙️</p>
+                <p className="font-bold">Brak kategorii</p>
+                <p className="text-sm text-muted-foreground">Organizator nie wybrał żadnych kategorii dla tej sesji.</p>
+              </div>
+            ) : (
+              <>
+                {allMyDone && (
+                  <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 flex items-center gap-3 mb-1">
+                    <span className="text-xl">🎉</span>
+                    <div>
+                      <p className="text-sm font-bold text-emerald-700">Wszystkie kategorie przejrzane!</p>
+                      <p className="text-xs text-emerald-600/70">Sprawdź dopasowania →</p>
+                    </div>
+                  </div>
+                )}
+                {adminPickedCategory && (
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 pb-1">
+                    Aktywna kategoria
+                  </p>
+                )}
+                {sessionCategories.map((catId) => {
+                  const isDone = myDoneCategories.includes(catId);
+                  const isAdminPick = catId === adminPickedCategory;
+                  const doneByMembers = members.filter((m: any) =>
+                    (m.categories_done ?? []).includes(catId)
+                  ).length;
+
+                  return (
+                    <button
+                      key={catId}
+                      onClick={() => !isDone && setActiveCategoryForSwiping(catId)}
+                      className={`w-full flex items-center gap-3 rounded-2xl border p-4 text-left transition-all active:scale-[0.98] ${
+                        isDone
+                          ? "border-border/20 bg-muted/40 opacity-60"
+                          : isAdminPick
+                          ? "border-orange-500/60 bg-orange-500/5"
+                          : "border-border/50 bg-card"
+                      }`}
+                    >
+                      <span className="text-2xl shrink-0">{CATEGORY_EMOJI[catId] ?? "📍"}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-semibold text-sm ${isDone ? "line-through text-muted-foreground" : ""}`}>
+                          {CATEGORY_LABELS[catId] ?? catId}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {isDone
+                            ? "Przejrzane"
+                            : doneByMembers > 0
+                            ? `${doneByMembers}/${members.length} osób skończyło`
+                            : "20 miejsc"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isAdminPick && !isDone && (
+                          <span className="text-[10px] font-bold bg-orange-600 text-white px-2 py-0.5 rounded-full">
+                            Aktywna
+                          </span>
+                        )}
+                        {isDone ? (
+                          <div className="h-7 w-7 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                            <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          </div>
+                        ) : (
+                          <div className="h-7 w-7 rounded-full bg-orange-600/10 flex items-center justify-center">
+                            <ArrowLeft className="h-3.5 w-3.5 text-orange-600 rotate-180" />
+                          </div>
+                        )}
+                      </div>
+                      {/* Admin: set as active button */}
+                      {isCreator && !isDone && !isAdminPick && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleSetActiveCategory(catId); }}
+                          disabled={settingActiveCategory}
+                          className="shrink-0 text-[10px] font-semibold text-muted-foreground border border-border/50 px-2 py-1 rounded-full active:scale-95 transition-transform disabled:opacity-40"
+                        >
+                          Ustaw aktywną
+                        </button>
+                      )}
+                    </button>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        )}
         </div>{/* end always-mounted swipe tab */}
 
         {/* ── Matches tab ── */}
