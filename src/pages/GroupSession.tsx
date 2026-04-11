@@ -261,12 +261,10 @@ const GroupSession = () => {
     setSavingCategory(true);
     const newCategories = [...sessionCategories, pendingCategory];
     const newIndex = newCategories.length - 1;
-    const { data: updated, error } = await (supabase as any)
+    const { error } = await (supabase as any)
       .from("group_sessions")
       .update({ categories: newCategories, current_category_index: newIndex })
-      .eq("id", session.id)
-      .select()
-      .single();
+      .eq("id", session.id);
     if (error) {
       toast.error("Błąd zapisu: " + error.message);
       setSavingCategory(false);
@@ -274,7 +272,11 @@ const GroupSession = () => {
     }
     // Cancel any in-flight refetch so it doesn't overwrite our update
     await queryClient.cancelQueries({ queryKey: ["group-session", joinCode] });
-    queryClient.setQueryData(["group-session", joinCode], updated);
+    queryClient.setQueryData(["group-session", joinCode], (old: any) => ({
+      ...old,
+      categories: newCategories,
+      current_category_index: newIndex,
+    }));
     setPendingCategory(null);
     setSavingCategory(false);
     // Delayed refetch so UI has already transitioned
