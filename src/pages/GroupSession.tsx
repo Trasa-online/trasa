@@ -16,22 +16,22 @@ import { cn } from "@/lib/utils";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const AVAILABLE_CATEGORIES = [
-  { id: "Śniadania",  label: "Śniadania",  emoji: "🥐" },
-  { id: "cafe",       label: "Kawiarnie",  emoji: "☕" },
-  { id: "restaurant", label: "Restauracje", emoji: "🍽️" },
-  { id: "museum",    label: "Muzea",       emoji: "🏛️" },
-  { id: "park",      label: "Parki",       emoji: "🌿" },
-  { id: "bar",       label: "Bary",        emoji: "🍺" },
-  { id: "monument",  label: "Zabytki",     emoji: "🏰" },
-  { id: "experience",label: "Rozrywka",    emoji: "🎪" },
-  { id: "market",    label: "Markety",     emoji: "🛒" },
+  { id: "Kawiarnia",   label: "Kawiarnia",   emoji: "☕" },
+  { id: "Piekarnia",   label: "Piekarnia",   emoji: "🥐" },
+  { id: "Śniadania",   label: "Śniadania",   emoji: "🍳" },
+  { id: "Restauracja", label: "Restauracja", emoji: "🍽️" },
+  { id: "Bar",         label: "Bar",         emoji: "🍺" },
+  { id: "Muzeum",      label: "Muzeum",      emoji: "🏛️" },
+  { id: "Park",        label: "Park",        emoji: "🌿" },
+  { id: "Market",      label: "Market",      emoji: "🛒" },
+  { id: "Landmark",    label: "Landmark",    emoji: "🏰" },
+  { id: "Rozrywka",    label: "Rozrywka",    emoji: "🎪" },
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
-  "Śniadania": "Śniadania", restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum",
-  park: "Park", bar: "Bar", club: "Klub", monument: "Zabytek",
-  gallery: "Galeria", market: "Targ", viewpoint: "Widok",
-  shopping: "Zakupy", experience: "Rozrywka",
+  Kawiarnia: "Kawiarnia", Piekarnia: "Piekarnia", "Śniadania": "Śniadania",
+  Restauracja: "Restauracja", Bar: "Bar", Muzeum: "Muzeum",
+  Park: "Park", Market: "Market", Landmark: "Landmark", Rozrywka: "Rozrywka",
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -180,8 +180,9 @@ const GroupSession = () => {
   const needsCategoryPick = !currentCategory || allMembersDoneCategory;
 
   const CATEGORY_EMOJI: Record<string, string> = {
-    "Śniadania": "🥐", cafe: "☕", restaurant: "🍽️", museum: "🏛️", park: "🌿",
-    bar: "🍺", monument: "🏰", experience: "🎪", market: "🛒",
+    Kawiarnia: "☕", Piekarnia: "🥐", "Śniadania": "🍳",
+    Restauracja: "🍽️", Bar: "🍺", Muzeum: "🏛️",
+    Park: "🌿", Market: "🛒", Landmark: "🏰", Rozrywka: "🎪",
   };
 
   // Fetch 20 random places for current active category
