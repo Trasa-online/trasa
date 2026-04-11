@@ -88,6 +88,23 @@ const GroupSession = () => {
     refetchInterval: 5000,
   });
 
+  // Existing route saved from this session
+  const { data: existingRoute } = useQuery({
+    queryKey: ["group-session-route", session?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("routes")
+        .select("id, title, city, start_date")
+        .eq("group_session_id" as any, session!.id)
+        .order("created_at" as any, { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data ?? null;
+    },
+    enabled: !!session?.id,
+    refetchInterval: 15000,
+  });
+
   const { data: members = [] } = useQuery({
     queryKey: ["group-session-members", session?.id],
     queryFn: async () => {
@@ -823,12 +840,21 @@ const GroupSession = () => {
                           description: "",
                         })),
                         backTo: `/sesja/${session?.join_code}`,
+                        groupSession: { sessionId: session!.id, otherMemberIds: [] },
                       },
                     });
                   }}
                   className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.97] transition-transform"
                 >
-                  Przejdź do tworzenia trasy →
+                  {existingRoute ? "Stwórz nową trasę →" : "Przejdź do tworzenia trasy →"}
+                </button>
+              )}
+              {existingRoute && (
+                <button
+                  onClick={() => navigate(`/moje-wyprawy`)}
+                  className="w-full py-3.5 rounded-2xl bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
+                >
+                  Otwórz zapisaną trasę →
                 </button>
               )}
               <button

@@ -2,8 +2,8 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ArrowRight, CalendarDays, MapPin, ChevronRight } from "lucide-react";
-import { parseISO, isValid, format, formatDistanceToNow, isToday, isFuture } from "date-fns";
+import { Users, ArrowRight, CalendarDays, MapPin, ArrowLeft } from "lucide-react";
+import { parseISO, isValid, format, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -71,31 +71,35 @@ const Home = () => {
         if (r.reaction === "super_liked") entry.hasSuperLike = true;
       }
       const minMatch = Math.min(2, memberCount);
-      return Array.from(map.values())
+      const matched = Array.from(map.values())
         .filter(p => p.users.size >= minMatch)
         .sort((a, b) => (b.hasSuperLike ? 1 : 0) - (a.hasSuperLike ? 1 : 0) || b.users.size - a.users.size)
         .map(p => ({ place_name: p.place_name, photo_url: p.photo_url, category: p.category, hasSuperLike: p.hasSuperLike }));
+      // Fetch coordinates for map
+      if (matched.length > 0) {
+        const previewSession = (await (supabase as any).from("group_sessions").select("city").eq("id", previewSessionId).maybeSingle()).data;
+        const city = previewSession?.city;
+        if (city) {
+          const { data: places } = await (supabase as any).from("places").select("place_name, latitude, longitude").ilike("city", city).in("place_name", matched.map(p => p.place_name));
+          const coordMap = Object.fromEntries((places || []).map((p: any) => [p.place_name, { lat: p.latitude, lng: p.longitude }]));
+          return matched.map(p => ({ ...p, latitude: coordMap[p.place_name]?.lat ?? null, longitude: coordMap[p.place_name]?.lng ?? null }));
+        }
+      }
+      return matched.map(p => ({ ...p, latitude: null, longitude: null }));
     },
     enabled: !!previewSessionId,
   });
 
-  // Upcoming / active routes
-  const { data: upcomingRoute } = useQuery({
-    queryKey: ["upcoming-route", user?.id],
+  const { data: sessionRoute } = useQuery({
+    queryKey: ["session-route", previewSessionId],
     queryFn: async () => {
-      if (!user) return null;
-      const { data } = await supabase
-        .from("routes")
-        .select("id, city, title, start_date, trip_type, pins(*)")
-        .eq("user_id", user.id)
-        .in("trip_type", ["planning", "ongoing"])
-        .order("start_date", { ascending: true, nullsFirst: false })
-        .limit(1)
-        .maybeSingle();
+      if (!previewSessionId) return null;
+      const { data } = await (supabase as any).from("routes").select("id, title, city").eq("group_session_id", previewSessionId).order("created_at", { ascending: false }).limit(1).maybeSingle();
       return data ?? null;
     },
-    enabled: !!user,
+    enabled: !!previewSessionId,
   });
+
 
   if (loading) return null;
   if (!user) return <Navigate to="/auth" replace />;
@@ -131,57 +135,6 @@ const Home = () => {
         </button>
       </div>
 
-      {/* Upcoming route card */}
-      {upcomingRoute && (() => {
-        const pins: any[] = (upcomingRoute as any).pins ?? [];
-        const sortedPins = [...pins].sort((a, b) => (a.suggested_time ?? "").localeCompare(b.suggested_time ?? ""));
-        const dateObj = upcomingRoute.start_date ? parseISO(upcomingRoute.start_date) : null;
-        const isOngoing = upcomingRoute.trip_type === "ongoing";
-        const dateLabel = dateObj && isValid(dateObj)
-          ? isToday(dateObj) ? "Dzisiaj" : isFuture(dateObj) ? format(dateObj, "d MMM", { locale: pl }) : format(dateObj, "d MMM", { locale: pl })
-          : null;
-        return (
-          <div className="mt-6">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2">
-              {isOngoing ? "Aktywna trasa" : "Nadchodząca trasa"}
-            </p>
-            <button
-              onClick={() => navigate(`/moje-wyprawy`)}
-              className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform"
-            >
-              <div className="px-4 pt-3 pb-2 flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-base leading-tight">{upcomingRoute.title || upcomingRoute.city}</p>
-                  {dateLabel && (
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <CalendarDays className="h-3 w-3 text-muted-foreground" />
-                      <span className={`text-xs font-medium ${isOngoing || (dateObj && isToday(dateObj)) ? "text-orange-600" : "text-muted-foreground"}`}>{dateLabel}</span>
-                      <span className="text-xs text-muted-foreground">· {sortedPins.length} miejsc</span>
-                    </div>
-                  )}
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </div>
-              {sortedPins.length > 0 && (
-                <div className="px-4 pb-3 space-y-1">
-                  {sortedPins.slice(0, 4).map((pin: any, i: number) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <div className="h-5 w-5 rounded-full bg-orange-600/15 flex items-center justify-center shrink-0">
-                        <span className="text-[10px] font-bold text-orange-700">{i + 1}</span>
-                      </div>
-                      <span className="text-sm font-medium truncate flex-1">{pin.place_name}</span>
-                      {pin.suggested_time && <span className="text-xs text-muted-foreground shrink-0">{pin.suggested_time}</span>}
-                    </div>
-                  ))}
-                  {sortedPins.length > 4 && (
-                    <p className="text-xs text-muted-foreground pl-7">+{sortedPins.length - 4} więcej</p>
-                  )}
-                </div>
-              )}
-            </button>
-          </div>
-        );
-      })()}
 
       {/* Sessions list */}
       {activeSessions.length > 0 && (
@@ -246,23 +199,36 @@ const Home = () => {
       {/* Session preview sheet */}
       {(() => {
         const previewSession = activeSessions.find((s: any) => s.id === previewSessionId);
-        const isCompletedPreview = previewSession?.status === "completed";
+        const mapPins = matchedPlaces.filter((p: any) => p.latitude && p.longitude);
+        const pinsJson = JSON.stringify(mapPins.map((p: any, i: number) => ({ lat: p.latitude, lng: p.longitude, name: p.place_name, index: i + 1 })));
+        const leafletHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script><style>*{margin:0;padding:0;box-sizing:border-box}body{height:100%;overflow:hidden}#map{height:100%;width:100%}.pm{color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:-apple-system,sans-serif;border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.3);background:#ea580c}</style></head><body><div id="map"></div><script>const pins=${pinsJson};const map=L.map('map',{zoomControl:false,attributionControl:false});L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);const coords=pins.map(p=>[p.lat,p.lng]);if(coords.length>1){L.polyline(coords,{color:'#ea580c',weight:2.5,opacity:.6,dashArray:'6 5'}).addTo(map);map.fitBounds(coords,{padding:[30,30]});}else if(coords.length===1){map.setView(coords[0],15);}pins.forEach(p=>{const icon=L.divIcon({className:'',html:'<div class="pm">'+p.index+'</div>',iconSize:[26,26],iconAnchor:[13,13]});L.marker([p.lat,p.lng],{icon}).bindPopup('<b style="font-size:12px">'+p.name+'</b>').addTo(map);});<\/script></body></html>`;
         return (
           <Sheet open={!!previewSessionId} onOpenChange={(open) => { if (!open) setPreviewSessionId(null); }}>
-            <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] flex flex-col">
-              <SheetHeader className="pb-2">
-                <SheetTitle className="text-base font-bold">
-                  {previewSession?.name || previewSession?.city} — dopasowania
-                  {matchedPlaces.length > 0 && (
-                    <span className="ml-2 text-sm font-normal text-muted-foreground">({matchedPlaces.length})</span>
-                  )}
-                </SheetTitle>
-              </SheetHeader>
-              <div className="overflow-y-auto flex-1 space-y-2">
+            <SheetContent side="bottom" className="rounded-t-2xl max-h-[88vh] flex flex-col p-0">
+              {/* Header */}
+              <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-border/20 shrink-0">
+                <button onClick={() => setPreviewSessionId(null)} className="h-8 w-8 flex items-center justify-center -ml-1 shrink-0">
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-base leading-tight">{previewSession?.name || previewSession?.city}</p>
+                  <p className="text-xs text-muted-foreground">{matchedPlaces.length} wspólnych miejsc</p>
+                </div>
+              </div>
+
+              {/* Mini map */}
+              {mapPins.length > 0 && (
+                <div className="h-44 shrink-0">
+                  <iframe srcDoc={leafletHtml} className="w-full h-full border-0" sandbox="allow-scripts" />
+                </div>
+              )}
+
+              {/* Places list */}
+              <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2">
                 {matchedPlaces.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">Brak wspólnych miejsc jeszcze</p>
                 ) : (
-                  matchedPlaces.map((p: any) => (
+                  matchedPlaces.map((p: any, i: number) => (
                     <div key={p.place_name} className="flex items-center gap-3 p-3 rounded-xl bg-muted/40">
                       {p.photo_url ? (
                         <img src={p.photo_url} alt={p.place_name} className="h-12 w-12 rounded-lg object-cover shrink-0" />
@@ -280,13 +246,23 @@ const Home = () => {
                   ))
                 )}
               </div>
-              {!isCompletedPreview && previewSession && (
-                <div className="pt-3 pb-1 shrink-0">
+
+              {/* Action buttons */}
+              {previewSession && (
+                <div className="px-4 py-3 border-t border-border/20 space-y-2 shrink-0">
+                  {sessionRoute && (
+                    <button
+                      onClick={() => { setPreviewSessionId(null); navigate("/moje-wyprawy"); }}
+                      className="w-full py-3.5 rounded-2xl bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
+                    >
+                      Otwórz zapisaną trasę →
+                    </button>
+                  )}
                   <button
                     onClick={() => { setPreviewSessionId(null); navigate(`/sesja/${previewSession.join_code}`); }}
-                    className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.97] transition-transform"
+                    className={`w-full py-3.5 rounded-2xl font-bold text-sm active:scale-[0.97] transition-transform ${sessionRoute ? "border border-border/50 bg-card text-foreground" : "bg-orange-600 text-white"}`}
                   >
-                    Wejdź do sesji →
+                    {sessionRoute ? "Wróć do parowania" : "Wejdź do sesji →"}
                   </button>
                 </div>
               )}
