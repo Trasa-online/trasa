@@ -261,24 +261,26 @@ const GroupSession = () => {
     setSavingCategory(true);
     const newCategories = [...sessionCategories, pendingCategory];
     const newIndex = newCategories.length - 1;
-    const { error } = await (supabase as any)
+    const { data: updated, error } = await (supabase as any)
       .from("group_sessions")
       .update({ categories: newCategories, current_category_index: newIndex })
-      .eq("id", session.id);
+      .eq("id", session.id)
+      .select()
+      .single();
     if (error) {
-      toast.error("Błąd: " + error.message);
+      toast.error("Błąd zapisu: " + error.message);
       setSavingCategory(false);
       return;
     }
-    queryClient.setQueryData(["group-session", joinCode], (old: any) => ({
-      ...old,
-      categories: newCategories,
-      current_category_index: newIndex,
-    }));
-    queryClient.invalidateQueries({ queryKey: ["group-session", joinCode] });
-    queryClient.invalidateQueries({ queryKey: ["group-session-members", session.id] });
+    // Cancel any in-flight refetch so it doesn't overwrite our update
+    await queryClient.cancelQueries({ queryKey: ["group-session", joinCode] });
+    queryClient.setQueryData(["group-session", joinCode], updated);
     setPendingCategory(null);
     setSavingCategory(false);
+    // Delayed refetch so UI has already transitioned
+    setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: ["group-session", joinCode] });
+    }, 1000);
   };
 
   const togglePlace = (placeName: string) => {
