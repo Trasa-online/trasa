@@ -94,7 +94,7 @@ function buildRouteExamplesContext(examples: any[]): string {
   return `## 🏆 WZORCOWE TRASY (zatwierdzone przez redakcję TRASA)\nPoniższe trasy zostały ocenione jako idealne dla Krakowa. Planuj w podobnym rytmie, logice geograficznej i strukturze dnia:\n\n${lines.join("\n\n")}`;
 }
 
-function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string, superLikedPlaces?: string[], previousDayPlaces?: string[], previousDayCategoryCounts?: Record<string, number>): string {
+function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string, superLikedPlaces?: string[], previousDayPlaces?: string[], previousDayCategoryCounts?: Record<string, number>, restrictToLiked?: boolean): string {
   const isNightlife = preferences.priorities.includes("nightlife") || (userProfile?.travel_interests ?? []).includes("nightlife");
   const timeInfo = currentTime ? `- Aktualna godzina: ${currentTime} — planuj miejsca dostępne od tej pory, nie zaczynaj od miejsc które są już zamknięte lub których opening hours zaczyna się wcześniej` : "";
   const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}${currentTime ? " (dziś)" : ""}` : "";
@@ -373,7 +373,7 @@ ZASADY FORMATU:
 - "Usuń Z" → usuń, sprawdź kulminację (H3) → WYEMITUJ pełny plan
 - NIE regeneruj całego planu strukturalnie — tylko zmień to co user prosił
 - NIE mów "za chwilę", "przygotowuję", "zaktualizuję" — po prostu zrób to i pokaż plan
-- Komentarz do zmiany: MAX 1 zdanie przed blokiem planu${superLikedPlaces?.length ? `\n\n## ⭐ MIEJSCA OBOWIĄZKOWE (SUPER LIKE)\nUżytkownik oznaczył te miejsca jako MUST-HAVE — MUSZĄ znaleźć się w planie bez wyjątku:\n${superLikedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${likedPlaces?.length ? `\n\n## 🎯 MIEJSCA DO UWZGLĘDNIENIA\nUżytkownik chce odwiedzić te miejsca — koniecznie wstaw je w plan:\n${likedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${(() => {
+- Komentarz do zmiany: MAX 1 zdanie przed blokiem planu${superLikedPlaces?.length ? `\n\n## ⭐ MIEJSCA OBOWIĄZKOWE (SUPER LIKE)\nUżytkownik oznaczył te miejsca jako MUST-HAVE — MUSZĄ znaleźć się w planie bez wyjątku:\n${superLikedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${likedPlaces?.length ? (restrictToLiked ? `\n\n## 🔒 TRYB GRUPOWY — TYLKO TE MIEJSCA\nTo jest plan grupowy stworzony na podstawie wspólnych wyborów. BEZWZGLĘDNA ZASADA:\n- Używaj WYŁĄCZNIE miejsc z poniższej listy. Nie dodawaj żadnych innych miejsc.\n- Jeśli lista jest za krótka na pełny dzień — wybierz najlepszy podzbiór, NIE wymyślaj nowych.\n- Każde miejsce spoza tej listy w planie = błąd krytyczny.\n\nDozwolone miejsca:\n${likedPlaces.map(p => `- ${p}`).join("\n")}` : `\n\n## 🎯 MIEJSCA DO UWZGLĘDNIENIA\nUżytkownik chce odwiedzić te miejsca — koniecznie wstaw je w plan:\n${likedPlaces.map(p => `- ${p}`).join("\n")}`) : ""}${(() => {
   const allExcluded = [...(skippedPlaces ?? []), ...(previousDayPlaces ?? [])];
   if (!allExcluded.length) return "";
   const skippedSection = (skippedPlaces?.length ?? 0) > 0
@@ -408,7 +408,7 @@ serve(async (req) => {
   }
 
   try {
-    const { preferences, messages: userMessages, current_plan, force_plan, liked_places, skipped_places, super_liked_places, ideal_day, current_time, current_date } = await req.json();
+    const { preferences, messages: userMessages, current_plan, force_plan, liked_places, skipped_places, super_liked_places, ideal_day, current_time, current_date, restrict_to_liked } = await req.json();
 
     if (!preferences || !userMessages) {
       return new Response(
@@ -732,7 +732,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     }
 
     const isToday = current_date && preferences.startDate && preferences.startDate === current_date;
-    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined, super_liked_places ?? undefined, previousDayPlaces.length > 0 ? previousDayPlaces : undefined, Object.keys(previousDayCategoryCounts).length > 0 ? previousDayCategoryCounts : undefined);
+    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined, super_liked_places ?? undefined, previousDayPlaces.length > 0 ? previousDayPlaces : undefined, Object.keys(previousDayCategoryCounts).length > 0 ? previousDayCategoryCounts : undefined, restrict_to_liked ?? false);
 
     // Call AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

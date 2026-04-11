@@ -596,6 +596,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
             messages: isSubsequentDay ? [] : [{ role: "user", content: initMsg }],
             force_plan: isSubsequentDay ? false : true,
             liked_places: likedPlaces,
+            restrict_to_liked: likedPlacesData?.length ? true : undefined,
             skipped_places: skippedPlaces?.length ? skippedPlaces : undefined,
             super_liked_places: superLikedPlaces?.length ? superLikedPlaces : undefined,
             ideal_day: idealDay || undefined,
