@@ -23,6 +23,7 @@ function capitalizeCity(city: string): string {
 }
 
 const AVAILABLE_CATEGORIES = [
+  { id: "breakfast",  label: "Śniadania",  emoji: "🥐" },
   { id: "cafe",       label: "Kawiarnie",  emoji: "☕" },
   { id: "restaurant", label: "Restauracje", emoji: "🍽️" },
   { id: "museum",    label: "Muzea",       emoji: "🏛️" },

@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CATEGORY_LABELS: Record<string, string> = {
-  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum",
+  breakfast: "Śniadanie", restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum",
   park: "Park", bar: "Bar", club: "Klub", monument: "Zabytek",
   gallery: "Galeria", market: "Targ", viewpoint: "Widok",
   shopping: "Zakupy", experience: "Rozrywka",
@@ -162,7 +162,7 @@ const GroupSession = () => {
     members.every((m: any) => (m.categories_done ?? []).includes(currentCategory));
 
   const CATEGORY_EMOJI: Record<string, string> = {
-    cafe: "☕", restaurant: "🍽️", museum: "🏛️", park: "🌿",
+    breakfast: "🥐", cafe: "☕", restaurant: "🍽️", museum: "🏛️", park: "🌿",
     bar: "🍺", monument: "🏰", experience: "🎪", market: "🛒",
   };
 
