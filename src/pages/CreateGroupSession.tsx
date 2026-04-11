@@ -22,25 +22,12 @@ function capitalizeCity(city: string): string {
   return city.charAt(0).toUpperCase() + city.slice(1);
 }
 
-const AVAILABLE_CATEGORIES = [
-  { id: "breakfast",  label: "Śniadania",  emoji: "🥐" },
-  { id: "cafe",       label: "Kawiarnie",  emoji: "☕" },
-  { id: "restaurant", label: "Restauracje", emoji: "🍽️" },
-  { id: "museum",    label: "Muzea",       emoji: "🏛️" },
-  { id: "park",      label: "Parki",       emoji: "🌿" },
-  { id: "bar",       label: "Bary",        emoji: "🍺" },
-  { id: "monument",  label: "Zabytki",     emoji: "🏰" },
-  { id: "experience",label: "Rozrywka",    emoji: "🎪" },
-  { id: "market",    label: "Markety",     emoji: "🛒" },
-];
-
 const CreateGroupSession = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedCity, setSelectedCity] = useState("");
   const [tripDate, setTripDate] = useState<Date | undefined>(undefined);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(["cafe", "restaurant", "museum"]);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [createdCode, setCreatedCode] = useState<string | null>(null);
@@ -125,7 +112,6 @@ const CreateGroupSession = () => {
   const handleCreate = async () => {
     if (!user) { navigate("/auth"); return; }
     if (!selectedCity) { toast.error("Wybierz miasto"); return; }
-    if (selectedCategories.length < 1) { toast.error("Wybierz co najmniej jedną kategorię"); return; }
     setLoading(true);
     try {
       const code = generateJoinCode();
@@ -136,7 +122,6 @@ const CreateGroupSession = () => {
           created_by: user.id,
           join_code: code,
           expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-          categories: selectedCategories,
           ...(tripDate ? { trip_date: format(tripDate, "yyyy-MM-dd") } : {}),
         })
         .select()
@@ -310,49 +295,9 @@ const CreateGroupSession = () => {
               </div>
             </div>
 
-            {/* Category picker */}
-            <div>
-              <p className="text-sm font-semibold mb-1">Kategorie miejsc</p>
-              <p className="text-xs text-muted-foreground mb-3">Wybierz 3–5 kategorii, które będziecie razem swipe'ować</p>
-              <div className="flex flex-wrap gap-2">
-                {AVAILABLE_CATEGORIES.map((cat) => {
-                  const selected = selectedCategories.includes(cat.id);
-                  const atMax = selectedCategories.length >= 5 && !selected;
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => {
-                        if (selected) {
-                          setSelectedCategories(prev => prev.filter(c => c !== cat.id));
-                        } else if (!atMax) {
-                          setSelectedCategories(prev => [...prev, cat.id]);
-                        }
-                      }}
-                      className={`px-3 py-2 rounded-full text-sm font-medium border transition-colors flex items-center gap-1.5 ${
-                        selected
-                          ? "bg-orange-600 text-white border-orange-600"
-                          : atMax
-                          ? "bg-muted/50 text-muted-foreground/50 border-border/30 cursor-not-allowed"
-                          : "bg-card text-foreground border-border/60"
-                      }`}
-                    >
-                      <span>{cat.emoji}</span>
-                      <span>{cat.label}</span>
-                      {selected && <span className="ml-0.5 text-xs opacity-80">{selectedCategories.indexOf(cat.id) + 1}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-              {selectedCategories.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  Kolejność: {selectedCategories.map(id => AVAILABLE_CATEGORIES.find(c => c.id === id)?.label).join(" → ")}
-                </p>
-              )}
-            </div>
-
             <button
               onClick={handleCreate}
-              disabled={loading || !selectedCity || selectedCategories.length === 0}
+              disabled={loading || !selectedCity}
               className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
             >
               {loading ? "Tworzę sesję…" : "Stwórz sesję grupową"}

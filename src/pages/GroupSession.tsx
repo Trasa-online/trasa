@@ -15,6 +15,18 @@ import { cn } from "@/lib/utils";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+const AVAILABLE_CATEGORIES = [
+  { id: "breakfast",  label: "Śniadania",  emoji: "🥐" },
+  { id: "cafe",       label: "Kawiarnie",  emoji: "☕" },
+  { id: "restaurant", label: "Restauracje", emoji: "🍽️" },
+  { id: "museum",    label: "Muzea",       emoji: "🏛️" },
+  { id: "park",      label: "Parki",       emoji: "🌿" },
+  { id: "bar",       label: "Bary",        emoji: "🍺" },
+  { id: "monument",  label: "Zabytki",     emoji: "🏰" },
+  { id: "experience",label: "Rozrywka",    emoji: "🎪" },
+  { id: "market",    label: "Markety",     emoji: "🛒" },
+];
+
 const CATEGORY_LABELS: Record<string, string> = {
   breakfast: "Śniadanie", restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum",
   park: "Park", bar: "Bar", club: "Klub", monument: "Zabytek",
@@ -58,6 +70,8 @@ const GroupSession = () => {
   // ── Category state ───────────────────────────────────────────────────────────
   const [activeCategoryForSwiping, setActiveCategoryForSwiping] = useState<string | null>(null);
   const [settingActiveCategory, setSettingActiveCategory] = useState(false);
+  const [pendingCategories, setPendingCategories] = useState<string[]>([]);
+  const [savingCategories, setSavingCategories] = useState(false);
 
   // ── Data queries ────────────────────────────────────────────────────────────
 
@@ -236,6 +250,17 @@ const GroupSession = () => {
       .eq("user_id", user!.id);
     queryClient.invalidateQueries({ queryKey: ["group-session-members", session.id] });
     setActiveCategoryForSwiping(null);
+  };
+
+  const handleSaveCategories = async () => {
+    if (!session || !isCreator || !pendingCategories.length) return;
+    setSavingCategories(true);
+    await (supabase as any)
+      .from("group_sessions")
+      .update({ categories: pendingCategories, current_category_index: 0 })
+      .eq("id", session.id);
+    queryClient.invalidateQueries({ queryKey: ["group-session", joinCode] });
+    setSavingCategories(false);
   };
 
   const handleSetActiveCategory = async (catId: string) => {
@@ -465,7 +490,74 @@ const GroupSession = () => {
 
         {/* ── Swipe tab — always mounted so PlaceSwiper state survives tab switches ── */}
         <div className={cn("flex-1 flex flex-col overflow-hidden", tab !== "swipe" && "hidden")}>
-        {activeCategoryForSwiping ? (
+        {/* ── Setup screen: admin picks categories before swiping starts ── */}
+        {!sessionCategories.length && (
+          <div className="flex-1 overflow-y-auto px-4 pt-5 pb-6 flex flex-col gap-5">
+            {isCreator ? (
+              <>
+                <div>
+                  <p className="font-bold text-base mb-0.5">Wybierz kategorie</p>
+                  <p className="text-sm text-muted-foreground">Wszyscy będą swipe'ować miejsca z wybranych kategorii</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {AVAILABLE_CATEGORIES.map((cat) => {
+                    const selected = pendingCategories.includes(cat.id);
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setPendingCategories(prev =>
+                          selected ? prev.filter(c => c !== cat.id) : [...prev, cat.id]
+                        )}
+                        className={`px-3 py-2 rounded-full text-sm font-medium border transition-colors flex items-center gap-1.5 ${
+                          selected
+                            ? "bg-orange-600 text-white border-orange-600"
+                            : "bg-card text-foreground border-border/60"
+                        }`}
+                      >
+                        <span>{cat.emoji}</span>
+                        <span>{cat.label}</span>
+                        {selected && (
+                          <span className="ml-0.5 text-xs opacity-80">{pendingCategories.indexOf(cat.id) + 1}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {pendingCategories.length > 0 && (
+                  <p className="text-xs text-muted-foreground -mt-2">
+                    Kolejność: {pendingCategories.map(id => AVAILABLE_CATEGORIES.find(c => c.id === id)?.label).join(" → ")}
+                  </p>
+                )}
+                <button
+                  onClick={handleSaveCategories}
+                  disabled={savingCategories || pendingCategories.length === 0}
+                  className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 mt-auto"
+                >
+                  {savingCategories ? "Zapisuję…" : "Rozpocznij parowanie"}
+                </button>
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center">
+                <div className="h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
+                  <Users className="h-10 w-10 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-xl font-black mb-1">Zaraz zaczniemy!</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Organizator wybiera kategorie miejsc do parowania. Chwilę cierpliwości!
+                  </p>
+                </div>
+                <div className="flex gap-1.5">
+                  {[0, 1, 2].map(i => (
+                    <div key={i} className="h-2 w-2 rounded-full bg-orange-600/40 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!!sessionCategories.length && activeCategoryForSwiping ? (
           // ── Active swiper for chosen category ──────────────────────────
           categoryPlaceIds.length > 0 ? (
             <PlaceSwiper
@@ -486,7 +578,7 @@ const GroupSession = () => {
               <p className="text-sm text-muted-foreground">Ładowanie miejsc…</p>
             </div>
           )
-        ) : (
+        ) : !!sessionCategories.length ? (
           // ── Category list ───────────────────────────────────────────────
           <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4 space-y-2">
             {!sessionCategories.length ? (
@@ -575,7 +667,7 @@ const GroupSession = () => {
               </>
             )}
           </div>
-        )}
+        ) : null}
         </div>{/* end always-mounted swipe tab */}
 
         {/* ── Matches tab ── */}
