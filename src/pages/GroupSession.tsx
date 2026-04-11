@@ -17,7 +17,6 @@ import { cn } from "@/lib/utils";
 
 const AVAILABLE_CATEGORIES = [
   { id: "Kawiarnia",   label: "Kawiarnia",   emoji: "☕",  dbValue: "cafe" },
-  { id: "Piekarnia",   label: "Piekarnia",   emoji: "🥐",  dbValue: "Piekarnia" },
   { id: "Śniadania",   label: "Śniadania",   emoji: "🍳",  dbValue: "Śniadania" },
   { id: "Restauracja", label: "Restauracja", emoji: "🍽️", dbValue: "restaurant" },
   { id: "Bar",         label: "Bar",         emoji: "🍺",  dbValue: "bar" },
@@ -29,7 +28,7 @@ const AVAILABLE_CATEGORIES = [
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
-  Kawiarnia: "Kawiarnia", Piekarnia: "Piekarnia", "Śniadania": "Śniadania",
+  Kawiarnia: "Kawiarnia", "Śniadania": "Śniadania",
   Restauracja: "Restauracja", Bar: "Bar", Muzeum: "Muzeum",
   Park: "Park", Market: "Market", Landmark: "Landmark", Rozrywka: "Rozrywka",
 };
@@ -180,7 +179,7 @@ const GroupSession = () => {
   const needsCategoryPick = !currentCategory || allMembersDoneCategory;
 
   const CATEGORY_EMOJI: Record<string, string> = {
-    Kawiarnia: "☕", Piekarnia: "🥐", "Śniadania": "🍳",
+    Kawiarnia: "☕", "Śniadania": "🍳",
     Restauracja: "🍽️", Bar: "🍺", Muzeum: "🏛️",
     Park: "🌿", Market: "🛒", Landmark: "🏰", Rozrywka: "🎪",
   };
