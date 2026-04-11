@@ -851,7 +851,7 @@ const GroupSession = () => {
               )}
               {existingRoute && (
                 <button
-                  onClick={() => navigate(`/moje-wyprawy`)}
+                  onClick={() => navigate("/create", { state: { city: existingRoute.city, existingRouteId: existingRoute.id } })}
                   className="w-full py-3.5 rounded-2xl bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
                 >
                   Otwórz zapisaną trasę →

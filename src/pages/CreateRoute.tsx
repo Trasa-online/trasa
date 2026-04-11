@@ -38,9 +38,36 @@ const CreateRoute = () => {
     matchedRoutes?: MatchedRouteStub[]; selectedRouteIndex?: number;
     backTo?: string;
     groupSession?: { sessionId: string; otherMemberIds: string[] };
+    existingRouteId?: string;
   } | null);
   const matchedRoutes = wizardState?.matchedRoutes ?? [];
   const [altIndex, setAltIndex] = useState(wizardState?.selectedRouteIndex ?? 0);
+  const [loadedPlan, setLoadedPlan] = useState<any>(null);
+
+  useEffect(() => {
+    const id = wizardState?.existingRouteId;
+    if (!id) return;
+    supabase
+      .from("routes")
+      .select("city, pins(*)")
+      .eq("id", id)
+      .single()
+      .then(({ data }) => {
+        if (!data) return;
+        setLoadedPlan({
+          city: data.city,
+          days: [{
+            day_number: 1,
+            pins: ((data as any).pins as any[]).map((p: any) => ({
+              place_name: p.place_name, address: p.address ?? "", description: p.description ?? "",
+              suggested_time: p.suggested_time ?? "", duration_minutes: p.duration_minutes ?? 60,
+              category: p.category ?? "", latitude: p.latitude ?? 0, longitude: p.longitude ?? 0,
+              day_number: 1, walking_time_from_prev: p.walking_time_from_prev ?? null,
+            })),
+          }],
+        });
+      });
+  }, [wizardState?.existingRouteId]);
 
   const buildPlan = (route: MatchedRouteStub, city: string) => ({
     city,
@@ -48,9 +75,9 @@ const CreateRoute = () => {
   });
 
   const currentCity = wizardState?.city ?? "";
-  const templateInitialPlan = matchedRoutes.length > 0
+  const templateInitialPlan = loadedPlan ?? (matchedRoutes.length > 0
     ? buildPlan(matchedRoutes[altIndex] ?? matchedRoutes[0], currentCity)
-    : (wizardState?.initialPlan ?? null);
+    : (wizardState?.initialPlan ?? null));
   const [searchParams] = useSearchParams();
   const folderId = searchParams.get("trip") ?? undefined;
   const dayNumber = searchParams.get("day") ? parseInt(searchParams.get("day")!) : undefined;
@@ -194,6 +221,7 @@ const CreateRoute = () => {
           preferences={preferences}
           messages={finalMessages}
           groupSession={wizardState?.groupSession}
+          existingRouteId={wizardState?.existingRouteId}
         />
       )}
     </div>

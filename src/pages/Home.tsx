@@ -252,7 +252,7 @@ const Home = () => {
                 <div className="px-4 py-3 border-t border-border/20 space-y-2 shrink-0">
                   {sessionRoute && (
                     <button
-                      onClick={() => { setPreviewSessionId(null); navigate("/my-routes"); }}
+                      onClick={() => { setPreviewSessionId(null); navigate("/create", { state: { city: sessionRoute.city, existingRouteId: sessionRoute.id } }); }}
                       className="w-full py-3.5 rounded-2xl bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
                     >
                       Otwórz zapisaną trasę →

@@ -47,6 +47,7 @@ interface RouteSummaryDialogProps {
   preferences: TripPreferences;
   messages: ChatMessage[];
   groupSession?: { sessionId: string; otherMemberIds: string[] };
+  existingRouteId?: string;
 }
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -63,6 +64,7 @@ const RouteSummaryDialog = ({
   preferences,
   messages,
   groupSession,
+  existingRouteId,
 }: RouteSummaryDialogProps) => {
   const [saving, setSaving] = useState(false);
   const { user } = useAuth();
@@ -89,6 +91,12 @@ const RouteSummaryDialog = ({
 
   const saveRoute = useCallback(async () => {
     if (!user || saving) return;
+    if (existingRouteId) {
+      toast.success("Trasa jest już zapisana!");
+      onOpenChange(false);
+      navigate("/my-routes");
+      return;
+    }
     setSaving(true);
 
     try {
