@@ -523,9 +523,6 @@ const GroupSession = () => {
 
           // ── Admin/member picking next category ──────────────────────────
           if (needsCategoryPick) {
-            const alreadyPlayed = sessionCategories;
-            const available = AVAILABLE_CATEGORIES.filter(c => !alreadyPlayed.includes(c.id));
-
             if (isCreator) {
               const isFirst = sessionCategories.length === 0;
               return (
@@ -544,31 +541,25 @@ const GroupSession = () => {
                       {isFirst ? "Wybierz pierwszą kategorię" : "Wybierz następną kategorię"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Wszyscy będą swipe'ować 20 miejsc z wybranej kategorii
+                      Wszyscy będą swipe'ować 10 miejsc z wybranej kategorii
                     </p>
                   </div>
-                  {available.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Wszystkie kategorie zostały już zagrane!
-                    </p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {available.map((cat) => (
-                        <button
-                          key={cat.id}
-                          onClick={() => setPendingCategory(p => p === cat.id ? null : cat.id)}
-                          className={`px-3 py-2 rounded-full text-sm font-medium border transition-colors flex items-center gap-1.5 ${
-                            pendingCategory === cat.id
-                              ? "bg-orange-600 text-white border-orange-600"
-                              : "bg-card text-foreground border-border/60"
-                          }`}
-                        >
-                          <span>{cat.emoji}</span>
-                          <span>{cat.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {AVAILABLE_CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setPendingCategory(p => p === cat.id ? null : cat.id)}
+                        className={`px-3 py-2 rounded-full text-sm font-medium border transition-colors flex items-center gap-1.5 ${
+                          pendingCategory === cat.id
+                            ? "bg-orange-600 text-white border-orange-600"
+                            : "bg-card text-foreground border-border/60"
+                        }`}
+                      >
+                        <span>{cat.emoji}</span>
+                        <span>{cat.label}</span>
+                      </button>
+                    ))}
+                  </div>
                   <div className="flex flex-col gap-2 mt-auto">
                     <button
                       onClick={handleStartCategory}
@@ -617,30 +608,65 @@ const GroupSession = () => {
 
           // ── I finished this category, waiting for others ─────────────────
           if (iMyCategoryDone && !allMembersDoneCategory) {
+            const catEmoji = CATEGORY_EMOJI[currentCategory!] ?? "";
+            const catLabel = CATEGORY_LABELS[currentCategory!] ?? currentCategory;
+            const doneCount = members.filter((m: any) => (m.categories_done ?? []).includes(currentCategory)).length;
             return (
-              <div className="flex-1 flex flex-col items-center justify-center px-8 gap-5 text-center">
-                <p className="text-3xl">⏳</p>
-                <div>
-                  <p className="font-bold text-lg">Czekam na pozostałych…</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {CATEGORY_EMOJI[currentCategory!] ?? ""} {CATEGORY_LABELS[currentCategory!] ?? currentCategory}
+              <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6 text-center">
+                {/* Category chip */}
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-600/10 border border-orange-600/20 text-orange-700 font-semibold text-base">
+                  {catEmoji} {catLabel}
+                </span>
+
+                <div className="space-y-1">
+                  <p className="font-black text-2xl leading-tight">Gotowe!</p>
+                  <p className="text-sm text-muted-foreground">
+                    Czekam aż wszyscy skończą tę kategorię
                   </p>
                 </div>
-                <div className="flex gap-2">
+
+                {/* Member avatars with done state */}
+                <div className="flex gap-4 justify-center flex-wrap">
                   {members.map((m: any) => {
                     const done = (m.categories_done ?? []).includes(currentCategory);
+                    const name = m.profile?.first_name || m.profile?.username || "?";
                     return (
-                      <div key={m.user_id} className="flex flex-col items-center gap-1">
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors ${done ? "bg-orange-600 text-white border-orange-600" : "bg-muted text-muted-foreground border-border/40"}`}>
-                          {(m.profile?.first_name || m.profile?.username || "?")[0].toUpperCase()}
+                      <div key={m.user_id} className="flex flex-col items-center gap-2">
+                        <div className="relative">
+                          {m.profile?.avatar_url ? (
+                            <img
+                              src={m.profile.avatar_url}
+                              alt={name}
+                              className={`h-14 w-14 rounded-full object-cover border-2 transition-all ${done ? "border-orange-600" : "border-border/40 opacity-60"}`}
+                            />
+                          ) : (
+                            <div className={`h-14 w-14 rounded-full flex items-center justify-center text-lg font-bold border-2 transition-all ${done ? "bg-orange-600 text-white border-orange-600" : "bg-muted text-muted-foreground border-border/40 opacity-60"}`}>
+                              {name[0].toUpperCase()}
+                            </div>
+                          )}
+                          {done && (
+                            <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-orange-600 border-2 border-background flex items-center justify-center">
+                              <Check className="h-2.5 w-2.5 text-white" />
+                            </div>
+                          )}
                         </div>
-                        <span className="text-[10px] text-muted-foreground">{done ? "✓" : "…"}</span>
+                        <span className="text-xs text-muted-foreground font-medium max-w-[60px] truncate">{name}</span>
                       </div>
                     );
                   })}
                 </div>
+
+                <p className="text-xs text-muted-foreground">{doneCount} / {members.length} gotowych</p>
+
+                {/* Match count — prominent */}
                 {matches.length > 0 && (
-                  <p className="text-xs text-muted-foreground">{matches.length} matchów do tej pory</p>
+                  <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 px-6 py-4 flex flex-col items-center gap-1">
+                    <p className="text-3xl font-black text-emerald-700">{matches.length}</p>
+                    <p className="text-sm font-semibold text-emerald-600">
+                      {matches.length === 1 ? "wspólne miejsce" : matches.length < 5 ? "wspólne miejsca" : "wspólnych miejsc"}
+                    </p>
+                    <p className="text-xs text-emerald-600/70">do tej pory</p>
+                  </div>
                 )}
               </div>
             );
