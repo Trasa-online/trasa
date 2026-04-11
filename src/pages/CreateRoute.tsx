@@ -177,6 +177,20 @@ const CreateRoute = () => {
               </p>
             )}
           </div>
+          {wizardState?.existingRouteId && (
+            <button
+              onClick={async () => {
+                await supabase
+                  .from("routes")
+                  .update({ chat_status: "completed" } as any)
+                  .eq("id", wizardState.existingRouteId!);
+                navigate(`/review-summary?route=${wizardState.existingRouteId}&new=1`);
+              }}
+              className="text-sm font-semibold text-orange-600 shrink-0"
+            >
+              Zakończ trasę
+            </button>
+          )}
         </div>
 
         {/* Day tabs — shown when editing an existing multi-day trip */}

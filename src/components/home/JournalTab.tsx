@@ -23,7 +23,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       // Own completed routes
       const { data: ownRoutes } = await supabase
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, is_shared")
+        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, is_shared, overall_rating")
         .eq("user_id", userId)
         .eq("chat_status", "completed")
         .order("updated_at", { ascending: false });
@@ -127,6 +127,13 @@ const JournalTab = ({ userId }: JournalTabProps) => {
                 </p>
                 {dateLabel && (
                   <p className="text-white/70 text-xs mt-0.5">{dateLabel}</p>
+                )}
+                {entry.overall_rating && (
+                  <div className="flex items-center gap-0.5 mt-0.5">
+                    {Array.from({length: entry.overall_rating}).map((_,i) => (
+                      <span key={i} className="text-[10px]">⭐</span>
+                    ))}
+                  </div>
                 )}
               </div>
               {/* Privacy badge */}

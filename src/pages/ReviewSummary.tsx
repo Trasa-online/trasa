@@ -23,6 +23,7 @@ const ReviewSummary = () => {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const routeId = searchParams.get("route");
+  const isNewCompletion = searchParams.get("new") === "1";
 
   const [narrative, setNarrative] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
@@ -30,6 +31,9 @@ const ReviewSummary = () => {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [pinRatings, setPinRatings] = useState<Record<string, number>>({});
+  const [highlightPlace, setHighlightPlace] = useState<string | null>(null);
+  const [overallRating, setOverallRating] = useState<number | null>(null);
   const narrativeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -37,9 +41,9 @@ const ReviewSummary = () => {
     queryKey: ["review-summary-route", routeId],
     queryFn: async () => {
       if (!routeId || !user) return null;
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative, is_shared, group_session_id")
+        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative, is_shared, group_session_id, overall_rating")
         .eq("id", routeId)
         .single();
       return data as any;
@@ -98,7 +102,6 @@ const ReviewSummary = () => {
     enabled: !!route?.group_session_id,
   });
 
-
   const { data: pins = [] } = useQuery({
     queryKey: ["review-summary-pins", routeId],
     queryFn: async () => {
@@ -113,6 +116,19 @@ const ReviewSummary = () => {
     enabled: !!routeId && !!user,
   });
 
+  const { data: existingRatings = [] } = useQuery({
+    queryKey: ["pin-ratings", routeId, user?.id],
+    queryFn: async () => {
+      if (!routeId || !user) return [];
+      const { data } = await (supabase as any)
+        .from("pin_ratings")
+        .select("place_name, rating, is_highlight")
+        .eq("route_id", routeId)
+        .eq("user_id", user.id);
+      return data ?? [];
+    },
+    enabled: !!routeId && !!user,
+  });
 
   useEffect(() => {
     if (route?.review_narrative) setNarrative(route.review_narrative);
@@ -120,6 +136,22 @@ const ReviewSummary = () => {
     if (route?.is_shared != null) setIsPublic(route.is_shared);
   }, [route?.review_narrative, route?.review_photos, route?.is_shared]);
 
+  useEffect(() => {
+    if (existingRatings.length) {
+      const map: Record<string, number> = {};
+      let hl: string | null = null;
+      for (const r of existingRatings) {
+        if (r.rating) map[r.place_name] = r.rating;
+        if (r.is_highlight) hl = r.place_name;
+      }
+      setPinRatings(map);
+      setHighlightPlace(hl);
+    }
+  }, [existingRatings]);
+
+  useEffect(() => {
+    if (route?.overall_rating) setOverallRating(route.overall_rating);
+  }, [route?.overall_rating]);
 
   const togglePublic = async (val: boolean) => {
     setIsPublic(val);
@@ -179,6 +211,43 @@ const ReviewSummary = () => {
     const updated = [url, ...photos.filter(p => p !== url)];
     setPhotos(updated);
     await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
+  };
+
+  const ratePinHandler = async (placeName: string, rating: number) => {
+    if (!routeId || !user) return;
+    setPinRatings(prev => ({ ...prev, [placeName]: rating }));
+    await (supabase as any).from("pin_ratings").upsert({
+      route_id: routeId,
+      user_id: user.id,
+      place_name: placeName,
+      rating,
+      is_highlight: highlightPlace === placeName,
+    }, { onConflict: "route_id,user_id,place_name" });
+  };
+
+  const toggleHighlight = async (placeName: string) => {
+    if (!routeId || !user) return;
+    const newHL = highlightPlace === placeName ? null : placeName;
+    // Remove highlight from previous
+    if (highlightPlace && highlightPlace !== placeName) {
+      await (supabase as any).from("pin_ratings").upsert({
+        route_id: routeId, user_id: user.id, place_name: highlightPlace,
+        rating: pinRatings[highlightPlace] ?? null, is_highlight: false,
+      }, { onConflict: "route_id,user_id,place_name" });
+    }
+    setHighlightPlace(newHL);
+    if (newHL) {
+      await (supabase as any).from("pin_ratings").upsert({
+        route_id: routeId, user_id: user.id, place_name: newHL,
+        rating: pinRatings[newHL] ?? null, is_highlight: true,
+      }, { onConflict: "route_id,user_id,place_name" });
+    }
+  };
+
+  const rateOverall = async (rating: number) => {
+    if (!routeId) return;
+    setOverallRating(rating);
+    await (supabase as any).from("routes").update({ overall_rating: rating }).eq("id", routeId);
   };
 
   const handleShare = async () => {
@@ -282,6 +351,31 @@ const ReviewSummary = () => {
 
       {/* ── Scrollable content ────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto pb-32">
+
+        {/* Celebration banner — only when arriving from "Zakończ trasę" */}
+        {isNewCompletion && (
+          <div className="px-5 pt-6 pb-5 text-center border-b border-border/30">
+            <div className="text-5xl mb-2">🎉</div>
+            <h2 className="text-xl font-black">Świetna trasa!</h2>
+            <p className="text-sm text-muted-foreground mt-1">Oceń miejsca i zachowaj wspomnienia</p>
+          </div>
+        )}
+
+        {/* Overall rating */}
+        <div className="px-5 pt-5 pb-5 border-b border-border/30">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Ocena trasy</p>
+          <div className="flex gap-2">
+            {[1,2,3,4,5].map(n => (
+              <button
+                key={n}
+                onClick={() => rateOverall(n)}
+                className={`text-2xl transition-transform active:scale-90 ${n <= (overallRating ?? 0) ? "opacity-100" : "opacity-25"}`}
+              >
+                ⭐
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* AI highlight — big pull quote */}
         {route?.ai_highlight && (
@@ -414,32 +508,41 @@ const ReviewSummary = () => {
           </button>
         </div>
 
-        {/* ── Places ── */}
+        {/* ── Places with star ratings ── */}
         {pins.length > 0 && (
           <div className="px-5 pt-5 pb-5 border-b border-border/30">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-              Miejsca w tej trasie
-            </p>
-            <div className="space-y-3">
-              {pins.map((pin: any, i: number) => {
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Oceń miejsca</p>
+            <div className="space-y-4">
+              {pins.map((pin: any) => {
                 const thumb = pin.images?.[0] ?? pin.image_url ?? null;
+                const currentRating = pinRatings[pin.place_name] ?? 0;
+                const isHL = highlightPlace === pin.place_name;
                 return (
-                  <div key={pin.id} className="flex items-center gap-3">
-                    <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-[11px] font-bold text-muted-foreground shrink-0">
-                      {i + 1}
-                    </div>
-                    <div className="h-11 w-11 rounded-xl overflow-hidden bg-muted shrink-0">
-                      {thumb ? (
-                        <img src={thumb} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-lg">
-                          {CATEGORY_EMOJI[pin.category] ?? "📍"}
+                  <div key={pin.id} className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="h-11 w-11 rounded-xl overflow-hidden bg-muted shrink-0">
+                        {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : (
+                          <div className="w-full h-full flex items-center justify-center text-lg">{CATEGORY_EMOJI[pin.category] ?? "📍"}</div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold leading-tight truncate">{pin.place_name}</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          {[1,2,3,4,5].map(n => (
+                            <button key={n} onClick={() => ratePinHandler(pin.place_name, n)}
+                              className={`text-lg leading-none transition-transform active:scale-90 ${n <= currentRating ? "opacity-100" : "opacity-25"}`}>
+                              ⭐
+                            </button>
+                          ))}
                         </div>
-                      )}
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold leading-tight truncate">{pin.place_name}</p>
-                    </div>
+                    <button
+                      onClick={() => toggleHighlight(pin.place_name)}
+                      className={`w-full py-1.5 rounded-xl text-xs font-semibold border transition-colors ${isHL ? "bg-amber-400/20 border-amber-400 text-amber-700" : "border-border/40 text-muted-foreground"}`}
+                    >
+                      {isHL ? "⭐ Miejsce dnia!" : "Wyróżnij jako miejsce dnia"}
+                    </button>
                   </div>
                 );
               })}
