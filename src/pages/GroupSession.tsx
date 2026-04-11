@@ -70,6 +70,8 @@ const GroupSession = () => {
   // ── Category state ───────────────────────────────────────────────────────────
   const [pendingCategory, setPendingCategory] = useState<string | null>(null);
   const [savingCategory, setSavingCategory] = useState(false);
+  // Local override so server refetch can't reset the UI mid-swipe
+  const [localActiveCategory, setLocalActiveCategory] = useState<string | null>(null);
 
   // ── Data queries ────────────────────────────────────────────────────────────
 
@@ -165,12 +167,14 @@ const GroupSession = () => {
 
   const sessionCategories: string[] = (session as any)?.categories ?? [];
   const currentCategoryIndex: number = (session as any)?.current_category_index ?? 0;
-  const currentCategory: string | null = sessionCategories[currentCategoryIndex] ?? null;
+  const serverCategory: string | null = sessionCategories[currentCategoryIndex] ?? null;
+  // localActiveCategory takes precedence — prevents server refetch from resetting UI
+  const currentCategory: string | null = localActiveCategory ?? serverCategory;
   const myMemberData = members.find((m: any) => m.user_id === user?.id);
   const myDoneCategories: string[] = myMemberData?.categories_done ?? [];
   const iMyCategoryDone = currentCategory ? myDoneCategories.includes(currentCategory) : false;
   // All members (min 1) finished current category
-  const allMembersDoneCategory = !!currentCategory && members.length >= 1 &&
+  const allMembersDoneCategory = !!currentCategory && !localActiveCategory && members.length >= 1 &&
     members.every((m: any) => (m.categories_done ?? []).includes(currentCategory));
   // Admin needs to pick: either no category set yet, or everyone finished current one
   const needsCategoryPick = !currentCategory || allMembersDoneCategory;
@@ -252,6 +256,7 @@ const GroupSession = () => {
       .update({ categories_done: updated })
       .eq("session_id", session.id)
       .eq("user_id", user!.id);
+    setLocalActiveCategory(null); // clear local override — let server state take over
     queryClient.invalidateQueries({ queryKey: ["group-session-members", session.id] });
   };
 
@@ -259,6 +264,11 @@ const GroupSession = () => {
   const handleStartCategory = async () => {
     if (!session || !isCreator || !pendingCategory) return;
     setSavingCategory(true);
+    // Set local override immediately — UI transitions now, before DB confirms
+    setLocalActiveCategory(pendingCategory);
+    setPendingCategory(null);
+    setSavingCategory(false);
+    // Fire DB update in background
     const newCategories = [...sessionCategories, pendingCategory];
     const newIndex = newCategories.length - 1;
     const { error } = await (supabase as any)
@@ -267,22 +277,15 @@ const GroupSession = () => {
       .eq("id", session.id);
     if (error) {
       toast.error("Błąd zapisu: " + error.message);
-      setSavingCategory(false);
+      // Revert local override on failure
+      setLocalActiveCategory(null);
       return;
     }
-    // Cancel any in-flight refetch so it doesn't overwrite our update
-    await queryClient.cancelQueries({ queryKey: ["group-session", joinCode] });
     queryClient.setQueryData(["group-session", joinCode], (old: any) => ({
       ...old,
       categories: newCategories,
       current_category_index: newIndex,
     }));
-    setPendingCategory(null);
-    setSavingCategory(false);
-    // Delayed refetch so UI has already transitioned
-    setTimeout(() => {
-      queryClient.invalidateQueries({ queryKey: ["group-session", joinCode] });
-    }, 1000);
   };
 
   const togglePlace = (placeName: string) => {
