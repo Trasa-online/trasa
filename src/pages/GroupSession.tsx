@@ -86,6 +86,7 @@ const GroupSession = () => {
       return data as { id: string; city: string; created_by: string; join_code: string; trip_date: string | null; status: string | null; categories: string[]; current_category_index: number } | null;
     },
     enabled: !!joinCode,
+    refetchInterval: 5000,
   });
 
   const { data: members = [] } = useQuery({
@@ -255,10 +256,21 @@ const GroupSession = () => {
   const handleSaveCategories = async () => {
     if (!session || !isCreator || !pendingCategories.length) return;
     setSavingCategories(true);
-    await (supabase as any)
+    const { error } = await (supabase as any)
       .from("group_sessions")
       .update({ categories: pendingCategories, current_category_index: 0 })
       .eq("id", session.id);
+    if (error) {
+      toast.error("Błąd podczas zapisywania kategorii");
+      setSavingCategories(false);
+      return;
+    }
+    // Update cache immediately so UI reacts without waiting for refetch
+    queryClient.setQueryData(["group-session", joinCode], (old: any) => ({
+      ...old,
+      categories: pendingCategories,
+      current_category_index: 0,
+    }));
     queryClient.invalidateQueries({ queryKey: ["group-session", joinCode] });
     setSavingCategories(false);
   };
