@@ -184,23 +184,39 @@ const GroupSession = () => {
     Park: "🌿", Market: "🛒", Landmark: "🏰", Rozrywka: "🎪",
   };
 
-  // Fetch 20 random places for current active category
+  // Deterministic seeded shuffle — same session+category = same order for all users
+  function seededShuffle<T>(arr: T[], seed: string): T[] {
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
+    const rand = () => { h ^= h << 13; h ^= h >> 17; h ^= h << 5; return (h >>> 0) / 4294967296; };
+    const result = [...arr];
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
+  }
+
   const dbCategoryValue = AVAILABLE_CATEGORIES.find(c => c.id === currentCategory)?.dbValue ?? currentCategory;
   const { data: categoryPlaceIds = [], isLoading: placesLoading } = useQuery({
-    queryKey: ["category-places", session?.city, currentCategory],
+    queryKey: ["category-places", session?.id, currentCategory],
     queryFn: async () => {
-      if (!currentCategory || !session?.city) return [];
-      const { data } = await (supabase as any)
+      if (!currentCategory || !session?.city || !session?.id) return [];
+      const { data, error } = await (supabase as any)
         .from("places")
         .select("id")
         .ilike("city", session.city)
         .eq("category", dbCategoryValue)
         .eq("is_active", true)
-        .limit(80);
-      const shuffled = (data || []).sort(() => Math.random() - 0.5);
-      return shuffled.slice(0, 20).map((p: any) => p.id as string);
+        .order("id", { ascending: true })
+        .limit(40);
+      if (error) { console.error("Places query error:", error); return []; }
+      if (!data?.length) { console.warn("No places found for", dbCategoryValue, "in", session.city); return []; }
+      // Seed = sessionId + category → same result for every user in this session
+      const shuffled = seededShuffle(data, session.id + currentCategory);
+      return shuffled.slice(0, 10).map((p: any) => p.id as string);
     },
-    enabled: !!currentCategory && !!session?.city && !iMyCategoryDone,
+    enabled: !!currentCategory && !!session?.id && !!session?.city && !iMyCategoryDone,
     staleTime: Infinity,
   });
 
