@@ -16,16 +16,16 @@ import { cn } from "@/lib/utils";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const AVAILABLE_CATEGORIES = [
-  { id: "Kawiarnia",   label: "Kawiarnia",   emoji: "☕" },
-  { id: "Piekarnia",   label: "Piekarnia",   emoji: "🥐" },
-  { id: "Śniadania",   label: "Śniadania",   emoji: "🍳" },
-  { id: "Restauracja", label: "Restauracja", emoji: "🍽️" },
-  { id: "Bar",         label: "Bar",         emoji: "🍺" },
-  { id: "Muzeum",      label: "Muzeum",      emoji: "🏛️" },
-  { id: "Park",        label: "Park",        emoji: "🌿" },
-  { id: "Market",      label: "Market",      emoji: "🛒" },
-  { id: "Landmark",    label: "Landmark",    emoji: "🏰" },
-  { id: "Rozrywka",    label: "Rozrywka",    emoji: "🎪" },
+  { id: "Kawiarnia",   label: "Kawiarnia",   emoji: "☕",  dbValue: "cafe" },
+  { id: "Piekarnia",   label: "Piekarnia",   emoji: "🥐",  dbValue: "Piekarnia" },
+  { id: "Śniadania",   label: "Śniadania",   emoji: "🍳",  dbValue: "Śniadania" },
+  { id: "Restauracja", label: "Restauracja", emoji: "🍽️", dbValue: "restaurant" },
+  { id: "Bar",         label: "Bar",         emoji: "🍺",  dbValue: "bar" },
+  { id: "Muzeum",      label: "Muzeum",      emoji: "🏛️", dbValue: "museum" },
+  { id: "Park",        label: "Park",        emoji: "🌿",  dbValue: "park" },
+  { id: "Market",      label: "Market",      emoji: "🛒",  dbValue: "market" },
+  { id: "Landmark",    label: "Landmark",    emoji: "🏰",  dbValue: "monument" },
+  { id: "Rozrywka",    label: "Rozrywka",    emoji: "🎪",  dbValue: "experience" },
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -186,6 +186,7 @@ const GroupSession = () => {
   };
 
   // Fetch 20 random places for current active category
+  const dbCategoryValue = AVAILABLE_CATEGORIES.find(c => c.id === currentCategory)?.dbValue ?? currentCategory;
   const { data: categoryPlaceIds = [], isLoading: placesLoading } = useQuery({
     queryKey: ["category-places", session?.city, currentCategory],
     queryFn: async () => {
@@ -194,7 +195,7 @@ const GroupSession = () => {
         .from("places")
         .select("id")
         .ilike("city", session.city)
-        .eq("category", currentCategory)
+        .eq("category", dbCategoryValue)
         .eq("is_active", true)
         .limit(80);
       const shuffled = (data || []).sort(() => Math.random() - 0.5);
