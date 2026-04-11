@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, MapPin, Star, Check, UserPlus, Play, Clock, CalendarDays, Copy, Share2 } from "lucide-react";
+import { ArrowLeft, Users, MapPin, Star, Check, UserPlus, CalendarDays, Copy, Share2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -12,7 +12,6 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { MOCK_MODE, getMockPlaces } from "@/lib/mockPlaces";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -53,17 +52,13 @@ const GroupSession = () => {
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const prevMatchNamesRef = useRef<Set<string> | null>(null);
-
-  // ── Round state ──────────────────────────────────────────────────────────────
-  const [myRoundDone, setMyRoundDone] = useState(false);
-  const prevRoundIdRef = useRef<string | null>(null);
-  const [startingRound, setStartingRound] = useState(false);
-  const [voting, setVoting] = useState(false);
-  // Mock mode: local round state (no SQL functions needed)
-  const [mockRoundNumber, setMockRoundNumber] = useState<number | null>(null);
-  const [mockIsVoting, setMockIsVoting] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // ── Category state ───────────────────────────────────────────────────────────
+  const [myCategoryDone, setMyCategoryDone] = useState(false);
+  const [advancingCategory, setAdvancingCategory] = useState(false);
+  const prevCategoryRef = useRef<string | null>(null);
 
   // ── Data queries ────────────────────────────────────────────────────────────
 
@@ -75,7 +70,7 @@ const GroupSession = () => {
         .select("*")
         .eq("join_code", joinCode)
         .maybeSingle();
-      return data as { id: string; city: string; created_by: string; join_code: string; trip_date: string | null; status: string | null } | null;
+      return data as { id: string; city: string; created_by: string; join_code: string; trip_date: string | null; status: string | null; categories: string[]; current_category_index: number } | null;
     },
     enabled: !!joinCode,
   });
@@ -85,7 +80,7 @@ const GroupSession = () => {
     queryFn: async () => {
       const { data: memberRows } = await (supabase as any)
         .from("group_session_members")
-        .select("user_id, joined_at")
+        .select("user_id, joined_at, categories_done")
         .eq("session_id", session!.id);
       if (!memberRows?.length) return [];
       const userIds = memberRows.map((m: any) => m.user_id);
@@ -114,47 +109,6 @@ const GroupSession = () => {
     enabled: !!session?.id,
     refetchInterval: 5000,
   });
-
-  // ── Current round ───────────────────────────────────────────────────────────
-
-  const { data: currentRound } = useQuery({
-    queryKey: ["group-session-round", session?.id],
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("group_session_rounds")
-        .select("*")
-        .eq("session_id", session!.id)
-        .order("round_number", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return data as { id: string; round_number: number; place_ids: string[]; status: string } | null;
-    },
-    enabled: !!session?.id,
-    refetchInterval: 3000,
-  });
-
-  const { data: roundProgress = [] } = useQuery({
-    queryKey: ["group-round-progress", session?.id, currentRound?.round_number],
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("group_session_members")
-        .select("user_id, current_round_done, current_round_vote, swiping_active")
-        .eq("session_id", session!.id);
-      return data || [];
-    },
-    enabled: !!session?.id && !!currentRound,
-    refetchInterval: 3000,
-  });
-
-  // Reset local myRoundDone when a NEW round starts (handles the non-creator case
-  // where setMyRoundDone(false) is never called because they didn't click "start").
-  // Must be placed AFTER currentRound query to avoid TDZ ReferenceError.
-  useEffect(() => {
-    if (currentRound?.id && currentRound.id !== prevRoundIdRef.current) {
-      prevRoundIdRef.current = currentRound.id;
-      setMyRoundDone(false);
-    }
-  }, [currentRound?.id]);
 
   // Switch to matches tab automatically when session is completed.
   // Must be placed AFTER session query to avoid TDZ ReferenceError.
@@ -195,30 +149,54 @@ const GroupSession = () => {
     return stats;
   }, [reactions]);
 
+  // ── Category computed ────────────────────────────────────────────────────────
 
-  // ── Round computed ───────────────────────────────────────────────────────────
+  const sessionCategories: string[] = (session as any)?.categories ?? [];
+  const currentCategoryIndex: number = (session as any)?.current_category_index ?? 0;
+  const currentCategory: string | null = sessionCategories[currentCategoryIndex] ?? null;
+  const allCategoriesDone = currentCategoryIndex >= sessionCategories.length && sessionCategories.length > 0;
+  const myMemberData = members.find((m: any) => m.user_id === user?.id);
+  const iMyCategoryDone = myCategoryDone || (myMemberData?.categories_done ?? []).includes(currentCategory ?? "");
+  const allMembersDoneCategory = members.length >= 2 &&
+    currentCategory !== null &&
+    members.every((m: any) => (m.categories_done ?? []).includes(currentCategory));
 
-  const myRoundProgress = roundProgress.find((m: any) => m.user_id === user?.id);
-  const mySwipingActive = myRoundProgress?.swiping_active ?? true;
-  // True when the user finished swiping this round (local flag OR DB says done)
-  const iDoneThisRound = myRoundDone || (myRoundProgress?.current_round_done ?? false);
-  const activeSwipers = roundProgress.filter((m: any) => m.swiping_active);
-  const doneCount = activeSwipers.filter((m: any) => m.current_round_done).length;
-  // Always use DB round for multi-user coordination; mockRoundNumber is only a fallback for solo dev testing
-  const effectiveRound = currentRound ?? (MOCK_MODE && mockRoundNumber !== null
-    ? { id: "mock", round_number: mockRoundNumber, place_ids: [] as string[], status: mockIsVoting ? "voting" : "active" }
-    : null);
+  const CATEGORY_EMOJI: Record<string, string> = {
+    cafe: "☕", restaurant: "🍽️", museum: "🏛️", park: "🌿",
+    bar: "🍺", monument: "🏰", experience: "🎪", market: "🛒",
+  };
 
-  // Stabilize place_ids reference so PlaceSwiper doesn't re-init on every 3-second poll.
-  // Only update the ref when the round ID actually changes.
-  const stableRoundPlaceIds = useMemo(
-    () => MOCK_MODE ? undefined : effectiveRound?.place_ids,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [effectiveRound?.id],
-  );
+  // Reset local done flag when category advances
+  useEffect(() => {
+    if (currentCategory && currentCategory !== prevCategoryRef.current) {
+      prevCategoryRef.current = currentCategory;
+      setMyCategoryDone(false);
+    }
+  }, [currentCategory]);
 
-  const isVotingPhase = effectiveRound?.status === "voting";
-  const myVote = myRoundProgress?.current_round_vote ?? null;
+  // Auto-switch to matches when all categories done
+  useEffect(() => {
+    if (allCategoriesDone) setTab("matches");
+  }, [allCategoriesDone]);
+
+  // Fetch 15 random places for current category
+  const { data: categoryPlaceIds = [] } = useQuery({
+    queryKey: ["category-places", session?.city, currentCategory],
+    queryFn: async () => {
+      if (!currentCategory || !session?.city) return [];
+      const { data } = await (supabase as any)
+        .from("places")
+        .select("id")
+        .ilike("city", session.city)
+        .eq("category", currentCategory)
+        .eq("is_active", true)
+        .limit(60);
+      const shuffled = (data || []).sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, 15).map((p: any) => p.id as string);
+    },
+    enabled: !!currentCategory && !!session?.city,
+    staleTime: Infinity,
+  });
 
   // ── Match banner detection ──────────────────────────────────────────────────
 
@@ -265,61 +243,26 @@ const GroupSession = () => {
     }
   };
 
-  const handleStartRound = async (roundNumber: number) => {
-    if (!session) return;
-    setStartingRound(true);
-    try {
-      const { error } = await (supabase as any).rpc("start_group_round", {
-        p_session_id: session.id,
-        p_round_number: roundNumber,
-      });
-      if (error) throw error;
-      setMyRoundDone(false);
-      if (MOCK_MODE) { setMockRoundNumber(roundNumber); setMockIsVoting(false); }
-      queryClient.invalidateQueries({ queryKey: ["group-session-round", session.id] });
-      queryClient.invalidateQueries({ queryKey: ["group-round-progress", session.id] });
-    } catch (e: any) {
-      toast.error(e.message || "Błąd podczas startu rundy");
-    } finally {
-      setStartingRound(false);
-    }
+  const handleCategoryComplete = async () => {
+    if (!session || !currentCategory) return;
+    setMyCategoryDone(true);
+    await (supabase as any)
+      .from("group_session_members")
+      .update({ categories_done: [...(myMemberData?.categories_done ?? []), currentCategory] })
+      .eq("session_id", session.id)
+      .eq("user_id", user!.id);
+    queryClient.invalidateQueries({ queryKey: ["group-session-members", session.id] });
   };
 
-  const handleRoundComplete = async () => {
-    if (!session) return;
-    setMyRoundDone(true);
-    if (MOCK_MODE) setMockIsVoting(true);
-    if (!currentRound) return;
-    try {
-      await (supabase as any).rpc("complete_round_for_user", {
-        p_session_id: session.id,
-        p_round_number: currentRound.round_number,
-      });
-      queryClient.invalidateQueries({ queryKey: ["group-round-progress", session.id] });
-      queryClient.invalidateQueries({ queryKey: ["group-session-round", session.id] });
-    } catch (e: any) {
-      toast.error(e.message || "Błąd zapisu");
-    }
-  };
-
-  const handleVote = async (vote: "continue" | "finish" | "opt_out") => {
-    if (!session) return;
-    setVoting(true);
-    try {
-      const { error } = await (supabase as any).rpc("vote_on_round", {
-        p_session_id: session.id,
-        p_vote: vote,
-      });
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["group-round-progress", session.id] });
-      if (vote === "finish" || vote === "opt_out") {
-        setTab("matches");
-      }
-    } catch (e: any) {
-      toast.error(e.message || "Błąd podczas głosowania");
-    } finally {
-      setVoting(false);
-    }
+  const handleNextCategory = async () => {
+    if (!session || !isCreator) return;
+    setAdvancingCategory(true);
+    await (supabase as any)
+      .from("group_sessions")
+      .update({ current_category_index: currentCategoryIndex + 1 })
+      .eq("id", session.id);
+    queryClient.invalidateQueries({ queryKey: ["group-session", joinCode] });
+    setAdvancingCategory(false);
   };
 
   const togglePlace = (placeName: string) => {
@@ -453,9 +396,21 @@ const GroupSession = () => {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-base leading-tight">{session.city}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-bold text-base leading-tight">{session.city}</p>
+            {currentCategory && !allCategoriesDone && (
+              <span className="text-sm font-semibold text-orange-600">
+                {CATEGORY_EMOJI[currentCategory] ?? ""} {CATEGORY_LABELS[currentCategory] ?? currentCategory}
+              </span>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground">
             {members.length} {members.length === 1 ? "osoba" : "osoby"} · #{joinCode}
+            {sessionCategories.length > 0 && (
+              <span className="ml-1.5">
+                · {Math.min(currentCategoryIndex + 1, sessionCategories.length)}/{sessionCategories.length}
+              </span>
+            )}
             {session.trip_date && (
               <span className="ml-1.5 inline-flex items-center gap-0.5">
                 · <CalendarDays className="h-3 w-3 inline mx-0.5" />
@@ -524,13 +479,23 @@ const GroupSession = () => {
         {/* ── Swipe tab — always mounted so PlaceSwiper state survives tab switches ── */}
         <div className={cn("flex-1 flex flex-col overflow-hidden", tab !== "swipe" && "hidden")}>
         {(() => {
-          // User opted out of swiping
-          if (!mySwipingActive && myVote) {
+          // No categories configured
+          if (!sessionCategories.length) {
             return (
               <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 text-center">
-                <p className="text-3xl">👀</p>
-                <p className="font-bold">Nie swipe'ujesz w tej rundzie</p>
-                <p className="text-sm text-muted-foreground">Twoje wcześniejsze lajki nadal liczą się do matchów.</p>
+                <p className="text-3xl">⚙️</p>
+                <p className="font-bold">Brak kategorii</p>
+                <p className="text-sm text-muted-foreground">Organizator nie wybrał żadnych kategorii dla tej sesji.</p>
+              </div>
+            );
+          }
+
+          // All categories done
+          if (allCategoriesDone) {
+            return (
+              <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 text-center">
+                <p className="text-3xl">🎉</p>
+                <p className="font-bold text-lg">Wszystkie kategorie przejrzane!</p>
                 <button onClick={() => setTab("matches")} className="py-3 px-6 rounded-2xl bg-orange-600 text-white font-semibold text-sm">
                   Zobacz dopasowania
                 </button>
@@ -538,202 +503,103 @@ const GroupSession = () => {
             );
           }
 
-          // ── Decision modal (voting phase) ───────────────────────────────
-          if (isVotingPhase && !myVote) {
-            const nextRound = (effectiveRound?.round_number ?? 0) + 1;
-            return (
-              <div className="flex-1 flex flex-col items-center justify-center px-6 gap-5">
-                <div className="text-center">
-                  <p className="text-4xl mb-3">🏁</p>
-                  <p className="text-xl font-black">Koniec rundy {effectiveRound?.round_number}!</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Znaleźliście <strong>{matches.length}</strong> {matches.length === 1 ? "wspólne miejsce" : "wspólnych miejsc"}
-                  </p>
-                </div>
-
-                <div className="w-full space-y-2.5">
-                  {isCreator ? (
-                    <>
-                      {/* Creator: start next round */}
-                      <button
-                        onClick={() => handleStartRound(nextRound)}
-                        disabled={startingRound}
-                        className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
-                      >
-                        <Play className="h-4 w-4" />
-                        {startingRound ? "Startuję…" : `Runda ${nextRound} — start!`}
-                      </button>
-
-                      {/* Creator: finish and go to matches */}
-                      <button
-                        onClick={() => { handleVote("finish"); setTab("matches"); }}
-                        disabled={voting || startingRound}
-                        className="w-full py-3.5 rounded-2xl border border-border/60 bg-card font-semibold text-sm active:scale-[0.97] transition-transform disabled:opacity-40"
-                      >
-                        {matches.length > 0
-                          ? `Przejdź do dopasowań (${matches.length})`
-                          : "Zakończ i przejdź do dopasowań"}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      {/* Participant: waiting for creator to decide */}
-                      <div className="w-full py-5 flex flex-col items-center gap-3 text-center">
-                        <div className="flex gap-1.5">
-                          {[0, 1, 2].map(i => (
-                            <div key={i} className="h-2 w-2 rounded-full bg-orange-600/40 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-                          ))}
-                        </div>
-                        <p className="text-sm text-muted-foreground">Czekam na decyzję organizatora…</p>
-                        {matches.length > 0 && (
-                          <p className="text-xs text-muted-foreground">{matches.length} matchów do tej pory</p>
-                        )}
-                      </div>
-
-                      {/* Participant: opt out */}
-                      <button
-                        onClick={() => handleVote("opt_out")}
-                        disabled={voting}
-                        className="w-full py-3.5 rounded-2xl border border-border/60 bg-card font-semibold text-sm active:scale-[0.97] transition-transform disabled:opacity-40"
-                      >
-                        Wychodzę z parowania
-                      </button>
-                      <p className="text-xs text-muted-foreground text-center -mt-1">
-                        zostaję w podróży i widzę dopasowania
-                      </p>
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          }
-
-          // ── Voted "continue", waiting for creator to start next round ──
-          if (myVote === "continue" && isVotingPhase) {
-            return (
-              <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 text-center">
-                <p className="text-3xl">👍</p>
-                <p className="font-bold text-lg">Gotowe!</p>
-                <p className="text-sm text-muted-foreground">Czekam aż host rozpocznie kolejną rundę…</p>
-                {matches.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">{matches.length} matchów do tej pory</p>
-                )}
-              </div>
-            );
-          }
-
-          // ── Waiting for others ──────────────────────────────────────────
-          if (iDoneThisRound && !isVotingPhase) {
+          // Waiting for others to finish current category
+          if (iMyCategoryDone && !allMembersDoneCategory) {
             return (
               <div className="flex-1 flex flex-col items-center justify-center px-8 gap-5 text-center">
-                <Clock className="h-10 w-10 text-muted-foreground/40" />
+                <p className="text-3xl">⏳</p>
                 <div>
                   <p className="font-bold text-lg">Czekam na pozostałych…</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {doneCount} / {activeSwipers.length} osób skończyło rundę {effectiveRound?.round_number}
+                    Inni przeglądają {CATEGORY_EMOJI[currentCategory!] ?? ""} {CATEGORY_LABELS[currentCategory!] ?? currentCategory}
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  {activeSwipers.map((m: any) => {
-                    const member = members.find((mem: any) => mem.user_id === m.user_id);
-                    const done = m.current_round_done;
+                  {members.map((m: any) => {
+                    const done = (m.categories_done ?? []).includes(currentCategory);
                     return (
                       <div key={m.user_id} className="flex flex-col items-center gap-1">
                         <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors ${done ? "bg-orange-600 text-white border-orange-600" : "bg-muted text-muted-foreground border-border/40"}`}>
-                          {(member?.profile?.first_name || member?.profile?.username || "?")[0].toUpperCase()}
+                          {(m.profile?.first_name || m.profile?.username || "?")[0].toUpperCase()}
                         </div>
                         <span className="text-[10px] text-muted-foreground">{done ? "✓" : "…"}</span>
                       </div>
                     );
                   })}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {matches.length > 0 ? `${matches.length} matchów do tej pory` : "Brak matchów jeszcze"}
-                </p>
+                {matches.length > 0 && (
+                  <p className="text-xs text-muted-foreground">{matches.length} matchów do tej pory</p>
+                )}
               </div>
             );
           }
 
-          // ── No round started yet ────────────────────────────────────────
-          if (!effectiveRound || effectiveRound.status === "completed") {
-            const nextRound = (effectiveRound?.round_number ?? 0) + 1;
-
-            if (!isCreator) {
-              // Participant waiting screen
-              return (
-                <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
-                  <div className="h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
-                    <Users className="h-10 w-10 text-orange-600" />
-                  </div>
-                  <div>
-                    <p className="text-xl font-black mb-1">
-                      {nextRound === 1 ? "Zaraz zaczniemy!" : `Runda ${nextRound} — chwilka`}
+          // All members done with this category
+          if (allMembersDoneCategory) {
+            return (
+              <div className="flex-1 flex flex-col items-center justify-center px-6 gap-5 text-center">
+                <div>
+                  <p className="text-4xl mb-2">✅</p>
+                  <p className="text-xl font-black">Kategoria gotowa!</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Wszyscy przejrzeli {CATEGORY_EMOJI[currentCategory!] ?? ""} {CATEGORY_LABELS[currentCategory!] ?? currentCategory}
+                  </p>
+                  {matches.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {matches.length} {matches.length === 1 ? "dopasowanie" : "dopasowań"} do tej pory
                     </p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {nextRound === 1
-                        ? "Organizator sesji za chwilę rozpocznie parowanie. Przygotuj się!"
-                        : `Czekam aż organizator uruchomi kolejną rundę. ${matches.length > 0 ? `${matches.length} matchów do tej pory.` : ""}`}
-                    </p>
-                  </div>
+                  )}
+                </div>
+                {isCreator ? (
+                  <button
+                    onClick={handleNextCategory}
+                    disabled={advancingCategory}
+                    className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
+                  >
+                    {advancingCategory
+                      ? "Przechodzę…"
+                      : currentCategoryIndex + 1 < sessionCategories.length
+                        ? `Następna: ${CATEGORY_EMOJI[sessionCategories[currentCategoryIndex + 1]] ?? ""} ${CATEGORY_LABELS[sessionCategories[currentCategoryIndex + 1]] ?? sessionCategories[currentCategoryIndex + 1]}`
+                        : "Zakończ parowanie →"}
+                  </button>
+                ) : (
                   <div className="flex flex-col items-center gap-2">
                     <div className="flex gap-1.5">
                       {[0, 1, 2].map(i => (
                         <div key={i} className="h-2 w-2 rounded-full bg-orange-600/40 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
                       ))}
                     </div>
-                    <p className="text-xs text-muted-foreground">Czekam na organizatora…</p>
+                    <p className="text-sm text-muted-foreground">Czekam aż organizator przejdzie dalej…</p>
                   </div>
-                </div>
-              );
-            }
-
-            return (
-              <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
-                <div className="h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
-                  <Users className="h-10 w-10 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-xl font-black mb-1">
-                    {nextRound === 1 ? "Gotowi na start?" : `Runda ${nextRound}`}
-                  </p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {nextRound === 1
-                      ? members.length < 2
-                        ? "Czekaj aż co najmniej jedna osoba dołączy do sesji."
-                        : `${members.length} ${members.length === 1 ? "osoba" : "osoby"} w pokoju. Wszyscy zobaczycie te same 10 miejsc.`
-                      : `Kolejna pula 10 nowych miejsc. ${matches.length} matchów do tej pory.`}
-                  </p>
-                </div>
-                {nextRound === 1 && members.length < 2 ? (
-                  <div className="w-full py-3 rounded-2xl border border-border/40 bg-muted/50 text-center space-y-2">
-                    <p className="text-sm font-semibold text-muted-foreground">Udostępnij kod sesji</p>
-                    <p className="text-2xl font-black tracking-widest">{joinCode}</p>
-                    <p className="text-xs text-muted-foreground">Gdy znajomy dołączy, będziesz mógł rozpocząć</p>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleStartRound(nextRound)}
-                    disabled={startingRound}
-                    className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
-                  >
-                    <Play className="h-5 w-5" />
-                    {startingRound ? "Startuję…" : nextRound === 1 ? "Rozpocznij parowanie" : `Runda ${nextRound} — start!`}
-                  </button>
                 )}
               </div>
             );
           }
 
-          // ── Active round: show swiper ───────────────────────────────────
+          // Active category: show swiper
+          if (!iMyCategoryDone && categoryPlaceIds.length > 0) {
+            return (
+              <PlaceSwiper
+                city={session.city}
+                date={session.trip_date ? new Date(session.trip_date) : new Date()}
+                groupSessionId={session.id}
+                roundPlaceIds={categoryPlaceIds}
+                onRoundComplete={handleCategoryComplete}
+                onGroupFinished={() => setTab("matches")}
+              />
+            );
+          }
+
+          // Loading places
           return (
-            <PlaceSwiper
-              city={session.city}
-              date={session.trip_date ? new Date(session.trip_date) : new Date()}
-              groupSessionId={session.id}
-              roundPlaceIds={stableRoundPlaceIds}
-              onRoundComplete={handleRoundComplete}
-              onGroupFinished={() => setTab("matches")}
-            />
+            <div className="flex-1 flex flex-col items-center justify-center gap-3">
+              <div className="flex gap-1.5">
+                {[0, 1, 2].map(i => (
+                  <div key={i} className="h-2 w-2 rounded-full bg-orange-600 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground">Ładowanie miejsc…</p>
+            </div>
           );
         })()}
         </div>{/* end always-mounted swipe tab */}
