@@ -156,12 +156,6 @@ const GroupSession = () => {
       });
   }, [reactions, members]);
 
-  const memberStats = useMemo(() => {
-    const stats: Record<string, number> = {};
-    for (const r of reactions) stats[r.user_id] = (stats[r.user_id] ?? 0) + 1;
-    return stats;
-  }, [reactions]);
-
   // ── Category computed ────────────────────────────────────────────────────────
 
   const sessionCategories: string[] = (session as any)?.categories ?? [];
@@ -727,25 +721,6 @@ const GroupSession = () => {
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3">
 
-              {/* Member stats chips */}
-              <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none">
-                {members.map((m: any) => (
-                  <div key={m.user_id} className="flex items-center gap-2 rounded-2xl border border-border/40 bg-card px-3 py-2 shrink-0">
-                    {m.profile?.avatar_url ? (
-                      <img src={m.profile.avatar_url} alt={m.profile?.first_name || m.profile?.username || "?"} className="h-7 w-7 rounded-full object-cover shrink-0" />
-                    ) : (
-                      <div className="h-7 w-7 rounded-full bg-orange-600/15 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
-                        {(m.profile?.first_name || m.profile?.username || "?")[0].toUpperCase()}
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-xs font-semibold leading-tight">{m.profile?.first_name || m.profile?.username || "Użytkownik"}</p>
-                      <p className="text-[10px] text-muted-foreground">{memberStats[m.user_id] ?? 0} polubionych</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
               {matches.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
                   <p className="text-4xl">🤔</p>
@@ -757,71 +732,73 @@ const GroupSession = () => {
                     Swipe'uj dalej
                   </button>
                 </div>
-              ) : (
-                <>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    {matches.length} {matches.length === 1 ? "wspólne miejsce" : "wspólnych miejsc"} · polubione przez co najmniej 2 osoby
-                  </p>
-
-                  <div className="space-y-2">
-                    {matches.map((m) => {
-                      const isSelected = !deselectedPlaces.has(m.place_name);
-                      return (
-                        <button
-                          key={m.place_name}
-                          onClick={() => handleOpenDetail(m)}
-                          className={`w-full flex items-center gap-3 rounded-2xl border bg-card p-3 text-left transition-all active:scale-[0.98] ${
-                            isCreator && !isSelected ? "border-border/20 opacity-50" : "border-border/40"
-                          }`}
-                        >
-                          {/* Photo thumbnail */}
-                          {m.photo_url ? (
-                            <img src={m.photo_url} alt={m.place_name} className="h-14 w-14 rounded-xl object-cover shrink-0" />
-                          ) : (
-                            <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center shrink-0">
-                              <MapPin className="h-5 w-5 text-muted-foreground" />
+              ) : (() => {
+                  // Group matches by category
+                  const grouped = matches.reduce<Record<string, MatchItem[]>>((acc, m) => {
+                    const key = m.category || "inne";
+                    if (!acc[key]) acc[key] = [];
+                    acc[key].push(m);
+                    return acc;
+                  }, {});
+                  const catMeta = (dbVal: string) => AVAILABLE_CATEGORIES.find(c => c.dbValue === dbVal);
+                  return (
+                    <div className="space-y-5">
+                      <p className="text-xs text-muted-foreground">
+                        {matches.length} {matches.length === 1 ? "wspólne miejsce" : "wspólnych miejsc"}
+                      </p>
+                      {Object.entries(grouped).map(([cat, items]) => {
+                        const meta = catMeta(cat);
+                        return (
+                          <div key={cat}>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                              {meta ? `${meta.emoji} ${meta.label}` : cat}
+                            </p>
+                            <div className="space-y-2">
+                              {items.map((m) => {
+                                const isSelected = !deselectedPlaces.has(m.place_name);
+                                return (
+                                  <button
+                                    key={m.place_name}
+                                    onClick={() => handleOpenDetail(m)}
+                                    className={`w-full flex items-center gap-3 rounded-2xl border bg-card p-3 text-left transition-all active:scale-[0.98] ${
+                                      isCreator && !isSelected ? "border-border/20 opacity-50" : "border-border/40"
+                                    }`}
+                                  >
+                                    {m.photo_url ? (
+                                      <img src={m.photo_url} alt={m.place_name} className="h-14 w-14 rounded-xl object-cover shrink-0" />
+                                    ) : (
+                                      <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                                        <MapPin className="h-5 w-5 text-muted-foreground" />
+                                      </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5">
+                                        <p className="font-semibold text-sm leading-tight">{m.place_name}</p>
+                                        {m.hasSuperLike && (
+                                          <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />
+                                        )}
+                                      </div>
+                                    </div>
+                                    {isCreator && (
+                                      <div
+                                        onClick={(e) => { e.stopPropagation(); togglePlace(m.place_name); }}
+                                        className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
+                                          isSelected ? "bg-orange-600 border-orange-600" : "border-border/60 bg-background"
+                                        }`}
+                                      >
+                                        {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
+                                      </div>
+                                    )}
+                                  </button>
+                                );
+                              })}
                             </div>
-                          )}
-
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <p className="font-semibold text-sm leading-tight">{m.place_name}</p>
-                              {/* Super-like star */}
-                              {m.hasSuperLike && (
-                                <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />
-                              )}
-                            </div>
-                            {m.category && (
-                              <p className="text-xs text-muted-foreground mt-0.5">{CATEGORY_LABELS[m.category] ?? m.category}</p>
-                            )}
                           </div>
-
-                          {/* Right side: liked count OR creator checkbox */}
-                          <div className="shrink-0 flex items-center gap-2">
-                            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-orange-600/10">
-                              <span className="text-orange-600 font-bold text-xs">{m.liked_by}</span>
-                              <span className="text-[10px]">❤️</span>
-                            </div>
-                            {isCreator && (
-                              <div
-                                onClick={(e) => { e.stopPropagation(); togglePlace(m.place_name); }}
-                                className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                  isSelected
-                                    ? "bg-orange-600 border-orange-600"
-                                    : "border-border/60 bg-background"
-                                }`}
-                              >
-                                {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
-                              </div>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
+                        );
+                      })}
+                    </div>
+                  );
+              })()}
             </div>
 
             {/* Finish button */}
