@@ -56,9 +56,9 @@ const CreateRoute = () => {
   const dayNumber = searchParams.get("day") ? parseInt(searchParams.get("day")!) : undefined;
   const creatorPlanId = searchParams.get("creatorPlan") ?? undefined;
   const initialUserMessage = searchParams.get("q") ?? undefined;
-  const wizardLikedPlaces = wizardState?.likedPlaceNames ?? [];
-  const wizardSkippedPlaces = wizardState?.skippedPlaceNames ?? [];
   const wizardLikedPlacesData = wizardState?.likedPlacesData ?? [];
+  const wizardLikedPlaces = wizardState?.likedPlaceNames ?? wizardLikedPlacesData.map(p => p.place_name);
+  const wizardSkippedPlaces = wizardState?.skippedPlaceNames ?? [];
   const wizardSuperLikedPlaces = wizardState?.superLikedPlaceNames ?? [];
   const [likedPlaces, setLikedPlaces] = useState<string[]>(wizardLikedPlaces);
   const [idealDay] = useState("");
