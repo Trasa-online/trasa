@@ -26,6 +26,7 @@ const CreateGroupSession = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [sessionName, setSessionName] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [tripDate, setTripDate] = useState<Date | undefined>(undefined);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -52,7 +53,7 @@ const CreateGroupSession = () => {
       const sessionIds = memberRows.map((m: any) => m.session_id);
       const { data: sessions } = await (supabase as any)
         .from("group_sessions")
-        .select("id, city, join_code, created_at, created_by")
+        .select("id, city, join_code, created_at, created_by, name")
         .in("id", sessionIds)
         .eq("status", "active")
         .order("created_at", { ascending: false })
@@ -122,6 +123,7 @@ const CreateGroupSession = () => {
           created_by: user.id,
           join_code: code,
           expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+          ...(sessionName.trim() ? { name: sessionName.trim() } : {}),
           ...(tripDate ? { trip_date: format(tripDate, "yyyy-MM-dd") } : {}),
         })
         .select()
@@ -305,6 +307,19 @@ const CreateGroupSession = () => {
               </div>
             </div>
 
+            {/* Session name */}
+            <div>
+              <p className="text-sm font-semibold mb-2">Nazwa sesji <span className="text-muted-foreground font-normal">(opcjonalnie)</span></p>
+              <input
+                type="text"
+                value={sessionName}
+                onChange={(e) => setSessionName(e.target.value)}
+                placeholder={selectedCity ? `np. Majówka ${capitalizeCity(selectedCity)}` : "np. Majówka Kraków"}
+                maxLength={40}
+                className="w-full px-4 py-3 rounded-2xl border border-border/60 bg-card text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-orange-600/30"
+              />
+            </div>
+
             <button
               onClick={handleCreate}
               disabled={loading || !selectedCity}
@@ -331,8 +346,8 @@ const CreateGroupSession = () => {
                       <Users className="h-5 w-5 text-orange-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">{capitalizeCity(s.city)}</p>
-                      <p className="text-xs text-muted-foreground font-mono">#{s.join_code}</p>
+                      <p className="font-semibold text-sm truncate">{s.name || capitalizeCity(s.city)}</p>
+                      <p className="text-xs text-muted-foreground font-mono">#{s.join_code}{s.name ? ` · ${capitalizeCity(s.city)}` : ""}</p>
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     <button

@@ -440,7 +440,7 @@ const GroupSession = () => {
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <p className="font-bold text-base leading-tight">{session.city}</p>
+            <p className="font-bold text-base leading-tight">{(session as any).name || session.city}</p>
             {currentCategory && !needsCategoryPick && (
               <span className="text-sm font-semibold text-orange-600">
                 {CATEGORY_EMOJI[currentCategory] ?? ""} {CATEGORY_LABELS[currentCategory] ?? currentCategory}

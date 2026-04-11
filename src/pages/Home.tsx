@@ -26,7 +26,7 @@ const Home = () => {
       const sessionIds = memberRows.map((m: any) => m.session_id);
       const { data: sessions } = await (supabase as any)
         .from("group_sessions")
-        .select("id, city, join_code, trip_date, created_at, status, match_count")
+        .select("id, city, join_code, trip_date, created_at, status, match_count, name")
         .in("id", sessionIds)
         .order("created_at", { ascending: false })
         .limit(10);
@@ -210,7 +210,7 @@ const Home = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold leading-tight">{s.city}</p>
+                    <p className="text-sm font-semibold leading-tight">{s.name || s.city}</p>
                     {isCompleted && (
                       <span className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded-full">
                         Zakończone
@@ -252,7 +252,7 @@ const Home = () => {
             <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] flex flex-col">
               <SheetHeader className="pb-2">
                 <SheetTitle className="text-base font-bold">
-                  {previewSession?.city} — dopasowania
+                  {previewSession?.name || previewSession?.city} — dopasowania
                   {matchedPlaces.length > 0 && (
                     <span className="ml-2 text-sm font-normal text-muted-foreground">({matchedPlaces.length})</span>
                   )}
