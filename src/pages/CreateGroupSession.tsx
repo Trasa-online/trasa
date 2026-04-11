@@ -37,6 +37,7 @@ const CreateGroupSession = () => {
   const [linkCopied, setLinkCopied] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joining, setJoining] = useState(false);
+  const [confirmActionId, setConfirmActionId] = useState<string | null>(null);
   const [friendSearch, setFriendSearch] = useState("");
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
   const [inviting, setInviting] = useState<string | null>(null);
@@ -171,13 +172,17 @@ const CreateGroupSession = () => {
 
   const handleDeleteOrLeaveSession = async (session: any, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (confirmActionId !== session.id) {
+      setConfirmActionId(session.id);
+      setTimeout(() => setConfirmActionId(null), 3000);
+      return;
+    }
+    setConfirmActionId(null);
     const isOwner = session.created_by === user?.id;
     if (isOwner) {
-      if (!confirm("Usunąć tę sesję? Wszyscy członkowie stracą dostęp.")) return;
       await (supabase as any).from("group_sessions").delete().eq("id", session.id);
       toast.success("Sesja usunięta");
     } else {
-      if (!confirm("Wyjść z tej sesji?")) return;
       await (supabase as any).from("group_session_members")
         .delete()
         .eq("session_id", session.id)
@@ -352,9 +357,9 @@ const CreateGroupSession = () => {
                     <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     <button
                       onClick={(e) => handleDeleteOrLeaveSession(s, e)}
-                      className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 active:scale-90 transition-transform shrink-0"
+                      className={`h-10 flex items-center justify-center rounded-xl active:scale-90 transition-all shrink-0 text-xs font-bold ${confirmActionId === s.id ? "px-2 bg-red-500 text-white min-w-[60px]" : "w-10 bg-red-500/10 text-red-500"}`}
                     >
-                      {s.created_by === user?.id
+                      {confirmActionId === s.id ? "Pewny?" : s.created_by === user?.id
                         ? <Trash2 className="h-4 w-4" />
                         : <LogOut className="h-4 w-4" />
                       }

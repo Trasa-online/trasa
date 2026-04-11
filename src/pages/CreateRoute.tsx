@@ -214,6 +214,7 @@ const CreateRoute = () => {
           altRoutes={matchedRoutes.map(r => ({ id: r.id, title: r.title, personality_type: r.personality_type }))}
           altIndex={altIndex}
           onSwitchAlt={setAltIndex}
+          readOnly={!!wizardState?.existingRouteId}
         />
       </div>
 

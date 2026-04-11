@@ -61,6 +61,7 @@ interface PlanChatExperienceProps {
   initialPlan?: RoutePlan;
   altRoutes?: AltRoute[];
   altIndex?: number;
+  readOnly?: boolean;
   onSwitchAlt?: (i: number) => void;
 }
 
@@ -402,7 +403,7 @@ function getCurrentTimeContext(): { current_time: string; current_date: string }
   };
 }
 
-const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlacesData, skippedPlaces, superLikedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt }: PlanChatExperienceProps) => {
+const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlacesData, skippedPlaces, superLikedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt, readOnly }: PlanChatExperienceProps) => {
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
   const [input, setInput] = useState("");
@@ -1535,7 +1536,7 @@ window.addEventListener('message',function(e){
                           onClick={handleConfirm}
                           className="flex-1 py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold"
                         >
-                          Wybieram ten plan!
+                          {readOnly ? "Wracam na główną" : "Wybieram ten plan!"}
                         </button>
                       </div>
                     </div>
