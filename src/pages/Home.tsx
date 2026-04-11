@@ -219,7 +219,7 @@ const Home = () => {
               {/* Mini map */}
               {mapPins.length > 0 && (
                 <div className="h-44 shrink-0">
-                  <iframe srcDoc={leafletHtml} className="w-full h-full border-0" sandbox="allow-scripts" />
+                  <iframe srcDoc={leafletHtml} className="w-full h-full border-0" />
                 </div>
               )}
 

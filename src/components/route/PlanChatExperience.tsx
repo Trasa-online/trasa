@@ -1022,7 +1022,6 @@ window.addEventListener('message',function(e){
                     ref={(el) => { iframeRef.current = el; }}
                     srcDoc={leafletHtml}
                     className="absolute inset-0 w-full h-full border-0"
-                    sandbox="allow-scripts"
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Brak danych mapy</div>

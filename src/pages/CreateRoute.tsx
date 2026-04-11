@@ -130,6 +130,10 @@ const CreateRoute = () => {
     return null;
   }
 
+  // When viewing an existing route, wait for it to load before rendering PlanChatExperience
+  // (otherwise it renders with no initialPlan and triggers the AI to generate a new plan)
+  if (wizardState?.existingRouteId && !loadedPlan) return null;
+
   const handlePlanReady = (plan: any, messages: any[]) => {
     setFinalPlan(plan);
     setFinalMessages(messages);
