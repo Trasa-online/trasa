@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, Check, ArrowRight, Users, Trash2, Search, UserPlus, CalendarDays, Bell } from "lucide-react";
+import { ArrowLeft, Copy, Check, ArrowRight, Users, Trash2, LogOut, Search, UserPlus, CalendarDays, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -52,7 +52,7 @@ const CreateGroupSession = () => {
       const sessionIds = memberRows.map((m: any) => m.session_id);
       const { data: sessions } = await (supabase as any)
         .from("group_sessions")
-        .select("id, city, join_code, created_at")
+        .select("id, city, join_code, created_at, created_by")
         .in("id", sessionIds)
         .eq("status", "active")
         .order("created_at", { ascending: false })
@@ -167,12 +167,22 @@ const CreateGroupSession = () => {
     }
   };
 
-  const handleDeleteSession = async (sessionId: string, e: React.MouseEvent) => {
+  const handleDeleteOrLeaveSession = async (session: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Usunąć tę sesję? Wszyscy członkowie stracą dostęp.")) return;
-    await (supabase as any).from("group_sessions").delete().eq("id", sessionId);
+    const isOwner = session.created_by === user?.id;
+    if (isOwner) {
+      if (!confirm("Usunąć tę sesję? Wszyscy członkowie stracą dostęp.")) return;
+      await (supabase as any).from("group_sessions").delete().eq("id", session.id);
+      toast.success("Sesja usunięta");
+    } else {
+      if (!confirm("Wyjść z tej sesji?")) return;
+      await (supabase as any).from("group_session_members")
+        .delete()
+        .eq("session_id", session.id)
+        .eq("user_id", user!.id);
+      toast.success("Wyszedłeś z sesji");
+    }
     queryClient.invalidateQueries({ queryKey: ["my-group-sessions", user?.id] });
-    toast.success("Sesja usunięta");
   };
 
   const handleInvite = async (profile: { id: string; username: string }) => {
@@ -326,10 +336,13 @@ const CreateGroupSession = () => {
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     <button
-                      onClick={(e) => handleDeleteSession(s.id, e)}
+                      onClick={(e) => handleDeleteOrLeaveSession(s, e)}
                       className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 active:scale-90 transition-transform shrink-0"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {s.created_by === user?.id
+                        ? <Trash2 className="h-4 w-4" />
+                        : <LogOut className="h-4 w-4" />
+                      }
                     </button>
                   </button>
                 ))}
