@@ -6,7 +6,7 @@ import { Users, ArrowRight, CalendarDays, MapPin, ArrowLeft } from "lucide-react
 import { parseISO, isValid, format, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 const Home = () => {
   const { user, loading } = useAuth();
@@ -228,7 +228,7 @@ const Home = () => {
                 {matchedPlaces.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">Brak wspólnych miejsc jeszcze</p>
                 ) : (
-                  matchedPlaces.map((p: any, i: number) => (
+                  matchedPlaces.map((p: any) => (
                     <div key={p.place_name} className="flex items-center gap-3 p-3 rounded-xl bg-muted/40">
                       {p.photo_url ? (
                         <img src={p.photo_url} alt={p.place_name} className="h-12 w-12 rounded-lg object-cover shrink-0" />
@@ -252,7 +252,7 @@ const Home = () => {
                 <div className="px-4 py-3 border-t border-border/20 space-y-2 shrink-0">
                   {sessionRoute && (
                     <button
-                      onClick={() => { setPreviewSessionId(null); navigate("/moje-wyprawy"); }}
+                      onClick={() => { setPreviewSessionId(null); navigate("/my-routes"); }}
                       className="w-full py-3.5 rounded-2xl bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
                     >
                       Otwórz zapisaną trasę →

@@ -76,13 +76,6 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
           </button>
         </div>
 
-        {/* Orb logo — right */}
-        <button
-          onClick={() => navigate("/")}
-          className="h-9 w-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-          style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
-          aria-label="Strona główna"
-        />
       </header>
 
       {notifOpen && user && (
