@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const AVAILABLE_CATEGORIES = [
-  { id: "breakfast",  label: "Śniadania",  emoji: "🥐" },
+  { id: "Śniadania",  label: "Śniadania",  emoji: "🥐" },
   { id: "cafe",       label: "Kawiarnie",  emoji: "☕" },
   { id: "restaurant", label: "Restauracje", emoji: "🍽️" },
   { id: "museum",    label: "Muzea",       emoji: "🏛️" },
@@ -28,7 +28,7 @@ const AVAILABLE_CATEGORIES = [
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
-  breakfast: "Śniadanie", restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum",
+  "Śniadania": "Śniadania", restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum",
   park: "Park", bar: "Bar", club: "Klub", monument: "Zabytek",
   gallery: "Galeria", market: "Targ", viewpoint: "Widok",
   shopping: "Zakupy", experience: "Rozrywka",
@@ -180,7 +180,7 @@ const GroupSession = () => {
   const needsCategoryPick = !currentCategory || allMembersDoneCategory;
 
   const CATEGORY_EMOJI: Record<string, string> = {
-    breakfast: "🥐", cafe: "☕", restaurant: "🍽️", museum: "🏛️", park: "🌿",
+    "Śniadania": "🥐", cafe: "☕", restaurant: "🍽️", museum: "🏛️", park: "🌿",
     bar: "🍺", monument: "🏰", experience: "🎪", market: "🛒",
   };
 
