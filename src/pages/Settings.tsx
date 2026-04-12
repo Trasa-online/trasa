@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound } from "lucide-react";
+import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { toast } from "sonner";
@@ -206,6 +206,128 @@ function ChangePasswordSection() {
   );
 }
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
+function BugReportSection({ userId }: { userId: string }) {
+  const [open, setOpen] = useState(false);
+  const [description, setDescription] = useState("");
+  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleScreenshot = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const path = `bug-reports/${userId}/${Date.now()}.jpg`;
+    const { error } = await supabase.storage
+      .from("route-images")
+      .upload(path, file, { contentType: file.type, upsert: true });
+    if (!error) {
+      setScreenshotUrl(`${SUPABASE_URL}/storage/v1/object/public/route-images/${path}`);
+    } else {
+      toast.error("Nie udało się przesłać zdjęcia");
+    }
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const handleSubmit = async () => {
+    if (!description.trim()) { toast.error("Opisz błąd przed wysłaniem"); return; }
+    setSubmitting(true);
+    const { error } = await (supabase as any).from("bug_reports").insert({
+      user_id: userId,
+      description: description.trim(),
+      screenshot_url: screenshotUrl,
+    });
+    if (error) { toast.error("Nie udało się wysłać zgłoszenia"); setSubmitting(false); return; }
+    setDone(true);
+    setSubmitting(false);
+  };
+
+  const reset = () => { setOpen(false); setDone(false); setDescription(""); setScreenshotUrl(null); };
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+      >
+        <AlertCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        <span className="text-sm font-medium flex-1">Zgłoś błąd</span>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </button>
+    );
+  }
+
+  if (done) {
+    return (
+      <div className="bg-card border border-border/40 rounded-2xl p-5 flex flex-col items-center gap-2 text-center">
+        <div className="text-3xl">🙏</div>
+        <p className="text-sm font-bold">Dziękujemy za zgłoszenie!</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">Przejrzymy je jak najszybciej i wrócimy z informacją.</p>
+        <button onClick={reset} className="mt-1 text-xs text-muted-foreground/60 underline underline-offset-2">Zamknij</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">Zgłoś błąd</p>
+        <button onClick={reset} className="p-1 text-muted-foreground/60 hover:text-muted-foreground">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <textarea
+        value={description}
+        onChange={e => setDescription(e.target.value)}
+        placeholder="Opisz co się stało — na jakim ekranie, co kliknąłeś/-aś, co pojawiło się zamiast oczekiwanego efektu…"
+        rows={4}
+        className="w-full bg-background rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/60 leading-relaxed"
+      />
+      {screenshotUrl ? (
+        <div className="relative rounded-xl overflow-hidden">
+          <img src={screenshotUrl} alt="screenshot" className="w-full max-h-48 object-cover" />
+          <button
+            onClick={() => setScreenshotUrl(null)}
+            className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm rounded-full p-1.5"
+          >
+            <X className="h-3.5 w-3.5 text-white" />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="w-full py-2.5 rounded-xl border border-dashed border-border/50 text-xs text-muted-foreground flex items-center justify-center gap-2 hover:bg-muted/40 transition-colors"
+        >
+          <Camera className="h-4 w-4" />
+          {uploading ? "Przesyłam zdjęcie…" : "Dodaj zrzut ekranu (opcjonalnie)"}
+        </button>
+      )}
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleScreenshot} />
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={reset}
+          className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm font-medium"
+        >
+          Anuluj
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={submitting || !description.trim()}
+          className="flex-1 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
+        >
+          {submitting ? "Wysyłam…" : "Wyślij zgłoszenie"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const Settings = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
@@ -370,6 +492,11 @@ const Settings = () => {
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
           )}
+        </div>
+
+        {/* Bug report */}
+        <div className="space-y-2">
+          <BugReportSection userId={user.id} />
         </div>
 
         {/* Password */}

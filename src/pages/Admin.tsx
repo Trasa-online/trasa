@@ -60,7 +60,7 @@ const Admin = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"waitlist" | "referrals" | "cities" | "businesses">("waitlist");
+  const [tab, setTab] = useState<"waitlist" | "referrals" | "cities" | "businesses" | "bugs">("waitlist");
 
   // Waitlist state
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
@@ -85,6 +85,18 @@ const Admin = () => {
     owner: { username: string | null; first_name: string | null; avatar_url: string | null };
   }>>([]);
   const [fetchingReferrals, setFetchingReferrals] = useState(false);
+
+  // Bug reports state
+  const [bugReports, setBugReports] = useState<Array<{
+    id: string;
+    user_id: string | null;
+    description: string;
+    screenshot_url: string | null;
+    status: string;
+    created_at: string;
+    profiles?: { username: string | null; first_name: string | null } | null;
+  }>>([]);
+  const [fetchingBugs, setFetchingBugs] = useState(false);
 
   // Business claims state
   const [claims, setClaims] = useState<BusinessClaim[]>([]);
@@ -111,6 +123,7 @@ const Admin = () => {
         loadReferrals();
         loadCityRequests();
         loadClaims();
+        loadBugReports();
       });
   }, [user, loading, navigate]);
 
@@ -187,6 +200,21 @@ const Admin = () => {
       setReferrals([]);
     }
     setFetchingReferrals(false);
+  };
+
+  const loadBugReports = async () => {
+    setFetchingBugs(true);
+    const { data } = await (supabase as any)
+      .from("bug_reports")
+      .select("id, user_id, description, screenshot_url, status, created_at, profiles(username, first_name)")
+      .order("created_at", { ascending: false });
+    setBugReports(data ?? []);
+    setFetchingBugs(false);
+  };
+
+  const markBugResolved = async (id: string) => {
+    await (supabase as any).from("bug_reports").update({ status: "resolved" }).eq("id", id);
+    setBugReports(prev => prev.map(r => r.id === id ? { ...r, status: "resolved" } : r));
   };
 
   const loadClaims = async () => {
@@ -304,6 +332,7 @@ const Admin = () => {
     referrals: "Zaproszenia",
     cities: "Miasta",
     businesses: "Biznesy",
+    bugs: "Błędy",
   };
 
   const sortedClaims = [...claims].sort((a, b) => {
@@ -337,8 +366,9 @@ const Admin = () => {
 
       {/* Tabs */}
       <div className="flex border-b border-border/40">
-        {(["waitlist", "referrals", "cities", "businesses"] as const).map(t => {
-          const badge = t === "businesses" ? pendingClaims : t === "waitlist" ? pendingWaitlist : 0;
+        {(["waitlist", "referrals", "cities", "businesses", "bugs"] as const).map(t => {
+          const newBugs = bugReports.filter(r => r.status === "new").length;
+          const badge = t === "businesses" ? pendingClaims : t === "waitlist" ? pendingWaitlist : t === "bugs" ? newBugs : 0;
           return (
             <button
               key={t}
@@ -628,6 +658,52 @@ const Admin = () => {
                   )}
                 </div>
               ))}
+            </div>
+          )
+        )}
+        {/* ── Bug Reports Tab ── */}
+        {tab === "bugs" && (
+          fetchingBugs ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : bugReports.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-12">Brak zgłoszeń błędów.</p>
+          ) : (
+            <div className="space-y-3">
+              {bugReports.map(r => {
+                const author = (r.profiles as any)?.first_name || (r.profiles as any)?.username || r.user_id?.slice(0, 8) || "?";
+                return (
+                  <div key={r.id} className={`rounded-2xl border p-4 space-y-2.5 ${r.status === "resolved" ? "opacity-50 border-border/30" : "border-border/60 bg-card"}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-semibold text-muted-foreground">{author}</span>
+                          <span className="text-xs text-muted-foreground/50">·</span>
+                          <span className="text-xs text-muted-foreground/50">{format(new Date(r.created_at), "dd.MM.yyyy HH:mm")}</span>
+                        </div>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{r.description}</p>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${r.status === "resolved" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
+                        {r.status === "resolved" ? "Rozwiązane" : "Nowe"}
+                      </span>
+                    </div>
+                    {r.screenshot_url && (
+                      <a href={r.screenshot_url} target="_blank" rel="noopener noreferrer">
+                        <img src={r.screenshot_url} alt="screenshot" className="w-full max-h-48 object-cover rounded-xl border border-border/30" />
+                      </a>
+                    )}
+                    {r.status !== "resolved" && (
+                      <button
+                        onClick={() => markBugResolved(r.id)}
+                        className="w-full py-1.5 rounded-xl border border-border/40 text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors"
+                      >
+                        Oznacz jako rozwiązane
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )
         )}
