@@ -242,7 +242,7 @@ function BugReportSection({ userId }: { userId: string }) {
       description: description.trim(),
       screenshot_url: screenshotUrl,
     });
-    if (error) { toast.error("Nie udało się wysłać zgłoszenia"); setSubmitting(false); return; }
+    if (error) { toast.error(`Błąd: ${error.message}`); setSubmitting(false); return; }
     setDone(true);
     setSubmitting(false);
   };
