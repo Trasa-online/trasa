@@ -2,13 +2,19 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ArrowRight, CalendarDays, MapPin, ArrowLeft, CheckCircle } from "lucide-react";
+import { Users, ArrowRight, CalendarDays, ArrowLeft, CheckCircle } from "lucide-react";
 import { parseISO, isValid, format, formatDistanceToNow, startOfToday } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
 import HomeTour, { useHomeTour } from "@/components/home/HomeTour";
+
+const CATEGORY_EMOJI: Record<string, string> = {
+  restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
+  bar: "🍺", club: "🎵", monument: "🏰", gallery: "🖼️",
+  market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
+};
 
 const Home = () => {
   const { user, loading } = useAuth();
@@ -75,7 +81,7 @@ const Home = () => {
       if (!sessionRoute?.id) return [];
       const { data } = await (supabase as any)
         .from("pins")
-        .select("place_name, latitude, longitude, category")
+        .select("place_name, latitude, longitude, category, image_url, images")
         .eq("route_id", sessionRoute.id);
       return (data || []).filter((p: any) => p.latitude && p.longitude);
     },
@@ -198,51 +204,8 @@ const Home = () => {
         </div>
       )}
 
-      {/* Historical sessions */}
-      {historicalSessions.length > 0 && (
-        <div className="space-y-2 mb-6">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
-            Historyczne
-          </p>
-          {historicalSessions.map((s: any) => {
-            const tripDateObj = s.trip_date ? parseISO(s.trip_date) : null;
-            const dateLabel = tripDateObj && isValid(tripDateObj)
-              ? format(tripDateObj, "d MMM yyyy", { locale: pl })
-              : null;
-            const sessionRouteEntry = sessionRoutes.find((r: any) => r.group_session_id === s.id);
-            return (
-              <button
-                key={s.id}
-                onClick={() => setPreviewSessionId(s.id)}
-                className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-muted/40 border border-border/30 active:scale-[0.98] transition-transform text-left opacity-70"
-              >
-                <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center shrink-0">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold leading-tight">{s.name || s.city}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {dateLabel && (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <CalendarDays className="h-3 w-3" />{dateLabel}
-                      </span>
-                    )}
-                    {sessionRouteEntry && (
-                      <span className="text-[10px] bg-emerald-500/10 text-emerald-700 px-1.5 py-0.5 rounded font-medium">
-                        Odbyta
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       {/* Hero CTA */}
-      <div className={`flex flex-col items-center justify-center gap-8 py-10 ${activeSessions.length > 0 || historicalSessions.length > 0 ? "" : "flex-1"}`}>
+      <div className={`flex flex-col items-center justify-center gap-8 py-10 ${activeSessions.length > 0 ? "" : "flex-1"}`}>
         <div className="text-center space-y-3">
           <div className="mx-auto h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
             <svg width="48" height="48" viewBox="0 0 56 56" fill="none">
@@ -316,13 +279,17 @@ const Home = () => {
                         })}
                         className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted/40 text-left active:scale-[0.98] transition-transform"
                       >
-                        {p.photo_url ? (
-                          <img src={p.photo_url} alt={p.place_name} className="h-12 w-12 rounded-lg object-cover shrink-0" />
-                        ) : (
-                          <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                            <MapPin className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                        )}
+                        {(() => {
+                          const pin = routePins.find((rp: any) => rp.place_name === p.place_name);
+                          const thumb = p.photo_url || pin?.image_url || (Array.isArray(pin?.images) ? pin.images[0] : null);
+                          return thumb ? (
+                            <img src={thumb} alt={p.place_name} className="h-12 w-12 rounded-lg object-cover shrink-0" />
+                          ) : (
+                            <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0 text-xl">
+                              {CATEGORY_EMOJI[p.category] ?? "📍"}
+                            </div>
+                          );
+                        })()}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold truncate">{p.place_name}</p>
                           <p className="text-xs text-muted-foreground capitalize">{p.category}</p>

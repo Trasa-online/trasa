@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, parseISO, startOfToday } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 
@@ -39,10 +39,10 @@ const CreateGroupSession = () => {
   const [joining, setJoining] = useState(false);
   const [confirmActionId, setConfirmActionId] = useState<string | null>(null);
   const [friendSearch, setFriendSearch] = useState("");
-  const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
-  const [inviting, setInviting] = useState<string | null>(null);
+  const [selectedFriends, setSelectedFriends] = useState<Set<string>>(new Set());
+  const [sendingInvites, setSendingInvites] = useState(false);
 
-  const { data: activeSessions = [] } = useQuery({
+  const { data: allUserSessions = [] } = useQuery({
     queryKey: ["my-group-sessions", user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -54,15 +54,22 @@ const CreateGroupSession = () => {
       const sessionIds = memberRows.map((m: any) => m.session_id);
       const { data: sessions } = await (supabase as any)
         .from("group_sessions")
-        .select("id, city, join_code, created_at, created_by, name")
+        .select("id, city, join_code, created_at, created_by, name, trip_date")
         .in("id", sessionIds)
-        .eq("status", "active")
         .order("created_at", { ascending: false })
-        .limit(5);
+        .limit(20);
       return sessions || [];
     },
     enabled: !!user,
   });
+
+  const today = startOfToday();
+  const activeSessions = allUserSessions.filter((s: any) =>
+    !s.trip_date || parseISO(s.trip_date) >= today
+  );
+  const historicalSessions = allUserSessions.filter((s: any) =>
+    s.trip_date && parseISO(s.trip_date) < today
+  );
 
   const { data: cities = [] } = useQuery({
     queryKey: ["places-cities"],
@@ -192,22 +199,31 @@ const CreateGroupSession = () => {
     queryClient.invalidateQueries({ queryKey: ["my-group-sessions", user?.id] });
   };
 
-  const handleInvite = async (profile: { id: string; username: string }) => {
-    if (!createdSessionId) return;
-    setInviting(profile.id);
-    try {
-      const { error } = await (supabase as any).rpc("send_group_invite", {
-        p_target_user_id: profile.id,
-        p_session_id: createdSessionId,
-      });
-      if (error) throw error;
-      setInvitedIds(prev => new Set([...prev, profile.id]));
-      toast.success(`Zaproszenie wysłane do @${profile.username} 🔔`);
-    } catch (e: any) {
-      toast.error("Nie udało się wysłać zaproszenia", { description: e?.message });
-    } finally {
-      setInviting(null);
+  const toggleFriend = (id: string) => {
+    setSelectedFriends(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleStartWithInvites = async () => {
+    if (!createdSessionId || !createdCode) return;
+    if (selectedFriends.size > 0) {
+      setSendingInvites(true);
+      const ids = Array.from(selectedFriends);
+      await Promise.allSettled(
+        ids.map(id =>
+          (supabase as any).rpc("send_group_invite", {
+            p_target_user_id: id,
+            p_session_id: createdSessionId,
+          })
+        )
+      );
+      setSendingInvites(false);
+      toast.success(`Zaproszono ${ids.length} ${ids.length === 1 ? "osobę" : "osoby"} 🔔`);
     }
+    navigate(`/sesja/${createdCode}`);
   };
 
   const shareUrl = createdCode ? `${window.location.origin}/sesja/${createdCode}` : "";
@@ -334,11 +350,11 @@ const CreateGroupSession = () => {
             </button>
 
             {/* Active sessions — BOTTOM */}
-            {activeSessions.length > 0 && (
+            {(activeSessions.length > 0 || historicalSessions.length > 0) && (
               <div className="space-y-2 pt-2">
                 <div className="flex items-center gap-3 mb-1">
                   <div className="flex-1 h-px bg-border/40" />
-                  <span className="text-xs text-muted-foreground">twoje aktywne sesje</span>
+                  <span className="text-xs text-muted-foreground">twoje sesje</span>
                   <div className="flex-1 h-px bg-border/40" />
                 </div>
                 {activeSessions.map((s: any) => (
@@ -366,6 +382,32 @@ const CreateGroupSession = () => {
                     </button>
                   </button>
                 ))}
+                {historicalSessions.map((s: any) => {
+                  const dateLabel = s.trip_date
+                    ? format(parseISO(s.trip_date), "d MMM yyyy", { locale: pl })
+                    : null;
+                  return (
+                    <div
+                      key={s.id}
+                      className="w-full flex items-center gap-3 rounded-2xl border border-border/30 bg-muted/30 p-3 text-left opacity-70"
+                    >
+                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <Users className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{s.name || capitalizeCity(s.city)}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {dateLabel && (
+                            <span className="text-xs text-muted-foreground">{dateLabel}</span>
+                          )}
+                          <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium">
+                            Zakończona
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </>
@@ -409,31 +451,29 @@ const CreateGroupSession = () => {
                 <div className="space-y-1">
                   {friendResults.map(profile => {
                     const initials = (profile.first_name || profile.username || "?")[0].toUpperCase();
-                    const isInvited = invitedIds.has(profile.id);
-                    const isSending = inviting === profile.id;
+                    const isSelected = selectedFriends.has(profile.id);
                     return (
                       <div key={profile.id} className="flex items-center gap-3 rounded-xl bg-background p-2">
-                        <div className="h-8 w-8 rounded-full bg-orange-600/15 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
-                          {initials}
-                        </div>
+                        {profile.avatar_url ? (
+                          <img src={profile.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="h-8 w-8 rounded-full bg-orange-600/15 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
+                            {initials}
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold leading-tight">{profile.first_name || profile.username}</p>
                           <p className="text-xs text-muted-foreground">@{profile.username}</p>
                         </div>
                         <button
-                          disabled={isInvited || isSending}
-                          onClick={() => handleInvite(profile)}
-                          className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold active:scale-95 transition-transform disabled:opacity-60 disabled:scale-100 ${
-                            isInvited
-                              ? "border border-border/60 text-emerald-600"
-                              : "bg-orange-600 text-white"
+                          onClick={() => toggleFriend(profile.id)}
+                          className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold active:scale-95 transition-all ${
+                            isSelected
+                              ? "bg-orange-600 text-white"
+                              : "border border-border/60 text-foreground"
                           }`}
                         >
-                          {isInvited
-                            ? <><Check className="h-3 w-3" />Zaproszono</>
-                            : isSending
-                            ? "…"
-                            : <><UserPlus className="h-3 w-3" />Zaproś</>}
+                          {isSelected ? <><Check className="h-3 w-3" />Wybrano</> : <><UserPlus className="h-3 w-3" />Zaproś</>}
                         </button>
                       </div>
                     );
@@ -478,10 +518,11 @@ const CreateGroupSession = () => {
             </div>
 
             <button
-              onClick={() => navigate(`/sesja/${createdCode}`)}
-              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform"
+              onClick={handleStartWithInvites}
+              disabled={sendingInvites}
+              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-60"
             >
-              Zacznij parowanie
+              {sendingInvites ? "Wysyłam zaproszenia…" : selectedFriends.size > 0 ? `Zaproś (${selectedFriends.size}) i zacznij parowanie` : "Zacznij parowanie"}
             </button>
           </>
         )}

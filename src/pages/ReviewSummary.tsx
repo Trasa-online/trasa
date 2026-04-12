@@ -607,9 +607,9 @@ const ReviewSummary = () => {
                     ) : (
                       <button
                         onClick={() => toggleNotVisited(pin.place_name)}
-                        className="text-xs text-muted-foreground/55 py-0.5 transition-colors hover:text-muted-foreground"
+                        className="w-full py-2 rounded-xl text-xs font-medium border border-dashed border-border/60 text-muted-foreground bg-muted/20 active:scale-[0.98] transition-transform"
                       >
-                        Nie było tego miejsca na trasie
+                        ✕ Nie było tego miejsca na trasie
                       </button>
                     )}
                   </div>
