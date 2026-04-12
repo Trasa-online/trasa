@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// Google Maps API Key
-export const GOOGLE_MAPS_API_KEY = 'AIzaSyCdZ-on1_mKr1Q9OTDYkqkk4OzB7SwR32M';
+// Google Maps API Key — read from env, never hardcode
+export const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
 
 // Reverse Geocoding (Coordinates → Address)
 export const reverseGeocode = async (lat: number, lng: number) => {
