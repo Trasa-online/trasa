@@ -43,14 +43,14 @@ const HomeTour = ({ onDone }: HomeTourProps) => {
 
   return (
     <>
-      {/* Dark overlay — clicking dismisses */}
+      {/* Dark overlay — covers BottomNav (z-50) */}
       <div
-        className="fixed inset-0 z-40 bg-black/55"
+        className="fixed inset-0 z-[55] bg-black/55"
         onClick={onDone}
       />
 
       {/* Tooltip card pinned to bottom */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pointer-events-none">
+      <div className="fixed bottom-0 left-0 right-0 z-[60] px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pointer-events-none">
         <div className="bg-card rounded-3xl shadow-2xl border border-border/20 overflow-hidden pointer-events-auto">
           {/* Header row */}
           <div className="flex items-center justify-between px-5 pt-5 pb-1">
