@@ -160,13 +160,15 @@ interface SwipeCardProps {
   onLike: (photoUrl?: string) => void;
   onSkip: () => void;
   onTap: () => void;
+  onUndo?: () => void;
+  canUndo?: boolean;
   onPhotoFetched?: (placeId: string, photoUrl: string) => void;
   isTop: boolean;
   offset: number; // 0 = top, 1 = second, 2 = third
 }
 
 
-const SwipeCard = ({ place, city, onLike, onSkip, onTap, onPhotoFetched, isTop, offset }: SwipeCardProps) => {
+const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhotoFetched, isTop, offset }: SwipeCardProps) => {
   const [imgFailed, setImgFailed] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<string[]>(
     [place.photo_url, ...(place.galleryPhotos ?? [])]
@@ -416,14 +418,28 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, onPhotoFetched, isTop, 
               </span>
             ))}
           </div>
-          {isTop && place.businessPlan !== 'zero' && (
-            <button
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); onTap(); }}
-              className="shrink-0 h-10 w-10 rounded-full bg-white flex items-center justify-center shadow-md active:scale-90 transition-transform"
-            >
-              <ChevronUp className="h-5 w-5 text-black" />
-            </button>
+          {isTop && (
+            <div className="flex items-center gap-2 shrink-0">
+              {onUndo && (
+                <button
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); onUndo(); }}
+                  disabled={!canUndo}
+                  className="h-10 w-10 rounded-full bg-white/90 flex items-center justify-center shadow-md active:scale-90 transition-transform disabled:opacity-30"
+                >
+                  <RotateCcw className="h-4 w-4 text-black" />
+                </button>
+              )}
+              {place.businessPlan !== 'zero' && (
+                <button
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); onTap(); }}
+                  className="h-10 w-10 rounded-full bg-white flex items-center justify-center shadow-md active:scale-90 transition-transform"
+                >
+                  <ChevronUp className="h-5 w-5 text-black" />
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -1123,6 +1139,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
                       onLike={(photoUrl) => handleLike(photoUrl)}
                       onSkip={handleSkip}
                       onTap={() => handleTap(place)}
+                      onUndo={handleUndo}
+                      canUndo={history.length > 0}
                       onPhotoFetched={(id, url) => { photoUrlOverrides.current[id] = url; }}
                       isTop={offset === 0}
                       offset={offset}
@@ -1135,25 +1153,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
       </div>
 
       {/* Action buttons */}
-      <div className="px-4 pb-5 shrink-0 space-y-3">
-        {/* Utility row: undo + show more */}
-        <div className="flex items-center justify-center gap-2">
-          <button
-            onClick={handleUndo}
-            disabled={history.length === 0}
-            className="h-10 w-10 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform disabled:opacity-25"
-          >
-            <RotateCcw className="h-4 w-4 text-muted-foreground" />
-          </button>
-          <button
-            onClick={() => displayQueue[0] && handleTap(displayQueue[0])}
-            disabled={!displayQueue[0] || displayQueue[0].businessPlan === 'zero'}
-            className="h-10 w-10 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30"
-          >
-            <ChevronUp className="h-5 w-5 text-muted-foreground" />
-          </button>
-        </div>
-        {/* Main action row */}
+      <div className="px-4 pb-5 shrink-0">
         <div className="flex gap-2">
           <button
             onClick={handleSkip}
