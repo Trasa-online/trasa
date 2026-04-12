@@ -305,7 +305,7 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhot
         touchAction: "none",
       }}
       className={cn(
-        "absolute inset-0 rounded-3xl overflow-hidden shadow-2xl select-none",
+        "absolute inset-0 rounded-3xl overflow-hidden shadow-md select-none",
         isTop ? "cursor-grab active:cursor-grabbing" : "pointer-events-none"
       )}
     >
@@ -1153,7 +1153,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
       </div>
 
       {/* Action buttons */}
-      <div className="px-4 pb-5 shrink-0">
+      <div className="px-4 pt-2 pb-3 shrink-0">
         <div className="flex gap-2">
           <button
             onClick={handleSkip}
