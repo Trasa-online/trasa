@@ -292,7 +292,39 @@ const Home = () => {
                   {sessionRoute && (
                     <button
                       onClick={async () => {
+                        // 1. Mark route as completed
                         await (supabase as any).from("routes").update({ chat_status: "completed" }).eq("id", sessionRoute.id);
+
+                        // 2. Notify all group members to review
+                        if (previewSession?.id) {
+                          const { data: members } = await (supabase as any)
+                            .from("group_session_members")
+                            .select("user_id")
+                            .eq("session_id", previewSession.id)
+                            .neq("user_id", user?.id);
+
+                          const memberIds: string[] = (members ?? []).map((m: any) => m.user_id);
+
+                          if (memberIds.length) {
+                            // Set new_for_users so journal shows badge
+                            await (supabase as any).from("routes")
+                              .update({ new_for_users: memberIds })
+                              .eq("id", sessionRoute.id);
+
+                            // Send push to each member
+                            for (const memberId of memberIds) {
+                              supabase.functions.invoke("send-push", {
+                                body: {
+                                  user_id: memberId,
+                                  title: "Trasa zakończona! 🗺️",
+                                  body: `Oceń miejsca z ${sessionRoute.city || "trasy"} i dodaj wspomnienia`,
+                                  url: `/review-summary?route=${sessionRoute.id}`,
+                                },
+                              });
+                            }
+                          }
+                        }
+
                         setPreviewSessionId(null);
                         navigate(`/review-summary?route=${sessionRoute.id}&new=1`);
                       }}

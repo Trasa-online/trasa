@@ -34,6 +34,9 @@ const ReviewSummary = () => {
   const [pinRatings, setPinRatings] = useState<Record<string, number>>({});
   const [highlightPlace, setHighlightPlace] = useState<string | null>(null);
   const [overallRating, setOverallRating] = useState<number | null>(null);
+  const [notVisited, setNotVisited] = useState<Record<string, boolean>>({});
+  const [notVisitedReason, setNotVisitedReason] = useState<Record<string, string>>({});
+  const notVisitedTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const narrativeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -122,7 +125,7 @@ const ReviewSummary = () => {
       if (!routeId || !user) return [];
       const { data } = await (supabase as any)
         .from("pin_ratings")
-        .select("place_name, rating, is_highlight")
+        .select("place_name, rating, is_highlight, not_visited, not_visited_reason")
         .eq("route_id", routeId)
         .eq("user_id", user.id);
       return data ?? [];
@@ -139,15 +142,27 @@ const ReviewSummary = () => {
   useEffect(() => {
     if (existingRatings.length) {
       const map: Record<string, number> = {};
+      const nv: Record<string, boolean> = {};
+      const nvr: Record<string, string> = {};
       let hl: string | null = null;
       for (const r of existingRatings) {
         if (r.rating) map[r.place_name] = r.rating;
         if (r.is_highlight) hl = r.place_name;
+        if (r.not_visited) nv[r.place_name] = true;
+        if (r.not_visited_reason) nvr[r.place_name] = r.not_visited_reason;
       }
       setPinRatings(map);
       setHighlightPlace(hl);
+      setNotVisited(nv);
+      setNotVisitedReason(nvr);
     }
   }, [existingRatings]);
+
+  // Dismiss "Nowa trasa!" badge when user opens the review
+  useEffect(() => {
+    if (!routeId || !user) return;
+    (supabase as any).rpc("dismiss_route_badge", { p_route_id: routeId });
+  }, [routeId, user]);
 
   useEffect(() => {
     if (route?.overall_rating) setOverallRating(route.overall_rating);
@@ -242,6 +257,31 @@ const ReviewSummary = () => {
         rating: pinRatings[newHL] ?? null, is_highlight: true,
       }, { onConflict: "route_id,user_id,place_name" });
     }
+  };
+
+  const toggleNotVisited = async (placeName: string) => {
+    if (!routeId || !user) return;
+    const newVal = !notVisited[placeName];
+    setNotVisited(prev => ({ ...prev, [placeName]: newVal }));
+    await (supabase as any).from("pin_ratings").upsert({
+      route_id: routeId, user_id: user.id, place_name: placeName,
+      not_visited: newVal,
+      not_visited_reason: notVisitedReason[placeName] ?? null,
+      rating: null, is_highlight: false,
+    }, { onConflict: "route_id,user_id,place_name" });
+  };
+
+  const handleNotVisitedReason = (placeName: string, value: string) => {
+    setNotVisitedReason(prev => ({ ...prev, [placeName]: value }));
+    if (notVisitedTimer.current[placeName]) clearTimeout(notVisitedTimer.current[placeName]);
+    notVisitedTimer.current[placeName] = setTimeout(async () => {
+      if (!routeId || !user) return;
+      await (supabase as any).from("pin_ratings").upsert({
+        route_id: routeId, user_id: user.id, place_name: placeName,
+        not_visited: true, not_visited_reason: value,
+        rating: null, is_highlight: false,
+      }, { onConflict: "route_id,user_id,place_name" });
+    }, 800);
   };
 
   const rateOverall = async (rating: number) => {
@@ -517,8 +557,9 @@ const ReviewSummary = () => {
                 const thumb = pin.images?.[0] ?? pin.image_url ?? null;
                 const currentRating = pinRatings[pin.place_name] ?? 0;
                 const isHL = highlightPlace === pin.place_name;
+                const isNV = notVisited[pin.place_name] ?? false;
                 return (
-                  <div key={pin.id} className="space-y-2">
+                  <div key={pin.id} className={`space-y-2 ${isNV ? "opacity-60" : ""}`}>
                     <div className="flex items-center gap-3">
                       <div className="h-11 w-11 rounded-xl overflow-hidden bg-muted shrink-0">
                         {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : (
@@ -527,22 +568,44 @@ const ReviewSummary = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold leading-tight truncate">{pin.place_name}</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          {[1,2,3,4,5].map(n => (
-                            <button key={n} onClick={() => ratePinHandler(pin.place_name, n)}
-                              className={`text-lg leading-none transition-transform active:scale-90 ${n <= currentRating ? "opacity-100" : "opacity-25"}`}>
-                              ⭐
-                            </button>
-                          ))}
-                        </div>
+                        {!isNV && (
+                          <div className="flex items-center gap-1 mt-1">
+                            {[1,2,3,4,5].map(n => (
+                              <button key={n} onClick={() => ratePinHandler(pin.place_name, n)}
+                                className={`text-lg leading-none transition-transform active:scale-90 ${n <= currentRating ? "opacity-100" : "opacity-25"}`}>
+                                ⭐
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {isNV && (
+                          <p className="text-xs text-muted-foreground mt-0.5">Nie odwiedzono</p>
+                        )}
                       </div>
                     </div>
+                    {!isNV && (
+                      <button
+                        onClick={() => toggleHighlight(pin.place_name)}
+                        className={`w-full py-1.5 rounded-xl text-xs font-semibold border transition-colors ${isHL ? "bg-amber-400/20 border-amber-400 text-amber-700" : "border-border/40 text-muted-foreground"}`}
+                      >
+                        {isHL ? "⭐ Miejsce dnia!" : "Wyróżnij jako miejsce dnia"}
+                      </button>
+                    )}
                     <button
-                      onClick={() => toggleHighlight(pin.place_name)}
-                      className={`w-full py-1.5 rounded-xl text-xs font-semibold border transition-colors ${isHL ? "bg-amber-400/20 border-amber-400 text-amber-700" : "border-border/40 text-muted-foreground"}`}
+                      onClick={() => toggleNotVisited(pin.place_name)}
+                      className={`w-full py-1.5 rounded-xl text-xs font-semibold border transition-colors ${isNV ? "bg-red-500/10 border-red-400/60 text-red-600" : "border-border/40 text-muted-foreground"}`}
                     >
-                      {isHL ? "⭐ Miejsce dnia!" : "Wyróżnij jako miejsce dnia"}
+                      {isNV ? "✕ Odznacz nieobecność" : "Nie było tego miejsca na trasie"}
                     </button>
+                    {isNV && (
+                      <textarea
+                        value={notVisitedReason[pin.place_name] ?? ""}
+                        onChange={e => handleNotVisitedReason(pin.place_name, e.target.value)}
+                        placeholder="Opcjonalne uzasadnienie (np. było zamknięte)…"
+                        rows={2}
+                        className="w-full bg-muted/40 rounded-xl px-3 py-2 text-xs text-foreground resize-none focus:outline-none border border-border/20 placeholder:text-muted-foreground/40"
+                      />
+                    )}
                   </div>
                 );
               })}

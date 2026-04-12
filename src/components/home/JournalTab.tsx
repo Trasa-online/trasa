@@ -23,7 +23,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       // Own completed routes
       const { data: ownRoutes } = await supabase
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, is_shared, overall_rating")
+        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, is_shared, overall_rating, new_for_users")
         .eq("user_id", userId)
         .eq("chat_status", "completed")
         .order("updated_at", { ascending: false });
@@ -39,7 +39,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         const sessionIds = memberRows.map((m: any) => m.session_id);
         const { data } = await (supabase as any)
           .from("routes")
-          .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos")
+          .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, new_for_users")
           .in("group_session_id", sessionIds)
           .neq("user_id", userId)
           .eq("chat_status", "completed")
@@ -145,6 +145,11 @@ const JournalTab = ({ userId }: JournalTabProps) => {
               </div>
               {/* Top-right: photo badge or delete button */}
               <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                {entry.new_for_users?.includes(userId) && (
+                  <div className="bg-orange-500 rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow">
+                    Nowa trasa!
+                  </div>
+                )}
                 {hasUserPhoto && (
                   <div className="bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-[10px] text-white/90">
                     📷 Twoje zdjęcie
