@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Copy, Check, Loader2, ArrowLeft, Trash2 } from "lucide-react";
+import { Copy, Check, Loader2, ArrowLeft, Trash2, Bell } from "lucide-react";
 import { format } from "date-fns";
 
 interface WaitlistEntry {
@@ -92,6 +92,20 @@ const Admin = () => {
     if (!isAdmin) return;
     const interval = setInterval(() => loadWaitlist(), 30000);
     return () => clearInterval(interval);
+  }, [isAdmin]);
+
+  // Realtime: notify when a new business claim arrives
+  useEffect(() => {
+    if (!isAdmin) return;
+    const channel = supabase
+      .channel("admin-business-claims")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "business_claims" }, (payload) => {
+        const name = (payload.new as any).place_name_text || (payload.new as any).contact_email || "nowy lokal";
+        toast.info(`🏪 Nowe zgłoszenie: ${name}`, { duration: 8000 });
+        loadClaims();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [isAdmin]);
 
   const loadWaitlist = async () => {
@@ -222,6 +236,10 @@ const Admin = () => {
 
   if (loading || isAdmin === null) return null;
 
+  const pendingClaims = claims.filter(c => c.status === "pending").length;
+  const pendingWaitlist = waitlist.filter(w => !w.notified_at).length;
+  const totalPending = pendingClaims + pendingWaitlist;
+
   const tabLabels: Record<string, string> = {
     waitlist: "Oczekujący",
     referrals: "Zaproszenia",
@@ -242,6 +260,14 @@ const Admin = () => {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-semibold flex-1">Panel admina</h1>
+        {totalPending > 0 && (
+          <div className="relative mr-1">
+            <Bell className="h-5 w-5 text-muted-foreground" />
+            <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-0.5 rounded-full bg-orange-600 text-white text-[10px] font-bold flex items-center justify-center">
+              {totalPending}
+            </span>
+          </div>
+        )}
         <button
           onClick={() => navigate("/admin/routes")}
           className="text-xs bg-orange-600/10 text-orange-600 font-semibold px-3 py-1.5 rounded-full hover:bg-orange-700/20 transition-colors"
@@ -252,17 +278,25 @@ const Admin = () => {
 
       {/* Tabs */}
       <div className="flex border-b border-border/40">
-        {(["waitlist", "referrals", "cities", "businesses"] as const).map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`flex-1 py-3 text-sm font-medium transition-colors ${
-              tab === t ? "border-b-2 border-foreground text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            {tabLabels[t]}
-          </button>
-        ))}
+        {(["waitlist", "referrals", "cities", "businesses"] as const).map(t => {
+          const badge = t === "businesses" ? pendingClaims : t === "waitlist" ? pendingWaitlist : 0;
+          return (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
+                tab === t ? "border-b-2 border-foreground text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              {tabLabels[t]}
+              {badge > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-600 text-white text-[10px] font-bold">
+                  {badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className="p-4 max-w-2xl mx-auto">
