@@ -56,20 +56,9 @@ const Auth = () => {
     if (!bizPlace.trim()) { toast.error("Podaj nazwę lokalu"); return; }
     setLoading(true);
     try {
-      // Create auth account with a random password — user will set their own when admin grants access
-      const tempPassword = crypto.randomUUID();
-      const { data, error } = await supabase.auth.signUp({ email, password: tempPassword });
-      if (error) throw error;
-      const userId = data.user?.id;
-      if (!userId) throw new Error("Brak ID użytkownika");
-
-      // Sign in immediately so auth.uid() is set for RLS on the insert below
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: tempPassword });
-      if (signInError) throw signInError;
-
-      // Submit claim
+      // Just submit the inquiry — no auth account yet.
+      // Admin will invite the owner via Supabase after reviewing the claim.
       const { error: claimError } = await (supabase as any).from("business_claims").insert({
-        user_id: userId,
         contact_email: email,
         contact_phone: bizPhone.trim() || null,
         place_name_text: bizPlace.trim(),
@@ -77,9 +66,6 @@ const Auth = () => {
         status: "pending",
       });
       if (claimError) throw claimError;
-
-      // Sign out — access will be properly set up by admin later
-      await supabase.auth.signOut();
 
       setBizDone(true);
     } catch (err: any) {
