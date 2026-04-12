@@ -14,6 +14,219 @@ export type Database = {
   }
   public: {
     Tables: {
+      bug_reports: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          screenshot_url: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          screenshot_url?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          screenshot_url?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      business_claims: {
+        Row: {
+          business_name: string | null
+          contact_email: string
+          contact_phone: string | null
+          created_at: string | null
+          id: string
+          message: string | null
+          place_id: string | null
+          place_name_text: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          business_name?: string | null
+          contact_email: string
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          place_id?: string | null
+          place_name_text?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          business_name?: string | null
+          contact_email?: string
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          place_id?: string | null
+          place_name_text?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_claims_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_posts: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          photo_urls: string[] | null
+          place_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          photo_urls?: string[] | null
+          place_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          photo_urls?: string[] | null
+          place_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_posts_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_profiles: {
+        Row: {
+          address: string | null
+          booking_url: string | null
+          business_name: string
+          cover_image_url: string | null
+          created_at: string | null
+          description: string | null
+          email: string | null
+          event_description: string | null
+          event_ends_at: string | null
+          event_starts_at: string | null
+          event_title: string | null
+          gallery_urls: string[] | null
+          id: string
+          is_active: boolean | null
+          is_premium: boolean | null
+          is_verified: boolean | null
+          logo_url: string | null
+          opening_hours: Json | null
+          owner_user_id: string | null
+          phone: string | null
+          place_id: string | null
+          plan: string
+          promo_code: string | null
+          promo_description: string | null
+          promo_expires_at: string | null
+          promo_title: string | null
+          social_links: Json | null
+          tags: string[] | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          booking_url?: string | null
+          business_name: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          event_description?: string | null
+          event_ends_at?: string | null
+          event_starts_at?: string | null
+          event_title?: string | null
+          gallery_urls?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          is_premium?: boolean | null
+          is_verified?: boolean | null
+          logo_url?: string | null
+          opening_hours?: Json | null
+          owner_user_id?: string | null
+          phone?: string | null
+          place_id?: string | null
+          plan?: string
+          promo_code?: string | null
+          promo_description?: string | null
+          promo_expires_at?: string | null
+          promo_title?: string | null
+          social_links?: Json | null
+          tags?: string[] | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          booking_url?: string | null
+          business_name?: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          event_description?: string | null
+          event_ends_at?: string | null
+          event_starts_at?: string | null
+          event_title?: string | null
+          gallery_urls?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          is_premium?: boolean | null
+          is_verified?: boolean | null
+          logo_url?: string | null
+          opening_hours?: Json | null
+          owner_user_id?: string | null
+          phone?: string | null
+          place_id?: string | null
+          plan?: string
+          promo_code?: string | null
+          promo_description?: string | null
+          promo_expires_at?: string | null
+          promo_title?: string | null
+          social_links?: Json | null
+          tags?: string[] | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_profiles_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: true
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       canonical_pins: {
         Row: {
           address: string | null
@@ -125,6 +338,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      city_requests: {
+        Row: {
+          city_name: string
+          created_at: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          city_name: string
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          city_name?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       comment_likes: {
         Row: {
@@ -429,6 +663,7 @@ export type Database = {
       }
       group_session_members: {
         Row: {
+          categories_done: string[] | null
           current_round_done: boolean | null
           current_round_vote: string | null
           finished_at: string | null
@@ -438,6 +673,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          categories_done?: string[] | null
           current_round_done?: boolean | null
           current_round_vote?: string | null
           finished_at?: string | null
@@ -447,6 +683,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          categories_done?: string[] | null
           current_round_done?: boolean | null
           current_round_vote?: string | null
           finished_at?: string | null
@@ -574,28 +811,46 @@ export type Database = {
       }
       group_sessions: {
         Row: {
+          categories: string[] | null
           city: string
           created_at: string | null
           created_by: string
+          current_category_index: number | null
+          expires_at: string | null
           id: string
           join_code: string
+          match_count: number | null
+          name: string | null
           status: string
+          trip_date: string | null
         }
         Insert: {
+          categories?: string[] | null
           city: string
           created_at?: string | null
           created_by: string
+          current_category_index?: number | null
+          expires_at?: string | null
           id?: string
           join_code: string
+          match_count?: number | null
+          name?: string | null
           status?: string
+          trip_date?: string | null
         }
         Update: {
+          categories?: string[] | null
           city?: string
           created_at?: string | null
           created_by?: string
+          current_category_index?: number | null
+          expires_at?: string | null
           id?: string
           join_code?: string
+          match_count?: number | null
+          name?: string | null
           status?: string
+          trip_date?: string | null
         }
         Relationships: [
           {
@@ -801,6 +1056,50 @@ export type Database = {
             columns: ["pin_id"]
             isOneToOne: false
             referencedRelation: "pins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pin_ratings: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_highlight: boolean | null
+          not_visited: boolean | null
+          not_visited_reason: string | null
+          place_name: string
+          rating: number | null
+          route_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_highlight?: boolean | null
+          not_visited?: boolean | null
+          not_visited_reason?: string | null
+          place_name: string
+          rating?: number | null
+          route_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_highlight?: boolean | null
+          not_visited?: boolean | null
+          not_visited_reason?: string | null
+          place_name?: string
+          rating?: number | null
+          route_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pin_ratings_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
             referencedColumns: ["id"]
           },
         ]
@@ -1156,6 +1455,38 @@ export type Database = {
         }
         Relationships: []
       }
+      place_events: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          id: string
+          place_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          id?: string
+          place_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          place_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "place_events_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       place_photo_cache: {
         Row: {
           created_at: string
@@ -1188,6 +1519,7 @@ export type Database = {
           city: string
           created_at: string | null
           description: string | null
+          google_place_id: string | null
           id: string
           is_active: boolean | null
           latitude: number | null
@@ -1205,6 +1537,7 @@ export type Database = {
           city: string
           created_at?: string | null
           description?: string | null
+          google_place_id?: string | null
           id?: string
           is_active?: boolean | null
           latitude?: number | null
@@ -1222,6 +1555,7 @@ export type Database = {
           city?: string
           created_at?: string | null
           description?: string | null
+          google_place_id?: string | null
           id?: string
           is_active?: boolean | null
           latitude?: number | null
@@ -1612,6 +1946,8 @@ export type Database = {
           id: string
           intent: Json | null
           is_shared: boolean | null
+          new_for_users: string[] | null
+          overall_rating: number | null
           pace: string | null
           priorities: string[] | null
           rating: number | null
@@ -1642,6 +1978,8 @@ export type Database = {
           id?: string
           intent?: Json | null
           is_shared?: boolean | null
+          new_for_users?: string[] | null
+          overall_rating?: number | null
           pace?: string | null
           priorities?: string[] | null
           rating?: number | null
@@ -1672,6 +2010,8 @@ export type Database = {
           id?: string
           intent?: Json | null
           is_shared?: boolean | null
+          new_for_users?: string[] | null
+          overall_rating?: number | null
           pace?: string | null
           priorities?: string[] | null
           rating?: number | null
@@ -2098,6 +2438,7 @@ export type Database = {
         Returns: undefined
       }
       delete_current_user_account: { Args: never; Returns: undefined }
+      dismiss_route_badge: { Args: { p_route_id: string }; Returns: undefined }
       find_nearby_canonical_pin: {
         Args: { radius_meters?: number; search_lat: number; search_lng: number }
         Returns: string
@@ -2204,6 +2545,7 @@ export type Database = {
         | "discovery_used"
         | "group_match"
         | "group_invite"
+        | "group_route_ready"
       trip_type: "planning" | "ongoing" | "completed"
     }
     CompositeTypes: {
@@ -2345,6 +2687,7 @@ export const Constants = {
         "discovery_used",
         "group_match",
         "group_invite",
+        "group_route_ready",
       ],
       trip_type: ["planning", "ongoing", "completed"],
     },
