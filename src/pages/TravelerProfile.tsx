@@ -295,24 +295,6 @@ const TravelerProfile = () => {
           </button>
         </div>
 
-        {/* Invites */}
-        {referralCodes.length > 0 && (
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-bold">Zaproś znajomych</p>
-              <p className="text-xs text-muted-foreground">{referralCodes.length} zaproszenia</p>
-            </div>
-            {referralCodes.map(rc => (
-              <InviteSlot
-                key={rc.code}
-                code={rc.code}
-                slot={rc.slot}
-                usedByName={rc.used_by_name}
-                usedByEmail={rc.used_by_email}
-              />
-            ))}
-          </section>
-        )}
 
       </div>
 
