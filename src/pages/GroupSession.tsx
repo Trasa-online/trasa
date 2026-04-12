@@ -1046,21 +1046,23 @@ const GroupSession = () => {
                   Otwórz zapisaną trasę →
                 </button>
               )}
-              <button
-                onClick={async () => {
-                  const selectedMatches = matches.filter(m => !deselectedPlaces.has(m.place_name));
-                  if (session) {
-                    await (supabase as any)
-                      .from("group_sessions")
-                      .update({ status: "completed", match_count: selectedMatches.length })
-                      .eq("id", session.id);
-                  }
-                  navigate("/");
-                }}
-                className={`w-full py-3 rounded-2xl font-semibold text-sm active:scale-[0.97] transition-transform ${matches.length > 0 ? "border border-border/50 text-muted-foreground bg-card" : "bg-orange-600 text-white"}`}
-              >
-                Zakończ parowanie
-              </button>
+              {(matches.length > 0 || members.length >= 2) && (
+                <button
+                  onClick={async () => {
+                    const selectedMatches = matches.filter(m => !deselectedPlaces.has(m.place_name));
+                    if (session) {
+                      await (supabase as any)
+                        .from("group_sessions")
+                        .update({ status: "completed", match_count: selectedMatches.length })
+                        .eq("id", session.id);
+                    }
+                    navigate("/");
+                  }}
+                  className={`w-full py-3 rounded-2xl font-semibold text-sm active:scale-[0.97] transition-transform ${matches.length > 0 ? "border border-border/50 text-muted-foreground bg-card" : "bg-orange-600 text-white"}`}
+                >
+                  Zakończ parowanie
+                </button>
+              )}
             </div>
           </div>
         )}
