@@ -212,11 +212,14 @@ const Admin = () => {
       const response = await supabase.functions.invoke("invite-user", {
         body: { email: claim.contact_email, username: claim.contact_email.split("@")[0] },
       });
-      if (response.error || !response.data?.link) throw new Error(response.error?.message ?? "Błąd generowania linku");
-      setBizInviteLinks(prev => ({ ...prev, [claim.id]: response.data.link as string }));
+      console.log("[invite-user] response:", JSON.stringify(response));
+      const link = response.data?.link ?? response.data?.action_link;
+      if (response.error) throw new Error(typeof response.error === "string" ? response.error : (response.error as any)?.message ?? JSON.stringify(response.error));
+      if (!link) throw new Error(`Brak linku w odpowiedzi: ${JSON.stringify(response.data)}`);
+      setBizInviteLinks(prev => ({ ...prev, [claim.id]: link as string }));
       toast.success("Link wygenerowany — skopiuj i wyślij");
     } catch (err: any) {
-      toast.error(err.message ?? "Błąd generowania linku");
+      toast.error(err.message ?? "Błąd generowania linku", { duration: 10000 });
     } finally {
       setApprovingId(null);
     }
