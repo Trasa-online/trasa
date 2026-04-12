@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Heart, MapPin, Star, ArrowRight, ChevronUp, RotateCcw } from "lucide-react";
+import { MapPin, Star, ArrowRight, ChevronUp, RotateCcw } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -865,16 +865,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
     saveReaction(top, "skipped");
   };
 
-  const handleSuperLike = () => {
-    const top = displayQueue[0];
-    if (!top) return;
-    setHistory(prev => [...prev, { place: top, reaction: "super_liked" }]);
-    setSuperLikedPlaces(prev => [...prev, top]);
-    setAllPlaces(prev => prev.filter(p => p.id !== top.id));
-    setQueue(prev => prev.filter(p => p.id !== top.id));
-    saveReaction(top, "super_liked");
-    trackAndRebalance(top);
-  };
 
   const handleUndo = () => {
     const last = history[history.length - 1];
@@ -1145,43 +1135,39 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
       </div>
 
       {/* Action buttons */}
-      <div className="flex items-center justify-center gap-3 py-5 shrink-0">
-        <button
-          onClick={handleUndo}
-          disabled={history.length === 0}
-          className="h-12 w-12 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform disabled:opacity-25"
-        >
-          <RotateCcw className="h-4 w-4 text-muted-foreground" />
-        </button>
-
-        <button
-          onClick={handleSkip}
-          className="h-14 w-14 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform"
-        >
-          <X className="h-6 w-6 text-muted-foreground" />
-        </button>
-
-        <button
-          onClick={handleSuperLike}
-          className="h-14 w-14 rounded-full border-2 border-yellow-400 bg-card flex items-center justify-center shadow-sm active:scale-90 transition-transform"
-        >
-          <Star className="h-6 w-6 text-yellow-400 fill-yellow-400" />
-        </button>
-
-        <button
-          onClick={() => handleLike()}
-          className="h-16 w-16 rounded-full bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/30 active:scale-90 transition-transform"
-        >
-          <Heart className="h-7 w-7 text-white fill-white" />
-        </button>
-
-        <button
-          onClick={() => displayQueue[0] && handleTap(displayQueue[0])}
-          disabled={!displayQueue[0] || displayQueue[0].businessPlan === 'zero'}
-          className="h-14 w-14 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30"
-        >
-          <ChevronUp className="h-5 w-5 text-muted-foreground" />
-        </button>
+      <div className="px-4 pb-5 shrink-0 space-y-3">
+        {/* Utility row: undo + show more */}
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={handleUndo}
+            disabled={history.length === 0}
+            className="h-10 w-10 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform disabled:opacity-25"
+          >
+            <RotateCcw className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <button
+            onClick={() => displayQueue[0] && handleTap(displayQueue[0])}
+            disabled={!displayQueue[0] || displayQueue[0].businessPlan === 'zero'}
+            className="h-10 w-10 rounded-full border border-border/60 bg-card flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30"
+          >
+            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
+        {/* Main action row */}
+        <div className="flex gap-2">
+          <button
+            onClick={handleSkip}
+            className="flex-1 py-4 rounded-2xl border border-border/60 bg-card text-foreground font-semibold text-sm active:scale-[0.97] transition-transform"
+          >
+            Odrzuć
+          </button>
+          <button
+            onClick={() => handleLike()}
+            className="flex-1 py-4 rounded-2xl bg-orange-600 text-white font-semibold text-sm shadow-lg shadow-orange-600/20 active:scale-[0.97] transition-transform"
+          >
+            Dodaj
+          </button>
+        </div>
       </div>
 
       {/* Proceed CTA */}
