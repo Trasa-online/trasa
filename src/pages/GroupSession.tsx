@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, MapPin, Star, Check, UserPlus, CalendarDays, Copy, Share2 } from "lucide-react";
+import { ArrowLeft, Users, MapPin, Star, Check, UserPlus, CalendarDays, Copy, Share2, Search, X } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -65,6 +65,10 @@ const GroupSession = () => {
   const prevMatchNamesRef = useRef<Set<string> | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [friendSearch, setFriendSearch] = useState("");
+  const [friendResults, setFriendResults] = useState<{ id: string; username: string | null; first_name: string | null; avatar_url: string | null }[]>([]);
+  const [selectedFriends, setSelectedFriends] = useState<Set<string>>(new Set());
+  const [sendingInvites, setSendingInvites] = useState(false);
 
   // ── Category state ───────────────────────────────────────────────────────────
   const [pendingCategory, setPendingCategory] = useState<string | null>(null);
@@ -348,6 +352,55 @@ const GroupSession = () => {
     setDetailOpen(true);
   };
 
+
+  // ── Friend search ────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!inviteOpen) {
+      setFriendSearch("");
+      setFriendResults([]);
+      setSelectedFriends(new Set());
+      return;
+    }
+  }, [inviteOpen]);
+
+  useEffect(() => {
+    const q = friendSearch.trim();
+    if (q.length < 2) { setFriendResults([]); return; }
+    const timeout = setTimeout(async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, username, first_name, avatar_url")
+        .or(`username.ilike.%${q}%,first_name.ilike.%${q}%`)
+        .neq("id", user?.id ?? "")
+        .limit(10);
+      setFriendResults(data ?? []);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [friendSearch, user?.id]);
+
+  const handleSendInvites = async () => {
+    if (selectedFriends.size === 0 || !session) return;
+    setSendingInvites(true);
+    try {
+      await Promise.all(
+        Array.from(selectedFriends).map((friendId) =>
+          (supabase as any).from("notifications").insert({
+            user_id: friendId,
+            type: "group_session_invite",
+            data: { session_id: session.id, join_code: joinCode, city: session.city },
+            message: `Zaproszenie do sesji parowania w ${session.city}`,
+          })
+        )
+      );
+      toast.success(`Zaproszenia wysłane (${selectedFriends.size})`);
+      setInviteOpen(false);
+    } catch {
+      toast.error("Nie udało się wysłać zaproszeń");
+    } finally {
+      setSendingInvites(false);
+    }
+  };
 
   // ── Loading / error states ──────────────────────────────────────────────────
 
@@ -902,36 +955,114 @@ const GroupSession = () => {
 
       {/* Invite sheet */}
       <Sheet open={inviteOpen} onOpenChange={setInviteOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl pb-8">
-          <SheetHeader className="pb-4">
+        <SheetContent side="bottom" className="rounded-t-2xl pb-8 max-h-[85vh] flex flex-col">
+          <SheetHeader className="pb-3 shrink-0">
             <SheetTitle>Zaproś do sesji</SheetTitle>
           </SheetHeader>
-          <p className="text-sm text-muted-foreground mb-3">Podaj znajomemu kod sesji lub wyślij link:</p>
-          <div className="flex items-center justify-center gap-3 py-4 rounded-2xl bg-muted mb-4">
-            <span className="text-3xl font-black tracking-widest">{joinCode}</span>
-          </div>
-          <div className="flex gap-2">
+
+          {/* Code copy row */}
+          <div className="flex gap-2 mb-4 shrink-0">
+            <div className="flex-1 flex items-center justify-center gap-3 py-3 rounded-2xl bg-muted">
+              <span className="text-2xl font-black tracking-widest">{joinCode}</span>
+            </div>
             <button
               onClick={() => {
                 navigator.clipboard.writeText(joinCode ?? "");
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border border-border/50 bg-card text-sm font-semibold active:scale-[0.97] transition-transform"
+              className="px-4 flex items-center justify-center gap-2 rounded-2xl border border-border/50 bg-card text-sm font-semibold active:scale-[0.97] transition-transform"
             >
               <Copy className="h-4 w-4" />
-              {copied ? "Skopiowano!" : "Kopiuj kod"}
+              {copied ? "✓" : "Kopiuj"}
             </button>
-            {typeof navigator.share === "function" && (
-              <button
-                onClick={() => navigator.share({ title: "Dołącz do mojej sesji w TRASA", text: `Dołącz używając kodu: ${joinCode}`, url: `${window.location.origin}/sesja/${joinCode}` })}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-orange-600 text-white text-sm font-semibold active:scale-[0.97] transition-transform"
-              >
-                <Share2 className="h-4 w-4" />
-                Udostępnij
+          </div>
+
+          {/* Friend search */}
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 shrink-0">Znajdź znajomych</p>
+          <div className="relative mb-3 shrink-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={friendSearch}
+              onChange={(e) => setFriendSearch(e.target.value)}
+              placeholder="Szukaj po nazwie lub @nickname…"
+              className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-muted text-sm placeholder:text-muted-foreground/60 outline-none"
+            />
+            {friendSearch && (
+              <button onClick={() => setFriendSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
+                <X className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
             )}
           </div>
+
+          {/* Results */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {friendResults.length > 0 ? (
+              <ul className="flex flex-col gap-1">
+                {friendResults.map((f) => {
+                  const selected = selectedFriends.has(f.id);
+                  return (
+                    <li key={f.id}>
+                      <button
+                        onClick={() => {
+                          setSelectedFriends((prev) => {
+                            const next = new Set(prev);
+                            selected ? next.delete(f.id) : next.add(f.id);
+                            return next;
+                          });
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors",
+                          selected ? "bg-orange-600/10" : "active:bg-muted"
+                        )}
+                      >
+                        {f.avatar_url ? (
+                          <img src={f.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="h-9 w-9 rounded-full bg-orange-600/20 flex items-center justify-center text-sm font-bold text-orange-700 shrink-0">
+                            {(f.first_name || f.username || "?")[0].toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex-1 text-left min-w-0">
+                          <p className="text-sm font-semibold leading-tight">{f.first_name || f.username}</p>
+                          {f.username && <p className="text-xs text-muted-foreground">@{f.username}</p>}
+                        </div>
+                        <div className={cn(
+                          "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                          selected ? "bg-orange-600 border-orange-600" : "border-border"
+                        )}>
+                          {selected && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : friendSearch.trim().length >= 2 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Brak wyników dla „{friendSearch}"</p>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-6">Wpisz co najmniej 2 znaki, żeby wyszukać</p>
+            )}
+          </div>
+
+          {/* Send button */}
+          <button
+            onClick={handleSendInvites}
+            disabled={selectedFriends.size === 0 || sendingInvites}
+            className={cn(
+              "mt-4 shrink-0 w-full py-3.5 rounded-2xl font-bold text-base transition-all",
+              selectedFriends.size > 0
+                ? "bg-orange-600 text-white active:scale-[0.98]"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+            )}
+          >
+            {sendingInvites
+              ? "Wysyłanie…"
+              : selectedFriends.size > 0
+                ? `Wyślij zaproszenia (${selectedFriends.size})`
+                : "Wybierz znajomych"}
+          </button>
         </SheetContent>
       </Sheet>
 
