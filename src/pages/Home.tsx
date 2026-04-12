@@ -130,41 +130,13 @@ const Home = () => {
   if (!user) return <Navigate to="/auth" replace />;
 
   return (
-    <div className="flex-1 flex flex-col px-4 pt-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto w-full">
-
-      {/* Hero CTA */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-8">
-        <div className="text-center space-y-3">
-          <div className="mx-auto h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
-            <svg width="48" height="48" viewBox="0 0 56 56" fill="none">
-              <circle cx="18" cy="16" r="8" fill="#fdba74" />
-              <path d="M4 44c0-7.732 6.268-14 14-14s14 6.268 14 14" fill="#fdba74" />
-              <circle cx="38" cy="14" r="9" fill="#ea580c" />
-              <path d="M22 44c0-8.284 6.716-15 15-15s15 6.716 15 15" fill="#ea580c" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-black tracking-tight leading-tight">
-            Zaplanujcie razem
-          </h1>
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
-            Swipe'ujcie miejsca niezależnie i odkryjcie co Was łączy. Trasa tworzy się sama z Waszych wspólnych wyborów.
-          </p>
-        </div>
-
-        <button
-          onClick={() => navigate("/sesja/nowa")}
-          className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/20 flex items-center justify-center gap-2"
-        >
-          <Users className="h-5 w-5" />
-          Zaplanuj razem
-        </button>
-      </div>
+    <div className="flex-1 flex flex-col px-4 pt-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto w-full overflow-y-auto">
 
       {/* Sessions list — only non-completed */}
       {displayedSessions.length > 0 && (
-        <div className="mt-6 space-y-2">
+        <div className="space-y-2 mb-6">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
-            Twoje sesje
+            Aktywne sesje
           </p>
           {displayedSessions.map((s: any) => {
             const tripDateObj = s.trip_date ? parseISO(s.trip_date) : null;
@@ -221,6 +193,34 @@ const Home = () => {
           })}
         </div>
       )}
+
+      {/* Hero CTA */}
+      <div className={`flex flex-col items-center justify-center gap-8 py-10 ${displayedSessions.length > 0 ? "" : "flex-1"}`}>
+        <div className="text-center space-y-3">
+          <div className="mx-auto h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
+            <svg width="48" height="48" viewBox="0 0 56 56" fill="none">
+              <circle cx="18" cy="16" r="8" fill="#fdba74" />
+              <path d="M4 44c0-7.732 6.268-14 14-14s14 6.268 14 14" fill="#fdba74" />
+              <circle cx="38" cy="14" r="9" fill="#ea580c" />
+              <path d="M22 44c0-8.284 6.716-15 15-15s15 6.716 15 15" fill="#ea580c" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-black tracking-tight leading-tight">
+            Zaplanujcie razem
+          </h1>
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
+            Swipe'ujcie miejsca niezależnie i odkryjcie co Was łączy. Trasa tworzy się sama z Waszych wspólnych wyborów.
+          </p>
+        </div>
+
+        <button
+          onClick={() => navigate("/sesja/nowa")}
+          className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/20 flex items-center justify-center gap-2"
+        >
+          <Users className="h-5 w-5" />
+          Zaplanuj razem
+        </button>
+      </div>
 
       {/* Session preview sheet */}
       {(() => {
