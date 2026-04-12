@@ -204,11 +204,23 @@ const Admin = () => {
 
   const loadBugReports = async () => {
     setFetchingBugs(true);
-    const { data } = await (supabase as any)
+    const { data, error } = await (supabase as any)
       .from("bug_reports")
-      .select("id, user_id, description, screenshot_url, status, created_at, profiles(username, first_name)")
+      .select("id, user_id, description, screenshot_url, status, created_at")
       .order("created_at", { ascending: false });
-    setBugReports(data ?? []);
+    if (error) { console.error("bug_reports fetch error:", error); }
+    if (data?.length) {
+      // Enrich with profile names
+      const userIds = [...new Set(data.map((r: any) => r.user_id).filter(Boolean))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, first_name")
+        .in("id", userIds as string[]);
+      const profileMap = Object.fromEntries((profiles ?? []).map((p: any) => [p.id, p]));
+      setBugReports(data.map((r: any) => ({ ...r, profiles: profileMap[r.user_id] ?? null })));
+    } else {
+      setBugReports(data ?? []);
+    }
     setFetchingBugs(false);
   };
 
