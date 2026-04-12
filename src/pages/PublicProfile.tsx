@@ -92,7 +92,7 @@ export default function PublicProfile() {
   if (!profile) return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-3">
       <p className="text-muted-foreground">Nie znaleziono użytkownika</p>
-      <button onClick={() => navigate(-1)} className="text-orange-600 font-semibold text-sm">Wróć</button>
+      <button onClick={() => window.history.state?.idx > 0 ? navigate(-1) : navigate("/")} className="text-orange-600 font-semibold text-sm">Wróć</button>
     </div>
   );
 
@@ -102,7 +102,7 @@ export default function PublicProfile() {
     <div className="min-h-screen bg-background pb-8">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/40">
-        <button onClick={() => navigate(-1)} className="h-9 w-9 flex items-center justify-center text-foreground">
+        <button onClick={() => window.history.state?.idx > 0 ? navigate(-1) : navigate("/")} className="h-9 w-9 flex items-center justify-center text-foreground">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="flex-1 text-base font-bold text-center">@{profile.username}</h1>

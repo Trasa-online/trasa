@@ -486,7 +486,7 @@ const GroupSession = () => {
     return (
       <div className="flex flex-col h-screen bg-background max-w-lg mx-auto">
         <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-          <button onClick={() => navigate(-1)} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0">
+          <button onClick={() => navigate("/")} className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <span className="font-bold text-base">Zaproszenie do sesji</span>
@@ -535,7 +535,7 @@ const GroupSession = () => {
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/")}
           className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0"
         >
           <ArrowLeft className="h-5 w-5" />

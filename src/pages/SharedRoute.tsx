@@ -87,7 +87,7 @@ export default function SharedRoute() {
         {/* Back */}
         <div className="absolute left-0 right-0 flex items-center px-4"
           style={{ top: "max(16px, env(safe-area-inset-top, 16px))" }}>
-          <button onClick={() => navigate(-1)}
+          <button onClick={() => navigate("/")}
             className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
             <ArrowLeft className="h-5 w-5 text-white" />
           </button>

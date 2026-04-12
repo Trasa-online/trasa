@@ -8,10 +8,12 @@ import { pl } from "date-fns/locale";
 import { useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
+import HomeTour, { useHomeTour } from "@/components/home/HomeTour";
 
 const Home = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const { showTour, dismissTour } = useHomeTour();
   const [previewSessionId, setPreviewSessionId] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<{
     place_name: string; photo_url?: string | null;
@@ -417,6 +419,8 @@ const Home = () => {
           onOpenChange={(open) => { if (!open) setSelectedPlace(null); }}
         />
       )}
+
+      {showTour && <HomeTour onDone={dismissTour} />}
 
       {/* Admin shortcut */}
       {user.email === "nat.maz98@gmail.com" && (
