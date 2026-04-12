@@ -30,6 +30,7 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !user) {
+      console.error("auth error:", authError);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -37,15 +38,17 @@ serve(async (req) => {
     }
 
     // Verify caller is admin via user_roles table
-    const { data: roleData } = await supabaseAdmin
+    const { data: roleData, error: roleError } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
       .eq("role", "admin")
       .maybeSingle();
 
+    console.log("role check for user", user.id, "→ roleData:", roleData, "roleError:", roleError);
+
     if (!roleData) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
+      return new Response(JSON.stringify({ error: "Forbidden – no admin role" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -60,11 +63,11 @@ serve(async (req) => {
       });
     }
 
-    // Try invite link first; fall back to magiclink if user already exists
-    let inviteLink: string;
-    let invitedUserId: string;
+    let inviteLink: string | undefined;
+    let invitedUserId: string | undefined;
     let isExistingUser = false;
 
+    // 1. Try invite (new user path)
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "invite",
       email,
@@ -74,40 +77,52 @@ serve(async (req) => {
       },
     });
 
-    if (linkError) {
-      // User exists or invite failed — generate a recovery (password reset) link instead
-      const { data: mlData, error: mlError } = await supabaseAdmin.auth.admin.generateLink({
-        type: "recovery",
-        email,
-        options: {
-          redirectTo: "https://trasa.lovable.app/set-password",
-        },
-      });
+    console.log("invite result:", linkError?.message, "action_link:", linkData?.properties?.action_link?.slice(0, 60));
 
-      if (mlError || !mlData?.properties?.action_link) {
-        console.error("recovery fallback error:", mlError, "original error:", linkError);
-        return new Response(JSON.stringify({ error: mlError?.message ?? "Failed to generate link" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      inviteLink = mlData.properties.action_link;
-      invitedUserId = mlData.user.id;
-      isExistingUser = true;
-    } else if (linkError || !linkData?.properties?.action_link) {
-      console.error("generateLink error:", linkError);
-      return new Response(JSON.stringify({ error: "Failed to generate invite link" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    } else {
+    if (!linkError && linkData?.properties?.action_link) {
       inviteLink = linkData.properties.action_link;
       invitedUserId = linkData.user.id;
+    } else {
+      // User already exists or invite failed — try recovery link
+      const { data: recData, error: recError } = await supabaseAdmin.auth.admin.generateLink({
+        type: "recovery",
+        email,
+        options: { redirectTo: "https://trasa.lovable.app/set-password" },
+      });
+
+      console.log("recovery result:", recError?.message, "action_link:", recData?.properties?.action_link?.slice(0, 60));
+
+      if (!recError && recData?.properties?.action_link) {
+        inviteLink = recData.properties.action_link;
+        invitedUserId = recData.user.id;
+        isExistingUser = true;
+      } else {
+        // Last resort: magiclink
+        const { data: mlData, error: mlError } = await supabaseAdmin.auth.admin.generateLink({
+          type: "magiclink",
+          email,
+          options: { redirectTo: "https://trasa.lovable.app/set-password" },
+        });
+
+        console.log("magiclink result:", mlError?.message, "action_link:", mlData?.properties?.action_link?.slice(0, 60));
+
+        if (!mlError && mlData?.properties?.action_link) {
+          inviteLink = mlData.properties.action_link;
+          invitedUserId = mlData.user.id;
+          isExistingUser = true;
+        } else {
+          const errMsg = mlError?.message ?? recError?.message ?? linkError?.message ?? "Failed to generate link";
+          console.error("all link types failed:", { linkError, recError, mlError });
+          return new Response(JSON.stringify({ error: errMsg }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
     }
 
     // Create profile only for new users
-    if (!isExistingUser) {
+    if (!isExistingUser && invitedUserId) {
       await supabaseAdmin.from("profiles").upsert({
         id: invitedUserId,
         username,
