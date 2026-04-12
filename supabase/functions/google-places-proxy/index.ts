@@ -1,6 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const ALLOWED_ORIGINS = ["https://trasa.lovable.app", "http://localhost:8080"];
 const BASE = "https://maps.googleapis.com/maps/api";
 
 /** Exact token match — no substring tricks */
@@ -14,9 +13,8 @@ function nameMatches(requested: string, found: string): boolean {
 }
 
 Deno.serve(async (req) => {
-  const reqOrigin = req.headers.get("Origin") ?? "";
   const corsHeaders = {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.includes(reqOrigin) ? reqOrigin : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   };
 
