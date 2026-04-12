@@ -53,12 +53,12 @@ const Auth = () => {
 
   const handleBizRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!bizName.trim()) { toast.error("Podaj nazwę firmy"); return; }
-    if (!bizPlace.trim()) { toast.error("Podaj nazwę lokalu / miejsca"); return; }
+    if (!bizPlace.trim()) { toast.error("Podaj nazwę lokalu"); return; }
     setLoading(true);
     try {
-      // Create auth account
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      // Create auth account with a random password — user will set their own when admin grants access
+      const tempPassword = crypto.randomUUID();
+      const { data, error } = await supabase.auth.signUp({ email, password: tempPassword });
       if (error) throw error;
       const userId = data.user?.id;
       if (!userId) throw new Error("Brak ID użytkownika");
@@ -68,7 +68,6 @@ const Auth = () => {
         user_id: userId,
         contact_email: email,
         contact_phone: bizPhone.trim() || null,
-        business_name: bizName.trim(),
         place_name_text: bizPlace.trim(),
         message: bizMessage.trim() || null,
         status: "pending",
@@ -275,26 +274,14 @@ const Auth = () => {
               ) : (
                 <form onSubmit={handleBizRegister} className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="biz-name" className="text-blue-200">Nazwa firmy / sieci</Label>
-                    <Input
-                      id="biz-name"
-                      type="text"
-                      value={bizName}
-                      onChange={(e) => setBizName(e.target.value)}
-                      required
-                      placeholder="np. Kawiarnia Stara Kamienica"
-                      className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="biz-place" className="text-blue-200">Nazwa lokalu / miejsca</Label>
+                    <Label htmlFor="biz-place" className="text-blue-200">Nazwa lokalu</Label>
                     <Input
                       id="biz-place"
                       type="text"
                       value={bizPlace}
                       onChange={(e) => setBizPlace(e.target.value)}
                       required
-                      placeholder="np. Stara Kamienica – Kraków Stare Miasto"
+                      placeholder="np. Kawiarnia Stara Kamienica, Kraków"
                       className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
                     />
                   </div>
@@ -307,19 +294,6 @@ const Auth = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       placeholder={t("fields.email_placeholder")}
-                      className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="biz-reg-password" className="text-blue-200">{t("fields.password")}</Label>
-                    <Input
-                      id="biz-reg-password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={6}
-                      placeholder={t("fields.password_placeholder")}
                       className="bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus-visible:ring-blue-500"
                     />
                   </div>
