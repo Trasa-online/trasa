@@ -206,6 +206,22 @@ const Admin = () => {
     }
   };
 
+  const handleGenerateBizLink = async (claim: BusinessClaim) => {
+    setApprovingId(claim.id);
+    try {
+      const response = await supabase.functions.invoke("invite-user", {
+        body: { email: claim.contact_email, username: claim.contact_email.split("@")[0] },
+      });
+      if (response.error || !response.data?.link) throw new Error(response.error?.message ?? "Błąd generowania linku");
+      setBizInviteLinks(prev => ({ ...prev, [claim.id]: response.data.link as string }));
+      toast.success("Link wygenerowany — skopiuj i wyślij");
+    } catch (err: any) {
+      toast.error(err.message ?? "Błąd generowania linku");
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
   const handleRejectClaim = async (claim: BusinessClaim) => {
     setRejectingId(claim.id);
     await (supabase as any).from("business_claims").update({ status: "rejected" }).eq("id", claim.id);
@@ -548,6 +564,17 @@ const Admin = () => {
                         {approvingId === claim.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Generuję...</> : "Zatwierdź i wyślij link"}
                       </Button>
                     </div>
+                  )}
+                  {claim.status === "approved" && !bizInviteLinks[claim.id] && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => handleGenerateBizLink(claim)}
+                      disabled={approvingId === claim.id}
+                    >
+                      {approvingId === claim.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Generuję...</> : "Wyślij link aktywacyjny"}
+                    </Button>
                   )}
                   {bizInviteLinks[claim.id] && (
                     <div className="flex gap-2 pt-1">
