@@ -1082,7 +1082,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
       )}
 
       {/* Progress */}
-      <div className="flex items-center justify-between px-5 pb-2 shrink-0">
+      <div className="flex items-center justify-between px-5 pt-1 pb-3 shrink-0">
         <span className="text-xs text-muted-foreground">
           {roundPlaceIds?.length
             ? `Miejsce ${roundPlaceIds.length - queue.length}/${roundPlaceIds.length}`
@@ -1153,7 +1153,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
       </div>
 
       {/* Action buttons */}
-      <div className="px-4 pt-4 pb-safe-6 pb-6 shrink-0">
+      <div className="px-4 pt-5 pb-safe-8 pb-8 shrink-0">
         <div className="flex gap-2">
           <button
             onClick={handleSkip}

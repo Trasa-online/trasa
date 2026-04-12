@@ -74,10 +74,10 @@ serve(async (req) => {
       },
     });
 
-    if (linkError && linkError.message?.includes("already been registered")) {
-      // User exists — generate a magiclink instead
+    if (linkError) {
+      // User exists or invite failed — generate a recovery (password reset) link instead
       const { data: mlData, error: mlError } = await supabaseAdmin.auth.admin.generateLink({
-        type: "magiclink",
+        type: "recovery",
         email,
         options: {
           redirectTo: "https://trasa.lovable.app/set-password",
@@ -85,8 +85,8 @@ serve(async (req) => {
       });
 
       if (mlError || !mlData?.properties?.action_link) {
-        console.error("magiclink fallback error:", mlError);
-        return new Response(JSON.stringify({ error: "Failed to generate link for existing user" }), {
+        console.error("recovery fallback error:", mlError, "original error:", linkError);
+        return new Response(JSON.stringify({ error: mlError?.message ?? "Failed to generate link" }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

@@ -66,6 +66,7 @@ const Admin = () => {
   const [fetchingClaims, setFetchingClaims] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [deletingClaimId, setDeletingClaimId] = useState<string | null>(null);
   const [bizInviteLinks, setBizInviteLinks] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -231,6 +232,14 @@ const Admin = () => {
     setRejectingId(null);
     loadClaims();
     toast.success("Odrzucono");
+  };
+
+  const handleDeleteClaim = async (claim: BusinessClaim) => {
+    setDeletingClaimId(claim.id);
+    await (supabase as any).from("business_claims").delete().eq("id", claim.id);
+    setDeletingClaimId(null);
+    setClaims(prev => prev.filter(c => c.id !== claim.id));
+    toast.success("Usunięto zgłoszenie");
   };
 
   const handleInvite = async (entry: WaitlistEntry) => {
@@ -532,15 +541,24 @@ const Admin = () => {
                         {format(new Date(claim.created_at), "dd.MM.yyyy HH:mm")}
                       </p>
                     </div>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                      claim.status === "pending"
-                        ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                        : claim.status === "approved"
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                    }`}>
-                      {claim.status === "pending" ? "Oczekuje" : claim.status === "approved" ? "Zatwierdzono" : "Odrzucono"}
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        claim.status === "pending"
+                          ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                          : claim.status === "approved"
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      }`}>
+                        {claim.status === "pending" ? "Oczekuje" : claim.status === "approved" ? "Zatwierdzono" : "Odrzucono"}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteClaim(claim)}
+                        disabled={deletingClaimId === claim.id}
+                        className="h-7 w-7 flex items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                      >
+                        {deletingClaimId === claim.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
                   </div>
                   {claim.message && (
                     <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
