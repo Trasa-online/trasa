@@ -283,8 +283,6 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhot
   };
 
   const rotation = isTop ? dragX * 0.08 : 0;
-  const likeOpacity = isTop ? Math.min(dragX / 80, 1) : 0;
-  const skipOpacity = isTop ? Math.min(-dragX / 80, 1) : 0;
 
   const stackScale = 1 - offset * 0.04;
   const stackY = offset * 10;
@@ -338,23 +336,6 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhot
       </div>
 
 
-      {/* Like / Skip indicators */}
-      {isTop && (
-        <>
-          <div
-            className="absolute top-8 left-6 rotate-[-20deg] border-4 border-emerald-400 rounded-xl px-3 py-1"
-            style={{ opacity: likeOpacity }}
-          >
-            <span className="text-emerald-400 font-black text-2xl tracking-widest">CHCĘ</span>
-          </div>
-          <div
-            className="absolute top-8 right-6 rotate-[20deg] border-4 border-red-400 rounded-xl px-3 py-1"
-            style={{ opacity: skipOpacity }}
-          >
-            <span className="text-red-400 font-black text-2xl tracking-widest">SKIP</span>
-          </div>
-        </>
-      )}
 
       {/* Content */}
       <div className="absolute bottom-0 left-0 right-0 p-5 space-y-2">
