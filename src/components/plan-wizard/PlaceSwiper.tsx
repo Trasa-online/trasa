@@ -1134,17 +1134,17 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
       </div>
 
       {/* Action buttons — overlap card from bottom */}
-      <div className="relative z-20 -mt-16 mx-4 pb-safe-6 pb-6 shrink-0">
+      <div className="relative z-20 -mt-14 mx-5 pb-safe-8 pb-8 shrink-0">
         <div className="flex gap-3">
           <button
             onClick={handleSkip}
-            className="flex-1 py-4 rounded-full bg-white text-foreground font-bold text-base shadow-xl active:scale-[0.97] transition-transform"
+            className="flex-1 py-3 rounded-full bg-white text-foreground font-bold text-sm shadow-xl active:scale-[0.97] transition-transform"
           >
             Odrzuć
           </button>
           <button
             onClick={() => handleLike()}
-            className="flex-1 py-4 rounded-full bg-orange-600 text-white font-bold text-base shadow-xl shadow-orange-600/30 active:scale-[0.97] transition-transform"
+            className="flex-1 py-3 rounded-full bg-orange-600 text-white font-bold text-sm shadow-xl shadow-orange-600/30 active:scale-[0.97] transition-transform"
           >
             Dodaj
           </button>
