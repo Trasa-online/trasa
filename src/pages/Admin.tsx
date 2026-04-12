@@ -31,6 +31,31 @@ interface BusinessClaim {
   places: { place_name: string; city: string } | null;
 }
 
+/** Call invite-user with explicit session token to avoid PWA auth issues */
+async function invokeInviteUser(email: string, username: string, waitlist_id?: string) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Brak sesji – zaloguj się ponownie");
+
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-user`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+        "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({ email, username, waitlist_id }),
+    }
+  );
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
+  if (!json?.link) throw new Error(`Brak linku w odpowiedzi: ${JSON.stringify(json)}`);
+  return json as { link: string; email: string };
+}
+
 const Admin = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -178,12 +203,8 @@ const Admin = () => {
     setApprovingId(claim.id);
     try {
       // 1. Invite user — creates auth account + returns magic link
-      const response = await supabase.functions.invoke("invite-user", {
-        body: { email: claim.contact_email, username: claim.contact_email.split("@")[0] },
-      });
-      if (response.error || !response.data?.link) throw new Error(response.error?.message ?? "Błąd generowania linku");
-      const link = response.data.link as string;
-      const newUserId = response.data.user_id as string | undefined;
+      const { link } = await invokeInviteUser(claim.contact_email, claim.contact_email.split("@")[0]);
+      const newUserId: string | undefined = undefined;
 
       // 2. Create business profile linked to the new user
       await (supabase as any).from("business_profiles").upsert({
@@ -210,15 +231,8 @@ const Admin = () => {
   const handleGenerateBizLink = async (claim: BusinessClaim) => {
     setApprovingId(claim.id);
     try {
-      const response = await supabase.functions.invoke("invite-user", {
-        body: { email: claim.contact_email, username: claim.contact_email.split("@")[0] },
-      });
-      const link = response.data?.link ?? response.data?.action_link;
-      if (response.error || !link) {
-        const errMsg = response.data?.error ?? (response.error as any)?.message ?? "Błąd generowania linku";
-        throw new Error(errMsg);
-      }
-      setBizInviteLinks(prev => ({ ...prev, [claim.id]: link as string }));
+      const { link } = await invokeInviteUser(claim.contact_email, claim.contact_email.split("@")[0]);
+      setBizInviteLinks(prev => ({ ...prev, [claim.id]: link }));
       toast.success("Link wygenerowany — skopiuj i wyślij");
     } catch (err: any) {
       toast.error(err.message ?? "Błąd generowania linku", { duration: 10000 });
@@ -246,11 +260,7 @@ const Admin = () => {
   const handleInvite = async (entry: WaitlistEntry) => {
     setInviting(entry.id);
     try {
-      const response = await supabase.functions.invoke("invite-user", {
-        body: { email: entry.email, username: entry.email.split("@")[0], waitlist_id: entry.id },
-      });
-      if (response.error || !response.data?.link) throw new Error(response.error?.message ?? "Błąd generowania linku");
-      const link = response.data.link as string;
+      const { link } = await invokeInviteUser(entry.email, entry.email.split("@")[0], entry.id);
       setGeneratedLinks(prev => ({ ...prev, [entry.id]: link }));
       setWaitlist(prev => prev.map(e => e.id === entry.id ? { ...e, notified_at: new Date().toISOString() } : e));
       toast.success(`Link dla ${entry.email} gotowy — skopiuj i wyślij!`);
