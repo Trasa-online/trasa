@@ -80,7 +80,7 @@ const Auth = () => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: "https://trasa.lovable.app/set-password",
+        redirectTo: "https://trasa.travel/set-password",
       });
       if (error) throw error;
       toast.success("Link do resetowania hasła wysłany na " + email);
