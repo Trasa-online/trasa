@@ -1046,7 +1046,7 @@ const GroupSession = () => {
                   Otwórz zapisaną trasę →
                 </button>
               )}
-              {(matches.length > 0 || members.length >= 2) && (
+              {matches.length > 0 && (
                 <button
                   onClick={async () => {
                     const selectedMatches = matches.filter(m => !deselectedPlaces.has(m.place_name));

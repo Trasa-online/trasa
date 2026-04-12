@@ -92,6 +92,14 @@ Deno.serve(async (req) => {
     if (detailData.result) {
       if (detailData.result.photos?.length > 3) detailData.result.photos = detailData.result.photos.slice(0, 3);
 
+      // Enrich photos with full URL so clients don't need an API key
+      if (detailData.result.photos?.length && apiKey) {
+        detailData.result.photos = detailData.result.photos.map((p: any) => ({
+          ...p,
+          photo_url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${encodeURIComponent(p.photo_reference)}&key=${apiKey}`,
+        }));
+      }
+
       // Auto-save Place ID for future fast-path
       if (placeDbId && !knownPlaceId) {
         sb.from("places").update({ google_place_id: resolvedPlaceId }).eq("id", placeDbId).then(() => {});

@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import { supabase } from "@/integrations/supabase/client";
-import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
 import { MOCK_MODE, getMockPlaces } from "@/lib/mockPlaces";
@@ -188,7 +187,7 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhot
 
   // Prefetch Google Places data + cache 1 photo when card is top or next-in-line
   useEffect(() => {
-    if (offset > 1 || !GOOGLE_MAPS_API_KEY) return;
+    if (offset > 1) return;
     supabase.functions
       .invoke("google-places-proxy", {
         body: {
@@ -201,13 +200,12 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhot
         },
       })
       .then(({ data }) => {
-        const ref = data?.result?.photos?.[0]?.photo_reference;
-        if (ref) {
-          const url = getPhotoUrl(ref, 800);
-          if (url) {
-            setPhotoUrls([url]);
-            onPhotoFetched?.(place.id, url);
-          }
+        // Prefer full photo_url returned by proxy (no client key needed)
+        const photo = data?.result?.photos?.[0];
+        const url = photo?.photo_url ?? (photo?.photo_reference ? getPhotoUrl(photo.photo_reference, 800) : null);
+        if (url) {
+          setPhotoUrls([url]);
+          onPhotoFetched?.(place.id, url);
         }
         if (!place.rating && data?.result?.rating) setGoogleRating(data.result.rating);
         if (!place.address && data?.result?.formatted_address) setGoogleAddress(data.result.formatted_address);
