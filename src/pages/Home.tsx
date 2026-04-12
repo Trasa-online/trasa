@@ -7,11 +7,13 @@ import { parseISO, isValid, format, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
 
 const Home = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [previewSessionId, setPreviewSessionId] = useState<string | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<{ place_name: string; photo_url?: string | null } | null>(null);
 
   // Active group sessions the user is a member of
   const { data: activeSessions = [] } = useQuery({
@@ -98,6 +100,16 @@ const Home = () => {
       return data ?? null;
     },
     enabled: !!previewSessionId,
+  });
+
+  const { data: routePins = [] } = useQuery({
+    queryKey: ["session-route-pins", sessionRoute?.id],
+    queryFn: async () => {
+      if (!sessionRoute?.id) return [];
+      const { data } = await (supabase as any).from("pins").select("place_name, latitude, longitude, category").eq("route_id", sessionRoute.id);
+      return (data || []).filter((p: any) => p.latitude && p.longitude);
+    },
+    enabled: !!sessionRoute?.id,
   });
 
 
@@ -199,7 +211,9 @@ const Home = () => {
       {/* Session preview sheet */}
       {(() => {
         const previewSession = activeSessions.find((s: any) => s.id === previewSessionId);
-        const mapPins = matchedPlaces.filter((p: any) => p.latitude && p.longitude);
+        const mapPins = routePins.length > 0
+          ? routePins
+          : matchedPlaces.filter((p: any) => p.latitude && p.longitude);
         const pinsJson = JSON.stringify(mapPins.map((p: any, i: number) => ({ lat: p.latitude, lng: p.longitude, name: p.place_name, index: i + 1 })));
         const leafletHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script><style>*{margin:0;padding:0;box-sizing:border-box}body{height:100%;overflow:hidden}#map{height:100%;width:100%}.pm{color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:-apple-system,sans-serif;border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.3);background:#ea580c}</style></head><body><div id="map"></div><script>const pins=${pinsJson};const map=L.map('map',{zoomControl:false,attributionControl:false});L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);const coords=pins.map(p=>[p.lat,p.lng]);if(coords.length>1){L.polyline(coords,{color:'#ea580c',weight:2.5,opacity:.6,dashArray:'6 5'}).addTo(map);map.fitBounds(coords,{padding:[30,30]});}else if(coords.length===1){map.setView(coords[0],15);}pins.forEach(p=>{const icon=L.divIcon({className:'',html:'<div class="pm">'+p.index+'</div>',iconSize:[26,26],iconAnchor:[13,13]});L.marker([p.lat,p.lng],{icon}).bindPopup('<b style="font-size:12px">'+p.name+'</b>').addTo(map);});<\/script></body></html>`;
         return (
@@ -229,7 +243,11 @@ const Home = () => {
                   <p className="text-sm text-muted-foreground text-center py-8">Brak wspólnych miejsc jeszcze</p>
                 ) : (
                   matchedPlaces.map((p: any) => (
-                    <div key={p.place_name} className="flex items-center gap-3 p-3 rounded-xl bg-muted/40">
+                    <button
+                      key={p.place_name}
+                      onClick={() => setSelectedPlace(p)}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted/40 text-left active:scale-[0.98] transition-transform"
+                    >
                       {p.photo_url ? (
                         <img src={p.photo_url} alt={p.place_name} className="h-12 w-12 rounded-lg object-cover shrink-0" />
                       ) : (
@@ -242,7 +260,7 @@ const Home = () => {
                         <p className="text-xs text-muted-foreground capitalize">{p.category}</p>
                       </div>
                       {p.hasSuperLike && <span className="text-base">⭐</span>}
-                    </div>
+                    </button>
                   ))
                 )}
               </div>
@@ -250,6 +268,18 @@ const Home = () => {
               {/* Action buttons */}
               {previewSession && (
                 <div className="px-4 py-3 border-t border-border/20 space-y-2 shrink-0">
+                  {sessionRoute && (
+                    <button
+                      onClick={async () => {
+                        await (supabase as any).from("routes").update({ chat_status: "completed" }).eq("id", sessionRoute.id);
+                        setPreviewSessionId(null);
+                        navigate(`/review-summary?route=${sessionRoute.id}&new=1`);
+                      }}
+                      className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.97] transition-transform"
+                    >
+                      Zakończ i oceń trasę ✓
+                    </button>
+                  )}
                   {sessionRoute && (
                     <button
                       onClick={() => { setPreviewSessionId(null); navigate("/create", { state: { city: sessionRoute.city, existingRouteId: sessionRoute.id } }); }}
@@ -270,6 +300,14 @@ const Home = () => {
           </Sheet>
         );
       })()}
+
+      {selectedPlace && (
+        <PlaceDetailSheet
+          pin={{ id: selectedPlace.place_name, place_name: selectedPlace.place_name }}
+          open={!!selectedPlace}
+          onOpenChange={(open) => { if (!open) setSelectedPlace(null); }}
+        />
+      )}
 
       {/* Admin shortcut */}
       {user.email === "nat.maz98@gmail.com" && (
