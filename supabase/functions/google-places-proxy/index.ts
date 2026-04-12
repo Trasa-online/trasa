@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const BASE = "https://maps.googleapis.com/maps/api";
+const REFERER = "https://trasa.travel/";
 
 /** Exact token match — no substring tricks */
 function nameMatches(requested: string, found: string): boolean {
@@ -27,7 +28,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
 
     if (body.action === "citysearch") {
-      const res = await fetch(`${BASE}/place/autocomplete/json?input=${encodeURIComponent(body.query)}&types=(cities)&key=${apiKey}&language=pl`);
+      const res = await fetch(`${BASE}/place/autocomplete/json?input=${encodeURIComponent(body.query)}&types=(cities)&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
       const data = await res.json();
       const results = ((data.predictions ?? []) as any[]).slice(0, 5).map((p: any) => ({
         name: p.structured_formatting?.main_text ?? p.description,
@@ -37,7 +38,7 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === "textsearch") {
-      const res = await fetch(`${BASE}/place/textsearch/json?query=${encodeURIComponent(body.query)}&key=${apiKey}&language=pl`);
+      const res = await fetch(`${BASE}/place/textsearch/json?query=${encodeURIComponent(body.query)}&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
       const data = await res.json();
       const results = ((data.results ?? []) as any[]).slice(0, 6).map((r: any) => ({
         name: r.name ?? "",
@@ -62,7 +63,7 @@ Deno.serve(async (req) => {
     if (!resolvedPlaceId && hasCoords) {
       // ── 2. Nearby 100m + name check ───────────────────────────────
       for (const radius of [100, 300]) {
-        const r = await fetch(`${BASE}/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&keyword=${encodeURIComponent(placeName)}&key=${apiKey}&language=pl`);
+        const r = await fetch(`${BASE}/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&keyword=${encodeURIComponent(placeName)}&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
         const d = await r.json();
         const match = (d.results ?? []).find((p: any) => nameMatches(placeName, p.name ?? ""));
         if (match) { resolvedPlaceId = match.place_id; break; }
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
     if (!resolvedPlaceId) {
       // ── 3. Text search by name + city (with name validation) ──────
       const query = city ? `${placeName} ${city}` : placeName;
-      const r = await fetch(`${BASE}/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}&language=pl`);
+      const r = await fetch(`${BASE}/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
       const d = await r.json();
       const match = (d.results ?? []).find((p: any) => nameMatches(placeName, p.name ?? ""));
       if (match) resolvedPlaceId = match.place_id;
@@ -85,7 +86,8 @@ Deno.serve(async (req) => {
 
     // ── Fetch details ─────────────────────────────────────────────────
     const detailRes = await fetch(
-      `${BASE}/place/details/json?place_id=${resolvedPlaceId}&fields=name,rating,user_ratings_total,price_level,types,formatted_address,photos,reviews,geometry,opening_hours,editorial_summary&reviews_sort=newest&language=pl&key=${apiKey}`
+      `${BASE}/place/details/json?place_id=${resolvedPlaceId}&fields=name,rating,user_ratings_total,price_level,types,formatted_address,photos,reviews,geometry,opening_hours,editorial_summary&reviews_sort=newest&language=pl&key=${apiKey}`,
+      { headers: { Referer: REFERER } }
     );
     const detailData = await detailRes.json();
 
