@@ -338,7 +338,7 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhot
 
 
       {/* Content */}
-      <div className="absolute bottom-0 left-0 right-0 p-5 space-y-2">
+      <div className="absolute bottom-0 left-0 right-0 px-5 pt-5 pb-[88px] space-y-2">
         {/* Category (hidden for business cards — replaced by logo row) */}
         {place.businessLogoUrl === undefined && (
           <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full", CATEGORY_COLORS[place.category])}>
@@ -1133,18 +1133,18 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
         )}
       </div>
 
-      {/* Action buttons */}
-      <div className="px-4 pt-5 pb-safe-8 pb-8 shrink-0">
-        <div className="flex gap-2">
+      {/* Action buttons — overlap card from bottom */}
+      <div className="relative z-20 -mt-16 mx-4 pb-safe-6 pb-6 shrink-0">
+        <div className="flex gap-3">
           <button
             onClick={handleSkip}
-            className="flex-1 py-4 rounded-2xl border border-border/60 bg-card text-foreground font-semibold text-sm active:scale-[0.97] transition-transform"
+            className="flex-1 py-4 rounded-full bg-white text-foreground font-bold text-base shadow-xl active:scale-[0.97] transition-transform"
           >
             Odrzuć
           </button>
           <button
             onClick={() => handleLike()}
-            className="flex-1 py-4 rounded-2xl bg-orange-600 text-white font-semibold text-sm shadow-lg shadow-orange-600/20 active:scale-[0.97] transition-transform"
+            className="flex-1 py-4 rounded-full bg-orange-600 text-white font-bold text-base shadow-xl shadow-orange-600/30 active:scale-[0.97] transition-transform"
           >
             Dodaj
           </button>
