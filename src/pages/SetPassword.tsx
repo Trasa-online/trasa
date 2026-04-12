@@ -69,6 +69,22 @@ const SetPassword = () => {
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
+
+      // Check if this user is a business owner → redirect to business dashboard
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: bp } = await (supabase as any)
+          .from("business_profiles")
+          .select("place_id")
+          .eq("owner_user_id", user.id)
+          .maybeSingle();
+        if (bp?.place_id) {
+          toast.success("Hasło ustawione! Witaj w panelu biznesowym.");
+          navigate(`/biznes/${bp.place_id}`);
+          return;
+        }
+      }
+
       toast.success("Hasło ustawione!");
       navigate("/");
     } catch (error: any) {
