@@ -69,6 +69,11 @@ const GroupSession = () => {
   const [friendResults, setFriendResults] = useState<{ id: string; username: string | null; first_name: string | null; avatar_url: string | null }[]>([]);
   const [selectedFriends, setSelectedFriends] = useState<Set<string>>(new Set());
   const [sendingInvites, setSendingInvites] = useState(false);
+  // Inline search on the waiting screen
+  const [waitingSearch, setWaitingSearch] = useState("");
+  const [waitingResults, setWaitingResults] = useState<{ id: string; username: string | null; first_name: string | null; avatar_url: string | null }[]>([]);
+  const [waitingInvitedIds, setWaitingInvitedIds] = useState<Set<string>>(new Set());
+  const [waitingInviting, setWaitingInviting] = useState<string | null>(null);
 
   // ── Category state ───────────────────────────────────────────────────────────
   const [pendingCategory, setPendingCategory] = useState<string | null>(null);
@@ -379,6 +384,39 @@ const GroupSession = () => {
     return () => clearTimeout(timeout);
   }, [friendSearch, user?.id]);
 
+  useEffect(() => {
+    const q = waitingSearch.trim();
+    if (q.length < 2) { setWaitingResults([]); return; }
+    const timeout = setTimeout(async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, username, first_name, avatar_url")
+        .or(`username.ilike.%${q}%,first_name.ilike.%${q}%`)
+        .neq("id", user?.id ?? "")
+        .limit(8);
+      setWaitingResults(data ?? []);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [waitingSearch, user?.id]);
+
+  const handleWaitingInvite = async (profile: { id: string; username: string | null; first_name: string | null }) => {
+    if (!session) return;
+    setWaitingInviting(profile.id);
+    try {
+      await (supabase as any).from("notifications").insert({
+        user_id: profile.id,
+        type: "group_session_invite",
+        data: { session_id: session.id, join_code: joinCode, city: session.city },
+        message: `Zaproszenie do sesji parowania w ${session.city}`,
+      });
+      setWaitingInvitedIds((prev) => new Set(prev).add(profile.id));
+    } catch {
+      toast.error("Nie udało się wysłać zaproszenia");
+    } finally {
+      setWaitingInviting(null);
+    }
+  };
+
   const handleSendInvites = async () => {
     if (selectedFriends.size === 0 || !session) return;
     setSendingInvites(true);
@@ -588,22 +626,97 @@ const GroupSession = () => {
           // ── Block solo swiping — need at least 2 members ────────────────
           if (members.length < 2) {
             return (
-              <div className="flex-1 flex flex-col items-center justify-center px-8 gap-5 text-center">
-                <div className="h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center text-4xl">
-                  ⏳
-                </div>
-                <div>
-                  <p className="text-xl font-black mb-1">Czekamy na kogoś jeszcze</p>
+              <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-5">
+                <div className="text-center">
+                  <div className="mx-auto h-16 w-16 rounded-full bg-orange-600/10 flex items-center justify-center text-3xl mb-3">⏳</div>
+                  <p className="text-lg font-black mb-1">Czekamy na kogoś jeszcze</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Parowanie zacznie się gdy co najmniej jedna osoba dołączy do sesji. Wyślij zaproszenie!
+                    Parowanie zacznie się gdy co najmniej jedna osoba dołączy do sesji.
                   </p>
                 </div>
-                <button
-                  onClick={() => setInviteOpen(true)}
-                  className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform"
-                >
-                  Zaproś znajomego
-                </button>
+
+                {/* Inline friend search */}
+                <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <UserPlus className="h-4 w-4 text-orange-600 shrink-0" />
+                    <p className="text-sm font-semibold">Zaproś znajomych</p>
+                  </div>
+                  <div className="flex items-center gap-2 bg-background border border-border/60 rounded-xl px-3 h-10">
+                    <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <input
+                      type="text"
+                      inputMode="search"
+                      value={waitingSearch}
+                      onChange={(e) => setWaitingSearch(e.target.value)}
+                      placeholder="Szukaj po imieniu lub @nickname…"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  {waitingResults.length > 0 && (
+                    <div className="space-y-1">
+                      {waitingResults.map((profile) => {
+                        const isInvited = waitingInvitedIds.has(profile.id);
+                        const isSending = waitingInviting === profile.id;
+                        return (
+                          <div key={profile.id} className="flex items-center gap-3 rounded-xl bg-background p-2">
+                            {profile.avatar_url ? (
+                              <img src={profile.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
+                            ) : (
+                              <div className="h-8 w-8 rounded-full bg-orange-600/15 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
+                                {(profile.first_name || profile.username || "?")[0].toUpperCase()}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold leading-tight">{profile.first_name || profile.username}</p>
+                              {profile.username && <p className="text-xs text-muted-foreground">@{profile.username}</p>}
+                            </div>
+                            <button
+                              disabled={isInvited || isSending}
+                              onClick={() => handleWaitingInvite(profile)}
+                              className={cn(
+                                "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold active:scale-95 transition-transform disabled:opacity-60 disabled:scale-100",
+                                isInvited ? "border border-border/60 text-emerald-600" : "bg-orange-600 text-white"
+                              )}
+                            >
+                              {isInvited ? <><Check className="h-3 w-3" />Zaproszono</> : isSending ? "…" : <><UserPlus className="h-3 w-3" />Zaproś</>}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {waitingSearch.trim().length >= 2 && waitingResults.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-1">Nie znaleziono użytkownika</p>
+                  )}
+                </div>
+
+                {/* Share code */}
+                <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Lub udostępnij kod</p>
+                  <p className="text-3xl font-black tracking-widest text-center py-1">{joinCode}</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(joinCode ?? ""); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                      className="flex-1 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                    >
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      {copied ? "Skopiowano!" : "Kopiuj kod"}
+                    </button>
+                    {typeof navigator.share === "function" && (
+                      <button
+                        onClick={() => navigator.share({ title: "Dołącz do mojej sesji w TRASA", text: `Dołącz używając kodu: ${joinCode}`, url: `${window.location.origin}/sesja/${joinCode}` })}
+                        className="flex-1 py-2.5 rounded-xl border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                      >
+                        <Share2 className="h-4 w-4" />
+                        Udostępnij
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             );
           }

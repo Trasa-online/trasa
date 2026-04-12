@@ -481,7 +481,7 @@ const CreateGroupSession = () => {
               onClick={() => navigate(`/sesja/${createdCode}`)}
               className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform"
             >
-              Zacznij swipe'ować
+              Zacznij parowanie
             </button>
           </>
         )}
