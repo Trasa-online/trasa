@@ -20,7 +20,7 @@ const CookieBanner = () => {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-card border-t border-border/60 shadow-lg">
+    <div className="fixed bottom-0 left-0 right-0 z-[60] p-4 bg-card border-t border-border/60 shadow-lg">
       <div className="max-w-lg mx-auto space-y-3">
         <p className="text-sm text-foreground leading-relaxed">
           Używamy plików cookies do analizy ruchu (Google Analytics) oraz nagrań sesji (Microsoft Clarity), żeby lepiej rozumieć jak korzystasz z aplikacji.{" "}

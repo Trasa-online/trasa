@@ -617,6 +617,8 @@ interface PlaceSwiperProps {
   roundPlaceIds?: string[];
   /** Called when the user finishes swiping all round places (instead of showing the default empty state). */
   onRoundComplete?: () => void;
+  /** Called when user taps "suggest adding a place" in the empty search state. */
+  onSuggestPlace?: () => void;
 }
 
 // Category groups for diversity balancing
@@ -647,7 +649,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
   } as MockPlace;
 }
 
-const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -1122,8 +1124,16 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
         ) : (
           <>
             {isSearching && displayQueue.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <p className="text-sm text-muted-foreground">Brak wyników dla tego miasta</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
+                <p className="text-sm text-muted-foreground">Brak wyników dla „{searchQuery.trim()}"</p>
+                {onSuggestPlace && (
+                  <button
+                    onClick={onSuggestPlace}
+                    className="text-sm font-semibold text-orange-600 underline underline-offset-2"
+                  >
+                    Zaproponuj dodanie miejsca
+                  </button>
+                )}
               </div>
             )}
             {(() => {
