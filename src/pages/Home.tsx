@@ -2,7 +2,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ArrowRight, CalendarDays, MapPin, ArrowLeft } from "lucide-react";
+import { Users, ArrowRight, CalendarDays, MapPin, ArrowLeft, CheckCircle } from "lucide-react";
 import { parseISO, isValid, format, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useState } from "react";
@@ -13,7 +13,10 @@ const Home = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [previewSessionId, setPreviewSessionId] = useState<string | null>(null);
-  const [selectedPlace, setSelectedPlace] = useState<{ place_name: string; photo_url?: string | null } | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<{
+    place_name: string; photo_url?: string | null;
+    latitude?: number | null; longitude?: number | null;
+  } | null>(null);
 
   // Active group sessions the user is a member of
   const { data: activeSessions = [] } = useQuery({
@@ -43,11 +46,49 @@ const Home = () => {
     refetchInterval: 30000,
   });
 
+  // Bulk route lookup: one query for all session IDs
+  const sessionIds = activeSessions.map((s: any) => s.id);
+  const { data: sessionRoutes = [] } = useQuery({
+    queryKey: ["session-routes-bulk", sessionIds.join(",")],
+    queryFn: async () => {
+      if (!sessionIds.length) return [];
+      const { data } = await (supabase as any)
+        .from("routes")
+        .select("id, title, city, group_session_id, chat_status")
+        .in("group_session_id", sessionIds)
+        .order("created_at", { ascending: false });
+      // Keep only the most recent route per session
+      const seen = new Set<string>();
+      return (data || []).filter((r: any) => {
+        if (seen.has(r.group_session_id)) return false;
+        seen.add(r.group_session_id);
+        return true;
+      });
+    },
+    enabled: sessionIds.length > 0,
+  });
+
+  // Derive current preview session's route
+  const sessionRoute = sessionRoutes.find((r: any) => r.group_session_id === previewSessionId) ?? null;
+
+  // Route pins for map (coords from saved route)
+  const { data: routePins = [] } = useQuery({
+    queryKey: ["session-route-pins", sessionRoute?.id],
+    queryFn: async () => {
+      if (!sessionRoute?.id) return [];
+      const { data } = await (supabase as any)
+        .from("pins")
+        .select("place_name, latitude, longitude, category")
+        .eq("route_id", sessionRoute.id);
+      return (data || []).filter((p: any) => p.latitude && p.longitude);
+    },
+    enabled: !!sessionRoute?.id,
+  });
+
   const { data: matchedPlaces = [] } = useQuery({
     queryKey: ["session-matches", previewSessionId],
     queryFn: async () => {
       if (!previewSessionId) return [];
-      // Get all members of this session
       const { data: members } = await (supabase as any)
         .from("group_session_members")
         .select("user_id")
@@ -55,7 +96,6 @@ const Home = () => {
       if (!members?.length) return [];
       const memberCount = members.length;
       const memberIds = members.map((m: any) => m.user_id);
-      // Get reactions (liked or super_liked) for this session from all members
       const { data: reactions } = await (supabase as any)
         .from("group_session_reactions")
         .select("place_name, reaction, user_id, photo_url, category")
@@ -63,7 +103,6 @@ const Home = () => {
         .in("reaction", ["liked", "super_liked"])
         .in("user_id", memberIds);
       if (!reactions?.length) return [];
-      // Group by place_name, count unique users
       const map = new Map<string, { place_name: string; photo_url: string | null; category: string; users: Set<string>; hasSuperLike: boolean }>();
       for (const r of reactions) {
         const key = r.place_name;
@@ -73,45 +112,19 @@ const Home = () => {
         if (r.reaction === "super_liked") entry.hasSuperLike = true;
       }
       const minMatch = Math.min(2, memberCount);
-      const matched = Array.from(map.values())
+      return Array.from(map.values())
         .filter(p => p.users.size >= minMatch)
         .sort((a, b) => (b.hasSuperLike ? 1 : 0) - (a.hasSuperLike ? 1 : 0) || b.users.size - a.users.size)
         .map(p => ({ place_name: p.place_name, photo_url: p.photo_url, category: p.category, hasSuperLike: p.hasSuperLike }));
-      // Fetch coordinates for map
-      if (matched.length > 0) {
-        const previewSession = (await (supabase as any).from("group_sessions").select("city").eq("id", previewSessionId).maybeSingle()).data;
-        const city = previewSession?.city;
-        if (city) {
-          const { data: places } = await (supabase as any).from("places").select("place_name, latitude, longitude").ilike("city", city).in("place_name", matched.map(p => p.place_name));
-          const coordMap = Object.fromEntries((places || []).map((p: any) => [p.place_name, { lat: p.latitude, lng: p.longitude }]));
-          return matched.map(p => ({ ...p, latitude: coordMap[p.place_name]?.lat ?? null, longitude: coordMap[p.place_name]?.lng ?? null }));
-        }
-      }
-      return matched.map(p => ({ ...p, latitude: null, longitude: null }));
     },
     enabled: !!previewSessionId,
   });
 
-  const { data: sessionRoute } = useQuery({
-    queryKey: ["session-route", previewSessionId],
-    queryFn: async () => {
-      if (!previewSessionId) return null;
-      const { data } = await (supabase as any).from("routes").select("id, title, city").eq("group_session_id", previewSessionId).order("created_at", { ascending: false }).limit(1).maybeSingle();
-      return data ?? null;
-    },
-    enabled: !!previewSessionId,
+  // Only show sessions without a completed route
+  const displayedSessions = activeSessions.filter((s: any) => {
+    const route = sessionRoutes.find((r: any) => r.group_session_id === s.id);
+    return !route || route.chat_status !== "completed";
   });
-
-  const { data: routePins = [] } = useQuery({
-    queryKey: ["session-route-pins", sessionRoute?.id],
-    queryFn: async () => {
-      if (!sessionRoute?.id) return [];
-      const { data } = await (supabase as any).from("pins").select("place_name, latitude, longitude, category").eq("route_id", sessionRoute.id);
-      return (data || []).filter((p: any) => p.latitude && p.longitude);
-    },
-    enabled: !!sessionRoute?.id,
-  });
-
 
   if (loading) return null;
   if (!user) return <Navigate to="/auth" replace />;
@@ -147,15 +160,13 @@ const Home = () => {
         </button>
       </div>
 
-
-      {/* Sessions list */}
-      {activeSessions.length > 0 && (
+      {/* Sessions list — only non-completed */}
+      {displayedSessions.length > 0 && (
         <div className="mt-6 space-y-2">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
             Twoje sesje
           </p>
-          {activeSessions.map((s: any) => {
-            const isCompleted = s.status === "completed";
+          {displayedSessions.map((s: any) => {
             const tripDateObj = s.trip_date ? parseISO(s.trip_date) : null;
             const dateLabel = tripDateObj && isValid(tripDateObj)
               ? format(tripDateObj, "d MMM", { locale: pl })
@@ -164,36 +175,26 @@ const Home = () => {
             const agoLabel = createdObj && isValid(createdObj)
               ? formatDistanceToNow(createdObj, { addSuffix: true, locale: pl })
               : null;
+            const sessionRouteEntry = sessionRoutes.find((r: any) => r.group_session_id === s.id);
+            const hasRoute = !!sessionRouteEntry;
             return (
               <button
                 key={s.id}
                 onClick={() => setPreviewSessionId(s.id)}
-                className={`w-full flex items-center gap-3 p-3.5 rounded-2xl bg-card border active:scale-[0.98] transition-transform text-left ${isCompleted ? "border-border/30 opacity-80" : "border-border/50"}`}
+                className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-card border border-border/50 active:scale-[0.98] transition-transform text-left"
               >
-                <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${isCompleted ? "bg-emerald-500/10" : "bg-orange-600/10"}`}>
-                  <Users className={`h-4 w-4 ${isCompleted ? "text-emerald-600" : "text-orange-600"}`} />
+                <div className="h-9 w-9 rounded-xl bg-orange-600/10 flex items-center justify-center shrink-0">
+                  <Users className="h-4 w-4 text-orange-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold leading-tight">{s.name || s.city}</p>
-                    {isCompleted && (
-                      <span className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded-full">
-                        Zakończone
-                      </span>
-                    )}
-                  </div>
+                  <p className="text-sm font-semibold leading-tight">{s.name || s.city}</p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    {isCompleted && s.match_count > 0 && (
-                      <span className="text-xs text-emerald-600 font-medium">
-                        {s.match_count} {s.match_count === 1 ? "wspólne miejsce" : s.match_count < 5 ? "wspólne miejsca" : "wspólnych miejsc"}
-                      </span>
-                    )}
-                    {!isCompleted && dateLabel && (
+                    {dateLabel && (
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         <CalendarDays className="h-3 w-3" />{dateLabel}
                       </span>
                     )}
-                    {!isCompleted && agoLabel && (
+                    {agoLabel && (
                       <span className="text-xs text-muted-foreground">{agoLabel}</span>
                     )}
                     <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
@@ -201,7 +202,20 @@ const Home = () => {
                     </span>
                   </div>
                 </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                {hasRoute ? (
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      await (supabase as any).from("routes").update({ chat_status: "completed" }).eq("id", sessionRouteEntry.id);
+                      navigate(`/review-summary?route=${sessionRouteEntry.id}&new=1`);
+                    }}
+                    className="h-8 w-8 flex items-center justify-center shrink-0 text-emerald-500 active:scale-90 transition-transform"
+                  >
+                    <CheckCircle className="h-6 w-6" />
+                  </button>
+                ) : (
+                  <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                )}
               </button>
             );
           })}
@@ -213,7 +227,7 @@ const Home = () => {
         const previewSession = activeSessions.find((s: any) => s.id === previewSessionId);
         const mapPins = routePins.length > 0
           ? routePins
-          : matchedPlaces.filter((p: any) => p.latitude && p.longitude);
+          : [];
         const pinsJson = JSON.stringify(mapPins.map((p: any, i: number) => ({ lat: p.latitude, lng: p.longitude, name: p.place_name, index: i + 1 })));
         const leafletHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script><style>*{margin:0;padding:0;box-sizing:border-box}body{height:100%;overflow:hidden}#map{height:100%;width:100%}.pm{color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:-apple-system,sans-serif;border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.3);background:#ea580c}</style></head><body><div id="map"></div><script>const pins=${pinsJson};const map=L.map('map',{zoomControl:false,attributionControl:false});L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);const coords=pins.map(p=>[p.lat,p.lng]);if(coords.length>1){L.polyline(coords,{color:'#ea580c',weight:2.5,opacity:.6,dashArray:'6 5'}).addTo(map);map.fitBounds(coords,{padding:[30,30]});}else if(coords.length===1){map.setView(coords[0],15);}pins.forEach(p=>{const icon=L.divIcon({className:'',html:'<div class="pm">'+p.index+'</div>',iconSize:[26,26],iconAnchor:[13,13]});L.marker([p.lat,p.lng],{icon}).bindPopup('<b style="font-size:12px">'+p.name+'</b>').addTo(map);});<\/script></body></html>`;
         return (
@@ -230,10 +244,10 @@ const Home = () => {
                 </div>
               </div>
 
-              {/* Mini map */}
+              {/* Mini map — key on pinsJson so iframe re-renders when pins load */}
               {mapPins.length > 0 && (
                 <div className="h-44 shrink-0">
-                  <iframe srcDoc={leafletHtml} className="w-full h-full border-0" />
+                  <iframe key={pinsJson} srcDoc={leafletHtml} className="w-full h-full border-0" />
                 </div>
               )}
 
@@ -242,26 +256,33 @@ const Home = () => {
                 {matchedPlaces.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">Brak wspólnych miejsc jeszcze</p>
                 ) : (
-                  matchedPlaces.map((p: any) => (
-                    <button
-                      key={p.place_name}
-                      onClick={() => setSelectedPlace(p)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted/40 text-left active:scale-[0.98] transition-transform"
-                    >
-                      {p.photo_url ? (
-                        <img src={p.photo_url} alt={p.place_name} className="h-12 w-12 rounded-lg object-cover shrink-0" />
-                      ) : (
-                        <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                          <MapPin className="h-5 w-5 text-muted-foreground" />
+                  matchedPlaces.map((p: any) => {
+                    const pinCoords = routePins.find((rp: any) => rp.place_name === p.place_name);
+                    return (
+                      <button
+                        key={p.place_name}
+                        onClick={() => setSelectedPlace({
+                          ...p,
+                          latitude: pinCoords?.latitude ?? null,
+                          longitude: pinCoords?.longitude ?? null,
+                        })}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted/40 text-left active:scale-[0.98] transition-transform"
+                      >
+                        {p.photo_url ? (
+                          <img src={p.photo_url} alt={p.place_name} className="h-12 w-12 rounded-lg object-cover shrink-0" />
+                        ) : (
+                          <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                            <MapPin className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{p.place_name}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{p.category}</p>
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{p.place_name}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{p.category}</p>
-                      </div>
-                      {p.hasSuperLike && <span className="text-base">⭐</span>}
-                    </button>
-                  ))
+                        {p.hasSuperLike && <span className="text-base">⭐</span>}
+                      </button>
+                    );
+                  })
                 )}
               </div>
 
@@ -303,7 +324,12 @@ const Home = () => {
 
       {selectedPlace && (
         <PlaceDetailSheet
-          pin={{ id: selectedPlace.place_name, place_name: selectedPlace.place_name }}
+          pin={{
+            id: selectedPlace.place_name,
+            place_name: selectedPlace.place_name,
+            latitude: selectedPlace.latitude,
+            longitude: selectedPlace.longitude,
+          }}
           open={!!selectedPlace}
           onOpenChange={(open) => { if (!open) setSelectedPlace(null); }}
         />
