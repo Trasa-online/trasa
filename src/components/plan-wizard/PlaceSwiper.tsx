@@ -1153,7 +1153,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
       </div>
 
       {/* Action buttons */}
-      <div className="px-4 pt-2 pb-3 shrink-0">
+      <div className="px-4 pt-4 pb-safe-6 pb-6 shrink-0">
         <div className="flex gap-2">
           <button
             onClick={handleSkip}
