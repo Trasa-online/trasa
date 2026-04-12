@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, ArrowRight, CalendarDays, MapPin, ArrowLeft, CheckCircle } from "lucide-react";
-import { parseISO, isValid, format, formatDistanceToNow } from "date-fns";
+import { parseISO, isValid, format, formatDistanceToNow, startOfToday } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -18,8 +18,8 @@ const Home = () => {
     latitude?: number | null; longitude?: number | null;
   } | null>(null);
 
-  // Active group sessions the user is a member of
-  const { data: activeSessions = [] } = useQuery({
+  // All group sessions the user is a member of (no expiry filter — historical ones need to be shown)
+  const { data: allSessions = [] } = useQuery({
     queryKey: ["my-active-sessions", user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -34,20 +34,15 @@ const Home = () => {
         .select("id, city, join_code, trip_date, created_at, status, match_count, name")
         .in("id", sessionIds)
         .order("created_at", { ascending: false })
-        .limit(10);
-      return (sessions || []).filter((s: any) => {
-        if (!s.created_at) return true;
-        const created = parseISO(s.created_at);
-        const expires = new Date(created.getTime() + 48 * 60 * 60 * 1000);
-        return new Date() < expires;
-      });
+        .limit(20);
+      return sessions || [];
     },
     enabled: !!user,
     refetchInterval: 30000,
   });
 
   // Bulk route lookup: one query for all session IDs
-  const sessionIds = activeSessions.map((s: any) => s.id);
+  const sessionIds = allSessions.map((s: any) => s.id);
   const { data: sessionRoutes = [] } = useQuery({
     queryKey: ["session-routes-bulk", sessionIds.join(",")],
     queryFn: async () => {
@@ -120,10 +115,17 @@ const Home = () => {
     enabled: !!previewSessionId,
   });
 
-  // Only show sessions without a completed route
-  const displayedSessions = activeSessions.filter((s: any) => {
+  // Split sessions: active vs historical
+  const today = startOfToday();
+  const activeSessions = allSessions.filter((s: any) => {
     const route = sessionRoutes.find((r: any) => r.group_session_id === s.id);
-    return !route || route.chat_status !== "completed";
+    if (route?.chat_status === "completed") return false;
+    if (s.trip_date && parseISO(s.trip_date) < today) return false;
+    return true;
+  });
+  const historicalSessions = allSessions.filter((s: any) => {
+    const route = sessionRoutes.find((r: any) => r.group_session_id === s.id);
+    return route?.chat_status === "completed" || (s.trip_date && parseISO(s.trip_date) < today);
   });
 
   if (loading) return null;
@@ -132,13 +134,13 @@ const Home = () => {
   return (
     <div className="flex-1 flex flex-col px-4 pt-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto w-full overflow-y-auto">
 
-      {/* Sessions list — only non-completed */}
-      {displayedSessions.length > 0 && (
+      {/* Active sessions */}
+      {activeSessions.length > 0 && (
         <div className="space-y-2 mb-6">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
             Aktywne sesje
           </p>
-          {displayedSessions.map((s: any) => {
+          {activeSessions.map((s: any) => {
             const tripDateObj = s.trip_date ? parseISO(s.trip_date) : null;
             const dateLabel = tripDateObj && isValid(tripDateObj)
               ? format(tripDateObj, "d MMM", { locale: pl })
@@ -194,8 +196,51 @@ const Home = () => {
         </div>
       )}
 
+      {/* Historical sessions */}
+      {historicalSessions.length > 0 && (
+        <div className="space-y-2 mb-6">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
+            Historyczne
+          </p>
+          {historicalSessions.map((s: any) => {
+            const tripDateObj = s.trip_date ? parseISO(s.trip_date) : null;
+            const dateLabel = tripDateObj && isValid(tripDateObj)
+              ? format(tripDateObj, "d MMM yyyy", { locale: pl })
+              : null;
+            const sessionRouteEntry = sessionRoutes.find((r: any) => r.group_session_id === s.id);
+            return (
+              <button
+                key={s.id}
+                onClick={() => setPreviewSessionId(s.id)}
+                className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-muted/40 border border-border/30 active:scale-[0.98] transition-transform text-left opacity-70"
+              >
+                <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold leading-tight">{s.name || s.city}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {dateLabel && (
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <CalendarDays className="h-3 w-3" />{dateLabel}
+                      </span>
+                    )}
+                    {sessionRouteEntry && (
+                      <span className="text-[10px] bg-emerald-500/10 text-emerald-700 px-1.5 py-0.5 rounded font-medium">
+                        Odbyta
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Hero CTA */}
-      <div className={`flex flex-col items-center justify-center gap-8 py-10 ${displayedSessions.length > 0 ? "" : "flex-1"}`}>
+      <div className={`flex flex-col items-center justify-center gap-8 py-10 ${activeSessions.length > 0 || historicalSessions.length > 0 ? "" : "flex-1"}`}>
         <div className="text-center space-y-3">
           <div className="mx-auto h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
             <svg width="48" height="48" viewBox="0 0 56 56" fill="none">
@@ -224,7 +269,8 @@ const Home = () => {
 
       {/* Session preview sheet */}
       {(() => {
-        const previewSession = activeSessions.find((s: any) => s.id === previewSessionId);
+        const previewSession = allSessions.find((s: any) => s.id === previewSessionId);
+        const isHistorical = historicalSessions.some((s: any) => s.id === previewSessionId);
         const mapPins = routePins.length > 0
           ? routePins
           : [];
@@ -289,57 +335,62 @@ const Home = () => {
               {/* Action buttons */}
               {previewSession && (
                 <div className="px-4 py-3 border-t border-border/20 space-y-2 shrink-0">
-                  {sessionRoute && (
-                    <button
-                      onClick={async () => {
-                        // 1. Mark route as completed
-                        await (supabase as any).from("routes").update({ chat_status: "completed" }).eq("id", sessionRoute.id);
-
-                        // 2. Notify all group members to review
-                        if (previewSession?.id) {
-                          const { data: members } = await (supabase as any)
-                            .from("group_session_members")
-                            .select("user_id")
-                            .eq("session_id", previewSession.id)
-                            .neq("user_id", user?.id);
-
-                          const memberIds: string[] = (members ?? []).map((m: any) => m.user_id);
-
-                          if (memberIds.length) {
-                            // Set new_for_users so journal shows badge
-                            await (supabase as any).from("routes")
-                              .update({ new_for_users: memberIds })
-                              .eq("id", sessionRoute.id);
-
-                            // Send push to each member
-                            for (const memberId of memberIds) {
-                              supabase.functions.invoke("send-push", {
-                                body: {
-                                  user_id: memberId,
-                                  title: "Trasa zakończona! 🗺️",
-                                  body: `Oceń miejsca z ${sessionRoute.city || "trasy"} i dodaj wspomnienia`,
-                                  url: `/review-summary?route=${sessionRoute.id}`,
-                                },
-                              });
+                  {isHistorical ? (
+                    // Historical session — only view route, no editing
+                    sessionRoute && (
+                      <button
+                        onClick={() => { setPreviewSessionId(null); navigate(`/review-summary?route=${sessionRoute.id}`); }}
+                        className="w-full py-3.5 rounded-2xl bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
+                      >
+                        Zobacz trasę w dzienniku →
+                      </button>
+                    )
+                  ) : (
+                    <>
+                      {sessionRoute && (
+                        <button
+                          onClick={async () => {
+                            await (supabase as any).from("routes").update({ chat_status: "completed" }).eq("id", sessionRoute.id);
+                            if (previewSession?.id) {
+                              const { data: members } = await (supabase as any)
+                                .from("group_session_members")
+                                .select("user_id")
+                                .eq("session_id", previewSession.id)
+                                .neq("user_id", user?.id);
+                              const memberIds: string[] = (members ?? []).map((m: any) => m.user_id);
+                              if (memberIds.length) {
+                                await (supabase as any).from("routes")
+                                  .update({ new_for_users: memberIds })
+                                  .eq("id", sessionRoute.id);
+                                for (const memberId of memberIds) {
+                                  supabase.functions.invoke("send-push", {
+                                    body: {
+                                      user_id: memberId,
+                                      title: "Trasa zakończona! 🗺️",
+                                      body: `Oceń miejsca z ${sessionRoute.city || "trasy"} i dodaj wspomnienia`,
+                                      url: `/review-summary?route=${sessionRoute.id}`,
+                                    },
+                                  });
+                                }
+                              }
                             }
-                          }
-                        }
-
-                        setPreviewSessionId(null);
-                        navigate(`/review-summary?route=${sessionRoute.id}&new=1`);
-                      }}
-                      className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.97] transition-transform"
-                    >
-                      Zakończ i oceń trasę ✓
-                    </button>
-                  )}
-                  {sessionRoute && (
-                    <button
-                      onClick={() => { setPreviewSessionId(null); navigate("/create", { state: { city: sessionRoute.city, existingRouteId: sessionRoute.id } }); }}
-                      className="w-full py-3.5 rounded-2xl bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
-                    >
-                      Otwórz zapisaną trasę →
-                    </button>
+                            setPreviewSessionId(null);
+                            navigate(`/review-summary?route=${sessionRoute.id}&new=1`);
+                          }}
+                          className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.97] transition-transform"
+                        >
+                          Zakończ i oceń trasę ✓
+                        </button>
+                      )}
+                      {sessionRoute && (
+                        <button
+                          onClick={() => { setPreviewSessionId(null); navigate("/create", { state: { city: sessionRoute.city, existingRouteId: sessionRoute.id } }); }}
+                          className="w-full py-3.5 rounded-2xl bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
+                        >
+                          Otwórz zapisaną trasę →
+                        </button>
+                      )}
+                    </>
                   )}
                   <button
                     onClick={() => { setPreviewSessionId(null); navigate(`/sesja/${previewSession.join_code}`); }}
