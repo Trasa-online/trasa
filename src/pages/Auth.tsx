@@ -63,6 +63,10 @@ const Auth = () => {
       const userId = data.user?.id;
       if (!userId) throw new Error("Brak ID użytkownika");
 
+      // Sign in immediately so auth.uid() is set for RLS on the insert below
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: tempPassword });
+      if (signInError) throw signInError;
+
       // Submit claim
       const { error: claimError } = await (supabase as any).from("business_claims").insert({
         user_id: userId,
@@ -73,6 +77,9 @@ const Auth = () => {
         status: "pending",
       });
       if (claimError) throw claimError;
+
+      // Sign out — access will be properly set up by admin later
+      await supabase.auth.signOut();
 
       setBizDone(true);
     } catch (err: any) {
