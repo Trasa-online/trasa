@@ -12,9 +12,9 @@ if (getConsent() === "granted" && typeof (window as any)._clarityInit === "funct
 }
 
 // ─── Sentry error tracking ────────────────────────────────────────────────────
-if (import.meta.env.VITE_SENTRY_DSN) {
+if (import.meta.env.PROD) {
   Sentry.init({
-    dsn: import.meta.env.VITE_SENTRY_DSN,
+    dsn: "https://043934f5cfe39c7f2ea9fd2da11be1ad@o4511209012264960.ingest.de.sentry.io/4511209017704528",
     environment: import.meta.env.MODE, // "development" | "production"
     integrations: [
       Sentry.browserTracingIntegration(),
