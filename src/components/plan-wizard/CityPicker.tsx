@@ -29,7 +29,7 @@ const COUNTRIES: Country[] = [
       { name: "Łódź" },
       { name: "Poznań",     comingSoon: true },
       { name: "Trójmiasto", comingSoon: true },
-      { name: "Warszawa",   comingSoon: true },
+      { name: "Warszawa" },
       { name: "Wrocław",    comingSoon: true },
     ],
   },
