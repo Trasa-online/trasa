@@ -1,11 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// Google Maps API Key — restrict this key to trasa.online in Google Cloud Console
-// (HTTP referrer restriction), so exposing it here is safe.
-// Lovable has no env var panel, so we can't use VITE_ vars in production builds.
-export const GOOGLE_MAPS_API_KEY =
-  (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) ||
-  "AIzaSyCdZ-on1_mKr1Q9OTDYkqkk4OzB7SwR32M";
+// Photos are fetched via google-places-proxy Edge Function (server-side key).
+// This client-side key is only a fallback for local development via .env.
+export const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string ?? "";
 
 // Reverse Geocoding (Coordinates → Address)
 export const reverseGeocode = async (lat: number, lng: number) => {
