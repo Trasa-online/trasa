@@ -171,7 +171,7 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhot
   const [imgFailed, setImgFailed] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<string[]>(
     [place.photo_url, ...(place.galleryPhotos ?? [])]
-      .filter((u): u is string => !!u && !u.includes("picsum") && !u.includes("lorem"))
+      .filter((u): u is string => !!u && u.startsWith("http") && !u.includes("picsum") && !u.includes("lorem"))
   );
   const [photoIdx, setPhotoIdx] = useState(0);
   const [dragX, setDragX] = useState(0);
@@ -205,6 +205,7 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhot
         const url = photo?.photo_url ?? (photo?.photo_reference ? getPhotoUrl(photo.photo_reference, 800) : null);
         if (url) {
           setPhotoUrls([url]);
+          setImgFailed(false);
           onPhotoFetched?.(place.id, url);
         }
         if (!place.rating && data?.result?.rating) setGoogleRating(data.result.rating);
