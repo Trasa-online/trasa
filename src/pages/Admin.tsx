@@ -66,6 +66,7 @@ const Admin = () => {
   const [fetchingClaims, setFetchingClaims] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [bizInviteLinks, setBizInviteLinks] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (loading) return;
@@ -174,16 +175,35 @@ const Admin = () => {
 
   const handleApproveClaim = async (claim: BusinessClaim) => {
     setApprovingId(claim.id);
-    await (supabase as any).from("business_profiles").upsert({
-      place_id: claim.place_id,
-      owner_user_id: claim.user_id,
-      business_name: claim.business_name ?? claim.places?.place_name ?? "Mój biznes",
-      is_active: true,
-    });
-    await (supabase as any).from("business_claims").update({ status: "approved" }).eq("id", claim.id);
-    setApprovingId(null);
-    loadClaims();
-    toast.success("Zatwierdzono claim");
+    try {
+      // 1. Invite user — creates auth account + returns magic link
+      const response = await supabase.functions.invoke("invite-user", {
+        body: { email: claim.contact_email, username: claim.contact_email.split("@")[0] },
+      });
+      if (response.error || !response.data?.link) throw new Error(response.error?.message ?? "Błąd generowania linku");
+      const link = response.data.link as string;
+      const newUserId = response.data.user_id as string | undefined;
+
+      // 2. Create business profile linked to the new user
+      await (supabase as any).from("business_profiles").upsert({
+        place_id: claim.place_id ?? null,
+        owner_user_id: newUserId ?? null,
+        business_name: claim.place_name_text ?? claim.business_name ?? claim.places?.place_name ?? "Mój lokal",
+        is_active: true,
+      });
+
+      // 3. Mark claim as approved
+      await (supabase as any).from("business_claims").update({ status: "approved" }).eq("id", claim.id);
+
+      // 4. Store link to display in UI for copying
+      setBizInviteLinks(prev => ({ ...prev, [claim.id]: link }));
+      loadClaims();
+      toast.success(`Zatwierdzono — skopiuj link i wyślij do ${claim.contact_email}`);
+    } catch (err: any) {
+      toast.error(err.message ?? "Błąd zatwierdzania");
+    } finally {
+      setApprovingId(null);
+    }
   };
 
   const handleRejectClaim = async (claim: BusinessClaim) => {
@@ -525,8 +545,26 @@ const Admin = () => {
                         onClick={() => handleApproveClaim(claim)}
                         disabled={approvingId === claim.id || rejectingId === claim.id}
                       >
-                        {approvingId === claim.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Zatwierdź"}
+                        {approvingId === claim.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Generuję...</> : "Zatwierdź i wyślij link"}
                       </Button>
+                    </div>
+                  )}
+                  {bizInviteLinks[claim.id] && (
+                    <div className="flex gap-2 pt-1">
+                      <div className="flex-1 bg-muted rounded-lg px-3 py-2 text-xs text-muted-foreground font-mono truncate">
+                        {bizInviteLinks[claim.id]}
+                      </div>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(bizInviteLinks[claim.id]);
+                          setCopiedId(claim.id);
+                          setTimeout(() => setCopiedId(null), 2000);
+                          toast.success("Link skopiowany!");
+                        }}
+                        className="shrink-0 h-9 w-9 flex items-center justify-center rounded-lg border border-border bg-card hover:bg-muted transition-colors"
+                      >
+                        {copiedId === claim.id ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                      </button>
                     </div>
                   )}
                 </div>
