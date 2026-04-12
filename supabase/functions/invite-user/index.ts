@@ -73,7 +73,7 @@ serve(async (req) => {
       email,
       options: {
         data: { username },
-        redirectTo: "https://trasa.lovable.app/set-password",
+        redirectTo: "https://trasa.travel/set-password",
       },
     });
 
@@ -87,7 +87,7 @@ serve(async (req) => {
       const { data: recData, error: recError } = await supabaseAdmin.auth.admin.generateLink({
         type: "recovery",
         email,
-        options: { redirectTo: "https://trasa.lovable.app/set-password" },
+        options: { redirectTo: "https://trasa.travel/set-password" },
       });
 
       console.log("recovery result:", recError?.message, "action_link:", recData?.properties?.action_link?.slice(0, 60));
@@ -101,7 +101,7 @@ serve(async (req) => {
         const { data: mlData, error: mlError } = await supabaseAdmin.auth.admin.generateLink({
           type: "magiclink",
           email,
-          options: { redirectTo: "https://trasa.lovable.app/set-password" },
+          options: { redirectTo: "https://trasa.travel/set-password" },
         });
 
         console.log("magiclink result:", mlError?.message, "action_link:", mlData?.properties?.action_link?.slice(0, 60));
