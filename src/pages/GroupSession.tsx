@@ -407,7 +407,7 @@ const GroupSession = () => {
           <div>
             <p className="text-xl font-black mb-1">Grupowe parowanie</p>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Swipe'ujcie miejsca w <strong>{session.city}</strong> niezależnie i sprawdźcie, co Was łączy!
+              Eksplorujcie miejsca w <strong>{session.city}</strong> niezależnie i sprawdźcie, co Was łączy!
             </p>
           </div>
           {members.length > 0 && (
@@ -499,7 +499,7 @@ const GroupSession = () => {
           onClick={() => setTab("swipe")}
           className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${tab === "swipe" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"}`}
         >
-          Swipe'uj
+          Eksploruj
         </button>
         <button
           onClick={() => setTab("matches")}
@@ -531,6 +531,29 @@ const GroupSession = () => {
         {/* ── Swipe tab ── */}
         <div className={cn("flex-1 flex flex-col overflow-hidden", tab !== "swipe" && "hidden")}>
         {(() => {
+
+          // ── Block solo swiping — need at least 2 members ────────────────
+          if (members.length < 2) {
+            return (
+              <div className="flex-1 flex flex-col items-center justify-center px-8 gap-5 text-center">
+                <div className="h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center text-4xl">
+                  ⏳
+                </div>
+                <div>
+                  <p className="text-xl font-black mb-1">Czekamy na kogoś jeszcze</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Parowanie zacznie się gdy co najmniej jedna osoba dołączy do sesji. Wyślij zaproszenie!
+                  </p>
+                </div>
+                <button
+                  onClick={() => setInviteOpen(true)}
+                  className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform"
+                >
+                  Zaproś znajomego
+                </button>
+              </div>
+            );
+          }
 
           // ── Admin/member picking next category ──────────────────────────
           if (needsCategoryPick) {
@@ -743,10 +766,10 @@ const GroupSession = () => {
                   <p className="text-4xl">🤔</p>
                   <p className="font-bold">Brak dopasowań jeszcze</p>
                   <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px]">
-                    Potrzeba co najmniej 2 osób, które polubiły to samo miejsce. Wróć do swipe'owania!
+                    Potrzeba co najmniej 2 osób, które polubiły to samo miejsce. Wróć do eksplorowania!
                   </p>
                   <button onClick={() => setTab("swipe")} className="py-3 px-6 rounded-2xl bg-orange-600 text-white font-semibold text-sm">
-                    Swipe'uj dalej
+                    Eksploruj dalej
                   </button>
                 </div>
               ) : (() => {
