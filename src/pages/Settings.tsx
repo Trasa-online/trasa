@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2 } from "lucide-react";
+import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { toast } from "sonner";
@@ -107,6 +107,101 @@ function DeleteAccountButton({ onDeleted }: { onDeleted: () => void }) {
           {deleting ? "Usuwam…" : "Usuń na stałe"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function ChangePasswordSection() {
+  const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPass.length < 6) { toast.error("Hasło musi mieć co najmniej 6 znaków"); return; }
+    if (newPass !== confirm) { toast.error("Hasła nie są identyczne"); return; }
+    setLoading(true);
+    try {
+      // Verify current password by re-authenticating
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: user!.email!,
+        password: current,
+      });
+      if (signInErr) throw new Error("Nieprawidłowe aktualne hasło");
+
+      const { error } = await supabase.auth.updateUser({ password: newPass });
+      if (error) throw error;
+      toast.success("Hasło zostało zmienione");
+      setOpen(false);
+      setCurrent(""); setNewPass(""); setConfirm("");
+    } catch (err: any) {
+      toast.error(err.message || "Błąd zmiany hasła");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center gap-3 px-4 py-3.5 bg-card rounded-2xl border border-border/40 hover:bg-muted transition-colors text-left"
+      >
+        <KeyRound className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        <span className="text-sm font-medium flex-1">Zmień hasło</span>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-3">
+      <p className="text-sm font-semibold">Zmień hasło</p>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <Input
+          type="password"
+          placeholder="Aktualne hasło"
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+          required
+          className="bg-background"
+        />
+        <Input
+          type="password"
+          placeholder="Nowe hasło (min. 6 znaków)"
+          value={newPass}
+          onChange={(e) => setNewPass(e.target.value)}
+          required
+          className="bg-background"
+        />
+        <Input
+          type="password"
+          placeholder="Powtórz nowe hasło"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          required
+          className="bg-background"
+        />
+        <div className="flex gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => { setOpen(false); setCurrent(""); setNewPass(""); setConfirm(""); }}
+            className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm font-medium"
+          >
+            Anuluj
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex-1 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold disabled:opacity-50"
+          >
+            {loading ? "Zapisuję..." : "Zapisz"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -275,6 +370,11 @@ const Settings = () => {
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
           )}
+        </div>
+
+        {/* Password */}
+        <div className="space-y-2">
+          <ChangePasswordSection />
         </div>
 
         {/* Danger zone */}
