@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Share2, Globe, Lock, Star } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Star } from "lucide-react";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -30,12 +30,12 @@ const ReviewSummary = () => {
   const [isPublic, setIsPublic] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [sharing, setSharing] = useState(false);
   const [pinRatings, setPinRatings] = useState<Record<string, number>>({});
   const [highlightPlace, setHighlightPlace] = useState<string | null>(null);
   const [overallRating, setOverallRating] = useState<number | null>(null);
   const [notVisited, setNotVisited] = useState<Record<string, boolean>>({});
   const [notVisitedReason, setNotVisitedReason] = useState<Record<string, string>>({});
+  const [notVisitedSaved, setNotVisitedSaved] = useState<Record<string, boolean>>({});
   const notVisitedTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const narrativeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -281,6 +281,8 @@ const ReviewSummary = () => {
         not_visited: true, not_visited_reason: value,
         rating: null, is_highlight: false,
       }, { onConflict: "route_id,user_id,place_name" });
+      setNotVisitedSaved(prev => ({ ...prev, [placeName]: true }));
+      setTimeout(() => setNotVisitedSaved(prev => ({ ...prev, [placeName]: false })), 2000);
     }, 800);
   };
 
@@ -290,18 +292,6 @@ const ReviewSummary = () => {
     await (supabase as any).from("routes").update({ overall_rating: rating }).eq("id", routeId);
   };
 
-  const handleShare = async () => {
-    if (!routeId) return;
-    setSharing(true);
-    await supabase.from("routes").update({ is_shared: true } as any).eq("id", routeId);
-    const url = `${window.location.origin}/route/${routeId}`;
-    if (navigator.share) {
-      await navigator.share({ title: `Trasa: ${cityLabel}`, url }).catch(() => {});
-    } else {
-      await navigator.clipboard.writeText(url).catch(() => {});
-    }
-    setSharing(false);
-  };
 
   const cityLabel = route?.city || "Podróż";
   const dayLabel = route?.day_number ? `Dzień ${route.day_number}` : "";
@@ -559,15 +549,20 @@ const ReviewSummary = () => {
                 const isHL = highlightPlace === pin.place_name;
                 const isNV = notVisited[pin.place_name] ?? false;
                 return (
-                  <div key={pin.id} className={`space-y-2 ${isNV ? "opacity-60" : ""}`}>
+                  <div key={pin.id} className="space-y-2">
                     <div className="flex items-center gap-3">
-                      <div className="h-11 w-11 rounded-xl overflow-hidden bg-muted shrink-0">
+                      <div className={`h-11 w-11 rounded-xl overflow-hidden bg-muted shrink-0 ${isNV ? "opacity-40" : ""}`}>
                         {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : (
                           <div className="w-full h-full flex items-center justify-center text-lg">{CATEGORY_EMOJI[pin.category] ?? "📍"}</div>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold leading-tight truncate">{pin.place_name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className={`text-sm font-semibold leading-tight truncate flex-1 ${isNV ? "line-through text-muted-foreground" : ""}`}>{pin.place_name}</p>
+                          {isNV && (
+                            <span className="text-[10px] font-semibold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded-full shrink-0">Nie było</span>
+                          )}
+                        </div>
                         {!isNV && (
                           <div className="flex items-center gap-1 mt-1">
                             {[1,2,3,4,5].map(n => (
@@ -577,9 +572,6 @@ const ReviewSummary = () => {
                               </button>
                             ))}
                           </div>
-                        )}
-                        {isNV && (
-                          <p className="text-xs text-muted-foreground mt-0.5">Nie odwiedzono</p>
                         )}
                       </div>
                     </div>
@@ -591,20 +583,34 @@ const ReviewSummary = () => {
                         {isHL ? "⭐ Miejsce dnia!" : "Wyróżnij jako miejsce dnia"}
                       </button>
                     )}
-                    <button
-                      onClick={() => toggleNotVisited(pin.place_name)}
-                      className={`w-full py-1.5 rounded-xl text-xs font-semibold border transition-colors ${isNV ? "bg-red-500/10 border-red-400/60 text-red-600" : "border-border/40 text-muted-foreground"}`}
-                    >
-                      {isNV ? "✕ Odznacz nieobecność" : "Nie było tego miejsca na trasie"}
-                    </button>
-                    {isNV && (
-                      <textarea
-                        value={notVisitedReason[pin.place_name] ?? ""}
-                        onChange={e => handleNotVisitedReason(pin.place_name, e.target.value)}
-                        placeholder="Opcjonalne uzasadnienie (np. było zamknięte)…"
-                        rows={2}
-                        className="w-full bg-muted/40 rounded-xl px-3 py-2 text-xs text-foreground resize-none focus:outline-none border border-border/20 placeholder:text-muted-foreground/40"
-                      />
+                    {isNV ? (
+                      <div className="space-y-1.5">
+                        <button
+                          onClick={() => toggleNotVisited(pin.place_name)}
+                          className="w-full py-1.5 rounded-xl text-xs font-semibold border transition-colors bg-red-500/10 border-red-400/60 text-red-600"
+                        >
+                          ✕ Odznacz nieobecność
+                        </button>
+                        <div className="relative">
+                          <textarea
+                            value={notVisitedReason[pin.place_name] ?? ""}
+                            onChange={e => handleNotVisitedReason(pin.place_name, e.target.value)}
+                            placeholder="Powód (np. było zamknięte)…"
+                            rows={2}
+                            className="w-full bg-muted/50 rounded-xl px-3 py-2 text-xs text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/65"
+                          />
+                          {notVisitedSaved[pin.place_name] && (
+                            <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">Zapisano ✓</span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => toggleNotVisited(pin.place_name)}
+                        className="text-xs text-muted-foreground/55 py-0.5 transition-colors hover:text-muted-foreground"
+                      >
+                        Nie było tego miejsca na trasie
+                      </button>
                     )}
                   </div>
                 );
@@ -630,19 +636,11 @@ const ReviewSummary = () => {
       </div>
 
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
-      <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 space-y-2 bg-background/80 backdrop-blur-md border-t border-border/30"
+      <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         <button
-          onClick={handleShare}
-          disabled={sharing}
-          className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-orange-600/20"
-        >
-          <Share2 className="h-4 w-4" />
-          {sharing ? "Tworzę link…" : "Poleć tę trasę"}
-        </button>
-        <button
           onClick={() => navigate("/")}
-          className="w-full py-3 rounded-2xl text-muted-foreground font-medium text-sm active:bg-muted/50 transition-colors"
+          className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-orange-600/20"
         >
           Gotowe
         </button>
