@@ -75,6 +75,22 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email.trim()) { toast.error("Podaj najpierw swój adres email"); return; }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/set-password`,
+      });
+      if (error) throw error;
+      toast.success("Link do resetowania hasła wysłany na " + email);
+    } catch (err: any) {
+      toast.error(err.message || "Błąd wysyłania emaila");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -372,6 +388,14 @@ const Auth = () => {
               <Button type="submit" className="w-full rounded-2xl py-6 bg-orange-600 hover:bg-orange-700 text-white font-bold text-base" disabled={loading}>
                 {loading ? t("logging_in") : t("login_btn")}
               </Button>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={loading}
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+              >
+                Zapomniałeś/aś hasła?
+              </button>
             </form>
           ) : waitlistDone ? (
             <div className="text-center py-6 space-y-3">
