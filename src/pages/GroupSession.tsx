@@ -1493,9 +1493,9 @@ const LobbyProposals = ({
       </p>
     </div>
 
-    {/* Search input */}
+    {/* Search input + dropdown */}
     <div className="relative">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 z-10" />
       <input
         value={lobbyQuery}
         onChange={e => setLobbyQuery(e.target.value)}
@@ -1505,38 +1505,40 @@ const LobbyProposals = ({
       {lobbySearching && (
         <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground/60" />
       )}
-    </div>
 
-    {/* Search results */}
-    {lobbyQuery.trim().length >= 2 && !lobbySearching && (
-      <div className="rounded-xl border border-border/40 bg-card overflow-hidden">
-        {lobbyResults.length > 0 ? (
-          lobbyResults.map(place => (
-            <button
-              key={place.id}
-              onClick={() => handleLobbyPropose(place.place_name, place.id, place.city)}
-              className="w-full flex items-center gap-3 px-4 py-3 text-left border-b border-border/20 last:border-0 active:bg-muted/60 transition-colors"
-            >
-              <MapPin className="h-4 w-4 text-muted-foreground/60 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{place.place_name}</p>
-                <p className="text-xs text-muted-foreground">{place.city}</p>
-              </div>
-            </button>
-          ))
-        ) : (
-          <div className="px-4 py-5 text-center space-y-3">
-            <p className="text-sm text-muted-foreground">Ups! Tego miejsca jeszcze nie ma na Trasie.</p>
-            <button
-              onClick={onSuggestNew}
-              className="px-5 py-2.5 rounded-full bg-orange-600 text-white text-sm font-semibold active:scale-95 transition-transform"
-            >
-              Tak! Zaproponuj dodanie miejsca
-            </button>
-          </div>
-        )}
-      </div>
-    )}
+      {/* Dropdown results */}
+      {lobbyQuery.trim().length >= 2 && !lobbySearching && (
+        <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl border border-border/40 bg-card shadow-lg overflow-hidden">
+          {lobbyResults.length > 0 ? (
+            lobbyResults.map(place => (
+              <button
+                key={place.id}
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => handleLobbyPropose(place.place_name, place.id, place.city)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left border-b border-border/20 last:border-0 active:bg-muted/60 transition-colors"
+              >
+                <MapPin className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{place.place_name}</p>
+                  <p className="text-xs text-muted-foreground">{place.city}</p>
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="px-4 py-4 text-center space-y-3">
+              <p className="text-sm text-muted-foreground">Ups! Tego miejsca jeszcze nie ma na Trasie.</p>
+              <button
+                onMouseDown={e => e.preventDefault()}
+                onClick={onSuggestNew}
+                className="px-5 py-2.5 rounded-full bg-orange-600 text-white text-sm font-semibold active:scale-95 transition-transform"
+              >
+                Tak! Zaproponuj dodanie miejsca
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
 
     {/* Proposals feed */}
     {lobbyProposals.length > 0 && (
