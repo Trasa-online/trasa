@@ -149,8 +149,8 @@ const PlaceSwiperDetail = ({
             setDetail(data.result);
             const urls = (data.result.photos ?? [])
               .slice(0, 3)
-              .map((p: any) => getPhotoUrl(p.photo_reference, 800))
-              .filter(Boolean) as string[];
+              .map((p: any) => p.photo_url ?? getPhotoUrl(p.photo_reference, 800))
+              .filter((u: any): u is string => typeof u === "string" && u.startsWith("http"));
             if (urls.length > 0) setPhotos(urls);
           }
         })
@@ -191,7 +191,9 @@ const PlaceSwiperDetail = ({
     onOpenChange(false);
   };
 
-  const displayPhotos = photos.length > 0 ? photos : (place?.photo_url ? [place.photo_url] : []);
+  const isRealPhoto = (url?: string | null) =>
+    !!url && url.startsWith("http") && !url.includes("staticmap") && !url.includes("maps/api/staticmap");
+  const displayPhotos = photos.length > 0 ? photos : (isRealPhoto(place?.photo_url) ? [place!.photo_url!] : []);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
