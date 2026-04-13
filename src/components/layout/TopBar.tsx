@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Bell } from "lucide-react";
 import NotificationsDrawer from "./NotificationsDrawer";
@@ -11,6 +11,7 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["notifications-unread", user?.id],
@@ -25,8 +26,26 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
       return count ?? 0;
     },
     enabled: !!user,
-    refetchInterval: 60_000,
+    refetchInterval: 30_000,
   });
+
+  // Realtime: instant badge update on new notification
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`notif-badge-${user.id}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${user.id}`,
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ["notifications-unread", user.id] });
+        queryClient.invalidateQueries({ queryKey: ["notifications", user.id] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
 
   const { data: profile } = useQuery({
     queryKey: ["profile-topbar", user?.id],

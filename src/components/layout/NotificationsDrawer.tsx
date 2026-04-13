@@ -67,8 +67,27 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
         actor: profileMap[n.actor_id] ?? null,
       })) as Notification[];
     },
-    enabled: open && !!userId,
+    enabled: !!userId,
+    refetchInterval: 30_000,
   });
+
+  // Realtime: refetch instantly when new notification arrives
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`notif-drawer-${userId}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${userId}`,
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
+        queryClient.invalidateQueries({ queryKey: ["notifications-unread", userId] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [userId]);
 
   const deleteOneMutation = useMutation({
     mutationFn: async (id: string) => {
