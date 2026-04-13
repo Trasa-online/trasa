@@ -227,6 +227,25 @@ const GroupSession = () => {
     return result;
   }
 
+  // Counts per category for current city — used to gray out empty categories
+  const { data: categoryCounts = {} } = useQuery({
+    queryKey: ["category-counts", session?.city],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("places")
+        .select("category")
+        .ilike("city", session!.city)
+        .eq("is_active", true);
+      const counts: Record<string, number> = {};
+      for (const row of data ?? []) {
+        counts[row.category] = (counts[row.category] ?? 0) + 1;
+      }
+      return counts;
+    },
+    enabled: !!session?.city,
+    staleTime: 60_000,
+  });
+
   const dbCategoryValue = AVAILABLE_CATEGORIES.find(c => c.id === currentCategory)?.dbValue ?? currentCategory;
   const { data: categoryPlaceIds = [], isLoading: placesLoading } = useQuery({
     queryKey: ["category-places", session?.id, currentCategory],
@@ -304,6 +323,24 @@ const GroupSession = () => {
       .eq("session_id", session.id)
       .eq("user_id", user!.id);
     setLocalActiveCategory(null); // clear local override — let server state take over
+    queryClient.invalidateQueries({ queryKey: ["group-session-members", session.id] });
+  };
+
+  // Creator skips waiting — marks ALL members as done for current category
+  const handleSkipWaiting = async () => {
+    if (!session || !currentCategory) return;
+    await Promise.all(
+      members
+        .filter((m: any) => !(m.categories_done ?? []).includes(currentCategory))
+        .map((m: any) => {
+          const updated = [...new Set([...(m.categories_done ?? []), currentCategory])];
+          return (supabase as any)
+            .from("group_session_members")
+            .update({ categories_done: updated })
+            .eq("session_id", session.id)
+            .eq("user_id", m.user_id);
+        })
+    );
     queryClient.invalidateQueries({ queryKey: ["group-session-members", session.id] });
   };
 
@@ -808,20 +845,27 @@ const GroupSession = () => {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {AVAILABLE_CATEGORIES.map((cat) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => setPendingCategory(p => p === cat.id ? null : cat.id)}
-                        className={`px-3 py-2 rounded-full text-sm font-medium border transition-colors flex items-center gap-1.5 ${
-                          pendingCategory === cat.id
-                            ? "bg-orange-600 text-white border-orange-600"
-                            : "bg-card text-foreground border-border/60"
-                        }`}
-                      >
-                        <span>{cat.emoji}</span>
-                        <span>{cat.label}</span>
-                      </button>
-                    ))}
+                    {AVAILABLE_CATEGORIES.map((cat) => {
+                      const count = categoryCounts[cat.dbValue] ?? 0;
+                      const isEmpty = count === 0;
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => !isEmpty && setPendingCategory(p => p === cat.id ? null : cat.id)}
+                          disabled={isEmpty}
+                          className={`px-3 py-2 rounded-full text-sm font-medium border transition-colors flex items-center gap-1.5 ${
+                            isEmpty
+                              ? "bg-card text-muted-foreground/40 border-border/30 cursor-not-allowed"
+                              : pendingCategory === cat.id
+                                ? "bg-orange-600 text-white border-orange-600"
+                                : "bg-card text-foreground border-border/60"
+                          }`}
+                        >
+                          <span>{cat.emoji}</span>
+                          <span>{cat.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                   <div className="flex flex-col gap-2 mt-auto">
                     <button
@@ -923,7 +967,7 @@ const GroupSession = () => {
 
                 {isCreator && (
                   <button
-                    onClick={handleCategoryComplete}
+                    onClick={handleSkipWaiting}
                     className="py-2.5 px-5 rounded-2xl border border-border/50 bg-card text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform"
                   >
                     Pomiń oczekiwanie →
