@@ -302,6 +302,12 @@ const PlaceSwiperDetail = ({
                     {place.place_name}
                   </h2>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    {place.city && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                        <MapPin className="h-2.5 w-2.5" />
+                        {place.city}
+                      </span>
+                    )}
                     {(detail?.rating ?? place.rating) && (
                       <div className="flex items-center gap-1.5">
                         <Stars rating={detail?.rating ?? place.rating} />
