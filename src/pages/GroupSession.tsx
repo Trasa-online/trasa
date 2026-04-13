@@ -80,6 +80,11 @@ const GroupSession = () => {
   const [placeSearchQuery, setPlaceSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Suggest place ────────────────────────────────────────────────────────────
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestUrl, setSuggestUrl] = useState("");
+  const [suggestSending, setSuggestSending] = useState(false);
+
   // ── Category state ───────────────────────────────────────────────────────────
   const [pendingCategory, setPendingCategory] = useState<string | null>(null);
   const [savingCategory, setSavingCategory] = useState(false);
@@ -442,6 +447,26 @@ const GroupSession = () => {
       toast.error("Nie udało się wysłać zaproszeń");
     } finally {
       setSendingInvites(false);
+    }
+  };
+
+  const handleSuggestPlace = async () => {
+    if (!placeSearchQuery.trim()) return;
+    setSuggestSending(true);
+    try {
+      await (supabase as any).from("place_suggestions").insert({
+        place_name: placeSearchQuery.trim(),
+        city: session?.city ?? null,
+        google_maps_url: suggestUrl.trim() || null,
+        suggested_by: user?.id ?? null,
+      });
+      toast.success("Dziękujemy! Dodamy to miejsce wkrótce 🙌");
+      setSuggestOpen(false);
+      setSuggestUrl("");
+    } catch {
+      toast.error("Nie udało się wysłać sugestii");
+    } finally {
+      setSuggestSending(false);
     }
   };
 
@@ -930,6 +955,7 @@ const GroupSession = () => {
                 onRoundComplete={handleCategoryComplete}
                 onGroupFinished={handleCategoryComplete}
                 searchQuery={placeSearchQuery}
+                onSuggestPlace={() => setSuggestOpen(true)}
               />
             );
           }
@@ -1226,6 +1252,41 @@ const GroupSession = () => {
                 ? `Wyślij zaproszenia (${selectedFriends.size})`
                 : "Wybierz znajomych"}
           </button>
+        </SheetContent>
+      </Sheet>
+
+      {/* Suggest place sheet */}
+      <Sheet open={suggestOpen} onOpenChange={(o) => { setSuggestOpen(o); if (!o) setSuggestUrl(""); }}>
+        <SheetContent side="bottom" className="rounded-t-2xl pb-safe-6 pb-8">
+          <SheetHeader className="pb-4">
+            <SheetTitle>Zaproponuj dodanie miejsca</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-muted px-4 py-3">
+              <p className="text-xs text-muted-foreground mb-0.5">Nazwa miejsca</p>
+              <p className="font-semibold text-sm">{placeSearchQuery.trim()}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium mb-2">Link do wizytówki Google <span className="text-muted-foreground font-normal">(opcjonalnie)</span></p>
+              <input
+                type="url"
+                inputMode="url"
+                value={suggestUrl}
+                onChange={e => setSuggestUrl(e.target.value)}
+                placeholder="https://maps.google.com/..."
+                autoComplete="off"
+                className="w-full px-4 py-3 rounded-2xl border border-border/60 bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-orange-600/30"
+              />
+              <p className="text-xs text-muted-foreground mt-1.5">Wklej link z Google Maps — pomoże nam szybciej dodać miejsce</p>
+            </div>
+            <button
+              onClick={handleSuggestPlace}
+              disabled={suggestSending || !placeSearchQuery.trim()}
+              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-50"
+            >
+              {suggestSending ? "Wysyłam…" : "Wyślij sugestię"}
+            </button>
+          </div>
         </SheetContent>
       </Sheet>
 
