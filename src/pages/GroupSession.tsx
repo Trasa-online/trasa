@@ -75,6 +75,11 @@ const GroupSession = () => {
   const [waitingInvitedIds, setWaitingInvitedIds] = useState<Set<string>>(new Set());
   const [waitingInviting, setWaitingInviting] = useState<string | null>(null);
 
+  // ── Place search in swiper ───────────────────────────────────────────────────
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [placeSearchQuery, setPlaceSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   // ── Category state ───────────────────────────────────────────────────────────
   const [pendingCategory, setPendingCategory] = useState<string | null>(null);
   const [savingCategory, setSavingCategory] = useState(false);
@@ -575,6 +580,13 @@ const GroupSession = () => {
             ))}
           </div>
           <button
+            onClick={() => { setSearchOpen(o => !o); if (searchOpen) setPlaceSearchQuery(""); else setTimeout(() => searchInputRef.current?.focus(), 50); }}
+            className="h-7 w-7 rounded-full bg-muted flex items-center justify-center"
+            title="Szukaj miejsca"
+          >
+            {searchOpen ? <X className="h-3.5 w-3.5 text-muted-foreground" /> : <Search className="h-3.5 w-3.5 text-muted-foreground" />}
+          </button>
+          <button
             onClick={() => setInviteOpen(true)}
             className="h-7 w-7 rounded-full bg-muted flex items-center justify-center"
             title="Zaproś do sesji"
@@ -583,6 +595,32 @@ const GroupSession = () => {
           </button>
         </div>
       </div>
+
+      {/* Search bar — expands under header when lupka active */}
+      {searchOpen && (
+        <div className="px-4 py-2 border-b border-border/20 shrink-0">
+          <div className="flex items-center gap-2 bg-muted rounded-xl px-3 h-9">
+            <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={placeSearchQuery}
+              onChange={e => setPlaceSearchQuery(e.target.value)}
+              placeholder="Szukaj miejsca…"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+            {placeSearchQuery && (
+              <button onClick={() => setPlaceSearchQuery("")} className="shrink-0">
+                <X className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex border-b border-border/20 shrink-0">
@@ -891,6 +929,7 @@ const GroupSession = () => {
                 roundPlaceIds={categoryPlaceIds}
                 onRoundComplete={handleCategoryComplete}
                 onGroupFinished={handleCategoryComplete}
+                searchQuery={placeSearchQuery}
               />
             );
           }
