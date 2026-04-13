@@ -379,9 +379,7 @@ const GroupSession = () => {
     if (!session) return;
     setJoining(true);
     try {
-      const { error } = await (supabase as any)
-        .from("group_session_members")
-        .upsert({ session_id: session.id, user_id: user.id }, { onConflict: "session_id,user_id", ignoreDuplicates: true });
+      const { error } = await supabase.rpc("join_group_session" as any, { p_session_id: session.id });
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["group-session-members", session.id] });
       toast.success("Dołączono do sesji!");
