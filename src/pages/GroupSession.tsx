@@ -274,7 +274,7 @@ const GroupSession = () => {
     try {
       const { error } = await (supabase as any)
         .from("group_session_members")
-        .insert({ session_id: session.id, user_id: user.id });
+        .upsert({ session_id: session.id, user_id: user.id }, { onConflict: "session_id,user_id", ignoreDuplicates: true });
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["group-session-members", session.id] });
       toast.success("Dołączono do sesji!");
@@ -857,6 +857,15 @@ const GroupSession = () => {
                 </div>
 
                 <p className="text-xs text-muted-foreground">{doneCount} / {members.length} gotowych</p>
+
+                {isCreator && (
+                  <button
+                    onClick={handleCategoryComplete}
+                    className="py-2.5 px-5 rounded-2xl border border-border/50 bg-card text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform"
+                  >
+                    Pomiń oczekiwanie →
+                  </button>
+                )}
 
                 {/* Match count — prominent */}
                 {matches.length > 0 && (
