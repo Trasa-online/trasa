@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, MapPin, Star, Check, UserPlus, CalendarDays, Copy, Share2, Search, X } from "lucide-react";
+import { ArrowLeft, Users, MapPin, Star, Check, UserPlus, CalendarDays, Copy, Share2, Search, X, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -80,10 +80,18 @@ const GroupSession = () => {
   const [placeSearchQuery, setPlaceSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Suggest place ────────────────────────────────────────────────────────────
+  // ── Suggest place (swiper) ───────────────────────────────────────────────────
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestUrl, setSuggestUrl] = useState("");
   const [suggestSending, setSuggestSending] = useState(false);
+
+  // ── Lobby place proposals ────────────────────────────────────────────────────
+  const [lobbyQuery, setLobbyQuery] = useState("");
+  const [lobbyResults, setLobbyResults] = useState<{id: string; place_name: string; city: string; category: string}[]>([]);
+  const [lobbySearching, setLobbySearching] = useState(false);
+  const [lobbySuggestOpen, setLobbySuggestOpen] = useState(false);
+  const [lobbySuggestUrl, setLobbySuggestUrl] = useState("");
+  const [lobbySuggestSending, setLobbySuggestSending] = useState(false);
 
   // ── Category state ───────────────────────────────────────────────────────────
   const [pendingCategory, setPendingCategory] = useState<string | null>(null);
@@ -154,6 +162,21 @@ const GroupSession = () => {
         .eq("session_id", session!.id)
         .in("reaction", ["liked", "super_liked"]);
       return data || [];
+    },
+    enabled: !!session?.id,
+    refetchInterval: 5000,
+  });
+
+  // Lobby place proposals (shown before any category starts)
+  const { data: lobbyProposals = [], refetch: refetchLobbyProposals } = useQuery({
+    queryKey: ["lobby-proposals", session?.id],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("group_session_place_proposals")
+        .select("id, place_name, proposed_by, city")
+        .eq("session_id", session!.id)
+        .order("created_at", { ascending: false });
+      return data ?? [];
     },
     enabled: !!session?.id,
     refetchInterval: 5000,
@@ -293,6 +316,61 @@ const GroupSession = () => {
       return () => clearTimeout(t);
     }
   }, [matches]);
+
+  // ── Lobby search ────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (lobbyQuery.trim().length < 2) { setLobbyResults([]); setLobbySearching(false); return; }
+    setLobbySearching(true);
+    const t = setTimeout(async () => {
+      const { data } = await (supabase as any)
+        .from("places")
+        .select("id, place_name, city, category")
+        .ilike("city", session?.city ?? "")
+        .ilike("place_name", `%${lobbyQuery.trim()}%`)
+        .eq("is_active", true)
+        .limit(5);
+      setLobbyResults(data ?? []);
+      setLobbySearching(false);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [lobbyQuery, session?.city]);
+
+  const handleLobbyPropose = async (placeName: string, placeId?: string, city?: string) => {
+    if (!session || !user) return;
+    await (supabase as any).from("group_session_place_proposals").insert({
+      session_id: session.id,
+      place_id: placeId ?? null,
+      place_name: placeName,
+      city: city ?? session.city,
+      proposed_by: user.id,
+    });
+    setLobbyQuery("");
+    setLobbyResults([]);
+    refetchLobbyProposals();
+    toast.success("Propozycja wysłana!");
+  };
+
+  const handleLobbySuggestNew = async () => {
+    if (!lobbyQuery.trim()) return;
+    setLobbySuggestSending(true);
+    try {
+      await (supabase as any).from("place_suggestions").insert({
+        place_name: lobbyQuery.trim(),
+        city: session?.city ?? null,
+        google_maps_url: lobbySuggestUrl.trim() || null,
+        suggested_by: user?.id ?? null,
+      });
+      toast.success("Dziękujemy! Dodamy to miejsce wkrótce 🙌");
+      setLobbySuggestOpen(false);
+      setLobbySuggestUrl("");
+      setLobbyQuery("");
+    } catch {
+      toast.error("Nie udało się wysłać sugestii");
+    } finally {
+      setLobbySuggestSending(false);
+    }
+  };
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -836,6 +914,7 @@ const GroupSession = () => {
                       </div>
                     </div>
                   )}
+                  {isFirst && <LobbyProposals lobbyQuery={lobbyQuery} setLobbyQuery={setLobbyQuery} lobbyResults={lobbyResults} lobbySearching={lobbySearching} lobbyProposals={lobbyProposals} members={members} handleLobbyPropose={handleLobbyPropose} onSuggestNew={() => setLobbySuggestOpen(true)} />}
                   <div>
                     <p className="font-bold text-base mb-0.5">
                       {isFirst ? "Wybierz pierwszą kategorię" : "Wybierz następną kategorię"}
@@ -889,19 +968,29 @@ const GroupSession = () => {
             }
 
             // Member waiting for admin to pick category
+            if (sessionCategories.length === 0) {
+              // Lobby — show place proposal section before swiping starts
+              return (
+                <div className="flex-1 flex flex-col px-4 pt-5 pb-6 gap-5 overflow-y-auto">
+                  <LobbyProposals lobbyQuery={lobbyQuery} setLobbyQuery={setLobbyQuery} lobbyResults={lobbyResults} lobbySearching={lobbySearching} lobbyProposals={lobbyProposals} members={members} handleLobbyPropose={handleLobbyPropose} onSuggestNew={() => setLobbySuggestOpen(true)} />
+                  <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-muted/50 mt-auto">
+                    <div className="flex gap-1">
+                      {[0,1,2].map(i => <div key={i} className="h-1.5 w-1.5 rounded-full bg-orange-600/50 animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Organizator wybiera kategorię…</p>
+                  </div>
+                </div>
+              );
+            }
             return (
               <div className="flex-1 flex flex-col items-center justify-center px-8 gap-5 text-center">
                 <div className="h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
                   <Users className="h-10 w-10 text-orange-600" />
                 </div>
                 <div>
-                  <p className="text-xl font-black mb-1">
-                    {sessionCategories.length === 0 ? "Zaraz zaczniemy!" : "Runda zakończona!"}
-                  </p>
+                  <p className="text-xl font-black mb-1">Runda zakończona!</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    {sessionCategories.length === 0
-                      ? "Organizator wybiera pierwszą kategorię miejsc."
-                      : "Czekam aż organizator wybierze kolejną kategorię."}
+                    Czekam aż organizator wybierze kolejną kategorię.
                   </p>
                 </div>
                 <div className="flex gap-1.5">
@@ -1334,6 +1423,42 @@ const GroupSession = () => {
         </SheetContent>
       </Sheet>
 
+      {/* Lobby suggest-new-place sheet */}
+      <Sheet open={lobbySuggestOpen} onOpenChange={(o) => { setLobbySuggestOpen(o); if (!o) setLobbySuggestUrl(""); }}>
+        <SheetContent side="bottom" className="rounded-t-3xl pb-safe-6 px-5 pt-6 space-y-5 [&>button]:hidden">
+          <div className="w-10 h-1 bg-foreground/20 rounded-full mx-auto mb-1" />
+          <SheetHeader className="text-left p-0">
+            <SheetTitle>Zaproponuj dodanie miejsca</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-muted px-4 py-3">
+              <p className="text-xs text-muted-foreground mb-0.5">Nazwa miejsca</p>
+              <p className="font-semibold text-sm">{lobbyQuery.trim()}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium mb-2">Link do wizytówki Google <span className="text-muted-foreground font-normal">(opcjonalnie)</span></p>
+              <input
+                type="url"
+                inputMode="url"
+                value={lobbySuggestUrl}
+                onChange={e => setLobbySuggestUrl(e.target.value)}
+                placeholder="https://maps.google.com/..."
+                autoComplete="off"
+                className="w-full px-4 py-3 rounded-2xl border border-border/60 bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-orange-600/30"
+              />
+              <p className="text-xs text-muted-foreground mt-1.5">Wklej link z Google Maps — pomoże nam szybciej dodać miejsce</p>
+            </div>
+            <button
+              onClick={handleLobbySuggestNew}
+              disabled={lobbySuggestSending || !lobbyQuery.trim()}
+              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-50"
+            >
+              {lobbySuggestSending ? "Wysyłam…" : "Wyślij sugestię"}
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* Place detail sheet */}
       <PlaceSwiperDetail
         place={detailPlace}
@@ -1344,5 +1469,100 @@ const GroupSession = () => {
     </div>
   );
 };
+
+// ─── Lobby proposals component ────────────────────────────────────────────────
+
+interface LobbyProposalsProps {
+  lobbyQuery: string;
+  setLobbyQuery: (q: string) => void;
+  lobbyResults: {id: string; place_name: string; city: string; category: string}[];
+  lobbySearching: boolean;
+  lobbyProposals: any[];
+  members: any[];
+  handleLobbyPropose: (name: string, id?: string, city?: string) => void;
+  onSuggestNew: () => void;
+}
+
+const LobbyProposals = ({
+  lobbyQuery, setLobbyQuery, lobbyResults, lobbySearching,
+  lobbyProposals, members, handleLobbyPropose, onSuggestNew,
+}: LobbyProposalsProps) => (
+  <div className="space-y-4">
+    <div>
+      <p className="font-bold text-base mb-0.5">Zaproponuj miejsca</p>
+      <p className="text-sm text-muted-foreground leading-relaxed">
+        Zanim zaczniecie parować, możecie zaproponować miejsca, które chcecie odwiedzić innym członkom!
+      </p>
+    </div>
+
+    {/* Search input */}
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+      <input
+        value={lobbyQuery}
+        onChange={e => setLobbyQuery(e.target.value)}
+        placeholder="Wpisz nazwę miejsca…"
+        className="w-full h-11 pl-9 pr-10 rounded-xl border border-border/60 bg-card text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+      />
+      {lobbySearching && (
+        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground/60" />
+      )}
+    </div>
+
+    {/* Search results */}
+    {lobbyQuery.trim().length >= 2 && !lobbySearching && (
+      <div className="rounded-xl border border-border/40 bg-card overflow-hidden">
+        {lobbyResults.length > 0 ? (
+          lobbyResults.map(place => (
+            <button
+              key={place.id}
+              onClick={() => handleLobbyPropose(place.place_name, place.id, place.city)}
+              className="w-full flex items-center gap-3 px-4 py-3 text-left border-b border-border/20 last:border-0 active:bg-muted/60 transition-colors"
+            >
+              <MapPin className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{place.place_name}</p>
+                <p className="text-xs text-muted-foreground">{place.city}</p>
+              </div>
+            </button>
+          ))
+        ) : (
+          <div className="px-4 py-5 text-center space-y-3">
+            <p className="text-sm text-muted-foreground">Ups! Tego miejsca jeszcze nie ma na Trasie.</p>
+            <button
+              onClick={onSuggestNew}
+              className="px-5 py-2.5 rounded-full bg-orange-600 text-white text-sm font-semibold active:scale-95 transition-transform"
+            >
+              Tak! Zaproponuj dodanie miejsca
+            </button>
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* Proposals feed */}
+    {lobbyProposals.length > 0 && (
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Propozycje grupy</p>
+        {lobbyProposals.map((p: any) => {
+          const proposer = members.find((m: any) => m.user_id === p.proposed_by);
+          const name = proposer?.profile?.first_name || proposer?.profile?.username || "Ktoś";
+          return (
+            <div key={p.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border/40">
+              <div className="h-7 w-7 rounded-full bg-orange-600/20 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
+                {name[0].toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{p.place_name}</p>
+                <p className="text-xs text-muted-foreground">{name}</p>
+              </div>
+              <MapPin className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+);
 
 export default GroupSession;
