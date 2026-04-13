@@ -4,6 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 const CONSENT_KEY = "trasa_cookie_consent_v2";
 
+// Internal accounts excluded from Clarity session recording
+const CLARITY_EXCLUDED_EMAILS = new Set([
+  "nat.maz98@gmail.com",
+  "tomalab97@gmail.com",
+]);
+
 export type ConsentStatus = "granted" | "denied" | null;
 
 export function getConsent(): ConsentStatus {
@@ -20,16 +26,19 @@ function applyGtagConsent(status: "granted" | "denied") {
   }
 }
 
-function applyClarityConsent(status: "granted" | "denied") {
-  if (status === "granted" && typeof window !== "undefined" && typeof window._clarityInit === "function") {
+function applyClarityConsent(status: "granted" | "denied", email?: string | null) {
+  if (status !== "granted") return;
+  if (email && CLARITY_EXCLUDED_EMAILS.has(email.toLowerCase())) return;
+  if (typeof window !== "undefined" && typeof window._clarityInit === "function") {
     window._clarityInit();
   }
 }
 
-export function grantConsent() {
+export async function grantConsent() {
   localStorage.setItem(CONSENT_KEY, "granted");
   applyGtagConsent("granted");
-  applyClarityConsent("granted");
+  const { data: { user } } = await supabase.auth.getUser();
+  applyClarityConsent("granted", user?.email);
   // Save to DB in the background (fire & forget)
   void saveConsentToProfile("granted");
 }
@@ -70,7 +79,7 @@ export async function syncConsentFromProfile(): Promise<boolean> {
     localStorage.setItem(CONSENT_KEY, dbConsent);
     if (dbConsent === "granted") {
       applyGtagConsent("granted");
-      applyClarityConsent("granted");
+      applyClarityConsent("granted", user.email);
     }
     return false;
   }
