@@ -723,7 +723,7 @@ export default function DemoSession() {
     : [];
 
   return (
-    <div className="flex flex-col h-screen bg-background max-w-lg mx-auto">
+    <div className="flex flex-col h-dvh bg-background max-w-lg mx-auto">
       {/* Header — hidden on landing */}
       <div className={cn("flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0", step === "city" && "hidden")}>
         <button
@@ -846,10 +846,11 @@ export default function DemoSession() {
             </div>
           </div>
 
-          <div className="flex-1" />
+          {/* Spacer so content isn't hidden behind fixed buttons */}
+          <div className="h-32" />
 
-          {/* Sticky bottom CTAs */}
-          <div className="shrink-0 px-5 pb-6 pt-2 space-y-2">
+          {/* Fixed bottom CTAs */}
+          <div className="fixed bottom-0 left-0 right-0 px-5 pb-safe-6 pt-3 space-y-2 bg-background/95 backdrop-blur-sm max-w-lg mx-auto" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
             <button
               onClick={handleStartGroup}
               className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
