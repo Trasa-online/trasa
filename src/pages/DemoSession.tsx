@@ -597,6 +597,8 @@ export default function DemoSession() {
   const [codeCopied, setCodeCopied] = useState(false);
   const [groupReactions, setGroupReactions] = useState<Record<string, { device_id: string; liked: boolean }[]>>({});
   const [otherDeviceDone, setOtherDeviceDone] = useState(false);
+  const [joinInput, setJoinInput] = useState("");
+  const [joinLoading, setJoinLoading] = useState(false);
 
   // Handle ?join=CODE — second user joins existing session
   useEffect(() => {
@@ -617,6 +619,28 @@ export default function DemoSession() {
   }, []);
 
   const places: DemoPlace[] = city && category ? (MOCK_DATA[city]?.[category] ?? []) : [];
+
+  const handleJoinByCode = async () => {
+    const code = joinInput.trim().toUpperCase();
+    if (code.length < 4) return;
+    setJoinLoading(true);
+    try {
+      const { data } = await (supabase as any).from("demo_sessions").select("*").eq("code", code).single();
+      if (data) {
+        setCity(data.city);
+        setCategory(data.category as CategoryKey);
+        setSessionCode(code);
+        setMode("group");
+        setStep("swipe");
+      } else {
+        toast.error("Nie znaleziono sesji — sprawdź kod i spróbuj ponownie");
+      }
+    } catch {
+      toast.error("Błąd połączenia — spróbuj ponownie");
+    } finally {
+      setJoinLoading(false);
+    }
+  };
 
   const handleCitySelect = (c: string) => { setCity(c); setStep("mode"); };
 
@@ -749,7 +773,29 @@ export default function DemoSession() {
               </button>
             ))}
           </div>
-          <div className="rounded-2xl bg-muted/50 px-4 py-4 text-center space-y-2 mt-auto">
+          {/* Join by code */}
+          <div className="rounded-2xl border border-border/50 bg-card px-4 py-4 space-y-3">
+            <p className="text-sm font-semibold">Masz kod zaproszenia?</p>
+            <div className="flex gap-2">
+              <input
+                value={joinInput}
+                onChange={e => setJoinInput(e.target.value.toUpperCase())}
+                onKeyDown={e => e.key === "Enter" && handleJoinByCode()}
+                placeholder="np. ABC123"
+                maxLength={8}
+                className="flex-1 px-3 py-2.5 rounded-xl border border-border/60 bg-background text-sm font-mono font-bold tracking-widest uppercase placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-orange-600/30"
+              />
+              <button
+                onClick={handleJoinByCode}
+                disabled={joinInput.trim().length < 4 || joinLoading}
+                className="px-4 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-bold disabled:opacity-40 active:scale-[0.97] transition-transform flex items-center gap-1.5"
+              >
+                {joinLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Dołącz"}
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-muted/50 px-4 py-4 text-center space-y-2">
             <p className="text-xs text-muted-foreground">Masz już konto?</p>
             <button onClick={() => navigate("/auth")} className="text-sm font-semibold text-orange-600">
               Zaloguj się →
