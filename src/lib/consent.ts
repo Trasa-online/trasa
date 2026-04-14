@@ -3,6 +3,8 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const CONSENT_KEY = "trasa_cookie_consent_v2";
+// For unauthenticated visitors: reset on each browser session (tab close)
+const SESSION_CONSENT_KEY = "trasa_cookie_consent_session";
 
 // Internal accounts excluded from Clarity session recording
 const CLARITY_EXCLUDED_EMAILS = new Set([
@@ -16,6 +18,23 @@ export function getConsent(): ConsentStatus {
   const val = localStorage.getItem(CONSENT_KEY);
   if (val === "granted" || val === "denied") return val;
   return null;
+}
+
+/** For unauthenticated visitors — stored in sessionStorage (resets each session). */
+export function getSessionConsent(): ConsentStatus {
+  const val = sessionStorage.getItem(SESSION_CONSENT_KEY);
+  if (val === "granted" || val === "denied") return val;
+  return null;
+}
+
+export function grantSessionConsent() {
+  sessionStorage.setItem(SESSION_CONSENT_KEY, "granted");
+  applyGtagConsent("granted");
+  applyClarityConsent("granted", null);
+}
+
+export function denySessionConsent() {
+  sessionStorage.setItem(SESSION_CONSENT_KEY, "denied");
 }
 
 function applyGtagConsent(status: "granted" | "denied") {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getConsent, grantConsent, denyConsent, syncConsentFromProfile } from "@/lib/consent";
+import { getConsent, grantConsent, denyConsent, syncConsentFromProfile, getSessionConsent, grantSessionConsent, denySessionConsent } from "@/lib/consent";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -8,16 +8,31 @@ const CookieBanner = () => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // Only show after user is authenticated
-    if (loading || !user) return;
-    if (getConsent() !== null) return;
+    if (loading) return;
 
-    syncConsentFromProfile().then((shouldShow) => {
-      if (shouldShow) setVisible(true);
-    });
+    if (user) {
+      // Logged-in: show only if never consented (localStorage + DB)
+      if (getConsent() !== null) return;
+      syncConsentFromProfile().then((shouldShow) => {
+        if (shouldShow) setVisible(true);
+      });
+    } else {
+      // Not logged in: show every new browser session (sessionStorage)
+      if (getSessionConsent() === null) setVisible(true);
+    }
   }, [user, loading]);
 
   if (!visible) return null;
+
+  const handleGrant = () => {
+    if (user) grantConsent(); else grantSessionConsent();
+    setVisible(false);
+  };
+
+  const handleDeny = () => {
+    if (user) denyConsent(); else denySessionConsent();
+    setVisible(false);
+  };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[60] p-4 bg-card border-t border-border/60 shadow-lg">
@@ -30,13 +45,13 @@ const CookieBanner = () => {
         </p>
         <div className="flex gap-2">
           <button
-            onClick={() => { grantConsent(); setVisible(false); }}
+            onClick={handleGrant}
             className="flex-1 py-2.5 rounded-xl bg-foreground text-background text-sm font-semibold"
           >
             Akceptuję
           </button>
           <button
-            onClick={() => { denyConsent(); setVisible(false); }}
+            onClick={handleDeny}
             className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground bg-card"
           >
             Tylko niezbędne
