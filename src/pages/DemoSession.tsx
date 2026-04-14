@@ -803,7 +803,7 @@ export default function DemoSession() {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-5 pt-3 pb-4 space-y-3">
+          <div className="overflow-y-auto px-5 pt-3 pb-4 space-y-3">
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Wybierz miasto</p>
               <div className="flex flex-wrap gap-2">
@@ -845,6 +845,8 @@ export default function DemoSession() {
               </div>
             </div>
           </div>
+
+          <div className="flex-1" />
 
           {/* Sticky bottom CTAs */}
           <div className="shrink-0 px-5 pb-6 pt-2 space-y-2">
