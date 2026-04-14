@@ -230,13 +230,15 @@ const Home = () => {
           <Users className="h-5 w-5" />
           Zaplanuj razem
         </button>
-        <button
-          onClick={() => navigate("/demo")}
-          className="w-full py-3.5 rounded-2xl border-2 border-orange-600/30 bg-orange-600/5 text-sm font-bold text-orange-700 active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
-        >
-          <Sparkles className="h-4 w-4" />
-          Sprawdź jak to działa — demo bez konta
-        </button>
+        {!user && (
+          <button
+            onClick={() => navigate("/demo")}
+            className="w-full py-3.5 rounded-2xl border-2 border-orange-600/30 bg-orange-600/5 text-sm font-bold text-orange-700 active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
+          >
+            <Sparkles className="h-4 w-4" />
+            Sprawdź jak to działa — demo bez konta
+          </button>
+        )}
       </div>
 
       {/* Session preview sheet */}
