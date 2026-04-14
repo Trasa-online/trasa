@@ -486,7 +486,7 @@ const Auth = () => {
 
           {/* Demo CTA */}
           <button
-            onClick={() => navigate("/demo")}
+            onClick={() => navigate("/")}
             className="w-full py-3.5 rounded-2xl border-2 border-orange-600/30 bg-orange-600/5 text-sm font-bold text-orange-700 active:scale-[0.97] transition-transform flex items-center justify-center gap-2 mt-2"
           >
             ✨ Sprawdź jak to działa — demo bez konta
