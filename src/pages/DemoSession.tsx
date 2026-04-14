@@ -755,11 +755,11 @@ export default function DemoSession() {
       {step === "city" && (
         <div className="flex-1 flex flex-col min-h-0">
           {/* Hero — text left + cards right bleeding off screen */}
-          <div className="bg-orange-50 shrink-0 overflow-hidden flex items-center px-5 pt-8 pb-6 gap-2" style={{ minHeight: "42vh" }}>
+          <div className="bg-background shrink-0 overflow-hidden flex items-center px-5 pt-8 pb-6 gap-2" style={{ minHeight: "42vh" }}>
             {/* Left: headline */}
             <div className="flex-1 shrink-0 z-10">
-              <h1 className="text-2xl font-black leading-tight">Speed dating<br/>z miastem.</h1>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-[160px]">
+              <h1 className="text-3xl font-black leading-tight">Speed dating<br/>z miastem.</h1>
+              <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[170px]">
                 Odkryj kawiarnie, restauracje i atrakcje razem z ekipą.
               </p>
             </div>
