@@ -754,47 +754,49 @@ export default function DemoSession() {
       {/* ── STEP: city (landing) ── */}
       {step === "city" && (
         <div className="flex-1 flex flex-col min-h-0">
-          {/* Hero — stacked card previews on light background */}
-          <div className="relative shrink-0 bg-orange-50 flex items-center justify-center" style={{ height: "44vh" }}>
-            {/* Card — restaurant (back right) */}
-            <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-lg"
-              style={{ transform: "rotate(10deg) translate(58px, 10px)" }}>
-              <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute bottom-2.5 left-2.5 right-2.5">
-                <span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">Restauracja</span>
-                <p className="text-white text-[11px] font-bold mt-0.5 leading-tight">Butchery & Wine</p>
-                <div className="flex items-center gap-0.5 mt-0.5">
-                  <span className="text-yellow-400 text-[9px]">★</span>
-                  <span className="text-white/80 text-[9px]">4.7</span>
+          {/* Hero — text left + cards right bleeding off screen */}
+          <div className="bg-orange-50 shrink-0 overflow-hidden flex items-center px-5 pt-8 pb-6 gap-2" style={{ minHeight: "42vh" }}>
+            {/* Left: headline */}
+            <div className="flex-1 shrink-0 z-10">
+              <h1 className="text-2xl font-black leading-tight">Speed dating<br/>z miastem.</h1>
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-[160px]">
+                Odkryj kawiarnie, restauracje i atrakcje razem z ekipą.
+              </p>
+            </div>
+
+            {/* Right: card stack, bleeds off right edge */}
+            <div className="relative shrink-0" style={{ width: "148px", height: "210px", marginRight: "-48px" }}>
+              {/* Park — back */}
+              <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-md"
+                style={{ transform: "rotate(-8deg) translate(-28px, 16px)" }}>
+                <img src="https://images.unsplash.com/photo-1519197924294-4ba991a11128?w=400&q=80" alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute bottom-2.5 left-2.5">
+                  <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 rounded-full font-bold">Park</span>
+                  <p className="text-white text-[11px] font-bold mt-0.5">Łazienki</p>
+                  <p className="text-yellow-400 text-[9px]">★ 4.9</p>
                 </div>
               </div>
-            </div>
-            {/* Card — park (back left) */}
-            <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-lg"
-              style={{ transform: "rotate(-8deg) translate(-52px, 14px)" }}>
-              <img src="https://images.unsplash.com/photo-1519197924294-4ba991a11128?w=400&q=80" alt="" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute bottom-2.5 left-2.5 right-2.5">
-                <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 rounded-full font-bold">Park</span>
-                <p className="text-white text-[11px] font-bold mt-0.5 leading-tight">Łazienki Królewskie</p>
-                <div className="flex items-center gap-0.5 mt-0.5">
-                  <span className="text-yellow-400 text-[9px]">★</span>
-                  <span className="text-white/80 text-[9px]">4.9</span>
+              {/* Restaurant — middle */}
+              <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-lg"
+                style={{ transform: "rotate(7deg) translate(10px, -12px)" }}>
+                <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute bottom-2.5 left-2.5">
+                  <span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">Restauracja</span>
+                  <p className="text-white text-[11px] font-bold mt-0.5">Butchery & Wine</p>
+                  <p className="text-yellow-400 text-[9px]">★ 4.7</p>
                 </div>
               </div>
-            </div>
-            {/* Card — cafe (front center) */}
-            <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-2xl border-2 border-white"
-              style={{ transform: "rotate(1deg) translateY(-6px)" }}>
-              <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80" alt="" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-              <div className="absolute bottom-2.5 left-2.5 right-2.5">
-                <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">Kawiarnia</span>
-                <p className="text-white text-[11px] font-bold mt-0.5 leading-tight">Kawiarnia Charlotte</p>
-                <div className="flex items-center gap-0.5 mt-0.5">
-                  <span className="text-yellow-400 text-[9px]">★</span>
-                  <span className="text-white/80 text-[9px]">4.8</span>
+              {/* Cafe — front */}
+              <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-2xl border-2 border-white"
+                style={{ transform: "rotate(-2deg) translate(-8px, -6px)" }}>
+                <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80" alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+                <div className="absolute bottom-2.5 left-2.5">
+                  <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">Kawiarnia</span>
+                  <p className="text-white text-[11px] font-bold mt-0.5">Charlotte</p>
+                  <p className="text-yellow-400 text-[9px]">★ 4.8</p>
                 </div>
               </div>
             </div>
@@ -802,13 +804,6 @@ export default function DemoSession() {
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto px-5 pt-5 pb-4 space-y-5">
-            <div>
-              <h1 className="text-3xl font-black leading-tight">Speed dating<br/>z miastem.</h1>
-              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                Przeglądaj kawiarnie, restauracje i atrakcje — solo lub z ekipą — i razem planujcie dzień w mieście.
-              </p>
-            </div>
-
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Wybierz miasto</p>
               <div className="flex flex-wrap gap-2">

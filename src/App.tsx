@@ -7,6 +7,13 @@ import { trackPageView } from "@/lib/analytics";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
+function RootPage() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (user) return <Navigate to="/home" replace />;
+  return <DemoSession />;
+}
+
 function RouteTracker() {
   const location = useLocation();
   useEffect(() => {
@@ -81,7 +88,8 @@ const App = () => (
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/terms" element={<Terms />} />
-          <Route path="/" element={<AppLayout><Home /></AppLayout>} />
+          <Route path="/" element={<RootPage />} />
+          <Route path="/home" element={<AppLayout><Home /></AppLayout>} />
           <Route path="/create" element={<CreateRoute />} />
           <Route path="/my-routes" element={<AppLayout><MyRoutes /></AppLayout>} />
           <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
