@@ -753,20 +753,16 @@ export default function DemoSession() {
 
       {/* ── STEP: city (landing) ── */}
       {step === "city" && (
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 overflow-y-auto">
           {/* Hero — text left + cards right bleeding off screen */}
-          <div className="bg-background shrink-0 overflow-hidden flex items-center px-5 pt-6 pb-4 gap-2" style={{ minHeight: "34vh" }}>
-            {/* Left: headline */}
-            <div className="flex-1 shrink-0 z-10">
+          <div className="overflow-hidden flex items-center px-5 pt-6 pb-4 gap-2" style={{ minHeight: "34vh" }}>
+            <div className="flex-1 z-10">
               <h1 className="text-3xl font-black leading-tight">Speed dating<br/>z miastem.</h1>
               <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[170px]">
                 Odkryj kawiarnie, restauracje i atrakcje razem z ekipą.
               </p>
             </div>
-
-            {/* Right: card stack, bleeds off right edge */}
             <div className="relative shrink-0" style={{ width: "148px", height: "210px", marginRight: "-48px" }}>
-              {/* Park — back */}
               <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-md"
                 style={{ transform: "rotate(-8deg) translate(-28px, 16px)" }}>
                 <img src="https://images.unsplash.com/photo-1519197924294-4ba991a11128?w=400&q=80" alt="" className="w-full h-full object-cover" />
@@ -777,7 +773,6 @@ export default function DemoSession() {
                   <p className="text-yellow-400 text-[9px]">★ 4.9</p>
                 </div>
               </div>
-              {/* Restaurant — middle */}
               <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-lg"
                 style={{ transform: "rotate(7deg) translate(10px, -12px)" }}>
                 <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
@@ -788,7 +783,6 @@ export default function DemoSession() {
                   <p className="text-yellow-400 text-[9px]">★ 4.7</p>
                 </div>
               </div>
-              {/* Cafe — front */}
               <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-2xl border-2 border-white"
                 style={{ transform: "rotate(-2deg) translate(-8px, -6px)" }}>
                 <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80" alt="" className="w-full h-full object-cover" />
@@ -802,29 +796,30 @@ export default function DemoSession() {
             </div>
           </div>
 
-          {/* Content */}
-          <div className="overflow-y-auto px-5 pt-3 pb-4 space-y-3">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Wybierz miasto</p>
-              <div className="flex flex-wrap gap-2">
-                {DEMO_CITIES.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => setSelectedCity(c)}
-                    className={cn(
-                      "px-4 py-2 rounded-full text-sm font-semibold border transition-all active:scale-[0.97]",
-                      selectedCity === c
-                        ? "bg-foreground text-background border-foreground"
-                        : "bg-card border-border/60 text-foreground"
-                    )}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
+          {/* City picker */}
+          <div className="px-5 pt-2 pb-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Wybierz miasto</p>
+            <div className="flex flex-wrap gap-2">
+              {DEMO_CITIES.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setSelectedCity(c)}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-semibold border transition-all active:scale-[0.97]",
+                    selectedCity === c
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-card border-border/60 text-foreground"
+                  )}
+                >
+                  {c}
+                </button>
+              ))}
             </div>
+          </div>
 
-            <div className="rounded-2xl border border-border/50 bg-card px-4 py-3.5 space-y-2.5 mb-4">
+          {/* Join by code */}
+          <div className="px-5 pb-4">
+            <div className="rounded-2xl border border-border/50 bg-card px-4 py-3.5 space-y-2.5">
               <p className="text-sm font-semibold">Masz kod zaproszenia?</p>
               <div className="flex gap-2">
                 <input
@@ -846,21 +841,18 @@ export default function DemoSession() {
             </div>
           </div>
 
-          {/* Spacer so content clears fixed buttons (buttons ~160px + 16px gap) */}
-          <div className="h-44" />
-
-          {/* Fixed bottom CTAs */}
-          <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 space-y-2 bg-background/95 backdrop-blur-sm max-w-lg mx-auto" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
+          {/* CTAs */}
+          <div className="px-5 pt-0 pb-8 space-y-2">
             <button
               onClick={handleStartGroup}
-              className="w-full py-3 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
+              className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
             >
               <Users className="h-5 w-5" />
               Zacznij z grupą
             </button>
             <button
               onClick={handleStartSolo}
-              className="w-full py-3 rounded-2xl bg-foreground text-background font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+              className="w-full py-3.5 rounded-2xl bg-foreground text-background font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
             >
               <User className="h-5 w-5" />
               Zacznij solo
