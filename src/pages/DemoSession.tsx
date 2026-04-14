@@ -754,36 +754,54 @@ export default function DemoSession() {
       {/* ── STEP: city (landing) ── */}
       {step === "city" && (
         <div className="flex-1 flex flex-col min-h-0">
-          {/* Hero — stacked card previews */}
-          <div className="relative bg-neutral-900 shrink-0 overflow-hidden" style={{ height: "38vh" }}>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute w-32 h-48 rounded-2xl overflow-hidden shadow-xl"
-                style={{ transform: "rotate(12deg) translate(52px, 8px)" }}>
-                <img src={PHOTOS.restaurant[0]} alt="" className="w-full h-full object-cover" />
-              </div>
-              <div className="absolute w-32 h-48 rounded-2xl overflow-hidden shadow-xl"
-                style={{ transform: "rotate(-7deg) translate(-44px, 12px)" }}>
-                <img src={PHOTOS.cafe[0]} alt="" className="w-full h-full object-cover" />
-              </div>
-              <div className="absolute w-32 h-48 rounded-2xl overflow-hidden shadow-2xl border border-white/20"
-                style={{ transform: "rotate(2deg) translateY(-4px)" }}>
-                <img src={PHOTOS.park[0]} alt="" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3">
-                  <span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">Park</span>
-                  <p className="text-white text-xs font-bold mt-0.5 leading-tight">Planty</p>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <span className="text-yellow-400 text-[10px]">★</span>
-                    <span className="text-white/80 text-[9px]">4.9</span>
-                  </div>
+          {/* Hero — stacked card previews on light background */}
+          <div className="relative shrink-0 bg-orange-50 flex items-center justify-center" style={{ height: "44vh" }}>
+            {/* Card — restaurant (back right) */}
+            <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-lg"
+              style={{ transform: "rotate(10deg) translate(58px, 10px)" }}>
+              <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <div className="absolute bottom-2.5 left-2.5 right-2.5">
+                <span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">Restauracja</span>
+                <p className="text-white text-[11px] font-bold mt-0.5 leading-tight">Butchery & Wine</p>
+                <div className="flex items-center gap-0.5 mt-0.5">
+                  <span className="text-yellow-400 text-[9px]">★</span>
+                  <span className="text-white/80 text-[9px]">4.7</span>
                 </div>
               </div>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
+            {/* Card — park (back left) */}
+            <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-lg"
+              style={{ transform: "rotate(-8deg) translate(-52px, 14px)" }}>
+              <img src="https://images.unsplash.com/photo-1519197924294-4ba991a11128?w=400&q=80" alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <div className="absolute bottom-2.5 left-2.5 right-2.5">
+                <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 rounded-full font-bold">Park</span>
+                <p className="text-white text-[11px] font-bold mt-0.5 leading-tight">Łazienki Królewskie</p>
+                <div className="flex items-center gap-0.5 mt-0.5">
+                  <span className="text-yellow-400 text-[9px]">★</span>
+                  <span className="text-white/80 text-[9px]">4.9</span>
+                </div>
+              </div>
+            </div>
+            {/* Card — cafe (front center) */}
+            <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-2xl border-2 border-white"
+              style={{ transform: "rotate(1deg) translateY(-6px)" }}>
+              <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80" alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+              <div className="absolute bottom-2.5 left-2.5 right-2.5">
+                <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">Kawiarnia</span>
+                <p className="text-white text-[11px] font-bold mt-0.5 leading-tight">Kawiarnia Charlotte</p>
+                <div className="flex items-center gap-0.5 mt-0.5">
+                  <span className="text-yellow-400 text-[9px]">★</span>
+                  <span className="text-white/80 text-[9px]">4.8</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-5 pt-4 pb-4 space-y-5">
+          <div className="flex-1 overflow-y-auto px-5 pt-5 pb-4 space-y-5">
             <div>
               <h1 className="text-3xl font-black leading-tight">Speed dating<br/>z miastem.</h1>
               <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
