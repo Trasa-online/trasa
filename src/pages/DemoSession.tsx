@@ -755,7 +755,7 @@ export default function DemoSession() {
       {step === "city" && (
         <div className="flex-1 flex flex-col min-h-0">
           {/* Hero — text left + cards right bleeding off screen */}
-          <div className="bg-background shrink-0 overflow-hidden flex items-center px-5 pt-8 pb-6 gap-2" style={{ minHeight: "42vh" }}>
+          <div className="bg-background shrink-0 overflow-hidden flex items-center px-5 pt-6 pb-4 gap-2" style={{ minHeight: "34vh" }}>
             {/* Left: headline */}
             <div className="flex-1 shrink-0 z-10">
               <h1 className="text-3xl font-black leading-tight">Speed dating<br/>z miastem.</h1>
@@ -803,7 +803,7 @@ export default function DemoSession() {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-5 pt-5 pb-4 space-y-5">
+          <div className="flex-1 overflow-y-auto px-5 pt-3 pb-4 space-y-3">
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Wybierz miasto</p>
               <div className="flex flex-wrap gap-2">
