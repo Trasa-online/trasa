@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin, ChevronRight, Lock, Sparkles, Heart, X, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
