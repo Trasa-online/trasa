@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, MapPin, ChevronRight, Lock, Sparkles, Users, User, Copy, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Lock, Sparkles, Users, User, Copy, Check, Loader2 } from "lucide-react";
 import { SwipeCard } from "@/components/plan-wizard/PlaceSwiper";
 import type { MockPlace, PlaceCategory } from "@/components/plan-wizard/PlaceSwiper";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -599,6 +599,7 @@ export default function DemoSession() {
   const [otherDeviceDone, setOtherDeviceDone] = useState(false);
   const [joinInput, setJoinInput] = useState("");
   const [joinLoading, setJoinLoading] = useState(false);
+  const [selectedCity, setSelectedCity] = useState(DEMO_CITIES[0]);
 
   // Handle ?join=CODE — second user joins existing session
   useEffect(() => {
@@ -619,6 +620,9 @@ export default function DemoSession() {
   }, []);
 
   const places: DemoPlace[] = city && category ? (MOCK_DATA[city]?.[category] ?? []) : [];
+
+  const handleStartSolo = () => { setCity(selectedCity); setMode("solo"); setStep("category"); };
+  const handleStartGroup = () => { setCity(selectedCity); setMode("group"); setStep("category"); };
 
   const handleJoinByCode = async () => {
     const code = joinInput.trim().toUpperCase();
@@ -725,8 +729,7 @@ export default function DemoSession() {
         <button
           onClick={() => {
             if (step === "city") navigate("/");
-            else if (step === "mode") setStep("city");
-            else if (step === "category") setStep("mode");
+            else if (step === "category") setStep("city");
             else if (step === "invite") setStep("category");
             else if (step === "swipe") { if (mode === "group" && sessionCode) setStep("invite"); else setStep("category"); }
             else if (step === "results") setStep("swipe");
@@ -738,7 +741,6 @@ export default function DemoSession() {
         <div className="flex-1">
           <p className="font-bold text-sm leading-tight">
             {step === "city" ? "Wypróbuj Trasę"
-              : step === "mode" ? city
               : step === "category" ? city
               : step === "invite" ? "Zaproś znajomego"
               : step === "swipe" ? `${catLabel?.emoji} ${catLabel?.label}`
@@ -749,95 +751,110 @@ export default function DemoSession() {
         <span className="text-xs bg-orange-600/10 text-orange-600 font-semibold px-2.5 py-1 rounded-full">Demo</span>
       </div>
 
-      {/* ── STEP: city ── */}
+      {/* ── STEP: city (landing) ── */}
       {step === "city" && (
-        <div className="flex-1 flex flex-col px-5 pt-6 pb-8 gap-5 overflow-y-auto">
-          <div>
-            <p className="text-2xl font-black mb-1.5">Odkryj jak działa Trasa</p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Swipe'uj miejsca jak w Tinderze i stwórz plan dnia. Bez rejestracji.
-            </p>
-          </div>
-          <div className="space-y-2">
-            {DEMO_CITIES.map(c => (
-              <button
-                key={c}
-                onClick={() => handleCitySelect(c)}
-                className="w-full flex items-center justify-between px-4 py-4 rounded-2xl border border-border/50 bg-card active:scale-[0.98] transition-transform"
-              >
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-4 w-4 text-orange-600" />
-                  <span className="font-semibold">{c}</span>
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* Hero — stacked card previews */}
+          <div className="relative bg-neutral-900 shrink-0 overflow-hidden" style={{ height: "38vh" }}>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute w-32 h-48 rounded-2xl overflow-hidden shadow-xl"
+                style={{ transform: "rotate(12deg) translate(52px, 8px)" }}>
+                <img src={PHOTOS.restaurant[0]} alt="" className="w-full h-full object-cover" />
+              </div>
+              <div className="absolute w-32 h-48 rounded-2xl overflow-hidden shadow-xl"
+                style={{ transform: "rotate(-7deg) translate(-44px, 12px)" }}>
+                <img src={PHOTOS.cafe[0]} alt="" className="w-full h-full object-cover" />
+              </div>
+              <div className="absolute w-32 h-48 rounded-2xl overflow-hidden shadow-2xl border border-white/20"
+                style={{ transform: "rotate(2deg) translateY(-4px)" }}>
+                <img src={PHOTOS.park[0]} alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                <div className="absolute bottom-3 left-3 right-3">
+                  <span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">Park</span>
+                  <p className="text-white text-xs font-bold mt-0.5 leading-tight">Planty</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-yellow-400 text-[10px]">★</span>
+                    <span className="text-white/80 text-[9px]">4.9</span>
+                  </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
-              </button>
-            ))}
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
           </div>
-          {/* Join by code */}
-          <div className="rounded-2xl border border-border/50 bg-card px-4 py-4 space-y-3">
-            <p className="text-sm font-semibold">Masz kod zaproszenia?</p>
-            <div className="flex gap-2">
-              <input
-                value={joinInput}
-                onChange={e => setJoinInput(e.target.value.toUpperCase())}
-                onKeyDown={e => e.key === "Enter" && handleJoinByCode()}
-                placeholder="np. ABC123"
-                maxLength={8}
-                className="flex-1 px-3 py-2.5 rounded-xl border border-border/60 bg-background text-sm font-mono font-bold tracking-widest uppercase placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-orange-600/30"
-              />
-              <button
-                onClick={handleJoinByCode}
-                disabled={joinInput.trim().length < 4 || joinLoading}
-                className="px-4 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-bold disabled:opacity-40 active:scale-[0.97] transition-transform flex items-center gap-1.5"
-              >
-                {joinLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Dołącz"}
-              </button>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto px-5 pt-4 pb-4 space-y-5">
+            <div>
+              <h1 className="text-3xl font-black leading-tight">Tinder<br/>dla miejsc.</h1>
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                Swipe'uj kawiarnie, restauracje i atrakcje — solo lub z ekipą — i razem planujcie dzień w mieście.
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Wybierz miasto</p>
+              <div className="flex flex-wrap gap-2">
+                {DEMO_CITIES.map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setSelectedCity(c)}
+                    className={cn(
+                      "px-4 py-2 rounded-full text-sm font-semibold border transition-all active:scale-[0.97]",
+                      selectedCity === c
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-card border-border/60 text-foreground"
+                    )}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border/50 bg-card px-4 py-3.5 space-y-2.5">
+              <p className="text-sm font-semibold">Masz kod zaproszenia?</p>
+              <div className="flex gap-2">
+                <input
+                  value={joinInput}
+                  onChange={e => setJoinInput(e.target.value.toUpperCase())}
+                  onKeyDown={e => e.key === "Enter" && handleJoinByCode()}
+                  placeholder="np. ABC123"
+                  maxLength={8}
+                  className="flex-1 px-3 py-2.5 rounded-xl border border-border/60 bg-background text-sm font-mono font-bold tracking-widest uppercase placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-orange-600/30"
+                />
+                <button
+                  onClick={handleJoinByCode}
+                  disabled={joinInput.trim().length < 4 || joinLoading}
+                  className="px-4 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-bold disabled:opacity-40 active:scale-[0.97] transition-transform flex items-center gap-1.5"
+                >
+                  {joinLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Dołącz"}
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="rounded-2xl bg-muted/50 px-4 py-4 text-center space-y-2">
-            <p className="text-xs text-muted-foreground">Masz już konto?</p>
-            <button onClick={() => navigate("/auth")} className="text-sm font-semibold text-orange-600">
-              Zaloguj się →
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── STEP: mode ── */}
-      {step === "mode" && (
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto px-5 pt-6 pb-4">
-            <p className="text-2xl font-black mb-1.5">Jak chcesz odkrywać?</p>
-            <p className="text-sm text-muted-foreground">Możesz swipe'ować solo albo zaprosić znajomego i zobaczyć co Was łączy.</p>
-          </div>
-          <div className="shrink-0 px-5 pb-8 pt-2 space-y-3">
+          {/* Sticky bottom CTAs */}
+          <div className="shrink-0 px-5 pb-8 pt-3 space-y-2.5">
             <button
-              onClick={() => { setMode("solo"); setStep("category"); }}
-              className="w-full flex items-center gap-4 px-5 py-5 rounded-2xl border border-border/50 bg-card active:scale-[0.98] transition-transform text-left"
+              onClick={handleStartGroup}
+              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
             >
-              <div className="h-11 w-11 rounded-2xl bg-muted flex items-center justify-center shrink-0">
-                <User className="h-5 w-5 text-foreground" />
-              </div>
-              <div>
-                <p className="font-bold">Solo</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Swipe'uj sam/a i zbierz swoje ulubione miejsca</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground/50 ml-auto" />
+              <Users className="h-5 w-5" />
+              Zacznij z grupą
             </button>
             <button
-              onClick={() => { setMode("group"); setStep("category"); }}
-              className="w-full flex items-center gap-4 px-5 py-5 rounded-2xl border-2 border-orange-600/30 bg-orange-600/5 active:scale-[0.98] transition-transform text-left"
+              onClick={handleStartSolo}
+              className="w-full py-4 rounded-2xl bg-foreground text-background font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
             >
-              <div className="h-11 w-11 rounded-2xl bg-orange-600/10 flex items-center justify-center shrink-0">
-                <Users className="h-5 w-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="font-bold text-orange-700">Z grupą</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Swipe'ujcie osobno, odkryjcie co Was łączy</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground/50 ml-auto" />
+              <User className="h-5 w-5" />
+              Zacznij solo
             </button>
+            <p className="text-center text-xs text-muted-foreground pt-1">
+              Masz konto?{" "}
+              <button onClick={() => navigate("/auth")} className="text-orange-600 font-semibold">
+                Zaloguj się →
+              </button>
+            </p>
           </div>
         </div>
       )}
