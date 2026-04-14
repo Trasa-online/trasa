@@ -716,6 +716,51 @@ export type Database = {
           },
         ]
       }
+      group_session_place_proposals: {
+        Row: {
+          city: string | null
+          created_at: string | null
+          id: string
+          place_id: string | null
+          place_name: string
+          proposed_by: string | null
+          session_id: string
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          place_id?: string | null
+          place_name: string
+          proposed_by?: string | null
+          session_id: string
+        }
+        Update: {
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          place_id?: string | null
+          place_name?: string
+          proposed_by?: string | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_session_place_proposals_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_session_place_proposals_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "group_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_session_reactions: {
         Row: {
           category: string | null
@@ -818,6 +863,7 @@ export type Database = {
           current_category_index: number | null
           expires_at: string | null
           id: string
+          is_demo: boolean | null
           join_code: string
           match_count: number | null
           name: string | null
@@ -832,6 +878,7 @@ export type Database = {
           current_category_index?: number | null
           expires_at?: string | null
           id?: string
+          is_demo?: boolean | null
           join_code: string
           match_count?: number | null
           name?: string | null
@@ -846,6 +893,7 @@ export type Database = {
           current_category_index?: number | null
           expires_at?: string | null
           id?: string
+          is_demo?: boolean | null
           join_code?: string
           match_count?: number | null
           name?: string | null
@@ -1508,6 +1556,33 @@ export type Database = {
           photo_reference?: string
           public_url?: string
           storage_path?: string
+        }
+        Relationships: []
+      }
+      place_suggestions: {
+        Row: {
+          city: string | null
+          created_at: string | null
+          google_maps_url: string | null
+          id: string
+          place_name: string
+          suggested_by: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string | null
+          google_maps_url?: string | null
+          id?: string
+          place_name: string
+          suggested_by?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string | null
+          google_maps_url?: string | null
+          id?: string
+          place_name?: string
+          suggested_by?: string | null
         }
         Relationships: []
       }
@@ -2473,6 +2548,8 @@ export type Database = {
         Returns: boolean
       }
       increment_route_views: { Args: { route_id: string }; Returns: undefined }
+      is_group_session_member: { Args: { sid: string }; Returns: boolean }
+      join_group_session: { Args: { p_session_id: string }; Returns: undefined }
       match_memories: {
         Args: {
           filter_user_id?: string
