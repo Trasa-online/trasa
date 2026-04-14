@@ -66,6 +66,7 @@ import SharedRoute from "./pages/SharedRoute";
 import JoinPage from "./pages/JoinPage";
 import PublicProfile from "./pages/PublicProfile";
 import BusinessDashboard from "./pages/BusinessDashboard";
+import DemoSession from "./pages/DemoSession";
 
 const queryClient = new QueryClient();
 
@@ -95,6 +96,7 @@ const App = () => (
           <Route path="/edit-plan" element={<EditPlan />} />
           <Route path="/review-summary" element={<ReviewSummary />} />
           <Route path="/plan" element={<PlanWizard />} />
+          <Route path="/demo" element={<DemoSession />} />
           <Route path="/sesja/nowa" element={<CreateGroupSession />} />
           <Route path="/sesja/:joinCode" element={<GroupSession />} />
           <Route path="/search" element={<UserSearch />} />

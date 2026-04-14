@@ -230,6 +230,12 @@ const Home = () => {
           <Users className="h-5 w-5" />
           Zaplanuj razem
         </button>
+        <button
+          onClick={() => navigate("/demo")}
+          className="w-full py-3 rounded-2xl border border-border/50 bg-card text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform"
+        >
+          Wypróbuj bez konta →
+        </button>
       </div>
 
       {/* Session preview sheet */}
