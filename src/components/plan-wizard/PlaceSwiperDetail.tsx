@@ -70,6 +70,7 @@ interface PlaceSwiperDetailProps {
   city?: string;
   onLike?: (() => void) | undefined;
   onSkip?: (() => void) | undefined;
+  skipGoogleFetch?: boolean;
 }
 
 const PlaceSwiperDetail = ({
@@ -79,6 +80,7 @@ const PlaceSwiperDetail = ({
   city,
   onLike,
   onSkip,
+  skipGoogleFetch = false,
 }: PlaceSwiperDetailProps) => {
   const [detail, setDetail] = useState<PlaceDetail | null>(null);
 
@@ -111,8 +113,8 @@ const PlaceSwiperDetail = ({
     }
 
     const fetchAll = async () => {
-      // ── Mock mode: skip Google Places API entirely ──
-      if (MOCK_MODE) {
+      // ── Mock mode or demo: skip Google Places API entirely ──
+      if (MOCK_MODE || skipGoogleFetch) {
         setDetail({ ...MOCK_PLACE_DETAIL, name: place.place_name } as any);
         setPhotos([place.photo_url, ...(place.galleryPhotos ?? [])].filter(Boolean) as string[]);
 

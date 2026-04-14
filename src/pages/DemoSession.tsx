@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin, ChevronRight, Lock, Sparkles } from "lucide-react";
 import { SwipeCard } from "@/components/plan-wizard/PlaceSwiper";
 import type { MockPlace, PlaceCategory } from "@/components/plan-wizard/PlaceSwiper";
+import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -372,6 +373,8 @@ function DemoSwiper({ places, city, category, onComplete }: {
 }) {
   const [queue, setQueue] = useState<DemoPlace[]>(places);
   const [liked, setLiked] = useState<DemoPlace[]>([]);
+  const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   useEffect(() => {
     if (queue.length === 0) onComplete(liked);
@@ -407,7 +410,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
               city={city}
               onLike={handleLike}
               onSkip={handleSkip}
-              onTap={() => {}}
+              onTap={() => { setDetailPlace(place); setDetailOpen(true); }}
               isTop={offset === 0}
               offset={offset}
               skipGoogleFetch={true}
@@ -415,6 +418,15 @@ function DemoSwiper({ places, city, category, onComplete }: {
           );
         })}
       </div>
+      <PlaceSwiperDetail
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        place={detailPlace}
+        city={city}
+        onLike={() => { handleLike(); setDetailOpen(false); }}
+        onSkip={() => { handleSkip(); setDetailOpen(false); }}
+        skipGoogleFetch={true}
+      />
     </div>
   );
 }
