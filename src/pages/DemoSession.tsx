@@ -1,9 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, ChevronRight, Lock, Sparkles } from "lucide-react";
+import { ArrowLeft, MapPin, ChevronRight, Lock, Sparkles, Users, User, Copy, Check, Loader2 } from "lucide-react";
 import { SwipeCard } from "@/components/plan-wizard/PlaceSwiper";
 import type { MockPlace, PlaceCategory } from "@/components/plan-wizard/PlaceSwiper";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+function generateJoinCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -343,7 +352,7 @@ const DEMO_CATEGORIES = [
   { id: "experience", label: "Rozrywka",    emoji: "🎪"  },
 ];
 
-type Step = "city" | "category" | "swipe" | "results";
+type Step = "city" | "mode" | "category" | "swipe" | "results" | "invite";
 
 // ─── Convert DemoPlace → MockPlace ────────────────────────────────────────────
 
@@ -439,12 +448,57 @@ export default function DemoSession() {
   const [city, setCity] = useState("");
   const [category, setCategory] = useState<CategoryKey | null>(null);
   const [likedPlaces, setLikedPlaces] = useState<DemoPlace[]>([]);
+  const [groupLoading, setGroupLoading] = useState(false);
+  const [groupJoinCode, setGroupJoinCode] = useState("");
+  const [codeCopied, setCodeCopied] = useState(false);
 
   const places: DemoPlace[] = city && category ? (MOCK_DATA[city]?.[category] ?? []) : [];
 
-  const handleCitySelect = (c: string) => { setCity(c); setStep("category"); };
+  const handleCitySelect = (c: string) => { setCity(c); setStep("mode"); };
   const handleCategorySelect = (cat: CategoryKey) => { setCategory(cat); setStep("swipe"); };
   const handleSwipeComplete = (liked: DemoPlace[]) => { setLikedPlaces(liked); setStep("results"); };
+
+  const handleCreateGroupSession = async () => {
+    setGroupLoading(true);
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+      if (authError || !authData.user) throw authError ?? new Error("auth failed");
+
+      const code = generateJoinCode();
+      const { data: session, error: sessionError } = await (supabase as any)
+        .from("group_sessions")
+        .insert({
+          city,
+          created_by: authData.user.id,
+          join_code: code,
+          is_demo: true,
+          expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+        })
+        .select()
+        .single();
+      if (sessionError) throw sessionError;
+
+      await supabase.rpc("join_group_session" as any, { p_session_id: session.id });
+
+      setGroupJoinCode(code);
+      setStep("invite");
+    } catch (e: any) {
+      toast.error("Nie udało się utworzyć sesji — spróbuj ponownie");
+    } finally {
+      setGroupLoading(false);
+    }
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(groupJoinCode);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(`${window.location.origin}/join/${groupJoinCode}`);
+    toast.success("Link skopiowany!");
+  };
 
   const catLabel = DEMO_CATEGORIES.find(c => c.id === category);
 
@@ -453,14 +507,26 @@ export default function DemoSession() {
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
         <button
-          onClick={() => { if (step === "city") navigate("/"); else if (step === "category") setStep("city"); else if (step === "swipe") setStep("category"); else if (step === "results") setStep("swipe"); }}
+          onClick={() => {
+            if (step === "city") navigate("/");
+            else if (step === "mode") setStep("city");
+            else if (step === "category") setStep("mode");
+            else if (step === "invite") setStep("mode");
+            else if (step === "swipe") setStep("category");
+            else if (step === "results") setStep("swipe");
+          }}
           className="h-9 w-9 flex items-center justify-center -ml-1"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="flex-1">
           <p className="font-bold text-sm leading-tight">
-            {step === "city" ? "Wypróbuj Trasę" : step === "category" ? city : step === "swipe" ? `${catLabel?.emoji} ${catLabel?.label}` : "Twoje propozycje"}
+            {step === "city" ? "Wypróbuj Trasę"
+              : step === "mode" ? city
+              : step === "category" ? city
+              : step === "invite" ? "Zaproś znajomego"
+              : step === "swipe" ? `${catLabel?.emoji} ${catLabel?.label}`
+              : "Twoje propozycje"}
           </p>
           {(step === "swipe" || step === "results") && <p className="text-xs text-muted-foreground">{city}</p>}
         </div>
@@ -497,6 +563,88 @@ export default function DemoSession() {
               Zaloguj się →
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ── STEP: mode ── */}
+      {step === "mode" && (
+        <div className="flex-1 flex flex-col px-5 pt-6 pb-8 gap-4 overflow-y-auto">
+          <div>
+            <p className="text-2xl font-black mb-1.5">Jak chcesz odkrywać?</p>
+            <p className="text-sm text-muted-foreground">Możesz swipe'ować solo albo zaprosić znajomego i zobaczyć co Was łączy.</p>
+          </div>
+          <button
+            onClick={() => setStep("category")}
+            className="w-full flex items-center gap-4 px-5 py-5 rounded-2xl border border-border/50 bg-card active:scale-[0.98] transition-transform text-left"
+          >
+            <div className="h-11 w-11 rounded-2xl bg-muted flex items-center justify-center shrink-0">
+              <User className="h-5 w-5 text-foreground" />
+            </div>
+            <div>
+              <p className="font-bold">Solo</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Swipe'uj sam/a i zbierz swoje ulubione miejsca</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/50 ml-auto" />
+          </button>
+          <button
+            onClick={handleCreateGroupSession}
+            disabled={groupLoading}
+            className="w-full flex items-center gap-4 px-5 py-5 rounded-2xl border-2 border-orange-600/30 bg-orange-600/5 active:scale-[0.98] transition-transform text-left disabled:opacity-60"
+          >
+            <div className="h-11 w-11 rounded-2xl bg-orange-600/10 flex items-center justify-center shrink-0">
+              {groupLoading ? <Loader2 className="h-5 w-5 text-orange-600 animate-spin" /> : <Users className="h-5 w-5 text-orange-600" />}
+            </div>
+            <div>
+              <p className="font-bold text-orange-700">Z przyjacielem</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Swipe'ujcie osobno, odkryjcie co Was łączy</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/50 ml-auto" />
+          </button>
+        </div>
+      )}
+
+      {/* ── STEP: invite ── */}
+      {step === "invite" && (
+        <div className="flex-1 flex flex-col px-5 pt-6 pb-8 gap-5 overflow-y-auto">
+          <div>
+            <p className="text-2xl font-black mb-1.5">Zaproś znajomego</p>
+            <p className="text-sm text-muted-foreground">Wyślij kod lub link — gdy dołączy, zaczniecie swipe'ować i zobaczycie co Was łączy.</p>
+          </div>
+
+          {/* Code */}
+          <div className="rounded-2xl bg-muted/60 px-5 py-5 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Kod sesji</p>
+              <p className="text-3xl font-black tracking-widest text-foreground">{groupJoinCode}</p>
+            </div>
+            <button
+              onClick={handleCopyCode}
+              className="h-10 w-10 rounded-xl bg-card border border-border/60 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+            >
+              {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+            </button>
+          </div>
+
+          {/* Share link */}
+          <button
+            onClick={handleCopyLink}
+            className="w-full py-3.5 rounded-2xl border border-border/60 bg-card text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+          >
+            <Copy className="h-4 w-4" />
+            Skopiuj link zaproszenia
+          </button>
+
+          <div className="rounded-2xl bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
+            Znajomy wchodzi na <span className="font-semibold text-foreground">trasa.travel/join/{groupJoinCode}</span> i dołącza bez zakładania konta.
+          </div>
+
+          <button
+            onClick={() => navigate(`/sesja/${groupJoinCode}`)}
+            className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/20 mt-auto"
+          >
+            <Users className="h-5 w-5" />
+            Przejdź do sesji →
+          </button>
         </div>
       )}
 
