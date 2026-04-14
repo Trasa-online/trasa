@@ -2,7 +2,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ArrowRight, CalendarDays, ArrowLeft, CheckCircle } from "lucide-react";
+import { Users, ArrowRight, CalendarDays, ArrowLeft, CheckCircle, Sparkles } from "lucide-react";
 import { parseISO, isValid, format, formatDistanceToNow, startOfToday } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useState } from "react";
@@ -232,9 +232,10 @@ const Home = () => {
         </button>
         <button
           onClick={() => navigate("/demo")}
-          className="w-full py-3 rounded-2xl border border-border/50 bg-card text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform"
+          className="w-full py-3.5 rounded-2xl border-2 border-orange-600/30 bg-orange-600/5 text-sm font-bold text-orange-700 active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
         >
-          Wypróbuj bez konta →
+          <Sparkles className="h-4 w-4" />
+          Sprawdź jak to działa — demo bez konta
         </button>
       </div>
 
