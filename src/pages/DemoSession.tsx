@@ -852,7 +852,7 @@ export default function DemoSession() {
             </button>
             <button
               onClick={handleStartSolo}
-              className="w-full py-3.5 rounded-2xl bg-orange-100 text-orange-600 font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+              className="w-full py-3.5 rounded-2xl bg-white border-2 border-orange-600 text-orange-600 font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
             >
               <User className="h-5 w-5" />
               Zacznij solo
