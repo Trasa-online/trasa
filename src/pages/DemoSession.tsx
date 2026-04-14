@@ -1,7 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, ChevronRight, Lock, Sparkles, Heart, X, Star } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowLeft, MapPin, ChevronRight, Lock, Sparkles } from "lucide-react";
+import { SwipeCard } from "@/components/plan-wizard/PlaceSwiper";
+import type { MockPlace, PlaceCategory } from "@/components/plan-wizard/PlaceSwiper";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -343,13 +344,81 @@ const DEMO_CATEGORIES = [
 
 type Step = "city" | "category" | "swipe" | "results";
 
-// ─── Mini swiper ──────────────────────────────────────────────────────────────
+// ─── Convert DemoPlace → MockPlace ────────────────────────────────────────────
 
-function DemoSwiper({ places, onComplete }: { places: DemoPlace[]; onComplete: (liked: DemoPlace[]) => void }) {
-  const [index, setIndex] = useState(0);
+function toMock(p: DemoPlace, city: string, category: string): MockPlace {
+  return {
+    id: p.id,
+    place_name: p.name,
+    category: category as PlaceCategory,
+    city,
+    address: p.address,
+    latitude: 0,
+    longitude: 0,
+    rating: p.rating,
+    photo_url: p.photo,
+    vibe_tags: p.tags,
+    description: p.description,
+  };
+}
+
+// ─── Real SwipeCard stack (same mechanism as the app) ─────────────────────────
+
+function DemoSwiper({ places, city, category, onComplete }: {
+  places: DemoPlace[];
+  city: string;
+  category: string;
+  onComplete: (liked: DemoPlace[]) => void;
+}) {
+  const [queue, setQueue] = useState<DemoPlace[]>(places);
   const [liked, setLiked] = useState<DemoPlace[]>([]);
-  const [animating, setAnimating] = useState<"left" | "right" | null>(null);
-  const touchStartX = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (queue.length === 0) onComplete(liked);
+  }, [queue.length]);
+
+  const mockQueue = queue.map(p => toMock(p, city, category));
+  const cardSlice = mockQueue.slice(0, 3);
+
+  if (queue.length === 0) return null;
+
+  const handleLike = () => {
+    setLiked(prev => [...prev, queue[0]]);
+    setQueue(prev => prev.slice(1));
+  };
+
+  const handleSkip = () => {
+    setQueue(prev => prev.slice(1));
+  };
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      <div className="flex items-center justify-between px-5 pt-1 pb-3 shrink-0">
+        <span className="text-xs text-muted-foreground">{city}</span>
+        <span className="text-xs text-muted-foreground">{liked.length > 0 ? `${liked.length} wybranych` : ""}</span>
+      </div>
+      <div className="relative mx-4 mb-4" style={{ flex: "1 1 0", minHeight: 0, maxHeight: "min(680px, 78dvh)" }}>
+        {cardSlice.slice().reverse().map((place, reversedIdx) => {
+          const offset = cardSlice.length - 1 - reversedIdx;
+          return (
+            <SwipeCard
+              key={place.id}
+              place={place}
+              city={city}
+              onLike={handleLike}
+              onSkip={handleSkip}
+              onTap={() => {}}
+              isTop={offset === 0}
+              offset={offset}
+              skipGoogleFetch={true}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 
   const current = places[index];
   const progress = index / places.length;
@@ -540,7 +609,7 @@ export default function DemoSession() {
 
       {/* ── STEP: swipe ── */}
       {step === "swipe" && places.length > 0 && (
-        <DemoSwiper places={places} onComplete={handleSwipeComplete} />
+        <DemoSwiper places={places} city={city} category={category!} onComplete={handleSwipeComplete} />
       )}
 
       {/* ── STEP: results ── */}

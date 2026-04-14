@@ -164,10 +164,11 @@ interface SwipeCardProps {
   onPhotoFetched?: (placeId: string, photoUrl: string) => void;
   isTop: boolean;
   offset: number; // 0 = top, 1 = second, 2 = third
+  skipGoogleFetch?: boolean;
 }
 
 
-const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhotoFetched, isTop, offset }: SwipeCardProps) => {
+export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhotoFetched, isTop, offset, skipGoogleFetch = false }: SwipeCardProps) => {
   const [imgFailed, setImgFailed] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<string[]>(
     [place.photo_url, ...(place.galleryPhotos ?? [])]
@@ -187,7 +188,7 @@ const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhot
 
   // Prefetch Google Places data + cache 1 photo when card is top or next-in-line
   useEffect(() => {
-    if (offset > 1) return;
+    if (offset > 1 || skipGoogleFetch) return;
     supabase.functions
       .invoke("google-places-proxy", {
         body: {
