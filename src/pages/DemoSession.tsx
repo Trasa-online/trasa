@@ -824,7 +824,7 @@ export default function DemoSession() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border/50 bg-card px-4 py-3.5 space-y-2.5">
+            <div className="rounded-2xl border border-border/50 bg-card px-4 py-3.5 space-y-2.5 mb-4">
               <p className="text-sm font-semibold">Masz kod zaproszenia?</p>
               <div className="flex gap-2">
                 <input
@@ -846,21 +846,21 @@ export default function DemoSession() {
             </div>
           </div>
 
-          {/* Spacer so content isn't hidden behind fixed buttons */}
-          <div className="h-32" />
+          {/* Spacer so content clears fixed buttons (buttons ~160px + 16px gap) */}
+          <div className="h-44" />
 
           {/* Fixed bottom CTAs */}
-          <div className="fixed bottom-0 left-0 right-0 px-5 pb-safe-6 pt-3 space-y-2 bg-background/95 backdrop-blur-sm max-w-lg mx-auto" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
+          <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 space-y-2 bg-background/95 backdrop-blur-sm max-w-lg mx-auto" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
             <button
               onClick={handleStartGroup}
-              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
+              className="w-full py-3 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
             >
               <Users className="h-5 w-5" />
               Zacznij z grupą
             </button>
             <button
               onClick={handleStartSolo}
-              className="w-full py-4 rounded-2xl bg-foreground text-background font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+              className="w-full py-3 rounded-2xl bg-foreground text-background font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
             >
               <User className="h-5 w-5" />
               Zacznij solo
