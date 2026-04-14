@@ -373,68 +373,6 @@ function toMock(p: DemoPlace, city: string, category: string): MockPlace {
   };
 }
 
-// ─── Mock route screen ────────────────────────────────────────────────────────
-
-const SUGGESTED_TIMES = ["09:00", "10:30", "12:00", "13:30", "15:00", "16:30", "18:00", "19:30"];
-
-function MockRouteScreen({ city, places, onBack, onSignup }: {
-  city: string;
-  places: DemoPlace[];
-  onBack: () => void;
-  onSignup: () => void;
-}) {
-  return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4 space-y-3">
-        {/* Disclaimer */}
-        <div className="rounded-2xl bg-orange-600/8 border border-orange-600/20 px-4 py-3 flex items-start gap-2.5">
-          <Sparkles className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
-          <p className="text-xs text-orange-700 leading-relaxed">
-            Ta trasa jest trasą przykładową — nie ma tu rzeczywistych miejsc. W pełnej wersji AI układa plan z Twoich wyborów.
-          </p>
-        </div>
-
-        {/* Route stops */}
-        {places.map((place, i) => (
-          <div key={place.id} className="rounded-2xl border border-border/40 bg-card overflow-hidden">
-            <div className="relative h-40">
-              <img src={place.photo} alt={place.name} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              <span className="absolute top-3 left-3 h-7 w-7 rounded-full bg-orange-600 flex items-center justify-center text-xs font-bold text-white shadow-lg">
-                {i + 1}
-              </span>
-              <div className="absolute bottom-3 left-4 right-4">
-                <p className="text-white font-black text-base leading-tight">{place.name}</p>
-                <p className="text-white/60 text-xs mt-0.5">{SUGGESTED_TIMES[i] ?? "10:00"} · ok. 60 min</p>
-              </div>
-            </div>
-            <div className="px-4 py-3">
-              <p className="text-sm text-foreground/75 leading-relaxed">{place.description}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Bottom CTA */}
-      <div className="px-4 pb-6 pt-3 border-t border-border/20 shrink-0 flex gap-2.5">
-        <button
-          onClick={onBack}
-          className="py-3 px-4 rounded-2xl border border-border/60 text-sm font-semibold text-muted-foreground flex items-center gap-1.5 active:scale-[0.97] transition-transform"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Wróć
-        </button>
-        <button
-          onClick={onSignup}
-          className="flex-1 py-3.5 rounded-2xl bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
-        >
-          Załóż konto, żeby zapisać →
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ─── Real SwipeCard stack (GroupSession-style UI) ─────────────────────────────
 
 function DemoSwiper({ places, city, category, onComplete }: {
@@ -449,7 +387,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"explore" | "matches">("explore");
-  const [showRoute, setShowRoute] = useState(false);
+  const [showUpsell, setShowUpsell] = useState(false);
 
   // Auto-switch to matches when all cards are swiped
   useEffect(() => {
@@ -469,17 +407,6 @@ function DemoSwiper({ places, city, category, onComplete }: {
   const handleSkip = () => {
     setQueue(prev => prev.slice(1));
   };
-
-  if (showRoute) {
-    return (
-      <MockRouteScreen
-        city={city}
-        places={liked.length > 0 ? liked : places.slice(0, 4)}
-        onBack={() => setShowRoute(false)}
-        onSignup={() => navigate("/auth")}
-      />
-    );
-  }
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -588,7 +515,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
                 </div>
               ))}
               <button
-                onClick={() => setShowRoute(true)}
+                onClick={() => setShowUpsell(true)}
                 className="w-full py-4 rounded-2xl bg-foreground text-background font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform mt-1"
               >
                 Stwórz trasę →
@@ -607,6 +534,41 @@ function DemoSwiper({ places, city, category, onComplete }: {
         onSkip={() => { handleSkip(); setDetailOpen(false); }}
         skipGoogleFetch={true}
       />
+
+      {/* Upsell modal */}
+      {showUpsell && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-card rounded-t-3xl px-6 pt-8 pb-10 flex flex-col items-center gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+            <div className="h-14 w-14 rounded-2xl bg-orange-600/10 flex items-center justify-center">
+              <Sparkles className="h-7 w-7 text-orange-600" />
+            </div>
+            <div className="text-center space-y-1.5">
+              <p className="text-2xl font-black">Dołącz do Trasy!</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Załóż konto i stwórz prawdziwą trasę z Twoich ulubionych miejsc. Zajmuje 30 sekund.
+              </p>
+            </div>
+            <ul className="w-full space-y-2 text-sm text-muted-foreground">
+              <li className="flex items-center gap-2"><span className="text-orange-600 font-bold">✓</span> Zapisz trasę i nawiguj po niej</li>
+              <li className="flex items-center gap-2"><span className="text-orange-600 font-bold">✓</span> Paruj miejsca razem z grupą znajomych</li>
+              <li className="flex items-center gap-2"><span className="text-orange-600 font-bold">✓</span> Nieograniczone kategorie i rundy</li>
+              <li className="flex items-center gap-2"><span className="text-orange-600 font-bold">✓</span> Historia wszystkich wspólnych planów</li>
+            </ul>
+            <button
+              onClick={() => navigate("/auth")}
+              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
+            >
+              Załóż konto — to nic nie kosztuje →
+            </button>
+            <button
+              onClick={() => setShowUpsell(false)}
+              className="text-sm text-muted-foreground"
+            >
+              Wróć do demo
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -766,7 +728,7 @@ export default function DemoSession() {
               {groupLoading ? <Loader2 className="h-5 w-5 text-orange-600 animate-spin" /> : <Users className="h-5 w-5 text-orange-600" />}
             </div>
             <div>
-              <p className="font-bold text-orange-700">Z przyjacielem</p>
+              <p className="font-bold text-orange-700">Z grupą</p>
               <p className="text-xs text-muted-foreground mt-0.5">Swipe'ujcie osobno, odkryjcie co Was łączy</p>
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground/50 ml-auto" />
