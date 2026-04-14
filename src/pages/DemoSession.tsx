@@ -724,8 +724,8 @@ export default function DemoSession() {
 
   return (
     <div className="flex flex-col h-screen bg-background max-w-lg mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
+      {/* Header — hidden on landing */}
+      <div className={cn("flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0", step === "city" && "hidden")}>
         <button
           onClick={() => {
             if (step === "city") navigate("/");
