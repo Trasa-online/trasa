@@ -847,7 +847,7 @@ export default function DemoSession() {
           </div>
 
           {/* Sticky bottom CTAs */}
-          <div className="shrink-0 px-5 pb-8 pt-3 space-y-2.5">
+          <div className="shrink-0 px-5 pb-6 pt-2 space-y-2">
             <button
               onClick={handleStartGroup}
               className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
