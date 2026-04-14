@@ -785,9 +785,9 @@ export default function DemoSession() {
           {/* Content */}
           <div className="flex-1 overflow-y-auto px-5 pt-4 pb-4 space-y-5">
             <div>
-              <h1 className="text-3xl font-black leading-tight">Tinder<br/>dla miejsc.</h1>
+              <h1 className="text-3xl font-black leading-tight">Speed dating<br/>z miastem.</h1>
               <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                Swipe'uj kawiarnie, restauracje i atrakcje — solo lub z ekipą — i razem planujcie dzień w mieście.
+                Przeglądaj kawiarnie, restauracje i atrakcje — solo lub z ekipą — i razem planujcie dzień w mieście.
               </p>
             </div>
 
