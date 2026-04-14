@@ -594,29 +594,47 @@ export default function DemoSession() {
   const handleCreateGroupSession = async () => {
     setGroupLoading(true);
     try {
+      // Sign in anonymously
       const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
-      if (authError || !authData.user) throw authError ?? new Error("auth failed");
+      if (authError) {
+        console.error("[demo] anonymous auth error:", authError);
+        // Anonymous auth likely disabled in Supabase — fall back to auth page
+        toast("Sesje grupowe wymagają konta. Rejestracja jest bezpłatna!");
+        navigate("/auth?tab=register");
+        return;
+      }
+      if (!authData.user) throw new Error("no user after signInAnonymously");
 
       const code = generateJoinCode();
-      const { data: session, error: sessionError } = await (supabase as any)
-        .from("group_sessions")
-        .insert({
-          city,
-          created_by: authData.user.id,
-          join_code: code,
-          is_demo: true,
-          expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-        })
-        .select()
-        .single();
-      if (sessionError) throw sessionError;
+      const basePayload = {
+        city,
+        created_by: authData.user.id,
+        join_code: code,
+        expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+      };
+
+      // Try insert with is_demo; fall back without it if column doesn't exist yet
+      let session: any = null;
+      const { data: d1, error: e1 } = await (supabase as any)
+        .from("group_sessions").insert({ ...basePayload, is_demo: true }).select().single();
+
+      if (e1) {
+        console.warn("[demo] insert with is_demo failed:", e1.message);
+        const { data: d2, error: e2 } = await (supabase as any)
+          .from("group_sessions").insert(basePayload).select().single();
+        if (e2) throw e2;
+        session = d2;
+      } else {
+        session = d1;
+      }
 
       await supabase.rpc("join_group_session" as any, { p_session_id: session.id });
 
       setGroupJoinCode(code);
       setStep("invite");
     } catch (e: any) {
-      toast.error("Nie udało się utworzyć sesji — spróbuj ponownie");
+      console.error("[demo] group session creation failed:", e);
+      toast.error(e?.message ?? "Nie udało się utworzyć sesji — spróbuj ponownie");
     } finally {
       setGroupLoading(false);
     }
