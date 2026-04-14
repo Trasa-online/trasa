@@ -806,111 +806,120 @@ export default function DemoSession() {
 
       {/* ── STEP: mode ── */}
       {step === "mode" && (
-        <div className="flex-1 flex flex-col px-5 pt-6 pb-8 gap-4 overflow-y-auto">
-          <div>
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto px-5 pt-6 pb-4">
             <p className="text-2xl font-black mb-1.5">Jak chcesz odkrywać?</p>
             <p className="text-sm text-muted-foreground">Możesz swipe'ować solo albo zaprosić znajomego i zobaczyć co Was łączy.</p>
           </div>
-          <button
-            onClick={() => { setMode("solo"); setStep("category"); }}
-            className="w-full flex items-center gap-4 px-5 py-5 rounded-2xl border border-border/50 bg-card active:scale-[0.98] transition-transform text-left"
-          >
-            <div className="h-11 w-11 rounded-2xl bg-muted flex items-center justify-center shrink-0">
-              <User className="h-5 w-5 text-foreground" />
-            </div>
-            <div>
-              <p className="font-bold">Solo</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Swipe'uj sam/a i zbierz swoje ulubione miejsca</p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/50 ml-auto" />
-          </button>
-          <button
-            onClick={() => { setMode("group"); setStep("category"); }}
-            className="w-full flex items-center gap-4 px-5 py-5 rounded-2xl border-2 border-orange-600/30 bg-orange-600/5 active:scale-[0.98] transition-transform text-left"
-          >
-            <div className="h-11 w-11 rounded-2xl bg-orange-600/10 flex items-center justify-center shrink-0">
-              <Users className="h-5 w-5 text-orange-600" />
-            </div>
-            <div>
-              <p className="font-bold text-orange-700">Z grupą</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Swipe'ujcie osobno, odkryjcie co Was łączy</p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/50 ml-auto" />
-          </button>
+          <div className="shrink-0 px-5 pb-8 pt-2 space-y-3">
+            <button
+              onClick={() => { setMode("solo"); setStep("category"); }}
+              className="w-full flex items-center gap-4 px-5 py-5 rounded-2xl border border-border/50 bg-card active:scale-[0.98] transition-transform text-left"
+            >
+              <div className="h-11 w-11 rounded-2xl bg-muted flex items-center justify-center shrink-0">
+                <User className="h-5 w-5 text-foreground" />
+              </div>
+              <div>
+                <p className="font-bold">Solo</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Swipe'uj sam/a i zbierz swoje ulubione miejsca</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground/50 ml-auto" />
+            </button>
+            <button
+              onClick={() => { setMode("group"); setStep("category"); }}
+              className="w-full flex items-center gap-4 px-5 py-5 rounded-2xl border-2 border-orange-600/30 bg-orange-600/5 active:scale-[0.98] transition-transform text-left"
+            >
+              <div className="h-11 w-11 rounded-2xl bg-orange-600/10 flex items-center justify-center shrink-0">
+                <Users className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="font-bold text-orange-700">Z grupą</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Swipe'ujcie osobno, odkryjcie co Was łączy</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground/50 ml-auto" />
+            </button>
+          </div>
         </div>
       )}
 
       {/* ── STEP: category ── */}
       {step === "category" && (
-        <div className="flex-1 flex flex-col px-4 pt-6 pb-6 gap-5 overflow-y-auto">
-          <div>
-            <p className="text-xl font-black mb-1">Wybierz kategorię</p>
-            <p className="text-sm text-muted-foreground">
-              {mode === "group" ? "Wybierz kategorię i zaproś znajomego — oboje będziecie swipe'ować te same miejsca." : "W demo możesz wybrać 1 kategorię i przejrzeć 8 miejsc."}
-            </p>
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto px-4 pt-6 pb-4 space-y-5">
+            <div>
+              <p className="text-xl font-black mb-1">Wybierz kategorię</p>
+              <p className="text-sm text-muted-foreground">
+                {mode === "group" ? "Wybierz kategorię i zaproś znajomego — oboje będziecie swipe'ować te same miejsca." : "W demo możesz wybrać 1 kategorię i przejrzeć 8 miejsc."}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {DEMO_CATEGORIES.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => handleCategorySelect(cat.id as CategoryKey)}
+                  disabled={groupLoading}
+                  className="px-4 py-3 rounded-2xl text-sm font-semibold border border-border/60 bg-card flex items-center gap-2 active:scale-[0.97] transition-transform hover:border-orange-600/40 disabled:opacity-60"
+                >
+                  {groupLoading && category === cat.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>{cat.emoji}</span>}
+                  <span>{cat.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {DEMO_CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => handleCategorySelect(cat.id as CategoryKey)}
-                disabled={groupLoading}
-                className="px-4 py-3 rounded-2xl text-sm font-semibold border border-border/60 bg-card flex items-center gap-2 active:scale-[0.97] transition-transform hover:border-orange-600/40 disabled:opacity-60"
-              >
-                {groupLoading && category === cat.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>{cat.emoji}</span>}
-                <span>{cat.label}</span>
-              </button>
-            ))}
-          </div>
-          <div className="rounded-2xl bg-muted/50 px-4 py-3 flex items-center gap-3 mt-auto">
-            <Lock className="h-4 w-4 text-muted-foreground/60 shrink-0" />
-            <p className="text-xs text-muted-foreground">
-              Pełna wersja: nieograniczone kategorie, rundy z grupą znajomych i zapisywanie tras.
-            </p>
+          <div className="shrink-0 px-4 pb-8 pt-2">
+            <div className="rounded-2xl bg-muted/50 px-4 py-3 flex items-center gap-3">
+              <Lock className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+              <p className="text-xs text-muted-foreground">
+                Pełna wersja: nieograniczone kategorie, rundy z grupą znajomych i zapisywanie tras.
+              </p>
+            </div>
           </div>
         </div>
       )}
 
       {/* ── STEP: invite ── */}
       {step === "invite" && (
-        <div className="flex-1 flex flex-col px-5 pt-6 pb-8 gap-5 overflow-y-auto">
-          <div>
-            <p className="text-2xl font-black mb-1.5">Zaproś znajomego</p>
-            <p className="text-sm text-muted-foreground">Wyślij kod lub link — gdy dołączy, zaczniecie swipe'ować te same miejsca i zobaczycie co Was łączy.</p>
-          </div>
-
-          <div className="rounded-2xl bg-muted/60 px-5 py-5 flex items-center justify-between gap-3">
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto px-5 pt-6 pb-4 space-y-5">
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Kod sesji</p>
-              <p className="text-3xl font-black tracking-widest text-foreground">{sessionCode}</p>
+              <p className="text-2xl font-black mb-1.5">Zaproś znajomego</p>
+              <p className="text-sm text-muted-foreground">Wyślij kod lub link — gdy dołączy, zaczniecie swipe'ować te same miejsca i zobaczycie co Was łączy.</p>
             </div>
+
+            <div className="rounded-2xl bg-muted/60 px-5 py-5 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Kod sesji</p>
+                <p className="text-3xl font-black tracking-widest text-foreground">{sessionCode}</p>
+              </div>
+              <button
+                onClick={handleCopyCode}
+                className="h-10 w-10 rounded-xl bg-card border border-border/60 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+              >
+                {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+              </button>
+            </div>
+
             <button
-              onClick={handleCopyCode}
-              className="h-10 w-10 rounded-xl bg-card border border-border/60 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+              onClick={handleCopyLink}
+              className="w-full py-3.5 rounded-2xl border border-border/60 bg-card text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
             >
-              {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+              <Copy className="h-4 w-4" />
+              Skopiuj link zaproszenia
+            </button>
+
+            <div className="rounded-2xl bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
+              Znajomy otwiera link i od razu trafia do tej samej sesji — zero rejestracji.
+            </div>
+          </div>
+          <div className="shrink-0 px-5 pb-8 pt-3">
+            <button
+              onClick={() => setStep("swipe")}
+              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/20"
+            >
+              <Users className="h-5 w-5" />
+              Zaczynamy!
             </button>
           </div>
-
-          <button
-            onClick={handleCopyLink}
-            className="w-full py-3.5 rounded-2xl border border-border/60 bg-card text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-          >
-            <Copy className="h-4 w-4" />
-            Skopiuj link zaproszenia
-          </button>
-
-          <div className="rounded-2xl bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
-            Znajomy otwiera link i od razu trafia do tej samej sesji — zero rejestracji.
-          </div>
-
-          <button
-            onClick={() => setStep("swipe")}
-            className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/20 mt-auto"
-          >
-            <Users className="h-5 w-5" />
-            Zaczynam swipe'ować →
-          </button>
         </div>
       )}
 
@@ -921,8 +930,8 @@ export default function DemoSession() {
 
       {/* ── STEP: results ── */}
       {step === "results" && (
-        <div className="flex-1 flex flex-col overflow-y-auto">
-          <div className="px-4 pt-5 pb-8 space-y-4">
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto px-4 pt-5 pb-4 space-y-4">
 
             {/* Group: waiting for partner */}
             {mode === "group" && !otherDeviceDone && (
@@ -992,14 +1001,15 @@ export default function DemoSession() {
                 <li>✓ Zapisz trasę i nawiguj po niej</li>
                 <li>✓ Historia wszystkich wspólnych planów</li>
               </ul>
-              <button
-                onClick={() => navigate("/auth")}
-                className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.97] transition-transform"
-              >
-                Załóż konto — zajmuje 30 sekund →
-              </button>
             </div>
-
+          </div>
+          <div className="shrink-0 px-4 pb-8 pt-3 space-y-2">
+            <button
+              onClick={() => navigate("/auth")}
+              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/20"
+            >
+              Załóż konto — zajmuje 30 sekund →
+            </button>
             <button
               onClick={() => { setStep("category"); setCategory(null); setLikedPlaces([]); setGroupReactions({}); setOtherDeviceDone(false); }}
               className="w-full py-3 rounded-2xl border border-border/50 text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform"
