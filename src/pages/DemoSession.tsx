@@ -6,6 +6,7 @@ import type { MockPlace, PlaceCategory } from "@/components/plan-wizard/PlaceSwi
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 function generateJoinCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -372,7 +373,69 @@ function toMock(p: DemoPlace, city: string, category: string): MockPlace {
   };
 }
 
-// ─── Real SwipeCard stack (same mechanism as the app) ─────────────────────────
+// ─── Mock route screen ────────────────────────────────────────────────────────
+
+const SUGGESTED_TIMES = ["09:00", "10:30", "12:00", "13:30", "15:00", "16:30", "18:00", "19:30"];
+
+function MockRouteScreen({ city, places, onBack, onSignup }: {
+  city: string;
+  places: DemoPlace[];
+  onBack: () => void;
+  onSignup: () => void;
+}) {
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4 space-y-3">
+        {/* Disclaimer */}
+        <div className="rounded-2xl bg-orange-600/8 border border-orange-600/20 px-4 py-3 flex items-start gap-2.5">
+          <Sparkles className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
+          <p className="text-xs text-orange-700 leading-relaxed">
+            Ta trasa jest trasą przykładową — nie ma tu rzeczywistych miejsc. W pełnej wersji AI układa plan z Twoich wyborów.
+          </p>
+        </div>
+
+        {/* Route stops */}
+        {places.map((place, i) => (
+          <div key={place.id} className="rounded-2xl border border-border/40 bg-card overflow-hidden">
+            <div className="relative h-40">
+              <img src={place.photo} alt={place.name} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <span className="absolute top-3 left-3 h-7 w-7 rounded-full bg-orange-600 flex items-center justify-center text-xs font-bold text-white shadow-lg">
+                {i + 1}
+              </span>
+              <div className="absolute bottom-3 left-4 right-4">
+                <p className="text-white font-black text-base leading-tight">{place.name}</p>
+                <p className="text-white/60 text-xs mt-0.5">{SUGGESTED_TIMES[i] ?? "10:00"} · ok. 60 min</p>
+              </div>
+            </div>
+            <div className="px-4 py-3">
+              <p className="text-sm text-foreground/75 leading-relaxed">{place.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Bottom CTA */}
+      <div className="px-4 pb-6 pt-3 border-t border-border/20 shrink-0 flex gap-2.5">
+        <button
+          onClick={onBack}
+          className="py-3 px-4 rounded-2xl border border-border/60 text-sm font-semibold text-muted-foreground flex items-center gap-1.5 active:scale-[0.97] transition-transform"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Wróć
+        </button>
+        <button
+          onClick={onSignup}
+          className="flex-1 py-3.5 rounded-2xl bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
+        >
+          Załóż konto, żeby zapisać →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Real SwipeCard stack (GroupSession-style UI) ─────────────────────────────
 
 function DemoSwiper({ places, city, category, onComplete }: {
   places: DemoPlace[];
@@ -380,19 +443,23 @@ function DemoSwiper({ places, city, category, onComplete }: {
   category: string;
   onComplete: (liked: DemoPlace[]) => void;
 }) {
+  const navigate = useNavigate();
   const [queue, setQueue] = useState<DemoPlace[]>(places);
   const [liked, setLiked] = useState<DemoPlace[]>([]);
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"explore" | "matches">("explore");
+  const [showRoute, setShowRoute] = useState(false);
 
+  // Auto-switch to matches when all cards are swiped
   useEffect(() => {
-    if (queue.length === 0) onComplete(liked);
+    if (queue.length === 0 && activeTab === "explore") setActiveTab("matches");
   }, [queue.length]);
 
+  const catInfo = DEMO_CATEGORIES.find(c => c.id === category);
   const mockQueue = queue.map(p => toMock(p, city, category));
   const cardSlice = mockQueue.slice(0, 3);
-
-  if (queue.length === 0) return null;
+  const swiped = places.length - queue.length;
 
   const handleLike = () => {
     setLiked(prev => [...prev, queue[0]]);
@@ -403,30 +470,134 @@ function DemoSwiper({ places, city, category, onComplete }: {
     setQueue(prev => prev.slice(1));
   };
 
+  if (showRoute) {
+    return (
+      <MockRouteScreen
+        city={city}
+        places={liked.length > 0 ? liked : places.slice(0, 4)}
+        onBack={() => setShowRoute(false)}
+        onSignup={() => navigate("/auth")}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex items-center justify-between px-5 pt-1 pb-3 shrink-0">
-        <span className="text-xs text-muted-foreground">{city}</span>
-        <span className="text-xs text-muted-foreground">{liked.length > 0 ? `${liked.length} wybranych` : ""}</span>
+      {/* GroupSession-style sub-header */}
+      <div className="px-4 pt-2 pb-1.5 shrink-0">
+        <p className="text-sm font-bold flex items-center gap-1.5">
+          {city}
+          <span>{catInfo?.emoji}</span>
+          <span className="text-orange-600">{catInfo?.label}</span>
+        </p>
+        <p className="text-xs text-muted-foreground">Demo · runda 1</p>
       </div>
-      <div className="relative mx-4 mb-4" style={{ flex: "1 1 0", minHeight: 0, maxHeight: "min(680px, 78dvh)" }}>
-        {cardSlice.slice().reverse().map((place, reversedIdx) => {
-          const offset = cardSlice.length - 1 - reversedIdx;
-          return (
-            <SwipeCard
-              key={place.id}
-              place={place}
-              city={city}
-              onLike={handleLike}
-              onSkip={handleSkip}
-              onTap={() => { setDetailPlace(place); setDetailOpen(true); }}
-              isTop={offset === 0}
-              offset={offset}
-              skipGoogleFetch={true}
-            />
-          );
-        })}
+
+      {/* Tabs */}
+      <div className="flex border-b border-border/30 px-4 shrink-0">
+        {(["explore", "matches"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              "pb-2.5 mr-6 text-sm font-semibold border-b-2 -mb-px transition-colors flex items-center gap-1.5",
+              activeTab === tab
+                ? "border-orange-600 text-orange-600"
+                : "border-transparent text-muted-foreground"
+            )}
+          >
+            {tab === "explore" ? "Eksploruj" : "Dopasowania"}
+            {tab === "matches" && liked.length > 0 && (
+              <span className={cn(
+                "text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none",
+                activeTab === "matches" ? "bg-orange-600 text-white" : "bg-muted text-muted-foreground"
+              )}>
+                {liked.length}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
+
+      {/* ── TAB: Eksploruj ── */}
+      {activeTab === "explore" && (
+        <>
+          <div className="px-5 py-2 text-xs text-muted-foreground shrink-0">
+            Miejsce {swiped}/{places.length}
+          </div>
+
+          {queue.length > 0 ? (
+            <div className="relative mx-4 mb-4" style={{ flex: "1 1 0", minHeight: 0, maxHeight: "min(680px, 78dvh)" }}>
+              {cardSlice.slice().reverse().map((place, reversedIdx) => {
+                const offset = cardSlice.length - 1 - reversedIdx;
+                return (
+                  <SwipeCard
+                    key={place.id}
+                    place={place}
+                    city={city}
+                    onLike={handleLike}
+                    onSkip={handleSkip}
+                    onTap={() => { setDetailPlace(place); setDetailOpen(true); }}
+                    isTop={offset === 0}
+                    offset={offset}
+                    skipGoogleFetch={true}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center px-6 gap-4 text-center">
+              <p className="text-5xl">✅</p>
+              <p className="font-bold text-lg">Przejrzałeś wszystkie miejsca!</p>
+              <p className="text-sm text-muted-foreground">Sprawdź swoje dopasowania w drugiej zakładce.</p>
+              <button
+                onClick={() => setActiveTab("matches")}
+                className="py-3 px-6 rounded-2xl bg-orange-600 text-white font-semibold text-sm active:scale-[0.97] transition-transform"
+              >
+                Zobacz dopasowania →
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── TAB: Dopasowania ── */}
+      {activeTab === "matches" && (
+        <div className="flex-1 flex flex-col overflow-y-auto px-4 pt-4 pb-6 gap-3">
+          {liked.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center py-12">
+              <p className="text-4xl">❤️</p>
+              <p className="font-semibold">Brak polubionych miejsc</p>
+              <p className="text-sm text-muted-foreground">Swipe'uj miejsca i wróć tutaj</p>
+              <button onClick={() => setActiveTab("explore")} className="text-sm font-semibold text-orange-600">
+                Wróć do eksplorowania →
+              </button>
+            </div>
+          ) : (
+            <>
+              {liked.map((place, i) => (
+                <div key={place.id} className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/40">
+                  <span className="h-7 w-7 rounded-full bg-orange-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                    {i + 1}
+                  </span>
+                  <img src={place.photo} alt={place.name} className="h-12 w-12 rounded-xl object-cover shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{place.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{place.address}</p>
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => setShowRoute(true)}
+                className="w-full py-4 rounded-2xl bg-foreground text-background font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform mt-1"
+              >
+                Stwórz trasę →
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       <PlaceSwiperDetail
         open={detailOpen}
         onOpenChange={setDetailOpen}
