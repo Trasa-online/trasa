@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Loader2, ArrowRight, Map } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -81,6 +81,17 @@ const Avatar = ({ color, initials }: { color: string; initials: string }) => (
     {initials}
   </div>
 );
+
+const MapCell = ({ url }: { url: string | null }) => {
+  const [failed, setFailed] = useState(false);
+  if (!url || failed)
+    return (
+      <div className="w-full h-full bg-muted flex items-center justify-center">
+        <Map className="h-8 w-8 text-muted-foreground/30" />
+      </div>
+    );
+  return <img src={url} alt="Mapa trasy" className="w-full h-full object-cover" onError={() => setFailed(true)} />;
+};
 
 const Photo = ({ src, index }: { src: string; index: number }) => {
   const gradients = [
@@ -251,10 +262,7 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
               {/* Photo grid */}
               <div className="flex h-44 gap-0.5 px-3">
                 <div className="w-[46%] rounded-l-xl overflow-hidden">
-                  {mapUrl
-                    ? <img src={mapUrl} alt="Mapa trasy" className="w-full h-full object-cover" />
-                    : <div className="w-full h-full bg-muted" />
-                  }
+                  <MapCell url={mapUrl} />
                 </div>
                 <div className="flex-1 flex flex-col gap-0.5">
                   <div className="flex-1 rounded-tr-xl overflow-hidden">
