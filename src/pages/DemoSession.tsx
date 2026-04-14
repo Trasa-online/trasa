@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, MapPin, ChevronRight, Lock, Sparkles, Users, User, Copy, Check, Loader2 } from "lucide-react";
 import { SwipeCard } from "@/components/plan-wizard/PlaceSwiper";
 import type { MockPlace, PlaceCategory } from "@/components/plan-wizard/PlaceSwiper";
@@ -13,6 +13,15 @@ function generateJoinCode(): string {
   let code = "";
   for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
   return code;
+}
+
+function getDeviceId(): string {
+  let id = localStorage.getItem("trasa_device_id");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("trasa_device_id", id);
+  }
+  return id;
 }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
@@ -577,81 +586,113 @@ function DemoSwiper({ places, city, category, onComplete }: {
 
 export default function DemoSession() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState<Step>("city");
   const [city, setCity] = useState("");
+  const [mode, setMode] = useState<"solo" | "group">("solo");
   const [category, setCategory] = useState<CategoryKey | null>(null);
   const [likedPlaces, setLikedPlaces] = useState<DemoPlace[]>([]);
   const [groupLoading, setGroupLoading] = useState(false);
-  const [groupJoinCode, setGroupJoinCode] = useState("");
+  const [sessionCode, setSessionCode] = useState("");
   const [codeCopied, setCodeCopied] = useState(false);
+  const [groupReactions, setGroupReactions] = useState<Record<string, { device_id: string; liked: boolean }[]>>({});
+  const [otherDeviceDone, setOtherDeviceDone] = useState(false);
+
+  // Handle ?join=CODE — second user joins existing session
+  useEffect(() => {
+    const joinCode = searchParams.get("join");
+    if (!joinCode) return;
+    (supabase as any).from("demo_sessions").select("*").eq("code", joinCode).single()
+      .then(({ data }: any) => {
+        if (data) {
+          setCity(data.city);
+          setCategory(data.category as CategoryKey);
+          setSessionCode(joinCode);
+          setMode("group");
+          setStep("swipe");
+        } else {
+          toast.error("Nie znaleziono sesji — sprawdź kod i spróbuj ponownie");
+        }
+      });
+  }, []);
 
   const places: DemoPlace[] = city && category ? (MOCK_DATA[city]?.[category] ?? []) : [];
 
   const handleCitySelect = (c: string) => { setCity(c); setStep("mode"); };
-  const handleCategorySelect = (cat: CategoryKey) => { setCategory(cat); setStep("swipe"); };
-  const handleSwipeComplete = (liked: DemoPlace[]) => { setLikedPlaces(liked); setStep("results"); };
 
-  const handleCreateGroupSession = async () => {
-    setGroupLoading(true);
-    try {
-      // Sign in anonymously
-      const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
-      if (authError) {
-        console.error("[demo] anonymous auth error:", authError);
-        // Anonymous auth likely disabled in Supabase — fall back to auth page
-        toast("Sesje grupowe wymagają konta. Rejestracja jest bezpłatna!");
-        navigate("/auth?tab=register");
-        return;
+  const handleCategorySelect = async (cat: CategoryKey) => {
+    setCategory(cat);
+    if (mode === "group") {
+      setGroupLoading(true);
+      try {
+        const code = generateJoinCode();
+        const { error } = await (supabase as any).from("demo_sessions").insert({ code, city, category: cat });
+        if (error) throw error;
+        setSessionCode(code);
+        setStep("invite");
+      } catch (e: any) {
+        console.error("[demo] session create error:", e);
+        toast.error("Nie udało się utworzyć sesji — spróbuj ponownie");
+      } finally {
+        setGroupLoading(false);
       }
-      if (!authData.user) throw new Error("no user after signInAnonymously");
-
-      const code = generateJoinCode();
-      const basePayload = {
-        city,
-        created_by: authData.user.id,
-        join_code: code,
-        expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-      };
-
-      // Try insert with is_demo; fall back without it if column doesn't exist yet
-      let session: any = null;
-      const { data: d1, error: e1 } = await (supabase as any)
-        .from("group_sessions").insert({ ...basePayload, is_demo: true }).select().single();
-
-      if (e1) {
-        console.warn("[demo] insert with is_demo failed:", e1.message);
-        const { data: d2, error: e2 } = await (supabase as any)
-          .from("group_sessions").insert(basePayload).select().single();
-        if (e2) throw e2;
-        session = d2;
-      } else {
-        session = d1;
-      }
-
-      await supabase.rpc("join_group_session" as any, { p_session_id: session.id });
-
-      setGroupJoinCode(code);
-      setStep("invite");
-    } catch (e: any) {
-      console.error("[demo] group session creation failed:", e);
-      toast.error(e?.message ?? "Nie udało się utworzyć sesji — spróbuj ponownie");
-    } finally {
-      setGroupLoading(false);
+    } else {
+      setStep("swipe");
     }
   };
 
+  const handleSwipeComplete = async (liked: DemoPlace[]) => {
+    setLikedPlaces(liked);
+    if (mode === "group" && sessionCode) {
+      const deviceId = getDeviceId();
+      const allPlaces = MOCK_DATA[city]?.[category!] ?? [];
+      const reactions = allPlaces.map(p => ({
+        session_code: sessionCode,
+        device_id: deviceId,
+        place_name: p.name,
+        liked: liked.some(l => l.id === p.id),
+      }));
+      try {
+        await (supabase as any).from("demo_reactions").upsert(reactions);
+        const { data: allReactions } = await (supabase as any)
+          .from("demo_reactions").select("*").eq("session_code", sessionCode);
+        if (allReactions) {
+          const byPlace: Record<string, { device_id: string; liked: boolean }[]> = {};
+          for (const r of allReactions) {
+            if (!byPlace[r.place_name]) byPlace[r.place_name] = [];
+            byPlace[r.place_name].push({ device_id: r.device_id, liked: r.liked });
+          }
+          setGroupReactions(byPlace);
+          const uniqueDevices = new Set(allReactions.map((r: any) => r.device_id));
+          setOtherDeviceDone(uniqueDevices.size >= 2);
+        }
+      } catch (e) {
+        console.error("[demo] failed to save reactions:", e);
+      }
+    }
+    setStep("results");
+  };
+
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(groupJoinCode);
+    navigator.clipboard.writeText(sessionCode);
     setCodeCopied(true);
     setTimeout(() => setCodeCopied(false), 2000);
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/join/${groupJoinCode}`);
+    navigator.clipboard.writeText(`${window.location.origin}/demo?join=${sessionCode}`);
     toast.success("Link skopiowany!");
   };
 
   const catLabel = DEMO_CATEGORIES.find(c => c.id === category);
+
+  // Group matches: places liked by both devices
+  const groupMatches: DemoPlace[] = mode === "group" && otherDeviceDone
+    ? (MOCK_DATA[city]?.[category!] ?? []).filter(p => {
+        const r = groupReactions[p.name] ?? [];
+        return r.length >= 2 && r.every(x => x.liked);
+      })
+    : [];
 
   return (
     <div className="flex flex-col h-screen bg-background max-w-lg mx-auto">
@@ -662,8 +703,8 @@ export default function DemoSession() {
             if (step === "city") navigate("/");
             else if (step === "mode") setStep("city");
             else if (step === "category") setStep("mode");
-            else if (step === "invite") setStep("mode");
-            else if (step === "swipe") setStep("category");
+            else if (step === "invite") setStep("category");
+            else if (step === "swipe") { if (mode === "group" && sessionCode) setStep("invite"); else setStep("category"); }
             else if (step === "results") setStep("swipe");
           }}
           className="h-9 w-9 flex items-center justify-center -ml-1"
@@ -677,7 +718,7 @@ export default function DemoSession() {
               : step === "category" ? city
               : step === "invite" ? "Zaproś znajomego"
               : step === "swipe" ? `${catLabel?.emoji} ${catLabel?.label}`
-              : "Twoje propozycje"}
+              : mode === "group" ? "Wspólne dopasowania" : "Twoje propozycje"}
           </p>
           {(step === "swipe" || step === "results") && <p className="text-xs text-muted-foreground">{city}</p>}
         </div>
@@ -725,7 +766,7 @@ export default function DemoSession() {
             <p className="text-sm text-muted-foreground">Możesz swipe'ować solo albo zaprosić znajomego i zobaczyć co Was łączy.</p>
           </div>
           <button
-            onClick={() => setStep("category")}
+            onClick={() => { setMode("solo"); setStep("category"); }}
             className="w-full flex items-center gap-4 px-5 py-5 rounded-2xl border border-border/50 bg-card active:scale-[0.98] transition-transform text-left"
           >
             <div className="h-11 w-11 rounded-2xl bg-muted flex items-center justify-center shrink-0">
@@ -738,12 +779,11 @@ export default function DemoSession() {
             <ChevronRight className="h-4 w-4 text-muted-foreground/50 ml-auto" />
           </button>
           <button
-            onClick={handleCreateGroupSession}
-            disabled={groupLoading}
-            className="w-full flex items-center gap-4 px-5 py-5 rounded-2xl border-2 border-orange-600/30 bg-orange-600/5 active:scale-[0.98] transition-transform text-left disabled:opacity-60"
+            onClick={() => { setMode("group"); setStep("category"); }}
+            className="w-full flex items-center gap-4 px-5 py-5 rounded-2xl border-2 border-orange-600/30 bg-orange-600/5 active:scale-[0.98] transition-transform text-left"
           >
             <div className="h-11 w-11 rounded-2xl bg-orange-600/10 flex items-center justify-center shrink-0">
-              {groupLoading ? <Loader2 className="h-5 w-5 text-orange-600 animate-spin" /> : <Users className="h-5 w-5 text-orange-600" />}
+              <Users className="h-5 w-5 text-orange-600" />
             </div>
             <div>
               <p className="font-bold text-orange-700">Z grupą</p>
@@ -754,66 +794,24 @@ export default function DemoSession() {
         </div>
       )}
 
-      {/* ── STEP: invite ── */}
-      {step === "invite" && (
-        <div className="flex-1 flex flex-col px-5 pt-6 pb-8 gap-5 overflow-y-auto">
-          <div>
-            <p className="text-2xl font-black mb-1.5">Zaproś znajomego</p>
-            <p className="text-sm text-muted-foreground">Wyślij kod lub link — gdy dołączy, zaczniecie swipe'ować i zobaczycie co Was łączy.</p>
-          </div>
-
-          {/* Code */}
-          <div className="rounded-2xl bg-muted/60 px-5 py-5 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Kod sesji</p>
-              <p className="text-3xl font-black tracking-widest text-foreground">{groupJoinCode}</p>
-            </div>
-            <button
-              onClick={handleCopyCode}
-              className="h-10 w-10 rounded-xl bg-card border border-border/60 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
-            >
-              {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
-            </button>
-          </div>
-
-          {/* Share link */}
-          <button
-            onClick={handleCopyLink}
-            className="w-full py-3.5 rounded-2xl border border-border/60 bg-card text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-          >
-            <Copy className="h-4 w-4" />
-            Skopiuj link zaproszenia
-          </button>
-
-          <div className="rounded-2xl bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
-            Znajomy wchodzi na <span className="font-semibold text-foreground">trasa.travel/join/{groupJoinCode}</span> i dołącza bez zakładania konta.
-          </div>
-
-          <button
-            onClick={() => navigate(`/sesja/${groupJoinCode}`)}
-            className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/20 mt-auto"
-          >
-            <Users className="h-5 w-5" />
-            Przejdź do sesji →
-          </button>
-        </div>
-      )}
-
       {/* ── STEP: category ── */}
       {step === "category" && (
         <div className="flex-1 flex flex-col px-4 pt-6 pb-6 gap-5 overflow-y-auto">
           <div>
             <p className="text-xl font-black mb-1">Wybierz kategorię</p>
-            <p className="text-sm text-muted-foreground">W demo możesz wybrać 1 kategorię i przejrzeć 8 miejsc.</p>
+            <p className="text-sm text-muted-foreground">
+              {mode === "group" ? "Wybierz kategorię i zaproś znajomego — oboje będziecie swipe'ować te same miejsca." : "W demo możesz wybrać 1 kategorię i przejrzeć 8 miejsc."}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {DEMO_CATEGORIES.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => handleCategorySelect(cat.id as CategoryKey)}
-                className="px-4 py-3 rounded-2xl text-sm font-semibold border border-border/60 bg-card flex items-center gap-2 active:scale-[0.97] transition-transform hover:border-orange-600/40"
+                disabled={groupLoading}
+                className="px-4 py-3 rounded-2xl text-sm font-semibold border border-border/60 bg-card flex items-center gap-2 active:scale-[0.97] transition-transform hover:border-orange-600/40 disabled:opacity-60"
               >
-                <span>{cat.emoji}</span>
+                {groupLoading && category === cat.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>{cat.emoji}</span>}
                 <span>{cat.label}</span>
               </button>
             ))}
@@ -827,6 +825,49 @@ export default function DemoSession() {
         </div>
       )}
 
+      {/* ── STEP: invite ── */}
+      {step === "invite" && (
+        <div className="flex-1 flex flex-col px-5 pt-6 pb-8 gap-5 overflow-y-auto">
+          <div>
+            <p className="text-2xl font-black mb-1.5">Zaproś znajomego</p>
+            <p className="text-sm text-muted-foreground">Wyślij kod lub link — gdy dołączy, zaczniecie swipe'ować te same miejsca i zobaczycie co Was łączy.</p>
+          </div>
+
+          <div className="rounded-2xl bg-muted/60 px-5 py-5 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Kod sesji</p>
+              <p className="text-3xl font-black tracking-widest text-foreground">{sessionCode}</p>
+            </div>
+            <button
+              onClick={handleCopyCode}
+              className="h-10 w-10 rounded-xl bg-card border border-border/60 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+            >
+              {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+            </button>
+          </div>
+
+          <button
+            onClick={handleCopyLink}
+            className="w-full py-3.5 rounded-2xl border border-border/60 bg-card text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+          >
+            <Copy className="h-4 w-4" />
+            Skopiuj link zaproszenia
+          </button>
+
+          <div className="rounded-2xl bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
+            Znajomy otwiera link i od razu trafia do tej samej sesji — zero rejestracji.
+          </div>
+
+          <button
+            onClick={() => setStep("swipe")}
+            className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/20 mt-auto"
+          >
+            <Users className="h-5 w-5" />
+            Zaczynam swipe'ować →
+          </button>
+        </div>
+      )}
+
       {/* ── STEP: swipe ── */}
       {step === "swipe" && places.length > 0 && (
         <DemoSwiper places={places} city={city} category={category!} onComplete={handleSwipeComplete} />
@@ -836,20 +877,49 @@ export default function DemoSession() {
       {step === "results" && (
         <div className="flex-1 flex flex-col overflow-y-auto">
           <div className="px-4 pt-5 pb-8 space-y-4">
-            <div className="text-center">
-              <p className="text-2xl font-black">
-                {likedPlaces.length > 0 ? "Twoje propozycje 🎉" : "Żadnych lajków"}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {likedPlaces.length > 0
-                  ? `Polubiłeś/aś ${likedPlaces.length} ${likedPlaces.length === 1 ? "miejsce" : likedPlaces.length < 5 ? "miejsca" : "miejsc"} w ${city}`
-                  : "Spróbuj jeszcze raz i polub jakieś miejsca!"}
-              </p>
-            </div>
 
-            {likedPlaces.length > 0 && (
+            {/* Group: waiting for partner */}
+            {mode === "group" && !otherDeviceDone && (
+              <div className="rounded-2xl bg-muted/50 border border-border/40 px-5 py-5 flex flex-col items-center gap-3 text-center">
+                <Loader2 className="h-6 w-6 text-orange-600 animate-spin" />
+                <p className="font-semibold">Czekamy na znajomego…</p>
+                <p className="text-xs text-muted-foreground">Gdy skończy swipe'ować, zobaczycie wspólne dopasowania.</p>
+                <p className="text-xs font-mono bg-background border border-border/50 px-3 py-1.5 rounded-xl">{sessionCode}</p>
+              </div>
+            )}
+
+            {/* Group: both done — show matches */}
+            {mode === "group" && otherDeviceDone && (
+              <div className="text-center">
+                <p className="text-2xl font-black">
+                  {groupMatches.length > 0 ? "Macie wspólne miejsca! 🎉" : "Brak dopasowań"}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {groupMatches.length > 0
+                    ? `${groupMatches.length} ${groupMatches.length === 1 ? "miejsce" : groupMatches.length < 5 ? "miejsca" : "miejsc"} polubiliście oboje`
+                    : "Tym razem się nie pokryło — spróbujcie innej kategorii"}
+                </p>
+              </div>
+            )}
+
+            {/* Solo results header */}
+            {mode === "solo" && (
+              <div className="text-center">
+                <p className="text-2xl font-black">
+                  {likedPlaces.length > 0 ? "Twoje propozycje 🎉" : "Żadnych lajków"}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {likedPlaces.length > 0
+                    ? `Polubiłeś/aś ${likedPlaces.length} ${likedPlaces.length === 1 ? "miejsce" : likedPlaces.length < 5 ? "miejsca" : "miejsc"} w ${city}`
+                    : "Spróbuj jeszcze raz i polub jakieś miejsca!"}
+                </p>
+              </div>
+            )}
+
+            {/* Place list */}
+            {(mode === "solo" ? likedPlaces : groupMatches).length > 0 && (
               <div className="space-y-2">
-                {likedPlaces.map((place, i) => (
+                {(mode === "solo" ? likedPlaces : groupMatches).map((place, i) => (
                   <div key={place.id} className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/40">
                     <span className="h-7 w-7 rounded-full bg-orange-600/10 flex items-center justify-center text-xs font-bold text-orange-600 shrink-0">
                       {i + 1}
@@ -885,7 +955,7 @@ export default function DemoSession() {
             </div>
 
             <button
-              onClick={() => { setStep("category"); setCategory(null); setLikedPlaces([]); }}
+              onClick={() => { setStep("category"); setCategory(null); setLikedPlaces([]); setGroupReactions({}); setOtherDeviceDone(false); }}
               className="w-full py-3 rounded-2xl border border-border/50 text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform"
             >
               Spróbuj innej kategorii
