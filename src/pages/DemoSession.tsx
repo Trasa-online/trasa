@@ -600,6 +600,9 @@ export default function DemoSession() {
   const [joinInput, setJoinInput] = useState("");
   const [joinLoading, setJoinLoading] = useState(false);
   const [selectedCity, setSelectedCity] = useState(DEMO_CITIES[0]);
+  const [businessMode, setBusinessMode] = useState(false);
+  const [realPlaces, setRealPlaces] = useState<DemoPlace[] | null>(null);
+  const [placesLoading, setPlacesLoading] = useState(false);
 
   // Handle ?join=CODE — second user joins existing session
   useEffect(() => {
@@ -619,7 +622,7 @@ export default function DemoSession() {
       });
   }, []);
 
-  const places: DemoPlace[] = city && category ? (MOCK_DATA[city]?.[category] ?? []) : [];
+  const places: DemoPlace[] = realPlaces ?? (city && category ? (MOCK_DATA[city]?.[category] ?? []) : []);
 
   const handleStartSolo = () => { setCity(selectedCity); setMode("solo"); setStep("category"); };
   const handleStartGroup = () => { setCity(selectedCity); setMode("group"); setStep("category"); };
@@ -650,6 +653,16 @@ export default function DemoSession() {
 
   const handleCategorySelect = async (cat: CategoryKey) => {
     setCategory(cat);
+    setRealPlaces(null);
+
+    // Fetch real places in background (cached 24h at CDN)
+    setPlacesLoading(true);
+    fetch(`/api/demo-places?city=${encodeURIComponent(city)}&category=${cat}`)
+      .then(r => r.json())
+      .then((data: DemoPlace[]) => { if (Array.isArray(data) && data.length > 0) setRealPlaces(data); })
+      .catch(() => { /* fallback to MOCK_DATA silently */ })
+      .finally(() => setPlacesLoading(false));
+
     if (mode === "group") {
       setGroupLoading(true);
       try {
@@ -673,7 +686,7 @@ export default function DemoSession() {
     setLikedPlaces(liked);
     if (mode === "group" && sessionCode) {
       const deviceId = getDeviceId();
-      const allPlaces = MOCK_DATA[city]?.[category!] ?? [];
+      const allPlaces = realPlaces ?? MOCK_DATA[city]?.[category!] ?? [];
       const reactions = allPlaces.map(p => ({
         session_code: sessionCode,
         device_id: deviceId,
@@ -754,8 +767,82 @@ export default function DemoSession() {
       {/* ── STEP: city (landing) ── */}
       {step === "city" && (
         <div className="flex-1 overflow-y-auto">
+          {/* Top bar with "dla firm" toggle */}
+          <div className="flex items-center justify-between px-5 pt-4 pb-0">
+            <span className="text-sm font-black tracking-tight">trasa</span>
+            <button
+              onClick={() => setBusinessMode(b => !b)}
+              className="text-xs font-semibold text-orange-600 bg-orange-600/10 px-3 py-1.5 rounded-full active:scale-95 transition-transform"
+            >
+              {businessMode ? "← dla turystów" : "dla firm →"}
+            </button>
+          </div>
+
+          {businessMode ? (
+            /* ── Business landing ── */
+            <>
+              <div className="overflow-hidden flex items-center px-5 pt-4 pb-4 gap-2" style={{ minHeight: "30vh" }}>
+                <div className="flex-1 z-10">
+                  <h1 className="text-3xl font-black leading-tight">Bądź tam,<br/>gdzie szukają<br/>klienci.</h1>
+                  <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[200px]">
+                    Twój lokal w trasach tworzonych przez turystów i lokalsów — bez reklam, z prawdziwym zasięgiem.
+                  </p>
+                </div>
+                <div className="relative shrink-0" style={{ width: "148px", height: "210px", marginRight: "-48px" }}>
+                  <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-md"
+                    style={{ transform: "rotate(-8deg) translate(-28px, 16px)" }}>
+                    <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <div className="absolute bottom-2.5 left-2.5">
+                      <span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">Restauracja</span>
+                      <p className="text-white text-[11px] font-bold mt-0.5">Twój lokal</p>
+                    </div>
+                  </div>
+                  <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-2xl border-2 border-white"
+                    style={{ transform: "rotate(-2deg) translate(-8px, -6px)" }}>
+                    <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80" alt="" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+                    <div className="absolute bottom-2.5 left-2.5">
+                      <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">Kawiarnia</span>
+                      <p className="text-white text-[11px] font-bold mt-0.5">Charlotte</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-5 pb-4 space-y-3">
+                {[
+                  { icon: "📍", text: "Pojawiaj się w trasach tworzonych przez użytkowników" },
+                  { icon: "📊", text: "Śledź ile osób odwiedza Twój lokal dzięki Trasie" },
+                  { icon: "🤝", text: "Bezpośredni kontakt z turystami i lokalsami" },
+                ].map(item => (
+                  <div key={item.icon} className="flex items-start gap-3 bg-card rounded-2xl px-4 py-3 border border-border/40">
+                    <span className="text-lg leading-none mt-0.5">{item.icon}</span>
+                    <p className="text-sm font-medium leading-snug">{item.text}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="px-5 pb-8 space-y-2">
+                <button
+                  onClick={() => navigate("/auth")}
+                  className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
+                >
+                  Zaloguj się jako firma
+                </button>
+                <button
+                  onClick={() => navigate("/auth")}
+                  className="w-full py-3.5 rounded-2xl bg-white border-2 border-orange-600 text-orange-600 font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+                >
+                  Zarejestruj lokal
+                </button>
+              </div>
+            </>
+          ) : (
+            /* ── User landing ── */
+            <>
           {/* Hero — text left + cards right bleeding off screen */}
-          <div className="overflow-hidden flex items-center px-5 pt-6 pb-4 gap-2" style={{ minHeight: "34vh" }}>
+          <div className="overflow-hidden flex items-center px-5 pt-4 pb-4 gap-2" style={{ minHeight: "30vh" }}>
             <div className="flex-1 z-10">
               <h1 className="text-3xl font-black leading-tight">Speed dating<br/>z miastem.</h1>
               <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[170px]">
@@ -864,6 +951,8 @@ export default function DemoSession() {
               </button>
             </p>
           </div>
+            </>
+          )}
         </div>
       )}
 
