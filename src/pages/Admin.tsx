@@ -270,7 +270,7 @@ const Admin = () => {
   const handleGenerateBizLink = async (claim: BusinessClaim) => {
     setApprovingId(claim.id);
     try {
-      const { link } = await invokeInviteUser(claim.contact_email, claim.contact_email.split("@")[0]);
+      const { link } = await invokeInviteUser(claim.contact_email, claim.contact_email.split("@")[0], undefined, true);
       setBizInviteLinks(prev => ({ ...prev, [claim.id]: link }));
       toast.success("Link wygenerowany — skopiuj i wyślij");
     } catch (err: any) {
@@ -641,20 +641,29 @@ const Admin = () => {
                     </Button>
                   )}
                   {bizInviteLinks[claim.id] && (
-                    <div className="flex gap-2 pt-1">
-                      <div className="flex-1 bg-muted rounded-2xl px-3 py-2 text-xs text-muted-foreground font-mono truncate">
-                        {bizInviteLinks[claim.id]}
+                    <div className="space-y-2 pt-1">
+                      <div className="flex gap-2">
+                        <div className="flex-1 bg-muted rounded-2xl px-3 py-2 text-xs text-muted-foreground font-mono truncate">
+                          {bizInviteLinks[claim.id]}
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(bizInviteLinks[claim.id]);
+                            setCopiedId(claim.id);
+                            setTimeout(() => setCopiedId(null), 2000);
+                            toast.success("Link skopiowany!");
+                          }}
+                          className="shrink-0 h-9 w-9 flex items-center justify-center rounded-2xl border border-border bg-card hover:bg-muted transition-colors"
+                        >
+                          {copiedId === claim.id ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                        </button>
                       </div>
                       <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(bizInviteLinks[claim.id]);
-                          setCopiedId(claim.id);
-                          setTimeout(() => setCopiedId(null), 2000);
-                          toast.success("Link skopiowany!");
-                        }}
-                        className="shrink-0 h-9 w-9 flex items-center justify-center rounded-2xl border border-border bg-card hover:bg-muted transition-colors"
+                        onClick={() => handleGenerateBizLink(claim)}
+                        disabled={approvingId === claim.id}
+                        className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 disabled:opacity-50 flex items-center justify-center gap-1"
                       >
-                        {copiedId === claim.id ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                        {approvingId === claim.id ? <><Loader2 className="h-3 w-3 animate-spin" />Generuję...</> : "Wygeneruj nowy link (użyty lub wygasły)"}
                       </button>
                     </div>
                   )}
