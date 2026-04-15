@@ -186,8 +186,6 @@ const PlaceSwiperDetail = ({
     ...(!photos.length && validUrl(place?.photo_url) ? [place!.photo_url!] : []),
   ];
   const hasPhoto = displayPhotos.length > 0;
-  const showPhotoArea = hasPhoto || loading;
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -197,9 +195,10 @@ const PlaceSwiperDetail = ({
         {!place ? null : (
           <>
             {/* ── HERO PHOTO (top ~48% of drawer) ── */}
+            {/* X button and handle live INSIDE this relative div so they always render above the photo */}
             <div
               className="relative shrink-0 overflow-hidden rounded-t-3xl bg-muted"
-              style={{ height: showPhotoArea ? "48%" : "0px", touchAction: "pan-y" }}
+              style={{ height: "48%", touchAction: "pan-y" }}
               onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
               onTouchEnd={(e) => {
                 if (swipeStartX.current === null) return;
@@ -211,6 +210,7 @@ const PlaceSwiperDetail = ({
                 }
               }}
             >
+              {/* Photo or loading placeholder */}
               {hasPhoto ? (
                 <>
                   <img
@@ -222,8 +222,7 @@ const PlaceSwiperDetail = ({
                         setActivePhoto((n) => n + 1);
                     }}
                   />
-                  {/* Gradient overlays */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-black/30" />
 
                   {/* Tap areas for prev/next */}
                   <button className="absolute left-0 inset-y-0 w-1/3 z-10" onClick={() => setActivePhoto((n) => Math.max(0, n - 1))} />
@@ -242,7 +241,7 @@ const PlaceSwiperDetail = ({
                     </div>
                   )}
 
-                  {/* Place name + rating overlay at bottom of photo */}
+                  {/* Place name + rating overlay — bottom of photo */}
                   <div className="absolute bottom-0 left-0 right-0 px-5 pb-4 z-20">
                     <h2 className="text-2xl font-black text-white leading-tight drop-shadow-sm">
                       {place.place_name}
@@ -250,76 +249,49 @@ const PlaceSwiperDetail = ({
                     {(detail?.rating ?? place.rating) && (
                       <div className="flex items-center gap-1.5 mt-1">
                         <Stars rating={detail?.rating ?? place.rating} />
-                        <span className="text-sm font-semibold text-white">
-                          {detail?.rating ?? place.rating}
-                        </span>
+                        <span className="text-sm font-semibold text-white">{detail?.rating ?? place.rating}</span>
                         {detail?.user_ratings_total && (
-                          <span className="text-xs text-white/70">
-                            ({detail.user_ratings_total.toLocaleString("pl")})
-                          </span>
+                          <span className="text-xs text-white/70">({detail.user_ratings_total.toLocaleString("pl")})</span>
                         )}
                       </div>
                     )}
                   </div>
+
+                  {/* Google Maps link */}
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.place_name} ${place.address ?? ""}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute bottom-4 right-4 z-20 h-8 px-3 rounded-full bg-black/40 backdrop-blur-sm flex items-center gap-1.5 text-white text-xs font-medium"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    Maps
+                  </a>
                 </>
               ) : (
-                /* Loading state */
                 <div className="w-full h-full bg-muted flex flex-col items-center justify-center gap-3">
-                  <Loader2 className="h-7 w-7 text-muted-foreground/40 animate-spin" />
-                  <p className="text-xs text-muted-foreground/50">Wczytywanie zdjęć…</p>
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-7 w-7 text-muted-foreground/40 animate-spin" />
+                      <p className="text-xs text-muted-foreground/50">Wczytywanie zdjęć…</p>
+                    </>
+                  ) : (
+                    <p className="text-2xl font-black text-foreground px-5">{place.place_name}</p>
+                  )}
                 </div>
               )}
 
-              {/* Drag handle — top center */}
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 w-10 h-1 rounded-full bg-white/50" />
+              {/* ── Drag handle — always on top ── */}
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 w-10 h-1 rounded-full bg-white/60 pointer-events-none" />
 
-              {/* Google Maps link — bottom-right of photo */}
-              {hasPhoto && (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.place_name} ${place.address ?? ""}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="absolute bottom-4 right-4 z-20 h-8 px-3 rounded-full bg-black/40 backdrop-blur-sm flex items-center gap-1.5 text-white text-xs font-medium"
-                >
-                  <MapPin className="h-3.5 w-3.5" />
-                  Maps
-                </a>
-              )}
-            </div>
-
-            {/* ── CLOSE BUTTON — always visible, right below photo edge ── */}
-            <div className="absolute top-3 right-4 z-40">
+              {/* ── X close button — always on top, inside photo div ── */}
               <button
                 onClick={() => onOpenChange(false)}
-                className="h-10 w-10 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+                className="absolute top-3 right-3 z-30 h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center shadow-lg active:scale-95 transition-transform"
               >
                 <X className="h-5 w-5 text-white" />
               </button>
             </div>
-
-            {/* No-photo header (when photo loading disabled) */}
-            {!showPhotoArea && (
-              <div className="px-5 pt-12 pb-4 shrink-0">
-                <button
-                  onClick={() => onOpenChange(false)}
-                  className="absolute top-4 right-4 h-9 w-9 rounded-full bg-muted flex items-center justify-center"
-                >
-                  <X className="h-4 w-4 text-foreground" />
-                </button>
-                {/* Drag handle */}
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-foreground/15" />
-                <h2 className="text-2xl font-black text-foreground leading-tight">{place.place_name}</h2>
-                {(detail?.rating ?? place.rating) && (
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <Stars rating={detail?.rating ?? place.rating} />
-                    <span className="text-sm font-semibold">{detail?.rating ?? place.rating}</span>
-                    {detail?.user_ratings_total && (
-                      <span className="text-xs text-muted-foreground">({detail.user_ratings_total.toLocaleString("pl")})</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* ── SCROLLABLE CONTENT ── */}
             <div className="flex-1 overflow-y-auto">
