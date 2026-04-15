@@ -208,20 +208,18 @@ const PlaceSwiperDetail = ({
         side="bottom"
         className="h-[92vh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden"
       >
-        {/* Drag handle + close — always visible at top */}
-        <div className={cn(
-          "shrink-0 flex items-center justify-between px-4 z-20",
-          hasPhoto ? "absolute top-0 left-0 right-0 pt-3 pb-2" : "relative pt-3 pb-2 border-b border-border/20"
-        )}>
-          <div className="w-9" />
-          <div className={cn("w-10 h-1 rounded-full", hasPhoto ? "bg-white/50" : "bg-foreground/20")} />
+        {/* Drag handle — floats over photo or content */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 w-10 h-1 rounded-full pointer-events-none"
+          style={{ background: hasPhoto ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.15)" }}
+        />
+
+        {/* Close button — always top-right */}
+        <div className="absolute top-4 right-4 z-30">
           <button
             onClick={() => onOpenChange(false)}
             className={cn(
-              "h-9 w-9 rounded-full flex items-center justify-center",
-              hasPhoto
-                ? "bg-black/30 backdrop-blur-sm"
-                : "bg-muted border border-border/40"
+              "h-9 w-9 rounded-full flex items-center justify-center shadow-md",
+              hasPhoto ? "bg-black/30 backdrop-blur-sm" : "bg-background/95 border border-border/40"
             )}
           >
             <X className={cn("h-4 w-4", hasPhoto ? "text-white" : "text-foreground")} />
@@ -230,11 +228,11 @@ const PlaceSwiperDetail = ({
 
         {!place ? null : (
           <>
-            {/* Photo carousel — only rendered when photos exist or loading */}
+            {/* Photo carousel — only when photos exist or still loading */}
             {(hasPhoto || loading) && (
               <div
                 className="relative shrink-0 overflow-hidden"
-                style={{ height: "52vw", maxHeight: "280px", touchAction: "pan-y" }}
+                style={{ height: "56vw", maxHeight: "300px", touchAction: "pan-y" }}
                 onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
                 onTouchEnd={(e) => {
                   if (swipeStartX.current === null) return;
@@ -257,8 +255,7 @@ const PlaceSwiperDetail = ({
                           setActivePhoto((n) => n + 1);
                       }}
                     />
-                    {/* Gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
 
                     {/* Photo dots */}
                     {displayPhotos.length > 1 && (
@@ -267,47 +264,38 @@ const PlaceSwiperDetail = ({
                           <button
                             key={i}
                             onClick={() => setActivePhoto(i)}
-                            className={cn(
-                              "h-1.5 rounded-full transition-all",
-                              i === activePhoto ? "w-4 bg-white" : "w-1.5 bg-white/50"
-                            )}
+                            className={cn("h-1.5 rounded-full transition-all", i === activePhoto ? "w-4 bg-white" : "w-1.5 bg-white/50")}
                           />
                         ))}
                       </div>
                     )}
 
-                    {/* Tap areas to navigate */}
-                    <button
-                      className="absolute left-0 inset-y-0 w-1/3"
-                      onClick={() => setActivePhoto((n) => Math.max(0, n - 1))}
-                    />
-                    <button
-                      className="absolute right-0 inset-y-0 w-1/3"
-                      onClick={() => setActivePhoto((n) => Math.min(displayPhotos.length - 1, n + 1))}
-                    />
+                    {/* Tap areas */}
+                    <button className="absolute left-0 inset-y-0 w-1/3" onClick={() => setActivePhoto((n) => Math.max(0, n - 1))} />
+                    <button className="absolute right-0 inset-y-0 w-1/3" onClick={() => setActivePhoto((n) => Math.min(displayPhotos.length - 1, n + 1))} />
+
+                    {/* Google Maps link — top-left of photo */}
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.place_name} ${place.address ?? ""}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute top-4 left-4 h-8 px-3 rounded-full bg-black/40 backdrop-blur-sm flex items-center gap-1.5 text-white text-xs font-medium"
+                    >
+                      <MapPin className="h-3.5 w-3.5" />
+                      Google Maps
+                    </a>
                   </>
                 ) : (
                   <div className="w-full h-full bg-muted flex items-center justify-center">
-                    <Loader2 className="h-6 w-6 text-muted-foreground/40 animate-spin" />
+                    <Loader2 className="h-6 w-6 text-muted-foreground/30 animate-spin" />
                   </div>
                 )}
-
-                {/* Google Maps link */}
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.place_name} ${place.address ?? ""}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="absolute bottom-3 left-4 h-8 px-3 rounded-full bg-black/40 flex items-center gap-1.5 text-white text-xs font-medium"
-                >
-                  <MapPin className="h-3.5 w-3.5" />
-                  Google Maps
-                </a>
               </div>
             )}
 
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto">
-              <div className={cn("px-5 space-y-6", hasPhoto ? "pt-4" : "pt-3", (onLike || onSkip) ? "pb-32" : "pb-8")}>
+              <div className={cn("px-5 space-y-6", hasPhoto ? "pt-4" : "pt-12", (onLike || onSkip) ? "pb-32" : "pb-8")}>
                 {/* Name + meta */}
                 <div>
                   <h2 className="text-2xl font-black text-foreground leading-tight">
@@ -339,24 +327,11 @@ const PlaceSwiperDetail = ({
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center justify-between mt-1">
-                    <div className="flex items-center gap-1 flex-1 min-w-0">
-                      <MapPin className="h-3 w-3 text-muted-foreground/50 shrink-0" />
-                      <p className="text-xs text-muted-foreground truncate">
-                        {detail?.formatted_address ?? place.address}
-                      </p>
-                    </div>
-                    {!hasPhoto && (
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.place_name} ${place.address ?? ""}`)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-2 shrink-0 h-7 px-2.5 rounded-full bg-muted border border-border/40 flex items-center gap-1 text-xs font-medium text-foreground"
-                      >
-                        <MapPin className="h-3 w-3" />
-                        Mapa
-                      </a>
-                    )}
+                  <div className="flex items-center gap-1 mt-1">
+                    <MapPin className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                    <p className="text-xs text-muted-foreground">
+                      {detail?.formatted_address ?? place.address}
+                    </p>
                   </div>
                 </div>
 

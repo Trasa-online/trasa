@@ -228,7 +228,6 @@ function DemoSwiper({ places, city, category, onComplete }: {
         city={city}
         onLike={() => { handleLike(); setDetailOpen(false); }}
         onSkip={() => { handleSkip(); setDetailOpen(false); }}
-        skipGoogleFetch={true}
       />
 
       {/* Upsell modal */}
@@ -345,7 +344,7 @@ export default function DemoSession() {
     setRealPlaces(null);
     setPlacesLoading(true);
 
-    // Fetch real places from Supabase
+    // Fetch real places — DB first, Google fallback when no photos
     try {
       const { data } = await (supabase as any)
         .from("places")
@@ -354,7 +353,10 @@ export default function DemoSession() {
         .eq("category", cat)
         .eq("is_active", true)
         .limit(8);
-      if (data && data.length > 0) {
+
+      const hasPhotos = (data ?? []).some((p: any) => p.photo_url);
+
+      if (data && data.length > 0 && hasPhotos) {
         setRealPlaces(data.map((p: any) => ({
           id: p.id,
           name: p.place_name,
@@ -364,6 +366,13 @@ export default function DemoSession() {
           tags: p.vibe_tags ?? [],
           description: p.description ?? "",
         })));
+      } else {
+        // No photos in DB → fetch from Google Places (cached 24h at CDN)
+        const resp = await fetch(`/api/demo-places?city=${encodeURIComponent(city)}&category=${cat}`);
+        if (resp.ok) {
+          const googlePlaces: DemoPlace[] = await resp.json();
+          setRealPlaces(googlePlaces.length > 0 ? googlePlaces : null);
+        }
       }
     } catch (e) {
       console.error("[demo] places fetch error:", e);
