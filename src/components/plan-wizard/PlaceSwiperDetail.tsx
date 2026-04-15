@@ -190,7 +190,7 @@ const PlaceSwiperDetail = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-[92vh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden"
+        className="h-[85vh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden"
       >
         {!place ? null : (
           <>
