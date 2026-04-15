@@ -96,6 +96,7 @@ const App = () => (
           <Route path="/day-review" element={<DayReview />} />
           <Route path="/onboarding" element={<Navigate to="/" replace />} />
           <Route path="/set-password" element={<SetPassword />} />
+          <Route path="/set-password-biznes" element={<SetPassword forceBusiness />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/moje-trasy" element={<AppLayout><MyTrips /></AppLayout>} />
           <Route path="/dziennik" element={<AppLayout><Journal /></AppLayout>} />

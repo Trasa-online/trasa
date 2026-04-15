@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Building2, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const SetPassword = () => {
+const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -16,9 +16,9 @@ const SetPassword = () => {
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
 
-  // Detect business flow from URL param (?type=business)
+  // Business flow: either via dedicated /set-password-biznes route or legacy ?type=business param
   const params = new URLSearchParams(window.location.search);
-  const isBusiness = params.get("type") === "business";
+  const isBusiness = forceBusiness || params.get("type") === "business";
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {

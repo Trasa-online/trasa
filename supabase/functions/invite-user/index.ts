@@ -64,7 +64,7 @@ serve(async (req) => {
     }
 
     const redirectTo = isBusiness
-      ? "https://trasa.travel/set-password?type=business"
+      ? "https://trasa.travel/set-password-biznes"
       : "https://trasa.travel/set-password";
 
     let inviteLink: string | undefined;
