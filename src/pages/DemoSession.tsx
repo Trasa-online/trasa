@@ -497,7 +497,11 @@ export default function DemoSession() {
             <div className="h-7 w-7 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
             <button
               onClick={() => setBusinessMode(b => !b)}
-              className="text-xs font-semibold text-orange-600 bg-orange-600/10 px-3 py-1.5 rounded-full active:scale-95 transition-transform"
+              className={`text-xs font-semibold px-3 py-1.5 rounded-full active:scale-95 transition-transform ${
+                businessMode
+                  ? "text-blue-600 bg-blue-600/10"
+                  : "text-blue-600 bg-blue-600/10"
+              }`}
             >
               {businessMode ? "← dla turystów" : "dla firm →"}
             </button>
@@ -531,7 +535,7 @@ export default function DemoSession() {
                     <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     {/* Premium badge */}
-                    <div className="absolute top-2 left-2 bg-amber-500/90 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">★ Premium</div>
+                    <div className="absolute top-2 left-2 bg-blue-600/90 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">★ Premium</div>
                     <div className="absolute bottom-2.5 left-2.5 right-2.5">
                       {/* Logo circle */}
                       <div className="w-6 h-6 rounded-full mb-1 border border-white/40 overflow-hidden"
@@ -539,7 +543,7 @@ export default function DemoSession() {
                       <p className="text-white text-[11px] font-black leading-tight">Butchery & Wine</p>
                       <p className="text-white/60 text-[9px]">Restauracja · @trasa</p>
                       <p className="text-yellow-400 text-[9px] mt-0.5">★ 4.7</p>
-                      <div className="mt-1 inline-flex items-center gap-0.5 bg-amber-500/80 rounded-full px-1.5 py-0.5">
+                      <div className="mt-1 inline-flex items-center gap-0.5 bg-blue-500/80 rounded-full px-1.5 py-0.5">
                         <span className="text-white text-[8px] font-semibold">🎉 Wydarzenie dziś</span>
                       </div>
                     </div>
@@ -563,13 +567,13 @@ export default function DemoSession() {
               <div className="px-5 pb-10 space-y-3">
                 <button
                   onClick={() => navigate("/auth?business=true")}
-                  className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
+                  className="w-full py-3.5 rounded-2xl bg-blue-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-blue-600/25"
                 >
                   Zaloguj się jako firma
                 </button>
                 <button
                   onClick={() => navigate("/auth?business=true")}
-                  className="w-full py-3.5 rounded-2xl bg-white border-2 border-orange-600 text-orange-600 font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+                  className="w-full py-3.5 rounded-2xl bg-white border-2 border-blue-600 text-blue-600 font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
                 >
                   Zarejestruj lokal
                 </button>
