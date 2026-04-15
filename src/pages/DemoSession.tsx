@@ -362,7 +362,7 @@ const DEMO_CATEGORIES = [
   { id: "experience", label: "Rozrywka",    emoji: "🎪"  },
 ];
 
-type Step = "city" | "mode" | "category" | "swipe" | "results" | "invite";
+type Step = "city" | "location" | "mode" | "category" | "swipe" | "results" | "invite";
 
 // ─── Convert DemoPlace → MockPlace ────────────────────────────────────────────
 
@@ -603,6 +603,8 @@ export default function DemoSession() {
   const [businessMode, setBusinessMode] = useState(false);
   const [realPlaces, setRealPlaces] = useState<DemoPlace[] | null>(null);
   const [placesLoading, setPlacesLoading] = useState(false);
+  const [drumIndex, setDrumIndex] = useState(0);
+  const drumRef = useRef<HTMLDivElement>(null);
 
   // Handle ?join=CODE — second user joins existing session
   useEffect(() => {
@@ -624,8 +626,8 @@ export default function DemoSession() {
 
   const places: DemoPlace[] = realPlaces ?? (city && category ? (MOCK_DATA[city]?.[category] ?? []) : []);
 
-  const handleStartSolo = () => { setCity(selectedCity); setMode("solo"); setStep("category"); };
-  const handleStartGroup = () => { setCity(selectedCity); setMode("group"); setStep("category"); };
+  const handleStartSolo = () => { setMode("solo"); setStep("location"); };
+  const handleStartGroup = () => { setMode("group"); setStep("location"); };
 
   const handleJoinByCode = async () => {
     const code = joinInput.trim().toUpperCase();
@@ -742,7 +744,8 @@ export default function DemoSession() {
         <button
           onClick={() => {
             if (step === "city") navigate("/");
-            else if (step === "category") setStep("city");
+            else if (step === "location") setStep("city");
+            else if (step === "category") setStep("location");
             else if (step === "invite") setStep("category");
             else if (step === "swipe") { if (mode === "group" && sessionCode) setStep("invite"); else setStep("category"); }
             else if (step === "results") setStep("swipe");
@@ -754,6 +757,7 @@ export default function DemoSession() {
         <div className="flex-1">
           <p className="font-bold text-sm leading-tight">
             {step === "city" ? "Wypróbuj Trasę"
+              : step === "location" ? "Wybierz miasto"
               : step === "category" ? city
               : step === "invite" ? "Zaproś znajomego"
               : step === "swipe" ? `${catLabel?.emoji} ${catLabel?.label}`
@@ -895,27 +899,6 @@ export default function DemoSession() {
             </div>
           </div>
 
-          {/* City picker */}
-          <div className="px-5 pt-2 pb-4">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Wybierz miasto</p>
-            <div className="flex flex-wrap gap-2">
-              {DEMO_CITIES.map(c => (
-                <button
-                  key={c}
-                  onClick={() => setSelectedCity(c)}
-                  className={cn(
-                    "px-4 py-2 rounded-full text-sm font-semibold border transition-all active:scale-[0.97]",
-                    selectedCity === c
-                      ? "bg-foreground text-background border-foreground"
-                      : "bg-card border-border/60 text-foreground"
-                  )}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Join by code */}
           <div className="px-5 pb-4">
             <div className="rounded-2xl border border-border/50 bg-card px-4 py-3.5 space-y-2.5">
@@ -967,6 +950,111 @@ export default function DemoSession() {
           )}
         </div>
       )}
+
+      {/* ── STEP: location ── */}
+      {step === "location" && (() => {
+        const ITEM_H = 64;
+        const COUNTRIES = [
+          { flag: "🇵🇱", name: "Polska", available: true },
+          { flag: "🇮🇹", name: "Włochy", available: false },
+          { flag: "🇪🇸", name: "Hiszpania", available: false },
+          { flag: "🇭🇺", name: "Węgry", available: false },
+        ];
+        return (
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Country selector */}
+            <div className="px-5 pt-4 pb-3 shrink-0">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Kraj</p>
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {COUNTRIES.map(c => (
+                  <button
+                    key={c.name}
+                    disabled={!c.available}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-sm font-semibold shrink-0 transition-all",
+                      c.available
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-card border-border/40 text-muted-foreground/50"
+                    )}
+                  >
+                    <span>{c.flag}</span>
+                    <span>{c.name}</span>
+                    {!c.available && (
+                      <span className="text-[10px] font-normal ml-0.5 opacity-70">wkrótce</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Drum scroll */}
+            <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+              {/* Center highlight line */}
+              <div className="absolute left-0 right-0 pointer-events-none z-10"
+                style={{ top: "50%", transform: "translateY(-50%)", height: `${ITEM_H}px` }}>
+                <div className="mx-8 h-full rounded-2xl bg-orange-600/8 border border-orange-600/15" />
+              </div>
+
+              <div
+                ref={drumRef}
+                onScroll={() => {
+                  const el = drumRef.current;
+                  if (!el) return;
+                  const idx = Math.round(el.scrollTop / ITEM_H);
+                  setDrumIndex(Math.min(Math.max(idx, 0), DEMO_CITIES.length - 1));
+                  setSelectedCity(DEMO_CITIES[Math.min(Math.max(idx, 0), DEMO_CITIES.length - 1)]);
+                }}
+                className="w-full overflow-y-scroll no-scrollbar"
+                style={{
+                  height: `${ITEM_H * 5}px`,
+                  scrollSnapType: "y mandatory",
+                  scrollBehavior: "smooth",
+                }}
+              >
+                {/* Top padding to center first item */}
+                <div style={{ height: `${ITEM_H * 2}px` }} />
+                {DEMO_CITIES.map((c, i) => {
+                  const dist = Math.abs(i - drumIndex);
+                  return (
+                    <div
+                      key={c}
+                      style={{ height: `${ITEM_H}px`, scrollSnapAlign: "center" }}
+                      className="flex items-center justify-center cursor-pointer"
+                      onClick={() => {
+                        setDrumIndex(i);
+                        setSelectedCity(c);
+                        drumRef.current?.scrollTo({ top: i * ITEM_H, behavior: "smooth" });
+                      }}
+                    >
+                      <span className={cn(
+                        "font-black transition-all duration-150 select-none",
+                        dist === 0 && "text-4xl text-foreground",
+                        dist === 1 && "text-2xl text-foreground/40",
+                        dist === 2 && "text-xl text-foreground/20",
+                        dist >= 3 && "text-lg text-foreground/10",
+                      )}>
+                        {c}
+                      </span>
+                    </div>
+                  );
+                })}
+                {/* Bottom padding to center last item */}
+                <div style={{ height: `${ITEM_H * 2}px` }} />
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div className="px-5 pt-3 pb-8 shrink-0">
+              <button
+                onClick={() => { setCity(selectedCity); setStep("category"); }}
+                className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
+              >
+                Dalej — {selectedCity}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── STEP: category ── */}
       {step === "category" && (
