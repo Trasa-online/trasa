@@ -35,6 +35,8 @@ interface DemoPlace {
   address: string;
   tags: string[];
   description: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 type CategoryKey = "cafe" | "restaurant" | "bar" | "museum" | "park" | "experience";
@@ -60,8 +62,8 @@ function toMock(p: DemoPlace, city: string, category: string): MockPlace {
     category: category as PlaceCategory,
     city,
     address: p.address,
-    latitude: 0,
-    longitude: 0,
+    latitude: p.latitude ?? 0,
+    longitude: p.longitude ?? 0,
     rating: p.rating,
     photo_url: p.photo,
     vibe_tags: p.tags,
@@ -348,7 +350,7 @@ export default function DemoSession() {
     try {
       const { data } = await (supabase as any)
         .from("places")
-        .select("id, place_name, category, address, rating, photo_url, vibe_tags, description")
+        .select("id, place_name, category, address, rating, photo_url, vibe_tags, description, latitude, longitude")
         .ilike("city", city)
         .eq("category", cat)
         .eq("is_active", true)
@@ -360,11 +362,15 @@ export default function DemoSession() {
         setRealPlaces(data.map((p: any) => ({
           id: p.id,
           name: p.place_name,
-          photo: (p.photo_url && !p.photo_url.startsWith("http")) ? (getPhotoUrl(p.photo_url) ?? "") : (p.photo_url ?? ""),
+          photo: !p.photo_url ? ""
+            : (p.photo_url.startsWith("http") || p.photo_url.startsWith("/api/")) ? p.photo_url
+            : (getPhotoUrl(p.photo_url) ?? ""),
           rating: p.rating ?? 4.5,
           address: p.address ?? "",
           tags: p.vibe_tags ?? [],
           description: p.description ?? "",
+          latitude: p.latitude ?? undefined,
+          longitude: p.longitude ?? undefined,
         })));
       } else {
         // No photos in DB → fetch from Google Places (cached 24h at CDN)

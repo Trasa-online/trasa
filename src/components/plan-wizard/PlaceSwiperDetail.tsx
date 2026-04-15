@@ -152,7 +152,7 @@ const PlaceSwiperDetail = ({
             const urls = (data.result.photos ?? [])
               .slice(0, 3)
               .map((p: any) => p.photo_url ?? getPhotoUrl(p.photo_reference, 800))
-              .filter((u: any): u is string => typeof u === "string" && u.startsWith("http"));
+              .filter((u: any): u is string => typeof u === "string" && (u.startsWith("http") || u.startsWith("/api/")));
             if (urls.length > 0) setPhotos(urls);
           }
         })
