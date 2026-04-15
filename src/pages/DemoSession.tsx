@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { getPhotoUrl } from "@/lib/placePhotos";
 import { ArrowLeft, Lock, Sparkles, Users, User, Copy, Check, Loader2 } from "lucide-react";
 import { SwipeCard } from "@/components/plan-wizard/PlaceSwiper";
 import type { MockPlace, PlaceCategory } from "@/components/plan-wizard/PlaceSwiper";
@@ -112,7 +113,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
           <span>{catInfo?.emoji}</span>
           <span className="text-orange-600">{catInfo?.label}</span>
         </p>
-        <p className="text-xs text-muted-foreground">Demo · runda 1</p>
+        <p className="text-xs text-muted-foreground">runda 1</p>
       </div>
 
       {/* Tabs */}
@@ -357,7 +358,7 @@ export default function DemoSession() {
         setRealPlaces(data.map((p: any) => ({
           id: p.id,
           name: p.place_name,
-          photo: p.photo_url ?? "",
+          photo: (p.photo_url && !p.photo_url.startsWith("http")) ? (getPhotoUrl(p.photo_url) ?? "") : (p.photo_url ?? ""),
           rating: p.rating ?? 4.5,
           address: p.address ?? "",
           tags: p.vibe_tags ?? [],
@@ -470,7 +471,7 @@ export default function DemoSession() {
           </p>
           {(step === "swipe" || step === "results") && <p className="text-xs text-muted-foreground">{city}</p>}
         </div>
-        <span className="text-xs bg-orange-600/10 text-orange-600 font-semibold px-2.5 py-1 rounded-full">Demo</span>
+        {step === "city" && <span className="text-xs bg-orange-600/10 text-orange-600 font-semibold px-2.5 py-1 rounded-full">Demo</span>}
       </div>
 
       {/* ── STEP: city (landing) ── */}
@@ -546,13 +547,13 @@ export default function DemoSession() {
 
               <div className="px-5 pb-10 space-y-3">
                 <button
-                  onClick={() => navigate("/auth")}
+                  onClick={() => navigate("/auth?business=true")}
                   className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
                 >
                   Zaloguj się jako firma
                 </button>
                 <button
-                  onClick={() => navigate("/auth")}
+                  onClick={() => navigate("/auth?business=true")}
                   className="w-full py-3.5 rounded-2xl bg-white border-2 border-orange-600 text-orange-600 font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
                 >
                   Zarejestruj lokal

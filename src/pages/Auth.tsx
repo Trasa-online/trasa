@@ -22,7 +22,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [honeypot, setHoneypot] = useState("");
   const [formOpenedAt] = useState(() => Date.now());
-  const [businessMode, setBusinessMode] = useState(false);
+  const [businessMode, setBusinessMode] = useState(searchParams.get("business") === "true");
   const [bizMode, setBizMode] = useState<BizMode>("login");
   // Business registration fields
   const [bizName, setBizName] = useState("");
