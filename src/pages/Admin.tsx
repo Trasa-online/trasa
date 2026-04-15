@@ -60,7 +60,7 @@ const Admin = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"waitlist" | "referrals" | "cities" | "businesses" | "bugs">("waitlist");
+  const [tab, setTab] = useState<"waitlist" | "cities" | "businesses" | "bugs">("waitlist");
 
   // Waitlist state
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
@@ -73,18 +73,6 @@ const Admin = () => {
   // Cities state
   const [cityRequests, setCityRequests] = useState<Array<{ city_name: string; count: number }>>([]);
   const [fetchingCities, setFetchingCities] = useState(false);
-
-  // Referrals state
-  const [referrals, setReferrals] = useState<Array<{
-    id: string;
-    code: string;
-    slot: number;
-    used_by_email: string | null;
-    used_by_name: string | null;
-    used_at: string | null;
-    owner: { username: string | null; first_name: string | null; avatar_url: string | null };
-  }>>([]);
-  const [fetchingReferrals, setFetchingReferrals] = useState(false);
 
   // Bug reports state
   const [bugReports, setBugReports] = useState<Array<{
@@ -120,7 +108,6 @@ const Admin = () => {
         if (!data) { navigate("/"); return; }
         setIsAdmin(true);
         loadWaitlist();
-        loadReferrals();
         loadCityRequests();
         loadClaims();
         loadBugReports();
@@ -177,29 +164,6 @@ const Admin = () => {
       );
     }
     setFetchingCities(false);
-  };
-
-  const loadReferrals = async () => {
-    setFetchingReferrals(true);
-    const { data: codes } = await (supabase as any)
-      .from("referral_codes")
-      .select("id, code, slot, used_by_email, used_by_name, used_at, owner_id")
-      .order("slot");
-    if (codes?.length) {
-      const ownerIds = [...new Set(codes.map((c: any) => c.owner_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, username, avatar_url, first_name")
-        .in("id", ownerIds as string[]);
-      const profileMap = Object.fromEntries((profiles ?? []).map((p: any) => [p.id, p]));
-      setReferrals(codes.map((c: any) => ({
-        ...c,
-        owner: profileMap[c.owner_id] ?? { username: null, first_name: null, avatar_url: null },
-      })));
-    } else {
-      setReferrals([]);
-    }
-    setFetchingReferrals(false);
   };
 
   const loadBugReports = async () => {
@@ -339,7 +303,6 @@ const Admin = () => {
 
   const tabLabels: Record<string, string> = {
     waitlist: "Oczekujący",
-    referrals: "Zaproszenia",
     cities: "Miasta",
     businesses: "Biznesy",
     bugs: "Błędy",
@@ -368,7 +331,7 @@ const Admin = () => {
 
       {/* Tabs */}
       <div className="flex border-b border-border/40">
-        {(["waitlist", "referrals", "cities", "businesses", "bugs"] as const).map(t => {
+        {(["waitlist", "cities", "businesses", "bugs"] as const).map(t => {
           const newBugs = bugReports.filter(r => r.status === "new").length;
           const badge = t === "businesses" ? pendingClaims : t === "waitlist" ? pendingWaitlist : t === "bugs" ? newBugs : 0;
           return (
@@ -471,66 +434,6 @@ const Admin = () => {
           )
         )}
 
-        {/* ── Referrals Tab ── */}
-        {tab === "referrals" && (
-          fetchingReferrals ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : referrals.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-12">Brak kodów zaproszeń.</p>
-          ) : (
-            <div className="space-y-3">
-              {Object.entries(
-                referrals.reduce<Record<string, typeof referrals>>((acc, r) => {
-                  const key = r.owner.username ?? r.id;
-                  if (!acc[key]) acc[key] = [];
-                  acc[key].push(r);
-                  return acc;
-                }, {})
-              ).map(([, slots]) => {
-                const owner = slots[0].owner;
-                const ownerName = owner.first_name || owner.username || "Użytkownik";
-                return (
-                  <div key={slots[0].id} className="border border-border rounded-xl p-4 bg-card space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-sm font-bold text-orange-600 flex-shrink-0">
-                        {ownerName.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">{ownerName}</p>
-                        {owner.username && <p className="text-xs text-muted-foreground">@{owner.username}</p>}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      {slots.map(slot => (
-                        <div key={slot.code} className="flex items-center gap-3 text-xs">
-                          <span className="text-muted-foreground w-16 flex-shrink-0">Slot {slot.slot}</span>
-                          {slot.used_at ? (
-                            <span className="flex-1 font-medium text-amber-600 dark:text-amber-400">
-                              Wykorzystany — {slot.used_by_name || slot.used_by_email || "nieznany"}
-                            </span>
-                          ) : (
-                            <span className="flex-1 font-mono text-muted-foreground truncate">
-                              {window.location.origin}/join/{slot.code}
-                            </span>
-                          )}
-                          <span className={`px-2 py-0.5 rounded-full font-semibold ${
-                            slot.used_at
-                              ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
-                              : "bg-muted text-muted-foreground"
-                          }`}>
-                            {slot.used_at ? "Użyty" : "Wolny"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )
-        )}
 
         {/* ── Cities Tab ── */}
         {tab === "cities" && (
