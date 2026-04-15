@@ -124,9 +124,9 @@ Klient → supabase.functions.invoke("google-places-proxy", ...) → Google Plac
 ## Znane problemy do naprawy
 
 - [ ] `photo_url` w tabeli `places` jest null dla większości wpisów → potrzebne ręczne uzupełnienie lub skrypt migracyjny
-- [ ] Google Photos nie działa w `DemoSession` na etapie kart swipe (SwipeCard) gdy `skipGoogleFetch=true` i brak `photo_url` w DB
-- [ ] Google Photos nie działa przy tworzeniu trasy (`CreateRoute`/`PlanWizard` SwipeCard)
-- [ ] Sprawdzić `PlaceDetailSheet` (home/PlaceDetailSheet.tsx) czy używa proxy poprawnie
+- [x] Google Photos nie działa w `DemoSession` na etapie kart swipe — naprawione: `skipGoogleFetch=false` w DemoSwiper
+- [x] Google Photos nie działa przy tworzeniu trasy — `skipGoogleFetch` domyślnie `false` w SwipeCard/PlaceSwiper
+- [x] `PlaceDetailSheet` — sprawdzone, używa `getPhotoUrl()` poprawnie przez proxy
 
 ---
 
