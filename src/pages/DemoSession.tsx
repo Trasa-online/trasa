@@ -491,17 +491,13 @@ export default function DemoSession() {
 
       {/* ── STEP: city (landing) ── */}
       {step === "city" && (
-        <div className="flex-1 overflow-y-auto">
-          {/* Top bar with "dla firm" toggle */}
-          <div className="flex items-center justify-between px-5 pt-4 pb-0">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Top bar — fixed height */}
+          <div className="flex items-center justify-between px-5 pt-4 pb-0 shrink-0">
             <div className="h-7 w-7 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
             <button
               onClick={() => setBusinessMode(b => !b)}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-full active:scale-95 transition-transform ${
-                businessMode
-                  ? "text-blue-600 bg-blue-600/10"
-                  : "text-blue-600 bg-blue-600/10"
-              }`}
+              className="text-xs font-semibold px-3 py-1.5 rounded-full active:scale-95 transition-transform text-blue-600 bg-blue-600/10"
             >
               {businessMode ? "← dla turystów" : "dla firm →"}
             </button>
@@ -510,61 +506,61 @@ export default function DemoSession() {
           {businessMode ? (
             /* ── Business landing ── */
             <>
-              <div className="overflow-hidden flex items-center px-5 pt-6 pb-8 gap-2" style={{ minHeight: "32vh" }}>
-                <div className="flex-1 z-10">
-                  <h1 className="text-3xl font-black leading-tight">Bądź tam,<br/>gdzie szukają<br/>klienci.</h1>
-                  <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[200px]">
-                    Twój lokal w trasach tworzonych przez turystów i lokalsów — bez reklam, z prawdziwym zasięgiem.
-                  </p>
-                </div>
-                <div className="relative shrink-0" style={{ width: "148px", height: "210px", marginRight: "-48px" }}>
-                  {/* Back card — regular place with rating */}
-                  <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-md"
-                    style={{ transform: "rotate(-8deg) translate(-28px, 16px)" }}>
-                    <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80" alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-                    <div className="absolute bottom-2.5 left-2.5">
-                      <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">Kawiarnia</span>
-                      <p className="text-white text-[11px] font-bold mt-0.5">Charlotte</p>
-                      <p className="text-yellow-400 text-[9px]">★ 4.8</p>
-                    </div>
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="overflow-hidden flex items-center px-5 pt-6 pb-8 gap-2" style={{ minHeight: "32vh" }}>
+                  <div className="flex-1 z-10">
+                    <h1 className="text-3xl font-black leading-tight">Bądź tam,<br/>gdzie szukają<br/>klienci.</h1>
+                    <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[200px]">
+                      Twój lokal w trasach tworzonych przez turystów i lokalsów — bez reklam, z prawdziwym zasięgiem.
+                    </p>
                   </div>
-                  {/* Front card — premium business profile mockup */}
-                  <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-2xl border-2 border-white"
-                    style={{ transform: "rotate(-2deg) translate(-8px, -6px)" }}>
-                    <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    {/* Premium badge */}
-                    <div className="absolute top-2 left-2 bg-blue-600/90 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">★ Premium</div>
-                    <div className="absolute bottom-2.5 left-2.5 right-2.5">
-                      {/* Logo circle */}
-                      <div className="w-6 h-6 rounded-full mb-1 border border-white/40 overflow-hidden"
-                        style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-                      <p className="text-white text-[11px] font-black leading-tight">Butchery & Wine</p>
-                      <p className="text-white/60 text-[9px]">Restauracja · @trasa</p>
-                      <p className="text-yellow-400 text-[9px] mt-0.5">★ 4.7</p>
-                      <div className="mt-1 inline-flex items-center gap-0.5 bg-blue-500/80 rounded-full px-1.5 py-0.5">
-                        <span className="text-white text-[8px] font-semibold">🎉 Wydarzenie dziś</span>
+                  <div className="relative shrink-0" style={{ width: "148px", height: "210px", marginRight: "-48px" }}>
+                    <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-md"
+                      style={{ transform: "rotate(-8deg) translate(-28px, 16px)" }}>
+                      <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80" alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+                      <div className="absolute bottom-2.5 left-2.5">
+                        <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">Kawiarnia</span>
+                        <p className="text-white text-[11px] font-bold mt-0.5">Charlotte</p>
+                        <p className="text-yellow-400 text-[9px]">★ 4.8</p>
+                      </div>
+                    </div>
+                    <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-2xl border-2 border-white"
+                      style={{ transform: "rotate(-2deg) translate(-8px, -6px)" }}>
+                      <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                      <div className="absolute top-2 left-2 bg-blue-600/90 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">★ Premium</div>
+                      <div className="absolute bottom-2.5 left-2.5 right-2.5">
+                        <div className="w-6 h-6 rounded-full mb-1 border border-white/40 overflow-hidden"
+                          style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                        <p className="text-white text-[11px] font-black leading-tight">Butchery & Wine</p>
+                        <p className="text-white/60 text-[9px]">Restauracja · @trasa</p>
+                        <p className="text-yellow-400 text-[9px] mt-0.5">★ 4.7</p>
+                        <div className="mt-1 inline-flex items-center gap-0.5 bg-blue-500/80 rounded-full px-1.5 py-0.5">
+                          <span className="text-white text-[8px] font-semibold">🎉 Wydarzenie dziś</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
+
+                <div className="px-5 pb-6 space-y-3">
+                  {[
+                    { icon: "📍", text: "Pojawiaj się w trasach tworzonych przez użytkowników" },
+                    { icon: "📊", text: "Śledź ile osób odwiedza Twój lokal dzięki Trasie" },
+                    { icon: "🤝", text: "Bezpośredni kontakt z turystami i lokalsami" },
+                  ].map(item => (
+                    <div key={item.icon} className="flex items-start gap-3 bg-card rounded-2xl px-4 py-4 border border-border/40">
+                      <span className="text-xl leading-none mt-0.5">{item.icon}</span>
+                      <p className="text-sm font-medium leading-snug">{item.text}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="px-5 pb-6 space-y-3">
-                {[
-                  { icon: "📍", text: "Pojawiaj się w trasach tworzonych przez użytkowników" },
-                  { icon: "📊", text: "Śledź ile osób odwiedza Twój lokal dzięki Trasie" },
-                  { icon: "🤝", text: "Bezpośredni kontakt z turystami i lokalsami" },
-                ].map(item => (
-                  <div key={item.icon} className="flex items-start gap-3 bg-card rounded-2xl px-4 py-4 border border-border/40">
-                    <span className="text-xl leading-none mt-0.5">{item.icon}</span>
-                    <p className="text-sm font-medium leading-snug">{item.text}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="px-5 pb-10 space-y-3">
+              {/* Sticky CTA buttons */}
+              <div className="px-5 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] space-y-3 shrink-0 border-t border-border/10 bg-background">
                 <button
                   onClick={() => navigate("/auth?business=true")}
                   className="w-full py-3.5 rounded-2xl bg-blue-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-blue-600/25"
@@ -582,95 +578,98 @@ export default function DemoSession() {
           ) : (
             /* ── User landing ── */
             <>
-          {/* Hero — text left + cards right bleeding off screen */}
-          <div className="overflow-hidden flex items-center px-5 pt-6 pb-8 gap-2" style={{ minHeight: "32vh" }}>
-            <div className="flex-1 z-10">
-              <h1 className="text-3xl font-black leading-tight">Speed dating<br/>z miastem.</h1>
-              <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[170px]">
-                Odkryj kawiarnie, restauracje i atrakcje razem z ekipą.
-              </p>
-            </div>
-            <div className="relative shrink-0" style={{ width: "148px", height: "210px", marginRight: "-48px" }}>
-              <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-md"
-                style={{ transform: "rotate(-8deg) translate(-28px, 16px)" }}>
-                <img src="https://images.unsplash.com/photo-1519197924294-4ba991a11128?w=400&q=80" alt="" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                <div className="absolute bottom-2.5 left-2.5">
-                  <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 rounded-full font-bold">Park</span>
-                  <p className="text-white text-[11px] font-bold mt-0.5">Łazienki</p>
-                  <p className="text-yellow-400 text-[9px]">★ 4.9</p>
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto">
+                {/* Hero — text left + cards right bleeding off screen */}
+                <div className="overflow-hidden flex items-center px-5 pt-6 pb-8 gap-2" style={{ minHeight: "32vh" }}>
+                  <div className="flex-1 z-10">
+                    <h1 className="text-3xl font-black leading-tight">Speed dating<br/>z miastem.</h1>
+                    <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[170px]">
+                      Odkryj kawiarnie, restauracje i atrakcje razem z ekipą.
+                    </p>
+                  </div>
+                  <div className="relative shrink-0" style={{ width: "148px", height: "210px", marginRight: "-48px" }}>
+                    <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-md"
+                      style={{ transform: "rotate(-8deg) translate(-28px, 16px)" }}>
+                      <img src="https://images.unsplash.com/photo-1519197924294-4ba991a11128?w=400&q=80" alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute bottom-2.5 left-2.5">
+                        <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 rounded-full font-bold">Park</span>
+                        <p className="text-white text-[11px] font-bold mt-0.5">Łazienki</p>
+                        <p className="text-yellow-400 text-[9px]">★ 4.9</p>
+                      </div>
+                    </div>
+                    <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-lg"
+                      style={{ transform: "rotate(7deg) translate(10px, -12px)" }}>
+                      <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute bottom-2.5 left-2.5">
+                        <span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">Restauracja</span>
+                        <p className="text-white text-[11px] font-bold mt-0.5">Butchery & Wine</p>
+                        <p className="text-yellow-400 text-[9px]">★ 4.7</p>
+                      </div>
+                    </div>
+                    <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-2xl border-2 border-white"
+                      style={{ transform: "rotate(-2deg) translate(-8px, -6px)" }}>
+                      <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80" alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+                      <div className="absolute bottom-2.5 left-2.5">
+                        <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">Kawiarnia</span>
+                        <p className="text-white text-[11px] font-bold mt-0.5">Charlotte</p>
+                        <p className="text-yellow-400 text-[9px]">★ 4.8</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-lg"
-                style={{ transform: "rotate(7deg) translate(10px, -12px)" }}>
-                <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                <div className="absolute bottom-2.5 left-2.5">
-                  <span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">Restauracja</span>
-                  <p className="text-white text-[11px] font-bold mt-0.5">Butchery & Wine</p>
-                  <p className="text-yellow-400 text-[9px]">★ 4.7</p>
-                </div>
-              </div>
-              <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-2xl border-2 border-white"
-                style={{ transform: "rotate(-2deg) translate(-8px, -6px)" }}>
-                <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80" alt="" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-                <div className="absolute bottom-2.5 left-2.5">
-                  <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">Kawiarnia</span>
-                  <p className="text-white text-[11px] font-bold mt-0.5">Charlotte</p>
-                  <p className="text-yellow-400 text-[9px]">★ 4.8</p>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Join by code */}
-          <div className="px-5 pb-6">
-            <div className="rounded-2xl border border-border/50 bg-card px-4 py-4 space-y-2.5">
-              <p className="text-sm font-semibold">Masz kod zaproszenia?</p>
-              <div className="flex gap-2">
-                <input
-                  value={joinInput}
-                  onChange={e => setJoinInput(e.target.value.toUpperCase())}
-                  onKeyDown={e => e.key === "Enter" && handleJoinByCode()}
-                  placeholder="np. ABC123"
-                  maxLength={8}
-                  className="flex-1 px-3 py-2.5 rounded-2xl border border-border/60 bg-background text-sm font-mono font-bold tracking-widest uppercase placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-orange-600/30"
-                />
+                {/* Join by code */}
+                <div className="px-5 pb-4">
+                  <div className="rounded-2xl border border-border/50 bg-card px-4 py-4 space-y-2.5">
+                    <p className="text-sm font-semibold">Masz kod zaproszenia?</p>
+                    <div className="flex gap-2">
+                      <input
+                        value={joinInput}
+                        onChange={e => setJoinInput(e.target.value.toUpperCase())}
+                        onKeyDown={e => e.key === "Enter" && handleJoinByCode()}
+                        placeholder="np. ABC123"
+                        maxLength={8}
+                        className="flex-1 px-3 py-2.5 rounded-2xl border border-border/60 bg-background text-sm font-mono font-bold tracking-widest uppercase placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-orange-600/30"
+                      />
+                      <button
+                        onClick={handleJoinByCode}
+                        disabled={joinInput.trim().length < 4 || joinLoading}
+                        className="px-4 py-2.5 rounded-2xl bg-orange-600 text-white text-sm font-bold disabled:opacity-40 active:scale-[0.97] transition-transform flex items-center gap-1.5"
+                      >
+                        {joinLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Dołącz"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sticky CTA buttons */}
+              <div className="px-5 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] space-y-3 shrink-0 border-t border-border/10 bg-background">
                 <button
-                  onClick={handleJoinByCode}
-                  disabled={joinInput.trim().length < 4 || joinLoading}
-                  className="px-4 py-2.5 rounded-2xl bg-orange-600 text-white text-sm font-bold disabled:opacity-40 active:scale-[0.97] transition-transform flex items-center gap-1.5"
+                  onClick={handleStartGroup}
+                  className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
                 >
-                  {joinLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Dołącz"}
+                  <Users className="h-5 w-5" />
+                  Zacznij z grupą
                 </button>
+                <button
+                  onClick={handleStartSolo}
+                  className="w-full py-3.5 rounded-2xl bg-white border-2 border-orange-600 text-orange-600 font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+                >
+                  <User className="h-5 w-5" />
+                  Zacznij solo
+                </button>
+                <p className="text-center text-xs text-muted-foreground">
+                  Masz konto?{" "}
+                  <button onClick={() => navigate("/auth")} className="text-orange-600 font-semibold">
+                    Zaloguj się →
+                  </button>
+                </p>
               </div>
-            </div>
-          </div>
-
-          {/* CTAs */}
-          <div className="px-5 pt-0 pb-10 space-y-3">
-            <button
-              onClick={handleStartGroup}
-              className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
-            >
-              <Users className="h-5 w-5" />
-              Zacznij z grupą
-            </button>
-            <button
-              onClick={handleStartSolo}
-              className="w-full py-3.5 rounded-2xl bg-white border-2 border-orange-600 text-orange-600 font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-            >
-              <User className="h-5 w-5" />
-              Zacznij solo
-            </button>
-            <p className="text-center text-xs text-muted-foreground pt-1">
-              Masz konto?{" "}
-              <button onClick={() => navigate("/auth")} className="text-orange-600 font-semibold">
-                Zaloguj się →
-              </button>
-            </p>
-          </div>
             </>
           )}
         </div>
