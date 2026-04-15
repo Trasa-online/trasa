@@ -11,7 +11,7 @@ export default async function handler(req: Request): Promise<Response> {
     return new Response("Missing ref", { status: 400 });
   }
 
-  const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY;
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
     return new Response("API key not configured", { status: 500 });
   }
