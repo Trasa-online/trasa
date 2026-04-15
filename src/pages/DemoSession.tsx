@@ -41,7 +41,21 @@ interface DemoPlace {
 
 type CategoryKey = "cafe" | "restaurant" | "bar" | "museum" | "park" | "experience";
 
-const DEMO_CITIES = ['Kraków', 'Warszawa', 'Gdańsk', 'Łódź', 'Wrocław'];
+const DEMO_CITIES_DATA = [
+  { name: 'Kraków',     locked: false },
+  { name: 'Łódź',      locked: false },
+  { name: 'Warszawa',   locked: false },
+  { name: 'Gdańsk',     locked: true  },
+  { name: 'Wrocław',    locked: true  },
+  { name: 'Poznań',     locked: true  },
+  { name: 'Katowice',   locked: true  },
+  { name: 'Szczecin',   locked: true  },
+  { name: 'Lublin',     locked: true  },
+  { name: 'Trójmiasto', locked: true  },
+  { name: 'Toruń',      locked: true  },
+  { name: 'Zakopane',   locked: true  },
+];
+const DEMO_CITIES = DEMO_CITIES_DATA.map(c => c.name);
 const DEMO_CATEGORIES = [
   { id: "cafe",       label: "Kawiarnia",   emoji: "☕"  },
   { id: "restaurant", label: "Restauracja", emoji: "🍽️" },
@@ -679,10 +693,19 @@ export default function DemoSession() {
       {step === "location" && (() => {
         const ITEM_H = 64;
         const COUNTRIES = [
-          { flag: "🇵🇱", name: "Polska", available: true },
-          { flag: "🇮🇹", name: "Włochy", available: false },
-          { flag: "🇪🇸", name: "Hiszpania", available: false },
-          { flag: "🇭🇺", name: "Węgry", available: false },
+          { flag: "🇵🇱", name: "Polska",     available: true  },
+          { flag: "🇮🇹", name: "Włochy",     available: false },
+          { flag: "🇪🇸", name: "Hiszpania",  available: false },
+          { flag: "🇫🇷", name: "Francja",    available: false },
+          { flag: "🇩🇪", name: "Niemcy",     available: false },
+          { flag: "🇵🇹", name: "Portugalia", available: false },
+          { flag: "🇭🇷", name: "Chorwacja",  available: false },
+          { flag: "🇬🇷", name: "Grecja",     available: false },
+          { flag: "🇦🇹", name: "Austria",    available: false },
+          { flag: "🇨🇿", name: "Czechy",     available: false },
+          { flag: "🇭🇺", name: "Węgry",      available: false },
+          { flag: "🇳🇱", name: "Holandia",   available: false },
+          { flag: "🇲🇹", name: "Malta",      available: false },
         ];
         return (
           <div className="flex-1 flex flex-col min-h-0">
@@ -737,28 +760,37 @@ export default function DemoSession() {
               >
                 {/* Top padding to center first item */}
                 <div style={{ height: `${ITEM_H * 2}px` }} />
-                {DEMO_CITIES.map((c, i) => {
+                {DEMO_CITIES_DATA.map((city, i) => {
                   const dist = Math.abs(i - drumIndex);
+                  const isLocked = city.locked;
                   return (
                     <div
-                      key={c}
+                      key={city.name}
                       style={{ height: `${ITEM_H}px`, scrollSnapAlign: "center" }}
-                      className="flex items-center justify-center cursor-pointer"
+                      className="flex items-center justify-center gap-2 cursor-pointer"
                       onClick={() => {
                         setDrumIndex(i);
-                        setSelectedCity(c);
+                        setSelectedCity(city.name);
                         drumRef.current?.scrollTo({ top: i * ITEM_H, behavior: "smooth" });
                       }}
                     >
                       <span className={cn(
                         "font-black transition-all duration-150 select-none",
-                        dist === 0 && "text-4xl text-foreground",
-                        dist === 1 && "text-2xl text-foreground/40",
-                        dist === 2 && "text-xl text-foreground/20",
-                        dist >= 3 && "text-lg text-foreground/10",
+                        dist === 0 && !isLocked && "text-4xl text-foreground",
+                        dist === 0 && isLocked  && "text-4xl text-foreground/25",
+                        dist === 1 && !isLocked && "text-2xl text-foreground/40",
+                        dist === 1 && isLocked  && "text-2xl text-foreground/15",
+                        dist === 2 && "text-xl text-foreground/10",
+                        dist >= 3  && "text-lg text-foreground/[0.06]",
                       )}>
-                        {c}
+                        {city.name}
                       </span>
+                      {isLocked && dist <= 1 && (
+                        <span className={cn(
+                          "transition-all duration-150",
+                          dist === 0 ? "text-foreground/25 text-xl" : "text-foreground/10 text-base"
+                        )}>🔒</span>
+                      )}
                     </div>
                   );
                 })}
@@ -769,12 +801,24 @@ export default function DemoSession() {
 
             {/* CTA */}
             <div className="px-5 pt-3 pb-8 shrink-0">
-              <button
-                onClick={() => { setCity(selectedCity); setStep("category"); }}
-                className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
-              >
-                Dalej — {selectedCity}
-              </button>
+              {(() => {
+                const cityData = DEMO_CITIES_DATA[drumIndex];
+                const locked = cityData?.locked;
+                return (
+                  <button
+                    onClick={() => { if (!locked) { setCity(selectedCity); setStep("category"); } }}
+                    disabled={locked}
+                    className={cn(
+                      "w-full py-3.5 rounded-2xl font-bold text-base active:scale-[0.97] transition-transform",
+                      locked
+                        ? "bg-muted text-muted-foreground cursor-default shadow-none"
+                        : "bg-orange-600 text-white shadow-lg shadow-orange-600/25"
+                    )}
+                  >
+                    {locked ? `${selectedCity} — wkrótce 🔒` : `Dalej — ${selectedCity}`}
+                  </button>
+                );
+              })()}
             </div>
           </div>
         );
