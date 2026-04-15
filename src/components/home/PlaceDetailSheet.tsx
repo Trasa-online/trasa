@@ -176,7 +176,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                   </span>
                 </div>
                 {details.opening_hours.weekday_text?.length > 0 && (
-                  <div className="bg-muted/40 rounded-xl p-3 space-y-1">
+                  <div className="bg-muted/40 rounded-2xl p-3 space-y-1">
                     {(details.opening_hours.weekday_text as string[]).map((line, i) => {
                       const [day, ...rest] = line.split(": ");
                       return (
@@ -190,7 +190,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-xl px-3 py-2.5">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-2xl px-3 py-2.5">
                 <Clock className="h-4 w-4 flex-shrink-0" />
                 <span>Brak potwierdzonych godzin otwarcia — sprawdź w Google</span>
               </div>
@@ -203,7 +203,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                   Ostatnie opinie
                 </p>
                 {details.reviews.slice(0, 3).map((review: any, i: number) => (
-                  <div key={i} className="bg-muted/40 rounded-xl p-3 space-y-1.5">
+                  <div key={i} className="bg-muted/40 rounded-2xl p-3 space-y-1.5">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium truncate">{review.author_name}</span>
                       <div className="flex gap-0.5 shrink-0">
@@ -225,7 +225,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
               href={mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm py-2.5 px-3 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors"
+              className="flex items-center gap-2 text-sm py-2.5 px-3 rounded-2xl bg-muted/40 hover:bg-muted/70 transition-colors"
             >
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <span className="flex-1">Otwórz w Google Maps</span>
@@ -246,7 +246,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
               href={mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm py-2.5 px-3 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors"
+              className="flex items-center gap-2 text-sm py-2.5 px-3 rounded-2xl bg-muted/40 hover:bg-muted/70 transition-colors"
             >
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <span className="flex-1">Szukaj w Google Maps</span>
@@ -280,7 +280,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
 
               {/* Current event */}
               {hasEvent && (
-                <div className="rounded-xl border border-amber-200/60 bg-amber-50 p-3 space-y-1">
+                <div className="rounded-2xl border border-amber-200/60 bg-amber-50 p-3 space-y-1">
                   <p className="text-xs font-bold text-amber-800">🎉 {businessProfile.event_title}</p>
                   {businessProfile.event_description && (
                     <p className="text-xs text-amber-700 leading-relaxed">{businessProfile.event_description}</p>
@@ -302,7 +302,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                     <img
                       key={i}
                       src={url}
-                      className="h-24 w-24 flex-shrink-0 rounded-xl object-cover"
+                      className="h-24 w-24 flex-shrink-0 rounded-2xl object-cover"
                     />
                   ))}
                 </div>
@@ -317,7 +317,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
             {businessProfile?.owner_user_id === user.id ? (
               <button
                 onClick={() => navigate(`/biznes/${pin.place_id}`)}
-                className="w-full text-sm text-center text-orange-600 font-semibold py-2.5 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors"
+                className="w-full text-sm text-center text-orange-600 font-semibold py-2.5 rounded-2xl border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors"
               >
                 Zarządzaj wizytówką →
               </button>
@@ -337,33 +337,33 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                     placeholder="E-mail kontaktowy *"
                     value={claimEmail}
                     onChange={(e) => setClaimEmail(e.target.value)}
-                    className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full text-sm rounded-2xl border border-input bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                   <input
                     type="tel"
                     placeholder="Telefon (opcjonalnie)"
                     value={claimPhone}
                     onChange={(e) => setClaimPhone(e.target.value)}
-                    className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full text-sm rounded-2xl border border-input bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                   <textarea
                     placeholder="Wiadomość (opcjonalnie)"
                     rows={2}
                     value={claimMessage}
                     onChange={(e) => setClaimMessage(e.target.value)}
-                    className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                    className="w-full text-sm rounded-2xl border border-input bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                   />
                   <div className="flex gap-2">
                     <button
                       onClick={() => setShowClaimForm(false)}
-                      className="flex-1 text-sm py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors"
+                      className="flex-1 text-sm py-2 rounded-2xl border border-border text-muted-foreground hover:bg-muted transition-colors"
                     >
                       Anuluj
                     </button>
                     <button
                       onClick={handleSubmitClaim}
                       disabled={submittingClaim || !claimEmail}
-                      className="flex-1 text-sm py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors disabled:opacity-50"
+                      className="flex-1 text-sm py-2 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors disabled:opacity-50"
                     >
                       {submittingClaim ? "Wysyłam..." : "Wyślij zgłoszenie"}
                     </button>

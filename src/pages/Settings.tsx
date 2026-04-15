@@ -95,14 +95,14 @@ function DeleteAccountButton({ onDeleted }: { onDeleted: () => void }) {
         <button
           onClick={() => setConfirm(false)}
           disabled={deleting}
-          className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm font-medium"
+          className="flex-1 py-2.5 rounded-2xl border border-border/60 text-sm font-medium"
         >
           Anuluj
         </button>
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="flex-1 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-semibold disabled:opacity-50"
+          className="flex-1 py-2.5 rounded-2xl bg-destructive text-destructive-foreground text-sm font-semibold disabled:opacity-50"
         >
           {deleting ? "Usuwam…" : "Usuń na stałe"}
         </button>
@@ -189,14 +189,14 @@ function ChangePasswordSection() {
           <button
             type="button"
             onClick={() => { setOpen(false); setCurrent(""); setNewPass(""); setConfirm(""); }}
-            className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm font-medium"
+            className="flex-1 py-2.5 rounded-2xl border border-border/60 text-sm font-medium"
           >
             Anuluj
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold disabled:opacity-50"
+            className="flex-1 py-2.5 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold disabled:opacity-50"
           >
             {loading ? "Zapisuję..." : "Zapisz"}
           </button>
@@ -286,10 +286,10 @@ function BugReportSection({ userId }: { userId: string }) {
         onChange={e => setDescription(e.target.value)}
         placeholder="Opisz co się stało — na jakim ekranie, co kliknąłeś/-aś, co pojawiło się zamiast oczekiwanego efektu…"
         rows={4}
-        className="w-full bg-background rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/60 leading-relaxed"
+        className="w-full bg-background rounded-2xl px-3 py-2.5 text-sm resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/60 leading-relaxed"
       />
       {screenshotUrl ? (
-        <div className="relative rounded-xl overflow-hidden">
+        <div className="relative rounded-2xl overflow-hidden">
           <img src={screenshotUrl} alt="screenshot" className="w-full max-h-48 object-cover" />
           <button
             onClick={() => setScreenshotUrl(null)}
@@ -302,7 +302,7 @@ function BugReportSection({ userId }: { userId: string }) {
         <button
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="w-full py-2.5 rounded-xl border border-dashed border-border/50 text-xs text-muted-foreground flex items-center justify-center gap-2 hover:bg-muted/40 transition-colors"
+          className="w-full py-2.5 rounded-2xl border border-dashed border-border/50 text-xs text-muted-foreground flex items-center justify-center gap-2 hover:bg-muted/40 transition-colors"
         >
           <Camera className="h-4 w-4" />
           {uploading ? "Przesyłam zdjęcie…" : "Dodaj zrzut ekranu (opcjonalnie)"}
@@ -312,14 +312,14 @@ function BugReportSection({ userId }: { userId: string }) {
       <div className="flex gap-2 pt-1">
         <button
           onClick={reset}
-          className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm font-medium"
+          className="flex-1 py-2.5 rounded-2xl border border-border/60 text-sm font-medium"
         >
           Anuluj
         </button>
         <button
           onClick={handleSubmit}
           disabled={submitting || !description.trim()}
-          className="flex-1 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
+          className="flex-1 py-2.5 rounded-2xl bg-orange-600 text-white text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
         >
           {submitting ? "Wysyłam…" : "Wyślij zgłoszenie"}
         </button>

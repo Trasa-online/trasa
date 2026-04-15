@@ -49,12 +49,12 @@ function InviteSlot({ code, slot, usedByName, usedByEmail }: {
         </p>
       ) : (
         <div className="flex items-center gap-2">
-          <div className="flex-1 bg-muted rounded-xl px-3 py-2 text-xs text-muted-foreground font-mono truncate">
+          <div className="flex-1 bg-muted rounded-2xl px-3 py-2 text-xs text-muted-foreground font-mono truncate">
             {url}
           </div>
           <button
             onClick={handleCopy}
-            className="h-9 w-9 flex items-center justify-center rounded-xl border border-border bg-background active:bg-muted transition-colors flex-shrink-0"
+            className="h-9 w-9 flex items-center justify-center rounded-2xl border border-border bg-background active:bg-muted transition-colors flex-shrink-0"
           >
             {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
           </button>
@@ -224,7 +224,7 @@ const TravelerProfile = () => {
         <h1 className="text-base font-black tracking-tight">Mój profil</h1>
         <button
           onClick={() => navigate("/settings")}
-          className="h-9 w-9 flex items-center justify-center rounded-xl text-muted-foreground hover:bg-muted transition-colors"
+          className="h-9 w-9 flex items-center justify-center rounded-2xl text-muted-foreground hover:bg-muted transition-colors"
         >
           <Settings className="h-5 w-5" />
         </button>

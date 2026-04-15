@@ -436,7 +436,7 @@ const Admin = () => {
                         <button
                           onClick={() => handleDelete(entry)}
                           disabled={deleting === entry.id}
-                          className="h-7 w-7 flex items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                          className="h-7 w-7 flex items-center justify-center rounded-2xl text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
                         >
                           {deleting === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                         </button>
@@ -444,10 +444,10 @@ const Admin = () => {
                     </div>
                     {link ? (
                       <div className="flex gap-2">
-                        <div className="flex-1 bg-muted rounded-lg px-3 py-2 text-xs text-muted-foreground font-mono truncate">{link}</div>
+                        <div className="flex-1 bg-muted rounded-2xl px-3 py-2 text-xs text-muted-foreground font-mono truncate">{link}</div>
                         <button
                           onClick={() => copyLink(entry.id, link)}
-                          className="shrink-0 h-9 w-9 flex items-center justify-center rounded-lg border border-border bg-card hover:bg-muted transition-colors"
+                          className="shrink-0 h-9 w-9 flex items-center justify-center rounded-2xl border border-border bg-card hover:bg-muted transition-colors"
                         >
                           {copiedId === entry.id ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                         </button>
@@ -458,7 +458,7 @@ const Admin = () => {
                         variant={entry.notified_at ? "outline" : "default"}
                         onClick={() => handleInvite(entry)}
                         disabled={inviting === entry.id}
-                        className="w-full rounded-lg"
+                        className="w-full rounded-2xl"
                       >
                         {inviting === entry.id ? (
                           <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Generuję link...</>
@@ -598,14 +598,14 @@ const Admin = () => {
                       <button
                         onClick={() => handleDeleteClaim(claim)}
                         disabled={deletingClaimId === claim.id}
-                        className="h-7 w-7 flex items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                        className="h-7 w-7 flex items-center justify-center rounded-2xl text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
                       >
                         {deletingClaimId === claim.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                       </button>
                     </div>
                   </div>
                   {claim.message && (
-                    <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+                    <p className="text-xs text-muted-foreground bg-muted/40 rounded-2xl px-3 py-2">
                       {claim.message}
                     </p>
                   )}
@@ -643,7 +643,7 @@ const Admin = () => {
                   )}
                   {bizInviteLinks[claim.id] && (
                     <div className="flex gap-2 pt-1">
-                      <div className="flex-1 bg-muted rounded-lg px-3 py-2 text-xs text-muted-foreground font-mono truncate">
+                      <div className="flex-1 bg-muted rounded-2xl px-3 py-2 text-xs text-muted-foreground font-mono truncate">
                         {bizInviteLinks[claim.id]}
                       </div>
                       <button
@@ -653,7 +653,7 @@ const Admin = () => {
                           setTimeout(() => setCopiedId(null), 2000);
                           toast.success("Link skopiowany!");
                         }}
-                        className="shrink-0 h-9 w-9 flex items-center justify-center rounded-lg border border-border bg-card hover:bg-muted transition-colors"
+                        className="shrink-0 h-9 w-9 flex items-center justify-center rounded-2xl border border-border bg-card hover:bg-muted transition-colors"
                       >
                         {copiedId === claim.id ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                       </button>

@@ -737,7 +737,7 @@ const GroupSession = () => {
       {/* Search bar — expands under header when lupka active */}
       {searchOpen && (
         <div className="px-4 py-2 border-b border-border/20 shrink-0">
-          <div className="flex items-center gap-2 bg-muted rounded-xl px-3 h-9">
+          <div className="flex items-center gap-2 bg-muted rounded-2xl px-3 h-9">
             <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <input
               ref={searchInputRef}
@@ -817,7 +817,7 @@ const GroupSession = () => {
                     <UserPlus className="h-4 w-4 text-orange-600 shrink-0" />
                     <p className="text-sm font-semibold">Zaproś znajomych</p>
                   </div>
-                  <div className="flex items-center gap-2 bg-background border border-border/60 rounded-xl px-3 h-10">
+                  <div className="flex items-center gap-2 bg-background border border-border/60 rounded-2xl px-3 h-10">
                     <Search className="h-4 w-4 text-muted-foreground shrink-0" />
                     <input
                       type="text"
@@ -838,7 +838,7 @@ const GroupSession = () => {
                         const isInvited = waitingInvitedIds.has(profile.id);
                         const isSending = waitingInviting === profile.id;
                         return (
-                          <div key={profile.id} className="flex items-center gap-3 rounded-xl bg-background p-2">
+                          <div key={profile.id} className="flex items-center gap-3 rounded-2xl bg-background p-2">
                             {profile.avatar_url ? (
                               <img src={profile.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
                             ) : (
@@ -877,7 +877,7 @@ const GroupSession = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => { navigator.clipboard.writeText(joinCode ?? ""); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                      className="flex-1 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                      className="flex-1 py-2.5 rounded-2xl bg-orange-600 text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                     >
                       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       {copied ? "Skopiowano!" : "Kopiuj kod"}
@@ -885,7 +885,7 @@ const GroupSession = () => {
                     {typeof navigator.share === "function" && (
                       <button
                         onClick={() => navigator.share({ title: "Dołącz do mojej sesji w TRASA", text: `Dołącz używając kodu: ${joinCode}`, url: `${window.location.origin}/sesja/${joinCode}` })}
-                        className="flex-1 py-2.5 rounded-xl border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                        className="flex-1 py-2.5 rounded-2xl border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                       >
                         <Share2 className="h-4 w-4" />
                         Udostępnij
@@ -1176,9 +1176,9 @@ const GroupSession = () => {
                                     }`}
                                   >
                                     {m.photo_url ? (
-                                      <img src={m.photo_url} alt={m.place_name} className="h-14 w-14 rounded-xl object-cover shrink-0" />
+                                      <img src={m.photo_url} alt={m.place_name} className="h-14 w-14 rounded-2xl object-cover shrink-0" />
                                     ) : (
-                                      <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                                      <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center shrink-0">
                                         <MapPin className="h-5 w-5 text-muted-foreground" />
                                       </div>
                                     )}
@@ -1500,7 +1500,7 @@ const LobbyProposals = ({
         value={lobbyQuery}
         onChange={e => setLobbyQuery(e.target.value)}
         placeholder="Wpisz nazwę miejsca…"
-        className="w-full h-11 pl-9 pr-10 rounded-xl border border-border/60 bg-card text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+        className="w-full h-11 pl-9 pr-10 rounded-2xl border border-border/60 bg-card text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30"
       />
       {lobbySearching && (
         <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground/60" />
@@ -1508,7 +1508,7 @@ const LobbyProposals = ({
 
       {/* Dropdown results */}
       {lobbyQuery.trim().length >= 2 && !lobbySearching && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl border border-border/40 bg-card shadow-lg overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-2xl border border-border/40 bg-card shadow-lg overflow-hidden">
           {lobbyResults.length > 0 ? (
             lobbyResults.map(place => (
               <button
@@ -1548,7 +1548,7 @@ const LobbyProposals = ({
           const proposer = members.find((m: any) => m.user_id === p.proposed_by);
           const name = proposer?.profile?.first_name || proposer?.profile?.username || "Ktoś";
           return (
-            <div key={p.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border/40">
+            <div key={p.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border border-border/40">
               <div className="h-7 w-7 rounded-full bg-orange-600/20 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
                 {name[0].toUpperCase()}
               </div>

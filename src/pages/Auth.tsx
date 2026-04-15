@@ -219,7 +219,7 @@ const Auth = () => {
               <div className="flex rounded-2xl bg-blue-900/60 p-1 mb-6">
                 <button
                   onClick={() => setBizMode("login")}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${
+                  className={`flex-1 py-2 text-sm font-semibold rounded-2xl transition-all ${
                     bizMode === "login" ? "bg-blue-600 text-white shadow-sm" : "text-blue-300 hover:text-white"
                   }`}
                 >
@@ -227,7 +227,7 @@ const Auth = () => {
                 </button>
                 <button
                   onClick={() => setBizMode("register")}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${
+                  className={`flex-1 py-2 text-sm font-semibold rounded-2xl transition-all ${
                     bizMode === "register" ? "bg-blue-600 text-white shadow-sm" : "text-blue-300 hover:text-white"
                   }`}
                 >
@@ -325,7 +325,7 @@ const Auth = () => {
                       onChange={(e) => setBizMessage(e.target.value)}
                       placeholder="Coś jeszcze, co chcesz nam powiedzieć..."
                       rows={2}
-                      className="w-full rounded-xl px-3 py-2 text-sm bg-blue-900/50 border border-blue-700/60 text-white placeholder:text-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      className="w-full rounded-2xl px-3 py-2 text-sm bg-blue-900/50 border border-blue-700/60 text-white placeholder:text-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     />
                   </div>
                   <Button type="submit" className="w-full rounded-2xl py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base border-0" disabled={loading}>
@@ -343,7 +343,7 @@ const Auth = () => {
           <div className="flex rounded-2xl bg-muted p-1 mb-6">
             <button
               onClick={() => setMode("login")}
-              className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${
+              className={`flex-1 py-2 text-sm font-semibold rounded-2xl transition-all ${
                 mode === "login" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -351,7 +351,7 @@ const Auth = () => {
             </button>
             <button
               onClick={() => setMode("register")}
-              className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${
+              className={`flex-1 py-2 text-sm font-semibold rounded-2xl transition-all ${
                 mode === "register" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >

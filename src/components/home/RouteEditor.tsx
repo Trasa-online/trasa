@@ -123,7 +123,7 @@ const RouteEditor = ({ routeId, initialPins, dayLabel, dateLabel, canReview, onS
           <div
             key={pin.id}
             className={cn(
-              "flex items-center gap-2 rounded-xl px-3 py-2.5 transition-opacity",
+              "flex items-center gap-2 rounded-2xl px-3 py-2.5 transition-opacity",
               pin.id.startsWith("temp-") ? "opacity-50 bg-muted/40" : "bg-background/60"
             )}
           >
@@ -140,20 +140,20 @@ const RouteEditor = ({ routeId, initialPins, dayLabel, dateLabel, canReview, onS
               <button
                 onClick={() => moveUp(pin.id)}
                 disabled={idx === 0}
-                className="h-7 w-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                className="h-7 w-7 flex items-center justify-center rounded-2xl text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-20 disabled:pointer-events-none transition-colors"
               >
                 <ChevronUp className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={() => moveDown(pin.id)}
                 disabled={idx === sorted.length - 1}
-                className="h-7 w-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                className="h-7 w-7 flex items-center justify-center rounded-2xl text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-20 disabled:pointer-events-none transition-colors"
               >
                 <ChevronDown className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={() => deletePin(pin.id)}
-                className="h-7 w-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                className="h-7 w-7 flex items-center justify-center rounded-2xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -167,7 +167,7 @@ const RouteEditor = ({ routeId, initialPins, dayLabel, dateLabel, canReview, onS
 
       <button
         onClick={() => setAddOpen(true)}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-border/60 text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors text-sm mb-3"
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-2xl border border-dashed border-border/60 text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors text-sm mb-3"
       >
         <Plus className="h-3.5 w-3.5" />
         Dodaj miejsce

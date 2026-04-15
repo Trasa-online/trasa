@@ -446,7 +446,7 @@ const BusinessDashboard = () => {
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Podgląd wizytówki</p>
 
           {/* Tabs */}
-          <div className="flex rounded-xl bg-muted p-0.5 gap-0.5">
+          <div className="flex rounded-2xl bg-muted p-0.5 gap-0.5">
             {(['basic', 'premium'] as const).map(tab => (
               <button
                 key={tab}
@@ -456,7 +456,7 @@ const BusinessDashboard = () => {
                   }
                   setPreviewTab(tab);
                 }}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-2xl transition-all ${
                   previewTab === tab ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -516,7 +516,7 @@ const BusinessDashboard = () => {
                   <p className="text-white/70 text-xs text-center px-8 leading-relaxed">Logo, galeria, opisy, wydarzenia i analityka</p>
                   <button
                     onClick={() => setShowUpgradeBanner(true)}
-                    className="mt-2 px-4 py-2 rounded-xl bg-amber-500 text-white text-xs font-bold active:opacity-80"
+                    className="mt-2 px-4 py-2 rounded-2xl bg-amber-500 text-white text-xs font-bold active:opacity-80"
                   >
                     Dowiedz się więcej →
                   </button>
@@ -548,7 +548,7 @@ const BusinessDashboard = () => {
             </div>
             <a
               href="mailto:kontakt@trasa.app?subject=Upgrade do Premium"
-              className="flex items-center justify-center w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm active:opacity-80"
+              className="flex items-center justify-center w-full py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm active:opacity-80"
             >
               Napisz do nas → kontakt@trasa.app
             </a>
@@ -568,7 +568,7 @@ const BusinessDashboard = () => {
                 <p className="text-xs font-medium mb-1.5">Logo</p>
                 <button
                   onClick={() => logoInputRef.current?.click()}
-                  className="relative w-full aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70"
+                  className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70"
                 >
                   {uploading === "logo" ? (
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -595,7 +595,7 @@ const BusinessDashboard = () => {
               <p className="text-xs font-medium mb-1.5">Zdjęcie główne</p>
               <button
                 onClick={() => coverInputRef.current?.click()}
-                className="relative w-full aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70"
+                className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70"
               >
                 {uploading === "cover" ? (
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -626,7 +626,7 @@ const BusinessDashboard = () => {
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {galleryUrls.map((url, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted">
+                  <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden bg-muted">
                     <img src={url} className="w-full h-full object-cover" />
                     <button
                       onClick={() => removeGalleryPhoto(idx)}
@@ -639,7 +639,7 @@ const BusinessDashboard = () => {
                 {galleryUrls.length < MAX_GALLERY && (
                   <button
                     onClick={() => galleryInputRef.current?.click()}
-                    className="aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70"
+                    className="aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70"
                   >
                     {uploading === "gallery" ? (
                       <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -719,7 +719,7 @@ const BusinessDashboard = () => {
                       maxLength={500}
                       onChange={e => { setDescription(e.target.value); setIsDirty(true); }}
                       placeholder="Opisz swój lokal..."
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                      className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
                     />
                     <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
                   </div>
@@ -729,7 +729,7 @@ const BusinessDashboard = () => {
           )}
 
           {plan === 'zero' && (
-            <p className="text-xs text-muted-foreground bg-muted/50 rounded-xl px-3 py-2">
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded-2xl px-3 py-2">
               Przejdź na plan Basic, aby dodać dane kontaktowe i typ miejsca.
             </p>
           )}
@@ -768,7 +768,7 @@ const BusinessDashboard = () => {
               maxLength={300}
               onChange={e => { setEventDescription(e.target.value); setIsDirty(true); }}
               placeholder="Szczegóły wydarzenia..."
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+              className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />
             <p className="text-[11px] text-muted-foreground text-right">{eventDescription.length}/300</p>
           </div>
@@ -800,14 +800,14 @@ const BusinessDashboard = () => {
           </p>
 
           {/* New post form */}
-          <div className="space-y-3 border border-border/60 rounded-xl p-3">
+          <div className="space-y-3 border border-border/60 rounded-2xl p-3">
             <textarea
               rows={3}
               value={postDescription}
               maxLength={600}
               onChange={e => setPostDescription(e.target.value)}
               placeholder="Co nowego w Twoim lokalu?"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+              className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />
             <p className="text-[11px] text-muted-foreground text-right -mt-2">{postDescription.length}/600</p>
 
@@ -815,7 +815,7 @@ const BusinessDashboard = () => {
             {postPhotos.length > 0 && (
               <div className="flex gap-2 flex-wrap">
                 {postPhotos.map((url, idx) => (
-                  <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden">
+                  <div key={idx} className="relative w-16 h-16 rounded-2xl overflow-hidden">
                     <img src={url} className="w-full h-full object-cover" />
                     <button
                       onClick={() => setPostPhotos(prev => prev.filter((_, i) => i !== idx))}
@@ -862,7 +862,7 @@ const BusinessDashboard = () => {
           )}
           <div className="space-y-3">
             {posts.map(post => (
-              <div key={post.id} className="border border-border/50 rounded-xl p-3 space-y-2">
+              <div key={post.id} className="border border-border/50 rounded-2xl p-3 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   {post.description && (
                     <p className="text-sm leading-relaxed flex-1">{post.description}</p>
@@ -877,7 +877,7 @@ const BusinessDashboard = () => {
                 {post.photo_urls.length > 0 && (
                   <div className={`grid gap-1.5 ${post.photo_urls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
                     {post.photo_urls.map((url, idx) => (
-                      <img key={idx} src={url} className="w-full rounded-lg object-cover aspect-square" />
+                      <img key={idx} src={url} className="w-full rounded-2xl object-cover aspect-square" />
                     ))}
                   </div>
                 )}
@@ -897,7 +897,7 @@ const BusinessDashboard = () => {
           <button
             onClick={handleSave}
             disabled={saving || uploading !== null}
-            className="w-full max-w-2xl mx-auto flex py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 items-center justify-center gap-2"
+            className="w-full max-w-2xl mx-auto flex py-3.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 items-center justify-center gap-2"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             Zapisz zmiany

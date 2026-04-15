@@ -210,7 +210,7 @@ const DraggablePinList = ({
     const CurrentIcon = currentConfig.icon;
     
     return (
-      <div className="bg-card border border-border rounded-lg p-3 space-y-2.5">
+      <div className="bg-card border border-border rounded-2xl p-3 space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-foreground">
             <CurrentIcon className={`h-4 w-4 ${currentConfig.iconColor}`} />
@@ -324,7 +324,7 @@ const DraggablePinList = ({
     return (
       <div 
         key={noteIndex}
-        className={`flex items-start gap-2 p-2.5 rounded-lg border ${noteConfig.bgColor} ${noteConfig.borderColor}`}
+        className={`flex items-start gap-2 p-2.5 rounded-2xl border ${noteConfig.bgColor} ${noteConfig.borderColor}`}
       >
         <NoteIcon className={`h-3.5 w-3.5 mt-0.5 flex-shrink-0 ${noteConfig.iconColor}`} />
         <div className="flex-1 min-w-0">
@@ -377,7 +377,7 @@ const DraggablePinList = ({
           <button
             type="button"
             onClick={() => setExpandedNotePinIndex(pinIndex)}
-            className="w-full flex items-center gap-2 py-2.5 px-3 text-xs bg-muted/50 border border-border rounded-lg hover:bg-muted transition-colors"
+            className="w-full flex items-center gap-2 py-2.5 px-3 text-xs bg-muted/50 border border-border rounded-2xl hover:bg-muted transition-colors"
           >
             <div className="flex -space-x-1">
               {pinNotes.slice(0, 3).map((note, i) => {
@@ -416,7 +416,7 @@ const DraggablePinList = ({
               <button
                 type="button"
                 onClick={() => startAddingNote(pinIndex)}
-                className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-foreground/50 rounded-lg transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-foreground/50 rounded-2xl transition-colors"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>Dodaj ciekawostkę ({pinNotes.length}/{MAX_NOTES_PER_PIN})</span>
@@ -430,7 +430,7 @@ const DraggablePinList = ({
           <button
             type="button"
             onClick={() => startAddingNote(pinIndex)}
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-foreground/50 rounded-lg transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-foreground/50 rounded-2xl transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>Dodaj notatkę na trasie</span>
@@ -460,7 +460,7 @@ const DraggablePinList = ({
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, index)}
               onDragEnd={handleDragEnd}
-              className={`border border-border rounded-lg p-2.5 bg-card transition-all ${
+              className={`border border-border rounded-2xl p-2.5 bg-card transition-all ${
                 isDragging ? 'opacity-50 scale-[0.98]' : ''
               } ${isDragOver ? 'border-primary border-2' : ''} ${
                 onPinClick ? 'cursor-pointer hover:border-primary' : ''

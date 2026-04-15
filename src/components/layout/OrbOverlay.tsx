@@ -457,13 +457,13 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
 
               {/* Place identification result */}
               {isIdentifying && (
-                <div className="rounded-xl bg-card border border-border p-4 flex items-center gap-3 w-full">
+                <div className="rounded-2xl bg-card border border-border p-4 flex items-center gap-3 w-full">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground shrink-0" />
                   <span className="text-sm text-muted-foreground">{tHome("identifying_place")}</span>
                 </div>
               )}
               {placeResult && !isIdentifying && (
-                <div className="rounded-xl bg-card border border-border p-4 flex flex-col gap-1 w-full">
+                <div className="rounded-2xl bg-card border border-border p-4 flex flex-col gap-1 w-full">
                   {placeResult.found === false ? (
                     <p className="text-sm text-muted-foreground text-center">
                       {i18n.language === "en"

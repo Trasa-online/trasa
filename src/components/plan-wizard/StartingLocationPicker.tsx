@@ -235,7 +235,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
         {/* Search input overlay */}
         <div className="absolute top-3 left-3 right-3 z-10">
           <div className="relative">
-            <div className="flex items-center bg-white rounded-xl shadow-lg px-3 h-11 gap-2">
+            <div className="flex items-center bg-white rounded-2xl shadow-lg px-3 h-11 gap-2">
               <Search className="h-4 w-4 text-muted-foreground shrink-0" />
               <input
                 type="text"
@@ -253,13 +253,13 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
             </div>
 
             {locationError && (
-              <div className="mt-1 bg-white rounded-xl shadow-lg px-4 py-3 text-sm text-red-500 font-medium">
+              <div className="mt-1 bg-white rounded-2xl shadow-lg px-4 py-3 text-sm text-red-500 font-medium">
                 {locationError}
               </div>
             )}
 
             {!locationError && showSuggestions && suggestions.length > 0 && (
-              <div className="mt-1 bg-white rounded-xl shadow-lg overflow-hidden">
+              <div className="mt-1 bg-white rounded-2xl shadow-lg overflow-hidden">
                 {suggestions.map((s) => (
                   <button
                     key={s.placeId}

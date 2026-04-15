@@ -57,11 +57,11 @@ export default function UserSearch() {
       <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/40 sticky top-0 bg-background z-10">
         <button
           onClick={() => navigate(-1)}
-          className="h-9 w-9 flex items-center justify-center rounded-xl text-foreground"
+          className="h-9 w-9 flex items-center justify-center rounded-2xl text-foreground"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div className="flex-1 flex items-center gap-2 bg-muted rounded-xl px-3 h-10">
+        <div className="flex-1 flex items-center gap-2 bg-muted rounded-2xl px-3 h-10">
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <input
             type="text"

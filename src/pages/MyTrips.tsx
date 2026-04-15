@@ -228,7 +228,7 @@ const MyTrips = () => {
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); setDeletingTrip(trip); }}
-                              className="absolute top-3 right-3 p-1 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                              className="absolute top-3 right-3 p-1 rounded-2xl text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
                               aria-label={t("delete_aria")}
                             >
                               <Trash2 className="h-3.5 w-3.5" />

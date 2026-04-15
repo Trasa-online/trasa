@@ -571,7 +571,7 @@ const EmptyState = ({
 
             <button
               onClick={() => onPickRoute(route)}
-              className="w-full py-3 rounded-xl bg-foreground text-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+              className="w-full py-3 rounded-2xl bg-foreground text-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
             >
               Wybierz tę trasę
               <ArrowRight className="h-4 w-4" />

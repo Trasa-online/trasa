@@ -104,7 +104,7 @@ function PlaceRow({
         onPointerCancel={handlePointerCancel}
       >
         {/* Thumbnail */}
-        <div className="h-12 w-12 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+        <div className="h-12 w-12 rounded-2xl overflow-hidden bg-muted flex-shrink-0">
           {place.photo_url ? (
             <img src={place.photo_url} alt="" className="w-full h-full object-cover" />
           ) : (

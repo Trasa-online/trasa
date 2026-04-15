@@ -373,7 +373,7 @@ const PlaceSwiperDetail = ({
 
                     {/* Current event */}
                     {place.businessEventTitle && (
-                      <div className="rounded-xl bg-amber-500/15 border border-amber-300/40 px-3 py-2.5 space-y-0.5">
+                      <div className="rounded-2xl bg-amber-500/15 border border-amber-300/40 px-3 py-2.5 space-y-0.5">
                         <p className="text-xs font-bold text-amber-900 dark:text-amber-300">🎉 Aktualne wydarzenie</p>
                         <p className="text-sm text-amber-800 dark:text-amber-200 leading-snug">{place.businessEventTitle}</p>
                       </div>
@@ -393,7 +393,7 @@ const PlaceSwiperDetail = ({
                         {post.photo_urls.length > 0 && (
                           <div className={`grid gap-1.5 ${post.photo_urls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
                             {post.photo_urls.map((url, idx) => (
-                              <img key={idx} src={url} className="w-full rounded-xl object-cover aspect-square" />
+                              <img key={idx} src={url} className="w-full rounded-2xl object-cover aspect-square" />
                             ))}
                           </div>
                         )}
@@ -411,7 +411,7 @@ const PlaceSwiperDetail = ({
                   <div className="space-y-3 animate-pulse">
                     <div className="h-4 bg-muted rounded w-3/4" />
                     <div className="h-4 bg-muted rounded w-1/2" />
-                    <div className="h-32 bg-muted rounded-xl" />
+                    <div className="h-32 bg-muted rounded-2xl" />
                   </div>
                 )}
 
@@ -458,7 +458,7 @@ const PlaceSwiperDetail = ({
                         href={`https://www.google.com/maps/place/?q=place_id:${detail.place_id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-border text-sm text-foreground"
+                        className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl border border-border text-sm text-foreground"
                       >
                         <span className="font-black text-[#4285F4]">G</span>
                         Więcej opinii na Google

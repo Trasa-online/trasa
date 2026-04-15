@@ -60,7 +60,7 @@ const AddPlaceSheet = ({ open, onOpenChange, onAdd }: AddPlaceSheetProps) => {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Szukaj lub wpisz nazwę..."
-            className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-border/60 bg-muted/30 text-sm focus:outline-none focus:border-foreground/30"
+            className="w-full pl-10 pr-9 py-2.5 rounded-2xl border border-border/60 bg-muted/30 text-sm focus:outline-none focus:border-foreground/30"
           />
           {query && (
             <button
@@ -76,7 +76,7 @@ const AddPlaceSheet = ({ open, onOpenChange, onAdd }: AddPlaceSheetProps) => {
           {query.trim() && (
             <button
               onClick={() => handleAdd(query.trim())}
-              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-muted/50 text-left"
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-muted/50 text-left"
             >
               <div className="h-8 w-8 rounded-full bg-foreground/10 flex items-center justify-center shrink-0">
                 <Plus className="h-4 w-4" />
@@ -92,7 +92,7 @@ const AddPlaceSheet = ({ open, onOpenChange, onAdd }: AddPlaceSheetProps) => {
             <button
               key={i}
               onClick={() => handleAdd(r.name, r)}
-              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-muted/50 text-left"
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-muted/50 text-left"
             >
               <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
                 <MapPin className="h-4 w-4 text-muted-foreground" />

@@ -203,7 +203,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
                   <span className="h-7 w-7 rounded-full bg-orange-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
                     {i + 1}
                   </span>
-                  <img src={place.photo} alt={place.name} className="h-12 w-12 rounded-xl object-cover shrink-0" />
+                  <img src={place.photo} alt={place.name} className="h-12 w-12 rounded-2xl object-cover shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate">{place.name}</p>
                     <p className="text-xs text-muted-foreground truncate">{place.address}</p>
@@ -625,12 +625,12 @@ export default function DemoSession() {
                   onKeyDown={e => e.key === "Enter" && handleJoinByCode()}
                   placeholder="np. ABC123"
                   maxLength={8}
-                  className="flex-1 px-3 py-2.5 rounded-xl border border-border/60 bg-background text-sm font-mono font-bold tracking-widest uppercase placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-orange-600/30"
+                  className="flex-1 px-3 py-2.5 rounded-2xl border border-border/60 bg-background text-sm font-mono font-bold tracking-widest uppercase placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-orange-600/30"
                 />
                 <button
                   onClick={handleJoinByCode}
                   disabled={joinInput.trim().length < 4 || joinLoading}
-                  className="px-4 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-bold disabled:opacity-40 active:scale-[0.97] transition-transform flex items-center gap-1.5"
+                  className="px-4 py-2.5 rounded-2xl bg-orange-600 text-white text-sm font-bold disabled:opacity-40 active:scale-[0.97] transition-transform flex items-center gap-1.5"
                 >
                   {joinLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Dołącz"}
                 </button>
@@ -822,7 +822,7 @@ export default function DemoSession() {
               </div>
               <button
                 onClick={handleCopyCode}
-                className="h-10 w-10 rounded-xl bg-card border border-border/60 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+                className="h-10 w-10 rounded-2xl bg-card border border-border/60 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
               >
                 {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
               </button>
@@ -868,7 +868,7 @@ export default function DemoSession() {
                 <Loader2 className="h-6 w-6 text-orange-600 animate-spin" />
                 <p className="font-semibold">Czekamy na znajomego…</p>
                 <p className="text-xs text-muted-foreground">Gdy skończy swipe'ować, zobaczycie wspólne dopasowania.</p>
-                <p className="text-xs font-mono bg-background border border-border/50 px-3 py-1.5 rounded-xl">{sessionCode}</p>
+                <p className="text-xs font-mono bg-background border border-border/50 px-3 py-1.5 rounded-2xl">{sessionCode}</p>
               </div>
             )}
 
@@ -908,7 +908,7 @@ export default function DemoSession() {
                     <span className="h-7 w-7 rounded-full bg-orange-600/10 flex items-center justify-center text-xs font-bold text-orange-600 shrink-0">
                       {i + 1}
                     </span>
-                    <img src={place.photo} alt={place.name} className="h-10 w-10 rounded-xl object-cover shrink-0" />
+                    <img src={place.photo} alt={place.name} className="h-10 w-10 rounded-2xl object-cover shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold truncate">{place.name}</p>
                       <p className="text-xs text-muted-foreground truncate">{place.address}</p>

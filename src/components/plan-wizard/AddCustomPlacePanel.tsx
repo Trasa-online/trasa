@@ -217,7 +217,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
 
       {/* Input */}
       <div className="relative">
-        <div className="flex items-center bg-background border border-border rounded-xl px-3 h-12 gap-2">
+        <div className="flex items-center bg-background border border-border rounded-2xl px-3 h-12 gap-2">
           {inputIcon}
           <input
             autoFocus
@@ -236,7 +236,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
 
         {/* Autocomplete suggestions */}
         {showSuggestions && suggestions.length > 0 && status === "idle" && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-xl shadow-lg overflow-hidden z-20">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-2xl shadow-lg overflow-hidden z-20">
             {suggestions.map((p) => (
               <button
                 key={p.place_id}
@@ -258,7 +258,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
       {(mode === "googlemaps" || mode === "social") && status === "idle" && query.trim().length > 0 && (
         <button
           onClick={handleAnalyzeUrl}
-          className="w-full h-11 rounded-xl bg-foreground text-background text-sm font-semibold active:opacity-80 transition-opacity"
+          className="w-full h-11 rounded-2xl bg-foreground text-background text-sm font-semibold active:opacity-80 transition-opacity"
         >
           Analizuj link
         </button>
@@ -274,7 +274,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
 
       {/* Error */}
       {status === "error" && (
-        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+        <div className="rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
           {errorMsg}
         </div>
       )}
@@ -284,7 +284,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
         <div className="flex-1 flex flex-col gap-4">
           <div className="rounded-2xl border border-border bg-card p-4 space-y-1">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-600/10 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-2xl bg-orange-600/10 flex items-center justify-center shrink-0">
                 <MapPin className="h-5 w-5 text-orange-600" />
               </div>
               <div className="min-w-0">

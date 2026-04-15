@@ -254,13 +254,13 @@ const CreateGroupSession = () => {
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
                   placeholder="np. AB3X9K"
-                  className="min-w-0 flex-1 h-11 rounded-xl border border-border/60 bg-background px-3 text-base font-mono font-bold tracking-widest uppercase outline-none focus:border-orange-500 transition-colors placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground"
+                  className="min-w-0 flex-1 h-11 rounded-2xl border border-border/60 bg-background px-3 text-base font-mono font-bold tracking-widest uppercase outline-none focus:border-orange-500 transition-colors placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground"
                   onKeyDown={(e) => e.key === "Enter" && handleJoinByCode()}
                 />
                 <button
                   onClick={handleJoinByCode}
                   disabled={joining || joinCode.trim().length < 4}
-                  className="shrink-0 h-11 px-4 rounded-xl bg-orange-600 text-white font-semibold text-sm flex items-center gap-1.5 active:scale-95 transition-transform disabled:opacity-40"
+                  className="shrink-0 h-11 px-4 rounded-2xl bg-orange-600 text-white font-semibold text-sm flex items-center gap-1.5 active:scale-95 transition-transform disabled:opacity-40"
                 >
                   {joining ? "…" : <><span>Dołącz</span><ArrowRight className="h-4 w-4" /></>}
                 </button>
@@ -279,7 +279,7 @@ const CreateGroupSession = () => {
               <p className="text-sm font-semibold mb-3">Data wyjazdu <span className="font-normal text-muted-foreground">(opcjonalnie)</span></p>
               <button
                 onClick={() => setDatePickerOpen(o => !o)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors w-full ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-medium transition-colors w-full ${
                   tripDate ? "border-orange-500 text-orange-600 bg-orange-500/5" : "border-border/60 bg-card text-muted-foreground"
                 }`}
               >
@@ -373,7 +373,7 @@ const CreateGroupSession = () => {
                     <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     <button
                       onClick={(e) => handleDeleteOrLeaveSession(s, e)}
-                      className={`h-10 flex items-center justify-center rounded-xl active:scale-90 transition-all shrink-0 text-xs font-bold ${confirmActionId === s.id ? "px-2 bg-red-500 text-white min-w-[60px]" : "w-10 bg-red-500/10 text-red-500"}`}
+                      className={`h-10 flex items-center justify-center rounded-2xl active:scale-90 transition-all shrink-0 text-xs font-bold ${confirmActionId === s.id ? "px-2 bg-red-500 text-white min-w-[60px]" : "w-10 bg-red-500/10 text-red-500"}`}
                     >
                       {confirmActionId === s.id ? "Pewny?" : s.created_by === user?.id
                         ? <Trash2 className="h-4 w-4" />
@@ -430,7 +430,7 @@ const CreateGroupSession = () => {
               {/* Hidden fake fields — trick iOS into not showing Face ID */}
               <input type="text" aria-hidden="true" className="hidden" autoComplete="username" tabIndex={-1} readOnly />
               <input type="password" aria-hidden="true" className="hidden" autoComplete="current-password" tabIndex={-1} readOnly />
-              <div className="flex items-center gap-2 bg-background border border-border/60 rounded-xl px-3 h-10">
+              <div className="flex items-center gap-2 bg-background border border-border/60 rounded-2xl px-3 h-10">
                 <Search className="h-4 w-4 text-muted-foreground shrink-0" />
                 <input
                   type="text"
@@ -453,7 +453,7 @@ const CreateGroupSession = () => {
                     const initials = (profile.first_name || profile.username || "?")[0].toUpperCase();
                     const isSelected = selectedFriends.has(profile.id);
                     return (
-                      <div key={profile.id} className="flex items-center gap-3 rounded-xl bg-background p-2">
+                      <div key={profile.id} className="flex items-center gap-3 rounded-2xl bg-background p-2">
                         {profile.avatar_url ? (
                           <img src={profile.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
                         ) : (
@@ -497,7 +497,7 @@ const CreateGroupSession = () => {
                     setTimeout(() => setCodeCopied(false), 2000);
                     toast.success("Skopiowano kod!");
                   }}
-                  className="flex-1 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  className="flex-1 py-2.5 rounded-2xl bg-orange-600 text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                 >
                   {codeCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   {codeCopied ? "Skopiowano!" : "Kopiuj kod"}
@@ -509,7 +509,7 @@ const CreateGroupSession = () => {
                     setTimeout(() => setLinkCopied(false), 2000);
                     toast.success("Skopiowano link!");
                   }}
-                  className="flex-1 py-2.5 rounded-xl border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  className="flex-1 py-2.5 rounded-2xl border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                 >
                   {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   {linkCopied ? "Skopiowano!" : "Kopiuj link"}
