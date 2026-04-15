@@ -769,7 +769,7 @@ export default function DemoSession() {
         <div className="flex-1 overflow-y-auto">
           {/* Top bar with "dla firm" toggle */}
           <div className="flex items-center justify-between px-5 pt-4 pb-0">
-            <img src="/icon-192.png" className="h-7 w-7 rounded-full" alt="trasa" />
+            <div className="h-7 w-7 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
             <button
               onClick={() => setBusinessMode(b => !b)}
               className="text-xs font-semibold text-orange-600 bg-orange-600/10 px-3 py-1.5 rounded-full active:scale-95 transition-transform"
