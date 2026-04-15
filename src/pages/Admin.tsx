@@ -53,7 +53,7 @@ async function invokeInviteUser(email: string, username: string, waitlist_id?: s
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
   if (!json?.link) throw new Error(`Brak linku w odpowiedzi: ${JSON.stringify(json)}`);
-  return json as { link: string; email: string };
+  return json as { link: string; email: string; userId?: string };
 }
 
 const Admin = () => {
@@ -242,9 +242,8 @@ const Admin = () => {
   const handleApproveClaim = async (claim: BusinessClaim) => {
     setApprovingId(claim.id);
     try {
-      // 1. Invite user — creates auth account + returns magic link
-      const { link } = await invokeInviteUser(claim.contact_email, claim.contact_email.split("@")[0]);
-      const newUserId: string | undefined = undefined;
+      // 1. Invite user — creates auth account + returns magic link + userId
+      const { link, userId: newUserId } = await invokeInviteUser(claim.contact_email, claim.contact_email.split("@")[0]);
 
       // 2. Create business profile linked to the new user
       await (supabase as any).from("business_profiles").upsert({

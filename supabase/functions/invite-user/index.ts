@@ -139,7 +139,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ link: inviteLink, email }),
+      JSON.stringify({ link: inviteLink, email, userId: invitedUserId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
