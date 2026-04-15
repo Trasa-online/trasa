@@ -769,7 +769,10 @@ export default function DemoSession() {
         <div className="flex-1 overflow-y-auto">
           {/* Top bar with "dla firm" toggle */}
           <div className="flex items-center justify-between px-5 pt-4 pb-0">
-            <span className="text-sm font-black tracking-tight">trasa</span>
+            <div className="flex items-center gap-2">
+              <img src="/icon-192.png" className="h-7 w-7 rounded-full" alt="trasa" />
+              <span className="text-sm font-black tracking-tight">trasa</span>
+            </div>
             <button
               onClick={() => setBusinessMode(b => !b)}
               className="text-xs font-semibold text-orange-600 bg-orange-600/10 px-3 py-1.5 rounded-full active:scale-95 transition-transform"
@@ -781,7 +784,7 @@ export default function DemoSession() {
           {businessMode ? (
             /* ── Business landing ── */
             <>
-              <div className="overflow-hidden flex items-center px-5 pt-4 pb-4 gap-2" style={{ minHeight: "30vh" }}>
+              <div className="overflow-hidden flex items-center px-5 pt-4 pb-8 gap-2" style={{ minHeight: "30vh" }}>
                 <div className="flex-1 z-10">
                   <h1 className="text-3xl font-black leading-tight">Bądź tam,<br/>gdzie szukają<br/>klienci.</h1>
                   <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[200px]">
@@ -789,22 +792,34 @@ export default function DemoSession() {
                   </p>
                 </div>
                 <div className="relative shrink-0" style={{ width: "148px", height: "210px", marginRight: "-48px" }}>
+                  {/* Back card — regular place with rating */}
                   <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-md"
                     style={{ transform: "rotate(-8deg) translate(-28px, 16px)" }}>
-                    <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                    <div className="absolute bottom-2.5 left-2.5">
-                      <span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">Restauracja</span>
-                      <p className="text-white text-[11px] font-bold mt-0.5">Twój lokal</p>
-                    </div>
-                  </div>
-                  <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-2xl border-2 border-white"
-                    style={{ transform: "rotate(-2deg) translate(-8px, -6px)" }}>
                     <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&q=80" alt="" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
                     <div className="absolute bottom-2.5 left-2.5">
                       <span className="text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">Kawiarnia</span>
                       <p className="text-white text-[11px] font-bold mt-0.5">Charlotte</p>
+                      <p className="text-yellow-400 text-[9px]">★ 4.8</p>
+                    </div>
+                  </div>
+                  {/* Front card — premium business profile mockup */}
+                  <div className="absolute w-36 h-52 rounded-2xl overflow-hidden shadow-2xl border-2 border-white"
+                    style={{ transform: "rotate(-2deg) translate(-8px, -6px)" }}>
+                    <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    {/* Premium badge */}
+                    <div className="absolute top-2 left-2 bg-amber-500/90 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">★ Premium</div>
+                    <div className="absolute bottom-2.5 left-2.5 right-2.5">
+                      {/* Logo circle */}
+                      <div className="w-6 h-6 rounded-full mb-1 border border-white/40 overflow-hidden"
+                        style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                      <p className="text-white text-[11px] font-black leading-tight">Butchery & Wine</p>
+                      <p className="text-white/60 text-[9px]">Restauracja · @trasa</p>
+                      <p className="text-yellow-400 text-[9px] mt-0.5">★ 4.7</p>
+                      <div className="mt-1 inline-flex items-center gap-0.5 bg-amber-500/80 rounded-full px-1.5 py-0.5">
+                        <span className="text-white text-[8px] font-semibold">🎉 Wydarzenie dziś</span>
+                      </div>
                     </div>
                   </div>
                 </div>
