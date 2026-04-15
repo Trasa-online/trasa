@@ -41,12 +41,16 @@ const Auth = () => {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) return;
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("onboarding_completed")
-        .eq("id", session.user.id)
-        .single();
-      // If column doesn't exist yet (migration pending), go to home directly
+      // Always check for business profile first — business users must not land on /home
+      const { data: bp } = await (supabase as any)
+        .from("business_profiles")
+        .select("place_id")
+        .eq("owner_user_id", session.user.id)
+        .maybeSingle();
+      if (bp?.place_id) {
+        navigate(`/biznes/${bp.place_id}`);
+        return;
+      }
       navigate("/");
     });
   }, [navigate]);
