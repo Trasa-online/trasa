@@ -1,0 +1,2 @@
+-- AUTO-GENERATED: populate photo_url for places table
+-- Wygenerowano: 0 aktualizacji, 569 pominięto
