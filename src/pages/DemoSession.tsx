@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getPhotoUrl } from "@/lib/placePhotos";
-import { ArrowLeft, Lock, Sparkles, Users, User, Copy, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Lock, Sparkles, Users, User, Copy, Check, Loader2, Search, UserPlus } from "lucide-react";
 import { SwipeCard } from "@/components/plan-wizard/PlaceSwiper";
 import type { MockPlace, PlaceCategory } from "@/components/plan-wizard/PlaceSwiper";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -105,7 +105,6 @@ function DemoSwiper({ places, city, category, onComplete }: {
     if (queue.length === 0 && activeTab === "explore") setActiveTab("matches");
   }, [queue.length]);
 
-  const catInfo = DEMO_CATEGORIES.find(c => c.id === category);
   const mockQueue = queue.map(p => toMock(p, city, category));
   const cardSlice = mockQueue.slice(0, 3);
   const swiped = places.length - queue.length;
@@ -121,40 +120,25 @@ function DemoSwiper({ places, city, category, onComplete }: {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* GroupSession-style sub-header */}
-      <div className="px-4 pt-2 pb-1.5 shrink-0">
-        <p className="text-sm font-bold flex items-center gap-1.5">
-          {city}
-          <span>{catInfo?.emoji}</span>
-          <span className="text-orange-600">{catInfo?.label}</span>
-        </p>
-        <p className="text-xs text-muted-foreground">runda 1</p>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-border/30 px-4 shrink-0">
-        {(["explore", "matches"] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={cn(
-              "pb-2.5 mr-6 text-sm font-semibold border-b-2 -mb-px transition-colors flex items-center gap-1.5",
-              activeTab === tab
-                ? "border-orange-600 text-orange-600"
-                : "border-transparent text-muted-foreground"
-            )}
-          >
-            {tab === "explore" ? "Eksploruj" : "Dopasowania"}
-            {tab === "matches" && liked.length > 0 && (
-              <span className={cn(
-                "text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none",
-                activeTab === "matches" ? "bg-orange-600 text-white" : "bg-muted text-muted-foreground"
-              )}>
-                {liked.length}
-              </span>
-            )}
-          </button>
-        ))}
+      {/* Tabs — full-width like GroupSession */}
+      <div className="flex border-b border-border/20 shrink-0">
+        <button
+          onClick={() => setActiveTab("explore")}
+          className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${activeTab === "explore" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"}`}
+        >
+          Eksploruj
+        </button>
+        <button
+          onClick={() => setActiveTab("matches")}
+          className={`flex-1 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 ${activeTab === "matches" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"}`}
+        >
+          Dopasowania
+          {liked.length > 0 && (
+            <span className="h-[18px] min-w-[18px] px-1 rounded-full bg-orange-600 text-white text-[10px] font-bold flex items-center justify-center">
+              {liked.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* ── TAB: Eksploruj ── */}
@@ -178,7 +162,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
                     onTap={() => { setDetailPlace(place); setDetailOpen(true); }}
                     isTop={offset === 0}
                     offset={offset}
-                    skipGoogleFetch={true}
+                    skipGoogleFetch={false}
                   />
                 );
               })}
@@ -474,33 +458,73 @@ export default function DemoSession() {
   return (
     <div className="flex flex-col h-dvh bg-background max-w-lg mx-auto">
       {/* Header — hidden on landing */}
-      <div className={cn("flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0", step === "city" && "hidden")}>
-        <button
-          onClick={() => {
-            if (step === "city") navigate("/");
-            else if (step === "location") setStep("city");
-            else if (step === "category") setStep("location");
-            else if (step === "invite") setStep("category");
-            else if (step === "swipe") { if (mode === "group" && sessionCode) setStep("invite"); else setStep("category"); }
-            else if (step === "results") setStep("swipe");
-          }}
-          className="h-9 w-9 flex items-center justify-center -ml-1"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div className="flex-1">
-          <p className="font-bold text-sm leading-tight">
-            {step === "city" ? "Wypróbuj Trasę"
-              : step === "location" ? "Wybierz miasto"
-              : step === "category" ? city
-              : step === "invite" ? "Zaproś znajomego"
-              : step === "swipe" ? `${catLabel?.emoji} ${catLabel?.label}`
-              : mode === "group" ? "Wspólne dopasowania" : "Twoje propozycje"}
-          </p>
-          {(step === "swipe" || step === "results") && <p className="text-xs text-muted-foreground">{city}</p>}
+      {step !== "city" && step !== "swipe" && (
+        <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
+          <button
+            onClick={() => {
+              if (step === "location") setStep("city");
+              else if (step === "category") setStep("location");
+              else if (step === "invite") setStep("category");
+              else if (step === "results") setStep("swipe");
+            }}
+            className="h-9 w-9 flex items-center justify-center -ml-1"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="flex-1">
+            <p className="font-bold text-sm leading-tight">
+              {step === "location" ? "Wybierz miasto"
+                : step === "category" ? city
+                : step === "invite" ? "Zaproś znajomego"
+                : mode === "group" ? "Wspólne dopasowania" : "Twoje propozycje"}
+            </p>
+            {step === "results" && <p className="text-xs text-muted-foreground">{city}</p>}
+          </div>
         </div>
-        {step === "city" && <span className="text-xs bg-orange-600/10 text-orange-600 font-semibold px-2.5 py-1 rounded-full">Demo</span>}
-      </div>
+      )}
+
+      {/* GroupSession-style header — swipe step only */}
+      {step === "swipe" && (
+        <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
+          <button
+            onClick={() => { if (mode === "group" && sessionCode) setStep("invite"); else setStep("category"); }}
+            className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-bold text-base leading-tight">{city}</p>
+              {catLabel && (
+                <span className="text-sm font-semibold text-orange-600">
+                  {catLabel.emoji} {catLabel.label}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {mode === "group" ? "3 osoby" : "1 osoba"}
+              {sessionCode ? ` · #${sessionCode}` : " · #DEMO"}
+              {" · runda 1"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Demo member avatars */}
+            <div className="flex -space-x-2">
+              {(mode === "group" ? ["T", "M", "J"] : ["T"]).map((initial, i) => (
+                <div key={i} className="h-7 w-7 rounded-full bg-orange-600/20 border-2 border-background flex items-center justify-center text-xs font-bold text-orange-700">
+                  {initial}
+                </div>
+              ))}
+            </div>
+            <button className="h-7 w-7 rounded-full bg-muted flex items-center justify-center" title="Szukaj miejsca">
+              <Search className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+            <button className="h-7 w-7 rounded-full bg-muted flex items-center justify-center" title="Zaproś do sesji">
+              <UserPlus className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── STEP: city (landing) ── */}
       {step === "city" && (
