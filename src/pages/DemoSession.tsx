@@ -785,7 +785,7 @@ export default function DemoSession() {
           {businessMode ? (
             /* ── Business landing ── */
             <>
-              <div className="overflow-hidden flex items-center px-5 pt-4 pb-8 gap-2" style={{ minHeight: "30vh" }}>
+              <div className="overflow-hidden flex items-center px-5 pt-6 pb-8 gap-2" style={{ minHeight: "32vh" }}>
                 <div className="flex-1 z-10">
                   <h1 className="text-3xl font-black leading-tight">Bądź tam,<br/>gdzie szukają<br/>klienci.</h1>
                   <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[200px]">
@@ -826,20 +826,20 @@ export default function DemoSession() {
                 </div>
               </div>
 
-              <div className="px-5 pb-4 space-y-3">
+              <div className="px-5 pb-6 space-y-3">
                 {[
                   { icon: "📍", text: "Pojawiaj się w trasach tworzonych przez użytkowników" },
                   { icon: "📊", text: "Śledź ile osób odwiedza Twój lokal dzięki Trasie" },
                   { icon: "🤝", text: "Bezpośredni kontakt z turystami i lokalsami" },
                 ].map(item => (
-                  <div key={item.icon} className="flex items-start gap-3 bg-card rounded-2xl px-4 py-3 border border-border/40">
-                    <span className="text-lg leading-none mt-0.5">{item.icon}</span>
+                  <div key={item.icon} className="flex items-start gap-3 bg-card rounded-2xl px-4 py-4 border border-border/40">
+                    <span className="text-xl leading-none mt-0.5">{item.icon}</span>
                     <p className="text-sm font-medium leading-snug">{item.text}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="px-5 pb-8 space-y-2">
+              <div className="px-5 pb-10 space-y-3">
                 <button
                   onClick={() => navigate("/auth")}
                   className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
@@ -858,7 +858,7 @@ export default function DemoSession() {
             /* ── User landing ── */
             <>
           {/* Hero — text left + cards right bleeding off screen */}
-          <div className="overflow-hidden flex items-center px-5 pt-4 pb-4 gap-2" style={{ minHeight: "30vh" }}>
+          <div className="overflow-hidden flex items-center px-5 pt-6 pb-8 gap-2" style={{ minHeight: "32vh" }}>
             <div className="flex-1 z-10">
               <h1 className="text-3xl font-black leading-tight">Speed dating<br/>z miastem.</h1>
               <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[170px]">
@@ -900,8 +900,8 @@ export default function DemoSession() {
           </div>
 
           {/* Join by code */}
-          <div className="px-5 pb-4">
-            <div className="rounded-2xl border border-border/50 bg-card px-4 py-3.5 space-y-2.5">
+          <div className="px-5 pb-6">
+            <div className="rounded-2xl border border-border/50 bg-card px-4 py-4 space-y-2.5">
               <p className="text-sm font-semibold">Masz kod zaproszenia?</p>
               <div className="flex gap-2">
                 <input
@@ -924,7 +924,7 @@ export default function DemoSession() {
           </div>
 
           {/* CTAs */}
-          <div className="px-5 pt-0 pb-8 space-y-2">
+          <div className="px-5 pt-0 pb-10 space-y-3">
             <button
               onClick={handleStartGroup}
               className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
@@ -992,7 +992,7 @@ export default function DemoSession() {
               {/* Center highlight line */}
               <div className="absolute left-0 right-0 pointer-events-none z-10"
                 style={{ top: "50%", transform: "translateY(-50%)", height: `${ITEM_H}px` }}>
-                <div className="mx-8 h-full rounded-2xl bg-orange-600/8 border border-orange-600/15" />
+                <div className="mx-8 h-full rounded-2xl bg-orange-600/8" />
               </div>
 
               <div
