@@ -131,8 +131,14 @@ const BusinessDashboard = () => {
     if (!placeId || !user) return;
     setLoading(true);
 
-    const { data: profileData } = await (supabase as any)
+    // Try to find by place_id first, then fall back to business_profiles.id
+    let { data: profileData } = await (supabase as any)
       .from("business_profiles").select("*").eq("place_id", placeId).maybeSingle();
+    if (!profileData) {
+      const { data: byId } = await (supabase as any)
+        .from("business_profiles").select("*").eq("id", placeId).maybeSingle();
+      profileData = byId;
+    }
 
     if (!profileData) { setAccessDenied(true); setLoading(false); return; }
 

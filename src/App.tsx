@@ -38,8 +38,8 @@ function BusinessGuard() {
       if (adminRow) return; // admins can go anywhere
 
       const { data: bp } = await (supabase as any)
-        .from("business_profiles").select("place_id").eq("owner_user_id", user.id).maybeSingle();
-      if (bp?.place_id) navigate(`/biznes/${bp.place_id}`, { replace: true });
+        .from("business_profiles").select("place_id, id").eq("owner_user_id", user.id).maybeSingle();
+      if (bp?.id) navigate(`/biznes/${bp.place_id ?? bp.id}`, { replace: true });
     })();
   }, [user, location.pathname]);
 

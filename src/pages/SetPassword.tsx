@@ -79,18 +79,17 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (isBusiness && user) {
-        // Business flow — find their place_id and go to dashboard
+        // Business flow — find their profile and go to dashboard
         const { data: bp } = await (supabase as any)
           .from("business_profiles")
           .select("place_id, id")
           .eq("owner_user_id", user.id)
           .maybeSingle();
 
-        if (bp?.place_id) {
+        if (bp?.id) {
           toast.success("Hasło ustawione! Witaj w panelu biznesowym Trasy.");
-          navigate(`/biznes/${bp.place_id}`);
+          navigate(`/biznes/${bp.place_id ?? bp.id}`);
         } else {
-          // Profile created but no place yet — go to business auth
           toast.success("Hasło ustawione! Zaloguj się do panelu biznesowego.");
           navigate("/auth?business=true");
         }

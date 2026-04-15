@@ -44,11 +44,11 @@ const Auth = () => {
       // Always check for business profile first — business users must not land on /home
       const { data: bp } = await (supabase as any)
         .from("business_profiles")
-        .select("place_id")
+        .select("place_id, id")
         .eq("owner_user_id", session.user.id)
         .maybeSingle();
-      if (bp?.place_id) {
-        navigate(`/biznes/${bp.place_id}`);
+      if (bp?.id) {
+        navigate(`/biznes/${bp.place_id ?? bp.id}`);
         return;
       }
       navigate("/");
@@ -102,28 +102,18 @@ const Auth = () => {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
-      if (businessMode) {
-        const { data: bp } = await (supabase as any)
-          .from("business_profiles")
-          .select("place_id")
-          .eq("owner_user_id", data.user!.id)
-          .maybeSingle();
-        if (bp?.place_id) {
-          navigate(`/biznes/${bp.place_id}`);
-          return;
-        }
-        toast.error("Nie znaleziono panelu biznesowego dla tego konta.");
-        return;
-      }
-
-      // Check if this is a business-only account
+      // Check for business profile (covers both businessMode and regular login for biz accounts)
       const { data: bp } = await (supabase as any)
         .from("business_profiles")
-        .select("place_id")
+        .select("place_id, id")
         .eq("owner_user_id", data.user!.id)
         .maybeSingle();
-      if (bp?.place_id) {
-        navigate(`/biznes/${bp.place_id}`);
+      if (bp?.id) {
+        navigate(`/biznes/${bp.place_id ?? bp.id}`);
+        return;
+      }
+      if (businessMode) {
+        toast.error("Nie znaleziono panelu biznesowego dla tego konta.");
         return;
       }
 
