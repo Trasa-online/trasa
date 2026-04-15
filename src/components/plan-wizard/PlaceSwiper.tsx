@@ -64,18 +64,18 @@ const CATEGORY_LABELS: Record<PlaceCategory, string> = {
 };
 
 const CATEGORY_COLORS: Record<PlaceCategory, string> = {
-  restaurant: "bg-orange-600/20 text-orange-400",
-  cafe: "bg-amber-500/20 text-amber-400",
-  museum: "bg-violet-500/20 text-violet-400",
-  park: "bg-emerald-500/20 text-emerald-400",
-  bar: "bg-blue-500/20 text-blue-400",
-  club: "bg-pink-500/20 text-pink-400",
-  monument: "bg-stone-500/20 text-stone-400",
-  gallery: "bg-purple-500/20 text-purple-400",
-  market: "bg-yellow-500/20 text-yellow-400",
-  viewpoint: "bg-sky-500/20 text-sky-400",
-  shopping: "bg-rose-500/20 text-rose-400",
-  experience: "bg-teal-500/20 text-teal-400",
+  restaurant: "bg-orange-600/80 text-white",
+  cafe: "bg-amber-500/80 text-white",
+  museum: "bg-violet-600/80 text-white",
+  park: "bg-emerald-600/80 text-white",
+  bar: "bg-blue-600/80 text-white",
+  club: "bg-pink-600/80 text-white",
+  monument: "bg-stone-600/80 text-white",
+  gallery: "bg-purple-600/80 text-white",
+  market: "bg-yellow-600/80 text-white",
+  viewpoint: "bg-sky-600/80 text-white",
+  shopping: "bg-rose-600/80 text-white",
+  experience: "bg-teal-600/80 text-white",
 };
 
 

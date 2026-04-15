@@ -295,7 +295,7 @@ const PlaceSwiperDetail = ({
 
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto">
-              <div className={cn("px-5 space-y-6", hasPhoto ? "pt-4" : "pt-12", (onLike || onSkip) ? "pb-32" : "pb-8")}>
+              <div className={cn("px-5 space-y-6", hasPhoto ? "pt-4" : "pt-12", "pb-8")}>
                 {/* Name + meta */}
                 <div>
                   <h2 className="text-2xl font-black text-foreground leading-tight">
@@ -470,9 +470,9 @@ const PlaceSwiperDetail = ({
               </div>
             </div>
 
-            {/* Sticky like/skip — only shown when launched from swipe view */}
+            {/* Like/skip — part of flex layout, never overlaps content */}
             {(onLike || onSkip) && (
-              <div className="absolute bottom-0 left-0 right-0 pb-safe-6 pb-6 pt-4 px-6 bg-gradient-to-t from-background via-background to-transparent">
+              <div className="shrink-0 px-6 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] border-t border-border/10 bg-background">
                 <div className="flex gap-3">
                   <button
                     onClick={handleSkip}
