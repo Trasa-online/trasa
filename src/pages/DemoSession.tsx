@@ -852,17 +852,20 @@ export default function DemoSession() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {DEMO_CATEGORIES.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => handleCategorySelect(cat.id as CategoryKey)}
-                  disabled={groupLoading}
-                  className="px-4 py-3 rounded-2xl text-sm font-semibold border border-border/60 bg-card flex items-center gap-2 active:scale-[0.97] transition-transform hover:border-orange-600/40 disabled:opacity-60"
-                >
-                  {groupLoading && category === cat.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>{cat.emoji}</span>}
-                  <span>{cat.label}</span>
-                </button>
-              ))}
+              {DEMO_CATEGORIES.map(cat => {
+                const isLoading = (placesLoading || groupLoading) && category === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleCategorySelect(cat.id as CategoryKey)}
+                    disabled={placesLoading || groupLoading}
+                    className="px-4 py-3 rounded-2xl text-sm font-semibold border border-border/60 bg-card flex items-center gap-2 active:scale-[0.97] transition-transform hover:border-orange-600/40 disabled:opacity-50"
+                  >
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>{cat.emoji}</span>}
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div className="shrink-0 px-4 pb-8 pt-2">
@@ -923,8 +926,20 @@ export default function DemoSession() {
       )}
 
       {/* ── STEP: swipe ── */}
-      {step === "swipe" && places.length > 0 && (
-        <DemoSwiper places={places} city={city} category={category!} onComplete={handleSwipeComplete} />
+      {step === "swipe" && (
+        places.length > 0
+          ? <DemoSwiper places={places} city={city} category={category!} onComplete={handleSwipeComplete} />
+          : <div className="flex-1 flex flex-col items-center justify-center px-6 gap-4 text-center">
+              <p className="text-4xl">😕</p>
+              <p className="font-bold text-lg">Brak miejsc dla tej kategorii</p>
+              <p className="text-sm text-muted-foreground">Spróbuj innej kategorii lub miasta.</p>
+              <button
+                onClick={() => setStep("category")}
+                className="py-3 px-6 rounded-2xl bg-orange-600 text-white font-semibold text-sm"
+              >
+                ← Wróć do kategorii
+              </button>
+            </div>
       )}
 
       {/* ── STEP: results ── */}
