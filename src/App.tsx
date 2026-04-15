@@ -30,7 +30,7 @@ function BusinessGuard() {
 
   useEffect(() => {
     if (!user) return;
-    if (location.pathname.startsWith("/biznes") || location.pathname === "/auth") return;
+    if (location.pathname.startsWith("/biznes") || location.pathname === "/auth" || location.pathname.startsWith("/set-password")) return;
 
     (async () => {
       const { data: adminRow } = await supabase
