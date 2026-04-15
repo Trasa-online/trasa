@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Star, MapPin, Loader2, Heart } from "lucide-react";
+import { X, Star, MapPin, Loader2, Heart, ChevronDown } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -43,8 +43,6 @@ const getPriceSymbol = (level?: number) => {
   return "zł".repeat(level) + "○".repeat(4 - level);
 };
 
-// ─── Stars ────────────────────────────────────────────────────────────────────
-
 const Stars = ({ rating }: { rating: number }) => (
   <div className="flex items-center gap-0.5">
     {[1, 2, 3, 4, 5].map((n) => (
@@ -83,7 +81,6 @@ const PlaceSwiperDetail = ({
   skipGoogleFetch = false,
 }: PlaceSwiperDetailProps) => {
   const [detail, setDetail] = useState<PlaceDetail | null>(null);
-
   const [loading, setLoading] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -93,7 +90,6 @@ const PlaceSwiperDetail = ({
   useEffect(() => {
     if (!open || !place) {
       setDetail(null);
-
       setActivePhoto(0);
       setPhotos([]);
       setBusinessPosts([]);
@@ -113,12 +109,9 @@ const PlaceSwiperDetail = ({
     }
 
     const fetchAll = async () => {
-      // ── Mock mode or demo: skip Google Places API entirely ──
       if (MOCK_MODE || skipGoogleFetch) {
         setDetail({ ...MOCK_PLACE_DETAIL, name: place.place_name } as any);
         setPhotos([place.photo_url, ...(place.galleryPhotos ?? [])].filter(Boolean) as string[]);
-
-        // Business posts: use mock data for mock places, real fetch for real UUIDs
         if (place.businessLogoUrl !== undefined) {
           if (place.id.startsWith("mock-")) {
             setBusinessPosts(MOCK_BUSINESS_POSTS);
@@ -158,14 +151,12 @@ const PlaceSwiperDetail = ({
         })
         .catch(() => {});
 
-      // 2. Usage count from pins table
       const usagePromise = supabase
         .from("pins")
         .select("id", { count: "exact", head: true })
         .ilike("place_name", `%${place.place_name}%`)
         .then(() => {});
 
-      // 3. Business posts (if this is a business card)
       const postsPromise = place.businessLogoUrl !== undefined
         ? (supabase as any)
             .from("business_posts")
@@ -183,24 +174,19 @@ const PlaceSwiperDetail = ({
     fetchAll();
   }, [open, place]);
 
-  const handleLike = () => {
-    onLike?.();
-    onOpenChange(false);
-  };
-
-  const handleSkip = () => {
-    onSkip?.();
-    onOpenChange(false);
-  };
+  const handleLike = () => { onLike?.(); onOpenChange(false); };
+  const handleSkip = () => { onSkip?.(); onOpenChange(false); };
 
   const validUrl = (url?: string | null) =>
     !!url && (url.startsWith("http") || url.startsWith("/")) &&
     !url.includes("staticmap") && !url.includes("maps/api/staticmap");
+
   const displayPhotos = [
     ...photos.filter(validUrl),
     ...(!photos.length && validUrl(place?.photo_url) ? [place!.photo_url!] : []),
   ];
   const hasPhoto = displayPhotos.length > 0;
+  const showPhotoArea = hasPhoto || loading;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -208,170 +194,188 @@ const PlaceSwiperDetail = ({
         side="bottom"
         className="h-[92vh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden"
       >
-        {/* Drag handle — floats over photo or content */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 w-10 h-1 rounded-full pointer-events-none"
-          style={{ background: hasPhoto ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.15)" }}
-        />
-
-        {/* Close button — always top-right */}
-        <div className="absolute top-4 right-4 z-30">
-          <button
-            onClick={() => onOpenChange(false)}
-            className={cn(
-              "h-9 w-9 rounded-full flex items-center justify-center shadow-md",
-              hasPhoto ? "bg-black/30 backdrop-blur-sm" : "bg-background/95 border border-border/40"
-            )}
-          >
-            <X className={cn("h-4 w-4", hasPhoto ? "text-white" : "text-foreground")} />
-          </button>
-        </div>
-
         {!place ? null : (
           <>
-            {/* Photo carousel — only when photos exist or still loading */}
-            {(hasPhoto || loading) && (
-              <div
-                className="relative shrink-0 overflow-hidden"
-                style={{ height: "56vw", maxHeight: "300px", touchAction: "pan-y" }}
-                onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
-                onTouchEnd={(e) => {
-                  if (swipeStartX.current === null) return;
-                  const dx = e.changedTouches[0].clientX - swipeStartX.current;
-                  swipeStartX.current = null;
-                  if (Math.abs(dx) > 40 && displayPhotos.length > 1) {
-                    if (dx < 0) setActivePhoto(n => Math.min(displayPhotos.length - 1, n + 1));
-                    else setActivePhoto(n => Math.max(0, n - 1));
-                  }
-                }}
-              >
-                {hasPhoto ? (
-                  <>
-                    <img
-                      src={displayPhotos[activePhoto]}
-                      alt={place.place_name}
-                      className="w-full h-full object-cover"
-                      onError={() => {
-                        if (activePhoto < displayPhotos.length - 1)
-                          setActivePhoto((n) => n + 1);
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            {/* ── HERO PHOTO (top ~48% of drawer) ── */}
+            <div
+              className="relative shrink-0 overflow-hidden rounded-t-3xl bg-muted"
+              style={{ height: showPhotoArea ? "48%" : "0px", touchAction: "pan-y" }}
+              onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
+              onTouchEnd={(e) => {
+                if (swipeStartX.current === null) return;
+                const dx = e.changedTouches[0].clientX - swipeStartX.current;
+                swipeStartX.current = null;
+                if (Math.abs(dx) > 40 && displayPhotos.length > 1) {
+                  if (dx < 0) setActivePhoto(n => Math.min(displayPhotos.length - 1, n + 1));
+                  else setActivePhoto(n => Math.max(0, n - 1));
+                }
+              }}
+            >
+              {hasPhoto ? (
+                <>
+                  <img
+                    src={displayPhotos[activePhoto]}
+                    alt={place.place_name}
+                    className="w-full h-full object-cover"
+                    onError={() => {
+                      if (activePhoto < displayPhotos.length - 1)
+                        setActivePhoto((n) => n + 1);
+                    }}
+                  />
+                  {/* Gradient overlays */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20" />
 
-                    {/* Photo dots */}
-                    {displayPhotos.length > 1 && (
-                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                        {displayPhotos.map((_, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setActivePhoto(i)}
-                            className={cn("h-1.5 rounded-full transition-all", i === activePhoto ? "w-4 bg-white" : "w-1.5 bg-white/50")}
-                          />
-                        ))}
+                  {/* Tap areas for prev/next */}
+                  <button className="absolute left-0 inset-y-0 w-1/3 z-10" onClick={() => setActivePhoto((n) => Math.max(0, n - 1))} />
+                  <button className="absolute right-0 inset-y-0 w-1/3 z-10" onClick={() => setActivePhoto((n) => Math.min(displayPhotos.length - 1, n + 1))} />
+
+                  {/* Photo dots */}
+                  {displayPhotos.length > 1 && (
+                    <div className="absolute bottom-14 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+                      {displayPhotos.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setActivePhoto(i)}
+                          className={cn("h-1.5 rounded-full transition-all", i === activePhoto ? "w-4 bg-white" : "w-1.5 bg-white/50")}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Place name + rating overlay at bottom of photo */}
+                  <div className="absolute bottom-0 left-0 right-0 px-5 pb-4 z-20">
+                    <h2 className="text-2xl font-black text-white leading-tight drop-shadow-sm">
+                      {place.place_name}
+                    </h2>
+                    {(detail?.rating ?? place.rating) && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <Stars rating={detail?.rating ?? place.rating} />
+                        <span className="text-sm font-semibold text-white">
+                          {detail?.rating ?? place.rating}
+                        </span>
+                        {detail?.user_ratings_total && (
+                          <span className="text-xs text-white/70">
+                            ({detail.user_ratings_total.toLocaleString("pl")})
+                          </span>
+                        )}
                       </div>
                     )}
+                  </div>
+                </>
+              ) : (
+                /* Loading state */
+                <div className="w-full h-full bg-muted flex flex-col items-center justify-center gap-3">
+                  <Loader2 className="h-7 w-7 text-muted-foreground/40 animate-spin" />
+                  <p className="text-xs text-muted-foreground/50">Wczytywanie zdjęć…</p>
+                </div>
+              )}
 
-                    {/* Tap areas */}
-                    <button className="absolute left-0 inset-y-0 w-1/3" onClick={() => setActivePhoto((n) => Math.max(0, n - 1))} />
-                    <button className="absolute right-0 inset-y-0 w-1/3" onClick={() => setActivePhoto((n) => Math.min(displayPhotos.length - 1, n + 1))} />
+              {/* Drag handle — top center */}
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 w-10 h-1 rounded-full bg-white/50" />
 
-                    {/* Google Maps link — top-left of photo */}
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.place_name} ${place.address ?? ""}`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="absolute top-4 left-4 h-8 px-3 rounded-full bg-black/40 backdrop-blur-sm flex items-center gap-1.5 text-white text-xs font-medium"
-                    >
-                      <MapPin className="h-3.5 w-3.5" />
-                      Google Maps
-                    </a>
-                  </>
-                ) : (
-                  <div className="w-full h-full bg-muted flex items-center justify-center">
-                    <Loader2 className="h-6 w-6 text-muted-foreground/30 animate-spin" />
+              {/* Google Maps link — bottom-right of photo */}
+              {hasPhoto && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.place_name} ${place.address ?? ""}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute bottom-4 right-4 z-20 h-8 px-3 rounded-full bg-black/40 backdrop-blur-sm flex items-center gap-1.5 text-white text-xs font-medium"
+                >
+                  <MapPin className="h-3.5 w-3.5" />
+                  Maps
+                </a>
+              )}
+            </div>
+
+            {/* ── CLOSE BUTTON — always visible, right below photo edge ── */}
+            <div className="absolute top-3 right-4 z-40">
+              <button
+                onClick={() => onOpenChange(false)}
+                className="h-10 w-10 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+              >
+                <X className="h-5 w-5 text-white" />
+              </button>
+            </div>
+
+            {/* No-photo header (when photo loading disabled) */}
+            {!showPhotoArea && (
+              <div className="px-5 pt-12 pb-4 shrink-0">
+                <button
+                  onClick={() => onOpenChange(false)}
+                  className="absolute top-4 right-4 h-9 w-9 rounded-full bg-muted flex items-center justify-center"
+                >
+                  <X className="h-4 w-4 text-foreground" />
+                </button>
+                {/* Drag handle */}
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-foreground/15" />
+                <h2 className="text-2xl font-black text-foreground leading-tight">{place.place_name}</h2>
+                {(detail?.rating ?? place.rating) && (
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <Stars rating={detail?.rating ?? place.rating} />
+                    <span className="text-sm font-semibold">{detail?.rating ?? place.rating}</span>
+                    {detail?.user_ratings_total && (
+                      <span className="text-xs text-muted-foreground">({detail.user_ratings_total.toLocaleString("pl")})</span>
+                    )}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Scrollable content */}
+            {/* ── SCROLLABLE CONTENT ── */}
             <div className="flex-1 overflow-y-auto">
-              <div className={cn("px-5 space-y-6", hasPhoto ? "pt-4" : "pt-12", "pb-8")}>
-                {/* Name + meta */}
-                <div>
-                  <h2 className="text-2xl font-black text-foreground leading-tight">
-                    {place.place_name}
-                  </h2>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    {place.city && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs font-medium text-muted-foreground">
-                        <MapPin className="h-2.5 w-2.5" />
-                        {place.city}
-                      </span>
-                    )}
-                    {(detail?.rating ?? place.rating) && (
-                      <div className="flex items-center gap-1.5">
-                        <Stars rating={detail?.rating ?? place.rating} />
-                        <span className="text-sm font-semibold">
-                          {detail?.rating ?? place.rating}
-                        </span>
-                        {detail?.user_ratings_total && (
-                          <span className="text-xs text-muted-foreground">
-                            ({detail.user_ratings_total.toLocaleString("pl")} opinii)
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    {(detail?.price_level ?? place.price_level) && (
-                      <span className="text-xs text-muted-foreground">
-                        · {getPriceSymbol(detail?.price_level ?? place.price_level)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 mt-1">
-                    <MapPin className="h-3 w-3 text-muted-foreground/50 shrink-0" />
-                    <p className="text-xs text-muted-foreground">
-                      {detail?.formatted_address ?? place.address}
+              <div className="px-5 pt-4 pb-8 space-y-5">
+
+                {/* Address + meta */}
+                <div className="flex items-start gap-1.5 flex-wrap">
+                  {place.city && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                      <MapPin className="h-2.5 w-2.5" />
+                      {place.city}
+                    </span>
+                  )}
+                  {(detail?.price_level ?? place.price_level) && (
+                    <span className="text-xs text-muted-foreground px-2 py-0.5">
+                      {getPriceSymbol(detail?.price_level ?? place.price_level)}
+                    </span>
+                  )}
+                  {detail?.formatted_address && (
+                    <p className="w-full text-xs text-muted-foreground flex items-center gap-1">
+                      <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                      {detail.formatted_address}
                     </p>
-                  </div>
+                  )}
                 </div>
 
                 {/* Description */}
-                <p className="text-sm text-foreground/80 leading-relaxed -mt-2">
-                  {place.description}
-                </p>
+                {place.description && (
+                  <p className="text-sm text-foreground/80 leading-relaxed">{place.description}</p>
+                )}
 
                 {/* Vibe tags */}
-                <div className="flex gap-1.5 flex-wrap -mt-2">
-                  {(place.vibe_tags ?? []).map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+                {(place.vibe_tags ?? []).length > 0 && (
+                  <div className="flex gap-1.5 flex-wrap">
+                    {(place.vibe_tags ?? []).map((tag) => (
+                      <span key={tag} className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {/* Business owner section */}
                 {place.businessLogoUrl !== undefined && (
                   <div className="space-y-3 rounded-2xl border border-amber-200/60 bg-amber-50/60 dark:bg-amber-950/20 p-4">
-                    {/* Owner header */}
                     <div className="flex items-center gap-2.5">
                       {place.businessLogoUrl ? (
                         <img src={place.businessLogoUrl} className="w-8 h-8 rounded-full object-cover border border-border/40 shrink-0" />
                       ) : (
-                        <div
-                          className="w-8 h-8 rounded-full shrink-0"
-                          style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
-                        />
+                        <div className="w-8 h-8 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-foreground leading-tight truncate">{place.place_name}</p>
                         <p className="text-[11px] text-amber-700 font-medium">Zweryfikowana wizytówka ✦</p>
                       </div>
                     </div>
-
-                    {/* Current event */}
                     {place.businessEventTitle && (
                       <div className="rounded-2xl bg-amber-500/15 border border-amber-300/40 px-3 py-2.5 space-y-0.5">
                         <p className="text-xs font-bold text-amber-900 dark:text-amber-300">🎉 Aktualne wydarzenie</p>
@@ -405,22 +409,19 @@ const PlaceSwiperDetail = ({
                   </div>
                 )}
 
-
                 {/* Loading skeleton */}
                 {loading && !detail && (
                   <div className="space-y-3 animate-pulse">
                     <div className="h-4 bg-muted rounded w-3/4" />
                     <div className="h-4 bg-muted rounded w-1/2" />
-                    <div className="h-32 bg-muted rounded-2xl" />
+                    <div className="h-24 bg-muted rounded-2xl" />
                   </div>
                 )}
 
                 {/* Google Reviews */}
                 {detail?.reviews && detail.reviews.length > 0 && (
                   <div>
-                    <h3 className="text-base font-bold text-foreground mb-3">
-                      Opinie
-                    </h3>
+                    <h3 className="text-base font-bold text-foreground mb-3">Opinie</h3>
                     <div className="space-y-4">
                       {detail.reviews.slice(0, 3).map((review, i) => (
                         <div key={i} className="space-y-1.5">
@@ -429,30 +430,20 @@ const PlaceSwiperDetail = ({
                               src={review.profile_photo_url}
                               alt={review.author_name}
                               className="h-8 w-8 rounded-full object-cover shrink-0"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display =
-                                  "none";
-                              }}
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                             />
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold truncate">
-                                {review.author_name}
-                              </p>
+                              <p className="text-sm font-semibold truncate">{review.author_name}</p>
                               <div className="flex items-center gap-1.5">
                                 <Stars rating={review.rating} />
-                                <span className="text-xs text-muted-foreground">
-                                  · {review.relative_time_description}
-                                </span>
+                                <span className="text-xs text-muted-foreground">· {review.relative_time_description}</span>
                               </div>
                             </div>
                           </div>
-                          <p className="text-sm text-foreground/80 leading-relaxed line-clamp-4 pl-10">
-                            {review.text}
-                          </p>
+                          <p className="text-sm text-foreground/80 leading-relaxed line-clamp-4 pl-10">{review.text}</p>
                         </div>
                       ))}
                     </div>
-
                     {detail.place_id && (
                       <a
                         href={`https://www.google.com/maps/place/?q=place_id:${detail.place_id}`}
@@ -466,19 +457,18 @@ const PlaceSwiperDetail = ({
                     )}
                   </div>
                 )}
-
               </div>
             </div>
 
-            {/* Like/skip — part of flex layout, never overlaps content */}
+            {/* ── LIKE / SKIP ── */}
             {(onLike || onSkip) && (
-              <div className="shrink-0 px-6 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] border-t border-border/10 bg-background">
+              <div className="shrink-0 px-5 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-border/10 bg-background">
                 <div className="flex gap-3">
                   <button
                     onClick={handleSkip}
                     className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-border bg-card text-muted-foreground font-semibold text-sm active:scale-[0.97] transition-transform"
                   >
-                    <X className="h-4 w-4" />
+                    <ChevronDown className="h-4 w-4" />
                     Pomiń
                   </button>
                   <button
