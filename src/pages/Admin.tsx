@@ -32,7 +32,7 @@ interface BusinessClaim {
 }
 
 /** Call invite-user with explicit session token to avoid PWA auth issues */
-async function invokeInviteUser(email: string, username: string, waitlist_id?: string) {
+async function invokeInviteUser(email: string, username: string, waitlist_id?: string, isBusiness?: boolean) {
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;
   if (!token) throw new Error("Brak sesji – zaloguj się ponownie");
@@ -46,7 +46,7 @@ async function invokeInviteUser(email: string, username: string, waitlist_id?: s
         "Authorization": `Bearer ${token}`,
         "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
-      body: JSON.stringify({ email, username, waitlist_id }),
+      body: JSON.stringify({ email, username, waitlist_id, isBusiness }),
     }
   );
 
@@ -243,7 +243,7 @@ const Admin = () => {
     setApprovingId(claim.id);
     try {
       // 1. Invite user — creates auth account + returns magic link + userId
-      const { link, userId: newUserId } = await invokeInviteUser(claim.contact_email, claim.contact_email.split("@")[0]);
+      const { link, userId: newUserId } = await invokeInviteUser(claim.contact_email, claim.contact_email.split("@")[0], undefined, true);
 
       // 2. Create business profile linked to the new user
       await (supabase as any).from("business_profiles").upsert({

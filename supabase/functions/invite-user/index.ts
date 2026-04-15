@@ -54,7 +54,7 @@ serve(async (req) => {
       });
     }
 
-    const { email, username, waitlist_id } = await req.json();
+    const { email, username, waitlist_id, isBusiness } = await req.json();
 
     if (!email || !username) {
       return new Response(JSON.stringify({ error: "email and username required" }), {
@@ -62,6 +62,10 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const redirectTo = isBusiness
+      ? "https://trasa.travel/set-password?type=business"
+      : "https://trasa.travel/set-password";
 
     let inviteLink: string | undefined;
     let invitedUserId: string | undefined;
@@ -73,7 +77,7 @@ serve(async (req) => {
       email,
       options: {
         data: { username },
-        redirectTo: "https://trasa.travel/set-password",
+        redirectTo,
       },
     });
 
@@ -87,7 +91,7 @@ serve(async (req) => {
       const { data: recData, error: recError } = await supabaseAdmin.auth.admin.generateLink({
         type: "recovery",
         email,
-        options: { redirectTo: "https://trasa.travel/set-password" },
+        options: { redirectTo },
       });
 
       console.log("recovery result:", recError?.message, "action_link:", recData?.properties?.action_link?.slice(0, 60));
@@ -101,7 +105,7 @@ serve(async (req) => {
         const { data: mlData, error: mlError } = await supabaseAdmin.auth.admin.generateLink({
           type: "magiclink",
           email,
-          options: { redirectTo: "https://trasa.travel/set-password" },
+          options: { redirectTo },
         });
 
         console.log("magiclink result:", mlError?.message, "action_link:", mlData?.properties?.action_link?.slice(0, 60));
