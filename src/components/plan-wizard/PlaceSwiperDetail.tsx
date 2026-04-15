@@ -195,9 +195,10 @@ const PlaceSwiperDetail = ({
         {!place ? null : (
           <>
             {/* ── HERO PHOTO (top ~48% of drawer) ── */}
-            {/* X button and handle live INSIDE this relative div so they always render above the photo */}
+            {/* No overflow-hidden here — SheetContent already clips rounded-t-3xl.
+                Keeping overflow-hidden would clip the X button at the top corner. */}
             <div
-              className="relative shrink-0 overflow-hidden rounded-t-3xl bg-muted"
+              className="relative shrink-0 bg-muted"
               style={{ height: "48%", touchAction: "pan-y" }}
               onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
               onTouchEnd={(e) => {
@@ -216,7 +217,7 @@ const PlaceSwiperDetail = ({
                   <img
                     src={displayPhotos[activePhoto]}
                     alt={place.place_name}
-                    className="w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
                     onError={() => {
                       if (activePhoto < displayPhotos.length - 1)
                         setActivePhoto((n) => n + 1);
@@ -269,7 +270,7 @@ const PlaceSwiperDetail = ({
                   </a>
                 </>
               ) : (
-                <div className="w-full h-full bg-muted flex flex-col items-center justify-center gap-3">
+                <div className="absolute inset-0 bg-muted flex flex-col items-center justify-center gap-3">
                   {loading ? (
                     <>
                       <Loader2 className="h-7 w-7 text-muted-foreground/40 animate-spin" />
