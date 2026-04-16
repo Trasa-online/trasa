@@ -16,7 +16,6 @@ const haversineKm = (a: { lat: number; lng: number }, b: { lat: number; lng: num
 
 const CITY_CENTERS: Record<string, { lat: number; lng: number }> = {
   "Kraków":    { lat: 50.0617, lng: 19.9373 },
-  "Gdańsk":    { lat: 54.3520, lng: 18.6466 },
   "Warszawa":  { lat: 52.2297, lng: 21.0122 },
   "Wrocław":   { lat: 51.1079, lng: 17.0385 },
   "Poznań":    { lat: 52.4064, lng: 16.9252 },
