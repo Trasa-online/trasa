@@ -160,14 +160,12 @@ const Admin = () => {
 
   const loadWaitlist = async () => {
     setFetchingList(true);
-    try {
-      const response = await supabase.functions.invoke("check-waitlist-status");
-      if (response.data?.entries) {
-        setWaitlist(response.data.entries as WaitlistEntry[]);
-      }
-    } catch (err) {
-      console.error("Failed to load waitlist:", err);
-    }
+    const { data, error } = await (supabase as any)
+      .from("waitlist")
+      .select("id, email, created_at, notified_at, source, referral_code")
+      .order("created_at", { ascending: false });
+    if (error) console.error("[Admin] waitlist fetch error:", error);
+    setWaitlist(data ?? []);
     setFetchingList(false);
   };
 
