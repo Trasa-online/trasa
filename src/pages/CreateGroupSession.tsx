@@ -260,7 +260,7 @@ const CreateGroupSession = () => {
                 <button
                   onClick={handleJoinByCode}
                   disabled={joining || joinCode.trim().length < 4}
-                  className="shrink-0 h-11 px-4 rounded-2xl bg-primary text-white font-semibold text-sm flex items-center gap-1.5 active:scale-95 transition-transform disabled:opacity-40"
+                  className="shrink-0 h-11 px-4 rounded-full bg-primary text-white font-semibold text-sm flex items-center gap-1.5 active:scale-95 transition-transform disabled:opacity-40"
                 >
                   {joining ? "…" : <><span>Dołącz</span><ArrowRight className="h-4 w-4" /></>}
                 </button>
@@ -344,7 +344,7 @@ const CreateGroupSession = () => {
             <button
               onClick={handleCreate}
               disabled={loading || !selectedCity}
-              className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
+              className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
             >
               {loading ? "Tworzę sesję…" : "Stwórz sesję grupową"}
             </button>
@@ -361,7 +361,7 @@ const CreateGroupSession = () => {
                   <button
                     key={s.id}
                     onClick={() => navigate(`/sesja/${s.join_code}`)}
-                    className="w-full flex items-center gap-3 rounded-2xl border border-border/40 bg-card p-3 text-left active:scale-[0.98] transition-transform"
+                    className="w-full flex items-center gap-3 rounded-full border border-border/40 bg-card p-3 text-left active:scale-[0.98] transition-transform"
                   >
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                       <Users className="h-5 w-5 text-orange-600" />
@@ -373,7 +373,7 @@ const CreateGroupSession = () => {
                     <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     <button
                       onClick={(e) => handleDeleteOrLeaveSession(s, e)}
-                      className={`h-10 flex items-center justify-center rounded-2xl active:scale-90 transition-all shrink-0 text-xs font-bold ${confirmActionId === s.id ? "px-2 bg-red-500 text-white min-w-[60px]" : "w-10 bg-red-500/10 text-red-500"}`}
+                      className={`h-10 flex items-center justify-center rounded-full active:scale-90 transition-all shrink-0 text-xs font-bold ${confirmActionId === s.id ? "px-2 bg-red-500 text-white min-w-[60px]" : "w-10 bg-red-500/10 text-red-500"}`}
                     >
                       {confirmActionId === s.id ? "Pewny?" : s.created_by === user?.id
                         ? <Trash2 className="h-4 w-4" />
@@ -497,7 +497,7 @@ const CreateGroupSession = () => {
                     setTimeout(() => setCodeCopied(false), 2000);
                     toast.success("Skopiowano kod!");
                   }}
-                  className="flex-1 py-2.5 rounded-2xl bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  className="flex-1 py-2.5 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                 >
                   {codeCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   {codeCopied ? "Skopiowano!" : "Kopiuj kod"}
@@ -509,7 +509,7 @@ const CreateGroupSession = () => {
                     setTimeout(() => setLinkCopied(false), 2000);
                     toast.success("Skopiowano link!");
                   }}
-                  className="flex-1 py-2.5 rounded-2xl border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  className="flex-1 py-2.5 rounded-full border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                 >
                   {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   {linkCopied ? "Skopiowano!" : "Kopiuj link"}
@@ -520,7 +520,7 @@ const CreateGroupSession = () => {
             <button
               onClick={handleStartWithInvites}
               disabled={sendingInvites}
-              className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-60"
+              className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-60"
             >
               {sendingInvites ? "Wysyłam zaproszenia…" : selectedFriends.size > 0 ? `Zaproś (${selectedFriends.size}) i zacznij parowanie` : "Zacznij parowanie"}
             </button>

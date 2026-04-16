@@ -607,7 +607,7 @@ const ReviewSummary = () => {
                     ) : (
                       <button
                         onClick={() => toggleNotVisited(pin.place_name)}
-                        className="w-full py-2 rounded-xl text-xs font-medium border border-dashed border-border/60 text-muted-foreground bg-muted/20 active:scale-[0.98] transition-transform"
+                        className="w-full py-2 rounded-full text-xs font-medium border border-dashed border-border/60 text-muted-foreground bg-muted/20 active:scale-[0.98] transition-transform"
                       >
                         ✕ Nie było tego miejsca na trasie
                       </button>
@@ -640,7 +640,7 @@ const ReviewSummary = () => {
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         <button
           onClick={() => navigate("/")}
-          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-primary/20"
+          className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-primary/20"
         >
           Gotowe
         </button>

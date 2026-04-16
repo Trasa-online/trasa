@@ -327,7 +327,7 @@ const SwipeHistory = () => {
       {/* Explore CTA */}
       <button
         onClick={() => navigate("/plan", { state: { exploreMode: true } })}
-        className="group w-full bg-card border border-border/40 rounded-3xl px-5 py-5 flex items-center gap-4 mb-5 active:scale-[0.98] transition-transform shadow-sm"
+        className="group w-full bg-card border border-border/40 rounded-full px-5 py-5 flex items-center gap-4 mb-5 active:scale-[0.98] transition-transform shadow-sm"
       >
         <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
           <Compass className="h-6 w-6 text-orange-600" />

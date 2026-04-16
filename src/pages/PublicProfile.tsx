@@ -151,7 +151,7 @@ export default function PublicProfile() {
               <button
                 key={route.id}
                 onClick={() => navigate(`/route/${route.id}`)}
-                className="w-full text-left bg-card border border-border/50 rounded-2xl px-4 py-3 active:scale-[0.98] transition-transform"
+                className="w-full text-left bg-card border border-border/50 rounded-full px-4 py-3 active:scale-[0.98] transition-transform"
               >
                 <div className="flex items-center gap-2 mb-1">
                   <MapPin className="h-3.5 w-3.5 text-orange-600" />

@@ -319,7 +319,7 @@ function BugReportSection({ userId }: { userId: string }) {
         <button
           onClick={handleSubmit}
           disabled={submitting || !description.trim()}
-          className="flex-1 py-2.5 rounded-2xl bg-primary text-white text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
+          className="flex-1 py-2.5 rounded-full bg-primary text-white text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
         >
           {submitting ? "Wysyłam…" : "Wyślij zgłoszenie"}
         </button>

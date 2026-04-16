@@ -246,7 +246,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                       key={name}
                       onClick={() => handleAddLikedByName(name)}
                       disabled={addingName === name}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted/40 active:scale-[0.98] transition-all text-left"
+                      className="w-full flex items-center gap-3 p-3 rounded-full bg-muted/40 active:scale-[0.98] transition-all text-left"
                     >
                       <div className="flex-shrink-0 h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-lg">
                         {CATEGORY_EMOJI[dbPlace?.category ?? ""] ?? "📍"}
@@ -294,7 +294,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                   <p className="text-sm text-muted-foreground">Brak wyników dla „{query}"</p>
                   <button
                     onClick={switchToManualWithQuery}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-foreground text-background text-sm font-semibold active:scale-[0.97] transition-transform"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-foreground text-background text-sm font-semibold active:scale-[0.97] transition-transform"
                   >
                     <PenLine className="h-4 w-4" />
                     Dodaj „{query}" ręcznie
@@ -307,7 +307,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                     <button
                       key={place.id}
                       onClick={() => handleAddDbPlace(place)}
-                      className="w-full flex items-start gap-3 p-3 rounded-xl bg-muted/40 active:scale-[0.98] transition-all text-left"
+                      className="w-full flex items-start gap-3 p-3 rounded-full bg-muted/40 active:scale-[0.98] transition-all text-left"
                     >
                       <div className="flex-shrink-0 h-9 w-9 rounded-full bg-muted flex items-center justify-center text-lg">
                         {CATEGORY_EMOJI[place.category] ?? "📍"}
@@ -365,7 +365,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                           <button
                             key={place.id}
                             onClick={() => handleAddDbPlace(place)}
-                            className="w-full flex items-start gap-3 p-3 rounded-xl bg-muted/40 active:scale-[0.98] transition-all text-left"
+                            className="w-full flex items-start gap-3 p-3 rounded-full bg-muted/40 active:scale-[0.98] transition-all text-left"
                           >
                             <div className="flex-shrink-0 h-9 w-9 rounded-full bg-muted flex items-center justify-center">
                               <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -466,7 +466,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
               <button
                 onClick={handleAddManual}
                 disabled={!manualName.trim()}
-                className="w-full py-3.5 rounded-xl bg-foreground text-background font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-transform"
+                className="w-full py-3.5 rounded-full bg-foreground text-background font-bold text-sm disabled:opacity-40 active:scale-[0.98] transition-transform"
               >
                 Dodaj do planu
               </button>

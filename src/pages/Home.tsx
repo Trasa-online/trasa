@@ -163,7 +163,7 @@ const Home = () => {
               <button
                 key={s.id}
                 onClick={() => setPreviewSessionId(s.id)}
-                className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-card border border-border/50 active:scale-[0.98] transition-transform text-left"
+                className="w-full flex items-center gap-3 p-3.5 rounded-full bg-card border border-border/50 active:scale-[0.98] transition-transform text-left"
               >
                 <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                   <Users className="h-4 w-4 text-orange-600" />
@@ -225,7 +225,7 @@ const Home = () => {
 
         <button
           onClick={() => navigate("/sesja/nowa")}
-          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+          className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
         >
           <Users className="h-5 w-5" />
           Zaplanuj razem
@@ -233,7 +233,7 @@ const Home = () => {
         {!user && (
           <button
             onClick={() => navigate("/demo")}
-            className="w-full py-3.5 rounded-2xl border-2 border-orange-600/30 bg-primary/5 text-sm font-bold text-orange-700 active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
+            className="w-full py-3.5 rounded-full border-2 border-orange-600/30 bg-primary/5 text-sm font-bold text-orange-700 active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
           >
             <Sparkles className="h-4 w-4" />
             Sprawdź jak to działa — demo bez konta
@@ -286,7 +286,7 @@ const Home = () => {
                           latitude: pinCoords?.latitude ?? null,
                           longitude: pinCoords?.longitude ?? null,
                         })}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted/40 text-left active:scale-[0.98] transition-transform"
+                        className="w-full flex items-center gap-3 p-3 rounded-full bg-muted/40 text-left active:scale-[0.98] transition-transform"
                       >
                         {(() => {
                           const pin = routePins.find((rp: any) => rp.place_name === p.place_name);
@@ -318,7 +318,7 @@ const Home = () => {
                     sessionRoute && (
                       <button
                         onClick={() => { setPreviewSessionId(null); navigate(`/review-summary?route=${sessionRoute.id}`); }}
-                        className="w-full py-3.5 rounded-2xl bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
+                        className="w-full py-3.5 rounded-full bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
                       >
                         Zobacz trasę w dzienniku →
                       </button>
@@ -355,7 +355,7 @@ const Home = () => {
                             setPreviewSessionId(null);
                             navigate(`/review-summary?route=${sessionRoute.id}&new=1`);
                           }}
-                          className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
+                          className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
                         >
                           Zakończ i oceń trasę ✓
                         </button>
@@ -363,7 +363,7 @@ const Home = () => {
                       {sessionRoute && (
                         <button
                           onClick={() => { setPreviewSessionId(null); navigate("/create", { state: { city: sessionRoute.city, existingRouteId: sessionRoute.id } }); }}
-                          className="w-full py-3.5 rounded-2xl bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
+                          className="w-full py-3.5 rounded-full bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
                         >
                           Otwórz zapisaną trasę →
                         </button>
@@ -372,7 +372,7 @@ const Home = () => {
                   )}
                   <button
                     onClick={() => { setPreviewSessionId(null); navigate(`/sesja/${previewSession.join_code}`); }}
-                    className={`w-full py-3.5 rounded-2xl font-bold text-sm active:scale-[0.97] transition-transform ${sessionRoute ? "border border-border/50 bg-card text-foreground" : "bg-primary text-white"}`}
+                    className={`w-full py-3.5 rounded-full font-bold text-sm active:scale-[0.97] transition-transform ${sessionRoute ? "border border-border/50 bg-card text-foreground" : "bg-primary text-white"}`}
                   >
                     {sessionRoute ? "Wróć do parowania" : "Wejdź do sesji →"}
                   </button>

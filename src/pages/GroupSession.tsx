@@ -618,7 +618,7 @@ const GroupSession = () => {
         <p className="text-sm text-muted-foreground">
           Twój znajomy zaprasza Cię do wspólnego parowania miejsc w <strong>{session.city}</strong>.
         </p>
-        <button onClick={() => navigate("/auth")} className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-base">
+        <button onClick={() => navigate("/auth")} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base">
           Zaloguj się
         </button>
       </div>
@@ -664,7 +664,7 @@ const GroupSession = () => {
           <button
             onClick={handleJoin}
             disabled={joining || members.length >= 10}
-            className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
+            className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
           >
             {joining ? "Dołączam…" : members.length >= 10 ? "Sesja pełna (max 10)" : "Dołącz i zacznij swipe'ować"}
           </button>
@@ -879,7 +879,7 @@ const GroupSession = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => { navigator.clipboard.writeText(joinCode ?? ""); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                      className="flex-1 py-2.5 rounded-2xl bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                      className="flex-1 py-2.5 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                     >
                       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       {copied ? "Skopiowano!" : "Kopiuj kod"}
@@ -887,7 +887,7 @@ const GroupSession = () => {
                     {typeof navigator.share === "function" && (
                       <button
                         onClick={() => navigator.share({ title: "Dołącz do mojej sesji w TRASA", text: `Dołącz używając kodu: ${joinCode}`, url: `${window.location.origin}/sesja/${joinCode}` })}
-                        className="flex-1 py-2.5 rounded-2xl border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                        className="flex-1 py-2.5 rounded-full border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                       >
                         <Share2 className="h-4 w-4" />
                         Udostępnij
@@ -950,7 +950,7 @@ const GroupSession = () => {
                     <button
                       onClick={handleStartCategory}
                       disabled={savingCategory || !pendingCategory}
-                      className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
+                      className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
                     >
                       {savingCategory ? "Startuję…" : isFirst ? "Rozpocznij parowanie" : "Następna runda →"}
                     </button>
@@ -1057,7 +1057,7 @@ const GroupSession = () => {
                 {isCreator && (
                   <button
                     onClick={handleSkipWaiting}
-                    className="py-2.5 px-5 rounded-2xl border border-border/50 bg-card text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform"
+                    className="py-2.5 px-5 rounded-full border border-border/50 bg-card text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform"
                   >
                     Pomiń oczekiwanie →
                   </button>
@@ -1119,7 +1119,7 @@ const GroupSession = () => {
               {isCreator && (
                 <button
                   onClick={handleCategoryComplete}
-                  className="py-3 px-6 rounded-2xl bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
+                  className="py-3 px-6 rounded-full bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
                 >
                   Przejdź do następnej kategorii
                 </button>
@@ -1141,7 +1141,7 @@ const GroupSession = () => {
                   <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px]">
                     Potrzeba co najmniej 2 osób, które polubiły to samo miejsce. Wróć do eksplorowania!
                   </p>
-                  <button onClick={() => setTab("swipe")} className="py-3 px-6 rounded-2xl bg-primary text-white font-semibold text-sm">
+                  <button onClick={() => setTab("swipe")} className="py-3 px-6 rounded-full bg-primary text-white font-semibold text-sm">
                     Eksploruj dalej
                   </button>
                 </div>
@@ -1173,7 +1173,7 @@ const GroupSession = () => {
                                   <button
                                     key={m.place_name}
                                     onClick={() => handleOpenDetail(m)}
-                                    className={`w-full flex items-center gap-3 rounded-2xl border bg-card p-3 text-left transition-all active:scale-[0.98] ${
+                                    className={`w-full flex items-center gap-3 rounded-full border bg-card p-3 text-left transition-all active:scale-[0.98] ${
                                       isCreator && !isSelected ? "border-border/20 opacity-50" : "border-border/40"
                                     }`}
                                   >
@@ -1240,7 +1240,7 @@ const GroupSession = () => {
                       },
                     });
                   }}
-                  className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
+                  className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
                 >
                   {existingRoute ? "Stwórz nową trasę →" : "Przejdź do tworzenia trasy →"}
                 </button>
@@ -1248,7 +1248,7 @@ const GroupSession = () => {
               {existingRoute && (
                 <button
                   onClick={() => navigate("/create", { state: { city: existingRoute.city, existingRouteId: existingRoute.id } })}
-                  className="w-full py-3.5 rounded-2xl bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
+                  className="w-full py-3.5 rounded-full bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
                 >
                   Otwórz zapisaną trasę →
                 </button>
@@ -1265,7 +1265,7 @@ const GroupSession = () => {
                     }
                     navigate("/");
                   }}
-                  className={`w-full py-3 rounded-2xl font-semibold text-sm active:scale-[0.97] transition-transform ${matches.length > 0 ? "border border-border/50 text-muted-foreground bg-card" : "bg-primary text-white"}`}
+                  className={`w-full py-3 rounded-full font-semibold text-sm active:scale-[0.97] transition-transform ${matches.length > 0 ? "border border-border/50 text-muted-foreground bg-card" : "bg-primary text-white"}`}
                 >
                   Zakończ parowanie
                 </button>
@@ -1293,7 +1293,7 @@ const GroupSession = () => {
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}
-              className="px-4 flex items-center justify-center gap-2 rounded-2xl border border-border/50 bg-card text-sm font-semibold active:scale-[0.97] transition-transform"
+              className="px-4 flex items-center justify-center gap-2 rounded-full border border-border/50 bg-card text-sm font-semibold active:scale-[0.97] transition-transform"
             >
               <Copy className="h-4 w-4" />
               {copied ? "✓" : "Kopiuj"}
@@ -1415,7 +1415,7 @@ const GroupSession = () => {
             <button
               onClick={handleSuggestPlace}
               disabled={suggestSending || !placeSearchQuery.trim()}
-              className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-50"
+              className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-50"
             >
               {suggestSending ? "Wysyłam…" : "Wyślij sugestię"}
             </button>
@@ -1451,7 +1451,7 @@ const GroupSession = () => {
             <button
               onClick={handleLobbySuggestNew}
               disabled={lobbySuggestSending || !lobbyQuery.trim()}
-              className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-50"
+              className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-50"
             >
               {lobbySuggestSending ? "Wysyłam…" : "Wyślij sugestię"}
             </button>

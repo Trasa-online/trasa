@@ -91,7 +91,7 @@ const HomeTour = ({ onDone }: HomeTourProps) => {
             </button>
             <button
               onClick={handleNext}
-              className="flex-1 py-3 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
+              className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
             >
               {isLast ? "Zaczynamy! 🚀" : "Dalej →"}
             </button>

@@ -200,7 +200,7 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
       {/* ── Edit CTA ── */}
       <button
         onClick={() => onEdit(trip)}
-        className="w-full py-3 rounded-2xl border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform"
+        className="w-full py-3 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform"
       >
         Dostosuj plan →
       </button>

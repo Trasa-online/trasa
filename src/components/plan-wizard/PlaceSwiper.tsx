@@ -136,14 +136,14 @@ const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: {
         <div className="w-full flex flex-col gap-2.5">
           <button
             onClick={onConfirm}
-            className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
           >
             Sprawdzam trasę
             <ArrowRight className="h-4 w-4" />
           </button>
           <button
             onClick={onDismiss}
-            className="w-full py-3 rounded-2xl border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
+            className="w-full py-3 rounded-full border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
           >
             Wróć do przeglądania
           </button>
@@ -573,7 +573,7 @@ const EmptyState = ({
 
             <button
               onClick={() => onPickRoute(route)}
-              className="w-full py-3 rounded-2xl bg-foreground text-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+              className="w-full py-3 rounded-full bg-foreground text-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
             >
               Wybierz tę trasę
               <ArrowRight className="h-4 w-4" />
@@ -586,7 +586,7 @@ const EmptyState = ({
       <button
         onClick={onProceed}
         className={cn(
-          "w-full py-3.5 rounded-2xl text-sm font-semibold active:scale-[0.97] transition-transform",
+          "w-full py-3.5 rounded-full text-sm font-semibold active:scale-[0.97] transition-transform",
           matchedRoutes.length > 0
             ? "border border-border text-muted-foreground bg-card mt-1"
             : "bg-primary text-white shadow-lg shadow-primary/25"
@@ -1059,7 +1059,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
           </div>
           <button
             onClick={onGroupFinished}
-            className="py-3 px-8 rounded-2xl bg-primary text-white font-semibold text-sm active:scale-95 transition-transform"
+            className="py-3 px-8 rounded-full bg-primary text-white font-semibold text-sm active:scale-95 transition-transform"
           >
             Zobacz dopasowania
           </button>
@@ -1175,14 +1175,14 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
           {exploreMode && (
             <button
               onClick={() => navigate("/historia", { state: { fromCity: city } })}
-              className="flex-1 py-3 rounded-2xl border border-border/60 bg-card text-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+              className="flex-1 py-3 rounded-full border border-border/60 bg-card text-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
             >
               Zakończ
             </button>
           )}
           <button
             onClick={handleProceed}
-            className="flex-[2] py-3 rounded-2xl bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+            className="flex-[2] py-3 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
           >
             Zaplanuj trasę · {likedPlaces.length + superLikedPlaces.length} {(likedPlaces.length + superLikedPlaces.length) === 1 ? "miejsce" : "miejsc"}
             <ArrowRight className="h-4 w-4" />

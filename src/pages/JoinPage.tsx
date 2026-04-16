@@ -114,7 +114,7 @@ export default function JoinPage() {
         {/* CTA */}
         <button
           onClick={handleJoin}
-          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-primary/25"
+          className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-primary/25"
         >
           Dołącz do Trasa
         </button>

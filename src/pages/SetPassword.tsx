@@ -228,7 +228,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all disabled:opacity-60 disabled:scale-100 mt-2"
+                className="w-full py-3.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all disabled:opacity-60 disabled:scale-100 mt-2"
               >
                 {loading ? "Zapisuję…" : "Aktywuj konto biznesowe"}
               </button>
@@ -330,7 +330,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold text-base shadow-lg shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-60 disabled:scale-100 mt-2"
+              className="w-full py-3.5 rounded-full bg-primary hover:bg-primary/90 text-white font-bold text-base shadow-lg shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-60 disabled:scale-100 mt-2"
             >
               {loading ? "Zapisuję…" : "Ustaw hasło i wejdź"}
             </button>

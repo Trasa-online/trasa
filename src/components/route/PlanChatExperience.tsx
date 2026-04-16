@@ -1330,7 +1330,7 @@ window.addEventListener('message',function(e){
                                     });
                                     sendMessage(`Zamień ${old} na ${place.place_name}`);
                                   }}
-                                  className="text-left w-full px-3 py-3 rounded-xl bg-muted active:scale-[0.97] transition-transform flex items-start gap-3"
+                                  className="text-left w-full px-3 py-3 rounded-full bg-muted active:scale-[0.97] transition-transform flex items-start gap-3"
                                 >
                                   {/* Category icon circle */}
                                   <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg ${CATEGORY_BG[place.category] ?? "bg-muted-foreground/10 text-muted-foreground"}`}>

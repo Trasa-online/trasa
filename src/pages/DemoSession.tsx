@@ -213,7 +213,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
               <p className="text-sm text-muted-foreground">Sprawdź swoje dopasowania w drugiej zakładce.</p>
               <button
                 onClick={() => setActiveTab("matches")}
-                className="py-3 px-6 rounded-2xl bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
+                className="py-3 px-6 rounded-full bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
               >
                 Zobacz dopasowania →
               </button>
@@ -250,7 +250,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
               ))}
               <button
                 onClick={() => setShowUpsell(true)}
-                className="w-full py-4 rounded-2xl bg-foreground text-background font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform mt-1"
+                className="w-full py-4 rounded-full bg-foreground text-background font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform mt-1"
               >
                 Stwórz trasę →
               </button>
@@ -292,7 +292,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
                 saveDemoLikedToStorage(liked, city, category);
                 navigate("/auth");
               }}
-              className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+              className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
             >
               Załóż konto — to nic nie kosztuje →
             </button>
@@ -657,13 +657,13 @@ export default function DemoSession() {
               <div className="space-y-3">
                 <button
                   onClick={() => navigate("/auth?business=true")}
-                  className="w-full py-3.5 rounded-2xl bg-blue-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-blue-600/25"
+                  className="w-full py-3.5 rounded-full bg-blue-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-blue-600/25"
                 >
                   Zaloguj się jako firma
                 </button>
                 <button
                   onClick={() => navigate("/auth?business=true")}
-                  className="w-full py-3.5 rounded-2xl bg-white border-2 border-blue-600 text-blue-600 font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+                  className="w-full py-3.5 rounded-full bg-white border-2 border-blue-600 text-blue-600 font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
                 >
                   Zarejestruj lokal
                 </button>
@@ -718,14 +718,14 @@ export default function DemoSession() {
               <div className="space-y-3">
                 <button
                   onClick={handleStartGroup}
-                  className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+                  className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
                 >
                   <Users className="h-5 w-5" />
                   Zacznij z grupą
                 </button>
                 <button
                   onClick={handleStartSolo}
-                  className="w-full py-3.5 rounded-2xl bg-white border-2 border-orange-600 text-orange-600 font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+                  className="w-full py-3.5 rounded-full bg-white border-2 border-orange-600 text-orange-600 font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
                 >
                   <User className="h-5 w-5" />
                   Zacznij solo
@@ -753,7 +753,7 @@ export default function DemoSession() {
                   <button
                     onClick={handleJoinByCode}
                     disabled={joinInput.trim().length < 4 || joinLoading}
-                    className="px-4 py-2.5 rounded-2xl bg-primary text-white text-sm font-bold disabled:opacity-40 active:scale-[0.97] transition-transform flex items-center gap-1.5"
+                    className="px-4 py-2.5 rounded-full bg-primary text-white text-sm font-bold disabled:opacity-40 active:scale-[0.97] transition-transform flex items-center gap-1.5"
                   >
                     {joinLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Dołącz"}
                   </button>
@@ -884,7 +884,7 @@ export default function DemoSession() {
                     onClick={() => { if (!locked) { setCity(selectedCity); setStep("category"); } }}
                     disabled={locked}
                     className={cn(
-                      "w-full py-3.5 rounded-2xl font-bold text-base active:scale-[0.97] transition-transform",
+                      "w-full py-3.5 rounded-full font-bold text-base active:scale-[0.97] transition-transform",
                       locked
                         ? "bg-muted text-muted-foreground cursor-default shadow-none"
                         : "bg-primary text-white shadow-lg shadow-primary/25"
@@ -917,7 +917,7 @@ export default function DemoSession() {
                     key={cat.id}
                     onClick={() => handleCategorySelect(cat.id as CategoryKey)}
                     disabled={placesLoading || groupLoading}
-                    className="px-4 py-3 rounded-2xl text-sm font-semibold border border-border/60 bg-card flex items-center gap-2 active:scale-[0.97] transition-transform hover:border-orange-600/40 disabled:opacity-50"
+                    className="px-4 py-3 rounded-full text-sm font-semibold border border-border/60 bg-card flex items-center gap-2 active:scale-[0.97] transition-transform hover:border-orange-600/40 disabled:opacity-50"
                   >
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>{cat.emoji}</span>}
                     <span>{cat.label}</span>
@@ -953,7 +953,7 @@ export default function DemoSession() {
               </div>
               <button
                 onClick={handleCopyCode}
-                className="h-10 w-10 rounded-2xl bg-card border border-border/60 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+                className="h-10 w-10 rounded-full bg-card border border-border/60 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
               >
                 {codeCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
               </button>
@@ -961,7 +961,7 @@ export default function DemoSession() {
 
             <button
               onClick={handleCopyLink}
-              className="w-full py-3.5 rounded-2xl border border-border/60 bg-card text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+              className="w-full py-3.5 rounded-full border border-border/60 bg-card text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
             >
               <Copy className="h-4 w-4" />
               Skopiuj link zaproszenia
@@ -974,7 +974,7 @@ export default function DemoSession() {
           <div className="shrink-0 px-5 pb-8 pt-3">
             <button
               onClick={() => setStep("swipe")}
-              className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
+              className="w-full py-4 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
             >
               <Users className="h-5 w-5" />
               Zaczynamy!
@@ -1082,13 +1082,13 @@ export default function DemoSession() {
                 saveDemoLikedToStorage(places, city, category ?? "");
                 navigate("/auth");
               }}
-              className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
+              className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
             >
               Załóż konto — zajmuje 30 sekund →
             </button>
             <button
               onClick={() => { setStep("category"); setCategory(null); setLikedPlaces([]); setGroupReactions({}); setOtherDeviceDone(false); }}
-              className="w-full py-3 rounded-2xl border border-border/50 text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform"
+              className="w-full py-3 rounded-full border border-border/50 text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform"
             >
               Spróbuj innej kategorii
             </button>
