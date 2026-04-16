@@ -327,7 +327,7 @@ const RouteSummaryDialog = ({
                       <div key={idx} className="flex items-start gap-3.5">
                         {/* Stepper */}
                         <div className="flex flex-col items-center shrink-0 pt-0.5">
-                          <div className="h-7 w-7 rounded-full bg-orange-600 flex items-center justify-center text-[11px] font-bold text-white shadow-sm shadow-orange-600/30">
+                          <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-[11px] font-bold text-white shadow-sm shadow-primary/30">
                             {idx + 1}
                           </div>
                           {!isLast && (
@@ -370,7 +370,7 @@ const RouteSummaryDialog = ({
           <button
             onClick={saveRoute}
             disabled={saving}
-            className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-orange-600/25 active:scale-[0.98] transition-transform"
+            className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-primary/25 active:scale-[0.98] transition-transform"
           >
             {saving
               ? <><Loader2 className="h-4 w-4 animate-spin" />Zapisuję...</>

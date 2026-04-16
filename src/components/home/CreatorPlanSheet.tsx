@@ -186,7 +186,7 @@ export default function CreatorPlanSheet({ plan, open, onOpenChange, onPersonali
         {/* CTA */}
         <div className="p-4 pb-safe flex-shrink-0 border-t border-border/40">
           <Button
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white border-0"
+            className="w-full bg-primary hover:bg-primary/90 text-white border-0"
             size="lg"
             onClick={() => {
               onOpenChange(false);

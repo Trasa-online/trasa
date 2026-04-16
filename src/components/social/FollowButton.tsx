@@ -78,7 +78,7 @@ export default function FollowButton({ targetUserId, initialIsFollowing, classNa
         "px-5 py-2 rounded-full text-sm font-semibold transition-all active:scale-95 disabled:opacity-60",
         isFollowing
           ? "bg-muted text-foreground border border-border/50"
-          : "bg-orange-600 text-white shadow-md shadow-orange-600/20",
+          : "bg-primary text-white shadow-md shadow-primary/20",
         className
       )}
     >

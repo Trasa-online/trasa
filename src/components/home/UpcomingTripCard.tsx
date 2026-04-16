@@ -127,7 +127,7 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
         {/* Top row: countdown + delete */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
           {countdownLabel && (
-            <span className="bg-orange-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm shadow-orange-600/30">
+            <span className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm shadow-primary/30">
               {countdownLabel}
             </span>
           )}

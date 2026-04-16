@@ -100,7 +100,7 @@ function CompletionRing({ percent, children }: { percent: number; children: Reac
         {children}
       </div>
       {/* Percent badge */}
-      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-orange-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
         {percent}%
       </div>
     </div>

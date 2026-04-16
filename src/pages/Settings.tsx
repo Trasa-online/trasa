@@ -196,7 +196,7 @@ function ChangePasswordSection() {
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 py-2.5 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold disabled:opacity-50"
+            className="flex-1 py-2.5 rounded-2xl bg-primary hover:bg-primary/90 text-white text-sm font-semibold disabled:opacity-50"
           >
             {loading ? "Zapisuję..." : "Zapisz"}
           </button>
@@ -319,7 +319,7 @@ function BugReportSection({ userId }: { userId: string }) {
         <button
           onClick={handleSubmit}
           disabled={submitting || !description.trim()}
-          className="flex-1 py-2.5 rounded-2xl bg-orange-600 text-white text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
+          className="flex-1 py-2.5 rounded-2xl bg-primary text-white text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
         >
           {submitting ? "Wysyłam…" : "Wyślij zgłoszenie"}
         </button>
@@ -461,7 +461,7 @@ const Settings = () => {
           <button
             onClick={() => updateProfileMutation.mutate()}
             disabled={updateProfileMutation.isPending}
-            className="w-full py-3 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-semibold text-sm transition-colors disabled:opacity-50"
+            className="w-full py-3 rounded-2xl bg-primary hover:bg-primary/90 text-white font-semibold text-sm transition-colors disabled:opacity-50"
           >
             {updateProfileMutation.isPending ? "Zapisuję..." : t("save_changes")}
           </button>

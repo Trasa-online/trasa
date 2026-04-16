@@ -799,7 +799,7 @@ const BusinessDashboard = () => {
                   onClick={() => { setTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag]); setIsDirty(true); }}
                   className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
                     active
-                      ? "bg-orange-600 border-orange-600 text-white"
+                      ? "bg-primary border-orange-600 text-white"
                       : "bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground"
                   }`}
                 >
@@ -921,7 +921,7 @@ const BusinessDashboard = () => {
               <button
                 onClick={handleAddPost}
                 disabled={submittingPost || (!postDescription.trim() && postPhotos.length === 0)}
-                className="ml-auto flex items-center gap-1.5 text-xs bg-orange-500 text-white px-3 py-1.5 rounded-full font-semibold active:opacity-70 disabled:opacity-40"
+                className="ml-auto flex items-center gap-1.5 text-xs bg-primary text-white px-3 py-1.5 rounded-full font-semibold active:opacity-70 disabled:opacity-40"
               >
                 {submittingPost ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                 Opublikuj
@@ -969,7 +969,7 @@ const BusinessDashboard = () => {
           <button
             onClick={handleSave}
             disabled={saving || uploading !== null}
-            className="w-full max-w-2xl mx-auto flex py-3.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 items-center justify-center gap-2"
+            className="w-full max-w-2xl mx-auto flex py-3.5 rounded-2xl bg-primary hover:bg-primary text-white font-semibold text-sm transition-colors disabled:opacity-50 items-center justify-center gap-2"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             Zapisz zmiany

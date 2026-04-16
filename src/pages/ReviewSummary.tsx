@@ -356,7 +356,7 @@ const ReviewSummary = () => {
                 {groupParticipants.slice(0, 5).map((p) => (
                   <div
                     key={p.id}
-                    className="h-7 w-7 rounded-full border-2 border-white/60 overflow-hidden bg-orange-500 flex items-center justify-center text-white text-[10px] font-bold"
+                    className="h-7 w-7 rounded-full border-2 border-white/60 overflow-hidden bg-primary flex items-center justify-center text-white text-[10px] font-bold"
                   >
                     {p.avatar_url ? (
                       <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -460,7 +460,7 @@ const ReviewSummary = () => {
                     </button>
                   )}
                   {idx === 0 && (
-                    <div className="absolute bottom-1.5 left-1.5 bg-orange-600/90 rounded-full px-1.5 py-0.5 text-[9px] font-bold text-white">
+                    <div className="absolute bottom-1.5 left-1.5 bg-primary/90 rounded-full px-1.5 py-0.5 text-[9px] font-bold text-white">
                       Okładka
                     </div>
                   )}
@@ -532,7 +532,7 @@ const ReviewSummary = () => {
           </div>
           <button
             onClick={() => togglePublic(!isPublic)}
-            className={`flex-shrink-0 relative w-11 h-6 rounded-full transition-colors duration-200 ${isPublic ? "bg-orange-600" : "bg-muted-foreground/30"}`}
+            className={`flex-shrink-0 relative w-11 h-6 rounded-full transition-colors duration-200 ${isPublic ? "bg-primary" : "bg-muted-foreground/30"}`}
           >
             <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${isPublic ? "translate-x-5" : "translate-x-0"}`} />
           </button>
@@ -640,7 +640,7 @@ const ReviewSummary = () => {
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         <button
           onClick={() => navigate("/")}
-          className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-orange-600/20"
+          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-primary/20"
         >
           Gotowe
         </button>

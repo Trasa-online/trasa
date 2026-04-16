@@ -224,7 +224,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
         >
           {markerPos && (
             <AdvancedMarker position={markerPos}>
-              <div className="w-5 h-5 bg-orange-600 rounded-full border-2 border-white shadow-lg" />
+              <div className="w-5 h-5 bg-primary rounded-full border-2 border-white shadow-lg" />
             </AdvancedMarker>
           )}
           <MapPanner pos={markerPos} />
@@ -281,7 +281,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
           size="lg"
           disabled={!selected}
           onClick={() => selected && onConfirm(selected.name)}
-          className="w-full rounded-full text-base font-semibold bg-orange-600 hover:bg-orange-700 text-white border-0 shadow-lg shadow-orange-600/20 disabled:opacity-40"
+          className="w-full rounded-full text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 shadow-lg shadow-primary/20 disabled:opacity-40"
         >
           Dalej
         </Button>

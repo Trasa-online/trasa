@@ -139,7 +139,7 @@ export default function RouteCommentsSheet({ routeId, open, onOpenChange }: Rout
             <button
               onClick={handleSubmit}
               disabled={!text.trim() || addMutation.isPending}
-              className="h-8 w-8 rounded-full bg-orange-600 text-white flex items-center justify-center disabled:opacity-40 transition-opacity flex-shrink-0"
+              className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center disabled:opacity-40 transition-opacity flex-shrink-0"
             >
               <ArrowUp className="h-4 w-4" />
             </button>

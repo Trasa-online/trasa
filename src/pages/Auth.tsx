@@ -399,7 +399,7 @@ const Auth = () => {
                   className="bg-card"
                 />
               </div>
-              <Button type="submit" className="w-full rounded-2xl py-6 bg-orange-600 hover:bg-orange-700 text-white font-bold text-base" disabled={loading}>
+              <Button type="submit" className="w-full rounded-2xl py-6 bg-primary hover:bg-primary/90 text-white font-bold text-base" disabled={loading}>
                 {loading ? t("logging_in") : t("login_btn")}
               </Button>
               <button
@@ -489,7 +489,7 @@ const Auth = () => {
                   {t("terms_app")}
                 </span>
               </label>
-              <Button type="submit" className="w-full rounded-2xl py-6 bg-orange-600 hover:bg-orange-700 text-white font-bold text-base" disabled={loading}>
+              <Button type="submit" className="w-full rounded-2xl py-6 bg-primary hover:bg-primary/90 text-white font-bold text-base" disabled={loading}>
                 {loading ? t("registering") : t("register_btn")}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
@@ -501,7 +501,7 @@ const Auth = () => {
           {/* Demo CTA */}
           <button
             onClick={() => navigate("/")}
-            className="w-full py-3.5 rounded-2xl border-2 border-orange-600/30 bg-orange-600/5 text-sm font-bold text-orange-700 active:scale-[0.97] transition-transform flex items-center justify-center gap-2 mt-2"
+            className="w-full py-3.5 rounded-2xl border-2 border-orange-600/30 bg-primary/5 text-sm font-bold text-orange-700 active:scale-[0.97] transition-transform flex items-center justify-center gap-2 mt-2"
           >
             ✨ Sprawdź jak to działa — demo bez konta
           </button>

@@ -146,7 +146,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
               {/* Top-right: photo badge or delete button */}
               <div className="absolute top-3 right-3 flex items-center gap-1.5">
                 {entry.new_for_users?.includes(userId) && (
-                  <div className="bg-orange-500 rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow">
+                  <div className="bg-primary rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow">
                     Nowa trasa!
                   </div>
                 )}

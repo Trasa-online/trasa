@@ -157,7 +157,7 @@ export default function RouteMapSheet({ city, pins, open, onOpenChange }: RouteM
                   key={i}
                   ref={el => { chipRefs.current[i] = el; }}
                   onClick={() => handleChipClick(i)}
-                  className={`flex items-center gap-1.5 rounded-full px-3 py-2 flex-shrink-0 transition-all duration-200 active:scale-95 ${isSelected ? "bg-orange-600" : "bg-muted"}`}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-2 flex-shrink-0 transition-all duration-200 active:scale-95 ${isSelected ? "bg-primary" : "bg-muted"}`}
                 >
                   <span
                     className="h-5 w-5 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0 transition-colors duration-200"

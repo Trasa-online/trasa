@@ -413,7 +413,7 @@ const Admin = () => {
         <h1 className="text-lg font-semibold flex-1">Panel admina</h1>
         <button
           onClick={() => navigate("/admin/routes")}
-          className="text-xs bg-orange-600/10 text-orange-600 font-semibold px-3 py-1.5 rounded-full hover:bg-orange-700/20 transition-colors"
+          className="text-xs bg-primary/10 text-orange-600 font-semibold px-3 py-1.5 rounded-full hover:bg-primary/90/20 transition-colors"
         >
           🗺️ Trasy wzorcowe
         </button>
@@ -434,7 +434,7 @@ const Admin = () => {
             >
               {tabLabels[t]}
               {badge > 0 && (
-                <span className="ml-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-600 text-white text-[10px] font-bold">
+                <span className="ml-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[10px] font-bold">
                   {badge}
                 </span>
               )}
@@ -706,7 +706,7 @@ const Admin = () => {
                       </Button>
                       <Button
                         size="sm"
-                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
+                        className="flex-1 bg-primary hover:bg-primary text-white"
                         onClick={() => handleApproveClaim(claim)}
                         disabled={approvingId === claim.id || rejectingId === claim.id}
                       >

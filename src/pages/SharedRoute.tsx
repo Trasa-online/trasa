@@ -191,7 +191,7 @@ export default function SharedRoute() {
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         <button
           onClick={() => navigate(`/plan?city=${encodeURIComponent(cityLabel)}`)}
-          className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-orange-600/25"
+          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-primary/25"
         >
           Zaplanuj podobną trasę w {cityLabel}
         </button>

@@ -512,7 +512,7 @@ const Onboarding = () => {
                 className={cn(
                   "absolute right-2.5 bottom-2.5 h-8 w-8 rounded-full flex items-center justify-center transition-colors",
                   isListening
-                    ? "bg-orange-600 text-white"
+                    ? "bg-primary text-white"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 )}
               >

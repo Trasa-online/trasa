@@ -37,7 +37,7 @@ interface RouteExample {
 const PERSONALITY_LABELS: Record<string, { label: string; color: string }> = {
   kulturalny:  { label: "Kulturalny",    color: "bg-purple-500/15 text-purple-700 dark:text-purple-300" },
   historyczny: { label: "Historyczny",   color: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
-  kawiarniany: { label: "Kawiarniany",   color: "bg-orange-600/15 text-orange-700 dark:text-orange-300" },
+  kawiarniany: { label: "Kawiarniany",   color: "bg-primary/15 text-orange-700 dark:text-orange-300" },
   nocny:       { label: "Nocny",         color: "bg-blue-500/15 text-blue-700 dark:text-blue-300" },
   aktywny:     { label: "Aktywny",       color: "bg-green-500/15 text-green-700 dark:text-green-300" },
   zakupowy:    { label: "Zakupowy",      color: "bg-pink-500/15 text-pink-700 dark:text-pink-300" },

@@ -173,7 +173,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
         >
           Dopasowania
           {liked.length > 0 && (
-            <span className="h-[18px] min-w-[18px] px-1 rounded-full bg-orange-600 text-white text-[10px] font-bold flex items-center justify-center">
+            <span className="h-[18px] min-w-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
               {liked.length}
             </span>
           )}
@@ -213,7 +213,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
               <p className="text-sm text-muted-foreground">Sprawdź swoje dopasowania w drugiej zakładce.</p>
               <button
                 onClick={() => setActiveTab("matches")}
-                className="py-3 px-6 rounded-2xl bg-orange-600 text-white font-semibold text-sm active:scale-[0.97] transition-transform"
+                className="py-3 px-6 rounded-2xl bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
               >
                 Zobacz dopasowania →
               </button>
@@ -238,7 +238,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
             <>
               {liked.map((place, i) => (
                 <div key={place.id} className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/40">
-                  <span className="h-7 w-7 rounded-full bg-orange-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                  <span className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-white shrink-0">
                     {i + 1}
                   </span>
                   <img src={place.photo} alt={place.name} className="h-12 w-12 rounded-2xl object-cover shrink-0" />
@@ -272,7 +272,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
       {showUpsell && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-lg bg-card rounded-t-3xl px-6 pt-8 pb-10 flex flex-col items-center gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-            <div className="h-14 w-14 rounded-2xl bg-orange-600/10 flex items-center justify-center">
+            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
               <Sparkles className="h-7 w-7 text-orange-600" />
             </div>
             <div className="text-center space-y-1.5">
@@ -292,7 +292,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
                 saveDemoLikedToStorage(liked, city, category);
                 navigate("/auth");
               }}
-              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
+              className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
             >
               Załóż konto — to nic nie kosztuje →
             </button>
@@ -569,7 +569,7 @@ export default function DemoSession() {
             {/* Demo member avatars */}
             <div className="flex -space-x-2">
               {(mode === "group" ? ["T", "M", "J"] : ["T"]).map((initial, i) => (
-                <div key={i} className="h-7 w-7 rounded-full bg-orange-600/20 border-2 border-background flex items-center justify-center text-xs font-bold text-orange-700">
+                <div key={i} className="h-7 w-7 rounded-full bg-primary/20 border-2 border-background flex items-center justify-center text-xs font-bold text-orange-700">
                   {initial}
                 </div>
               ))}
@@ -696,7 +696,7 @@ export default function DemoSession() {
                     <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                     <div className="absolute bottom-2.5 left-2.5">
-                      <span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">Restauracja</span>
+                      <span className="text-[9px] bg-primary text-white px-1.5 py-0.5 rounded-full font-bold">Restauracja</span>
                       <p className="text-white text-[11px] font-bold mt-0.5">Butchery & Wine</p>
                       <p className="text-yellow-400 text-[9px]">★ 4.7</p>
                     </div>
@@ -718,7 +718,7 @@ export default function DemoSession() {
               <div className="space-y-3">
                 <button
                   onClick={handleStartGroup}
-                  className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
+                  className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
                 >
                   <Users className="h-5 w-5" />
                   Zacznij z grupą
@@ -753,7 +753,7 @@ export default function DemoSession() {
                   <button
                     onClick={handleJoinByCode}
                     disabled={joinInput.trim().length < 4 || joinLoading}
-                    className="px-4 py-2.5 rounded-2xl bg-orange-600 text-white text-sm font-bold disabled:opacity-40 active:scale-[0.97] transition-transform flex items-center gap-1.5"
+                    className="px-4 py-2.5 rounded-2xl bg-primary text-white text-sm font-bold disabled:opacity-40 active:scale-[0.97] transition-transform flex items-center gap-1.5"
                   >
                     {joinLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Dołącz"}
                   </button>
@@ -814,7 +814,7 @@ export default function DemoSession() {
               {/* Center highlight line */}
               <div className="absolute left-0 right-0 pointer-events-none z-10"
                 style={{ top: "50%", transform: "translateY(-50%)", height: `${ITEM_H}px` }}>
-                <div className="mx-8 h-full rounded-2xl bg-orange-600/8" />
+                <div className="mx-8 h-full rounded-2xl bg-primary/8" />
               </div>
 
               <div
@@ -887,7 +887,7 @@ export default function DemoSession() {
                       "w-full py-3.5 rounded-2xl font-bold text-base active:scale-[0.97] transition-transform",
                       locked
                         ? "bg-muted text-muted-foreground cursor-default shadow-none"
-                        : "bg-orange-600 text-white shadow-lg shadow-orange-600/25"
+                        : "bg-primary text-white shadow-lg shadow-primary/25"
                     )}
                   >
                     {locked ? `${selectedCity} — wkrótce 🔒` : `Dalej — ${selectedCity}`}
@@ -974,7 +974,7 @@ export default function DemoSession() {
           <div className="shrink-0 px-5 pb-8 pt-3">
             <button
               onClick={() => setStep("swipe")}
-              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/20"
+              className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
             >
               <Users className="h-5 w-5" />
               Zaczynamy!
@@ -993,7 +993,7 @@ export default function DemoSession() {
               <p className="text-sm text-muted-foreground">Spróbuj innej kategorii lub miasta.</p>
               <button
                 onClick={() => setStep("category")}
-                className="py-3 px-6 rounded-2xl bg-orange-600 text-white font-semibold text-sm"
+                className="py-3 px-6 rounded-2xl bg-primary text-white font-semibold text-sm"
               >
                 ← Wróć do kategorii
               </button>
@@ -1048,7 +1048,7 @@ export default function DemoSession() {
               <div className="space-y-2">
                 {(mode === "solo" ? likedPlaces : groupMatches).map((place, i) => (
                   <div key={place.id} className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/40">
-                    <span className="h-7 w-7 rounded-full bg-orange-600/10 flex items-center justify-center text-xs font-bold text-orange-600 shrink-0">
+                    <span className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-orange-600 shrink-0">
                       {i + 1}
                     </span>
                     <img src={place.photo} alt={place.name} className="h-10 w-10 rounded-2xl object-cover shrink-0" />
@@ -1082,7 +1082,7 @@ export default function DemoSession() {
                 saveDemoLikedToStorage(places, city, category ?? "");
                 navigate("/auth");
               }}
-              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/20"
+              className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
             >
               Załóż konto — zajmuje 30 sekund →
             </button>

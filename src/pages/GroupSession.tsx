@@ -592,7 +592,7 @@ const GroupSession = () => {
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex gap-1.5">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-2 w-2 rounded-full bg-orange-600 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+            <div key={i} className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
           ))}
         </div>
       </div>
@@ -618,7 +618,7 @@ const GroupSession = () => {
         <p className="text-sm text-muted-foreground">
           Twój znajomy zaprasza Cię do wspólnego parowania miejsc w <strong>{session.city}</strong>.
         </p>
-        <button onClick={() => navigate("/auth")} className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base">
+        <button onClick={() => navigate("/auth")} className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-base">
           Zaloguj się
         </button>
       </div>
@@ -637,7 +637,7 @@ const GroupSession = () => {
           <span className="font-bold text-base">Zaproszenie do sesji</span>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
-          <div className="h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
+          <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
             <Users className="h-10 w-10 text-orange-600" />
           </div>
           <div>
@@ -652,7 +652,7 @@ const GroupSession = () => {
               <div className="flex flex-col gap-2">
                 {members.map((m: any) => (
                   <div key={m.user_id} className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-orange-600/20 flex items-center justify-center text-sm font-bold text-orange-700 shrink-0">
+                    <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-orange-700 shrink-0">
                       {(m.profile?.first_name || m.profile?.username || "?")[0].toUpperCase()}
                     </div>
                     <span className="text-sm font-medium">{m.profile?.first_name || m.profile?.username || "Użytkownik"}</span>
@@ -664,7 +664,7 @@ const GroupSession = () => {
           <button
             onClick={handleJoin}
             disabled={joining || members.length >= 10}
-            className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
+            className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
           >
             {joining ? "Dołączam…" : members.length >= 10 ? "Sesja pełna (max 10)" : "Dołącz i zacznij swipe'ować"}
           </button>
@@ -713,7 +713,7 @@ const GroupSession = () => {
               m.profile?.avatar_url ? (
                 <img key={m.user_id} src={m.profile.avatar_url} alt={m.profile?.first_name || m.profile?.username || "?"} className="h-7 w-7 rounded-full border-2 border-background object-cover" title={m.profile?.first_name || m.profile?.username} />
               ) : (
-                <div key={m.user_id} className="h-7 w-7 rounded-full bg-orange-600/20 border-2 border-background flex items-center justify-center text-xs font-bold text-orange-700" title={m.profile?.first_name || m.profile?.username}>
+                <div key={m.user_id} className="h-7 w-7 rounded-full bg-primary/20 border-2 border-background flex items-center justify-center text-xs font-bold text-orange-700" title={m.profile?.first_name || m.profile?.username}>
                   {(m.profile?.first_name || m.profile?.username || "?")[0].toUpperCase()}
                 </div>
               )
@@ -776,7 +776,7 @@ const GroupSession = () => {
         >
           Dopasowania
           {matches.length > 0 && (
-            <span className="h-[18px] min-w-[18px] px-1 rounded-full bg-orange-600 text-white text-[10px] font-bold flex items-center justify-center">
+            <span className="h-[18px] min-w-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
               {matches.length}
             </span>
           )}
@@ -806,7 +806,7 @@ const GroupSession = () => {
             return (
               <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-5">
                 <div className="text-center">
-                  <div className="mx-auto h-16 w-16 rounded-full bg-orange-600/10 flex items-center justify-center text-3xl mb-3">⏳</div>
+                  <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-3xl mb-3">⏳</div>
                   <p className="text-lg font-black mb-1">Czekamy na kogoś jeszcze</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Parowanie zacznie się gdy co najmniej jedna osoba dołączy do sesji.
@@ -844,7 +844,7 @@ const GroupSession = () => {
                             {profile.avatar_url ? (
                               <img src={profile.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
                             ) : (
-                              <div className="h-8 w-8 rounded-full bg-orange-600/15 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
+                              <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
                                 {(profile.first_name || profile.username || "?")[0].toUpperCase()}
                               </div>
                             )}
@@ -857,7 +857,7 @@ const GroupSession = () => {
                               onClick={() => handleWaitingInvite(profile)}
                               className={cn(
                                 "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold active:scale-95 transition-transform disabled:opacity-60 disabled:scale-100",
-                                isInvited ? "border border-border/60 text-emerald-600" : "bg-orange-600 text-white"
+                                isInvited ? "border border-border/60 text-emerald-600" : "bg-primary text-white"
                               )}
                             >
                               {isInvited ? <><Check className="h-3 w-3" />Zaproszono</> : isSending ? "…" : <><UserPlus className="h-3 w-3" />Zaproś</>}
@@ -879,7 +879,7 @@ const GroupSession = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => { navigator.clipboard.writeText(joinCode ?? ""); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                      className="flex-1 py-2.5 rounded-2xl bg-orange-600 text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                      className="flex-1 py-2.5 rounded-2xl bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                     >
                       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       {copied ? "Skopiowano!" : "Kopiuj kod"}
@@ -936,7 +936,7 @@ const GroupSession = () => {
                             isEmpty
                               ? "bg-card text-muted-foreground/40 border-border/30 cursor-not-allowed"
                               : pendingCategory === cat.id
-                                ? "bg-orange-600 text-white border-orange-600"
+                                ? "bg-primary text-white border-orange-600"
                                 : "bg-card text-foreground border-border/60"
                           }`}
                         >
@@ -950,7 +950,7 @@ const GroupSession = () => {
                     <button
                       onClick={handleStartCategory}
                       disabled={savingCategory || !pendingCategory}
-                      className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
+                      className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
                     >
                       {savingCategory ? "Startuję…" : isFirst ? "Rozpocznij parowanie" : "Następna runda →"}
                     </button>
@@ -975,7 +975,7 @@ const GroupSession = () => {
                   <LobbyProposals lobbyQuery={lobbyQuery} setLobbyQuery={setLobbyQuery} lobbyResults={lobbyResults} lobbySearching={lobbySearching} lobbyProposals={lobbyProposals} members={members} handleLobbyPropose={handleLobbyPropose} onSuggestNew={() => setLobbySuggestOpen(true)} />
                   <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-muted/50 mt-auto">
                     <div className="flex gap-1">
-                      {[0,1,2].map(i => <div key={i} className="h-1.5 w-1.5 rounded-full bg-orange-600/50 animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
+                      {[0,1,2].map(i => <div key={i} className="h-1.5 w-1.5 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
                     </div>
                     <p className="text-xs text-muted-foreground">Organizator wybiera kategorię…</p>
                   </div>
@@ -984,7 +984,7 @@ const GroupSession = () => {
             }
             return (
               <div className="flex-1 flex flex-col items-center justify-center px-8 gap-5 text-center">
-                <div className="h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
+                <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
                   <Users className="h-10 w-10 text-orange-600" />
                 </div>
                 <div>
@@ -995,7 +995,7 @@ const GroupSession = () => {
                 </div>
                 <div className="flex gap-1.5">
                   {[0, 1, 2].map(i => (
-                    <div key={i} className="h-2 w-2 rounded-full bg-orange-600/40 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                    <div key={i} className="h-2 w-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
                   ))}
                 </div>
               </div>
@@ -1010,7 +1010,7 @@ const GroupSession = () => {
             return (
               <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6 text-center">
                 {/* Category chip */}
-                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-600/10 border border-orange-600/20 text-orange-700 font-semibold text-base">
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-orange-600/20 text-orange-700 font-semibold text-base">
                   {catEmoji} {catLabel}
                 </span>
 
@@ -1036,12 +1036,12 @@ const GroupSession = () => {
                               className={`h-14 w-14 rounded-full object-cover border-2 transition-all ${done ? "border-orange-600" : "border-border/40 opacity-60"}`}
                             />
                           ) : (
-                            <div className={`h-14 w-14 rounded-full flex items-center justify-center text-lg font-bold border-2 transition-all ${done ? "bg-orange-600 text-white border-orange-600" : "bg-muted text-muted-foreground border-border/40 opacity-60"}`}>
+                            <div className={`h-14 w-14 rounded-full flex items-center justify-center text-lg font-bold border-2 transition-all ${done ? "bg-primary text-white border-orange-600" : "bg-muted text-muted-foreground border-border/40 opacity-60"}`}>
                               {name[0].toUpperCase()}
                             </div>
                           )}
                           {done && (
-                            <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-orange-600 border-2 border-background flex items-center justify-center">
+                            <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-primary border-2 border-background flex items-center justify-center">
                               <Check className="h-2.5 w-2.5 text-white" />
                             </div>
                           )}
@@ -1099,7 +1099,7 @@ const GroupSession = () => {
               <div className="flex-1 flex flex-col items-center justify-center gap-3">
                 <div className="flex gap-1.5">
                   {[0, 1, 2].map(i => (
-                    <div key={i} className="h-2 w-2 rounded-full bg-orange-600 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                    <div key={i} className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
                   ))}
                 </div>
                 <p className="text-sm text-muted-foreground">Ładowanie miejsc…</p>
@@ -1119,7 +1119,7 @@ const GroupSession = () => {
               {isCreator && (
                 <button
                   onClick={handleCategoryComplete}
-                  className="py-3 px-6 rounded-2xl bg-orange-600 text-white font-semibold text-sm active:scale-[0.97] transition-transform"
+                  className="py-3 px-6 rounded-2xl bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
                 >
                   Przejdź do następnej kategorii
                 </button>
@@ -1141,7 +1141,7 @@ const GroupSession = () => {
                   <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px]">
                     Potrzeba co najmniej 2 osób, które polubiły to samo miejsce. Wróć do eksplorowania!
                   </p>
-                  <button onClick={() => setTab("swipe")} className="py-3 px-6 rounded-2xl bg-orange-600 text-white font-semibold text-sm">
+                  <button onClick={() => setTab("swipe")} className="py-3 px-6 rounded-2xl bg-primary text-white font-semibold text-sm">
                     Eksploruj dalej
                   </button>
                 </div>
@@ -1196,7 +1196,7 @@ const GroupSession = () => {
                                       <div
                                         onClick={(e) => { e.stopPropagation(); togglePlace(m.place_name); }}
                                         className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
-                                          isSelected ? "bg-orange-600 border-orange-600" : "border-border/60 bg-background"
+                                          isSelected ? "bg-primary border-orange-600" : "border-border/60 bg-background"
                                         }`}
                                       >
                                         {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
@@ -1240,7 +1240,7 @@ const GroupSession = () => {
                       },
                     });
                   }}
-                  className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.97] transition-transform"
+                  className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
                 >
                   {existingRoute ? "Stwórz nową trasę →" : "Przejdź do tworzenia trasy →"}
                 </button>
@@ -1265,7 +1265,7 @@ const GroupSession = () => {
                     }
                     navigate("/");
                   }}
-                  className={`w-full py-3 rounded-2xl font-semibold text-sm active:scale-[0.97] transition-transform ${matches.length > 0 ? "border border-border/50 text-muted-foreground bg-card" : "bg-orange-600 text-white"}`}
+                  className={`w-full py-3 rounded-2xl font-semibold text-sm active:scale-[0.97] transition-transform ${matches.length > 0 ? "border border-border/50 text-muted-foreground bg-card" : "bg-primary text-white"}`}
                 >
                   Zakończ parowanie
                 </button>
@@ -1336,13 +1336,13 @@ const GroupSession = () => {
                         }}
                         className={cn(
                           "w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors",
-                          selected ? "bg-orange-600/10" : "active:bg-muted"
+                          selected ? "bg-primary/10" : "active:bg-muted"
                         )}
                       >
                         {f.avatar_url ? (
                           <img src={f.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
                         ) : (
-                          <div className="h-9 w-9 rounded-full bg-orange-600/20 flex items-center justify-center text-sm font-bold text-orange-700 shrink-0">
+                          <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-orange-700 shrink-0">
                             {(f.first_name || f.username || "?")[0].toUpperCase()}
                           </div>
                         )}
@@ -1352,7 +1352,7 @@ const GroupSession = () => {
                         </div>
                         <div className={cn(
                           "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                          selected ? "bg-orange-600 border-orange-600" : "border-border"
+                          selected ? "bg-primary border-orange-600" : "border-border"
                         )}>
                           {selected && <Check className="h-3 w-3 text-white" />}
                         </div>
@@ -1375,7 +1375,7 @@ const GroupSession = () => {
             className={cn(
               "mt-4 shrink-0 w-full py-3.5 rounded-2xl font-bold text-base transition-all",
               selectedFriends.size > 0
-                ? "bg-orange-600 text-white active:scale-[0.98]"
+                ? "bg-primary text-white active:scale-[0.98]"
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             )}
           >
@@ -1415,7 +1415,7 @@ const GroupSession = () => {
             <button
               onClick={handleSuggestPlace}
               disabled={suggestSending || !placeSearchQuery.trim()}
-              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-50"
+              className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-50"
             >
               {suggestSending ? "Wysyłam…" : "Wyślij sugestię"}
             </button>
@@ -1451,7 +1451,7 @@ const GroupSession = () => {
             <button
               onClick={handleLobbySuggestNew}
               disabled={lobbySuggestSending || !lobbyQuery.trim()}
-              className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-50"
+              className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-50"
             >
               {lobbySuggestSending ? "Wysyłam…" : "Wyślij sugestię"}
             </button>
@@ -1532,7 +1532,7 @@ const LobbyProposals = ({
               <button
                 onMouseDown={e => e.preventDefault()}
                 onClick={onSuggestNew}
-                className="px-5 py-2.5 rounded-full bg-orange-600 text-white text-sm font-semibold active:scale-95 transition-transform"
+                className="px-5 py-2.5 rounded-full bg-primary text-white text-sm font-semibold active:scale-95 transition-transform"
               >
                 Tak! Zaproponuj dodanie miejsca
               </button>
@@ -1551,7 +1551,7 @@ const LobbyProposals = ({
           const name = proposer?.profile?.first_name || proposer?.profile?.username || "Ktoś";
           return (
             <div key={p.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border border-border/40">
-              <div className="h-7 w-7 rounded-full bg-orange-600/20 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
+              <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
                 {name[0].toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">

@@ -297,7 +297,7 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
           onClick={handleConfirm}
           disabled={!selected || forking}
           size="lg"
-          className="w-full rounded-full text-base font-semibold bg-orange-600 hover:bg-orange-700 text-white border-0 shadow-lg shadow-orange-600/20 disabled:opacity-40"
+          className="w-full rounded-full text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 shadow-lg shadow-primary/20 disabled:opacity-40"
         >
           {forking ? <Loader2 className="h-5 w-5 animate-spin" /> : "Dalej"}
         </Button>

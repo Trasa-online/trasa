@@ -192,7 +192,7 @@ const QuickPlanReview = () => {
               }`}
             >
               {/* Number */}
-              <div className="h-7 w-7 rounded-full bg-orange-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+              <div className="h-7 w-7 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold shrink-0">
                 {i + 1}
               </div>
               {/* Info */}
@@ -229,7 +229,7 @@ const QuickPlanReview = () => {
         <button
           onClick={handleSave}
           disabled={saving || pins.length === 0}
-          className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
+          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40 flex items-center justify-center gap-2"
         >
           {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
           {saving ? "Zapisuję…" : `Zapisz trasę (${pins.length} miejsc)`}

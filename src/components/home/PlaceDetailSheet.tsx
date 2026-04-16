@@ -374,7 +374,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                     <button
                       onClick={handleSubmitClaim}
                       disabled={submittingClaim || !claimEmail}
-                      className="flex-1 text-sm py-2 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors disabled:opacity-50"
+                      className="flex-1 text-sm py-2 rounded-2xl bg-primary hover:bg-primary text-white font-semibold transition-colors disabled:opacity-50"
                     >
                       {submittingClaim ? "Wysyłam..." : "Wyślij zgłoszenie"}
                     </button>

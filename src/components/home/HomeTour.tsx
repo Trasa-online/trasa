@@ -60,9 +60,9 @@ const HomeTour = ({ onDone }: HomeTourProps) => {
                   key={i}
                   className={`h-1.5 rounded-full transition-all duration-300 ${
                     i === step
-                      ? "w-6 bg-orange-600"
+                      ? "w-6 bg-primary"
                       : i < step
-                      ? "w-1.5 bg-orange-600/40"
+                      ? "w-1.5 bg-primary/40"
                       : "w-1.5 bg-muted"
                   }`}
                 />
@@ -91,7 +91,7 @@ const HomeTour = ({ onDone }: HomeTourProps) => {
             </button>
             <button
               onClick={handleNext}
-              className="flex-1 py-3 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.97] transition-transform"
+              className="flex-1 py-3 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
             >
               {isLast ? "Zaczynamy! 🚀" : "Dalej →"}
             </button>

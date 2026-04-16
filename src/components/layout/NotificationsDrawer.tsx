@@ -150,7 +150,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
           <h2 className="text-lg font-bold flex-1">
             Powiadomienia
             {unreadCount > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-orange-600 text-white text-[10px] font-bold px-1.5">
+              <span className="ml-2 inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-primary text-white text-[10px] font-bold px-1.5">
                 {unreadCount}
               </span>
             )}
@@ -200,7 +200,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                 return (
                   <div
                     key={n.id}
-                    className={`flex items-start gap-3 px-4 py-3.5 transition-colors ${!n.read ? "bg-orange-600/5" : ""}`}
+                    className={`flex items-start gap-3 px-4 py-3.5 transition-colors ${!n.read ? "bg-primary/5" : ""}`}
                   >
                     <div className={`flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center ${cfg.color}`}>
                       <Icon className="h-4 w-4" />
@@ -217,7 +217,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                             onClose();
                             navigate(`/sesja/${n.metadata!.join_code}`);
                           }}
-                          className="mt-2 px-3 py-1.5 rounded-full bg-orange-600 text-white text-xs font-semibold active:scale-95 transition-transform"
+                          className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           Dołącz do sesji →
                         </button>
@@ -225,7 +225,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                       {n.type === "group_route_ready" && (
                         <button
                           onClick={() => { onClose(); navigate("/moje-podroze"); }}
-                          className="mt-2 px-3 py-1.5 rounded-full bg-orange-600 text-white text-xs font-semibold active:scale-95 transition-transform"
+                          className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           Zobacz trasę →
                         </button>
@@ -233,7 +233,7 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                     </div>
                     <div className="flex-shrink-0 flex flex-col items-center gap-1.5 ml-1">
                       {!n.read && (
-                        <div className="h-2 w-2 rounded-full bg-orange-600 mt-1.5" />
+                        <div className="h-2 w-2 rounded-full bg-primary mt-1.5" />
                       )}
                       <button
                         onClick={() => deleteOneMutation.mutate(n.id)}

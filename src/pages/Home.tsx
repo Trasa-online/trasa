@@ -165,7 +165,7 @@ const Home = () => {
                 onClick={() => setPreviewSessionId(s.id)}
                 className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-card border border-border/50 active:scale-[0.98] transition-transform text-left"
               >
-                <div className="h-9 w-9 rounded-xl bg-orange-600/10 flex items-center justify-center shrink-0">
+                <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                   <Users className="h-4 w-4 text-orange-600" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -207,7 +207,7 @@ const Home = () => {
       {/* Hero CTA */}
       <div className={`flex flex-col items-center justify-center gap-8 py-10 ${activeSessions.length > 0 ? "" : "flex-1"}`}>
         <div className="text-center space-y-3">
-          <div className="mx-auto h-20 w-20 rounded-full bg-orange-600/10 flex items-center justify-center">
+          <div className="mx-auto h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
             <svg width="48" height="48" viewBox="0 0 56 56" fill="none">
               <circle cx="18" cy="16" r="8" fill="#fdba74" />
               <path d="M4 44c0-7.732 6.268-14 14-14s14 6.268 14 14" fill="#fdba74" />
@@ -225,7 +225,7 @@ const Home = () => {
 
         <button
           onClick={() => navigate("/sesja/nowa")}
-          className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/20 flex items-center justify-center gap-2"
+          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
         >
           <Users className="h-5 w-5" />
           Zaplanuj razem
@@ -233,7 +233,7 @@ const Home = () => {
         {!user && (
           <button
             onClick={() => navigate("/demo")}
-            className="w-full py-3.5 rounded-2xl border-2 border-orange-600/30 bg-orange-600/5 text-sm font-bold text-orange-700 active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
+            className="w-full py-3.5 rounded-2xl border-2 border-orange-600/30 bg-primary/5 text-sm font-bold text-orange-700 active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
           >
             <Sparkles className="h-4 w-4" />
             Sprawdź jak to działa — demo bez konta
@@ -355,7 +355,7 @@ const Home = () => {
                             setPreviewSessionId(null);
                             navigate(`/review-summary?route=${sessionRoute.id}&new=1`);
                           }}
-                          className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-sm active:scale-[0.97] transition-transform"
+                          className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
                         >
                           Zakończ i oceń trasę ✓
                         </button>
@@ -372,7 +372,7 @@ const Home = () => {
                   )}
                   <button
                     onClick={() => { setPreviewSessionId(null); navigate(`/sesja/${previewSession.join_code}`); }}
-                    className={`w-full py-3.5 rounded-2xl font-bold text-sm active:scale-[0.97] transition-transform ${sessionRoute ? "border border-border/50 bg-card text-foreground" : "bg-orange-600 text-white"}`}
+                    className={`w-full py-3.5 rounded-2xl font-bold text-sm active:scale-[0.97] transition-transform ${sessionRoute ? "border border-border/50 bg-card text-foreground" : "bg-primary text-white"}`}
                   >
                     {sessionRoute ? "Wróć do parowania" : "Wejdź do sesji →"}
                   </button>
@@ -402,7 +402,7 @@ const Home = () => {
       {user.email === "nat.maz98@gmail.com" && (
         <button
           onClick={() => navigate("/admin/routes")}
-          className="mt-4 self-center text-xs bg-orange-600/10 text-orange-600 font-semibold px-4 py-2 rounded-full"
+          className="mt-4 self-center text-xs bg-primary/10 text-orange-600 font-semibold px-4 py-2 rounded-full"
         >
           🗺️ Trasy wzorcowe
         </button>

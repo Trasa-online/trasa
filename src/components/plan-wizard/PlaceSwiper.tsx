@@ -66,7 +66,7 @@ const CATEGORY_LABELS: Record<PlaceCategory, string> = {
 };
 
 const CATEGORY_COLORS: Record<PlaceCategory, string> = {
-  restaurant: "bg-orange-600/80 text-white",
+  restaurant: "bg-primary/80 text-white",
   cafe: "bg-amber-500/80 text-white",
   museum: "bg-violet-600/80 text-white",
   park: "bg-emerald-600/80 text-white",
@@ -136,7 +136,7 @@ const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: {
         <div className="w-full flex flex-col gap-2.5">
           <button
             onClick={onConfirm}
-            className="w-full py-3.5 rounded-2xl bg-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
+            className="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
           >
             Sprawdzam trasę
             <ArrowRight className="h-4 w-4" />
@@ -441,7 +441,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onLike(); }}
-            className="flex-1 py-3 rounded-full bg-orange-600 text-white font-bold text-sm shadow-xl shadow-orange-600/30 active:scale-[0.97] transition-transform"
+            className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm shadow-xl shadow-primary/30 active:scale-[0.97] transition-transform"
           >
             Dodaj
           </button>
@@ -532,7 +532,7 @@ const EmptyState = ({
         <div className="flex justify-center py-8">
           <div className="flex gap-1.5">
             {[0, 1, 2].map(i => (
-              <div key={i} className="h-2 w-2 rounded-full bg-orange-600 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+              <div key={i} className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
             ))}
           </div>
         </div>
@@ -560,7 +560,7 @@ const EmptyState = ({
             {/* Matched place pills */}
             <div className="flex flex-wrap gap-1.5">
               {route.matchedNames.map(name => (
-                <span key={name} className="text-xs bg-orange-600/10 text-orange-600 px-2.5 py-1 rounded-full font-medium">
+                <span key={name} className="text-xs bg-primary/10 text-orange-600 px-2.5 py-1 rounded-full font-medium">
                   {name}
                 </span>
               ))}
@@ -589,7 +589,7 @@ const EmptyState = ({
           "w-full py-3.5 rounded-2xl text-sm font-semibold active:scale-[0.97] transition-transform",
           matchedRoutes.length > 0
             ? "border border-border text-muted-foreground bg-card mt-1"
-            : "bg-orange-600 text-white shadow-lg shadow-orange-600/25"
+            : "bg-primary text-white shadow-lg shadow-primary/25"
         )}
       >
         {matchedRoutes.length > 0
@@ -1031,7 +1031,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="h-2 w-2 rounded-full bg-orange-600 animate-bounce"
+              className="h-2 w-2 rounded-full bg-primary animate-bounce"
               style={{ animationDelay: `${i * 0.15}s` }}
             />
           ))}
@@ -1059,7 +1059,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
           </div>
           <button
             onClick={onGroupFinished}
-            className="py-3 px-8 rounded-2xl bg-orange-600 text-white font-semibold text-sm active:scale-95 transition-transform"
+            className="py-3 px-8 rounded-2xl bg-primary text-white font-semibold text-sm active:scale-95 transition-transform"
           >
             Zobacz dopasowania
           </button>
@@ -1182,7 +1182,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
           )}
           <button
             onClick={handleProceed}
-            className="flex-[2] py-3 rounded-2xl bg-orange-600 text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+            className="flex-[2] py-3 rounded-2xl bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
           >
             Zaplanuj trasę · {likedPlaces.length + superLikedPlaces.length} {(likedPlaces.length + superLikedPlaces.length) === 1 ? "miejsce" : "miejsc"}
             <ArrowRight className="h-4 w-4" />

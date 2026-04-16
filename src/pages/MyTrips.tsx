@@ -176,7 +176,7 @@ const MyTrips = () => {
               >
                 {tab === "aktywne" ? t("tabs.active") : t("tabs.upcoming")}
                 {activeTab === tab && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-600 rounded-full" />
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
                 )}
               </button>
             ))}
@@ -264,7 +264,7 @@ const MyTrips = () => {
               ) : (
                 <div className="flex flex-col items-center py-8 text-center">
                   <p className="text-muted-foreground text-sm">{t("empty_active")}</p>
-                  <button onClick={() => navigate("/plan")} className="mt-3 px-5 py-2.5 rounded-full bg-orange-600 text-white text-sm font-semibold active:scale-95 transition-transform">Dodaj trasę</button>
+                  <button onClick={() => navigate("/plan")} className="mt-3 px-5 py-2.5 rounded-full bg-primary text-white text-sm font-semibold active:scale-95 transition-transform">Dodaj trasę</button>
                 </div>
               )}
             </section>
