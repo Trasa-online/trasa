@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowRight, Map } from "lucide-react";
 import { format } from "date-fns";
@@ -64,12 +63,11 @@ const getStaticMapUrl = (pins: TemplatePin[]) => {
     .map((p) => `markers=color:black%7C${p.latitude},${p.longitude}`)
     .join("&");
   const center = pins[Math.floor(pins.length / 2)];
-  return (
-    `https://maps.googleapis.com/maps/api/staticmap` +
-    `?center=${center.latitude},${center.longitude}&zoom=14&size=400x400&scale=2` +
-    `&${markers}&key=${GOOGLE_MAPS_API_KEY}` +
-    `&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`
-  );
+  const params =
+    `center=${center.latitude},${center.longitude}&zoom=14&size=400x400&scale=2` +
+    `&${markers}` +
+    `&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
+  return `/api/static-map?${params}`;
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
