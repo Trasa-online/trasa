@@ -86,7 +86,6 @@ const BusinessDashboard = () => {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
-  const [bookingUrl, setBookingUrl] = useState("");
   const [street, setStreet] = useState("");
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
@@ -172,7 +171,6 @@ const BusinessDashboard = () => {
     setPhone(profileData.phone ?? "");
     setEmail(profileData.email ?? "");
     setWebsite(profileData.website ?? "");
-    setBookingUrl(profileData.booking_url ?? "");
     setStreet(profileData.street ?? "");
     setCity(profileData.city ?? "");
     setPostalCode(profileData.postal_code ?? "");
@@ -228,9 +226,11 @@ const BusinessDashboard = () => {
     if (!ALLOWED_MIME.includes(file.type)) throw new Error("Niedozwolony format pliku (dozwolone: JPG, PNG, WEBP)");
     if (file.size > MAX_FILE_SIZE) throw new Error("Plik jest za duży (max 5 MB)");
     const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${placeId}/${folder}/${Date.now()}.${ext}`;
+    // Use profile.id as the storage folder (stable even when placeId is a UUID fallback)
+    const folder_key = profile?.id ?? placeId;
+    const path = `${folder_key}/${folder}/${Date.now()}.${ext}`;
     const { data, error } = await supabase.storage.from("business-photos").upload(path, file, { upsert: true });
-    if (error) throw error;
+    if (error) throw new Error(error.message);
     return supabase.storage.from("business-photos").getPublicUrl(data.path).data.publicUrl;
   };
 
@@ -242,7 +242,7 @@ const BusinessDashboard = () => {
       const url = await uploadFile(file, "logo");
       setLogoUrl(url);
       setIsDirty(true);
-    } catch { toast.error("Nie udało się przesłać logo"); }
+    } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać logo"); }
     setUploading(null);
   };
 
@@ -254,7 +254,7 @@ const BusinessDashboard = () => {
       const url = await uploadFile(file, "cover");
       setCoverImageUrl(url);
       setIsDirty(true);
-    } catch { toast.error("Nie udało się przesłać zdjęcia okładkowego"); }
+    } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać zdjęcia okładkowego"); }
     setUploading(null);
   };
 
@@ -268,7 +268,7 @@ const BusinessDashboard = () => {
       const urls = await Promise.all(toUpload.map(f => uploadFile(f, "gallery")));
       setGalleryUrls(prev => [...prev, ...urls]);
       setIsDirty(true);
-    } catch { toast.error("Nie udało się przesłać zdjęć"); }
+    } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać zdjęć"); }
     setUploading(null);
     e.target.value = "";
   };
@@ -343,7 +343,6 @@ const BusinessDashboard = () => {
         phone: phone || null,
         email: email || null,
         website: website || null,
-        booking_url: bookingUrl || null,
         street: street || null,
         city: city || null,
         postal_code: postalCode || null,
@@ -764,22 +763,28 @@ const BusinessDashboard = () => {
         <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dane lokalu</p>
           <div className="space-y-1">
-            <Label htmlFor="business_name">Nazwa</Label>
-            <Input id="business_name" value={businessName} maxLength={80} onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }} />
-            <p className="text-[11px] text-muted-foreground text-right">{businessName.length}/80</p>
+            <Label htmlFor="business_name">Nazwa lokalu</Label>
+            <Input
+              id="business_name"
+              value={businessName}
+              readOnly
+              disabled
+              className="bg-muted/50 text-muted-foreground cursor-not-allowed"
+            />
+            <p className="text-[11px] text-muted-foreground">Nazwa ustawiana przy rejestracji — skontaktuj się z nami, by ją zmienić.</p>
           </div>
           <div className="space-y-1">
             <Label htmlFor="street">Ulica i numer</Label>
-            <Input id="street" value={street} maxLength={100} placeholder="np. ul. Floriańska 12" onChange={e => { setStreet(e.target.value); setIsDirty(true); }} />
+            <Input id="street" value={street} maxLength={100} onChange={e => { setStreet(e.target.value); setIsDirty(true); }} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="city">Miasto</Label>
-              <Input id="city" value={city} maxLength={80} placeholder="np. Kraków" onChange={e => { setCity(e.target.value); setIsDirty(true); }} />
+              <Input id="city" value={city} maxLength={80} onChange={e => { setCity(e.target.value); setIsDirty(true); }} />
             </div>
             <div className="space-y-1">
               <Label htmlFor="postal_code">Kod pocztowy</Label>
-              <Input id="postal_code" value={postalCode} maxLength={10} placeholder="np. 31-008" onChange={e => { setPostalCode(e.target.value); setIsDirty(true); }} />
+              <Input id="postal_code" value={postalCode} maxLength={10} onChange={e => { setPostalCode(e.target.value); setIsDirty(true); }} />
             </div>
           </div>
 
@@ -794,10 +799,6 @@ const BusinessDashboard = () => {
           <div className="space-y-1">
             <Label htmlFor="website">Strona WWW</Label>
             <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="booking_url">URL rezerwacji</Label>
-            <Input id="booking_url" value={bookingUrl} maxLength={200} onChange={e => { setBookingUrl(e.target.value); setIsDirty(true); }} type="url" />
           </div>
 
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Typ miejsca</p>
