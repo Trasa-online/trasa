@@ -210,28 +210,29 @@ const Admin = () => {
       // 1. Invite user — creates auth account + returns magic link + userId
       const { link, userId: newUserId } = await invokeInviteUser(claim.contact_email, claim.contact_email.split("@")[0], undefined, true);
 
-      // 2. Create/update business profile linked to the new user
+      // 2. Create/update business profile linked to the new user (core — must succeed)
       const bizName = claim.place_name_text ?? claim.business_name ?? claim.places?.place_name ?? "Mój lokal";
       if (claim.place_id) {
-        // Upsert on place_id so repeated approvals update instead of failing
         const { error: bpErr } = await (supabase as any).from("business_profiles").upsert({
           place_id: claim.place_id,
           owner_user_id: newUserId,
           business_name: bizName,
           is_active: true,
-          claim_id: claim.id,
         }, { onConflict: "place_id" });
         if (bpErr) throw new Error(`business_profiles upsert: ${bpErr.message}`);
       } else {
-        // No Google Places match yet — insert without place_id
         const { error: bpErr } = await (supabase as any).from("business_profiles").insert({
           owner_user_id: newUserId,
           business_name: bizName,
           is_active: true,
-          claim_id: claim.id,
         });
         if (bpErr) throw new Error(`business_profiles insert: ${bpErr.message}`);
       }
+
+      // 2b. Link claim_id for activation tracking (optional — requires migration)
+      await (supabase as any).from("business_profiles")
+        .update({ claim_id: claim.id })
+        .eq("owner_user_id", newUserId);
 
       // 3. Mark claim as approved
       await (supabase as any).from("business_claims").update({ status: "approved" }).eq("id", claim.id);
