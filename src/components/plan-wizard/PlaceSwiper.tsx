@@ -202,10 +202,12 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           placeDbId: place.id,
         },
       })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) { console.error("[PlaceSwiper] proxy error:", error); return; }
         // Prefer full photo_url returned by proxy (no client key needed)
         const photo = data?.result?.photos?.[0];
         const url = photo?.photo_url ?? (photo?.photo_reference ? getPhotoUrl(photo.photo_reference, 800) : null);
+        if (!url) console.warn("[PlaceSwiper] no photo returned for:", place.place_name, data);
         if (url) {
           setPhotoUrls([url]);
           setImgFailed(false);
@@ -232,7 +234,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           if (tags.length) setGoogleTags(tags);
         }
       })
-      .catch(() => {});
+      .catch((err) => { console.error("[PlaceSwiper] google-places-proxy error:", err); });
   }, [offset, place.place_name, place.latitude, place.longitude]);
 
   const displayRating = place.rating || googleRating;
