@@ -54,7 +54,19 @@ serve(async (req) => {
       });
     }
 
-    const { email, username, waitlist_id, isBusiness } = await req.json();
+    const body = await req.json();
+
+    // ── check_emails action: returns which emails already have accounts ─────
+    if (body.action === "check_emails") {
+      const emails: string[] = body.emails ?? [];
+      const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+      const existing = users.filter(u => u.email && emails.includes(u.email)).map(u => u.email!);
+      return new Response(JSON.stringify({ existing_emails: existing }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { email, username, waitlist_id, isBusiness } = body;
 
     if (!email || !username) {
       return new Response(JSON.stringify({ error: "email and username required" }), {

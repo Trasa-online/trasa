@@ -165,7 +165,36 @@ const Admin = () => {
       .select("id, email, created_at, notified_at, source, referral_code")
       .order("created_at", { ascending: false });
     if (error) console.error("[Admin] waitlist fetch error:", error);
-    setWaitlist(data ?? []);
+
+    // Cross-check which emails already have an auth account (via profiles + auth metadata)
+    const entries: WaitlistEntry[] = data ?? [];
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (token) {
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-user`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+              "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({ action: "check_emails", emails: entries.map(e => e.email) }),
+          }
+        );
+        if (res.ok) {
+          const json = await res.json().catch(() => ({}));
+          const existing: string[] = json?.existing_emails ?? [];
+          setWaitlist(entries.map(e => ({ ...e, has_account: existing.includes(e.email) })));
+          setFetchingList(false);
+          return;
+        }
+      }
+    } catch { /* fall through */ }
+
+    setWaitlist(entries);
     setFetchingList(false);
   };
 
