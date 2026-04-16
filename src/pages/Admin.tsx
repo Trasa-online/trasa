@@ -95,6 +95,19 @@ const Admin = () => {
   const [deletingClaimId, setDeletingClaimId] = useState<string | null>(null);
   const [bizInviteLinks, setBizInviteLinks] = useState<Record<string, string>>({});
 
+  // Pending verification reviews
+  const [pendingReviews, setPendingReviews] = useState<Array<{
+    id: string;
+    business_name: string;
+    street: string | null;
+    city: string | null;
+    phone: string | null;
+    email: string | null;
+    review_requested_at: string;
+    is_verified: boolean;
+  }>>([]);
+  const [approvingReviewId, setApprovingReviewId] = useState<string | null>(null);
+
   useEffect(() => {
     if (loading) return;
     if (!user) { navigate("/auth"); return; }
@@ -112,6 +125,7 @@ const Admin = () => {
         loadCityRequests();
         loadClaims();
         loadBugReports();
+        loadPendingReviews();
       });
   }, [user, loading, navigate]);
 
@@ -202,6 +216,30 @@ const Admin = () => {
       .order("created_at", { ascending: false });
     setClaims(data ?? []);
     setFetchingClaims(false);
+  };
+
+  const loadPendingReviews = async () => {
+    const { data } = await (supabase as any)
+      .from("business_profiles")
+      .select("id, business_name, street, city, phone, email, review_requested_at, is_verified")
+      .not("review_requested_at", "is", null)
+      .order("review_requested_at", { ascending: true });
+    setPendingReviews(data ?? []);
+  };
+
+  const handleApproveReview = async (id: string) => {
+    setApprovingReviewId(id);
+    const { error } = await (supabase as any)
+      .from("business_profiles")
+      .update({ is_verified: true })
+      .eq("id", id);
+    if (error) {
+      toast.error("Nie udało się zatwierdzić wizytówki");
+    } else {
+      toast.success("Wizytówka zatwierdzona!");
+      setPendingReviews(prev => prev.map(r => r.id === id ? { ...r, is_verified: true } : r));
+    }
+    setApprovingReviewId(null);
   };
 
   const handleApproveClaim = async (claim: BusinessClaim) => {
@@ -476,14 +514,52 @@ const Admin = () => {
 
         {/* ── Businesses Tab ── */}
         {tab === "businesses" && (
-          fetchingClaims ? (
+          <>
+          {/* Pending verification reviews */}
+          {pendingReviews.length > 0 && (
+            <div className="p-4 space-y-3 border-b border-border/40">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Do weryfikacji ({pendingReviews.filter(r => !r.is_verified).length})
+              </p>
+              {pendingReviews.map(review => (
+                <div key={review.id} className={`border rounded-xl p-3 bg-card space-y-2 ${review.is_verified ? "opacity-50" : "border-blue-200 dark:border-blue-800/40"}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{review.business_name}</p>
+                      {(review.street || review.city) && (
+                        <p className="text-xs text-muted-foreground">{[review.street, review.city].filter(Boolean).join(", ")}</p>
+                      )}
+                      {review.email && <p className="text-xs text-muted-foreground">{review.email}</p>}
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Zgłoszono {format(new Date(review.review_requested_at), "dd.MM.yyyy HH:mm")}
+                      </p>
+                    </div>
+                    {review.is_verified ? (
+                      <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full flex-shrink-0">✓ Zatwierdzona</span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0"
+                        onClick={() => handleApproveReview(review.id)}
+                        disabled={approvingReviewId === review.id}
+                      >
+                        {approvingReviewId === review.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Zatwierdź"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {fetchingClaims ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : sortedClaims.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-12">Brak zgłoszeń biznesowych.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 p-4">
               {sortedClaims.map(claim => (
                 <div key={claim.id} className="border border-border rounded-xl p-4 bg-card space-y-2">
                   <div className="flex items-start justify-between gap-3">
@@ -602,7 +678,8 @@ const Admin = () => {
                 </div>
               ))}
             </div>
-          )
+          )}
+          </>
         )}
         {/* ── Bug Reports Tab ── */}
         {tab === "bugs" && (

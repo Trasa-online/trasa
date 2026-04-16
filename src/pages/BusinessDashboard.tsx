@@ -41,6 +41,7 @@ interface BusinessProfile {
   owner_user_id: string | null;
   business_name: string;
   plan: BizPlan;
+  is_premium: boolean;
   logo_url: string | null;
   cover_image_url: string | null;
   gallery_urls: string[];
@@ -49,9 +50,14 @@ interface BusinessProfile {
   website: string | null;
   booking_url: string | null;
   description: string | null;
-  address: string | null;
+  street: string | null;
+  city: string | null;
+  postal_code: string | null;
   tags: string[] | null;
   is_verified: boolean;
+  review_requested_at: string | null;
+  verification_notified_at: string | null;
+  activated_at: string | null;
   event_title: string | null;
   event_description: string | null;
   event_starts_at: string | null;
@@ -81,7 +87,9 @@ const BusinessDashboard = () => {
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
   const [bookingUrl, setBookingUrl] = useState("");
-  const [address, setAddress] = useState("");
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [postalCode, setPostalCode] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
@@ -92,9 +100,12 @@ const BusinessDashboard = () => {
   const [eventStartsAt, setEventStartsAt] = useState("");
   const [eventEndsAt, setEventEndsAt] = useState("");
 
-  const [plan, setPlan] = useState<BizPlan>('zero');
-  const [previewTab, setPreviewTab] = useState<'basic' | 'premium'>('basic');
+  const [plan, setPlan] = useState<BizPlan>('premium');
+  const [previewTab, setPreviewTab] = useState<'basic' | 'premium'>('premium');
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
+  const [reviewRequestedAt, setReviewRequestedAt] = useState<string | null>(null);
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
+  const [showVerifiedBanner, setShowVerifiedBanner] = useState(false);
 
   const [uploading, setUploading] = useState<string | null>(null); // which slot is uploading
   const [isDirty, setIsDirty] = useState(false);
@@ -155,13 +166,16 @@ const BusinessDashboard = () => {
     setPlaceCategory((placeData as any)?.category ?? null);
 
     setProfile(profileData as BusinessProfile);
-    setPlan((profileData.plan ?? 'zero') as BizPlan);
+    // All businesses get premium access
+    setPlan('premium');
     setBusinessName(profileData.business_name ?? "");
     setPhone(profileData.phone ?? "");
     setEmail(profileData.email ?? "");
     setWebsite(profileData.website ?? "");
     setBookingUrl(profileData.booking_url ?? "");
-    setAddress(profileData.address ?? "");
+    setStreet(profileData.street ?? "");
+    setCity(profileData.city ?? "");
+    setPostalCode(profileData.postal_code ?? "");
     setTags(profileData.tags ?? []);
     setDescription(profileData.description ?? "");
     setLogoUrl(profileData.logo_url ?? "");
@@ -171,7 +185,20 @@ const BusinessDashboard = () => {
     setEventDescription(profileData.event_description ?? "");
     setEventStartsAt(profileData.event_starts_at ?? "");
     setEventEndsAt(profileData.event_ends_at ?? "");
+    setReviewRequestedAt(profileData.review_requested_at ?? null);
     setIsDirty(false);
+
+    // Welcome banner: show if activated within last 7 days and not dismissed
+    const welcomeKey = `welcome_seen_${profileData.id}`;
+    if (profileData.activated_at && !localStorage.getItem(welcomeKey)) {
+      const activatedMs = Date.now() - new Date(profileData.activated_at).getTime();
+      if (activatedMs < 7 * 24 * 60 * 60 * 1000) setShowWelcomeBanner(true);
+    }
+
+    // Verified notification: show if verified but user hasn't seen notification yet
+    if (profileData.is_verified && !profileData.verification_notified_at) {
+      setShowVerifiedBanner(true);
+    }
 
     const since = new Date();
     since.setDate(since.getDate() - 30);
@@ -297,12 +324,18 @@ const BusinessDashboard = () => {
   };
 
   const handleSave = async () => {
-    if (!placeId) return;
+    if (!profile) return;
     if (eventStartsAt && eventEndsAt && eventEndsAt < eventStartsAt) {
       toast.error("Data końca wydarzenia nie może być wcześniejsza niż data początku");
       return;
     }
     setSaving(true);
+
+    // Trigger review if profile looks complete and not already requested
+    const isComplete = businessName.trim() && street.trim() && city.trim() && phone.trim();
+    const nowIso = new Date().toISOString();
+    const reviewAt = isComplete && !reviewRequestedAt ? nowIso : reviewRequestedAt;
+
     const { error } = await (supabase as any)
       .from("business_profiles")
       .update({
@@ -311,7 +344,9 @@ const BusinessDashboard = () => {
         email: email || null,
         website: website || null,
         booking_url: bookingUrl || null,
-        address: address || null,
+        street: street || null,
+        city: city || null,
+        postal_code: postalCode || null,
         tags: tags.length > 0 ? tags : null,
         description: description || null,
         logo_url: logoUrl || null,
@@ -321,12 +356,30 @@ const BusinessDashboard = () => {
         event_description: eventDescription || null,
         event_starts_at: eventStartsAt || null,
         event_ends_at: eventEndsAt || null,
-        updated_at: new Date().toISOString(),
+        review_requested_at: reviewAt,
+        updated_at: nowIso,
       })
-      .eq("place_id", placeId);
-    if (error) toast.error("Nie udało się zapisać zmian");
-    else { toast.success("Zmiany zapisane!"); setIsDirty(false); }
+      .eq("id", profile.id);
+    if (error) {
+      toast.error("Nie udało się zapisać zmian");
+    } else {
+      if (isComplete && !reviewRequestedAt) {
+        setReviewRequestedAt(nowIso);
+        toast.success("Zmiany zapisane! Wizytówka trafiła do weryfikacji.");
+      } else {
+        toast.success("Zmiany zapisane!");
+      }
+      setIsDirty(false);
+    }
     setSaving(false);
+  };
+
+  const dismissVerifiedBanner = async () => {
+    setShowVerifiedBanner(false);
+    if (!profile) return;
+    await (supabase as any).from("business_profiles")
+      .update({ verification_notified_at: new Date().toISOString() })
+      .eq("id", profile.id);
   };
 
   const handleLogout = async () => {
@@ -404,7 +457,59 @@ const BusinessDashboard = () => {
       </div>
 
       <div className={`p-4 space-y-4 max-w-2xl mx-auto ${isDirty ? "pb-28" : "pb-4"}`}>
-        {/* Stats — premium only */}
+
+        {/* Welcome banner */}
+        {showWelcomeBanner && (
+          <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-4 text-white shadow-lg shadow-blue-600/20">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <p className="font-black text-base leading-tight">Witaj w Panelu Biznesowym Trasy! 🎁</p>
+                <p className="text-sm text-blue-100 mt-1.5 leading-relaxed">
+                  Twoje konto jest aktywne i masz dostęp do pełnego pakietu <strong className="text-white">Premium</strong> — gratis przez pierwszy rok. Wypełnij wizytówkę i poczekaj na weryfikację.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowWelcomeBanner(false);
+                  localStorage.setItem(`welcome_seen_${profile!.id}`, "1");
+                }}
+                className="mt-0.5 text-blue-200 active:opacity-60 flex-shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Verified notification */}
+        {showVerifiedBanner && (
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-2xl p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <p className="font-bold text-sm text-amber-800">✓ Wizytówka zweryfikowana!</p>
+                <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                  Twoja wizytówka została zatwierdzona przez zespół Trasy. Teraz jest w pełni widoczna dla użytkowników aplikacji.
+                </p>
+              </div>
+              <button onClick={dismissVerifiedBanner} className="text-amber-400 active:opacity-60 flex-shrink-0 mt-0.5">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Review pending status */}
+        {reviewRequestedAt && !profile.is_verified && (
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse flex-shrink-0" />
+            <div>
+              <p className="text-xs font-semibold text-blue-700">Wizytówka oczekuje na weryfikację</p>
+              <p className="text-[11px] text-blue-500 mt-0.5">Sprawdzimy ją i zatwierdzimy wkrótce.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Stats */}
         {plan === 'premium' ? (
           <>
             <div className="grid grid-cols-3 gap-3">
@@ -561,16 +666,14 @@ const BusinessDashboard = () => {
           </div>
         )}
 
-        {/* Photos — gated by plan */}
-        {plan === 'zero' ? null : (
+        {/* Photos */}
         <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Zdjęcia</p>
 
-          {/* Cover (basic + premium) */}
-          <div className={plan === 'premium' ? "grid grid-cols-2 gap-3" : ""}>
-            {/* Logo — premium only */}
-            {plan === 'premium' && (
-              <div>
+          {/* Logo + Cover */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Logo */}
+            <div>
                 <p className="text-xs font-medium mb-1.5">Logo</p>
                 <button
                   onClick={() => logoInputRef.current?.click()}
@@ -593,8 +696,7 @@ const BusinessDashboard = () => {
                   )}
                 </button>
                 <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-              </div>
-            )}
+            </div>
 
             {/* Cover */}
             <div>
@@ -623,43 +725,40 @@ const BusinessDashboard = () => {
             </div>
           </div>
 
-          {/* Gallery — premium only */}
-          {plan === 'premium' && (
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-xs font-medium">Galeria dodatkowa</p>
-                <p className="text-[11px] text-muted-foreground">{galleryUrls.length}/{MAX_GALLERY}</p>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {galleryUrls.map((url, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden bg-muted">
-                    <img src={url} className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => removeGalleryPhoto(idx)}
-                      className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70"
-                    >
-                      <X className="h-3 w-3 text-white" />
-                    </button>
-                  </div>
-                ))}
-                {galleryUrls.length < MAX_GALLERY && (
-                  <button
-                    onClick={() => galleryInputRef.current?.click()}
-                    className="aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70"
-                  >
-                    {uploading === "gallery" ? (
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    ) : (
-                      <Plus className="h-6 w-6 text-muted-foreground" />
-                    )}
-                  </button>
-                )}
-              </div>
-              <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
+          {/* Gallery */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs font-medium">Galeria dodatkowa</p>
+              <p className="text-[11px] text-muted-foreground">{galleryUrls.length}/{MAX_GALLERY}</p>
             </div>
-          )}
+            <div className="grid grid-cols-3 gap-2">
+              {galleryUrls.map((url, idx) => (
+                <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden bg-muted">
+                  <img src={url} className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => removeGalleryPhoto(idx)}
+                    className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70"
+                  >
+                    <X className="h-3 w-3 text-white" />
+                  </button>
+                </div>
+              ))}
+              {galleryUrls.length < MAX_GALLERY && (
+                <button
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70"
+                >
+                  {uploading === "gallery" ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  ) : (
+                    <Plus className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </button>
+              )}
+            </div>
+            <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
+          </div>
         </div>
-        )}
 
         {/* Contact */}
         <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
@@ -670,85 +769,73 @@ const BusinessDashboard = () => {
             <p className="text-[11px] text-muted-foreground text-right">{businessName.length}/80</p>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="address">Adres</Label>
-            <Input id="address" value={address} maxLength={150} placeholder="np. ul. Floriańska 12, Kraków" onChange={e => { setAddress(e.target.value); setIsDirty(true); }} />
+            <Label htmlFor="street">Ulica i numer</Label>
+            <Input id="street" value={street} maxLength={100} placeholder="np. ul. Floriańska 12" onChange={e => { setStreet(e.target.value); setIsDirty(true); }} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="city">Miasto</Label>
+              <Input id="city" value={city} maxLength={80} placeholder="np. Kraków" onChange={e => { setCity(e.target.value); setIsDirty(true); }} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="postal_code">Kod pocztowy</Label>
+              <Input id="postal_code" value={postalCode} maxLength={10} placeholder="np. 31-008" onChange={e => { setPostalCode(e.target.value); setIsDirty(true); }} />
+            </div>
           </div>
 
-          {/* Below fields: basic + premium only */}
-          {plan !== 'zero' && (
-            <>
-              <div className="space-y-1">
-                <Label htmlFor="phone">Telefon</Label>
-                <Input id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="website">Strona WWW</Label>
-                <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="booking_url">URL rezerwacji</Label>
-                <Input id="booking_url" value={bookingUrl} maxLength={200} onChange={e => { setBookingUrl(e.target.value); setIsDirty(true); }} type="url" />
-              </div>
+          <div className="space-y-1">
+            <Label htmlFor="phone">Telefon</Label>
+            <Input id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="website">Strona WWW</Label>
+            <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="booking_url">URL rezerwacji</Label>
+            <Input id="booking_url" value={bookingUrl} maxLength={200} onChange={e => { setBookingUrl(e.target.value); setIsDirty(true); }} type="url" />
+          </div>
 
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Typ miejsca</p>
-              <div className="flex flex-wrap gap-2">
-                {PLACE_TAGS.map(tag => {
-                  const active = tags.includes(tag);
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => { setTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag]); setIsDirty(true); }}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
-                        active
-                          ? "bg-orange-600 border-orange-600 text-white"
-                          : "bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground"
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  );
-                })}
-              </div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Typ miejsca</p>
+          <div className="flex flex-wrap gap-2">
+            {PLACE_TAGS.map(tag => {
+              const active = tags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => { setTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag]); setIsDirty(true); }}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                    active
+                      ? "bg-orange-600 border-orange-600 text-white"
+                      : "bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground"
+                  }`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
 
-              {plan === 'premium' && (
-                <>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Opis</p>
-                  <div className="space-y-1">
-                    <textarea
-                      rows={3}
-                      value={description}
-                      maxLength={500}
-                      onChange={e => { setDescription(e.target.value); setIsDirty(true); }}
-                      placeholder="Opisz swój lokal..."
-                      className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-                    />
-                    <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
-                  </div>
-                </>
-              )}
-            </>
-          )}
-
-          {plan === 'zero' && (
-            <p className="text-xs text-muted-foreground bg-muted/50 rounded-2xl px-3 py-2">
-              Przejdź na plan Basic, aby dodać dane kontaktowe i typ miejsca.
-            </p>
-          )}
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Opis</p>
+          <div className="space-y-1">
+            <textarea
+              rows={3}
+              value={description}
+              maxLength={500}
+              onChange={e => { setDescription(e.target.value); setIsDirty(true); }}
+              placeholder="Opisz swój lokal..."
+              className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+            />
+            <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
+          </div>
         </div>
 
-        {/* Events — premium only */}
-        {plan !== 'premium' ? (
-          <div className="relative rounded-2xl border border-dashed border-border/60 p-4 text-center space-y-1.5">
-            <span className="text-xl">🎉</span>
-            <p className="text-xs font-semibold">Wydarzenia i promocje — plan Premium</p>
-            <p className="text-[11px] text-muted-foreground">Happy hour, koncerty, oferty specjalne widoczne w swiperze.</p>
-          </div>
-        ) : (
+        {/* Events */}
         <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Obecne wydarzenia</p>
           <p className="text-xs text-muted-foreground -mt-2">
@@ -789,16 +876,8 @@ const BusinessDashboard = () => {
             </div>
           </div>
         </div>
-        )}
 
-        {/* Posts / Feed — premium only */}
-        {plan !== 'premium' ? (
-          <div className="relative rounded-2xl border border-dashed border-border/60 p-4 text-center space-y-1.5">
-            <span className="text-xl">📸</span>
-            <p className="text-xs font-semibold">Posty i feed — plan Premium</p>
-            <p className="text-[11px] text-muted-foreground">Publikuj aktualizacje, nowości i zdjęcia widoczne w Twojej wizytówce.</p>
-          </div>
-        ) : (
+        {/* Posts / Feed */}
         <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Posty</p>
           <p className="text-xs text-muted-foreground -mt-2">
@@ -894,7 +973,6 @@ const BusinessDashboard = () => {
             ))}
           </div>
         </div>
-        )}
       </div>
 
       {/* Sticky save bar — only when dirty */}
