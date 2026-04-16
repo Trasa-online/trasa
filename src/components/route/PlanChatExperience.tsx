@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { type PlanPin } from "./DayPinList";
 import AddPinSheet from "./AddPinSheet";
-import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { getPhotoUrl } from "@/lib/placePhotos";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -209,7 +208,7 @@ function LargeCarouselCard({
   const pointerStart = useRef<{ x: number; y: number; t: number } | null>(null);
 
   useEffect(() => {
-    if (fetchedPhoto || !GOOGLE_MAPS_API_KEY) return;
+    if (fetchedPhoto) return;
     supabase.functions
       .invoke("google-places-proxy", {
         body: { placeName: pin.place_name, latitude: pin.latitude || undefined, longitude: pin.longitude || undefined },
@@ -363,9 +362,7 @@ async function enrichPlanWithPhotos(plan: RoutePlan, sb: typeof supabase): Promi
             const photoRef = data?.result?.photos?.[0]?.photo_reference;
             return {
               place_name: pin.place_name,
-              photoUrl: photoRef
-                ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photoRef}&key=${GOOGLE_MAPS_API_KEY}`
-                : null,
+              photoUrl: photoRef ? getPhotoUrl(photoRef, 800) : null,
             };
           })
         )
@@ -527,7 +524,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
           if (result) {
             const photoRef = result.photos?.[0]?.photo_reference;
             if (photoRef) {
-              photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photoRef}&key=${GOOGLE_MAPS_API_KEY}`;
+              photoUrl = getPhotoUrl(photoRef, 800) ?? undefined;
             }
             rating = result.rating ?? null;
             ratingsTotal = result.user_ratings_total ?? null;
@@ -1209,7 +1206,7 @@ window.addEventListener('message',function(e){
                       {detailPin.pin.latitude && detailPin.pin.longitude && (
                         <div className="rounded-2xl overflow-hidden h-32 w-full bg-muted">
                           <img
-                            src={`https://maps.googleapis.com/maps/api/staticmap?center=${detailPin.pin.latitude},${detailPin.pin.longitude}&zoom=16&size=600x240&scale=2&markers=color:black%7C${detailPin.pin.latitude},${detailPin.pin.longitude}&key=${GOOGLE_MAPS_API_KEY}&style=feature:poi%7Cvisibility:off`}
+                            src={`/api/static-map?center=${detailPin.pin.latitude},${detailPin.pin.longitude}&zoom=16&size=600x240&scale=2&markers=color:black%7C${detailPin.pin.latitude},${detailPin.pin.longitude}&style=feature:poi%7Cvisibility:off`}
                             alt="Mapa"
                             className="w-full h-full object-cover"
                           />

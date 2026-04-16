@@ -11,7 +11,6 @@ function safeDate(val: string | null | undefined): Date | null {
   return isValid(d) ? d : null;
 }
 import { supabase } from "@/integrations/supabase/client";
-import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { getPhotoUrl } from "@/lib/placePhotos";
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -27,7 +26,6 @@ function PinThumb({ pin, onClick }: { pin: any; onClick: () => void }) {
   const [photo, setPhoto] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!GOOGLE_MAPS_API_KEY) return;
     const hasCoords = pin.latitude && pin.longitude && pin.latitude !== 0 && pin.longitude !== 0;
     supabase.functions
       .invoke("google-places-proxy", {
@@ -92,10 +90,10 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
 
   // Build static map URL
   const mapPins = allPins.filter((p: any) => p.latitude && p.longitude).slice(0, 10);
-  const heroMapUrl = GOOGLE_MAPS_API_KEY && mapPins.length > 0
-    ? `https://maps.googleapis.com/maps/api/staticmap?size=800x400&scale=2&${mapPins.map((p: any, i: number) =>
+  const heroMapUrl = mapPins.length > 0
+    ? `/api/static-map?size=800x400&scale=2&${mapPins.map((p: any, i: number) =>
         `markers=color:0xff6b35%7Clabel:${i + 1}%7C${p.latitude},${p.longitude}`
-      ).join("&")}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off&key=${GOOGLE_MAPS_API_KEY}`
+      ).join("&")}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`
     : null;
 
   const countdownLabel = daysUntil === null

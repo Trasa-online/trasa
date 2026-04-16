@@ -9,14 +9,12 @@ import { toast } from "sonner";
 import { format, addDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import type { PlanPin } from "./DayPinList";
-import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
-
 const buildStaticMapUrl = (pins: { latitude: number; longitude: number }[]) => {
-  if (!GOOGLE_MAPS_API_KEY || pins.length === 0) return null;
+  if (pins.length === 0) return null;
   const markers = pins.slice(0, 10)
     .map((p, i) => `markers=color:0xea580c%7Clabel:${i + 1}%7C${p.latitude},${p.longitude}`)
     .join("&");
-  return `https://maps.googleapis.com/maps/api/staticmap?size=800x352&scale=2&${markers}&key=${GOOGLE_MAPS_API_KEY}`;
+  return `/api/static-map?size=800x352&scale=2&${markers}`;
 };
 
 interface RoutePlan {
