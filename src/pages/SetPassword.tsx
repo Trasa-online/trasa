@@ -100,7 +100,17 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
         return;
       }
 
-      // Regular user flow
+      // Regular user flow — check for demo liked places
+      const demoRaw = localStorage.getItem("trasa_demo_liked");
+      if (demoRaw) {
+        try {
+          const demo = JSON.parse(demoRaw);
+          localStorage.removeItem("trasa_demo_liked");
+          toast.success("Hasło ustawione! Twoja trasa z demo jest gotowa.");
+          navigate("/create", { state: { city: demo.city, likedPlacesData: demo.places } });
+          return;
+        } catch {}
+      }
       toast.success("Hasło ustawione! Możesz się teraz zalogować.");
       navigate("/home");
     } catch (error: any) {

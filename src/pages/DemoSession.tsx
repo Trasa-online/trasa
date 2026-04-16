@@ -16,6 +16,19 @@ function generateJoinCode(): string {
   return code;
 }
 
+// Deterministic shuffle — same city+category → same order for every user
+function seededShuffle<T>(arr: T[], seed: string): T[] {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
+  const rand = () => { h ^= h << 13; h ^= h >> 17; h ^= h << 5; return (h >>> 0) / 4294967296; };
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 function getDeviceId(): string {
   let id = localStorage.getItem("trasa_device_id");
   if (!id) {
@@ -85,6 +98,20 @@ function toMock(p: DemoPlace, city: string, category: string): MockPlace {
 }
 
 // ─── Real SwipeCard stack (GroupSession-style UI) ─────────────────────────────
+
+function saveDemoLikedToStorage(liked: DemoPlace[], city: string, category: string) {
+  localStorage.setItem("trasa_demo_liked", JSON.stringify({
+    city,
+    category,
+    places: liked.map(p => ({
+      place_name: p.name,
+      category,
+      description: p.description ?? "",
+      latitude: p.latitude,
+      longitude: p.longitude,
+    })),
+  }));
+}
 
 function DemoSwiper({ places, city, category, onComplete }: {
   places: DemoPlace[];
@@ -249,7 +276,10 @@ function DemoSwiper({ places, city, category, onComplete }: {
               <li className="flex items-center gap-2"><span className="text-orange-600 font-bold">✓</span> Historia wszystkich wspólnych planów</li>
             </ul>
             <button
-              onClick={() => navigate("/auth")}
+              onClick={() => {
+                saveDemoLikedToStorage(liked, city, category);
+                navigate("/auth");
+              }}
               className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/25"
             >
               Załóż konto — to nic nie kosztuje →
@@ -338,25 +368,26 @@ export default function DemoSession() {
 
   const handleCitySelect = (c: string) => { setCity(c); setStep("mode"); };
 
-  const handleCategorySelect = async (cat: CategoryKey) => {
-    setCategory(cat);
-    setRealPlaces(null);
+  // Shared place loader — used by both host (handleCategorySelect) and joiner (useEffect)
+  const loadPlaces = async (targetCity: string, cat: string) => {
     setPlacesLoading(true);
-
-    // Fetch real places — DB first, Google fallback when no photos
     try {
+      // DB first, ordered by id for deterministic base order
       const { data } = await (supabase as any)
         .from("places")
         .select("id, place_name, category, address, rating, photo_url, vibe_tags, description, latitude, longitude")
-        .ilike("city", city)
+        .ilike("city", targetCity)
         .eq("category", cat)
         .eq("is_active", true)
-        .limit(8);
+        .order("id")
+        .limit(12);
 
       const hasPhotos = (data ?? []).some((p: any) => p.photo_url);
 
       if (data && data.length > 0 && hasPhotos) {
-        setRealPlaces(data.map((p: any) => ({
+        const seed = targetCity + cat;
+        const shuffled = seededShuffle(data as any[], seed);
+        setRealPlaces(shuffled.map((p: any) => ({
           id: p.id,
           name: p.place_name,
           photo: !p.photo_url ? ""
@@ -371,10 +402,12 @@ export default function DemoSession() {
         })));
       } else {
         // No photos in DB → fetch from Google Places (cached 24h at CDN)
-        const resp = await fetch(`/api/demo-places?city=${encodeURIComponent(city)}&category=${cat}`);
+        const resp = await fetch(`/api/demo-places?city=${encodeURIComponent(targetCity)}&category=${cat}`);
         if (resp.ok) {
           const googlePlaces: DemoPlace[] = await resp.json();
-          setRealPlaces(googlePlaces.length > 0 ? googlePlaces : null);
+          // Apply same seed shuffle to Google results too
+          const seed = targetCity + cat;
+          setRealPlaces(googlePlaces.length > 0 ? seededShuffle(googlePlaces, seed) : null);
         }
       }
     } catch (e) {
@@ -382,6 +415,18 @@ export default function DemoSession() {
     } finally {
       setPlacesLoading(false);
     }
+  };
+
+  // Joiner: when they land on step="swipe" via join code/link, places are not loaded yet
+  useEffect(() => {
+    if (step !== "swipe" || !city || !category || realPlaces !== null || placesLoading) return;
+    loadPlaces(city, category);
+  }, [step, city, category]);
+
+  const handleCategorySelect = async (cat: CategoryKey) => {
+    setCategory(cat);
+    setRealPlaces(null);
+    await loadPlaces(city, cat);
 
     if (mode === "group") {
       setGroupLoading(true);
@@ -1019,7 +1064,11 @@ export default function DemoSession() {
           </div>
           <div className="shrink-0 px-4 pb-8 pt-3 space-y-2">
             <button
-              onClick={() => navigate("/auth")}
+              onClick={() => {
+                const places = mode === "solo" ? likedPlaces : groupMatches;
+                saveDemoLikedToStorage(places, city, category ?? "");
+                navigate("/auth");
+              }}
               className="w-full py-4 rounded-2xl bg-orange-600 text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-orange-600/20"
             >
               Załóż konto — zajmuje 30 sekund →

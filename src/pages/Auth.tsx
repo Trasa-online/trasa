@@ -51,6 +51,15 @@ const Auth = () => {
         navigate(`/biznes/${bp.place_id ?? bp.id}`);
         return;
       }
+      const demoRaw = localStorage.getItem("trasa_demo_liked");
+      if (demoRaw) {
+        try {
+          const demo = JSON.parse(demoRaw);
+          localStorage.removeItem("trasa_demo_liked");
+          navigate("/create", { state: { city: demo.city, likedPlacesData: demo.places } });
+          return;
+        } catch {}
+      }
       navigate("/");
     });
   }, [navigate]);
@@ -115,6 +124,17 @@ const Auth = () => {
       if (businessMode) {
         toast.error("Nie znaleziono panelu biznesowego dla tego konta.");
         return;
+      }
+
+      // Restore demo liked places if user came from demo upsell
+      const demoRaw = localStorage.getItem("trasa_demo_liked");
+      if (demoRaw) {
+        try {
+          const demo = JSON.parse(demoRaw);
+          localStorage.removeItem("trasa_demo_liked");
+          navigate("/create", { state: { city: demo.city, likedPlacesData: demo.places } });
+          return;
+        } catch {}
       }
 
       navigate("/");
