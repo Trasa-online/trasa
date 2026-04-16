@@ -16,21 +16,18 @@ import { cn } from "@/lib/utils";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const AVAILABLE_CATEGORIES = [
-  { id: "Kawiarnia",   label: "Kawiarnia",   emoji: "☕",  dbValue: "cafe" },
-  { id: "Śniadania",   label: "Śniadania",   emoji: "🍳",  dbValue: "Śniadania" },
-  { id: "Restauracja", label: "Restauracja", emoji: "🍽️", dbValue: "restaurant" },
-  { id: "Bar",         label: "Bar",         emoji: "🍺",  dbValue: "bar" },
-  { id: "Muzeum",      label: "Muzeum",      emoji: "🏛️", dbValue: "museum" },
-  { id: "Park",        label: "Park",        emoji: "🌿",  dbValue: "park" },
-  { id: "Market",      label: "Market",      emoji: "🛒",  dbValue: "market" },
-  { id: "Landmark",    label: "Landmark",    emoji: "🏰",  dbValue: "monument" },
-  { id: "Rozrywka",    label: "Rozrywka",    emoji: "🎪",  dbValue: "experience" },
+  { id: "Kawiarnia",   label: "Kawiarnia",   emoji: "☕",  dbValues: ["cafe"] },
+  { id: "Restauracja", label: "Restauracja", emoji: "🍽️", dbValues: ["restaurant"] },
+  { id: "Bar",         label: "Bar",         emoji: "🍺",  dbValues: ["bar"] },
+  { id: "Kultura",     label: "Kultura",     emoji: "🏛️", dbValues: ["museum", "monument"] },
+  { id: "Natura",      label: "Natura",      emoji: "🌿",  dbValues: ["park", "viewpoint"] },
+  { id: "Rozrywka",    label: "Rozrywka",    emoji: "🎪",  dbValues: ["experience"] },
+  { id: "Zakupy",      label: "Zakupy",      emoji: "🛍️", dbValues: ["shopping", "market"] },
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
-  Kawiarnia: "Kawiarnia", "Śniadania": "Śniadania",
-  Restauracja: "Restauracja", Bar: "Bar", Muzeum: "Muzeum",
-  Park: "Park", Market: "Market", Landmark: "Landmark", Rozrywka: "Rozrywka",
+  Kawiarnia: "Kawiarnia", Restauracja: "Restauracja", Bar: "Bar",
+  Kultura: "Kultura", Natura: "Natura", Rozrywka: "Rozrywka", Zakupy: "Zakupy",
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -259,9 +256,14 @@ const GroupSession = () => {
         .select("category")
         .ilike("city", session!.city)
         .eq("is_active", true);
-      const counts: Record<string, number> = {};
+      // Count per UI category (one UI category can span multiple DB values)
+      const rawCounts: Record<string, number> = {};
       for (const row of data ?? []) {
-        counts[row.category] = (counts[row.category] ?? 0) + 1;
+        rawCounts[row.category] = (rawCounts[row.category] ?? 0) + 1;
+      }
+      const counts: Record<string, number> = {};
+      for (const cat of AVAILABLE_CATEGORIES) {
+        counts[cat.id] = cat.dbValues.reduce((sum, v) => sum + (rawCounts[v] ?? 0), 0);
       }
       return counts;
     },
@@ -269,7 +271,7 @@ const GroupSession = () => {
     staleTime: 60_000,
   });
 
-  const dbCategoryValue = AVAILABLE_CATEGORIES.find(c => c.id === currentCategory)?.dbValue ?? currentCategory;
+  const dbCategoryValues = AVAILABLE_CATEGORIES.find(c => c.id === currentCategory)?.dbValues ?? [currentCategory];
   const { data: categoryPlaceIds = [], isLoading: placesLoading } = useQuery({
     queryKey: ["category-places", session?.id, currentCategory],
     queryFn: async () => {
@@ -278,7 +280,7 @@ const GroupSession = () => {
         .from("places")
         .select("id")
         .ilike("city", session.city)
-        .eq("category", dbCategoryValue)
+        .in("category", dbCategoryValues)
         .eq("is_active", true)
         .order("id", { ascending: true })
         .limit(40);
@@ -923,7 +925,7 @@ const GroupSession = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {AVAILABLE_CATEGORIES.map((cat) => {
-                      const count = categoryCounts[cat.dbValue] ?? 0;
+                      const count = categoryCounts[cat.id] ?? 0;
                       const isEmpty = count === 0;
                       return (
                         <button
@@ -1151,7 +1153,7 @@ const GroupSession = () => {
                     acc[key].push(m);
                     return acc;
                   }, {});
-                  const catMeta = (dbVal: string) => AVAILABLE_CATEGORIES.find(c => c.dbValue === dbVal);
+                  const catMeta = (dbVal: string) => AVAILABLE_CATEGORIES.find(c => c.dbValues.includes(dbVal));
                   return (
                     <div className="space-y-5">
                       <p className="text-xs text-muted-foreground">

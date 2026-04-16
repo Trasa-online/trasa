@@ -52,7 +52,18 @@ interface DemoPlace {
   longitude?: number;
 }
 
-type CategoryKey = "cafe" | "restaurant" | "bar" | "museum" | "park" | "experience";
+type CategoryKey = "cafe" | "restaurant" | "bar" | "museum" | "park" | "experience" | "shopping";
+
+// Maps UI category id → DB category values (one id can cover multiple DB values)
+const CATEGORY_DB_VALUES: Record<string, string[]> = {
+  cafe:       ["cafe"],
+  restaurant: ["restaurant"],
+  bar:        ["bar"],
+  museum:     ["museum", "monument"],
+  park:       ["park", "viewpoint"],
+  experience: ["experience"],
+  shopping:   ["shopping", "market"],
+};
 
 const DEMO_CITIES_DATA = [
   { name: 'Kraków',     locked: false },
@@ -72,9 +83,10 @@ const DEMO_CATEGORIES = [
   { id: "cafe",       label: "Kawiarnia",   emoji: "☕"  },
   { id: "restaurant", label: "Restauracja", emoji: "🍽️" },
   { id: "bar",        label: "Bar",         emoji: "🍺"  },
-  { id: "museum",     label: "Muzeum",      emoji: "🏛️" },
-  { id: "park",       label: "Park",        emoji: "🌿"  },
+  { id: "museum",     label: "Kultura",     emoji: "🏛️" },
+  { id: "park",       label: "Natura",      emoji: "🌿"  },
   { id: "experience", label: "Rozrywka",    emoji: "🎪"  },
+  { id: "shopping",   label: "Zakupy",      emoji: "🛍️" },
 ];
 
 type Step = "city" | "location" | "mode" | "category" | "swipe" | "results" | "invite";
@@ -373,11 +385,12 @@ export default function DemoSession() {
     setPlacesLoading(true);
     try {
       // DB first, ordered by id for deterministic base order
+      const dbValues = CATEGORY_DB_VALUES[cat] ?? [cat];
       const { data } = await (supabase as any)
         .from("places")
         .select("id, place_name, category, address, rating, photo_url, vibe_tags, description, latitude, longitude")
         .ilike("city", targetCity)
-        .eq("category", cat)
+        .in("category", dbValues)
         .eq("is_active", true)
         .order("id")
         .limit(12);
