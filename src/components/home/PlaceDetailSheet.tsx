@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Star, MapPin, ExternalLink, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPhotoUrl } from "@/lib/placePhotos";
+import BusinessActionButtons from "@/components/business/BusinessActionButtons";
 
 interface Pin {
   id: string;
@@ -31,6 +32,8 @@ interface BusinessProfile {
   is_active: boolean;
   logo_url: string | null;
   gallery_urls: string[];
+  phone: string | null;
+  website: string | null;
   event_title: string | null;
   event_description: string | null;
   event_starts_at: string | null;
@@ -69,7 +72,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
       // Load business profile
       (supabase as any)
         .from("business_profiles")
-        .select("id, place_id, owner_user_id, business_name, is_active, logo_url, gallery_urls, event_title, event_description, event_starts_at, event_ends_at")
+        .select("id, place_id, owner_user_id, business_name, is_active, logo_url, gallery_urls, phone, website, event_title, event_description, event_starts_at, event_ends_at")
         .eq("place_id", pin.place_id)
         .maybeSingle()
         .then(({ data }: { data: BusinessProfile | null }) => {
@@ -307,6 +310,14 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
                   ))}
                 </div>
               )}
+
+              {/* Contact buttons */}
+              <BusinessActionButtons
+                phone={businessProfile.phone}
+                website={businessProfile.website}
+                placeId={pin.place_id}
+                userId={user?.id}
+              />
             </div>
           );
         })()}

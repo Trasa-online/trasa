@@ -29,6 +29,8 @@ export interface MockPlace {
   businessPlan?: 'zero' | 'basic' | 'premium';
   businessLogoUrl?: string;
   businessEventTitle?: string;
+  businessPhone?: string | null;
+  businessWebsite?: string | null;
   galleryPhotos?: string[]; // extra photos shown in carousel (swipe card + detail)
 }
 
@@ -645,6 +647,8 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     // premium only: logo row + event pill + gallery
     businessLogoUrl: plan === 'premium' ? (bp.logo_url ?? '') : undefined,
     businessEventTitle: plan === 'premium' ? (bp.event_title ?? undefined) : undefined,
+    businessPhone: bp.phone ?? null,
+    businessWebsite: bp.website ?? null,
     galleryPhotos: plan === 'premium' ? (bp.gallery_urls ?? []) : [],
   } as MockPlace;
 }
@@ -691,7 +695,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
       if (roundPlaceIds?.length) {
         const { data } = await (supabase as any)
           .from("places")
-          .select("*, business_profiles(plan, logo_url, cover_image_url, event_title, gallery_urls)")
+          .select("*, business_profiles(plan, logo_url, cover_image_url, event_title, gallery_urls, phone, website)")
           .in("id", roundPlaceIds);
 
         if (!data?.length) { setLoading(false); return; }
@@ -712,7 +716,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
       // ── Normal mode ──────────────────────────────────────────────────────
       const { data } = await (supabase as any)
         .from("places")
-        .select("*, business_profiles(plan, logo_url, cover_image_url, event_title, gallery_urls)")
+        .select("*, business_profiles(plan, logo_url, cover_image_url, event_title, gallery_urls, phone, website)")
         .ilike("city", city)
         .eq("is_active", true);
 

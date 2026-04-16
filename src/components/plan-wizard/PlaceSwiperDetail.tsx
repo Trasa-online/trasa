@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import type { MockPlace } from "./PlaceSwiper";
 import { MOCK_MODE, MOCK_PLACE_DETAIL, MOCK_BUSINESS_POSTS } from "@/lib/mockPlaces";
+import BusinessActionButtons from "@/components/business/BusinessActionButtons";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 
@@ -355,6 +356,11 @@ const PlaceSwiperDetail = ({
                         <p className="text-sm text-amber-800 dark:text-amber-200 leading-snug">{place.businessEventTitle}</p>
                       </div>
                     )}
+                    <BusinessActionButtons
+                      phone={place.businessPhone}
+                      website={place.businessWebsite}
+                      placeId={place.id}
+                    />
                   </div>
                 )}
 
