@@ -29,6 +29,7 @@ interface BusinessClaim {
   business_name: string | null;
   place_name_text: string | null;
   places: { place_name: string; city: string } | null;
+  business_profiles: { activated_at: string | null } | null;
 }
 
 /** Call invite-user with explicit session token to avoid PWA auth issues */
@@ -197,7 +198,7 @@ const Admin = () => {
     setFetchingClaims(true);
     const { data } = await (supabase as any)
       .from("business_claims")
-      .select("id, place_id, user_id, contact_email, contact_phone, message, status, created_at, business_name, place_name_text, places(place_name, city)")
+      .select("id, place_id, user_id, contact_email, contact_phone, message, status, created_at, business_name, place_name_text, places(place_name, city), business_profiles(activated_at)")
       .order("created_at", { ascending: false });
     setClaims(data ?? []);
     setFetchingClaims(false);
@@ -218,6 +219,7 @@ const Admin = () => {
           owner_user_id: newUserId,
           business_name: bizName,
           is_active: true,
+          claim_id: claim.id,
         }, { onConflict: "place_id" });
         if (bpErr) throw new Error(`business_profiles upsert: ${bpErr.message}`);
       } else {
@@ -226,6 +228,7 @@ const Admin = () => {
           owner_user_id: newUserId,
           business_name: bizName,
           is_active: true,
+          claim_id: claim.id,
         });
         if (bpErr) throw new Error(`business_profiles insert: ${bpErr.message}`);
       }
@@ -543,6 +546,18 @@ const Admin = () => {
                       >
                         {approvingId === claim.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Generuję...</> : "Zatwierdź i wyślij link"}
                       </Button>
+                    </div>
+                  )}
+                  {claim.status === "approved" && (
+                    <div className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-2xl w-fit ${
+                      claim.business_profiles?.activated_at
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                    }`}>
+                      <div className={`h-1.5 w-1.5 rounded-full ${claim.business_profiles?.activated_at ? "bg-green-500" : "bg-amber-500"}`} />
+                      {claim.business_profiles?.activated_at
+                        ? `Konto aktywowane ${format(new Date(claim.business_profiles.activated_at), "dd.MM.yyyy HH:mm")}`
+                        : "Link nie użyty"}
                     </div>
                   )}
                   {claim.status === "approved" && !bizInviteLinks[claim.id] && (

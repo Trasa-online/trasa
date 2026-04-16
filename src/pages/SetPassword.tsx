@@ -87,6 +87,10 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
           .maybeSingle();
 
         if (bp?.id) {
+          // Mark account as activated
+          await (supabase as any).from("business_profiles")
+            .update({ activated_at: new Date().toISOString() })
+            .eq("owner_user_id", user.id);
           toast.success("Hasło ustawione! Witaj w panelu biznesowym Trasy.");
           navigate(`/biznes/${bp.place_id ?? bp.id}`);
         } else {
