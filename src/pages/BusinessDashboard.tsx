@@ -402,16 +402,6 @@ const BusinessDashboard = () => {
     window.location.replace("/auth");
   };
 
-  const sendTestEvent = async () => {
-    if (!placeId) return;
-    const { error } = await (supabase as any).from("place_events").insert({
-      place_id: placeId,
-      event_type: "view",
-      user_id: user?.id ?? null,
-    });
-    if (error) toast.error("Błąd: " + error.message);
-    else { toast.success("Testowe zdarzenie wysłane!"); await loadData(); }
-  };
 
   if (loading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
@@ -525,9 +515,6 @@ const BusinessDashboard = () => {
                 </div>
               ))}
             </div>
-            <button onClick={sendTestEvent} className="text-[11px] text-muted-foreground underline underline-offset-2 text-center w-full">
-              Wyślij testowe zdarzenie
-            </button>
           </>
         ) : (
           <div className="relative rounded-2xl border border-dashed border-border/60 p-4 overflow-hidden">
