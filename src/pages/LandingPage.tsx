@@ -338,7 +338,7 @@ const LandingPage = () => {
                 </div>
                 <div className="flex justify-center gap-5 py-3 shrink-0">
                   <div className="h-11 w-11 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center text-base">✕</div>
-                  <div className="h-13 w-13 rounded-full flex items-center justify-center shadow-lg" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c)" }}>
+                  <div className="h-14 w-14 rounded-full flex items-center justify-center shadow-lg shadow-orange-300/50" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}>
                     <Heart className="h-6 w-6 text-white fill-white" />
                   </div>
                   <div className="h-11 w-11 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center text-base">⭐</div>
@@ -409,15 +409,13 @@ const LandingPage = () => {
           </FadeIn>
           <FadeIn>
             <div className="flex flex-col sm:flex-row gap-8 items-center sm:items-start bg-white rounded-3xl p-8 shadow-sm border border-border/30">
-              <div className="flex gap-4 shrink-0">
-                {[{ i: "B", n: "Bart" }, { i: "N", n: "Nat" }].map(p => (
-                  <div key={p.n} className="flex flex-col items-center gap-2">
-                    <div className="h-20 w-20 rounded-full flex items-center justify-center shadow-lg" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}>
-                      <span className="text-white font-black text-2xl">{p.i}</span>
-                    </div>
-                    <p className="text-xs font-bold">{p.n}</p>
-                  </div>
-                ))}
+              <div className="shrink-0">
+                <img
+                  src="/founders.jpg"
+                  alt="Bart i Nat — twórcy Trasy"
+                  className="w-48 h-64 object-cover rounded-2xl shadow-md"
+                  style={{ objectPosition: "center top" }}
+                />
               </div>
               <div className="text-center sm:text-left">
                 <p className="text-base text-foreground leading-relaxed mb-3">
