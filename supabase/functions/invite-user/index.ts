@@ -1,12 +1,11 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-serve(async (req) => {
-  const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  };
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -30,7 +29,6 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !user) {
-      console.error("auth error:", authError);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -38,14 +36,12 @@ serve(async (req) => {
     }
 
     // Verify caller is admin via user_roles table
-    const { data: roleData, error: roleError } = await supabaseAdmin
+    const { data: roleData } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
       .eq("role", "admin")
       .maybeSingle();
-
-    console.log("role check for user", user.id, "→ roleData:", roleData, "roleError:", roleError);
 
     if (!roleData) {
       return new Response(JSON.stringify({ error: "Forbidden – no admin role" }), {
@@ -56,7 +52,7 @@ serve(async (req) => {
 
     const body = await req.json();
 
-    // ── check_emails action: returns which emails already have accounts ─────
+    // ── check_emails action ────────────────────────────────────────────────
     if (body.action === "check_emails") {
       const emails: string[] = body.emails ?? [];
       const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
@@ -66,6 +62,7 @@ serve(async (req) => {
       });
     }
 
+    // ── generate invite link ───────────────────────────────────────────────
     const { email, username, waitlist_id, isBusiness } = body;
 
     if (!email || !username) {
@@ -83,30 +80,23 @@ serve(async (req) => {
     let invitedUserId: string | undefined;
     let isExistingUser = false;
 
-    // 1. Try invite (new user path)
+    // Try invite (new user)
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "invite",
       email,
-      options: {
-        data: { username },
-        redirectTo,
-      },
+      options: { data: { username }, redirectTo },
     });
-
-    console.log("invite result:", linkError?.message, "action_link:", linkData?.properties?.action_link?.slice(0, 60));
 
     if (!linkError && linkData?.properties?.action_link) {
       inviteLink = linkData.properties.action_link;
       invitedUserId = linkData.user.id;
     } else {
-      // User already exists or invite failed — try recovery link
+      // User already exists — try recovery link
       const { data: recData, error: recError } = await supabaseAdmin.auth.admin.generateLink({
         type: "recovery",
         email,
         options: { redirectTo },
       });
-
-      console.log("recovery result:", recError?.message, "action_link:", recData?.properties?.action_link?.slice(0, 60));
 
       if (!recError && recData?.properties?.action_link) {
         inviteLink = recData.properties.action_link;
@@ -120,15 +110,12 @@ serve(async (req) => {
           options: { redirectTo },
         });
 
-        console.log("magiclink result:", mlError?.message, "action_link:", mlData?.properties?.action_link?.slice(0, 60));
-
         if (!mlError && mlData?.properties?.action_link) {
           inviteLink = mlData.properties.action_link;
           invitedUserId = mlData.user.id;
           isExistingUser = true;
         } else {
           const errMsg = mlError?.message ?? recError?.message ?? linkError?.message ?? "Failed to generate link";
-          console.error("all link types failed:", { linkError, recError, mlError });
           return new Response(JSON.stringify({ error: errMsg }), {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -158,8 +145,8 @@ serve(async (req) => {
       JSON.stringify({ link: inviteLink, email, userId: invitedUserId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (error) {
-    console.error("invite-user error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Internal error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
