@@ -2,7 +2,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ArrowRight, CalendarDays, ArrowLeft, CheckCircle, MapPin, Sparkles, Trash2 } from "lucide-react";
+import { Users, ArrowRight, CalendarDays, ArrowLeft, CheckCircle, Sparkles, Trash2 } from "lucide-react";
 import { parseISO, isValid, format, formatDistanceToNow, startOfToday, differenceInDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useState } from "react";
@@ -17,66 +17,128 @@ const CATEGORY_EMOJI: Record<string, string> = {
   market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
 };
 
-// ─── Solo route card ──────────────────────────────────────────────────────────
+// ─── Solo trip card ────────────────────────────────────────────────────────────
 
-function SoloRouteCard({ route, onTap, onDelete }: { route: any; onTap: () => void; onDelete: () => void }) {
+function PinThumb({ pin, onTap }: { pin: any; onTap: () => void }) {
+  const thumb = pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null) || pin.photo_url;
+  const emoji = CATEGORY_EMOJI[pin.category] ?? "📍";
+  return (
+    <button onClick={onTap} className="shrink-0 flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
+      <div className="h-[72px] w-[72px] rounded-2xl overflow-hidden bg-muted">
+        {thumb ? (
+          <img src={thumb} alt={pin.place_name} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-2xl">
+            {emoji}
+          </div>
+        )}
+      </div>
+      <p className="text-[10px] text-muted-foreground text-center leading-tight w-[72px] line-clamp-2">{pin.place_name}</p>
+    </button>
+  );
+}
+
+function SoloTripCard({ route, onDelete }: { route: any; onDelete: () => void }) {
+  const navigate = useNavigate();
+  const [selectedPin, setSelectedPin] = useState<any | null>(null);
   const pins: any[] = route.pins || [];
-  const pinsWithCoords = pins.filter((p: any) => p.latitude && p.longitude);
-  const today = startOfToday();
+
   const startDateObj = route.start_date ? parseISO(route.start_date) : null;
-  const daysUntil = startDateObj && isValid(startDateObj) ? differenceInDays(startDateObj, today) : null;
   const dateLabel = startDateObj && isValid(startDateObj)
-    ? format(startDateObj, "d MMM", { locale: pl })
+    ? format(startDateObj, "d MMM yyyy", { locale: pl })
     : null;
+  const today = startOfToday();
+  const daysUntil = startDateObj && isValid(startDateObj) ? differenceInDays(startDateObj, today) : null;
   const countdown =
-    daysUntil === null ? null
-    : daysUntil === 0 ? "Dzisiaj! 🔥"
-    : daysUntil === 1 ? "Jutro! 🔥"
-    : daysUntil > 0 ? `Za ${daysUntil} dni`
+    daysUntil === 0 ? "Dzisiaj! 🔥"
+    : daysUntil === 1 ? "Jutro!"
+    : daysUntil !== null && daysUntil > 0 ? `Za ${daysUntil} dni`
     : null;
 
-  const mapUrl = pinsWithCoords.length > 0
-    ? `/api/static-map?size=120x120&scale=2&${pinsWithCoords.slice(0, 5).map((p: any, i: number) =>
-        `markers=color:0xff6b35%7Clabel:${i + 1}%7C${p.latitude},${p.longitude}`
-      ).join("&")}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`
-    : null;
+  // Group pins by day_number (default 1)
+  const dayGroups: Record<number, any[]> = {};
+  for (const pin of pins) {
+    const day = pin.day_number ?? 1;
+    if (!dayGroups[day]) dayGroups[day] = [];
+    dayGroups[day].push(pin);
+  }
+  const days = Object.keys(dayGroups).map(Number).sort();
 
   return (
-    <div className="flex items-center gap-3 p-3.5 rounded-3xl bg-card border border-border/50 w-full">
-      <button onClick={onTap} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-70 transition-opacity">
-        <div className="h-14 w-14 rounded-2xl overflow-hidden bg-muted shrink-0">
-          {mapUrl ? (
-            <img src={mapUrl} alt={route.city} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-orange-200 to-amber-400 flex items-center justify-center text-xl">
-              🗺️
-            </div>
-          )}
-        </div>
+    <div className="rounded-3xl bg-card border border-border/50 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-2 px-4 pt-4 pb-2">
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm leading-tight truncate">{route.city || "Trasa"}</p>
-          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-            {dateLabel && (
-              <span className="text-xs text-muted-foreground">{dateLabel}</span>
-            )}
-            {dateLabel && pins.length > 0 && <span className="text-muted-foreground/40 text-xs">·</span>}
-            {pins.length > 0 && (
-              <span className="text-xs text-muted-foreground">
-                {pins.length} {pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc"}
-              </span>
+          <p className="font-black text-base leading-tight">{route.city || "Trasa"}</p>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            {dateLabel && <span className="text-xs text-muted-foreground">{dateLabel}</span>}
+            {countdown && (
+              <span className="text-xs font-semibold text-orange-600">{countdown}</span>
             )}
           </div>
-          {countdown && (
-            <span className="text-xs font-semibold text-orange-600 mt-0.5 block">{countdown}</span>
-          )}
         </div>
-      </button>
-      <button
-        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-        className="h-8 w-8 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="h-8 w-8 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Days with pins */}
+      {days.length > 0 ? days.map((day, idx) => {
+        const dayPins = [...dayGroups[day]].sort((a, b) => (a.pin_order ?? 0) - (b.pin_order ?? 0));
+        const dayDate = startDateObj && days.length > 1
+          ? format(new Date(startDateObj.getTime() + (day - 1) * 86400000), "EEE d MMM", { locale: pl })
+          : null;
+        return (
+          <div key={day} className={idx > 0 ? "border-t border-border/20" : ""}>
+            {days.length > 1 && (
+              <p className="px-4 pt-3 text-[11px] font-bold text-muted-foreground uppercase tracking-wide">
+                Dzień {day}{dayDate ? ` · ${dayDate}` : ""}
+              </p>
+            )}
+            <div className="flex gap-3 overflow-x-auto px-4 py-3 scrollbar-none">
+              {dayPins.map((pin: any) => (
+                <PinThumb key={pin.id} pin={pin} onTap={() => setSelectedPin(pin)} />
+              ))}
+            </div>
+          </div>
+        );
+      }) : (
+        <p className="px-4 py-3 text-xs text-muted-foreground">Brak miejsc w trasie</p>
+      )}
+
+      {/* Action buttons */}
+      <div className="px-4 pb-4 pt-1 flex gap-2">
+        <button
+          onClick={() => navigate(`/day-plan?id=${route.id}`)}
+          className="flex-1 py-2.5 rounded-full bg-foreground text-background font-bold text-xs active:scale-95 transition-transform"
+        >
+          Podejrzyj plan →
+        </button>
+        <button
+          onClick={() => navigate("/plan", {
+            state: {
+              city: route.city,
+              step: 3,
+              date: route.start_date,
+              likedPlaceNames: pins.map((p: any) => p.place_name),
+            },
+          })}
+          className="flex-1 py-2.5 rounded-full border border-border/60 text-foreground font-bold text-xs active:scale-95 transition-transform bg-card"
+        >
+          Dodaj miejsca
+        </button>
+      </div>
+
+      {selectedPin && (
+        <PlaceDetailSheet
+          pin={{ id: selectedPin.id, place_name: selectedPin.place_name, latitude: selectedPin.latitude, longitude: selectedPin.longitude }}
+          open={!!selectedPin}
+          onOpenChange={(open) => { if (!open) setSelectedPin(null); }}
+        />
+      )}
     </div>
   );
 }
@@ -154,7 +216,7 @@ const Home = () => {
       if (!user) return [];
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, city, start_date, trip_type, pins(id, place_name, latitude, longitude, category, pin_order)")
+        .select("id, city, start_date, trip_type, num_days, pins(id, place_name, latitude, longitude, category, pin_order, day_number, image_url, images, photo_url)")
         .eq("user_id", user.id)
         .is("group_session_id", null)
         .in("trip_type", ["planning", "ongoing"])
@@ -280,10 +342,9 @@ const Home = () => {
 
           {/* Solo routes */}
           {soloRoutes.map((route: any) => (
-            <SoloRouteCard
+            <SoloTripCard
               key={route.id}
               route={route}
-              onTap={() => navigate(`/day-plan?id=${route.id}`)}
               onDelete={async () => {
                 queryClient.setQueryData(["solo-routes-home", user?.id], (old: any[]) =>
                   (old ?? []).filter((r: any) => r.id !== route.id)
