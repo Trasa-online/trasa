@@ -32,29 +32,13 @@ interface BusinessClaim {
   business_profiles: { activated_at: string | null } | null;
 }
 
-/** Call invite-user with explicit session token to avoid PWA auth issues */
 async function invokeInviteUser(email: string, username: string, waitlist_id?: string, isBusiness?: boolean) {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) throw new Error("Brak sesji – zaloguj się ponownie");
-
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-user`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-        "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({ email, username, waitlist_id, isBusiness }),
-    }
-  );
-
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
-  if (!json?.link) throw new Error(`Brak linku w odpowiedzi: ${JSON.stringify(json)}`);
-  return json as { link: string; email: string; userId?: string };
+  const { data, error } = await supabase.functions.invoke("invite-user", {
+    body: { email, username, waitlist_id, isBusiness },
+  });
+  if (error) throw new Error(error.message ?? "Błąd funkcji");
+  if (!data?.link) throw new Error(`Brak linku w odpowiedzi: ${JSON.stringify(data)}`);
+  return data as { link: string; email: string; userId?: string };
 }
 
 const Admin = () => {
@@ -169,28 +153,14 @@ const Admin = () => {
     // Cross-check which emails already have an auth account (via profiles + auth metadata)
     const entries: WaitlistEntry[] = data ?? [];
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (token) {
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-user`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`,
-              "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
-            },
-            body: JSON.stringify({ action: "check_emails", emails: entries.map(e => e.email) }),
-          }
-        );
-        if (res.ok) {
-          const json = await res.json().catch(() => ({}));
-          const existing: string[] = json?.existing_emails ?? [];
-          setWaitlist(entries.map(e => ({ ...e, has_account: existing.includes(e.email) })));
-          setFetchingList(false);
-          return;
-        }
+      const { data: checkData } = await supabase.functions.invoke("invite-user", {
+        body: { action: "check_emails", emails: entries.map(e => e.email) },
+      });
+      if (checkData?.existing_emails) {
+        const existing: string[] = checkData.existing_emails;
+        setWaitlist(entries.map(e => ({ ...e, has_account: existing.includes(e.email) })));
+        setFetchingList(false);
+        return;
       }
     } catch { /* fall through */ }
 
