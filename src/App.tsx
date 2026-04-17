@@ -11,7 +11,7 @@ function RootPage() {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (user) return <Navigate to="/home" replace />;
-  return <DemoSession />;
+  return <LandingPage />;
 }
 
 function RouteTracker() {
@@ -74,6 +74,7 @@ import JoinPage from "./pages/JoinPage";
 import PublicProfile from "./pages/PublicProfile";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import DemoSession from "./pages/DemoSession";
+import LandingPage from "./pages/LandingPage";
 
 const queryClient = new QueryClient();
 
