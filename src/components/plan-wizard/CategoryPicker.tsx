@@ -1,82 +1,74 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-
 const CATEGORIES = [
   { value: "restaurant", label: "Restauracje", emoji: "🍽️" },
-  { value: "cafe", label: "Kawiarnie", emoji: "☕" },
-  { value: "museum", label: "Muzea", emoji: "🏛️" },
-  { value: "bar", label: "Bary", emoji: "🍺" },
-  { value: "monument", label: "Zabytki", emoji: "🏰" },
-  { value: "park", label: "Parki", emoji: "🌳" },
-  { value: "gallery", label: "Galerie", emoji: "🖼️" },
-  { value: "viewpoint", label: "Widoki", emoji: "🌅" },
-  { value: "experience", label: "Rozrywka", emoji: "🎭" },
-  { value: "shopping", label: "Zakupy", emoji: "🛍️" },
-  { value: "club", label: "Kluby", emoji: "🎵" },
-  { value: "market", label: "Targi", emoji: "🏪" },
+  { value: "cafe",       label: "Kawiarnie",   emoji: "☕" },
+  { value: "museum",     label: "Muzea",       emoji: "🏛️" },
+  { value: "bar",        label: "Bary",        emoji: "🍺" },
+  { value: "monument",   label: "Zabytki",     emoji: "🏰" },
+  { value: "park",       label: "Parki",       emoji: "🌳" },
+  { value: "gallery",    label: "Galerie",     emoji: "🖼️" },
+  { value: "viewpoint",  label: "Widoki",      emoji: "🌅" },
+  { value: "experience", label: "Rozrywka",    emoji: "🎭" },
+  { value: "shopping",   label: "Zakupy",      emoji: "🛍️" },
+  { value: "club",       label: "Kluby",       emoji: "🎵" },
+  { value: "market",     label: "Targi",       emoji: "🏪" },
 ];
 
+export { CATEGORIES };
+
 interface CategoryPickerProps {
-  onConfirm: (categories: string[]) => void;
+  onSelect: (category: string) => void;
+  onShowAll: () => void;
+  visitedCategories?: string[];
+  likedCount?: number;
 }
 
-const CategoryPicker = ({ onConfirm }: CategoryPickerProps) => {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  const toggle = (value: string) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(value)) next.delete(value);
-      else next.add(value);
-      return next;
-    });
-  };
+const CategoryPicker = ({ onSelect, onShowAll, visitedCategories = [], likedCount = 0 }: CategoryPickerProps) => {
+  const isReturn = visitedCategories.length > 0;
 
   return (
     <div className="flex flex-col h-full px-5 pt-6 pb-6 pb-safe-6">
       <div className="space-y-1 mb-6">
-        <p className="text-3xl font-black leading-tight">Co Cię interesuje?</p>
+        <p className="text-3xl font-black leading-tight">
+          {isReturn ? "Co teraz?" : "Co Cię interesuje?"}
+        </p>
         <p className="text-sm text-muted-foreground">
-          Wybierz kategorie — pokażemy 20 miejsc z każdej.
+          {isReturn
+            ? `${likedCount} miejsc wybranych · wybierz kolejną kategorię`
+            : "Wybierz kategorię — pokażemy 20 losowych miejsc."}
         </p>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         <div className="grid grid-cols-2 gap-2.5">
           {CATEGORIES.map(({ value, label, emoji }) => {
-            const isSelected = selected.has(value);
+            const visited = visitedCategories.includes(value);
             return (
               <button
                 key={value}
-                onClick={() => toggle(value)}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 text-left transition-all active:scale-[0.97] ${
-                  isSelected
-                    ? "border-primary bg-primary/8 text-foreground"
+                onClick={() => onSelect(value)}
+                className={`relative flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 text-left transition-all active:scale-[0.97] ${
+                  visited
+                    ? "border-primary/30 bg-primary/5 text-foreground/60"
                     : "border-border/50 bg-card text-foreground"
                 }`}
               >
                 <span className="text-2xl">{emoji}</span>
                 <span className="text-sm font-semibold leading-tight">{label}</span>
+                {visited && (
+                  <span className="absolute top-2 right-2 text-[10px] text-primary font-bold">✓</span>
+                )}
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="pt-4 space-y-3">
-        <Button
-          size="lg"
-          disabled={selected.size === 0}
-          onClick={() => onConfirm(Array.from(selected))}
-          className="w-full rounded-full text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 shadow-lg shadow-primary/20 disabled:opacity-40"
-        >
-          Dalej {selected.size > 0 ? `· ${selected.size} ${selected.size === 1 ? "kategoria" : selected.size < 5 ? "kategorie" : "kategorii"}` : ""}
-        </Button>
+      <div className="pt-4">
         <button
-          onClick={() => onConfirm(CATEGORIES.map(c => c.value))}
+          onClick={onShowAll}
           className="w-full text-sm text-muted-foreground py-2 active:opacity-60 transition-opacity"
         >
-          Pokaż wszystko
+          {isReturn ? "Wygeneruj trasę z wybranych miejsc →" : "Pokaż wszystko bez filtrowania"}
         </button>
       </div>
     </div>

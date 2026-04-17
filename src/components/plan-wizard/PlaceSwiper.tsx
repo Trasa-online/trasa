@@ -609,12 +609,15 @@ interface PlaceSwiperProps {
   date: Date;
   numDays?: number;
   startingLocation?: string;
-  selectedCategories?: string[];
+  /** Single category to show (batch of 20). When set, onBatchComplete fires when queue is exhausted. */
+  categoryFilter?: string;
   initialLikedPlaceNames?: string[];
   initialSkippedPlaceNames?: string[];
   searchQuery?: string;
   showAddPlace?: boolean;
   onAddPlaceClose?: () => void;
+  /** Called with accumulated liked place names when the category batch (20 places) runs out. */
+  onBatchComplete?: (likedNames: string[]) => void;
   exploreMode?: boolean;
   groupSessionId?: string;
   onGroupFinished?: () => void;
@@ -656,7 +659,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
   } as MockPlace;
 }
 
-const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", selectedCategories, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -766,18 +769,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", selectedC
       if (liked.length) setLikedPlaces(liked);
       if (skipped.length) setSkippedPlaces(skipped);
 
-      // If categories selected, serve 20 random places per category in order
-      if (selectedCategories?.length) {
-        const BATCH = 20;
-        const batched: MockPlace[] = [];
-        for (const cat of selectedCategories) {
-          const pool = remaining.filter(p => p.category === cat).sort(() => Math.random() - 0.5);
-          batched.push(...pool.slice(0, BATCH));
-        }
-        // Append any remaining places not in selected categories at the end
-        const inBatch = new Set(batched.map(p => p.id));
-        const rest = remaining.filter(p => !inBatch.has(p.id)).sort(() => Math.random() - 0.5);
-        setQueue([...batched, ...rest]);
+      // Batch mode: single category, max 20 places
+      if (categoryFilter) {
+        const pool = remaining
+          .filter(p => p.category === categoryFilter)
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 20);
+        setQueue(pool);
       } else {
         setQueue([...remaining].sort(() => Math.random() - 0.5));
       }
@@ -1060,6 +1058,39 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", selectedC
 
   // All cards swiped
   if (queue.length === 0) {
+    // Batch mode: category exhausted → go back to category picker
+    if (onBatchComplete) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
+          <div className="text-5xl">✅</div>
+          <div>
+            <p className="font-bold text-lg">Kategoria wyczerpana!</p>
+            <p className="text-muted-foreground text-sm mt-1">
+              {likedPlaces.length > 0
+                ? `Wybrałeś ${likedPlaces.length} miejsc. Wybierz kolejną kategorię lub zakończ.`
+                : "Nie wybrałeś żadnego miejsca — spróbuj innej kategorii."}
+            </p>
+          </div>
+          <div className="w-full space-y-3">
+            <button
+              onClick={() => onBatchComplete([...likedPlaces, ...superLikedPlaces].map(p => p.place_name))}
+              className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
+            >
+              Wybierz kolejną kategorię →
+            </button>
+            {likedPlaces.length > 0 && (
+              <button
+                onClick={handleProceed}
+                className="w-full py-3.5 rounded-full border border-border text-sm font-semibold active:scale-[0.97] transition-transform"
+              >
+                Zaplanuj trasę z {likedPlaces.length} miejsc
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     // Round mode: onRoundComplete is called via useEffect above; just render nothing
     if (onRoundComplete) {
       return null;

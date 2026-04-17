@@ -6,7 +6,7 @@ import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import CategoryPicker from "@/components/plan-wizard/CategoryPicker";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 
-// Steps: 1=CityPicker, 2=FullCalendarPicker, 3=CategoryPicker, 4=PlaceSwiper
+// Steps: 1=CityPicker, 2=FullCalendarPicker, 3=CategoryPicker, 4=PlaceSwiper (one category batch)
 type Step = 1 | 2 | 3 | 4;
 
 const PlanWizard = () => {
@@ -18,14 +18,18 @@ const PlanWizard = () => {
   const [city, setCity] = useState(returnState?.city ?? "");
   const [date, setDate] = useState<Date | null>(returnState?.date ? new Date(returnState.date) : null);
   const [numDays, setNumDays] = useState(1);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  // Iterative category flow state
+  const [currentCategory, setCurrentCategory] = useState<string>("");
+  const [visitedCategories, setVisitedCategories] = useState<string[]>([]);
+  const [allLikedNames, setAllLikedNames] = useState<string[]>(returnState?.likedPlaceNames ?? []);
+  const allSkippedNames: string[] = returnState?.skippedPlaceNames ?? [];
+
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddPlace, setShowAddPlace] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const exploreMode = returnState?.exploreMode ?? false;
-  const returnLiked = returnState?.likedPlaceNames ?? [];
-  const returnSkipped = returnState?.skippedPlaceNames ?? [];
 
   useEffect(() => {
     if (searchOpen) {
@@ -34,9 +38,27 @@ const PlanWizard = () => {
     }
   }, [searchOpen]);
 
+  const handleSelectCategory = (category: string) => {
+    setCurrentCategory(category);
+    setVisitedCategories(prev => prev.includes(category) ? prev : [...prev, category]);
+    setStep(4);
+  };
+
+  // Called by PlaceSwiper when the 20-place batch is exhausted
+  const handleBatchComplete = (newLikedNames: string[]) => {
+    setAllLikedNames(newLikedNames);
+    setStep(3);
+  };
+
+  // "Show all" = skip category filter, go straight to full swiper
+  const handleShowAll = () => {
+    setCurrentCategory("");
+    setStep(4);
+  };
+
   const handleBack = () => {
     if (step === 1) navigate("/");
-    else if (exploreMode && step === 4) setStep(1);
+    else if (step === 4) setStep(3);          // batch → back to category picker
     else setStep((s) => (s - 1) as Step);
   };
 
@@ -113,28 +135,38 @@ const PlanWizard = () => {
         {step === 1 && (
           <CityPicker onConfirm={(selectedCity) => {
             setCity(selectedCity);
-            if (exploreMode) { setDate(new Date()); setStep(4); }
+            if (exploreMode) { setDate(new Date()); setCurrentCategory(""); setStep(4); }
             else setStep(2);
           }} />
         )}
         {step === 2 && (
-          <FullCalendarPicker onConfirm={(selectedDate, days) => { setDate(selectedDate); setNumDays(days); setStep(3); }} />
+          <FullCalendarPicker onConfirm={(selectedDate, days) => {
+            setDate(selectedDate);
+            setNumDays(days);
+            setStep(3);
+          }} />
         )}
         {step === 3 && (
-          <CategoryPicker onConfirm={(cats) => { setSelectedCategories(cats); setStep(4); }} />
+          <CategoryPicker
+            onSelect={handleSelectCategory}
+            onShowAll={handleShowAll}
+            visitedCategories={visitedCategories}
+            likedCount={allLikedNames.length}
+          />
         )}
         {step === 4 && date && (
           <PlaceSwiper
             city={city}
             date={date}
             numDays={numDays}
-            selectedCategories={selectedCategories}
-            initialLikedPlaceNames={returnLiked}
-            initialSkippedPlaceNames={returnSkipped}
+            categoryFilter={currentCategory || undefined}
+            initialLikedPlaceNames={allLikedNames}
+            initialSkippedPlaceNames={allSkippedNames}
             searchQuery={searchQuery}
             showAddPlace={showAddPlace}
             onAddPlaceClose={() => setShowAddPlace(false)}
             onSuggestPlace={() => setShowAddPlace(true)}
+            onBatchComplete={currentCategory ? handleBatchComplete : undefined}
             exploreMode={exploreMode}
           />
         )}
