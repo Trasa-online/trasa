@@ -45,7 +45,7 @@ async function invokeInviteUser(email: string, username: string, waitlist_id?: s
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`,
-        "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
       },
       body: JSON.stringify({ email, username, waitlist_id, isBusiness }),
     }
@@ -179,7 +179,7 @@ const Admin = () => {
             headers: {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${token}`,
-              "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
             },
             body: JSON.stringify({ action: "check_emails", emails: entries.map(e => e.email) }),
           }
