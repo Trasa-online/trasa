@@ -219,7 +219,6 @@ const Home = () => {
         .select("id, city, start_date, trip_type, num_days, pins(id, place_name, latitude, longitude, category, pin_order, day_number, image_url, images, photo_url)")
         .eq("user_id", user.id)
         .is("group_session_id", null)
-        .neq("chat_status", "completed")
         .order("created_at", { ascending: false })
         .limit(5);
       return data || [];
