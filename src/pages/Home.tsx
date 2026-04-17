@@ -2,8 +2,8 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ArrowRight, CalendarDays, ArrowLeft, CheckCircle, Sparkles } from "lucide-react";
-import { parseISO, isValid, format, formatDistanceToNow, startOfToday } from "date-fns";
+import { Users, ArrowRight, CalendarDays, ArrowLeft, CheckCircle, MapPin, Sparkles } from "lucide-react";
+import { parseISO, isValid, format, formatDistanceToNow, startOfToday, differenceInDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -16,6 +16,98 @@ const CATEGORY_EMOJI: Record<string, string> = {
   market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
 };
 
+// ─── Solo route card ──────────────────────────────────────────────────────────
+
+function SoloRouteCard({ route, onTap }: { route: any; onTap: () => void }) {
+  const pins: any[] = route.pins || [];
+  const pinsWithCoords = pins.filter((p: any) => p.latitude && p.longitude);
+  const today = startOfToday();
+  const startDateObj = route.start_date ? parseISO(route.start_date) : null;
+  const daysUntil = startDateObj && isValid(startDateObj) ? differenceInDays(startDateObj, today) : null;
+  const dateLabel = startDateObj && isValid(startDateObj)
+    ? format(startDateObj, "d MMM", { locale: pl })
+    : null;
+  const countdown =
+    daysUntil === null ? null
+    : daysUntil === 0 ? "Dzisiaj! 🔥"
+    : daysUntil === 1 ? "Jutro! 🔥"
+    : daysUntil > 0 ? `Za ${daysUntil} dni`
+    : null;
+
+  const mapUrl = pinsWithCoords.length > 0
+    ? `/api/static-map?size=120x120&scale=2&${pinsWithCoords.slice(0, 5).map((p: any, i: number) =>
+        `markers=color:0xff6b35%7Clabel:${i + 1}%7C${p.latitude},${p.longitude}`
+      ).join("&")}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`
+    : null;
+
+  return (
+    <button
+      onClick={onTap}
+      className="flex items-center gap-3 p-3.5 rounded-3xl bg-card border border-border/50 active:scale-[0.98] transition-transform text-left w-full"
+    >
+      <div className="h-14 w-14 rounded-2xl overflow-hidden bg-muted shrink-0">
+        {mapUrl ? (
+          <img src={mapUrl} alt={route.city} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-orange-200 to-amber-400 flex items-center justify-center text-xl">
+            🗺️
+          </div>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-sm leading-tight truncate">{route.city || "Trasa"}</p>
+        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+          {dateLabel && (
+            <span className="text-xs text-muted-foreground">{dateLabel}</span>
+          )}
+          {dateLabel && pins.length > 0 && <span className="text-muted-foreground/40 text-xs">·</span>}
+          {pins.length > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {pins.length} {pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc"}
+            </span>
+          )}
+        </div>
+        {countdown && (
+          <span className="text-xs font-semibold text-orange-600 mt-0.5 block">{countdown}</span>
+        )}
+      </div>
+      <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+    </button>
+  );
+}
+
+// ─── Inspiration template card ─────────────────────────────────────────────────
+
+function TemplateCard({ template, onTap }: { template: any; onTap: () => void }) {
+  const coverPhoto = template.cover_photos?.[0] ?? null;
+  return (
+    <button
+      onClick={onTap}
+      className="shrink-0 w-44 text-left active:scale-95 transition-transform"
+    >
+      <div className="h-28 w-44 rounded-2xl overflow-hidden relative">
+        {coverPhoto ? (
+          <img src={coverPhoto} alt={template.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-orange-300 to-amber-500" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        <div className="absolute bottom-2 left-2 right-2">
+          <p className="text-white text-xs font-bold leading-tight line-clamp-2">{template.title}</p>
+        </div>
+      </div>
+      <div className="mt-1.5 px-0.5">
+        <p className="text-xs font-semibold text-foreground">{template.city}</p>
+        <p className="text-[11px] text-muted-foreground mt-0.5">
+          {template.point_count || 0} miejsc · {template.creator_handle || "@trasa"}
+        </p>
+      </div>
+    </button>
+  );
+}
+
+// ─── Home page ────────────────────────────────────────────────────────────────
+
 const Home = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -26,7 +118,7 @@ const Home = () => {
     latitude?: number | null; longitude?: number | null;
   } | null>(null);
 
-  // All group sessions the user is a member of (no expiry filter — historical ones need to be shown)
+  // All group sessions the user is a member of
   const { data: allSessions = [] } = useQuery({
     queryKey: ["my-active-sessions", user?.id],
     queryFn: async () => {
@@ -49,7 +141,39 @@ const Home = () => {
     refetchInterval: 30000,
   });
 
-  // Bulk route lookup: one query for all session IDs
+  // Solo routes (no group session)
+  const { data: soloRoutes = [] } = useQuery({
+    queryKey: ["solo-routes-home", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await (supabase as any)
+        .from("routes")
+        .select("id, city, start_date, trip_type, pins(id, place_name, latitude, longitude, category, pin_order)")
+        .eq("user_id", user.id)
+        .is("group_session_id", null)
+        .in("trip_type", ["planning", "ongoing"])
+        .order("created_at", { ascending: false })
+        .limit(5);
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  // Route templates for inspiration
+  const { data: templates = [] } = useQuery({
+    queryKey: ["route-templates-home"],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("route_templates")
+        .select("id, city, title, tags, cover_photos, personality_type, point_count, creator_handle")
+        .eq("is_active", true)
+        .order("fork_count", { ascending: false })
+        .limit(8);
+      return data || [];
+    },
+  });
+
+  // Bulk route lookup for group sessions
   const sessionIds = allSessions.map((s: any) => s.id);
   const { data: sessionRoutes = [] } = useQuery({
     queryKey: ["session-routes-bulk", sessionIds.join(",")],
@@ -60,7 +184,6 @@ const Home = () => {
         .select("id, title, city, group_session_id, chat_status")
         .in("group_session_id", sessionIds)
         .order("created_at", { ascending: false });
-      // Keep only the most recent route per session
       const seen = new Set<string>();
       return (data || []).filter((r: any) => {
         if (seen.has(r.group_session_id)) return false;
@@ -71,10 +194,8 @@ const Home = () => {
     enabled: sessionIds.length > 0,
   });
 
-  // Derive current preview session's route
   const sessionRoute = sessionRoutes.find((r: any) => r.group_session_id === previewSessionId) ?? null;
 
-  // Route pins for map (coords from saved route)
   const { data: routePins = [] } = useQuery({
     queryKey: ["session-route-pins", sessionRoute?.id],
     queryFn: async () => {
@@ -136,18 +257,31 @@ const Home = () => {
     return route?.chat_status === "completed" || (s.trip_date && parseISO(s.trip_date) < today);
   });
 
+  const hasPersonalContent = soloRoutes.length > 0 || activeSessions.length > 0;
+
   if (loading) return null;
   if (!user) return <Navigate to="/auth" replace />;
 
   return (
     <div className="flex-1 flex flex-col px-4 pt-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto w-full overflow-y-auto">
 
-      {/* Active sessions */}
-      {activeSessions.length > 0 && (
-        <div className="space-y-2 mb-6">
+      {/* ── Personal section ── */}
+      {hasPersonalContent && (
+        <div className="space-y-3 mb-8">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
-            Aktywne sesje
+            Twoje trasy
           </p>
+
+          {/* Solo routes */}
+          {soloRoutes.map((route: any) => (
+            <SoloRouteCard
+              key={route.id}
+              route={route}
+              onTap={() => navigate(`/day-plan?id=${route.id}`)}
+            />
+          ))}
+
+          {/* Active group sessions */}
           {activeSessions.map((s: any) => {
             const tripDateObj = s.trip_date ? parseISO(s.trip_date) : null;
             const dateLabel = tripDateObj && isValid(tripDateObj)
@@ -163,20 +297,20 @@ const Home = () => {
               <button
                 key={s.id}
                 onClick={() => setPreviewSessionId(s.id)}
-                className="w-full flex items-center gap-3 p-3.5 rounded-full bg-card border border-border/50 active:scale-[0.98] transition-transform text-left"
+                className="w-full flex items-center gap-3 p-3.5 rounded-3xl bg-card border border-border/50 active:scale-[0.98] transition-transform text-left"
               >
-                <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Users className="h-4 w-4 text-orange-600" />
+                <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Users className="h-6 w-6 text-orange-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold leading-tight">{s.name || s.city}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-sm font-bold leading-tight truncate">{s.name || s.city}</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     {dateLabel && (
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         <CalendarDays className="h-3 w-3" />{dateLabel}
                       </span>
                     )}
-                    {agoLabel && (
+                    {agoLabel && !dateLabel && (
                       <span className="text-xs text-muted-foreground">{agoLabel}</span>
                     )}
                     <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
@@ -204,50 +338,57 @@ const Home = () => {
         </div>
       )}
 
-      {/* Hero CTA */}
-      <div className={`flex flex-col items-center justify-center gap-8 py-10 ${activeSessions.length > 0 ? "" : "flex-1"}`}>
-        <div className="text-center space-y-3">
-          <div className="mx-auto h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
-            <svg width="48" height="48" viewBox="0 0 56 56" fill="none">
-              <circle cx="18" cy="16" r="8" fill="#fdba74" />
-              <path d="M4 44c0-7.732 6.268-14 14-14s14 6.268 14 14" fill="#fdba74" />
-              <circle cx="38" cy="14" r="9" fill="#ea580c" />
-              <path d="M22 44c0-8.284 6.716-15 15-15s15 6.716 15 15" fill="#ea580c" />
-            </svg>
+      {/* ── Inspiration section ── */}
+      {templates.length > 0 && (
+        <div className="space-y-3 mb-6">
+          <div className="flex items-center justify-between px-1">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Inspiracje
+            </p>
+            <button
+              onClick={() => navigate("/plan")}
+              className="text-xs font-semibold text-orange-600"
+            >
+              Zobacz więcej →
+            </button>
           </div>
-          <h1 className="text-2xl font-black tracking-tight leading-tight">
-            Zaplanujcie razem
-          </h1>
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
-            Swipe'ujcie miejsca niezależnie i odkryjcie co Was łączy. Trasa tworzy się sama z Waszych wspólnych wyborów.
-          </p>
+          <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 scrollbar-none snap-x">
+            {templates.map((template: any) => (
+              <TemplateCard
+                key={template.id}
+                template={template}
+                onTap={() => navigate("/plan", { state: { city: template.city } })}
+              />
+            ))}
+          </div>
         </div>
+      )}
 
-        <button
-          onClick={() => navigate("/sesja/nowa")}
-          className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
-        >
-          <Users className="h-5 w-5" />
-          Zaplanuj razem
-        </button>
-        {!user && (
+      {/* Empty state when no personal content and no templates */}
+      {!hasPersonalContent && templates.length === 0 && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-6 py-16">
+          <div className="text-center space-y-2">
+            <p className="text-5xl">🗺️</p>
+            <h2 className="text-xl font-black">Zacznij planować</h2>
+            <p className="text-sm text-muted-foreground max-w-[220px] mx-auto">
+              Wybierz miasto i datę, a Trasa zaproponuje gotowy plan.
+            </p>
+          </div>
           <button
-            onClick={() => navigate("/demo")}
-            className="w-full py-3.5 rounded-full border-2 border-orange-600/30 bg-primary/5 text-sm font-bold text-orange-700 active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
+            onClick={() => navigate("/plan")}
+            className="flex items-center gap-2 px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-95 transition-transform shadow-lg shadow-primary/20"
           >
             <Sparkles className="h-4 w-4" />
-            Sprawdź jak to działa — demo bez konta
+            Zaplanuj pierwszą trasę
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Session preview sheet */}
+      {/* ── Session preview sheet ── */}
       {(() => {
         const previewSession = allSessions.find((s: any) => s.id === previewSessionId);
         const isHistorical = historicalSessions.some((s: any) => s.id === previewSessionId);
-        const mapPins = routePins.length > 0
-          ? routePins
-          : [];
+        const mapPins = routePins.length > 0 ? routePins : [];
         const pinsJson = JSON.stringify(mapPins.map((p: any, i: number) => ({ lat: p.latitude, lng: p.longitude, name: p.place_name, index: i + 1 })));
         const leafletHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script><style>*{margin:0;padding:0;box-sizing:border-box}body{height:100%;overflow:hidden}#map{height:100%;width:100%}.pm{color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:-apple-system,sans-serif;border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.3);background:#ea580c}</style></head><body><div id="map"></div><script>const pins=${pinsJson};const map=L.map('map',{zoomControl:false,attributionControl:false});L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);const coords=pins.map(p=>[p.lat,p.lng]);if(coords.length>1){L.polyline(coords,{color:'#ea580c',weight:2.5,opacity:.6,dashArray:'6 5'}).addTo(map);map.fitBounds(coords,{padding:[30,30]});}else if(coords.length===1){map.setView(coords[0],15);}pins.forEach(p=>{const icon=L.divIcon({className:'',html:'<div class="pm">'+p.index+'</div>',iconSize:[26,26],iconAnchor:[13,13]});L.marker([p.lat,p.lng],{icon}).bindPopup('<b style="font-size:12px">'+p.name+'</b>').addTo(map);});<\/script></body></html>`;
         return (
@@ -264,7 +405,7 @@ const Home = () => {
                 </div>
               </div>
 
-              {/* Mini map — key on pinsJson so iframe re-renders when pins load */}
+              {/* Mini map */}
               {mapPins.length > 0 && (
                 <div className="h-44 shrink-0">
                   <iframe key={pinsJson} srcDoc={leafletHtml} className="w-full h-full border-0" />
@@ -314,7 +455,6 @@ const Home = () => {
               {previewSession && (
                 <div className="px-4 py-3 border-t border-border/20 space-y-2 shrink-0">
                   {isHistorical ? (
-                    // Historical session — only view route, no editing
                     sessionRoute && (
                       <button
                         onClick={() => { setPreviewSessionId(null); navigate(`/review-summary?route=${sessionRoute.id}`); }}
@@ -397,16 +537,6 @@ const Home = () => {
       )}
 
       {showTour && <HomeTour onDone={dismissTour} />}
-
-      {/* Admin shortcut */}
-      {user.email === "nat.maz98@gmail.com" && (
-        <button
-          onClick={() => navigate("/admin/routes")}
-          className="mt-4 self-center text-xs bg-primary/10 text-orange-600 font-semibold px-4 py-2 rounded-full"
-        >
-          🗺️ Trasy wzorcowe
-        </button>
-      )}
     </div>
   );
 };
