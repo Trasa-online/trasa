@@ -145,34 +145,6 @@ function SoloTripCard({ route, onDelete }: { route: any; onDelete: () => void })
 
 // ─── Inspiration template card ─────────────────────────────────────────────────
 
-function TemplateCard({ template, onTap }: { template: any; onTap: () => void }) {
-  const coverPhoto = template.cover_photos?.[0] ?? null;
-  return (
-    <button
-      onClick={onTap}
-      className="shrink-0 w-44 text-left active:scale-95 transition-transform"
-    >
-      <div className="h-28 w-44 rounded-2xl overflow-hidden relative">
-        {coverPhoto ? (
-          <img src={coverPhoto} alt={template.title} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-orange-300 to-amber-500" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <div className="absolute bottom-2 left-2 right-2">
-          <p className="text-white text-xs font-bold leading-tight line-clamp-2">{template.title}</p>
-        </div>
-      </div>
-      <div className="mt-1.5 px-0.5">
-        <p className="text-xs font-semibold text-foreground">{template.city}</p>
-        <p className="text-[11px] text-muted-foreground mt-0.5">
-          {template.point_count || 0} miejsc · {template.creator_handle || "@trasa"}
-        </p>
-      </div>
-    </button>
-  );
-}
-
 // ─── Home page ────────────────────────────────────────────────────────────────
 
 const Home = () => {
@@ -224,20 +196,7 @@ const Home = () => {
       return data || [];
     },
     enabled: !!user,
-  });
-
-  // Route templates for inspiration
-  const { data: templates = [] } = useQuery({
-    queryKey: ["route-templates-home"],
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("route_templates")
-        .select("id, city, title, tags, cover_photos, personality_type, point_count, creator_handle")
-        .eq("is_active", true)
-        .order("fork_count", { ascending: false })
-        .limit(8);
-      return data || [];
-    },
+    staleTime: 0,
   });
 
   // Bulk route lookup for group sessions
@@ -412,34 +371,8 @@ const Home = () => {
         </div>
       )}
 
-      {/* ── Inspiration section ── */}
-      {templates.length > 0 && (
-        <div className="space-y-3 mb-6">
-          <div className="flex items-center justify-between px-1">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Inspiracje
-            </p>
-            <button
-              onClick={() => navigate("/plan")}
-              className="text-xs font-semibold text-orange-600"
-            >
-              Zobacz więcej →
-            </button>
-          </div>
-          <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-1 scrollbar-none snap-x">
-            {templates.map((template: any) => (
-              <TemplateCard
-                key={template.id}
-                template={template}
-                onTap={() => navigate("/plan", { state: { city: template.city } })}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Empty state when no personal content and no templates */}
-      {!hasPersonalContent && templates.length === 0 && (
+      {/* Empty state */}
+      {!hasPersonalContent && (
         <div className="flex-1 flex flex-col items-center justify-center gap-6 py-16">
           <div className="text-center space-y-2">
             <p className="text-5xl">🗺️</p>

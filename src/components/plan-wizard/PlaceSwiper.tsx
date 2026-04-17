@@ -86,9 +86,8 @@ const CATEGORY_COLORS: Record<PlaceCategory, string> = {
 const PRICE_DOTS = (level?: number) =>
   level ? "·".repeat(level) + "·".repeat(4 - level).replace(/·/g, "○") : null;
 
-const MATCH_THRESHOLD = 5;        // minimum likes to show bingo banner
-const MATCH_THRESHOLD_REPEAT = 11; // re-show banner after dismissal
-const CATEGORY_DIVERSITY = 2;     // minimum different categories
+const BINGO_MIN_CATEGORIES = 4;       // show bingo when liked from ≥4 different categories
+const BINGO_REPEAT_CATEGORIES = 6;    // re-show banner after dismissal (≥6 categories)
 
 // ─── Bingo banner ─────────────────────────────────────────────────────────────
 
@@ -956,9 +955,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     if (groupSessionId) return; // not in group mode
     const uniqueCategories = new Set(likedPlaces.map((p) => p.category)).size;
     if (bannerDismissCount >= 2) return; // never show again after two dismissals
-    if (bannerDismissCount === 0 && likedPlaces.length >= MATCH_THRESHOLD && uniqueCategories >= CATEGORY_DIVERSITY) {
+    if (bannerDismissCount === 0 && uniqueCategories >= BINGO_MIN_CATEGORIES) {
       setShowBanner(true);
-    } else if (bannerDismissCount === 1 && likedPlaces.length >= MATCH_THRESHOLD_REPEAT && uniqueCategories >= CATEGORY_DIVERSITY) {
+    } else if (bannerDismissCount === 1 && uniqueCategories >= BINGO_REPEAT_CATEGORIES) {
       setShowBanner(true);
     }
   }, [likedPlaces, bannerDismissCount, groupSessionId]);
