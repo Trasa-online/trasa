@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Heart, Zap, Star, Check, ArrowRight } from "lucide-react";
+import { Users, Heart, Zap, Check } from "lucide-react";
 
 // ─── Scroll reveal hook (threshold=0 → fires on first pixel) ─────────────────
 
@@ -273,11 +273,6 @@ const LandingPage = () => {
     { icon: <Zap className="h-6 w-6 text-orange-600" />, title: "Spontaniczne wypady", desc: "Piątek wieczór, sobota wolna. Za 5 minut macie plan na cały dzień." },
   ];
 
-  const TESTIMONIALS = [
-    { text: "Planowaliśmy wyjazd do Krakowa w 6 osób — każdy chciał co innego. Trasa pogodziła nas w 10 minut. Dosłownie.", author: "Marta, 28", city: "Warszawa" },
-    { text: "Wreszcie aplikacja która nie wymaga 3 godzin planowania. Wybraliśmy miejsca razem z partnerem i pojechaliśmy.", author: "Kasia, 31", city: "Wrocław" },
-    { text: "Użyłam do weekendu w Gdańsku — trasa ułożona lepiej niż cokolwiek co sama bym wymyśliła.", author: "Ania, 24", city: "Poznań" },
-  ];
 
   return (
     <div className="min-h-screen bg-[#FEFEFE] overflow-x-hidden">
@@ -439,31 +434,6 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* ── Testimonials ── */}
-      <section className="py-20 px-5">
-        <div className="max-w-5xl mx-auto">
-          <FadeIn className="text-center mb-12">
-            <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">Opinie</p>
-            <h2 className="text-3xl sm:text-4xl font-black text-foreground">Co mówią pierwsi użytkownicy</h2>
-          </FadeIn>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            {TESTIMONIALS.map((t, i) => (
-              <FadeIn key={i} delay={i * 100}>
-                <div className="flex flex-col gap-4 p-6 rounded-3xl bg-card border border-border/40 shadow-sm h-full">
-                  <div className="flex gap-0.5">
-                    {[...Array(5)].map((_, s) => <Star key={s} className="h-4 w-4 fill-orange-400 text-orange-400" />)}
-                  </div>
-                  <p className="text-sm text-foreground leading-relaxed flex-1">"{t.text}"</p>
-                  <div>
-                    <p className="text-sm font-bold">{t.author}</p>
-                    <p className="text-xs text-muted-foreground">{t.city}</p>
-                  </div>
-                </div>
-              </FadeIn>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ── CTA końcowe ── */}
       <section className="py-24 px-5 text-center" style={{ background: "linear-gradient(135deg, #fff7ed 0%, #fef3c7 60%, #fff7ed 100%)" }}>
