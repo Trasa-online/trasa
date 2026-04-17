@@ -1,11 +1,12 @@
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ArrowRight, CalendarDays, ArrowLeft, CheckCircle, MapPin, Sparkles } from "lucide-react";
+import { Users, ArrowRight, CalendarDays, ArrowLeft, CheckCircle, MapPin, Sparkles, Trash2 } from "lucide-react";
 import { parseISO, isValid, format, formatDistanceToNow, startOfToday, differenceInDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
 import HomeTour, { useHomeTour } from "@/components/home/HomeTour";
@@ -18,7 +19,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
 
 // ─── Solo route card ──────────────────────────────────────────────────────────
 
-function SoloRouteCard({ route, onTap }: { route: any; onTap: () => void }) {
+function SoloRouteCard({ route, onTap, onDelete }: { route: any; onTap: () => void; onDelete: () => void }) {
   const pins: any[] = route.pins || [];
   const pinsWithCoords = pins.filter((p: any) => p.latitude && p.longitude);
   const today = startOfToday();
@@ -41,38 +42,42 @@ function SoloRouteCard({ route, onTap }: { route: any; onTap: () => void }) {
     : null;
 
   return (
-    <button
-      onClick={onTap}
-      className="flex items-center gap-3 p-3.5 rounded-3xl bg-card border border-border/50 active:scale-[0.98] transition-transform text-left w-full"
-    >
-      <div className="h-14 w-14 rounded-2xl overflow-hidden bg-muted shrink-0">
-        {mapUrl ? (
-          <img src={mapUrl} alt={route.city} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-orange-200 to-amber-400 flex items-center justify-center text-xl">
-            🗺️
-          </div>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-bold text-sm leading-tight truncate">{route.city || "Trasa"}</p>
-        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-          {dateLabel && (
-            <span className="text-xs text-muted-foreground">{dateLabel}</span>
-          )}
-          {dateLabel && pins.length > 0 && <span className="text-muted-foreground/40 text-xs">·</span>}
-          {pins.length > 0 && (
-            <span className="text-xs text-muted-foreground">
-              {pins.length} {pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc"}
-            </span>
+    <div className="flex items-center gap-3 p-3.5 rounded-3xl bg-card border border-border/50 w-full">
+      <button onClick={onTap} className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-70 transition-opacity">
+        <div className="h-14 w-14 rounded-2xl overflow-hidden bg-muted shrink-0">
+          {mapUrl ? (
+            <img src={mapUrl} alt={route.city} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-orange-200 to-amber-400 flex items-center justify-center text-xl">
+              🗺️
+            </div>
           )}
         </div>
-        {countdown && (
-          <span className="text-xs font-semibold text-orange-600 mt-0.5 block">{countdown}</span>
-        )}
-      </div>
-      <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-    </button>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm leading-tight truncate">{route.city || "Trasa"}</p>
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            {dateLabel && (
+              <span className="text-xs text-muted-foreground">{dateLabel}</span>
+            )}
+            {dateLabel && pins.length > 0 && <span className="text-muted-foreground/40 text-xs">·</span>}
+            {pins.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {pins.length} {pins.length === 1 ? "miejsce" : pins.length < 5 ? "miejsca" : "miejsc"}
+              </span>
+            )}
+          </div>
+          {countdown && (
+            <span className="text-xs font-semibold text-orange-600 mt-0.5 block">{countdown}</span>
+          )}
+        </div>
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+        className="h-8 w-8 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
   );
 }
 
@@ -112,6 +117,7 @@ const Home = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { showTour, dismissTour } = useHomeTour();
+  const queryClient = useQueryClient();
   const [previewSessionId, setPreviewSessionId] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<{
     place_name: string; photo_url?: string | null;
@@ -278,6 +284,14 @@ const Home = () => {
               key={route.id}
               route={route}
               onTap={() => navigate(`/day-plan?id=${route.id}`)}
+              onDelete={async () => {
+                queryClient.setQueryData(["solo-routes-home", user?.id], (old: any[]) =>
+                  (old ?? []).filter((r: any) => r.id !== route.id)
+                );
+                await (supabase as any).from("pins").delete().eq("route_id", route.id);
+                await (supabase as any).from("routes").delete().eq("id", route.id);
+                toast.success(`Usunięto trasę „${route.city}"`);
+              }}
             />
           ))}
 

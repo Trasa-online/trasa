@@ -609,6 +609,7 @@ interface PlaceSwiperProps {
   date: Date;
   numDays?: number;
   startingLocation?: string;
+  selectedCategories?: string[];
   initialLikedPlaceNames?: string[];
   initialSkippedPlaceNames?: string[];
   searchQuery?: string;
@@ -655,7 +656,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
   } as MockPlace;
 }
 
-const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", selectedCategories, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -764,7 +765,22 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", initialLi
       setAllPlaces(enriched);
       if (liked.length) setLikedPlaces(liked);
       if (skipped.length) setSkippedPlaces(skipped);
-      setQueue([...remaining].sort(() => Math.random() - 0.5));
+
+      // If categories selected, serve 20 random places per category in order
+      if (selectedCategories?.length) {
+        const BATCH = 20;
+        const batched: MockPlace[] = [];
+        for (const cat of selectedCategories) {
+          const pool = remaining.filter(p => p.category === cat).sort(() => Math.random() - 0.5);
+          batched.push(...pool.slice(0, BATCH));
+        }
+        // Append any remaining places not in selected categories at the end
+        const inBatch = new Set(batched.map(p => p.id));
+        const rest = remaining.filter(p => !inBatch.has(p.id)).sort(() => Math.random() - 0.5);
+        setQueue([...batched, ...rest]);
+      } else {
+        setQueue([...remaining].sort(() => Math.random() - 0.5));
+      }
       setLoading(false);
     };
     fetchPlaces();

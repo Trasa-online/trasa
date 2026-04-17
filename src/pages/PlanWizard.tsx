@@ -2,10 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, X, Plus, Users } from "lucide-react";
 import CityPicker from "@/components/plan-wizard/CityPicker";
-import StartingLocationPicker from "@/components/plan-wizard/StartingLocationPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
+import CategoryPicker from "@/components/plan-wizard/CategoryPicker";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 
+// Steps: 1=CityPicker, 2=FullCalendarPicker, 3=CategoryPicker, 4=PlaceSwiper
 type Step = 1 | 2 | 3 | 4;
 
 const PlanWizard = () => {
@@ -15,9 +16,9 @@ const PlanWizard = () => {
 
   const [step, setStep] = useState<Step>((returnState?.step as Step) ?? 1);
   const [city, setCity] = useState(returnState?.city ?? "");
-  const [startingLocation, setStartingLocation] = useState("");
   const [date, setDate] = useState<Date | null>(returnState?.date ? new Date(returnState.date) : null);
   const [numDays, setNumDays] = useState(1);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddPlace, setShowAddPlace] = useState(false);
@@ -117,21 +118,17 @@ const PlanWizard = () => {
           }} />
         )}
         {step === 2 && (
-          <StartingLocationPicker
-            city={city}
-            onConfirm={(loc) => { setStartingLocation(loc); setStep(3); }}
-            onSkip={() => setStep(3)}
-          />
+          <FullCalendarPicker onConfirm={(selectedDate, days) => { setDate(selectedDate); setNumDays(days); setStep(3); }} />
         )}
         {step === 3 && (
-          <FullCalendarPicker onConfirm={(selectedDate, days) => { setDate(selectedDate); setNumDays(days); setStep(4); }} />
+          <CategoryPicker onConfirm={(cats) => { setSelectedCategories(cats); setStep(4); }} />
         )}
         {step === 4 && date && (
           <PlaceSwiper
             city={city}
             date={date}
             numDays={numDays}
-            startingLocation={startingLocation}
+            selectedCategories={selectedCategories}
             initialLikedPlaceNames={returnLiked}
             initialSkippedPlaceNames={returnSkipped}
             searchQuery={searchQuery}
