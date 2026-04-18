@@ -435,12 +435,11 @@ const BusinessDashboard = () => {
         {/* Logo */}
         <div className="flex items-center gap-2 px-2 mb-8">
           <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-          <span className="font-black text-sm">trasa biznes</span>
+          <span className="font-black text-sm">trasa.biznes</span>
         </div>
         {/* Plan badge */}
         <div className="px-2 mb-6">
           <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
-          {profile.is_verified && <span className="ml-1.5 text-[10px] font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">✓ Zweryfikowany</span>}
         </div>
         {/* Nav items */}
         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Menu</p>
@@ -484,9 +483,6 @@ const BusinessDashboard = () => {
             <span className={`hidden md:inline text-[10px] font-bold px-2 py-0.5 rounded-full ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            {profile.is_verified && (
-              <span className="hidden sm:inline text-[10px] font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">✓ Zweryfikowany</span>
-            )}
             <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600 shrink-0">
               {profile.business_name?.slice(0, 2).toUpperCase() || 'BK'}
             </div>
@@ -685,15 +681,20 @@ const BusinessDashboard = () => {
           {activeSection === 'gallery' && (
             <div className="space-y-5">
               <div><h2 className="text-lg font-black">Galeria zdjęć</h2><p className="text-sm text-slate-400">Logo, zdjęcie główne i galeria widoczne na Twojej wizytówce.</p></div>
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-5">
+                {/* Logo — compact */}
+                <div className="flex items-start gap-4">
                   <div>
                     <p className="text-xs font-medium mb-1.5">Logo</p>
-                    <button onClick={() => logoInputRef.current?.click()} className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
-                      {uploading === 'logo' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : logoUrl ? (<><img src={logoUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-5 w-5 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-6 w-6" /><span className="text-[11px]">Dodaj logo</span></div>)}
+                    <button onClick={() => logoInputRef.current?.click()} className="relative h-20 w-20 rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
+                      {uploading === 'logo' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : logoUrl ? (<><img src={logoUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-4 w-4 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-5 w-5" /><span className="text-[10px]">Logo</span></div>)}
                     </button>
                     <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                   </div>
+                </div>
+
+                {/* Cover + Gallery — 2-col on desktop */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs font-medium mb-1.5">Zdjęcie główne</p>
                     <button onClick={() => coverInputRef.current?.click()} className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
@@ -701,26 +702,26 @@ const BusinessDashboard = () => {
                     </button>
                     <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
                   </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-xs font-medium">Galeria dodatkowa</p>
-                    <p className="text-[11px] text-muted-foreground">{galleryUrls.length}/{MAX_GALLERY}</p>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-xs font-medium">Galeria dodatkowa</p>
+                      <p className="text-[11px] text-muted-foreground">{galleryUrls.length}/{MAX_GALLERY}</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {galleryUrls.map((url, idx) => (
+                        <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden bg-muted">
+                          <img src={url} className="w-full h-full object-cover" />
+                          <button onClick={() => removeGalleryPhoto(idx)} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70"><X className="h-3 w-3 text-white" /></button>
+                        </div>
+                      ))}
+                      {galleryUrls.length < MAX_GALLERY && (
+                        <button onClick={() => galleryInputRef.current?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
+                          {uploading === 'gallery' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-6 w-6 text-muted-foreground" />}
+                        </button>
+                      )}
+                    </div>
+                    <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {galleryUrls.map((url, idx) => (
-                      <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden bg-muted">
-                        <img src={url} className="w-full h-full object-cover" />
-                        <button onClick={() => removeGalleryPhoto(idx)} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70"><X className="h-3 w-3 text-white" /></button>
-                      </div>
-                    ))}
-                    {galleryUrls.length < MAX_GALLERY && (
-                      <button onClick={() => galleryInputRef.current?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
-                        {uploading === 'gallery' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-6 w-6 text-muted-foreground" />}
-                      </button>
-                    )}
-                  </div>
-                  <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
                 </div>
               </div>
             </div>
@@ -737,25 +738,25 @@ const BusinessDashboard = () => {
                   <p className="text-[11px] text-muted-foreground">Nazwa ustawiana przy rejestracji — skontaktuj się z nami, by ją zmienić.</p>
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="street">Ulica i numer</Label>
+                  <Label htmlFor="street">Ulica i numer <span className="text-red-500">*</span></Label>
                   <Input id="street" value={street} maxLength={100} onChange={e => { setStreet(e.target.value); setIsDirty(true); }} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="city">Miasto</Label>
+                    <Label htmlFor="city">Miasto <span className="text-red-500">*</span></Label>
                     <Input id="city" value={city} maxLength={80} onChange={e => { setCity(e.target.value); setIsDirty(true); }} />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="postal_code">Kod pocztowy</Label>
+                    <Label htmlFor="postal_code">Kod pocztowy <span className="text-red-500">*</span></Label>
                     <Input id="postal_code" value={postalCode} maxLength={10} onChange={e => { setPostalCode(e.target.value); setIsDirty(true); }} />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="phone">Telefon</Label>
+                  <Label htmlFor="phone" className="flex items-center gap-1.5">Telefon <span className="text-[11px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
                   <Input id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="flex items-center gap-1.5">Email <span className="text-[11px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
                   <Input id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
                 </div>
                 <div className="space-y-1">

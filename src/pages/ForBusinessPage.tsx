@@ -213,7 +213,7 @@ function DashboardMockup() {
           <div className="hidden sm:flex w-48 shrink-0 border-r border-slate-100 bg-white flex-col py-5 px-3 gap-1">
             <div className="flex items-center gap-2 px-2 mb-5">
               <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-              <span className="font-black text-sm text-foreground">trasa biznes</span>
+              <span className="font-black text-sm text-foreground">trasa.biznes</span>
             </div>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-1">Menu</p>
             {MOCK_TABS.map(item => (
@@ -497,7 +497,7 @@ export default function ForBusinessPage() {
       {/* ── Hero ── */}
       <section className="min-h-[85dvh] flex items-center">
         <div className="max-w-5xl mx-auto px-5 pt-28 pb-16 w-full text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-8">
+          <div className="hidden sm:inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-8">
             <MapPin className="h-3.5 w-3.5" />
             Lokalne biznesy
           </div>
@@ -712,7 +712,7 @@ export default function ForBusinessPage() {
             Napisz do nas - ustalimy szczegóły i dodamy Twój lokal do bazy.
           </p>
           <a
-            href="mailto:trasa.app@gmail.com"
+            href="/auth?business=true"
             className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-blue-600 text-white font-bold text-base hover:bg-blue-500 active:scale-95 transition-all shadow-lg shadow-blue-200"
           >
             Dodaj swój lokal →
