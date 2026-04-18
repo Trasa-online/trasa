@@ -108,6 +108,30 @@ const PREMIUM_FEATURES = [
   { icon: <Star className="h-6 w-6 text-blue-500" />, title: "Wyróżnienie w wynikach", desc: "Lokale Premium wyświetlają się wyżej w rekomendacjach gdy użytkownik wybiera miejsca w Twoim mieście." },
 ];
 
+function FaqAccordion({ items }: { items: { q: string; a: string }[] }) {
+  const [open, setOpen] = useState<number | null>(null);
+  return (
+    <div className="flex flex-col divide-y divide-border/40 border border-border/40 rounded-3xl overflow-hidden bg-white">
+      {items.map((item, i) => (
+        <div key={i}>
+          <button
+            onClick={() => setOpen(open === i ? null : i)}
+            className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left hover:bg-slate-50 transition-colors"
+          >
+            <span className="font-bold text-sm text-foreground">{item.q}</span>
+            <span className={`shrink-0 h-5 w-5 rounded-full border-2 border-slate-300 flex items-center justify-center text-slate-400 transition-transform ${open === i ? "rotate-45" : ""}`} style={{ fontSize: 14, lineHeight: 1 }}>+</span>
+          </button>
+          {open === i && (
+            <div className="px-6 pb-5 text-sm text-muted-foreground leading-relaxed">
+              {item.a}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ForBusinessPage() {
 
   return (
@@ -292,6 +316,42 @@ export default function ForBusinessPage() {
               </FadeIn>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section className="py-24 px-5">
+        <div className="max-w-2xl mx-auto">
+          <FadeIn className="text-center mb-12">
+            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2">FAQ</p>
+            <h2 className="text-3xl sm:text-4xl font-black text-foreground" style={{ textWrap: "balance" } as React.CSSProperties}>
+              Najczęściej zadawane pytania
+            </h2>
+          </FadeIn>
+          <FadeIn>
+            <FaqAccordion items={[
+              {
+                q: "Jak dodać swój lokal do trasy?",
+                a: "Napisz do nas na trasa.app@gmail.com. Odpiszemy w ciągu 24h, dodamy Twój lokal do bazy i skonfigurujemy profil razem z Tobą.",
+              },
+              {
+                q: "Czym różni się Basic od Premium?",
+                a: "Basic daje Ci widoczność w trasach użytkowników, jedno zdjęcie profilowe i podstawowe statystyki wyświetleń. Premium to pełna galeria zdjęć, szczegółowa analityka (kliknięcia, dodania do trasy, oceny), aktualności i promocje w feedzie oraz wyróżnienie w wynikach wyszukiwania.",
+              },
+              {
+                q: "Ile kosztuje pakiet Premium?",
+                a: "Przez pierwsze 3 miesiące pakiet Premium jest całkowicie darmowy. Po tym czasie przechodzimy na wycenę indywidualną - napisz do nas, żeby ustalić szczegóły.",
+              },
+              {
+                q: "Jak wygląda analityka?",
+                a: "W panelu biznesowym widzisz ile osób wyświetliło Twój profil, ile kliknęło w szczegóły i ile dodało lokal do swojej trasy. W pakiecie Premium dane są podzielone na dni i źródła ruchu.",
+              },
+              {
+                q: "Czy mogę zarządzać wieloma lokalami?",
+                a: "Tak - pakiet Enterprise jest stworzony z myślą o sieciach i właścicielach kilku lokali. Jedno konto, wiele lokalizacji, zbiorcze statystyki. Napisz do nas po szczegóły.",
+              },
+            ]} />
+          </FadeIn>
         </div>
       </section>
 

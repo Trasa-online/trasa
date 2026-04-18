@@ -304,6 +304,32 @@ function PhoneMockup() {
   );
 }
 
+// ─── FAQ accordion ────────────────────────────────────────────────────────────
+
+function FaqAccordion({ items }: { items: { q: string; a: string }[] }) {
+  const [open, setOpen] = useState<number | null>(null);
+  return (
+    <div className="flex flex-col divide-y divide-border/40 border border-border/40 rounded-3xl overflow-hidden bg-white">
+      {items.map((item, i) => (
+        <div key={i}>
+          <button
+            onClick={() => setOpen(open === i ? null : i)}
+            className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left hover:bg-slate-50 transition-colors"
+          >
+            <span className="font-bold text-sm text-foreground">{item.q}</span>
+            <span className={`shrink-0 h-5 w-5 rounded-full border-2 border-slate-300 flex items-center justify-center text-slate-400 transition-transform ${open === i ? "rotate-45" : ""}`} style={{ fontSize: 14, lineHeight: 1 }}>+</span>
+          </button>
+          {open === i && (
+            <div className="px-6 pb-5 text-sm text-muted-foreground leading-relaxed">
+              {item.a}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Landing page ──────────────────────────────────────────────────────────────
 
 const LandingPage = () => {
@@ -515,6 +541,42 @@ const LandingPage = () => {
                 </p>
               </div>
             </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section className="py-24 px-5 bg-slate-50">
+        <div className="max-w-2xl mx-auto">
+          <FadeIn className="text-center mb-12">
+            <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">FAQ</p>
+            <h2 className="text-3xl sm:text-4xl font-black text-foreground" style={{ textWrap: "balance" } as React.CSSProperties}>
+              Najczęściej zadawane pytania
+            </h2>
+          </FadeIn>
+          <FadeIn>
+            <FaqAccordion items={[
+              {
+                q: "Czy trasa jest darmowa?",
+                a: "Tak, konto jest darmowe. Podstawowe planowanie - solo i w grupie - zawsze będzie bezpłatne. Płatne funkcje mogą pojawić się w przyszłości, ale z wyprzedzeniem damy Ci znać.",
+              },
+              {
+                q: "W jakich miastach działa trasa?",
+                a: "Aktualnie wspieramy Kraków, Gdańsk (Trójmiasto), Warszawę, Wrocław, Poznań i Zakopane. Sukcesywnie dodajemy nowe miasta - jeśli nie widzisz swojego, daj nam znać!",
+              },
+              {
+                q: "Czy mogę planować solo, bez grupy?",
+                a: "Tak! trasa działa świetnie zarówno solo jak i w grupie. Przeglądaj miejsca samodzielnie i buduj własny plan dnia we własnym tempie.",
+              },
+              {
+                q: "Kiedy aplikacja będzie dostępna?",
+                a: "Jesteśmy w fazie early access. Dołącz do listy oczekujących - napiszemy do Ciebie gdy będziemy gotowi na kolejną rundę użytkowników.",
+              },
+              {
+                q: "Jak wygląda planowanie grupowe w praktyce?",
+                a: "Tworzysz sesję i zapraszasz znajomych jednym linkiem. Każdy przegląda miejsca osobno na swoim telefonie. trasa zbiera wasze wybory i pokazuje miejsca które spodobały się wszystkim - na tej podstawie układa gotową trasę.",
+              },
+            ]} />
           </FadeIn>
         </div>
       </section>
