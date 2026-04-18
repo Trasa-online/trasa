@@ -475,15 +475,15 @@ const LandingPage = () => {
               <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-[48ch]">
                 Wyjazd z grupą kojarzy Ci się ze stresem i wiecznymi kłótniami na messengerze? Z trasą całą organizację macie z głowy.
               </p>
-              <div id="cta-hero">
+              <div id="cta-hero" className="flex flex-col items-center sm:items-start gap-4">
                 <button
                   onClick={() => navigate("/auth")}
                   className="rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold px-7 py-4 text-base shadow-md shadow-orange-200 hover:shadow-lg hover:shadow-orange-200/70 hover:opacity-95 active:scale-[0.98] active:translate-y-px transition-all"
                 >
                   Dołącz do trasy →
                 </button>
+                <p className="text-xs text-muted-foreground">Konto jest darmowe</p>
               </div>
-              <p className="text-xs text-muted-foreground mt-4 text-center sm:text-left">Konto jest darmowe</p>
             </div>
 
             {/* Right: phone mockup */}
