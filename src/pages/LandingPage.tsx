@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Heart, Zap, Check, Castle, GlassWater, Palette, TreePine, Pizza, Star, MapPin } from "lucide-react";
+import { Users, Heart, Zap, Check, Castle, GlassWater, Palette, TreePine, Pizza, Star, MapPin, Menu, X } from "lucide-react";
 
 // ─── Scroll reveal hook ───────────────────────────────────────────────────────
 
@@ -335,6 +335,7 @@ function FaqAccordion({ items }: { items: { q: string; a: string }[] }) {
 const LandingPage = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
   if (loading) return null;
   if (user) return <Navigate to="/home" replace />;
 
@@ -355,10 +356,11 @@ const LandingPage = () => {
 
       {/* ── Nav ── */}
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl">
+        {/* Pill bar */}
         <div className="bg-[#1a1a1a] rounded-full px-5 h-14 flex items-center gap-3 shadow-xl">
           {/* Left: logo + section links */}
           <div className="flex items-center gap-4 shrink-0">
-            <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center">
+            <button onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setMenuOpen(false); }} className="flex items-center">
               <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
             </button>
             <button onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })} className="hidden sm:block text-sm text-white/60 hover:text-white/90 transition-colors whitespace-nowrap">
@@ -369,10 +371,9 @@ const LandingPage = () => {
             </button>
           </div>
 
-          {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Right: badge + mam już konto + dołącz */}
+          {/* Right: badge + zaloguj + dołącz */}
           <div className="flex items-center gap-3 shrink-0">
             <a href="/dla-firm" className="hidden md:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-all border border-blue-500/30 whitespace-nowrap">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
@@ -381,11 +382,42 @@ const LandingPage = () => {
             <button onClick={() => navigate("/auth")} className="hidden sm:flex items-center text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/50 hover:text-white transition-all whitespace-nowrap">
               Zaloguj się
             </button>
-            <button onClick={() => document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" })} className="text-sm font-bold px-4 py-2 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all whitespace-nowrap">
+            <button onClick={() => document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" })} className="hidden sm:block text-sm font-bold px-4 py-2 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all whitespace-nowrap">
               Dołącz →
+            </button>
+            {/* Hamburger — mobile only */}
+            <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
+              {menuOpen ? <X className="h-4 w-4 text-white" /> : <Menu className="h-4 w-4 text-white" />}
             </button>
           </div>
         </div>
+
+        {/* Mobile dropdown */}
+        {menuOpen && (
+          <div className="sm:hidden mt-2 bg-[#1a1a1a] rounded-2xl shadow-xl overflow-hidden">
+            <div className="flex flex-col py-2">
+              <button onClick={() => { document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="px-5 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 text-left transition-colors">
+                Jak to działa
+              </button>
+              <button onClick={() => { document.getElementById("for-whom")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="px-5 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 text-left transition-colors">
+                Dla kogo
+              </button>
+              <a href="/dla-firm" className="px-5 py-3 text-sm font-bold text-blue-300 hover:text-blue-200 hover:bg-white/5 flex items-center gap-2 transition-colors">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
+                Dla firm
+              </a>
+              <div className="mx-5 my-1 border-t border-white/10" />
+              <button onClick={() => { navigate("/auth"); setMenuOpen(false); }} className="px-5 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 text-left transition-colors">
+                Zaloguj się
+              </button>
+              <div className="px-5 py-3">
+                <button onClick={() => { document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="w-full text-sm font-bold px-4 py-2.5 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all">
+                  Dołącz →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* ── Hero ── */}
