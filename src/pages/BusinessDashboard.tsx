@@ -109,6 +109,9 @@ const BusinessDashboard = () => {
   const [uploading, setUploading] = useState<string | null>(null); // which slot is uploading
   const [isDirty, setIsDirty] = useState(false);
 
+  const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'posts' | 'analytics'>('overview');
+  const [recentEvents, setRecentEvents] = useState<Array<{event_type: string, created_at: string}>>([]);
+
   // Posts state
   const [posts, setPosts] = useState<BusinessPost[]>([]);
   const [postDescription, setPostDescription] = useState("");
@@ -210,6 +213,14 @@ const BusinessDashboard = () => {
         clicks: events.filter(e => ["click_phone", "click_website", "click_booking"].includes(e.event_type)).length,
       });
     }
+
+    const { data: recentEventsData } = await (supabase as any)
+      .from("place_events")
+      .select("event_type, created_at")
+      .eq("place_id", placeId)
+      .order("created_at", { ascending: false })
+      .limit(8);
+    if (recentEventsData) setRecentEvents(recentEventsData);
 
     // Fetch posts
     const { data: postsData } = await (supabase as any)
@@ -417,560 +428,502 @@ const BusinessDashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background pb-12">
-      {/* Header — no back button, just title + logout */}
-      <div className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b border-border/40 px-4 pt-safe-4 pb-3 flex items-center">
-        <div
-          className="w-7 h-7 rounded-full mr-3 flex-shrink-0"
-          style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
-        />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold leading-tight truncate">{profile.business_name}</p>
-          <p className="text-[11px] text-muted-foreground">Panel biznesowy</p>
+    <div className="min-h-screen flex bg-slate-50">
+
+      {/* ── Sidebar (desktop only) ── */}
+      <aside className="hidden md:flex w-56 shrink-0 flex-col fixed h-full bg-white border-r border-slate-100 py-5 px-3 z-20">
+        {/* Logo */}
+        <div className="flex items-center gap-2 px-2 mb-8">
+          <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+          <span className="font-black text-sm">trasa biznes</span>
         </div>
-        <span className={`mr-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${PLAN_COLORS[plan]}`}>
-          {PLAN_LABELS[plan]}
-        </span>
-        {profile.is_verified && (
-          <span className="mr-3 text-[10px] font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-            ✓ Zweryfikowany
-          </span>
-        )}
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1.5 rounded-full bg-muted active:opacity-60"
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          Wyloguj
-        </button>
-      </div>
+        {/* Plan badge */}
+        <div className="px-2 mb-6">
+          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
+          {profile.is_verified && <span className="ml-1.5 text-[10px] font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">✓ Zweryfikowany</span>}
+        </div>
+        {/* Nav items */}
+        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Menu</p>
+        {([
+          { id: 'overview', label: 'Przegląd' },
+          { id: 'gallery', label: 'Galeria zdjęć' },
+          { id: 'profile', label: 'Dane lokalu' },
+          { id: 'posts', label: 'Aktualności' },
+          { id: 'analytics', label: 'Analityka' },
+        ] as const).map(item => (
+          <button
+            key={item.id}
+            onClick={() => setActiveSection(item.id)}
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-0.5 text-left ${activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+          >
+            <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${activeSection === item.id ? 'bg-blue-500' : 'bg-slate-300'}`} />
+            {item.label}
+          </button>
+        ))}
+        {/* Logout at bottom */}
+        <div className="mt-auto px-2">
+          <button onClick={handleLogout} className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2">
+            <LogOut className="h-3.5 w-3.5" />
+            Wyloguj się
+          </button>
+        </div>
+      </aside>
 
-      <div className={`p-4 space-y-4 max-w-2xl mx-auto ${isDirty ? "pb-28" : "pb-4"}`}>
+      {/* ── Main ── */}
+      <div className="flex-1 md:ml-56 flex flex-col min-h-screen">
 
-        {/* Welcome banner */}
-        {showWelcomeBanner && (
-          <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-4 text-white shadow-lg shadow-blue-600/20">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1">
-                <p className="font-black text-base leading-tight">Witaj w Panelu Biznesowym Trasy! 🎁</p>
-                <p className="text-sm text-blue-100 mt-1.5 leading-relaxed">
-                  Twoje konto jest aktywne i masz dostęp do pełnego pakietu <strong className="text-white">Premium</strong> — gratis przez pierwszy rok. Wypełnij wizytówkę i poczekaj na weryfikację.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowWelcomeBanner(false);
-                  localStorage.setItem(`welcome_seen_${profile!.id}`, "1");
-                }}
-                className="mt-0.5 text-blue-200 active:opacity-60 flex-shrink-0"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+        {/* ── Top bar ── */}
+        <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 md:px-6 h-14 flex items-center gap-3 shrink-0">
+          {/* Mobile: orb logo */}
+          <div className="md:hidden h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+          <div className="flex-1 hidden md:flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 max-w-xs">
+            <span className="text-xs text-slate-400">Szukaj w panelu...</span>
           </div>
-        )}
-
-        {/* Verified notification */}
-        {showVerifiedBanner && (
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-2xl p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1">
-                <p className="font-bold text-sm text-amber-800">✓ Wizytówka zweryfikowana!</p>
-                <p className="text-xs text-amber-700 mt-1 leading-relaxed">
-                  Twoja wizytówka została zatwierdzona przez zespół Trasy. Teraz jest w pełni widoczna dla użytkowników aplikacji.
-                </p>
-              </div>
-              <button onClick={dismissVerifiedBanner} className="text-amber-400 active:opacity-60 flex-shrink-0 mt-0.5">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+          <div className="flex-1 md:flex-none flex items-center gap-2">
+            <p className="text-sm font-bold truncate">{profile.business_name}</p>
+            <span className={`hidden md:inline text-[10px] font-bold px-2 py-0.5 rounded-full ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
           </div>
-        )}
-
-        {/* Review pending status */}
-        {reviewRequestedAt && !profile.is_verified && (
-          <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse flex-shrink-0" />
-            <div>
-              <p className="text-xs font-semibold text-blue-700">Wizytówka oczekuje na weryfikację</p>
-              <p className="text-[11px] text-blue-500 mt-0.5">Sprawdzimy ją i zatwierdzimy wkrótce.</p>
+          <div className="flex items-center gap-2 ml-auto">
+            {profile.is_verified && (
+              <span className="hidden sm:inline text-[10px] font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">✓ Zweryfikowany</span>
+            )}
+            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600 shrink-0">
+              {profile.business_name?.slice(0, 2).toUpperCase() || 'BK'}
             </div>
+            <button onClick={handleLogout} className="md:hidden flex items-center gap-1 text-xs text-muted-foreground px-2 py-1.5 rounded-full bg-slate-100">
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
           </div>
-        )}
-
-        {/* Stats */}
-        {plan === 'premium' ? (
-          <>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { icon: BarChart2, value: stats.views, label: "Wyświetlenia" },
-                { icon: MapPin, value: stats.onRoutes, label: "Na trasach" },
-                { icon: MousePointerClick, value: stats.clicks, label: "Kliknięcia" },
-              ].map(({ icon: Icon, value, label }) => (
-                <div key={label} className="bg-card border border-border/40 rounded-2xl p-3 text-center">
-                  <Icon className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
-                  <p className="text-xl font-bold">{value}</p>
-                  <p className="text-xs font-medium text-foreground">{label}</p>
-                  <p className="text-[10px] text-muted-foreground">ostatnie 30 dni</p>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="relative rounded-2xl border border-dashed border-border/60 p-4 overflow-hidden">
-            <div className="grid grid-cols-3 gap-3 opacity-30 pointer-events-none select-none">
-              {[
-                { icon: BarChart2, label: "Wyświetlenia" },
-                { icon: MapPin, label: "Na trasach" },
-                { icon: MousePointerClick, label: "Kliknięcia" },
-              ].map(({ icon: Icon, label }) => (
-                <div key={label} className="bg-card border border-border/40 rounded-2xl p-3 text-center">
-                  <Icon className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
-                  <p className="text-xl font-bold">—</p>
-                  <p className="text-xs font-medium">{label}</p>
-                </div>
-              ))}
-            </div>
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
-              <span className="text-lg">🔒</span>
-              <p className="text-xs font-semibold">Analityka dostępna w planie Premium</p>
-            </div>
-          </div>
-        )}
-
-        {/* Swipe card preview — tabs Basic / Premium */}
-        <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Podgląd wizytówki</p>
-
-          {/* Tabs */}
-          <div className="flex rounded-2xl bg-muted p-0.5 gap-0.5">
-            {(['basic', 'premium'] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => {
-                  if (tab === 'premium' && plan === 'basic') {
-                    setShowUpgradeBanner(true);
-                  }
-                  setPreviewTab(tab);
-                }}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-2xl transition-all ${
-                  previewTab === tab ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {tab === 'basic' ? '✦ Basic' : '★ Premium'}
-                {tab === 'premium' && plan !== 'premium' && (
-                  <span className="ml-1 text-[9px] font-bold bg-amber-400 text-amber-900 px-1 py-0.5 rounded-full">PRO</span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Card preview */}
-          <div className="relative w-full" style={{ aspectRatio: "3/4", maxHeight: 340 }}>
-            <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-lg">
-              {/* Background */}
-              {coverImageUrl ? (
-                <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-800 to-orange-600" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-              {/* Bottom content */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1.5">
-                {previewTab === 'premium' && logoUrl && (
-                  <img src={logoUrl} className="w-8 h-8 rounded-full object-cover border-2 border-white/30 mb-1" />
-                )}
-                <p className="text-white font-black text-xl leading-tight">{businessName || "Nazwa lokalu"}</p>
-                <p className="text-white/70 text-sm">{[placeCategory, "@trasa"].filter(Boolean).join(" · ")}</p>
-                {previewTab === 'premium' && description && (
-                  <p className="text-white/60 text-xs leading-relaxed line-clamp-2">{description}</p>
-                )}
-                {previewTab === 'premium' && eventTitle && (
-                  <div className="inline-flex items-center gap-1 bg-amber-500/80 backdrop-blur-sm rounded-full px-2.5 py-1 text-white text-xs font-semibold">
-                    🎉 {eventTitle}
-                  </div>
-                )}
-              </div>
-
-              {/* Basic label */}
-              {previewTab === 'basic' && (
-                <div className="absolute top-3 left-3 bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  ✦ Basic
-                </div>
-              )}
-              {previewTab === 'premium' && (
-                <div className="absolute top-3 left-3 bg-amber-500/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  ★ Premium
-                </div>
-              )}
-
-              {/* Premium locked overlay */}
-              {previewTab === 'premium' && plan !== 'premium' && (
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
-                  <span className="text-2xl">🔒</span>
-                  <p className="text-white font-bold text-sm text-center px-6">Plan Premium</p>
-                  <p className="text-white/70 text-xs text-center px-8 leading-relaxed">Logo, galeria, opisy, wydarzenia i analityka</p>
-                  <button
-                    onClick={() => setShowUpgradeBanner(true)}
-                    className="mt-2 px-4 py-2 rounded-2xl bg-amber-500 text-white text-xs font-bold active:opacity-80"
-                  >
-                    Dowiedz się więcej →
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <p className="text-[11px] text-muted-foreground text-center">
-            {previewTab === 'basic'
-              ? "Basic: zdjęcie główne + dane kontaktowe"
-              : "Premium: logo, galeria, wydarzenia, posty, analityka"}
-          </p>
         </div>
 
-        {/* Upgrade banner */}
-        {showUpgradeBanner && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-4 space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-bold text-sm">★ Przejdź na Premium</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                  Odblokuj logo, galerię do 10 zdjęć, wydarzenia, posty i pełną analitykę.
-                </p>
-              </div>
-              <button onClick={() => setShowUpgradeBanner(false)} className="text-muted-foreground mt-0.5 active:opacity-60">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <a
-              href="mailto:kontakt@trasa.app?subject=Upgrade do Premium"
-              className="flex items-center justify-center w-full py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm active:opacity-80"
+        {/* ── Mobile horizontal tabs ── */}
+        <div className="md:hidden sticky top-14 z-10 bg-white border-b border-slate-100 flex overflow-x-auto shrink-0 px-3 gap-1 py-2">
+          {([
+            { id: 'overview', label: 'Przegląd' },
+            { id: 'gallery', label: 'Galeria' },
+            { id: 'profile', label: 'Dane' },
+            { id: 'posts', label: 'Aktualności' },
+            { id: 'analytics', label: 'Analityka' },
+          ] as const).map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveSection(item.id)}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}
             >
-              Napisz do nas → kontakt@trasa.app
-            </a>
-          </div>
-        )}
+              {item.label}
+            </button>
+          ))}
+        </div>
 
-        {/* Photos */}
-        <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Zdjęcia</p>
+        {/* ── Content ── */}
+        <div className={`flex-1 p-4 md:p-6 max-w-4xl w-full ${isDirty ? 'pb-28' : 'pb-6'}`}>
 
-          {/* Logo + Cover */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Logo */}
-            <div>
-                <p className="text-xs font-medium mb-1.5">Logo</p>
-                <button
-                  onClick={() => logoInputRef.current?.click()}
-                  className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70"
-                >
-                  {uploading === "logo" ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                  ) : logoUrl ? (
-                    <>
-                      <img src={logoUrl} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                        <ImagePlus className="h-5 w-5 text-white" />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                      <Plus className="h-6 w-6" />
-                      <span className="text-[11px]">Dodaj logo</span>
-                    </div>
-                  )}
-                </button>
-                <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-            </div>
-
-            {/* Cover */}
-            <div>
-              <p className="text-xs font-medium mb-1.5">Zdjęcie główne</p>
-              <button
-                onClick={() => coverInputRef.current?.click()}
-                className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70"
-              >
-                {uploading === "cover" ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                ) : coverImageUrl ? (
-                  <>
-                    <img src={coverImageUrl} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                      <ImagePlus className="h-5 w-5 text-white" />
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                    <Plus className="h-6 w-6" />
-                    <span className="text-[11px]">Dodaj zdjęcie</span>
+          {/* Banners (always visible) */}
+          <div className="space-y-3 mb-4">
+            {showWelcomeBanner && (
+              <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-4 text-white shadow-lg shadow-blue-600/20">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <p className="font-black text-base leading-tight">Witaj w Panelu Biznesowym trasy! 🎁</p>
+                    <p className="text-sm text-blue-100 mt-1.5 leading-relaxed">
+                      Twoje konto jest aktywne i masz dostęp do pełnego pakietu <strong className="text-white">Premium</strong> — gratis przez pierwsze 3 miesiące. Wypełnij wizytówkę i poczekaj na weryfikację.
+                    </p>
                   </div>
-                )}
-              </button>
-              <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
-            </div>
-          </div>
-
-          {/* Gallery */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-xs font-medium">Galeria dodatkowa</p>
-              <p className="text-[11px] text-muted-foreground">{galleryUrls.length}/{MAX_GALLERY}</p>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {galleryUrls.map((url, idx) => (
-                <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden bg-muted">
-                  <img src={url} className="w-full h-full object-cover" />
-                  <button
-                    onClick={() => removeGalleryPhoto(idx)}
-                    className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70"
-                  >
-                    <X className="h-3 w-3 text-white" />
+                  <button onClick={() => { setShowWelcomeBanner(false); localStorage.setItem(`welcome_seen_${profile!.id}`, "1"); }} className="mt-0.5 text-blue-200 active:opacity-60 flex-shrink-0">
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
-              ))}
-              {galleryUrls.length < MAX_GALLERY && (
-                <button
-                  onClick={() => galleryInputRef.current?.click()}
-                  className="aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70"
-                >
-                  {uploading === "gallery" ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                  ) : (
-                    <Plus className="h-6 w-6 text-muted-foreground" />
-                  )}
-                </button>
-              )}
-            </div>
-            <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
-          </div>
-        </div>
-
-        {/* Contact */}
-        <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dane lokalu</p>
-          <div className="space-y-1">
-            <Label htmlFor="business_name">Nazwa lokalu</Label>
-            <Input
-              id="business_name"
-              value={businessName}
-              readOnly
-              disabled
-              className="bg-muted/50 text-muted-foreground cursor-not-allowed"
-            />
-            <p className="text-[11px] text-muted-foreground">Nazwa ustawiana przy rejestracji — skontaktuj się z nami, by ją zmienić.</p>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="street">Ulica i numer</Label>
-            <Input id="street" value={street} maxLength={100} onChange={e => { setStreet(e.target.value); setIsDirty(true); }} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="city">Miasto</Label>
-              <Input id="city" value={city} maxLength={80} onChange={e => { setCity(e.target.value); setIsDirty(true); }} />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="postal_code">Kod pocztowy</Label>
-              <Input id="postal_code" value={postalCode} maxLength={10} onChange={e => { setPostalCode(e.target.value); setIsDirty(true); }} />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="phone">Telefon</Label>
-            <Input id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="website">Strona WWW</Label>
-            <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
-          </div>
-
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Typ miejsca</p>
-          <div className="flex flex-wrap gap-2">
-            {PLACE_TAGS.map(tag => {
-              const active = tags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => { setTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag]); setIsDirty(true); }}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
-                    active
-                      ? "bg-primary border-orange-600 text-white"
-                      : "bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground"
-                  }`}
-                >
-                  {tag}
-                </button>
-              );
-            })}
-          </div>
-
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Opis</p>
-          <div className="space-y-1">
-            <textarea
-              rows={3}
-              value={description}
-              maxLength={500}
-              onChange={e => { setDescription(e.target.value); setIsDirty(true); }}
-              placeholder="Opisz swój lokal..."
-              className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-            />
-            <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
-          </div>
-        </div>
-
-        {/* Events */}
-        <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Obecne wydarzenia</p>
-          <p className="text-xs text-muted-foreground -mt-2">
-            Np. happy hour, promocja 1+1, koncert. Widoczne na wizytówce w aplikacji.
-          </p>
-          <div className="space-y-1">
-            <Label htmlFor="event_title">Tytuł</Label>
-            <Input
-              id="event_title"
-              value={eventTitle}
-              maxLength={80}
-              onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }}
-              placeholder="np. Drinki 1+1 do 20:00"
-            />
-            <p className="text-[11px] text-muted-foreground text-right">{eventTitle.length}/80</p>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="event_description">Opis</Label>
-            <textarea
-              id="event_description"
-              rows={2}
-              value={eventDescription}
-              maxLength={300}
-              onChange={e => { setEventDescription(e.target.value); setIsDirty(true); }}
-              placeholder="Szczegóły wydarzenia..."
-              className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-            />
-            <p className="text-[11px] text-muted-foreground text-right">{eventDescription.length}/300</p>
-          </div>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="event_starts_at">Od</Label>
-              <Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="event_ends_at">Do</Label>
-              <Input id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" />
-            </div>
-          </div>
-        </div>
-
-        {/* Posts / Feed */}
-        <div className="bg-card border border-border/40 rounded-2xl p-4 space-y-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Posty</p>
-          <p className="text-xs text-muted-foreground -mt-2">
-            Aktualizacje, nowości, zdjęcia — widoczne dla odwiedzających w Twojej wizytówce.
-          </p>
-
-          {/* New post form */}
-          <div className="space-y-3 border border-border/60 rounded-2xl p-3">
-            <textarea
-              rows={3}
-              value={postDescription}
-              maxLength={600}
-              onChange={e => setPostDescription(e.target.value)}
-              placeholder="Co nowego w Twoim lokalu?"
-              className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-            />
-            <p className="text-[11px] text-muted-foreground text-right -mt-2">{postDescription.length}/600</p>
-
-            {/* Post photo previews */}
-            {postPhotos.length > 0 && (
-              <div className="flex gap-2 flex-wrap">
-                {postPhotos.map((url, idx) => (
-                  <div key={idx} className="relative w-16 h-16 rounded-2xl overflow-hidden">
-                    <img src={url} className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => setPostPhotos(prev => prev.filter((_, i) => i !== idx))}
-                      className="absolute top-0.5 right-0.5 h-4 w-4 rounded-full bg-black/60 flex items-center justify-center"
-                    >
-                      <X className="h-2.5 w-2.5 text-white" />
-                    </button>
-                  </div>
-                ))}
               </div>
             )}
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => postPhotoInputRef.current?.click()}
-                disabled={postPhotos.length >= 4}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1.5 rounded-full bg-muted active:opacity-60 disabled:opacity-40"
-              >
-                {postPhotoUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
-                Zdjęcia
-              </button>
-              <input
-                ref={postPhotoInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handlePostPhotoUpload}
-              />
-              <button
-                onClick={handleAddPost}
-                disabled={submittingPost || (!postDescription.trim() && postPhotos.length === 0)}
-                className="ml-auto flex items-center gap-1.5 text-xs bg-primary text-white px-3 py-1.5 rounded-full font-semibold active:opacity-70 disabled:opacity-40"
-              >
-                {submittingPost ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                Opublikuj
-              </button>
-            </div>
+            {showVerifiedBanner && (
+              <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-2xl p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <p className="font-bold text-sm text-amber-800">✓ Wizytówka zweryfikowana!</p>
+                    <p className="text-xs text-amber-700 mt-1 leading-relaxed">Twoja wizytówka została zatwierdzona przez zespół trasy. Teraz jest w pełni widoczna dla użytkowników aplikacji.</p>
+                  </div>
+                  <button onClick={dismissVerifiedBanner} className="text-amber-400 active:opacity-60 flex-shrink-0 mt-0.5"><X className="h-4 w-4" /></button>
+                </div>
+              </div>
+            )}
+            {reviewRequestedAt && !profile.is_verified && (
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-blue-700">Wizytówka oczekuje na weryfikację</p>
+                  <p className="text-[11px] text-blue-500 mt-0.5">Sprawdzimy ją i zatwierdzimy wkrótce.</p>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Posts feed */}
-          {posts.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">Brak postów — dodaj pierwszy!</p>
-          )}
-          <div className="space-y-3">
-            {posts.map(post => (
-              <div key={post.id} className="border border-border/50 rounded-2xl p-3 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  {post.description && (
-                    <p className="text-sm leading-relaxed flex-1">{post.description}</p>
-                  )}
-                  <button
-                    onClick={() => handleDeletePost(post.id)}
-                    className="flex-shrink-0 h-6 w-6 rounded-full bg-muted flex items-center justify-center active:opacity-60"
-                  >
-                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
+          {/* ── PRZEGLĄD ── */}
+          {activeSection === 'overview' && (
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-lg font-black text-foreground">Przegląd</h2>
+                <p className="text-sm text-slate-400">Oto co dzieje się z Twoim lokalem w ostatnich 30 dniach.</p>
+              </div>
+              {/* Stats 4 cards */}
+              {plan === 'premium' ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: 'Wyświetlenia profilu', value: stats.views, icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
+                    { label: 'Dodania do trasy', value: stats.onRoutes, icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                    { label: 'Kliknięcia', value: stats.clicks, icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
+                    { label: 'Łączna aktywność', value: stats.views + stats.onRoutes + stats.clicks, icon: BarChart2, color: 'text-orange-500', bg: 'bg-orange-50' },
+                  ].map(({ label, value, icon: Icon, color, bg }) => (
+                    <div key={label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                      <div className={`h-8 w-8 rounded-xl ${bg} flex items-center justify-center mb-3`}>
+                        <Icon className={`h-4 w-4 ${color}`} />
+                      </div>
+                      <p className="text-2xl font-black text-foreground leading-none mb-1">{value}</p>
+                      <p className="text-xs text-slate-400 leading-snug">{label}</p>
+                      <p className="text-[10px] text-slate-300 mt-0.5">ostatnie 30 dni</p>
+                    </div>
+                  ))}
                 </div>
-                {post.photo_urls.length > 0 && (
-                  <div className={`grid gap-1.5 ${post.photo_urls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-                    {post.photo_urls.map((url, idx) => (
-                      <img key={idx} src={url} className="w-full rounded-2xl object-cover aspect-square" />
+              ) : (
+                <div className="relative rounded-2xl border border-dashed border-border/60 p-4 overflow-hidden">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 opacity-30 pointer-events-none select-none">
+                    {['Wyświetlenia', 'Na trasach', 'Kliknięcia', 'Aktywność'].map(l => (
+                      <div key={l} className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-2xl font-black">—</p><p className="text-xs text-slate-400">{l}</p></div>
                     ))}
                   </div>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
+                    <span className="text-lg">🔒</span>
+                    <p className="text-xs font-semibold">Analityka dostępna w planie Premium</p>
+                  </div>
+                </div>
+              )}
+              {/* Activity feed */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Ostatnia aktywność</p>
+                {recentEvents.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-4">Brak aktywności w ostatnim czasie.</p>
+                ) : (
+                  <div className="flex flex-col divide-y divide-slate-50">
+                    {recentEvents.map((ev, i) => {
+                      const labels: Record<string, { txt: string; dot: string }> = {
+                        view: { txt: 'Ktoś wyświetlił Twój profil', dot: 'bg-blue-400' },
+                        add_to_route: { txt: 'Lokal dodany do trasy', dot: 'bg-emerald-400' },
+                        click_phone: { txt: 'Kliknięcie w numer telefonu', dot: 'bg-violet-400' },
+                        click_website: { txt: 'Kliknięcie w stronę WWW', dot: 'bg-violet-400' },
+                        click_booking: { txt: 'Kliknięcie w rezerwację', dot: 'bg-amber-400' },
+                      };
+                      const info = labels[ev.event_type] ?? { txt: ev.event_type, dot: 'bg-slate-300' };
+                      return (
+                        <div key={i} className="flex items-center gap-3 py-2.5">
+                          <div className={`h-2 w-2 rounded-full shrink-0 ${info.dot}`} />
+                          <p className="text-sm text-slate-600 flex-1">{info.txt}</p>
+                          <p className="text-[10px] text-slate-400 shrink-0">
+                            {formatDistanceToNow(new Date(ev.created_at), { addSuffix: true, locale: pl })}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
-                <p className="text-[11px] text-muted-foreground">
-                  {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: pl })}
-                </p>
               </div>
-            ))}
-          </div>
+              {/* Preview card */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-3">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Podgląd wizytówki</p>
+                <div className="flex rounded-2xl bg-muted p-0.5 gap-0.5">
+                  {(['basic', 'premium'] as const).map(tab => (
+                    <button key={tab} onClick={() => { if (tab === 'premium' && plan === 'basic') setShowUpgradeBanner(true); setPreviewTab(tab); }}
+                      className={`flex-1 py-1.5 text-xs font-semibold rounded-2xl transition-all ${previewTab === tab ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+                      {tab === 'basic' ? '✦ Basic' : '★ Premium'}
+                      {tab === 'premium' && plan !== 'premium' && <span className="ml-1 text-[9px] font-bold bg-amber-400 text-amber-900 px-1 py-0.5 rounded-full">PRO</span>}
+                    </button>
+                  ))}
+                </div>
+                <div className="relative w-full max-w-xs mx-auto" style={{ aspectRatio: '3/4', maxHeight: 300 }}>
+                  <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-lg">
+                    {coverImageUrl ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 bg-gradient-to-br from-orange-800 to-orange-600" />}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1.5">
+                      {previewTab === 'premium' && logoUrl && <img src={logoUrl} className="w-8 h-8 rounded-full object-cover border-2 border-white/30 mb-1" />}
+                      <p className="text-white font-black text-xl leading-tight">{businessName || 'Nazwa lokalu'}</p>
+                      <p className="text-white/70 text-sm">{[placeCategory, '@trasa'].filter(Boolean).join(' · ')}</p>
+                      {previewTab === 'premium' && description && <p className="text-white/60 text-xs leading-relaxed line-clamp-2">{description}</p>}
+                      {previewTab === 'premium' && eventTitle && (
+                        <div className="inline-flex items-center gap-1 bg-amber-500/80 backdrop-blur-sm rounded-full px-2.5 py-1 text-white text-xs font-semibold">🎉 {eventTitle}</div>
+                      )}
+                    </div>
+                    {previewTab === 'basic' && <div className="absolute top-3 left-3 bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">✦ Basic</div>}
+                    {previewTab === 'premium' && <div className="absolute top-3 left-3 bg-amber-500/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">★ Premium</div>}
+                    {previewTab === 'premium' && plan !== 'premium' && (
+                      <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
+                        <span className="text-2xl">🔒</span>
+                        <p className="text-white font-bold text-sm text-center px-6">Plan Premium</p>
+                        <button onClick={() => setShowUpgradeBanner(true)} className="mt-2 px-4 py-2 rounded-2xl bg-amber-500 text-white text-xs font-bold active:opacity-80">Dowiedz się więcej →</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground text-center">{previewTab === 'basic' ? 'Basic: zdjęcie główne + dane kontaktowe' : 'Premium: logo, galeria, wydarzenia, posty, analityka'}</p>
+              </div>
+              {showUpgradeBanner && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-bold text-sm">★ Przejdź na Premium</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Odblokuj logo, galerię do 10 zdjęć, wydarzenia, posty i pełną analitykę.</p>
+                    </div>
+                    <button onClick={() => setShowUpgradeBanner(false)} className="text-muted-foreground mt-0.5 active:opacity-60"><X className="h-4 w-4" /></button>
+                  </div>
+                  <a href="mailto:kontakt@trasa.app?subject=Upgrade do Premium" className="flex items-center justify-center w-full py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm active:opacity-80">
+                    Napisz do nas → kontakt@trasa.app
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── GALERIA ── */}
+          {activeSection === 'gallery' && (
+            <div className="space-y-5">
+              <div><h2 className="text-lg font-black">Galeria zdjęć</h2><p className="text-sm text-slate-400">Logo, zdjęcie główne i galeria widoczne na Twojej wizytówce.</p></div>
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs font-medium mb-1.5">Logo</p>
+                    <button onClick={() => logoInputRef.current?.click()} className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
+                      {uploading === 'logo' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : logoUrl ? (<><img src={logoUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-5 w-5 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-6 w-6" /><span className="text-[11px]">Dodaj logo</span></div>)}
+                    </button>
+                    <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium mb-1.5">Zdjęcie główne</p>
+                    <button onClick={() => coverInputRef.current?.click()} className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
+                      {uploading === 'cover' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : coverImageUrl ? (<><img src={coverImageUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-5 w-5 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-6 w-6" /><span className="text-[11px]">Dodaj zdjęcie</span></div>)}
+                    </button>
+                    <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs font-medium">Galeria dodatkowa</p>
+                    <p className="text-[11px] text-muted-foreground">{galleryUrls.length}/{MAX_GALLERY}</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {galleryUrls.map((url, idx) => (
+                      <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden bg-muted">
+                        <img src={url} className="w-full h-full object-cover" />
+                        <button onClick={() => removeGalleryPhoto(idx)} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70"><X className="h-3 w-3 text-white" /></button>
+                      </div>
+                    ))}
+                    {galleryUrls.length < MAX_GALLERY && (
+                      <button onClick={() => galleryInputRef.current?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
+                        {uploading === 'gallery' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-6 w-6 text-muted-foreground" />}
+                      </button>
+                    )}
+                  </div>
+                  <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── DANE LOKALU ── */}
+          {activeSection === 'profile' && (
+            <div className="space-y-5">
+              <div><h2 className="text-lg font-black">Dane lokalu</h2><p className="text-sm text-slate-400">Informacje kontaktowe, opis i tagi widoczne w wizytówce.</p></div>
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                <div className="space-y-1">
+                  <Label htmlFor="business_name">Nazwa lokalu</Label>
+                  <Input id="business_name" value={businessName} readOnly disabled className="bg-muted/50 text-muted-foreground cursor-not-allowed" />
+                  <p className="text-[11px] text-muted-foreground">Nazwa ustawiana przy rejestracji — skontaktuj się z nami, by ją zmienić.</p>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="street">Ulica i numer</Label>
+                  <Input id="street" value={street} maxLength={100} onChange={e => { setStreet(e.target.value); setIsDirty(true); }} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="city">Miasto</Label>
+                    <Input id="city" value={city} maxLength={80} onChange={e => { setCity(e.target.value); setIsDirty(true); }} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="postal_code">Kod pocztowy</Label>
+                    <Input id="postal_code" value={postalCode} maxLength={10} onChange={e => { setPostalCode(e.target.value); setIsDirty(true); }} />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="phone">Telefon</Label>
+                  <Input id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="website">Strona WWW</Label>
+                  <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
+                </div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Typ miejsca</p>
+                <div className="flex flex-wrap gap-2">
+                  {PLACE_TAGS.map(tag => {
+                    const active = tags.includes(tag);
+                    return (
+                      <button key={tag} type="button" onClick={() => { setTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag]); setIsDirty(true); }}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${active ? 'bg-primary border-orange-600 text-white' : 'bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground'}`}>
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Opis</p>
+                <div className="space-y-1">
+                  <textarea rows={3} value={description} maxLength={500} onChange={e => { setDescription(e.target.value); setIsDirty(true); }} placeholder="Opisz swój lokal..." className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                  <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── AKTUALNOŚCI ── */}
+          {activeSection === 'posts' && (
+            <div className="space-y-5">
+              <div><h2 className="text-lg font-black">Aktualności</h2><p className="text-sm text-slate-400">Wydarzenia i posty widoczne w Twojej wizytówce.</p></div>
+              {/* Events */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Obecne wydarzenia</p>
+                <p className="text-xs text-muted-foreground -mt-2">Np. happy hour, promocja 1+1, koncert. Widoczne na wizytówce w aplikacji.</p>
+                <div className="space-y-1">
+                  <Label htmlFor="event_title">Tytuł</Label>
+                  <Input id="event_title" value={eventTitle} maxLength={80} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder="np. Drinki 1+1 do 20:00" />
+                  <p className="text-[11px] text-muted-foreground text-right">{eventTitle.length}/80</p>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="event_description">Opis</Label>
+                  <textarea id="event_description" rows={2} value={eventDescription} maxLength={300} onChange={e => { setEventDescription(e.target.value); setIsDirty(true); }} placeholder="Szczegóły wydarzenia..." className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                  <p className="text-[11px] text-muted-foreground text-right">{eventDescription.length}/300</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1"><Label htmlFor="event_starts_at">Od</Label><Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" /></div>
+                  <div className="space-y-1"><Label htmlFor="event_ends_at">Do</Label><Input id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" /></div>
+                </div>
+              </div>
+              {/* Posts */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Posty</p>
+                <p className="text-xs text-muted-foreground -mt-2">Aktualizacje, nowości, zdjęcia — widoczne dla odwiedzających w Twojej wizytówce.</p>
+                <div className="space-y-3 border border-border/60 rounded-2xl p-3">
+                  <textarea rows={3} value={postDescription} maxLength={600} onChange={e => setPostDescription(e.target.value)} placeholder="Co nowego w Twoim lokalu?" className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                  <p className="text-[11px] text-muted-foreground text-right -mt-2">{postDescription.length}/600</p>
+                  {postPhotos.length > 0 && (
+                    <div className="flex gap-2 flex-wrap">
+                      {postPhotos.map((url, idx) => (
+                        <div key={idx} className="relative w-16 h-16 rounded-2xl overflow-hidden">
+                          <img src={url} className="w-full h-full object-cover" />
+                          <button onClick={() => setPostPhotos(prev => prev.filter((_, i) => i !== idx))} className="absolute top-0.5 right-0.5 h-4 w-4 rounded-full bg-black/60 flex items-center justify-center"><X className="h-2.5 w-2.5 text-white" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => postPhotoInputRef.current?.click()} disabled={postPhotos.length >= 4} className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1.5 rounded-full bg-muted active:opacity-60 disabled:opacity-40">
+                      {postPhotoUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+                      Zdjęcia
+                    </button>
+                    <input ref={postPhotoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePostPhotoUpload} />
+                    <button onClick={handleAddPost} disabled={submittingPost || (!postDescription.trim() && postPhotos.length === 0)} className="ml-auto flex items-center gap-1.5 text-xs bg-primary text-white px-3 py-1.5 rounded-full font-semibold active:opacity-70 disabled:opacity-40">
+                      {submittingPost ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                      Opublikuj
+                    </button>
+                  </div>
+                </div>
+                {posts.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">Brak postów — dodaj pierwszy!</p>}
+                <div className="space-y-3">
+                  {posts.map(post => (
+                    <div key={post.id} className="border border-border/50 rounded-2xl p-3 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        {post.description && <p className="text-sm leading-relaxed flex-1">{post.description}</p>}
+                        <button onClick={() => handleDeletePost(post.id)} className="flex-shrink-0 h-6 w-6 rounded-full bg-muted flex items-center justify-center active:opacity-60"><Trash2 className="h-3.5 w-3.5 text-muted-foreground" /></button>
+                      </div>
+                      {post.photo_urls.length > 0 && (
+                        <div className={`grid gap-1.5 ${post.photo_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                          {post.photo_urls.map((url, idx) => <img key={idx} src={url} className="w-full rounded-2xl object-cover aspect-square" />)}
+                        </div>
+                      )}
+                      <p className="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: pl })}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── ANALITYKA ── */}
+          {activeSection === 'analytics' && (
+            <div className="space-y-5">
+              <div><h2 className="text-lg font-black">Analityka</h2><p className="text-sm text-slate-400">Statystyki aktywności Twojego lokalu z ostatnich 30 dni.</p></div>
+              {plan !== 'premium' ? (
+                <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center shadow-sm">
+                  <span className="text-3xl">🔒</span>
+                  <p className="font-bold text-base mt-3">Analityka dostępna w planie Premium</p>
+                  <p className="text-sm text-slate-400 mt-1 mb-4">Odblokuj szczegółowe statystyki kliknięć, wyświetleń i aktywności.</p>
+                  <button onClick={() => setShowUpgradeBanner(true)} className="px-5 py-2.5 rounded-2xl bg-amber-500 text-white text-sm font-bold">Dowiedz się więcej →</button>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {[
+                      { label: 'Wyświetlenia profilu', value: stats.views, desc: 'Ile razy użytkownicy zobaczyli Twój lokal', icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
+                      { label: 'Dodania do trasy', value: stats.onRoutes, desc: 'Ile razy lokal trafił do czyjejś trasy', icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                      { label: 'Kliknięcia kontaktowe', value: stats.clicks, desc: 'Kliknięcia w telefon, stronę lub rezerwację', icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
+                    ].map(({ label, value, desc, icon: Icon, color, bg }) => (
+                      <div key={label} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                        <div className={`h-10 w-10 rounded-xl ${bg} flex items-center justify-center mb-4`}>
+                          <Icon className={`h-5 w-5 ${color}`} />
+                        </div>
+                        <p className="text-3xl font-black text-foreground leading-none mb-1">{value}</p>
+                        <p className="text-sm font-semibold text-foreground mb-1">{label}</p>
+                        <p className="text-xs text-slate-400 leading-relaxed">{desc}</p>
+                        <p className="text-[10px] text-slate-300 mt-2">ostatnie 30 dni</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Ostatnia aktywność</p>
+                    {recentEvents.length === 0 ? (
+                      <p className="text-sm text-slate-400 text-center py-6">Brak aktywności w ostatnim czasie.</p>
+                    ) : (
+                      <div className="flex flex-col divide-y divide-slate-50">
+                        {recentEvents.map((ev, i) => {
+                          const labels: Record<string, { txt: string; dot: string }> = {
+                            view: { txt: 'Wyświetlenie profilu', dot: 'bg-blue-400' },
+                            add_to_route: { txt: 'Dodanie do trasy', dot: 'bg-emerald-400' },
+                            click_phone: { txt: 'Kliknięcie - telefon', dot: 'bg-violet-400' },
+                            click_website: { txt: 'Kliknięcie - strona WWW', dot: 'bg-violet-400' },
+                            click_booking: { txt: 'Kliknięcie - rezerwacja', dot: 'bg-amber-400' },
+                          };
+                          const info = labels[ev.event_type] ?? { txt: ev.event_type, dot: 'bg-slate-300' };
+                          return (
+                            <div key={i} className="flex items-center gap-3 py-3">
+                              <div className={`h-2 w-2 rounded-full shrink-0 ${info.dot}`} />
+                              <p className="text-sm text-slate-600 flex-1">{info.txt}</p>
+                              <p className="text-xs text-slate-400 shrink-0">{formatDistanceToNow(new Date(ev.created_at), { addSuffix: true, locale: pl })}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
 
-      {/* Sticky save bar — only when dirty */}
+      {/* Sticky save bar */}
       {isDirty && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 px-4 pb-safe-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent">
-          <button
-            onClick={handleSave}
-            disabled={saving || uploading !== null}
-            className="w-full max-w-2xl mx-auto flex py-3.5 rounded-2xl bg-primary hover:bg-primary text-white font-semibold text-sm transition-colors disabled:opacity-50 items-center justify-center gap-2"
-          >
+        <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-safe-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent">
+          <button onClick={handleSave} disabled={saving || uploading !== null} className="w-full max-w-2xl mx-auto flex py-3.5 rounded-2xl bg-primary hover:bg-primary text-white font-semibold text-sm transition-colors disabled:opacity-50 items-center justify-center gap-2">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             Zapisz zmiany
           </button>
