@@ -398,10 +398,14 @@ export default function ForBusinessPage() {
 
       {/* ── Nav ── */}
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl">
-        <div className="bg-[#1a1a1a] rounded-full px-5 h-14 flex items-center justify-between shadow-xl">
-          <a href="/" className="flex items-center">
-            <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-          </a>
+        <div className="bg-[#1a1a1a] rounded-full px-5 h-14 flex items-center shadow-xl">
+          {/* Left: logo */}
+          <div className="flex-1 flex items-center">
+            <a href="/" className="flex items-center">
+              <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            </a>
+          </div>
+          {/* Center: section links */}
           <div className="hidden sm:flex items-center gap-5">
             <button
               onClick={() => document.getElementById("pakiety")?.scrollIntoView({ behavior: "smooth" })}
@@ -416,13 +420,20 @@ export default function ForBusinessPage() {
               FAQ
             </button>
           </div>
-          <div className="flex items-center gap-2">
+          {/* Right: actions */}
+          <div className="flex-1 flex items-center justify-end gap-2">
             <a
               href="/"
               className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 transition-all border border-orange-500/30"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
               Dla podróżujących
+            </a>
+            <a
+              href="/auth"
+              className="text-sm text-white/60 hover:text-white/90 transition-colors"
+            >
+              Panel
             </a>
             <a
               href="mailto:trasa.app@gmail.com"

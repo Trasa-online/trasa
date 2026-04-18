@@ -355,36 +355,32 @@ const LandingPage = () => {
 
       {/* ── Nav ── */}
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl">
-        <div className="bg-[#1a1a1a] rounded-full px-5 h-14 flex items-center justify-between shadow-xl">
-          <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center">
-            <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-          </button>
-          <div className="hidden sm:flex items-center gap-6">
-            <button
-              onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}
-              className="text-sm text-white/60 hover:text-white/90 transition-colors"
-            >
+        <div className="bg-[#1a1a1a] rounded-full px-5 h-14 flex items-center shadow-xl">
+          {/* Left: logo */}
+          <div className="flex-1 flex items-center">
+            <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center">
+              <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            </button>
+          </div>
+          {/* Center: section links */}
+          <div className="hidden sm:flex items-center gap-5">
+            <button onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })} className="text-sm text-white/60 hover:text-white/90 transition-colors">
               Jak to działa
             </button>
-            <button
-              onClick={() => document.getElementById("for-whom")?.scrollIntoView({ behavior: "smooth" })}
-              className="text-sm text-white/60 hover:text-white/90 transition-colors"
-            >
+            <button onClick={() => document.getElementById("for-whom")?.scrollIntoView({ behavior: "smooth" })} className="text-sm text-white/60 hover:text-white/90 transition-colors">
               Dla kogo
             </button>
           </div>
-          <div className="flex items-center gap-2">
-            <a
-              href="/dla-firm"
-              className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-all border border-blue-500/30"
-            >
+          {/* Right: actions */}
+          <div className="flex-1 flex items-center justify-end gap-2">
+            <a href="/dla-firm" className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-all border border-blue-500/30">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
               Dla firm
             </a>
-            <button
-              onClick={() => document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" })}
-              className="text-sm font-bold px-4 py-2 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all"
-            >
+            <button onClick={() => navigate("/auth")} className="text-sm text-white/60 hover:text-white/90 transition-colors">
+              Zaloguj
+            </button>
+            <button onClick={() => document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" })} className="text-sm font-bold px-4 py-2 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all">
               Dołącz →
             </button>
           </div>
