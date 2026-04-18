@@ -121,8 +121,9 @@ export default function ForBusinessPage() {
           <div className="flex items-center gap-2">
             <a
               href="/"
-              className="hidden sm:block text-sm text-white/60 hover:text-white/90 transition-colors"
+              className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 transition-all border border-orange-500/30"
             >
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
               Dla podróżujących
             </a>
             <a

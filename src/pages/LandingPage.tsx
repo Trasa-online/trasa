@@ -315,7 +315,7 @@ const LandingPage = () => {
   const STEPS = [
     { num: "01", title: "Wybierz miasto i datę", desc: "Kraków, Gdańsk, Warszawa — wybierz gdzie i kiedy. Reszta sama się ułoży.", anim: <CityAnim /> },
     { num: "02", title: "Przeglądajcie miejsca razem", desc: "Każdy z grupy klika co go kręci. Restauracje, muzea, bary — bez kompromisów w messengerze.", anim: <SwipeAnim /> },
-    { num: "03", title: "Trasa gotowa w minutę", desc: "Na podstawie wspólnych wyborów Trasa układa gotowy plan z kolejnością, mapą i godzinami.", anim: <RouteAnim /> },
+    { num: "03", title: "Trasa gotowa w minutę", desc: "Na podstawie wspólnych wyborów trasa układa gotowy plan z kolejnością, mapą i godzinami.", anim: <RouteAnim /> },
   ];
 
   const FOR_WHOM = [
@@ -382,16 +382,15 @@ const LandingPage = () => {
                 style={{ fontFamily: "'Baloo 2', 'Inter', sans-serif", letterSpacing: "-0.02em", textWrap: "balance" } as React.CSSProperties}
               >
                 Speed dating<br />
-                <span className="bg-gradient-to-r from-[#F4A259] to-[#F9662B] bg-clip-text text-transparent">z&nbsp;miastem.</span>
+                <span className="bg-gradient-to-r from-[#F4A259] to-[#F9662B] bg-clip-text text-transparent">z&nbsp;miastem</span>
               </h1>
               <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-[48ch]">
-                Planujecie trip w grupie? Każdy klika co go kręci — Trasa układa gotową trasę.
-                Zero messengerów, zero kompromisów na wyczerpanie.
+                Wyjazd z grupą kojarzy Ci się ze stresem i wiecznymi kłótniami na messengerze? Z trasą całą organizację macie z głowy.
               </p>
               <div id="cta-hero">
                 <EmailCapture large />
               </div>
-              <p className="text-xs text-muted-foreground mt-4">Bez kart kredytowych · Piszemy gdy będziemy gotowi</p>
+              <p className="text-xs text-muted-foreground mt-4">Konto jest darmowe!</p>
             </div>
 
             {/* Right: phone mockup */}
