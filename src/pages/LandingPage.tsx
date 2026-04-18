@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Heart, Zap, Check } from "lucide-react";
+import { Users, Heart, Zap, Check, Castle, GlassWater, Palette, TreePine, Pizza, Star, MapPin } from "lucide-react";
 
-// ─── Scroll reveal hook (threshold=0 → fires on first pixel) ─────────────────
+// ─── Scroll reveal hook ───────────────────────────────────────────────────────
 
 function useFadeIn() {
   const ref = useRef<HTMLDivElement>(null);
@@ -37,8 +37,8 @@ function CityAnim() {
     return () => clearInterval(t);
   }, []);
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-5 w-52 mx-auto">
-      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-center mb-3">
+    <div className="bg-white rounded-2xl shadow-lg shadow-orange-100/60 border border-slate-100 p-5 w-52 mx-auto">
+      <p className="text-[10px] font-semibold text-muted-foreground text-center mb-3 tracking-wide">
         Wybierz miasto
       </p>
       <div className="h-10 overflow-hidden flex items-center justify-center">
@@ -70,11 +70,11 @@ function CityAnim() {
 // ─── Step 2: swiping place cards ─────────────────────────────────────────────
 
 const PLACES = [
-  { name: "Wawel", emoji: "🏰", cat: "Zabytek" },
-  { name: "Kazimierz", emoji: "🍷", cat: "Dzielnica" },
-  { name: "MOCAK", emoji: "🖼️", cat: "Muzeum" },
-  { name: "Planty", emoji: "🌳", cat: "Park" },
-  { name: "Nolio", emoji: "🍕", cat: "Restauracja" },
+  { name: "Wawel", Icon: Castle, cat: "Zabytek", color: "from-amber-50 to-orange-100" },
+  { name: "Kazimierz", Icon: GlassWater, cat: "Dzielnica", color: "from-violet-50 to-purple-100" },
+  { name: "MOCAK", Icon: Palette, cat: "Muzeum", color: "from-sky-50 to-blue-100" },
+  { name: "Planty", Icon: TreePine, cat: "Park", color: "from-green-50 to-emerald-100" },
+  { name: "Nolio", Icon: Pizza, cat: "Restauracja", color: "from-red-50 to-rose-100" },
 ];
 
 function SwipeAnim() {
@@ -89,19 +89,20 @@ function SwipeAnim() {
     return () => clearInterval(t);
   }, []);
   const p = PLACES[idx];
+  const PlaceIcon = p.Icon;
   return (
     <div className="relative w-52 h-40 mx-auto">
       <div className="absolute inset-x-3 inset-y-3 bg-white rounded-2xl shadow-sm border border-slate-100 opacity-50 scale-95" />
       <div
-        className="absolute inset-0 bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col overflow-hidden"
+        className="absolute inset-0 bg-white rounded-2xl shadow-lg shadow-orange-100/50 border border-slate-100 flex flex-col overflow-hidden"
         style={{
           transition: "transform 0.5s ease, opacity 0.5s ease",
           transform: action === "like" ? "translateX(56px) rotate(7deg)" : action === "skip" ? "translateX(-56px) rotate(-7deg)" : "none",
           opacity: action ? 0 : 1,
         }}
       >
-        <div className="flex-1 bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center text-4xl">
-          {p.emoji}
+        <div className={`flex-1 bg-gradient-to-br ${p.color} flex items-center justify-center`}>
+          <PlaceIcon className="h-9 w-9 text-orange-500/70" strokeWidth={1.5} />
         </div>
         <div className="px-3 py-2 flex items-center justify-between">
           <div>
@@ -109,7 +110,9 @@ function SwipeAnim() {
             <p className="text-[10px] text-muted-foreground">{p.cat}</p>
           </div>
           <div className="flex gap-1.5">
-            <div className="h-7 w-7 rounded-full border-2 border-slate-200 flex items-center justify-center text-xs text-muted-foreground">✕</div>
+            <div className="h-7 w-7 rounded-full border-2 border-slate-200 flex items-center justify-center text-muted-foreground">
+              <span className="text-[10px] font-bold">✕</span>
+            </div>
             <div className="h-7 w-7 rounded-full border-2 border-emerald-200 flex items-center justify-center">
               <Heart className="h-3.5 w-3.5 text-emerald-500" />
             </div>
@@ -117,13 +120,13 @@ function SwipeAnim() {
         </div>
       </div>
       {action === "like" && (
-        <div className="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full -rotate-12 animate-in zoom-in duration-150 shadow">
-          LUBIĘ ❤
+        <div className="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full -rotate-12 animate-in zoom-in duration-150 shadow flex items-center gap-1">
+          LUBIĘ <Heart className="h-2.5 w-2.5 fill-white" />
         </div>
       )}
       {action === "skip" && (
         <div className="absolute top-2 right-2 bg-slate-400 text-white text-[10px] font-black px-2 py-0.5 rounded-full rotate-12 animate-in zoom-in duration-150 shadow">
-          SKIP ✕
+          POMIŃ
         </div>
       )}
     </div>
@@ -148,7 +151,7 @@ function RouteAnim() {
     return () => clearTimeout(t);
   }, []);
   return (
-    <div className="w-52 h-40 mx-auto bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden relative">
+    <div className="w-52 h-40 mx-auto bg-white rounded-2xl shadow-lg shadow-orange-100/50 border border-slate-100 overflow-hidden relative">
       <div
         className="absolute inset-0 opacity-[0.07]"
         style={{
@@ -210,15 +213,15 @@ function EmailCapture({ large = false }: { large?: boolean }) {
     setStatus("done");
   };
   if (status === "done") return (
-    <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-orange-50 border border-orange-200 max-w-sm mx-auto">
+    <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-orange-50 border border-orange-200 max-w-sm mx-auto sm:mx-0">
       <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shrink-0">
         <Check className="h-4 w-4 text-white" />
       </div>
-      <p className="text-sm font-semibold text-foreground">Dzięki! Niedługo wyślemy Ci dostęp na maila 🧡</p>
+      <p className="text-sm font-semibold text-foreground">Dzięki! Niedługo wyślemy Ci dostęp na maila.</p>
     </div>
   );
   return (
-    <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2.5 w-full max-w-sm mx-auto">
+    <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2.5 w-full max-w-sm mx-auto sm:mx-0">
       <input
         type="email" required value={email} onChange={e => setEmail(e.target.value)}
         placeholder="twoj@email.pl"
@@ -226,7 +229,7 @@ function EmailCapture({ large = false }: { large?: boolean }) {
       />
       <button
         type="submit" disabled={status === "loading"}
-        className={`rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold whitespace-nowrap active:scale-95 transition-transform shadow-md shadow-orange-200 ${large ? "px-7 py-4 text-base" : "px-5 py-3 text-sm"}`}
+        className={`rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold whitespace-nowrap transition-all shadow-md shadow-orange-200 hover:shadow-lg hover:shadow-orange-200/70 hover:opacity-95 active:scale-[0.98] active:translate-y-px ${large ? "px-7 py-4 text-base" : "px-5 py-3 text-sm"}`}
       >
         {status === "loading" ? "…" : "Dołącz do listy →"}
       </button>
@@ -253,6 +256,54 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
   );
 }
 
+// ─── Phone mockup ─────────────────────────────────────────────────────────────
+
+function PhoneMockup() {
+  return (
+    <div className="relative w-60 h-[460px] mx-auto">
+      {/* frame */}
+      <div className="absolute inset-0 rounded-[3rem] bg-foreground shadow-2xl shadow-orange-400/10" />
+      <div className="absolute inset-[3px] rounded-[2.8rem] bg-white overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-6 bg-foreground rounded-b-2xl z-10" />
+        <div className="absolute inset-0 flex flex-col pt-7">
+          <div className="px-4 py-2 flex items-center gap-2 shrink-0">
+            <div className="h-5 w-5 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            <span className="font-black text-sm">trasa</span>
+            <span className="ml-auto text-[9px] text-muted-foreground font-semibold">Kraków · 14 cze</span>
+          </div>
+          <div className="mx-3 flex-1 bg-gradient-to-b from-amber-100 to-orange-200 rounded-2xl flex flex-col justify-end overflow-hidden">
+            <div className="flex items-center justify-center py-6">
+              <Castle className="h-14 w-14 text-orange-500/50" strokeWidth={1} />
+            </div>
+            <div className="bg-black/40 px-3 py-2.5">
+              <p className="text-white font-bold text-xs">Zamek na Wawelu</p>
+              <p className="text-white/60 text-[9px]">Zabytek · Kraków</p>
+            </div>
+          </div>
+          <div className="flex justify-center gap-5 py-3 shrink-0">
+            <div className="h-11 w-11 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center text-slate-400 font-bold text-base">✕</div>
+            <div className="h-14 w-14 rounded-full flex items-center justify-center shadow-lg shadow-orange-300/50" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}>
+              <Heart className="h-6 w-6 text-white fill-white" />
+            </div>
+            <div className="h-11 w-11 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center">
+              <Star className="h-4.5 w-4.5 text-amber-400" />
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* notification bubbles */}
+      <div className="absolute -left-28 top-20 hidden sm:flex bg-white rounded-2xl shadow-lg px-3 py-2 items-center gap-1.5 animate-bounce" style={{ animationDuration: "3s" }}>
+        <Heart className="h-3.5 w-3.5 text-red-400 fill-red-400" />
+        <p className="text-xs font-bold whitespace-nowrap">Marta lubi to!</p>
+      </div>
+      <div className="absolute -right-24 top-44 hidden sm:flex bg-white rounded-2xl shadow-lg px-3 py-2 items-center gap-1.5" style={{ animation: "bounce 3s 1.5s infinite" }}>
+        <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+        <p className="text-xs font-bold whitespace-nowrap">Piotr: must-see</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Landing page ──────────────────────────────────────────────────────────────
 
 const LandingPage = () => {
@@ -268,14 +319,13 @@ const LandingPage = () => {
   ];
 
   const FOR_WHOM = [
-    { icon: <Users className="h-6 w-6 text-orange-600" />, title: "Grupy przyjaciół", desc: "Każdy chce coś innego? Trasa pogodzi wszystkich bez godzin negocjacji." },
+    { icon: <Users className="h-7 w-7 text-orange-600" />, title: "Grupy przyjaciół", desc: "Każdy chce coś innego? Trasa pogodzi wszystkich bez godzin negocjacji w grupce." },
     { icon: <Heart className="h-6 w-6 text-orange-600" />, title: "Pary", desc: "Weekendowy wypad we dwoje — znajdźcie miejsca które kręcą was oboje." },
     { icon: <Zap className="h-6 w-6 text-orange-600" />, title: "Spontaniczne wypady", desc: "Piątek wieczór, sobota wolna. Za 5 minut macie plan na cały dzień." },
   ];
 
-
   return (
-    <div className="min-h-screen bg-[#FEFEFE] overflow-x-hidden">
+    <div className="min-h-[100dvh] bg-[#FEFEFE] overflow-x-hidden">
 
       {/* ── Nav ── */}
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl">
@@ -308,77 +358,72 @@ const LandingPage = () => {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="max-w-5xl mx-auto px-5 pt-28 pb-16 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 text-xs font-bold mb-8">
-          <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
-          Early access — dołącz do listy oczekujących
-        </div>
-        <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-foreground leading-[1.05] mb-6" style={{ fontFamily: "'Baloo 2', 'Inter', sans-serif" }}>
-          Speed dating<br />
-          <span className="bg-gradient-to-r from-[#F4A259] to-[#F9662B] bg-clip-text text-transparent">z&nbsp;miastem.</span>
-        </h1>
-        <p className="text-lg sm:text-xl text-muted-foreground max-w-lg mx-auto mb-10 leading-relaxed">
-          Planujecie trip w grupie? Każdy klika co go kręci — Trasa układa gotową trasę.
-          Zero messengerów, zero kompromisów na wyczerpanie.
-        </p>
-        <div id="cta-hero">
-          <EmailCapture large />
-        </div>
-        <p className="text-xs text-muted-foreground mt-4">Bez kart kredytowych · Piszemy gdy będziemy gotowi</p>
+      <section className="min-h-[100dvh] flex items-center">
+        <div className="max-w-5xl mx-auto px-5 pt-28 pb-16 w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-8 items-center">
 
-        {/* Phone mockup */}
-        <div className="mt-16 relative flex justify-center select-none">
-          <div className="relative w-60 h-[460px]">
-            <div className="absolute inset-0 rounded-[3rem] bg-foreground shadow-2xl shadow-black/25" />
-            <div className="absolute inset-[3px] rounded-[2.8rem] bg-white overflow-hidden">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-6 bg-foreground rounded-b-2xl z-10" />
-              <div className="absolute inset-0 flex flex-col pt-7">
-                <div className="px-4 py-2 flex items-center gap-2 shrink-0">
-                  <div className="h-5 w-5 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-                  <span className="font-black text-sm">trasa</span>
-                  <span className="ml-auto text-[9px] text-muted-foreground font-semibold">Kraków · 14 cze</span>
-                </div>
-                <div className="mx-3 flex-1 bg-gradient-to-b from-amber-100 to-orange-200 rounded-2xl flex flex-col justify-end overflow-hidden">
-                  <div className="text-center text-5xl py-6">🏰</div>
-                  <div className="bg-black/40 px-3 py-2.5">
-                    <p className="text-white font-bold text-xs">Zamek na Wawelu</p>
-                    <p className="text-white/60 text-[9px]">Zabytek · Kraków</p>
-                  </div>
-                </div>
-                <div className="flex justify-center gap-5 py-3 shrink-0">
-                  <div className="h-11 w-11 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center text-base">✕</div>
-                  <div className="h-14 w-14 rounded-full flex items-center justify-center shadow-lg shadow-orange-300/50" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}>
-                    <Heart className="h-6 w-6 text-white fill-white" />
-                  </div>
-                  <div className="h-11 w-11 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center text-base">⭐</div>
-                </div>
+            {/* Left: text */}
+            <div>
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 text-xs font-bold mb-8">
+                <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+                Early access — dołącz do listy oczekujących
+              </div>
+              <h1
+                className="text-5xl sm:text-6xl md:text-7xl font-black text-foreground leading-[1.05] mb-6"
+                style={{ fontFamily: "'Baloo 2', 'Inter', sans-serif", letterSpacing: "-0.02em", textWrap: "balance" } as React.CSSProperties}
+              >
+                Speed dating<br />
+                <span className="bg-gradient-to-r from-[#F4A259] to-[#F9662B] bg-clip-text text-transparent">z&nbsp;miastem.</span>
+              </h1>
+              <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-[48ch]">
+                Planujecie trip w grupie? Każdy klika co go kręci — Trasa układa gotową trasę.
+                Zero messengerów, zero kompromisów na wyczerpanie.
+              </p>
+              <div id="cta-hero">
+                <EmailCapture large />
+              </div>
+              <p className="text-xs text-muted-foreground mt-4">Bez kart kredytowych · Piszemy gdy będziemy gotowi</p>
+            </div>
+
+            {/* Right: phone mockup */}
+            <div className="flex justify-center md:justify-end mt-8 md:mt-0">
+              <div className="relative">
+                <PhoneMockup />
               </div>
             </div>
-          </div>
-          <div className="absolute left-[calc(50%-148px)] top-20 bg-white rounded-2xl shadow-xl px-3 py-2 flex items-center gap-1.5 animate-bounce" style={{ animationDuration: "3s" }}>
-            <span>❤️</span><p className="text-xs font-bold">Marta lubi to!</p>
-          </div>
-          <div className="absolute right-[calc(50%-148px)] top-44 bg-white rounded-2xl shadow-xl px-3 py-2 flex items-center gap-1.5" style={{ animation: "bounce 3s 1.5s infinite" }}>
-            <span>⭐</span><p className="text-xs font-bold">Piotr: must-see</p>
           </div>
         </div>
       </section>
 
       {/* ── Jak to działa ── */}
-      <section id="how-it-works" className="bg-slate-50 py-20 px-5">
+      <section id="how-it-works" className="bg-slate-50 py-24 px-5">
         <div className="max-w-5xl mx-auto">
-          <FadeIn className="text-center mb-14">
+          <FadeIn className="text-center mb-16">
             <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">Jak to działa</p>
-            <h2 className="text-3xl sm:text-4xl font-black text-foreground">Od pomysłu do trasy w 3 krokach</h2>
+            <h2
+              className="text-3xl sm:text-4xl font-black text-foreground"
+              style={{ textWrap: "balance" } as React.CSSProperties}
+            >
+              Od pomysłu do trasy w 3 krokach
+            </h2>
           </FadeIn>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          <div className="flex flex-col gap-20">
             {STEPS.map((step, i) => (
-              <FadeIn key={i} delay={i * 120} className="flex flex-col items-center text-center gap-5">
-                <div className="w-full">{step.anim}</div>
-                <div>
-                  <p className="text-[10px] font-black text-orange-400 tracking-widest mb-1">{step.num}</p>
-                  <h3 className="text-lg font-black text-foreground mb-2">{step.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+              <FadeIn key={i} delay={i * 80}>
+                <div className={`grid grid-cols-1 md:grid-cols-2 gap-12 items-center`}>
+                  <div className={`flex justify-center ${i % 2 === 1 ? "md:order-2" : ""}`}>
+                    {step.anim}
+                  </div>
+                  <div className={`${i % 2 === 1 ? "md:order-1" : ""}`}>
+                    <p className="text-[10px] font-black text-orange-400 tracking-widest mb-2">{step.num}</p>
+                    <h3
+                      className="text-2xl font-black text-foreground mb-3"
+                      style={{ textWrap: "balance" } as React.CSSProperties}
+                    >
+                      {step.title}
+                    </h3>
+                    <p className="text-base text-muted-foreground leading-relaxed max-w-[40ch]">{step.desc}</p>
+                  </div>
                 </div>
               </FadeIn>
             ))}
@@ -387,17 +432,37 @@ const LandingPage = () => {
       </section>
 
       {/* ── Dla kogo ── */}
-      <section id="for-whom" className="py-20 px-5">
+      <section id="for-whom" className="py-24 px-5">
         <div className="max-w-5xl mx-auto">
           <FadeIn className="text-center mb-12">
             <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">Dla kogo</p>
-            <h2 className="text-3xl sm:text-4xl font-black text-foreground">Trasa działa dla każdego tripu</h2>
+            <h2
+              className="text-3xl sm:text-4xl font-black text-foreground"
+              style={{ textWrap: "balance" } as React.CSSProperties}
+            >
+              Trasa działa dla każdego tripu
+            </h2>
           </FadeIn>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            {FOR_WHOM.map((item, i) => (
-              <FadeIn key={i} delay={i * 100}>
-                <div className="flex flex-col gap-4 p-6 rounded-3xl bg-card border border-border/40 shadow-sm h-full">
-                  <div className="h-12 w-12 rounded-2xl bg-orange-50 flex items-center justify-center">{item.icon}</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Featured card */}
+            <FadeIn className="md:row-span-2">
+              <div className="flex flex-col gap-5 p-8 rounded-3xl bg-gradient-to-br from-orange-50 via-amber-50 to-[#FEFEFE] border border-orange-100 shadow-sm h-full min-h-[260px] transition-shadow hover:shadow-md hover:shadow-orange-100/60">
+                <div className="h-14 w-14 rounded-2xl bg-white/80 shadow-sm border border-orange-100/50 flex items-center justify-center">
+                  {FOR_WHOM[0].icon}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-black text-xl text-foreground mb-2">{FOR_WHOM[0].title}</h3>
+                  <p className="text-base text-muted-foreground leading-relaxed max-w-[36ch]">{FOR_WHOM[0].desc}</p>
+                </div>
+              </div>
+            </FadeIn>
+            {/* Smaller cards */}
+            {FOR_WHOM.slice(1).map((item, i) => (
+              <FadeIn key={i} delay={(i + 1) * 100}>
+                <div className="flex gap-4 p-6 rounded-3xl bg-card border border-border/40 shadow-sm h-full items-start transition-shadow hover:shadow-md hover:shadow-orange-100/40">
+                  <div className="h-12 w-12 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0">
+                    {item.icon}
+                  </div>
                   <div>
                     <h3 className="font-black text-base text-foreground mb-1">{item.title}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
@@ -410,11 +475,16 @@ const LandingPage = () => {
       </section>
 
       {/* ── Founders ── */}
-      <section className="bg-slate-50 py-20 px-5">
+      <section className="bg-slate-50 py-24 px-5">
         <div className="max-w-3xl mx-auto">
           <FadeIn className="text-center mb-12">
             <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">O twórcach</p>
-            <h2 className="text-3xl sm:text-4xl font-black text-foreground">Cześć, jesteśmy Bart i Nat</h2>
+            <h2
+              className="text-3xl sm:text-4xl font-black text-foreground"
+              style={{ textWrap: "balance" } as React.CSSProperties}
+            >
+              Cześć, jesteśmy Bart i Nat
+            </h2>
           </FadeIn>
           <FadeIn>
             <div className="flex flex-col sm:flex-row gap-8 items-center sm:items-start bg-white rounded-3xl p-8 shadow-sm border border-border/30">
@@ -433,7 +503,7 @@ const LandingPage = () => {
                 </p>
                 <p className="text-base text-foreground leading-relaxed">
                   Rozumiemy, że czasami ciężko jest ustalić co chcecie robić podczas szybkiego tripu —
-                  dlatego <span className="font-bold text-orange-600">Trasa pomaga, żeby wyjazd wyszedł poza messengera!</span>
+                  dlatego <span className="font-bold text-orange-600">Trasa pomaga, żeby wyjazd wyszedł poza messengera.</span>
                 </p>
               </div>
             </div>
@@ -441,16 +511,32 @@ const LandingPage = () => {
         </div>
       </section>
 
-
       {/* ── CTA końcowe ── */}
-      <section className="py-24 px-5 text-center" style={{ background: "linear-gradient(135deg, #fff7ed 0%, #fef3c7 60%, #fff7ed 100%)" }}>
-        <FadeIn className="max-w-xl mx-auto">
+      <section className="py-28 px-5 text-center relative overflow-hidden">
+        {/* Gradient background with depth */}
+        <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 100%, #fff7ed 0%, #fef3c7 40%, #FEFEFE 100%)" }} />
+        {/* Subtle grain overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{
+            backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+            backgroundSize: "128px 128px",
+          }}
+        />
+        <FadeIn className="max-w-xl mx-auto relative">
           <div className="flex justify-center mb-6">
-            <div className="h-16 w-16 rounded-full shadow-xl" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            <div className="h-16 w-16 rounded-full shadow-xl shadow-orange-300/30" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
           </div>
-          <h2 className="text-3xl sm:text-4xl font-black text-foreground mb-4">Zacznij planować inaczej</h2>
-          <p className="text-base text-muted-foreground mb-8">Dołącz do listy i bądź pierwszą osobą która wypróbuje Trasę.</p>
-          <EmailCapture large />
+          <h2
+            className="text-3xl sm:text-4xl font-black text-foreground mb-4"
+            style={{ textWrap: "balance" } as React.CSSProperties}
+          >
+            Zacznij planować inaczej
+          </h2>
+          <p className="text-base text-muted-foreground mb-8 max-w-[40ch] mx-auto">Dołącz do listy i bądź pierwszą osobą która wypróbuje Trasę.</p>
+          <div className="flex justify-center">
+            <EmailCapture large />
+          </div>
         </FadeIn>
       </section>
 
