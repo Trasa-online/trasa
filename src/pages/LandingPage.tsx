@@ -460,7 +460,7 @@ const LandingPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-8 items-center">
 
             {/* Left: text */}
-            <div>
+            <div className="text-center md:text-left">
               <div className="hidden sm:inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 text-xs font-bold mb-8">
                 <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
                 Dołącz do trasy
@@ -472,10 +472,10 @@ const LandingPage = () => {
                 Speed dating<br />
                 <span className="bg-gradient-to-r from-[#F4A259] to-[#F9662B] bg-clip-text text-transparent">z&nbsp;miastem</span>
               </h1>
-              <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-[48ch]">
+              <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-[48ch] mx-auto md:mx-0">
                 Wyjazd z grupą kojarzy Ci się ze stresem i wiecznymi kłótniami na messengerze? Z trasą całą organizację macie z głowy.
               </p>
-              <div id="cta-hero" className="flex flex-col items-center sm:items-start gap-4">
+              <div id="cta-hero" className="flex flex-col items-center md:items-start gap-4">
                 <button
                   onClick={() => navigate("/auth")}
                   className="rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold px-7 py-4 text-base shadow-md shadow-orange-200 hover:shadow-lg hover:shadow-orange-200/70 hover:opacity-95 active:scale-[0.98] active:translate-y-px transition-all"

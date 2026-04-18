@@ -39,7 +39,7 @@ const TIERS = [
     name: "Basic",
     subtitle: "Zaistniej na mapie",
     price: "Bezpłatny",
-    cta: "Napisz do nas",
+    cta: null,
     highlight: false,
     danger: false,
     features: [
@@ -55,7 +55,7 @@ const TIERS = [
     name: "Premium",
     subtitle: "Pełna kontrola wizerunku",
     price: "Wycena indywidualna",
-    cta: "Umów rozmowę",
+    cta: "Dołączam",
     highlight: true,
     danger: false,
     features: [
@@ -574,9 +574,9 @@ export default function ForBusinessPage() {
               Wybierz jak chcesz być widoczny
             </h2>
           </FadeIn>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
             {TIERS.map((tier, i) => (
-              <FadeIn key={i} delay={i * 80}>
+              <FadeIn key={i} delay={i * 80} className="h-full">
                 <div className={`rounded-3xl p-6 h-full flex flex-col ${
                   tier.highlight
                     ? "bg-blue-600 text-white shadow-2xl shadow-blue-200 ring-2 ring-blue-400 ring-offset-2"
@@ -612,7 +612,7 @@ export default function ForBusinessPage() {
                   </ul>
                   {tier.cta && (
                     <a
-                      href="mailto:trasa.app@gmail.com"
+                      href={tier.highlight ? "/auth?business=true" : "mailto:trasa.app@gmail.com"}
                       className={`mt-auto text-center text-sm font-bold px-4 py-3 rounded-2xl transition-all active:scale-95 ${
                         tier.highlight
                           ? "bg-white text-blue-600 hover:bg-blue-50"
