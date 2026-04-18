@@ -387,7 +387,7 @@ const LandingPage = () => {
               style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)", color: "white" }}
             >
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Wypróbuj</span>
+              <span>Testuję!</span>
             </button>
             <button onClick={() => navigate("/auth")} className="hidden sm:flex items-center text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/50 hover:text-white transition-all whitespace-nowrap">
               Zaloguj się
@@ -419,7 +419,7 @@ const LandingPage = () => {
               <div className="mx-5 my-1 border-t border-white/10" />
               <button onClick={() => { setTrialOpen(true); setMenuOpen(false); }} className="px-5 py-3 text-sm font-bold text-white/80 hover:text-white hover:bg-white/5 text-left flex items-center gap-2 transition-colors">
                 <Sparkles className="h-3.5 w-3.5 text-orange-400" />
-                Wypróbuj demo
+                Testuję!
               </button>
               <button onClick={() => { navigate("/auth"); setMenuOpen(false); }} className="px-5 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 text-left transition-colors">
                 Zaloguj się

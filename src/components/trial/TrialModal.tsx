@@ -357,7 +357,7 @@ export default function TrialModal({ open, onClose }: TrialModalProps) {
             </div>
 
             {/* Card stack */}
-            <div className="flex-1 relative mx-5">
+            <div className="relative mx-5" style={{ height: 380 }}>
               {isDone ? (
                 <div className="h-full flex flex-col items-center justify-center gap-3 text-center">
                   <div className="text-5xl">🎉</div>
