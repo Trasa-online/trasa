@@ -112,7 +112,7 @@ function SoloTripCard({ route, onDelete }: { route: any; onDelete: () => void })
       {/* Action buttons */}
       <div className="px-4 pb-4 pt-1 flex gap-2">
         <button
-          onClick={() => navigate(`/day-plan?id=${route.id}`)}
+          onClick={() => navigate(`/edit-plan?route=${route.id}`)}
           className="flex-1 py-2.5 rounded-full bg-foreground text-background font-bold text-xs active:scale-95 transition-transform"
         >
           Podejrzyj plan →

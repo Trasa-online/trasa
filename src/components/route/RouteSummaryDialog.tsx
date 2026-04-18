@@ -99,6 +99,7 @@ const RouteSummaryDialog = ({
 
     try {
       let folderId: string | null = null;
+      let firstRouteId: string | null = null;
 
       if (days.length > 1) {
         const { data: folder, error: folderError } = await supabase
@@ -146,6 +147,7 @@ const RouteSummaryDialog = ({
           .single();
 
         if (routeError) throw routeError;
+        if (!firstRouteId) firstRouteId = route.id;
 
         if ((day.pins?.length ?? 0) > 0) {
           const { error: pinsError } = await supabase.from("pins").insert(
@@ -233,7 +235,8 @@ const RouteSummaryDialog = ({
 
       toast.success("Trasa zapisana! 🎉", { description: plan.city });
       onOpenChange(false);
-      navigate("/");
+      // Solo route: open the plan directly; group route: go home (session is already handled)
+      navigate((!groupSession && firstRouteId) ? `/edit-plan?route=${firstRouteId}` : "/");
     } catch (error) {
       console.error("Save error:", error);
       toast.error("Błąd zapisu", { description: "Spróbuj ponownie." });
