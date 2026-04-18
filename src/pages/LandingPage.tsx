@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Heart, Zap, Check, Castle, GlassWater, Palette, TreePine, Pizza, Star, MapPin, Menu, X, Sparkles } from "lucide-react";
+import { Users, Heart, Zap, Check, Castle, GlassWater, Palette, TreePine, Pizza, Star, MapPin, Menu, X, Sparkles, User } from "lucide-react";
 import TrialModal from "@/components/trial/TrialModal";
 
 // ─── Scroll reveal hook ───────────────────────────────────────────────────────
@@ -456,9 +456,12 @@ const LandingPage = () => {
                 <Sparkles className="h-3.5 w-3.5 text-orange-400" />
                 Wypróbuj bez konta
               </button>
-              <button onClick={() => { navigate("/auth"); setMenuOpen(false); }} className="px-5 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 text-left transition-colors">
-                Zaloguj się
-              </button>
+              <div className="px-5 pb-3 pt-1">
+                <button onClick={() => { navigate("/auth"); setMenuOpen(false); }} className="w-full flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-full border border-white/25 text-white/80 hover:border-white/50 hover:text-white active:scale-95 transition-all">
+                  <User className="h-4 w-4" />
+                  Zaloguj się
+                </button>
+              </div>
               <div className="px-5 py-3">
                 <button onClick={() => { document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="w-full text-sm font-bold px-4 py-2.5 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all">
                   Dołącz →
