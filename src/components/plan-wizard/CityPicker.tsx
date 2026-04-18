@@ -177,7 +177,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
       </div>
 
       {/* Drum picker */}
-      <div className="flex-1 flex flex-col items-center justify-center">
+      <div className="flex flex-col items-center justify-center py-4">
         <div className="relative w-full" style={{ height: CONTAINER_HEIGHT }}>
           <div
             className="absolute left-0 right-0 pointer-events-none z-10"
@@ -225,7 +225,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
       </div>
 
       {/* CTA */}
-      <div className="px-5 pb-safe-4 pb-6">
+      <div className="px-5 pb-[max(24px,env(safe-area-inset-bottom))]">
         <Button
           onClick={() => !isComingSoon && onConfirm(selectedCity.name)}
           disabled={isComingSoon}
