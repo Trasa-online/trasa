@@ -201,6 +201,104 @@ export default function ForBusinessPage() {
             Daj się odkryć →
           </a>
           <p className="text-xs text-muted-foreground mt-4">Odpisujemy w ciągu 24h</p>
+
+          {/* ── Dashboard mockup ── */}
+          <div className="mt-16 text-left">
+            <FadeIn>
+              <div className="rounded-2xl overflow-hidden shadow-2xl shadow-blue-100/60 border border-slate-200">
+                {/* Browser bar */}
+                <div className="bg-slate-100 px-4 py-2.5 flex items-center gap-3 border-b border-slate-200">
+                  <div className="flex gap-1.5">
+                    <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
+                  </div>
+                  <div className="flex-1 bg-white rounded-md px-3 py-1 text-xs text-slate-400 font-mono">
+                    trasa.travel/biznes
+                  </div>
+                </div>
+                {/* App shell */}
+                <div className="flex bg-white" style={{ height: 420 }}>
+                  {/* Sidebar */}
+                  <div className="w-48 shrink-0 border-r border-slate-100 bg-white flex flex-col py-5 px-3 gap-1">
+                    <div className="flex items-center gap-2 px-2 mb-5">
+                      <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                      <span className="font-black text-sm text-foreground">trasa biznes</span>
+                    </div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-1">Menu</p>
+                    {[
+                      { label: "Przegląd", active: true },
+                      { label: "Galeria zdjęć", active: false },
+                      { label: "Aktualności", active: false },
+                      { label: "Analityka", active: false },
+                    ].map((item) => (
+                      <div key={item.label} className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs font-semibold ${item.active ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}>
+                        <div className={`h-1.5 w-1.5 rounded-full ${item.active ? "bg-blue-500" : "bg-slate-300"}`} />
+                        {item.label}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Main */}
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    {/* Top bar */}
+                    <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-100">
+                      <div className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 w-52">
+                        <div className="h-3 w-3 text-slate-300">⌕</div>
+                        <span className="text-xs text-slate-400">Szukaj...</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">BK</div>
+                        <div>
+                          <p className="text-xs font-bold text-foreground leading-none">Bulaj Kraków</p>
+                          <p className="text-[10px] text-slate-400">właściciel</p>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 px-6 py-5 overflow-hidden">
+                      <div className="flex items-center justify-between mb-5">
+                        <div>
+                          <h3 className="text-base font-black text-foreground">Przegląd</h3>
+                          <p className="text-xs text-slate-400">Witaj! Oto co dzieje się dziś z Twoim lokalem.</p>
+                        </div>
+                        <div className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold">+ Dodaj aktualność</div>
+                      </div>
+                      {/* Stats row */}
+                      <div className="grid grid-cols-4 gap-3 mb-5">
+                        {[
+                          { label: "Wyświetlenia profilu", val: "1 284", delta: "+12%", up: true },
+                          { label: "Dodania do trasy", val: "347", delta: "+8%", up: true },
+                          { label: "Kliknięcia w szczegóły", val: "89", delta: "-2%", up: false },
+                          { label: "Średnia ocena", val: "4.7 ★", delta: "+0.2", up: true },
+                        ].map((s) => (
+                          <div key={s.label} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1">{s.label}</p>
+                            <p className="text-lg font-black text-foreground leading-none mb-1">{s.val}</p>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${s.up ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}>{s.delta} ostatni mies.</span>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Recent activity */}
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Ostatnia aktywność</p>
+                      <div className="flex flex-col gap-2">
+                        {[
+                          { txt: "Marta K. dodała Twój lokal do trasy na Kraków", time: "2 min temu", dot: "bg-blue-400" },
+                          { txt: "Nowa ocena 5★ od użytkownika Piotr W.", time: "14 min temu", dot: "bg-emerald-400" },
+                          { txt: "Twój profil wyświetlono 38 razy dzisiaj", time: "1 godz. temu", dot: "bg-amber-400" },
+                        ].map((a, i) => (
+                          <div key={i} className="flex items-center gap-3 py-2 border-b border-slate-50">
+                            <div className={`h-2 w-2 rounded-full shrink-0 ${a.dot}`} />
+                            <p className="text-xs text-slate-600 flex-1">{a.txt}</p>
+                            <p className="text-[10px] text-slate-400 shrink-0">{a.time}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+          </div>
         </div>
       </section>
 
@@ -302,52 +400,6 @@ export default function ForBusinessPage() {
               </FadeIn>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ── Demo ── */}
-      <section className="py-16 px-5">
-        <div className="max-w-4xl mx-auto">
-          <FadeIn className="text-center mb-10">
-            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2">Demo</p>
-            <h2 className="text-3xl sm:text-4xl font-black text-foreground" style={{ textWrap: "balance" } as React.CSSProperties}>
-              Zobacz panel biznesowy w akcji
-            </h2>
-          </FadeIn>
-          <FadeIn>
-            <div className="rounded-2xl overflow-hidden shadow-2xl shadow-slate-200/80 border border-slate-200">
-              <div className="bg-slate-100 px-4 py-3 flex items-center gap-3 border-b border-slate-200">
-                <div className="flex gap-1.5">
-                  <div className="h-3 w-3 rounded-full bg-red-400" />
-                  <div className="h-3 w-3 rounded-full bg-amber-400" />
-                  <div className="h-3 w-3 rounded-full bg-green-400" />
-                </div>
-                <div className="flex-1 bg-white rounded-md px-3 py-1 text-xs text-slate-400 font-mono">
-                  trasa.travel/biznes
-                </div>
-              </div>
-              <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 aspect-video flex items-center justify-center group cursor-pointer">
-                <div className="absolute inset-0 opacity-20 overflow-hidden">
-                  <div className="absolute top-6 left-6 right-6 h-10 bg-white/10 rounded-xl" />
-                  <div className="absolute top-20 left-6 w-48 h-32 bg-white/10 rounded-xl" />
-                  <div className="absolute top-20 left-60 right-6 h-32 bg-white/10 rounded-xl" />
-                  <div className="absolute top-56 left-6 right-6 h-20 bg-white/10 rounded-xl" />
-                </div>
-                <div className="relative flex flex-col items-center gap-4">
-                  <div className="h-20 w-20 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center group-hover:bg-white/20 transition-all group-hover:scale-110 duration-300">
-                    <div className="ml-1.5 w-0 h-0" style={{ borderTop: "14px solid transparent", borderBottom: "14px solid transparent", borderLeft: "22px solid white" }} />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-white font-bold text-sm">Zobacz jak działa panel biznesowy</p>
-                    <p className="text-white/50 text-xs mt-1">demo • ~2 min</p>
-                  </div>
-                </div>
-                <div className="absolute bottom-4 right-4 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
-                  <p className="text-white/70 text-xs font-semibold">Demo już wkrótce</p>
-                </div>
-              </div>
-            </div>
-          </FadeIn>
         </div>
       </section>
 
