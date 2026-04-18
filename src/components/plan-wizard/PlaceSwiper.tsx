@@ -152,6 +152,49 @@ const MatchModal = ({ likedPlaces, onConfirm, onDismiss }: {
   );
 };
 
+// ─── Guest upsell modal ───────────────────────────────────────────────────────
+
+const UPSELL_BENEFITS = [
+  { emoji: "🗺️", text: "Zapisz trasę i wróć do niej kiedy chcesz" },
+  { emoji: "👫", text: "Planuj wyjazdy razem ze znajomymi" },
+  { emoji: "📍", text: "Dodawaj własne miejsca do trasy" },
+  { emoji: "📒", text: "Prowadź dziennik podróży ze zdjęciami" },
+];
+
+const GuestUpsellModal = ({ onSignUp, onDismiss }: { onSignUp: () => void; onDismiss: () => void }) => (
+  <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+      <div className="text-center space-y-1">
+        <p className="text-2xl font-black text-foreground">Trasa gotowa! 🎉</p>
+        <p className="text-sm text-muted-foreground">Załóż konto żeby ją zobaczyć i zapisać.</p>
+      </div>
+      <div className="flex flex-col gap-3">
+        {UPSELL_BENEFITS.map(b => (
+          <div key={b.text} className="flex items-center gap-3">
+            <span className="text-xl shrink-0">{b.emoji}</span>
+            <p className="text-sm font-medium text-foreground">{b.text}</p>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-col gap-2.5">
+        <button
+          onClick={onSignUp}
+          className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+        >
+          Zakładam konto — to darmowe
+          <ArrowRight className="h-4 w-4" />
+        </button>
+        <button
+          onClick={onDismiss}
+          className="w-full py-3 rounded-full border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
+        >
+          Wróć do przeglądania
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 // ─── SwipeCard ────────────────────────────────────────────────────────────────
 
 interface SwipeCardProps {
@@ -674,6 +717,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const [matchedRoutes, setMatchedRoutes] = useState<MatchedRoute[]>([]);
   const [loadingExamples, setLoadingExamples] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
+  const [showUpsell, setShowUpsell] = useState(false);
   const [bannerDismissCount, setBannerDismissCount] = useState(0);
   // Track consecutive likes per category group
   const [recentLikedGroups, setRecentLikedGroups] = useState<(Set<string> | null)[]>([]);
@@ -928,6 +972,11 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   };
 
   const handleProceed = () => {
+    if (!user) {
+      setShowBanner(false);
+      setShowUpsell(true);
+      return;
+    }
     const allLiked = [...likedPlaces, ...superLikedPlaces];
     navigate("/create", {
       state: {
@@ -1134,6 +1183,22 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           likedPlaces={likedPlaces}
           onConfirm={handleProceed}
           onDismiss={handleBannerDismiss}
+        />
+      )}
+
+      {/* Guest upsell */}
+      {showUpsell && (
+        <GuestUpsellModal
+          onSignUp={() => {
+            const allLiked = [...likedPlaces, ...superLikedPlaces];
+            localStorage.setItem("trasa_guest_plan", JSON.stringify({
+              city,
+              date: date.toISOString(),
+              likedPlaceNames: allLiked.map(p => p.place_name),
+            }));
+            navigate("/auth?return=plan");
+          }}
+          onDismiss={() => setShowUpsell(false)}
         />
       )}
 
