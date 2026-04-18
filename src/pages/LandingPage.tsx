@@ -348,12 +348,21 @@ const LandingPage = () => {
               Dla kogo
             </button>
           </div>
-          <button
-            onClick={() => document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" })}
-            className="text-sm font-bold px-4 py-2 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all"
-          >
-            Dołącz →
-          </button>
+          <div className="flex items-center gap-2">
+            <a
+              href="/dla-firm"
+              className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-all border border-blue-500/30"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+              Dla firm
+            </a>
+            <button
+              onClick={() => document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" })}
+              className="text-sm font-bold px-4 py-2 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all"
+            >
+              Dołącz →
+            </button>
+          </div>
         </div>
       </nav>
 

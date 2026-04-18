@@ -74,6 +74,7 @@ import JoinPage from "./pages/JoinPage";
 import PublicProfile from "./pages/PublicProfile";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import LandingPage from "./pages/LandingPage";
+import ForBusinessPage from "./pages/ForBusinessPage";
 
 const queryClient = new QueryClient();
 
@@ -115,6 +116,7 @@ const App = () => (
           <Route path="/profil/:username" element={<PublicProfile />} />
           <Route path="/quick-plan-review" element={<QuickPlanReview />} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
+          <Route path="/dla-firm" element={<ForBusinessPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
