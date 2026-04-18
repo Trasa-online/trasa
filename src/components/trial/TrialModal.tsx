@@ -22,62 +22,63 @@ interface TrialPlace {
 }
 
 // ─── Trial places (10+ per city, independent from mockPlaces) ────────────────
+// Photos: specific Unsplash IDs — permanent CDN URLs, browser-cached (1yr)
 
-const p = (seed: string) => `https://picsum.photos/seed/${seed}/800/600`;
+const u = (id: string) => `https://images.unsplash.com/photo-${id}?w=700&q=75&auto=format&fit=crop`;
 
 const TRIAL_PLACES: Record<string, TrialPlace[]> = {
   Kraków: [
-    { id: "k1",  place_name: "Wawel",              category: "monument",   description: "Królewski zamek na wzgórzu z katedrą, smoczą jaskinią i skarbcem.", rating: 4.8, photo_url: p("wawel-castle"),         vibe_tags: ["historia", "widok", "must-see"] },
-    { id: "k2",  place_name: "Kościół Mariacki",    category: "monument",   description: "Gotycka bazylika z XIV w. ze słynnym hejnałem i ołtarzem Wita Stwosza.", rating: 4.8, photo_url: p("gothic-church"),         vibe_tags: ["architektura", "historia"] },
-    { id: "k3",  place_name: "Sukiennice",           category: "market",     description: "Renesansowa hala targowa w sercu Rynku — polskie rękodzieło i pamiątki.", rating: 4.6, photo_url: p("krakow-market"),        vibe_tags: ["zakupy", "centrum"] },
-    { id: "k4",  place_name: "Kazimierz",            category: "experience", description: "Historyczna dzielnica pełna galerii, barów i klimatycznych podwórek.", rating: 4.7, photo_url: p("kazimierz-krakow"),      vibe_tags: ["klimat", "bary", "historia"] },
-    { id: "k5",  place_name: "MOCAK",                category: "museum",     description: "Muzeum Sztuki Współczesnej w Krakowie — prowokujące wystawy w dawnej fabryce.", rating: 4.4, photo_url: p("modern-art-museum"),    vibe_tags: ["sztuka", "kultura"] },
-    { id: "k6",  place_name: "Muzeum Narodowe",      category: "museum",     description: "Największe muzeum w Polsce z bogatą kolekcją polskiego malarstwa.", rating: 4.5, photo_url: p("national-museum-art"),    vibe_tags: ["sztuka", "malarstwo"] },
-    { id: "k7",  place_name: "Kawiarnia Płyś",       category: "cafe",       description: "Kultowa krakowska kawiarnia ze świetną kawą i domowymi ciastkami.", rating: 4.5, photo_url: p("cozy-cafe-interior"),    vibe_tags: ["kawa", "klimat", "slow"] },
-    { id: "k8",  place_name: "Forum Przestrzenie",   category: "bar",        description: "Bar na tarasie dawnego hotelu Forum z widokiem na Wisłę i Wawel.", rating: 4.4, photo_url: p("riverside-bar-terrace"),  vibe_tags: ["taras", "Wisła", "koktajle"] },
-    { id: "k9",  place_name: "Veganico",             category: "restaurant", description: "Wegańska restauracja w centrum — kolorowe miski i smoothie na lunch.", rating: 4.5, photo_url: p("vegan-restaurant-food"),  vibe_tags: ["vege", "zdrowe", "lunch"] },
-    { id: "k10", place_name: "Bar Mleczny Centralny",category: "restaurant", description: "Kultowy bar mleczny — pierogi, żurek i kompot w niebiciu cenach.", rating: 4.2, photo_url: p("polish-milk-bar"),       vibe_tags: ["tanie", "nostalgiczny", "PRL"] },
-    { id: "k11", place_name: "Planty",               category: "park",       description: "Pierścień zieleni okalający Stare Miasto — idealne na poranny spacer.", rating: 4.6, photo_url: p("city-park-green"),       vibe_tags: ["spacer", "relaks", "natura"] },
-    { id: "k12", place_name: "Hala Targowa Kleparz", category: "market",     description: "Jeden z najstarszych targów w Krakowie — świeże produkty od rolników.", rating: 4.3, photo_url: p("local-food-market"),     vibe_tags: ["lokalnie", "śniadanie"] },
+    { id: "k1",  place_name: "Wawel",               category: "monument",   description: "Królewski zamek na wzgórzu z katedrą, smoczą jaskinią i skarbcem.", rating: 4.8, photo_url: u("1519197924294-4ba991a11128"), vibe_tags: ["historia", "widok", "must-see"] },
+    { id: "k2",  place_name: "Kościół Mariacki",     category: "monument",   description: "Gotycka bazylika z XIV w. ze słynnym hejnałem i ołtarzem Wita Stwosza.", rating: 4.8, photo_url: u("1548625149-720f75e9e9e4"),   vibe_tags: ["architektura", "historia"] },
+    { id: "k3",  place_name: "Sukiennice",            category: "market",     description: "Renesansowa hala targowa w sercu Rynku — polskie rękodzieło i pamiątki.", rating: 4.6, photo_url: u("1488459716781-31db52582fe9"), vibe_tags: ["zakupy", "centrum"] },
+    { id: "k4",  place_name: "Kazimierz",             category: "experience", description: "Historyczna dzielnica pełna galerii, barów i klimatycznych podwórek.", rating: 4.7, photo_url: u("1555396273-367ea4eb4db5"),   vibe_tags: ["klimat", "bary", "historia"] },
+    { id: "k5",  place_name: "MOCAK",                 category: "museum",     description: "Muzeum Sztuki Współczesnej w Krakowie — prowokujące wystawy w dawnej fabryce.", rating: 4.4, photo_url: u("1578301978693-85fa9c0320b9"), vibe_tags: ["sztuka", "kultura"] },
+    { id: "k6",  place_name: "Muzeum Narodowe",       category: "museum",     description: "Największe muzeum w Polsce z bogatą kolekcją polskiego malarstwa.", rating: 4.5, photo_url: u("1555448248-2571daf6344b"),   vibe_tags: ["sztuka", "malarstwo"] },
+    { id: "k7",  place_name: "Kawiarnia Płyś",        category: "cafe",       description: "Kultowa krakowska kawiarnia ze świetną kawą i domowymi ciastkami.", rating: 4.5, photo_url: u("1501339847302-ac426a4a7cbb"), vibe_tags: ["kawa", "klimat", "slow"] },
+    { id: "k8",  place_name: "Forum Przestrzenie",    category: "bar",        description: "Bar na tarasie dawnego hotelu Forum z widokiem na Wisłę i Wawel.", rating: 4.4, photo_url: u("1514362545857-3bc16c4c7d1b"), vibe_tags: ["taras", "Wisła", "koktajle"] },
+    { id: "k9",  place_name: "Veganico",              category: "restaurant", description: "Wegańska restauracja w centrum — kolorowe miski i smoothie na lunch.", rating: 4.5, photo_url: u("1512621776951-a57141f2eefd"), vibe_tags: ["vege", "zdrowe", "lunch"] },
+    { id: "k10", place_name: "Bar Mleczny Centralny", category: "restaurant", description: "Kultowy bar mleczny — pierogi, żurek i kompot w niebiciu cenach.", rating: 4.2, photo_url: u("1414235077428-338989a2e8c0"), vibe_tags: ["tanie", "nostalgiczny", "PRL"] },
+    { id: "k11", place_name: "Planty",                category: "park",       description: "Pierścień zieleni okalający Stare Miasto — idealne na poranny spacer.", rating: 4.6, photo_url: u("1425321221078-63e45e6b4e1a"), vibe_tags: ["spacer", "relaks", "natura"] },
+    { id: "k12", place_name: "Hala Targowa Kleparz",  category: "market",     description: "Jeden z najstarszych targów w Krakowie — świeże produkty od rolników.", rating: 4.3, photo_url: u("1488459716781-31db52582fe9"), vibe_tags: ["lokalnie", "śniadanie"] },
   ],
   Warszawa: [
-    { id: "w1",  place_name: "Stare Miasto",          category: "monument",   description: "Pięknie odbudowane Stare Miasto wpisane na listę UNESCO.", rating: 4.6, photo_url: p("warsaw-old-town"),       vibe_tags: ["historia", "spacer", "UNESCO"] },
-    { id: "w2",  place_name: "Centrum Nauki Kopernik",category: "experience", description: "Interaktywne muzeum nauki z setkami eksponatów do odkrywania.", rating: 4.7, photo_url: p("science-center-exhibit"),  vibe_tags: ["nauka", "interaktywnie"] },
-    { id: "w3",  place_name: "Hala Koszyki",          category: "restaurant", description: "Zabytkowa hala targowa — modne miejsce z kuchnią z całego świata.", rating: 4.5, photo_url: p("food-hall-indoor"),      vibe_tags: ["food hall", "różnorodność"] },
-    { id: "w4",  place_name: "Muzeum Powstania Warszawskiego", category: "museum", description: "Wstrząsające muzeum poświęcone bohaterom Powstania Warszawskiego 1944.", rating: 4.9, photo_url: p("warsaw-uprising-museum"), vibe_tags: ["historia", "must-see", "poruszające"] },
-    { id: "w5",  place_name: "Łazienki Królewskie",   category: "park",       description: "Piękny park z pałacem na wodzie i pawiem spacerującym po alejkach.", rating: 4.8, photo_url: p("royal-palace-lake"),     vibe_tags: ["park", "pałac", "przyroda"] },
-    { id: "w6",  place_name: "Pałac Kultury i Nauki", category: "monument",   description: "Stalionistyczna ikona Warszawy — platforma widokowa z panoramą miasta.", rating: 4.3, photo_url: p("palace-culture-warsaw"), vibe_tags: ["widok", "architektura"] },
-    { id: "w7",  place_name: "Przekąski Zakąski",     category: "bar",        description: "Legendarny bar przy Nowym Świecie — kultowe kanapki i piwo z beczki.", rating: 4.4, photo_url: p("warsaw-bar-snacks"),     vibe_tags: ["bary", "klimat", "kanapki"] },
-    { id: "w8",  place_name: "Charlotte Chleb i Wino",category: "cafe",       description: "Paryska kawiarnia na Placu Zbawiciela — świeże bagietki i świetne wino.", rating: 4.6, photo_url: p("paris-cafe-bread"),       vibe_tags: ["śniadanie", "wino", "paryski klimat"] },
-    { id: "w9",  place_name: "Wilanów",               category: "monument",   description: "Barokowy pałac i ogrody króla Jana III Sobieskiego — perła polskiego baroku.", rating: 4.7, photo_url: p("baroque-palace-garden"),  vibe_tags: ["pałac", "ogród", "historia"] },
-    { id: "w10", place_name: "Nowy Świat",             category: "experience", description: "Najbardziej reprezentacyjna ulica Warszawy — kawiarnie, sklepy i historia.", rating: 4.5, photo_url: p("warsaw-main-street"),    vibe_tags: ["spacer", "zakupy", "kawiarnie"] },
-    { id: "w11", place_name: "Biblioteka Uniwersytetu Warszawskiego", category: "experience", description: "Słynny ogród na dachu biblioteki z widokiem na Wisłę i miasto.", rating: 4.5, photo_url: p("rooftop-garden-city"),    vibe_tags: ["ogród", "widok", "relaks"] },
+    { id: "w1",  place_name: "Stare Miasto",          category: "monument",   description: "Pięknie odbudowane Stare Miasto wpisane na listę UNESCO.", rating: 4.6, photo_url: u("1559827260-dc66d52bef19"),   vibe_tags: ["historia", "spacer", "UNESCO"] },
+    { id: "w2",  place_name: "Centrum Nauki Kopernik",category: "experience", description: "Interaktywne muzeum nauki z setkami eksponatów do odkrywania.", rating: 4.7, photo_url: u("1567427017947-545c5f8d16ad"), vibe_tags: ["nauka", "interaktywnie"] },
+    { id: "w3",  place_name: "Hala Koszyki",          category: "restaurant", description: "Zabytkowa hala targowa — modne miejsce z kuchnią z całego świata.", rating: 4.5, photo_url: u("1414235077428-338989a2e8c0"), vibe_tags: ["food hall", "różnorodność"] },
+    { id: "w4",  place_name: "Muzeum Powstania Warszawskiego", category: "museum", description: "Wstrząsające muzeum poświęcone bohaterom Powstania Warszawskiego 1944.", rating: 4.9, photo_url: u("1549887534-1541e9326642"), vibe_tags: ["historia", "must-see", "poruszające"] },
+    { id: "w5",  place_name: "Łazienki Królewskie",   category: "park",       description: "Piękny park z pałacem na wodzie i pawiem spacerującym po alejkach.", rating: 4.8, photo_url: u("1500534314209-a25ddb2bd429"), vibe_tags: ["park", "pałac", "przyroda"] },
+    { id: "w6",  place_name: "Pałac Kultury i Nauki", category: "monument",   description: "Stalionistyczna ikona Warszawy — platforma widokowa z panoramą miasta.", rating: 4.3, photo_url: u("1477959858617-67f85cf4f1df"), vibe_tags: ["widok", "architektura"] },
+    { id: "w7",  place_name: "Przekąski Zakąski",     category: "bar",        description: "Legendarny bar przy Nowym Świecie — kultowe kanapki i piwo z beczki.", rating: 4.4, photo_url: u("1574890686897-1f5fb8d61cda"), vibe_tags: ["bary", "klimat", "kanapki"] },
+    { id: "w8",  place_name: "Charlotte Chleb i Wino",category: "cafe",       description: "Paryska kawiarnia na Placu Zbawiciela — świeże bagietki i świetne wino.", rating: 4.6, photo_url: u("1495474472287-4d71bcdd2085"), vibe_tags: ["śniadanie", "wino", "paryski klimat"] },
+    { id: "w9",  place_name: "Wilanów",               category: "monument",   description: "Barokowy pałac i ogrody króla Jana III Sobieskiego.", rating: 4.7, photo_url: u("1477959858617-67f85cf4f1df"), vibe_tags: ["pałac", "ogród", "historia"] },
+    { id: "w10", place_name: "Nowy Świat",             category: "experience", description: "Reprezentacyjna ulica Warszawy — kawiarnie, sklepy i historia.", rating: 4.5, photo_url: u("1498804103079-a6141b4c5499"), vibe_tags: ["spacer", "zakupy", "kawiarnie"] },
+    { id: "w11", place_name: "Ogród BUW",              category: "experience", description: "Słynny ogród na dachu Biblioteki UW z widokiem na Wisłę i panoramą miasta.", rating: 4.5, photo_url: u("1533750349088-cd871a92f312"), vibe_tags: ["ogród", "widok", "relaks"] },
   ],
   Łódź: [
-    { id: "l1",  place_name: "Manufaktura",          category: "experience", description: "Dawna fabryka Poznańskiego przebudowana w centrum kultury i rozrywki.", rating: 4.6, photo_url: p("lodz-manufaktura"),       vibe_tags: ["centrum", "rozrywka", "historia"] },
-    { id: "l2",  place_name: "EC1",                  category: "museum",     description: "Dawna elektrownia — interaktywne centrum nauki i planetarium.", rating: 4.5, photo_url: p("ec1-lodz-science"),        vibe_tags: ["nauka", "industrialne"] },
-    { id: "l3",  place_name: "The Brick Coffee",     category: "cafe",       description: "Kawiarnia specialty w klimatycznym industrialnym wnętrzu.", rating: 4.6, photo_url: p("brick-coffee-industrial"),  vibe_tags: ["specialty coffee", "industrialne"] },
-    { id: "l4",  place_name: "Przędza",              category: "cafe",       description: "Kawiarnia w pofabrycznym wnętrzu — wyśmienite śniadania i ciasta.", rating: 4.7, photo_url: p("lodz-cafe-factory"),       vibe_tags: ["śniadania", "klimat"] },
-    { id: "l5",  place_name: "Ulica Piotrkowska",    category: "experience", description: "Najdłuższa ulica handlowa w Polsce z kawiarnianymi ogródkami.", rating: 4.5, photo_url: p("piotrkowska-street-lodz"), vibe_tags: ["spacer", "kawiarnie", "historia"] },
-    { id: "l6",  place_name: "Muzeum Miasta Łodzi",  category: "museum",     description: "Pałac Poznańskiego z bogatą kolekcją historii i kultury miasta.", rating: 4.4, photo_url: p("lodz-palace-museum"),      vibe_tags: ["historia", "architektura"] },
-    { id: "l7",  place_name: "Księży Młyn",          category: "experience", description: "Osiedle fabryczne Scheiblera — street art i klimatyczne podwórka.", rating: 4.5, photo_url: p("lodz-ksiezy-mlyn"),       vibe_tags: ["street art", "industrialne"] },
-    { id: "l8",  place_name: "Bałucki Rynek",        category: "market",     description: "Klimatyczny targ w sercu Bałut — lokalne produkty i antyki.", rating: 4.2, photo_url: p("local-bazaar-square"),     vibe_tags: ["targ", "lokalne", "antyki"] },
-    { id: "l9",  place_name: "Restauracja Esencja",  category: "restaurant", description: "Nowoczesna polska kuchnia w sercu Łodzi — sezonowe menu od lokalnych rolników.", rating: 4.7, photo_url: p("modern-polish-cuisine"),   vibe_tags: ["fine dining", "polska kuchnia"] },
-    { id: "l10", place_name: "Park Źródliska",       category: "park",       description: "Piękny park z palmiarniami i ogrodem różanym w centrum miasta.", rating: 4.4, photo_url: p("park-botanical-garden"),   vibe_tags: ["park", "natura", "relaks"] },
-    { id: "l11", place_name: "Orientarium ZOO Łódź", category: "experience", description: "Największe oceanarium i terrarium w Polsce — tygrys sumatrzański i piranie.", rating: 4.8, photo_url: p("zoo-aquarium-tropical"),   vibe_tags: ["zwierzęta", "rodzina", "egzotyka"] },
+    { id: "l1",  place_name: "Manufaktura",           category: "experience", description: "Dawna fabryka Poznańskiego przebudowana w centrum kultury i rozrywki.", rating: 4.6, photo_url: u("1519681393784-d120267933ba"), vibe_tags: ["centrum", "rozrywka", "historia"] },
+    { id: "l2",  place_name: "EC1",                   category: "museum",     description: "Dawna elektrownia — interaktywne centrum nauki i planetarium.", rating: 4.5, photo_url: u("1567427017947-545c5f8d16ad"), vibe_tags: ["nauka", "industrialne"] },
+    { id: "l3",  place_name: "The Brick Coffee",      category: "cafe",       description: "Kawiarnia specialty w klimatycznym industrialnym wnętrzu.", rating: 4.6, photo_url: u("1501339847302-ac426a4a7cbb"), vibe_tags: ["specialty coffee", "industrialne"] },
+    { id: "l4",  place_name: "Przędza",               category: "cafe",       description: "Kawiarnia w pofabrycznym wnętrzu — wyśmienite śniadania i ciasta.", rating: 4.7, photo_url: u("1495474472287-4d71bcdd2085"), vibe_tags: ["śniadania", "klimat"] },
+    { id: "l5",  place_name: "Ulica Piotrkowska",     category: "experience", description: "Najdłuższa ulica handlowa w Polsce z kawiarnianymi ogródkami.", rating: 4.5, photo_url: u("1498804103079-a6141b4c5499"), vibe_tags: ["spacer", "kawiarnie", "historia"] },
+    { id: "l6",  place_name: "Muzeum Miasta Łodzi",   category: "museum",     description: "Pałac Poznańskiego z bogatą kolekcją historii i kultury miasta.", rating: 4.4, photo_url: u("1555448248-2571daf6344b"),   vibe_tags: ["historia", "architektura"] },
+    { id: "l7",  place_name: "Księży Młyn",           category: "experience", description: "Osiedle fabryczne Scheiblera — street art i klimatyczne podwórka.", rating: 4.5, photo_url: u("1578301978693-85fa9c0320b9"), vibe_tags: ["street art", "industrialne"] },
+    { id: "l8",  place_name: "Bałucki Rynek",         category: "market",     description: "Klimatyczny targ w sercu Bałut — lokalne produkty i antyki.", rating: 4.2, photo_url: u("1488459716781-31db52582fe9"), vibe_tags: ["targ", "lokalne", "antyki"] },
+    { id: "l9",  place_name: "Restauracja Esencja",   category: "restaurant", description: "Nowoczesna polska kuchnia — sezonowe menu od lokalnych rolników.", rating: 4.7, photo_url: u("1414235077428-338989a2e8c0"), vibe_tags: ["fine dining", "polska kuchnia"] },
+    { id: "l10", place_name: "Park Źródliska",        category: "park",       description: "Piękny park z palmiarniami i ogrodem różanym w centrum miasta.", rating: 4.4, photo_url: u("1425321221078-63e45e6b4e1a"), vibe_tags: ["park", "natura", "relaks"] },
+    { id: "l11", place_name: "Orientarium ZOO Łódź",  category: "experience", description: "Największe oceanarium w Polsce — tygrys sumatrzański i piranie.", rating: 4.8, photo_url: u("1534430480872-27ffc6c197db"), vibe_tags: ["zwierzęta", "rodzina", "egzotyka"] },
   ],
   Gdańsk: [
-    { id: "g1",  place_name: "Długi Targ",            category: "monument",   description: "Reprezentacyjna ulica Gdańska z Fontanną Neptuna i Dworem Artusa.", rating: 4.7, photo_url: p("gdansk-harbor-street"),   vibe_tags: ["widok", "kamienice", "centrum"] },
-    { id: "g2",  place_name: "Muzeum II Wojny Światowej", category: "museum", description: "Jedno z najważniejszych muzeów historycznych w Europie.", rating: 4.8, photo_url: p("war-museum-exhibition"),  vibe_tags: ["historia", "poruszające", "must-see"] },
-    { id: "g3",  place_name: "Westerplatte",          category: "monument",   description: "Półwysep gdzie wybuchła II Wojna Światowa — symbol polskiego oporu.", rating: 4.6, photo_url: p("westerplatte-monument"),   vibe_tags: ["historia", "patriotyzm"] },
-    { id: "g4",  place_name: "Stare Miasto Gdańsk",   category: "experience", description: "Pięknie odbudowane stare miasto z kolorowymi kamienicami przy Motławie.", rating: 4.8, photo_url: p("gdansk-old-town"),        vibe_tags: ["architektura", "spacer"] },
-    { id: "g5",  place_name: "Plaża Sopot",           category: "experience", description: "Najdłuższa plaża miejska w Polsce — biały piasek i promenada.", rating: 4.7, photo_url: p("sopot-beach-pier"),       vibe_tags: ["plaża", "morze", "relaks"] },
-    { id: "g6",  place_name: "Molo w Sopocie",        category: "monument",   description: "Najdłuższe molo w Europie — romantyczny spacer z widokiem na morze.", rating: 4.6, photo_url: p("sopot-pier-sea"),         vibe_tags: ["morze", "spacer", "romantycznie"] },
-    { id: "g7",  place_name: "Europejskie Centrum Solidarności", category: "museum", description: "Muzeum ruchu Solidarność — nowoczesna narracja o polskiej wolności.", rating: 4.8, photo_url: p("solidarity-museum-gdansk"), vibe_tags: ["historia", "demokracja"] },
-    { id: "g8",  place_name: "Kawiarnia Gunki",       category: "cafe",       description: "Kawiarnia z widokiem na Motławę — najlepszy widok i najlepsza kawa w mieście.", rating: 4.7, photo_url: p("gdansk-river-cafe"),      vibe_tags: ["kawa", "widok", "klimat"] },
-    { id: "g9",  place_name: "Restauracja Kubicki",   category: "restaurant", description: "Najstarsza restauracja Gdańska — kuchnia polska z tradycją od 1918 r.", rating: 4.6, photo_url: p("historic-restaurant-gdansk"), vibe_tags: ["tradycja", "polska kuchnia"] },
-    { id: "g10", place_name: "Targ Rybny",            category: "market",     description: "Historyczny rynek rybny nad Motławą — świeże ryby i amber.", rating: 4.4, photo_url: p("fish-market-gdansk"),      vibe_tags: ["ryby", "targ", "lokalnie"] },
-    { id: "g11", place_name: "Oliwski Park i Katedra",category: "park",       description: "Piękny park botaniczny z barokową katedrą i słynnymi organami.", rating: 4.7, photo_url: p("oliwa-cathedral-park"),    vibe_tags: ["park", "muzyka organowa", "natura"] },
+    { id: "g1",  place_name: "Długi Targ",             category: "monument",   description: "Reprezentacyjna ulica Gdańska z Fontanną Neptuna i Dworem Artusa.", rating: 4.7, photo_url: u("1559827260-dc66d52bef19"),   vibe_tags: ["widok", "kamienice", "centrum"] },
+    { id: "g2",  place_name: "Muzeum II Wojny Światowej", category: "museum", description: "Jedno z najważniejszych muzeów historycznych w Europie.", rating: 4.8, photo_url: u("1549887534-1541e9326642"),   vibe_tags: ["historia", "poruszające", "must-see"] },
+    { id: "g3",  place_name: "Westerplatte",           category: "monument",   description: "Półwysep gdzie wybuchła II Wojna Światowa — symbol polskiego oporu.", rating: 4.6, photo_url: u("1519197924294-4ba991a11128"), vibe_tags: ["historia", "patriotyzm"] },
+    { id: "g4",  place_name: "Stare Miasto Gdańsk",    category: "experience", description: "Pięknie odbudowane stare miasto z kolorowymi kamienicami przy Motławie.", rating: 4.8, photo_url: u("1587974928442-77dc3e0dba72"), vibe_tags: ["architektura", "spacer"] },
+    { id: "g5",  place_name: "Plaża Sopot",            category: "experience", description: "Najdłuższa plaża miejska w Polsce — biały piasek i promenada.", rating: 4.7, photo_url: u("1507525428034-b723cf961d3e"), vibe_tags: ["plaża", "morze", "relaks"] },
+    { id: "g6",  place_name: "Molo w Sopocie",         category: "monument",   description: "Najdłuższe molo w Europie — romantyczny spacer z widokiem na morze.", rating: 4.6, photo_url: u("1507525428034-b723cf961d3e"), vibe_tags: ["morze", "spacer", "romantycznie"] },
+    { id: "g7",  place_name: "ECS Solidarność",        category: "museum",     description: "Muzeum ruchu Solidarność — nowoczesna narracja o polskiej wolności.", rating: 4.8, photo_url: u("1555448248-2571daf6344b"),   vibe_tags: ["historia", "demokracja"] },
+    { id: "g8",  place_name: "Kawiarnia Gunki",        category: "cafe",       description: "Kawiarnia z widokiem na Motławę — najlepszy widok i najlepsza kawa.", rating: 4.7, photo_url: u("1495474472287-4d71bcdd2085"), vibe_tags: ["kawa", "widok", "klimat"] },
+    { id: "g9",  place_name: "Restauracja Kubicki",    category: "restaurant", description: "Najstarsza restauracja Gdańska — kuchnia polska z tradycją od 1918 r.", rating: 4.6, photo_url: u("1555396273-367ea4eb4db5"),   vibe_tags: ["tradycja", "polska kuchnia"] },
+    { id: "g10", place_name: "Targ Rybny",             category: "market",     description: "Historyczny rynek rybny nad Motławą — świeże ryby i bursztyn.", rating: 4.4, photo_url: u("1488459716781-31db52582fe9"), vibe_tags: ["ryby", "targ", "lokalnie"] },
+    { id: "g11", place_name: "Oliwski Park i Katedra", category: "park",       description: "Piękny park botaniczny z barokową katedrą i słynnymi organami.", rating: 4.7, photo_url: u("1425321221078-63e45e6b4e1a"), vibe_tags: ["park", "muzyka organowa", "natura"] },
   ],
 };
 
@@ -214,7 +215,7 @@ function SwipeCard({
         </div>
       </div>
 
-      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-5">
+      <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-5">
         <button
           onClick={() => fire("left", onSkip)}
           className="h-12 w-12 rounded-full bg-white shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
@@ -437,7 +438,7 @@ export default function TrialModal({ open, onClose }: TrialModalProps) {
                 className="w-full py-3.5 rounded-full font-black text-white text-base shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
                 style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}
               >
-                Zapisz mnie na waitlistę! <ArrowRight className="h-4 w-4" />
+                Tworzę konto na trasie <ArrowRight className="h-4 w-4" />
               </button>
             </div>
           </div>
