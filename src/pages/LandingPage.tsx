@@ -383,12 +383,32 @@ const LandingPage = () => {
             </a>
             <button
               onClick={() => setTrialOpen(true)}
-              className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap active:scale-95 transition-all"
-              style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)", color: "white" }}
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap active:scale-95 trial-btn"
+              style={{ color: "white" }}
             >
               <Sparkles className="h-3.5 w-3.5" />
               <span>Testuję!</span>
             </button>
+            <style>{`
+              @keyframes trial-flow {
+                0%   { background-position: 0% 50%; }
+                50%  { background-position: 100% 50%; }
+                100% { background-position: 0% 50%; }
+              }
+              .trial-btn {
+                background: linear-gradient(135deg, #fbbf7a, #F4A259, #F9662B, #ea580c);
+                background-size: 250% 250%;
+                animation: trial-flow 2.4s ease infinite;
+                box-shadow: 0 0 0 0 rgba(249,102,43,0.5);
+              }
+              @keyframes trial-pulse {
+                0%, 100% { box-shadow: 0 0 0 0 rgba(249,102,43,0.5); }
+                50%       { box-shadow: 0 0 0 5px rgba(249,102,43,0); }
+              }
+              .trial-btn {
+                animation: trial-flow 2.4s ease infinite, trial-pulse 2.4s ease infinite;
+              }
+            `}</style>
             <button onClick={() => navigate("/auth")} className="hidden sm:flex items-center text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/50 hover:text-white transition-all whitespace-nowrap">
               Zaloguj się
             </button>
