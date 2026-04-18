@@ -399,47 +399,48 @@ export default function ForBusinessPage() {
     <div className="min-h-[100dvh] bg-[#FEFEFE] overflow-x-hidden">
 
       {/* ── Nav ── */}
-      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl">
-        <div className="bg-[#1a1a1a] rounded-full px-5 h-14 flex items-center shadow-xl">
-          {/* Left: logo */}
-          <div className="flex-1 flex items-center">
+      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl">
+        <div className="bg-[#1a1a1a] rounded-full px-5 h-14 flex items-center gap-3 shadow-xl">
+          {/* Left: logo + section links */}
+          <div className="flex items-center gap-4 shrink-0">
             <a href="/" className="flex items-center">
               <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
             </a>
-          </div>
-          {/* Center: section links */}
-          <div className="hidden sm:flex items-center gap-5">
             <button
               onClick={() => document.getElementById("pakiety")?.scrollIntoView({ behavior: "smooth" })}
-              className="text-sm text-white/60 hover:text-white/90 transition-colors"
+              className="hidden sm:block text-sm text-white/60 hover:text-white/90 transition-colors whitespace-nowrap"
             >
               Pakiety
             </button>
             <button
               onClick={() => document.getElementById("faq-biznes")?.scrollIntoView({ behavior: "smooth" })}
-              className="text-sm text-white/60 hover:text-white/90 transition-colors"
+              className="hidden sm:block text-sm text-white/60 hover:text-white/90 transition-colors whitespace-nowrap"
             >
               FAQ
             </button>
           </div>
-          {/* Right: actions */}
-          <div className="flex-1 flex items-center justify-end gap-2">
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Right: badge + panel + contact */}
+          <div className="flex items-center gap-2 shrink-0">
             <a
               href="/"
-              className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 transition-all border border-orange-500/30"
+              className="hidden md:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 transition-all border border-orange-500/30 whitespace-nowrap"
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-400 shrink-0" />
               Dla podróżujących
             </a>
             <a
               href="/auth"
-              className="text-sm text-white/60 hover:text-white/90 transition-colors"
+              className="hidden sm:block text-sm text-white/60 hover:text-white/90 transition-colors whitespace-nowrap"
             >
               Panel
             </a>
             <a
               href="mailto:trasa.app@gmail.com"
-              className="text-sm font-bold px-4 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all"
+              className="text-sm font-bold px-4 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all whitespace-nowrap"
             >
               Kontakt →
             </a>
