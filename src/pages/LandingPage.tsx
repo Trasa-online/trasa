@@ -263,20 +263,14 @@ function PhoneMockup() {
   // PNG: 764×1360. Screen hole: left=17.28% top=3.16% width=65.18% height=82.50%
   return (
     <div className="relative mx-auto" style={{ width: 260 }}>
-      {/* Video sits behind the PNG, aligned to the screen cutout */}
-      <video
-        src="/demo.mp4"
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="absolute rounded-[14px]"
+      {/* Placeholder screen */}
+      <div
+        className="absolute rounded-[14px] bg-gradient-to-b from-orange-400 to-orange-600"
         style={{
           left: "17.28%",
           top: "3.16%",
           width: "65.18%",
           height: "82.50%",
-          objectFit: "cover",
           zIndex: 0,
         }}
       />
