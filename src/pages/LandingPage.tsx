@@ -372,14 +372,14 @@ const LandingPage = () => {
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Right: badge + zaloguj + dołącz */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Right: badge + mam już konto + dołącz */}
+          <div className="flex items-center gap-3 shrink-0">
             <a href="/dla-firm" className="hidden md:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-all border border-blue-500/30 whitespace-nowrap">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
               Dla firm
             </a>
-            <button onClick={() => navigate("/auth")} className="hidden sm:block text-sm text-white/60 hover:text-white/90 transition-colors whitespace-nowrap">
-              Zaloguj
+            <button onClick={() => navigate("/auth")} className="hidden sm:flex items-center text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/50 hover:text-white transition-all whitespace-nowrap">
+              Mam już konto
             </button>
             <button onClick={() => document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" })} className="text-sm font-bold px-4 py-2 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all whitespace-nowrap">
               Dołącz →
