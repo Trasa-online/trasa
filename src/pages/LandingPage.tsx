@@ -708,6 +708,14 @@ const LandingPage = () => {
           </div>
           <p className="text-xs text-white/40 text-center">© {new Date().getFullYear()} Trasa · Stworzone z ❤ w Polsce</p>
           <div className="flex items-center gap-4">
+            <a href="https://instagram.com/trasa.travel" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/80 transition-colors">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none" />
+              </svg>
+              @trasa.travel
+            </a>
             <button onClick={() => navigate("/terms")} className="text-xs text-white/50 hover:text-white/80 transition-colors">Regulamin</button>
             <button onClick={() => navigate("/auth")} className="text-xs font-bold text-white hover:text-orange-300 transition-colors">Zaloguj się →</button>
           </div>
