@@ -397,12 +397,12 @@ const LandingPage = () => {
               Dla firm
             </a>
             <button
-              onClick={() => setTrialOpen(true)}
+              onClick={() => navigate("/plan")}
               className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap active:scale-95 trial-btn"
               style={{ color: "white" }}
             >
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Testuję!</span>
+              <span>Wypróbuj bez konta</span>
             </button>
             <style>{`
               @keyframes trial-flow {
@@ -452,9 +452,9 @@ const LandingPage = () => {
                 Dla firm
               </a>
               <div className="mx-5 my-1 border-t border-white/10" />
-              <button onClick={() => { setTrialOpen(true); setMenuOpen(false); }} className="px-5 py-3 text-sm font-bold text-white/80 hover:text-white hover:bg-white/5 text-left flex items-center gap-2 transition-colors">
+              <button onClick={() => { navigate("/plan"); setMenuOpen(false); }} className="px-5 py-3 text-sm font-bold text-white/80 hover:text-white hover:bg-white/5 text-left flex items-center gap-2 transition-colors">
                 <Sparkles className="h-3.5 w-3.5 text-orange-400" />
-                Testuję!
+                Wypróbuj bez konta
               </button>
               <button onClick={() => { navigate("/auth"); setMenuOpen(false); }} className="px-5 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 text-left transition-colors">
                 Zaloguj się

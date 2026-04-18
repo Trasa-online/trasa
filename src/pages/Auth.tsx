@@ -60,6 +60,15 @@ const Auth = () => {
           return;
         } catch {}
       }
+      const guestRaw = localStorage.getItem("trasa_guest_plan");
+      if (guestRaw) {
+        try {
+          const guest = JSON.parse(guestRaw);
+          localStorage.removeItem("trasa_guest_plan");
+          navigate("/plan", { state: { step: 3, city: guest.city, date: guest.date, likedPlaceNames: guest.likedPlaceNames } });
+          return;
+        } catch {}
+      }
       navigate("/");
     });
   }, [navigate]);
@@ -133,6 +142,15 @@ const Auth = () => {
           const demo = JSON.parse(demoRaw);
           localStorage.removeItem("trasa_demo_liked");
           navigate("/create", { state: { city: demo.city, likedPlacesData: demo.places } });
+          return;
+        } catch {}
+      }
+      const guestRaw = localStorage.getItem("trasa_guest_plan");
+      if (guestRaw) {
+        try {
+          const guest = JSON.parse(guestRaw);
+          localStorage.removeItem("trasa_guest_plan");
+          navigate("/plan", { state: { step: 3, city: guest.city, date: guest.date, likedPlaceNames: guest.likedPlaceNames } });
           return;
         } catch {}
       }

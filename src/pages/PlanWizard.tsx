@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, X, Plus } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import CityPicker from "@/components/plan-wizard/CityPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import CategoryPicker from "@/components/plan-wizard/CategoryPicker";
@@ -12,6 +13,7 @@ type Step = 1 | 2 | 3 | 4;
 const PlanWizard = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const returnState = location.state as { step?: number; city?: string; date?: string; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; exploreMode?: boolean } | null;
 
   const [step, setStep] = useState<Step>((returnState?.step as Step) ?? 1);
@@ -97,7 +99,18 @@ const PlanWizard = () => {
             {step === 4 ? (
               <div className="flex items-center gap-1 -mr-1">
                 <button
-                  onClick={() => navigate("/historia", { state: { fromCity: city } })}
+                  onClick={() => {
+                    if (!user) {
+                      localStorage.setItem("trasa_guest_plan", JSON.stringify({
+                        city,
+                        date: date?.toISOString() ?? null,
+                        likedPlaceNames: allLikedNames,
+                      }));
+                      navigate("/auth?return=plan");
+                      return;
+                    }
+                    navigate("/historia", { state: { fromCity: city } });
+                  }}
                   className="text-sm text-muted-foreground font-medium px-2 py-1"
                 >
                   Zakończ
