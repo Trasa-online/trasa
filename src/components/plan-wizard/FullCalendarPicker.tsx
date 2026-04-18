@@ -85,9 +85,9 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
       </div>
 
       {/* Summary */}
-      <div className="px-5 pt-3 pb-3 flex-1 flex flex-col justify-end">
+      <div className="px-5 pt-3 pb-[max(24px,env(safe-area-inset-bottom))]">
         {startDate ? (
-          <div className="mb-4 text-center">
+          <div className="mb-3 text-center">
             {endDate && numDays > 1 ? (
               <>
                 <p className="text-base font-semibold text-foreground">
@@ -111,7 +111,7 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
             )}
           </div>
         ) : (
-          <div className="mb-4 text-center">
+          <div className="mb-3 text-center">
             <p className="text-sm text-muted-foreground">Wybierz dzień wyjazdu (max. {MAX_DAYS} dni)</p>
           </div>
         )}
