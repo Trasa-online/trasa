@@ -260,52 +260,41 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 // ─── Phone mockup ─────────────────────────────────────────────────────────────
 
 function PhoneMockup() {
+  // PNG: 764×1360. Screen hole: left=17.28% top=3.16% width=65.18% height=82.50%
   return (
-    <div className="relative mx-auto" style={{ width: 252, height: 510 }}>
-      {/* Body — iPhone 15 aluminium (lighter than 14 Pro titanium) */}
-      <div
-        className="absolute inset-0 rounded-[3.4rem]"
+    <div className="relative mx-auto" style={{ width: 260 }}>
+      {/* Video sits behind the PNG, aligned to the screen cutout */}
+      <video
+        src="/demo.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute rounded-[14px]"
         style={{
-          background: "linear-gradient(160deg, #d1d1d6 0%, #aeaeb2 30%, #8e8e93 60%, #c7c7cc 100%)",
-          boxShadow: "0 0 0 1px #c7c7cc, 0 30px 60px -12px rgba(0,0,0,0.55), 0 0 80px rgba(249,102,43,0.07)",
+          left: "17.28%",
+          top: "3.16%",
+          width: "65.18%",
+          height: "82.50%",
+          objectFit: "cover",
+          zIndex: 0,
         }}
       />
-
-      {/* Left: silent switch */}
-      <div className="absolute rounded-l-sm" style={{ left: -2, top: "17%", width: 3, height: 26, background: "#aeaeb2" }} />
-      {/* Left: volume up */}
-      <div className="absolute rounded-l-sm" style={{ left: -2, top: "26%", width: 3, height: 38, background: "#aeaeb2" }} />
-      {/* Left: volume down */}
-      <div className="absolute rounded-l-sm" style={{ left: -2, top: "36%", width: 3, height: 38, background: "#aeaeb2" }} />
-      {/* Right: power */}
-      <div className="absolute rounded-r-sm" style={{ right: -2, top: "27%", width: 3, height: 56, background: "#aeaeb2" }} />
-
-      {/* Screen bezel */}
-      <div className="absolute overflow-hidden rounded-[3rem] bg-black" style={{ inset: 5 }}>
-        {/* Video */}
-        <video
-          src="/demo.mp4"
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        {/* Black bar covering the video's status bar (22:02, recording dot, etc.) */}
-        <div className="absolute top-0 left-0 right-0 bg-black" style={{ height: 52 }} />
-        {/* Dynamic Island on top */}
-        <div
-          className="absolute z-10"
-          style={{ top: 12, left: "50%", transform: "translateX(-50%)", width: 92, height: 28, background: "#000", borderRadius: 20 }}
-        />
-      </div>
+      {/* PNG frame on top — screen area is transparent so video shows through */}
+      <img
+        src="/iphone-mockup.png"
+        alt=""
+        className="relative w-full h-auto"
+        style={{ zIndex: 1 }}
+        draggable={false}
+      />
 
       {/* Notification bubbles */}
-      <div className="absolute -left-28 top-20 hidden sm:flex bg-white rounded-2xl shadow-lg px-3 py-2 items-center gap-1.5 animate-bounce" style={{ animationDuration: "3s" }}>
+      <div className="absolute -left-28 top-20 hidden sm:flex bg-white rounded-2xl shadow-lg px-3 py-2 items-center gap-1.5 animate-bounce" style={{ animationDuration: "3s", zIndex: 2 }}>
         <Heart className="h-3.5 w-3.5 text-red-400 fill-red-400" />
         <p className="text-xs font-bold whitespace-nowrap">Marta lubi to!</p>
       </div>
-      <div className="absolute -right-24 top-44 hidden sm:flex bg-white rounded-2xl shadow-lg px-3 py-2 items-center gap-1.5" style={{ animation: "bounce 3s 1.5s infinite" }}>
+      <div className="absolute -right-24 top-44 hidden sm:flex bg-white rounded-2xl shadow-lg px-3 py-2 items-center gap-1.5" style={{ animation: "bounce 3s 1.5s infinite", zIndex: 2 }}>
         <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
         <p className="text-xs font-bold whitespace-nowrap">Piotr: must-see</p>
       </div>
