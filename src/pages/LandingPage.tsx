@@ -261,11 +261,32 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 
 function PhoneMockup() {
   return (
-    <div className="relative w-60 h-[460px] mx-auto">
-      {/* frame */}
-      <div className="absolute inset-0 rounded-[3rem] bg-foreground shadow-2xl shadow-orange-400/10" />
-      <div className="absolute inset-[3px] rounded-[2.8rem] bg-black overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-6 bg-foreground rounded-b-2xl z-10" />
+    <div className="relative mx-auto" style={{ width: 248, height: 504 }}>
+      {/* Body — aluminium frame */}
+      <div
+        className="absolute inset-0 rounded-[3.2rem]"
+        style={{
+          background: "linear-gradient(160deg, #3a3a3c 0%, #1c1c1e 45%, #3a3a3c 100%)",
+          boxShadow: "0 0 0 1px #48484a, 0 30px 60px -12px rgba(0,0,0,0.7), 0 0 80px rgba(249,102,43,0.07)",
+        }}
+      />
+
+      {/* Left: silent switch */}
+      <div className="absolute rounded-l-sm" style={{ left: -2, top: "17%", width: 3, height: 26, background: "#48484a" }} />
+      {/* Left: volume up */}
+      <div className="absolute rounded-l-sm" style={{ left: -2, top: "26%", width: 3, height: 38, background: "#48484a" }} />
+      {/* Left: volume down */}
+      <div className="absolute rounded-l-sm" style={{ left: -2, top: "36%", width: 3, height: 38, background: "#48484a" }} />
+      {/* Right: power */}
+      <div className="absolute rounded-r-sm" style={{ right: -2, top: "27%", width: 3, height: 56, background: "#48484a" }} />
+
+      {/* Screen bezel */}
+      <div className="absolute overflow-hidden rounded-[2.9rem] bg-black" style={{ inset: 4 }}>
+        {/* Dynamic Island */}
+        <div
+          className="absolute z-10"
+          style={{ top: 12, left: "50%", transform: "translateX(-50%)", width: 90, height: 28, background: "#000", borderRadius: 20, boxShadow: "inset 0 0 0 1px #1c1c1e" }}
+        />
         <video
           src="/demo.mp4"
           autoPlay
@@ -275,7 +296,8 @@ function PhoneMockup() {
           className="absolute inset-0 w-full h-full object-cover"
         />
       </div>
-      {/* notification bubbles */}
+
+      {/* Notification bubbles */}
       <div className="absolute -left-28 top-20 hidden sm:flex bg-white rounded-2xl shadow-lg px-3 py-2 items-center gap-1.5 animate-bounce" style={{ animationDuration: "3s" }}>
         <Heart className="h-3.5 w-3.5 text-red-400 fill-red-400" />
         <p className="text-xs font-bold whitespace-nowrap">Marta lubi to!</p>
