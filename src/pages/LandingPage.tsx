@@ -260,35 +260,59 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 // ─── Phone mockup ─────────────────────────────────────────────────────────────
 
 function PhoneMockup() {
-  // PNG: 764×1360. Screen hole: left=17.28% top=3.16% width=65.18% height=82.50%
   return (
-    <div className="relative mx-auto" style={{ width: 260 }}>
-      {/* Placeholder screen */}
-      <div
-        className="absolute rounded-[14px] bg-gradient-to-b from-orange-400 to-orange-600"
-        style={{
-          left: "17.28%",
-          top: "3.16%",
-          width: "65.18%",
-          height: "82.50%",
-          zIndex: 0,
-        }}
-      />
-      {/* PNG frame on top — screen area is transparent so video shows through */}
-      <img
-        src="/iphone-mockup.png"
-        alt=""
-        className="relative w-full h-auto"
-        style={{ zIndex: 1 }}
-        draggable={false}
-      />
+    <div className="relative mx-auto" style={{ width: 240 }}>
+      {/* Phone shell */}
+      <div className="relative bg-[#0E0E0E] rounded-[40px] p-2 shadow-2xl" style={{ aspectRatio: "9/19.5" }}>
+        {/* Dynamic Island */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-full z-10" />
+        {/* Screen */}
+        <div className="w-full h-full bg-[#FEFEFE] rounded-[32px] overflow-hidden flex flex-col">
+          {/* Status bar */}
+          <div className="flex items-center justify-between px-5 pt-8 pb-2 text-[9px] font-semibold text-foreground shrink-0">
+            <span>9:41</span>
+            <div className="flex items-center gap-1">
+              <span>●●●●</span>
+            </div>
+          </div>
+          {/* App header */}
+          <div className="px-4 pb-2 shrink-0">
+            <p className="text-[10px] text-muted-foreground">Kraków · dziś</p>
+            <p className="text-sm font-bold leading-tight">Wybierz miejsca</p>
+          </div>
+          {/* Swiper card */}
+          <div className="flex-1 px-3 pb-3 flex flex-col gap-2">
+            <div className="flex-1 rounded-2xl bg-gradient-to-b from-orange-100 to-orange-50 border border-orange-200/60 flex flex-col justify-between p-3 shadow-sm">
+              <div className="flex items-center gap-1.5">
+                <div className="h-5 w-5 rounded-full bg-orange-500/20 flex items-center justify-center">
+                  <span className="text-[8px]">🏛️</span>
+                </div>
+                <span className="text-[9px] font-semibold text-orange-700">Muzeum</span>
+              </div>
+              <div>
+                <p className="text-xs font-bold leading-tight">MOCAK</p>
+                <p className="text-[9px] text-muted-foreground mt-0.5">Muzeum Sztuki Współczesnej</p>
+              </div>
+            </div>
+            {/* Action buttons */}
+            <div className="flex gap-2 shrink-0">
+              <div className="flex-1 h-7 rounded-full border border-border/50 flex items-center justify-center">
+                <span className="text-[10px] text-muted-foreground">Pomiń</span>
+              </div>
+              <div className="flex-1 h-7 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] flex items-center justify-center">
+                <Heart className="h-3 w-3 text-white" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Notification bubbles */}
-      <div className="absolute -left-28 top-20 hidden sm:flex bg-white rounded-2xl shadow-lg px-3 py-2 items-center gap-1.5 animate-bounce" style={{ animationDuration: "3s", zIndex: 2 }}>
+      <div className="absolute -left-28 top-20 hidden sm:flex bg-white rounded-2xl shadow-lg px-3 py-2 items-center gap-1.5 animate-bounce" style={{ animationDuration: "3s" }}>
         <Heart className="h-3.5 w-3.5 text-red-400 fill-red-400" />
         <p className="text-xs font-bold whitespace-nowrap">Marta lubi to!</p>
       </div>
-      <div className="absolute -right-24 top-44 hidden sm:flex bg-white rounded-2xl shadow-lg px-3 py-2 items-center gap-1.5" style={{ animation: "bounce 3s 1.5s infinite", zIndex: 2 }}>
+      <div className="absolute -right-24 top-44 hidden sm:flex bg-white rounded-2xl shadow-lg px-3 py-2 items-center gap-1.5" style={{ animation: "bounce 3s 1.5s infinite" }}>
         <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
         <p className="text-xs font-bold whitespace-nowrap">Piotr: must-see</p>
       </div>
