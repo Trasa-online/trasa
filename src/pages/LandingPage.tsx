@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Heart, Zap, Check, Castle, GlassWater, Palette, TreePine, Pizza, Star, MapPin, Menu, X } from "lucide-react";
+import { Users, Heart, Zap, Check, Castle, GlassWater, Palette, TreePine, Pizza, Star, MapPin, Menu, X, Sparkles } from "lucide-react";
+import TrialModal from "@/components/trial/TrialModal";
 
 // ─── Scroll reveal hook ───────────────────────────────────────────────────────
 
@@ -336,6 +337,7 @@ const LandingPage = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [trialOpen, setTrialOpen] = useState(false);
   if (loading) return null;
   if (user) return <Navigate to="/home" replace />;
 
@@ -379,6 +381,13 @@ const LandingPage = () => {
               <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
               Dla firm
             </a>
+            <button
+              onClick={() => setTrialOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/40 hover:text-white transition-all whitespace-nowrap"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Wypróbuj
+            </button>
             <button onClick={() => navigate("/auth")} className="hidden sm:flex items-center text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/50 hover:text-white transition-all whitespace-nowrap">
               Zaloguj się
             </button>
@@ -407,6 +416,10 @@ const LandingPage = () => {
                 Dla firm
               </a>
               <div className="mx-5 my-1 border-t border-white/10" />
+              <button onClick={() => { setTrialOpen(true); setMenuOpen(false); }} className="px-5 py-3 text-sm font-bold text-white/80 hover:text-white hover:bg-white/5 text-left flex items-center gap-2 transition-colors">
+                <Sparkles className="h-3.5 w-3.5 text-orange-400" />
+                Wypróbuj demo
+              </button>
               <button onClick={() => { navigate("/auth"); setMenuOpen(false); }} className="px-5 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 text-left transition-colors">
                 Zaloguj się
               </button>
@@ -651,6 +664,8 @@ const LandingPage = () => {
           </div>
         </div>
       </footer>
+
+      <TrialModal open={trialOpen} onClose={() => setTrialOpen(false)} />
     </div>
   );
 };
