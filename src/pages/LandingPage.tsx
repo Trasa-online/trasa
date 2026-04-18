@@ -397,7 +397,7 @@ const LandingPage = () => {
               Dla firm
             </a>
             <button
-              onClick={() => navigate("/plan")}
+              onClick={() => {}}
               className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap active:scale-95 trial-btn"
               style={{ color: "white" }}
             >
@@ -452,7 +452,7 @@ const LandingPage = () => {
                 Dla firm
               </a>
               <div className="mx-5 my-1 border-t border-white/10" />
-              <button onClick={() => { navigate("/plan"); setMenuOpen(false); }} className="px-5 py-3 text-sm font-bold text-white/80 hover:text-white hover:bg-white/5 text-left flex items-center gap-2 transition-colors">
+              <button onClick={() => { setMenuOpen(false); }} className="px-5 py-3 text-sm font-bold text-white/80 hover:text-white hover:bg-white/5 text-left flex items-center gap-2 transition-colors">
                 <Sparkles className="h-3.5 w-3.5 text-orange-400" />
                 Wypróbuj bez konta
               </button>
