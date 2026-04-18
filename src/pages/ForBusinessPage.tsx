@@ -143,11 +143,11 @@ const MOCK_TABS: { id: MockTab; label: string }[] = [
   { id: 'analytics', label: 'Analityka' },
 ];
 
-const ANNOTATIONS: Record<MockTab, { text: string; sub?: string; side: 'left' | 'right'; top: string }> = {
-  overview: { text: 'Śledź aktywność w czasie rzeczywistym', sub: 'kto i kiedy odwiedza Twój lokal', side: 'right', top: '38%' },
-  gallery: { text: 'Twoje zdjęcia, Twój wizerunek', sub: 'kontroluj co widzą turyści', side: 'left', top: '30%' },
-  posts: { text: 'Publikuj promocje i wydarzenia', sub: 'widoczne dla planujących wyjazd', side: 'right', top: '25%' },
-  analytics: { text: 'Pełna analityka jednym rzutem', sub: 'bez arkuszy, bez zgadywania', side: 'left', top: '42%' },
+const ANNOTATIONS: Record<MockTab, { text: string; sub?: string; top: string }> = {
+  overview:  { text: 'Śledź aktywność w czasie rzeczywistym', sub: 'kto i kiedy odwiedza Twój lokal', top: '28%' },
+  gallery:   { text: 'Twoje zdjęcia, Twój wizerunek',         sub: 'kontroluj co widzą turyści',        top: '22%' },
+  posts:     { text: 'Publikuj promocje i wydarzenia',         sub: 'widoczne dla planujących wyjazd',    top: '18%' },
+  analytics: { text: 'Pełna analityka jednym rzutem',          sub: 'bez arkuszy, bez zgadywania',        top: '34%' },
 };
 
 function DashboardMockup() {
@@ -158,22 +158,20 @@ function DashboardMockup() {
 
   return (
     <div className="relative mt-16 text-left">
-      {/* Floating annotation */}
+      {/* Floating annotation — always right side */}
       {Object.entries(ANNOTATIONS).map(([key, ann]) => tab === key && (
         <div
           key={key + animKey}
-          className={`absolute z-10 hidden lg:flex flex-col gap-0.5 bg-white rounded-2xl shadow-xl shadow-slate-200/80 border border-slate-100 px-4 py-3 max-w-[180px] ${ann.side === 'right' ? '-right-4 translate-x-full' : '-left-4 -translate-x-full'}`}
+          className="absolute z-10 hidden lg:flex flex-col gap-0.5 bg-white rounded-2xl shadow-xl shadow-slate-200/80 border border-slate-100 px-4 py-3 max-w-[190px] -right-5 translate-x-full"
           style={{
             top: ann.top,
-            animation: 'callout-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both',
+            animation: 'callout-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both, float-bob 3s ease-in-out 0.4s infinite',
           }}
         >
-          {/* Arrow */}
-          <div className={`absolute top-4 ${ann.side === 'right' ? '-left-2' : '-right-2'} w-0 h-0`}
-            style={ann.side === 'right'
-              ? { borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderRight: '8px solid white' }
-              : { borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderLeft: '8px solid white' }
-            }
+          {/* Arrow pointing left toward dashboard */}
+          <div
+            className="absolute top-4 -left-2 w-0 h-0"
+            style={{ borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderRight: '8px solid white' }}
           />
           <div className="h-1.5 w-1.5 rounded-full bg-blue-500 mb-1" />
           <p className="text-xs font-bold text-foreground leading-snug">{ann.text}</p>
@@ -183,8 +181,12 @@ function DashboardMockup() {
 
       <style>{`
         @keyframes callout-in {
-          from { opacity: 0; transform: scale(0.85) translateX(${ANNOTATIONS[tab]?.side === 'right' ? '8px' : '-8px'}); }
+          from { opacity: 0; transform: scale(0.88) translateX(10px); }
           to   { opacity: 1; transform: scale(1) translateX(0); }
+        }
+        @keyframes float-bob {
+          0%, 100% { transform: translateY(0px); }
+          50%       { transform: translateY(-6px); }
         }
         @keyframes content-fade {
           from { opacity: 0; transform: translateY(6px); }
