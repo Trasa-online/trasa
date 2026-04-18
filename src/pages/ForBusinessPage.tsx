@@ -433,10 +433,10 @@ export default function ForBusinessPage() {
               Dla podróżujących
             </a>
             <a
-              href="/auth"
+              href="/auth?business=true"
               className="hidden sm:flex items-center text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/50 hover:text-white transition-all whitespace-nowrap"
             >
-              Mam już konto
+              Zaloguj się
             </a>
             <a
               href="mailto:trasa.app@gmail.com"
