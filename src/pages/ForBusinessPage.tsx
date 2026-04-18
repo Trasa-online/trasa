@@ -88,13 +88,8 @@ const TIERS = [
 // ─── Feature icon ──────────────────────────────────────────────────────────────
 
 function FeatureVal({ val }: { val: boolean | string }) {
-  if (val === true) return <Check className="h-4 w-4 text-blue-500 shrink-0" strokeWidth={2.5} />;
   if (val === false) return <X className="h-4 w-4 text-slate-300 shrink-0" strokeWidth={2} />;
-  return (
-    <span className="text-[9px] font-black shrink-0 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 border border-amber-200 uppercase tracking-wide whitespace-nowrap">
-      podstawowa
-    </span>
-  );
+  return <Check className="h-4 w-4 text-blue-500 shrink-0" strokeWidth={2.5} />;
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
@@ -503,7 +498,7 @@ export default function ForBusinessPage() {
           </div>
           <h1
             className="text-5xl sm:text-6xl md:text-7xl font-black text-foreground leading-[1.05] mb-6 mx-auto"
-            style={{ fontFamily: "'Baloo 2', 'Inter', sans-serif", letterSpacing: "-0.02em", maxWidth: "18ch", textWrap: "balance" } as React.CSSProperties}
+            style={{ letterSpacing: "-0.02em", maxWidth: "18ch", textWrap: "balance" } as React.CSSProperties}
           >
             Bądź tam, gdzie{" "}
             <span className="bg-gradient-to-r from-blue-500 to-blue-700 bg-clip-text text-transparent">

@@ -467,7 +467,7 @@ const LandingPage = () => {
               </div>
               <h1
                 className="text-5xl sm:text-6xl md:text-7xl font-black text-foreground leading-[1.05] mb-6"
-                style={{ fontFamily: "'Baloo 2', 'Inter', sans-serif", letterSpacing: "-0.02em", textWrap: "balance" } as React.CSSProperties}
+                style={{ letterSpacing: "-0.02em", textWrap: "balance" } as React.CSSProperties}
               >
                 Speed dating<br />
                 <span className="bg-gradient-to-r from-[#F4A259] to-[#F9662B] bg-clip-text text-transparent">z&nbsp;miastem</span>
@@ -669,9 +669,14 @@ const LandingPage = () => {
           >
             Następny trip bez chaosu na grupce
           </h2>
-          <p className="text-base text-muted-foreground mb-8 max-w-[40ch] mx-auto">Dołącz do listy i bądź pierwszą osobą która wypróbuje Trasę.</p>
+          <p className="text-base text-muted-foreground mb-8 max-w-[40ch] mx-auto">Stwórz konto i zaplanuj trasę już dziś.</p>
           <div className="flex justify-center">
-            <EmailCapture large />
+            <button
+              onClick={() => navigate("/auth")}
+              className="rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold px-9 py-4 text-base shadow-md shadow-orange-200 hover:shadow-lg hover:shadow-orange-200/70 hover:opacity-95 active:scale-[0.98] active:translate-y-px transition-all"
+            >
+              Dołączam! →
+            </button>
           </div>
         </FadeIn>
       </section>
