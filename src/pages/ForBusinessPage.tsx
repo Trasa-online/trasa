@@ -132,6 +132,265 @@ function FaqAccordion({ items }: { items: { q: string; a: string }[] }) {
   );
 }
 
+// ─── Interactive dashboard mockup ─────────────────────────────────────────────
+
+type MockTab = 'overview' | 'gallery' | 'posts' | 'analytics';
+
+const MOCK_TABS: { id: MockTab; label: string }[] = [
+  { id: 'overview', label: 'Przegląd' },
+  { id: 'gallery', label: 'Galeria zdjęć' },
+  { id: 'posts', label: 'Aktualności' },
+  { id: 'analytics', label: 'Analityka' },
+];
+
+const ANNOTATIONS: Record<MockTab, { text: string; sub?: string; side: 'left' | 'right'; top: string }> = {
+  overview: { text: 'Śledź aktywność w czasie rzeczywistym', sub: 'kto i kiedy odwiedza Twój lokal', side: 'right', top: '38%' },
+  gallery: { text: 'Twoje zdjęcia, Twój wizerunek', sub: 'kontroluj co widzą turyści', side: 'left', top: '30%' },
+  posts: { text: 'Publikuj promocje i wydarzenia', sub: 'widoczne dla planujących wyjazd', side: 'right', top: '25%' },
+  analytics: { text: 'Pełna analityka jednym rzutem', sub: 'bez arkuszy, bez zgadywania', side: 'left', top: '42%' },
+};
+
+function DashboardMockup() {
+  const [tab, setTab] = useState<MockTab>('overview');
+  const [animKey, setAnimKey] = useState(0);
+
+  const switchTab = (t: MockTab) => { setTab(t); setAnimKey(k => k + 1); };
+
+  return (
+    <div className="relative mt-16 text-left">
+      {/* Floating annotation */}
+      {Object.entries(ANNOTATIONS).map(([key, ann]) => tab === key && (
+        <div
+          key={key + animKey}
+          className={`absolute z-10 hidden lg:flex flex-col gap-0.5 bg-white rounded-2xl shadow-xl shadow-slate-200/80 border border-slate-100 px-4 py-3 max-w-[180px] ${ann.side === 'right' ? '-right-4 translate-x-full' : '-left-4 -translate-x-full'}`}
+          style={{
+            top: ann.top,
+            animation: 'callout-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both',
+          }}
+        >
+          {/* Arrow */}
+          <div className={`absolute top-4 ${ann.side === 'right' ? '-left-2' : '-right-2'} w-0 h-0`}
+            style={ann.side === 'right'
+              ? { borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderRight: '8px solid white' }
+              : { borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderLeft: '8px solid white' }
+            }
+          />
+          <div className="h-1.5 w-1.5 rounded-full bg-blue-500 mb-1" />
+          <p className="text-xs font-bold text-foreground leading-snug">{ann.text}</p>
+          {ann.sub && <p className="text-[10px] text-slate-400 leading-snug">{ann.sub}</p>}
+        </div>
+      ))}
+
+      <style>{`
+        @keyframes callout-in {
+          from { opacity: 0; transform: scale(0.85) translateX(${ANNOTATIONS[tab]?.side === 'right' ? '8px' : '-8px'}); }
+          to   { opacity: 1; transform: scale(1) translateX(0); }
+        }
+        @keyframes content-fade {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
+      <div className="rounded-2xl overflow-hidden shadow-2xl shadow-blue-100/60 border border-slate-200">
+        {/* Browser bar */}
+        <div className="bg-slate-100 px-4 py-2.5 flex items-center gap-3 border-b border-slate-200">
+          <div className="flex gap-1.5">
+            <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
+            <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+            <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
+          </div>
+          <div className="flex-1 bg-white rounded-md px-3 py-1 text-xs text-slate-400 font-mono">
+            trasa.travel/biznes
+          </div>
+        </div>
+
+        {/* App shell */}
+        <div className="flex bg-white" style={{ height: 460 }}>
+          {/* Sidebar */}
+          <div className="w-48 shrink-0 border-r border-slate-100 bg-white flex flex-col py-5 px-3 gap-1">
+            <div className="flex items-center gap-2 px-2 mb-5">
+              <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+              <span className="font-black text-sm text-foreground">trasa biznes</span>
+            </div>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-1">Menu</p>
+            {MOCK_TABS.map(item => (
+              <button
+                key={item.id}
+                onClick={() => switchTab(item.id)}
+                className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs font-semibold transition-colors text-left cursor-pointer ${tab === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+              >
+                <div className={`h-1.5 w-1.5 rounded-full shrink-0 transition-colors ${tab === item.id ? 'bg-blue-500' : 'bg-slate-300'}`} />
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Main */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Top bar */}
+            <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 w-52">
+                <span className="text-slate-300 text-xs">⌕</span>
+                <span className="text-xs text-slate-400">Szukaj...</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">BK</div>
+                <div>
+                  <p className="text-xs font-bold text-foreground leading-none">Bulaj Kraków</p>
+                  <p className="text-[10px] text-slate-400">właściciel</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content — animated on tab change */}
+            <div
+              key={animKey}
+              className="flex-1 px-6 py-5 overflow-hidden"
+              style={{ animation: 'content-fade 0.3s ease both' }}
+            >
+
+              {/* ── PRZEGLĄD ── */}
+              {tab === 'overview' && (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-sm font-black text-foreground">Przegląd</h3>
+                      <p className="text-[10px] text-slate-400">Witaj! Oto co dzieje się dziś z Twoim lokalem.</p>
+                    </div>
+                    <div className="px-2.5 py-1.5 rounded-lg bg-blue-600 text-white text-[10px] font-bold">+ Dodaj aktualność</div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 mb-4">
+                    {[
+                      { label: 'Wyświetlenia', val: '1 284', delta: '+12%', up: true },
+                      { label: 'Dodania do trasy', val: '347', delta: '+8%', up: true },
+                      { label: 'Kliknięcia', val: '89', delta: '-2%', up: false },
+                      { label: 'Ocena', val: '4.7 ★', delta: '+0.2', up: true },
+                    ].map(s => (
+                      <div key={s.label} className="bg-slate-50 rounded-xl p-2.5 border border-slate-100">
+                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wide mb-1">{s.label}</p>
+                        <p className="text-sm font-black text-foreground leading-none mb-1">{s.val}</p>
+                        <span className={`text-[9px] font-bold px-1 py-0.5 rounded-full ${s.up ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>{s.delta}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-2">Ostatnia aktywność</p>
+                  {[
+                    { txt: 'Marta K. dodała Twój lokal do trasy na Kraków', time: '2 min temu', dot: 'bg-blue-400' },
+                    { txt: 'Nowa ocena 5★ od użytkownika Piotr W.', time: '14 min temu', dot: 'bg-emerald-400' },
+                    { txt: 'Twój profil wyświetlono 38 razy dzisiaj', time: '1 godz. temu', dot: 'bg-amber-400' },
+                  ].map((a, i) => (
+                    <div key={i} className="flex items-center gap-3 py-2 border-b border-slate-50">
+                      <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${a.dot}`} />
+                      <p className="text-[10px] text-slate-600 flex-1">{a.txt}</p>
+                      <p className="text-[9px] text-slate-400 shrink-0">{a.time}</p>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* ── GALERIA ── */}
+              {tab === 'gallery' && (
+                <>
+                  <h3 className="text-sm font-black text-foreground mb-1">Galeria zdjęć</h3>
+                  <p className="text-[10px] text-slate-400 mb-4">Logo, zdjęcie główne i galeria widoczne na wizytówce.</p>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <p className="text-[9px] font-semibold text-slate-400 mb-1.5">Logo</p>
+                      <div className="aspect-square rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
+                        <div className="h-8 w-8 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-semibold text-slate-400 mb-1.5">Zdjęcie główne</p>
+                      <div className="aspect-square rounded-xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center overflow-hidden">
+                        <div className="text-2xl">🍽️</div>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[9px] font-semibold text-slate-400 mb-1.5">Galeria (3/10)</p>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {['from-blue-100 to-sky-200', 'from-green-100 to-emerald-200', 'from-purple-100 to-violet-200'].map((g, i) => (
+                      <div key={i} className={`aspect-square rounded-lg bg-gradient-to-br ${g}`} />
+                    ))}
+                    <div className="aspect-square rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 text-lg">+</div>
+                  </div>
+                </>
+              )}
+
+              {/* ── AKTUALNOŚCI ── */}
+              {tab === 'posts' && (
+                <>
+                  <h3 className="text-sm font-black text-foreground mb-1">Aktualności</h3>
+                  <p className="text-[10px] text-slate-400 mb-3">Promocje i wydarzenia widoczne dla użytkowników planujących trip.</p>
+                  <div className="border border-slate-100 rounded-xl p-3 mb-3 bg-slate-50">
+                    <div className="h-8 bg-white rounded-lg border border-slate-100 mb-2 flex items-center px-3">
+                      <span className="text-[10px] text-slate-300">Co nowego w Twoim lokalu?</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-[9px] text-slate-400 font-semibold px-2 py-1 bg-white rounded-full border border-slate-100">📷 Zdjęcia</div>
+                      <div className="px-2.5 py-1 rounded-full bg-blue-600 text-white text-[9px] font-bold">Opublikuj</div>
+                    </div>
+                  </div>
+                  {[
+                    { title: 'Happy hour 17:00–19:00 🍸', time: '2 godz. temu', tag: 'Wydarzenie' },
+                    { title: 'Nowe menu degustacyjne już dostępne!', time: 'wczoraj', tag: 'Nowość' },
+                  ].map((p, i) => (
+                    <div key={i} className="border border-slate-100 rounded-xl p-3 mb-2 bg-white flex items-start gap-2.5">
+                      <div className="h-7 w-7 rounded-lg bg-orange-50 flex items-center justify-center text-sm shrink-0">📣</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold text-foreground leading-snug">{p.title}</p>
+                        <p className="text-[9px] text-slate-400 mt-0.5">{p.time} · <span className="text-blue-500">{p.tag}</span></p>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* ── ANALITYKA ── */}
+              {tab === 'analytics' && (
+                <>
+                  <h3 className="text-sm font-black text-foreground mb-1">Analityka</h3>
+                  <p className="text-[10px] text-slate-400 mb-4">Ostatnie 30 dni · aktualizowane na bieżąco</p>
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    {[
+                      { label: 'Wyświetlenia profilu', val: '1 284', icon: '👁', color: 'bg-blue-50 text-blue-600' },
+                      { label: 'Dodania do trasy', val: '347', icon: '📍', color: 'bg-emerald-50 text-emerald-600' },
+                      { label: 'Kliknięcia', val: '89', icon: '👆', color: 'bg-violet-50 text-violet-600' },
+                    ].map(s => (
+                      <div key={s.label} className="bg-white border border-slate-100 rounded-xl p-3 shadow-sm">
+                        <div className={`h-7 w-7 rounded-lg ${s.color} flex items-center justify-center text-sm mb-2`}>{s.icon}</div>
+                        <p className="text-base font-black text-foreground leading-none mb-0.5">{s.val}</p>
+                        <p className="text-[9px] text-slate-400 leading-snug">{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Mini bar chart */}
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-2">Wyświetlenia — ostatnie 7 dni</p>
+                  <div className="flex items-end gap-1.5 h-16">
+                    {[40, 65, 55, 80, 70, 90, 75].map((h, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                        <div className="w-full rounded-t-md bg-blue-200" style={{ height: `${h}%` }} />
+                        <span className="text-[7px] text-slate-300">{['Pn','Wt','Śr','Cz','Pt','So','Nd'][i]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab hint */}
+      <p className="text-center text-xs text-slate-400 mt-3">
+        Kliknij menu po lewej, żeby zobaczyć więcej
+      </p>
+    </div>
+  );
+}
+
 export default function ForBusinessPage() {
 
   return (
@@ -203,102 +462,9 @@ export default function ForBusinessPage() {
           <p className="text-xs text-muted-foreground mt-4">Odpisujemy w ciągu 24h</p>
 
           {/* ── Dashboard mockup ── */}
-          <div className="mt-16 text-left">
-            <FadeIn>
-              <div className="rounded-2xl overflow-hidden shadow-2xl shadow-blue-100/60 border border-slate-200">
-                {/* Browser bar */}
-                <div className="bg-slate-100 px-4 py-2.5 flex items-center gap-3 border-b border-slate-200">
-                  <div className="flex gap-1.5">
-                    <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
-                  </div>
-                  <div className="flex-1 bg-white rounded-md px-3 py-1 text-xs text-slate-400 font-mono">
-                    trasa.travel/biznes
-                  </div>
-                </div>
-                {/* App shell */}
-                <div className="flex bg-white" style={{ height: 420 }}>
-                  {/* Sidebar */}
-                  <div className="w-48 shrink-0 border-r border-slate-100 bg-white flex flex-col py-5 px-3 gap-1">
-                    <div className="flex items-center gap-2 px-2 mb-5">
-                      <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-                      <span className="font-black text-sm text-foreground">trasa biznes</span>
-                    </div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-1">Menu</p>
-                    {[
-                      { label: "Przegląd", active: true },
-                      { label: "Galeria zdjęć", active: false },
-                      { label: "Aktualności", active: false },
-                      { label: "Analityka", active: false },
-                    ].map((item) => (
-                      <div key={item.label} className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs font-semibold ${item.active ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}>
-                        <div className={`h-1.5 w-1.5 rounded-full ${item.active ? "bg-blue-500" : "bg-slate-300"}`} />
-                        {item.label}
-                      </div>
-                    ))}
-                  </div>
-                  {/* Main */}
-                  <div className="flex-1 flex flex-col overflow-hidden">
-                    {/* Top bar */}
-                    <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-100">
-                      <div className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 w-52">
-                        <div className="h-3 w-3 text-slate-300">⌕</div>
-                        <span className="text-xs text-slate-400">Szukaj...</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-7 w-7 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">BK</div>
-                        <div>
-                          <p className="text-xs font-bold text-foreground leading-none">Bulaj Kraków</p>
-                          <p className="text-[10px] text-slate-400">właściciel</p>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 px-6 py-5 overflow-hidden">
-                      <div className="flex items-center justify-between mb-5">
-                        <div>
-                          <h3 className="text-base font-black text-foreground">Przegląd</h3>
-                          <p className="text-xs text-slate-400">Witaj! Oto co dzieje się dziś z Twoim lokalem.</p>
-                        </div>
-                        <div className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold">+ Dodaj aktualność</div>
-                      </div>
-                      {/* Stats row */}
-                      <div className="grid grid-cols-4 gap-3 mb-5">
-                        {[
-                          { label: "Wyświetlenia profilu", val: "1 284", delta: "+12%", up: true },
-                          { label: "Dodania do trasy", val: "347", delta: "+8%", up: true },
-                          { label: "Kliknięcia w szczegóły", val: "89", delta: "-2%", up: false },
-                          { label: "Średnia ocena", val: "4.7 ★", delta: "+0.2", up: true },
-                        ].map((s) => (
-                          <div key={s.label} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1">{s.label}</p>
-                            <p className="text-lg font-black text-foreground leading-none mb-1">{s.val}</p>
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${s.up ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}>{s.delta} ostatni mies.</span>
-                          </div>
-                        ))}
-                      </div>
-                      {/* Recent activity */}
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Ostatnia aktywność</p>
-                      <div className="flex flex-col gap-2">
-                        {[
-                          { txt: "Marta K. dodała Twój lokal do trasy na Kraków", time: "2 min temu", dot: "bg-blue-400" },
-                          { txt: "Nowa ocena 5★ od użytkownika Piotr W.", time: "14 min temu", dot: "bg-emerald-400" },
-                          { txt: "Twój profil wyświetlono 38 razy dzisiaj", time: "1 godz. temu", dot: "bg-amber-400" },
-                        ].map((a, i) => (
-                          <div key={i} className="flex items-center gap-3 py-2 border-b border-slate-50">
-                            <div className={`h-2 w-2 rounded-full shrink-0 ${a.dot}`} />
-                            <p className="text-xs text-slate-600 flex-1">{a.txt}</p>
-                            <p className="text-[10px] text-slate-400 shrink-0">{a.time}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </FadeIn>
-          </div>
+          <FadeIn>
+            <DashboardMockup />
+          </FadeIn>
         </div>
       </section>
 
