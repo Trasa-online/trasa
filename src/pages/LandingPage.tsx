@@ -424,7 +424,7 @@ const LandingPage = () => {
                 animation: trial-flow 2.4s ease infinite, trial-pulse 2.4s ease infinite;
               }
             `}</style>
-            <button onClick={() => navigate("/auth")} className="flex items-center text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/50 hover:text-white transition-all whitespace-nowrap">
+            <button onClick={() => navigate("/auth")} className="hidden sm:flex items-center text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/50 hover:text-white transition-all whitespace-nowrap">
               Zaloguj się
             </button>
             <button onClick={() => document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" })} className="hidden sm:block text-sm font-bold px-4 py-2 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all whitespace-nowrap">
@@ -455,6 +455,9 @@ const LandingPage = () => {
               <button onClick={() => { navigate("/plan"); setMenuOpen(false); }} className="px-5 py-3 text-sm font-bold text-white/80 hover:text-white hover:bg-white/5 text-left flex items-center gap-2 transition-colors">
                 <Sparkles className="h-3.5 w-3.5 text-orange-400" />
                 Wypróbuj bez konta
+              </button>
+              <button onClick={() => { navigate("/auth"); setMenuOpen(false); }} className="px-5 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 text-left transition-colors">
+                Zaloguj się
               </button>
               <div className="px-5 py-3">
                 <button onClick={() => { document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="w-full text-sm font-bold px-4 py-2.5 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all">
