@@ -356,9 +356,8 @@ const LandingPage = () => {
       {/* ── Nav ── */}
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl">
         <div className="bg-[#1a1a1a] rounded-full px-5 h-14 flex items-center justify-between shadow-xl">
-          <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-            <span className="font-black text-base tracking-tight text-white">trasa</span>
+          <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center">
+            <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
           </button>
           <div className="hidden sm:flex items-center gap-6">
             <button
@@ -533,7 +532,6 @@ const LandingPage = () => {
               <div className="text-center sm:text-left">
                 <p className="text-base text-foreground leading-relaxed mb-3">
                   Jesteśmy małżeństwem, które uwielbia podróżować i robić krótkie wypady po Polsce i Europie.
-                  Razem stworzyliśmy Trasę - Nat odpowiada za produkt i techniczny aspekt, a Bart stoi za wizją, strategią i marketingiem.
                 </p>
                 <p className="text-base text-foreground leading-relaxed">
                   Rozumiemy, że czasami ciężko jest ustalić co chcecie robić podczas szybkiego tripu -

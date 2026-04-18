@@ -143,6 +143,20 @@ export default function ForBusinessPage() {
           <a href="/" className="flex items-center">
             <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
           </a>
+          <div className="hidden sm:flex items-center gap-5">
+            <button
+              onClick={() => document.getElementById("pakiety")?.scrollIntoView({ behavior: "smooth" })}
+              className="text-sm text-white/60 hover:text-white/90 transition-colors"
+            >
+              Pakiety
+            </button>
+            <button
+              onClick={() => document.getElementById("faq-biznes")?.scrollIntoView({ behavior: "smooth" })}
+              className="text-sm text-white/60 hover:text-white/90 transition-colors"
+            >
+              FAQ
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             <a
               href="/"
@@ -225,7 +239,7 @@ export default function ForBusinessPage() {
       </section>
 
       {/* ── Pakiety ── */}
-      <section className="py-24 px-5">
+      <section id="pakiety" className="py-24 px-5">
         <div className="max-w-5xl mx-auto">
           <FadeIn className="text-center mb-14">
             <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2">Pakiety</p>
@@ -320,7 +334,7 @@ export default function ForBusinessPage() {
       </section>
 
       {/* ── FAQ ── */}
-      <section className="py-24 px-5">
+      <section id="faq-biznes" className="py-24 px-5">
         <div className="max-w-2xl mx-auto">
           <FadeIn className="text-center mb-12">
             <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2">FAQ</p>
