@@ -599,7 +599,7 @@ const LandingPage = () => {
             className="text-3xl sm:text-4xl font-black text-foreground mb-4"
             style={{ textWrap: "balance" } as React.CSSProperties}
           >
-            Zacznij planować inaczej
+            Następny trip bez chaosu na grupce
           </h2>
           <p className="text-base text-muted-foreground mb-8 max-w-[40ch] mx-auto">Dołącz do listy i bądź pierwszą osobą która wypróbuje Trasę.</p>
           <div className="flex justify-center">
