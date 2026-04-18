@@ -261,32 +261,28 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 
 function PhoneMockup() {
   return (
-    <div className="relative mx-auto" style={{ width: 248, height: 504 }}>
-      {/* Body — aluminium frame */}
+    <div className="relative mx-auto" style={{ width: 252, height: 510 }}>
+      {/* Body — iPhone 15 aluminium (lighter than 14 Pro titanium) */}
       <div
-        className="absolute inset-0 rounded-[3.2rem]"
+        className="absolute inset-0 rounded-[3.4rem]"
         style={{
-          background: "linear-gradient(160deg, #3a3a3c 0%, #1c1c1e 45%, #3a3a3c 100%)",
-          boxShadow: "0 0 0 1px #48484a, 0 30px 60px -12px rgba(0,0,0,0.7), 0 0 80px rgba(249,102,43,0.07)",
+          background: "linear-gradient(160deg, #d1d1d6 0%, #aeaeb2 30%, #8e8e93 60%, #c7c7cc 100%)",
+          boxShadow: "0 0 0 1px #c7c7cc, 0 30px 60px -12px rgba(0,0,0,0.55), 0 0 80px rgba(249,102,43,0.07)",
         }}
       />
 
       {/* Left: silent switch */}
-      <div className="absolute rounded-l-sm" style={{ left: -2, top: "17%", width: 3, height: 26, background: "#48484a" }} />
+      <div className="absolute rounded-l-sm" style={{ left: -2, top: "17%", width: 3, height: 26, background: "#aeaeb2" }} />
       {/* Left: volume up */}
-      <div className="absolute rounded-l-sm" style={{ left: -2, top: "26%", width: 3, height: 38, background: "#48484a" }} />
+      <div className="absolute rounded-l-sm" style={{ left: -2, top: "26%", width: 3, height: 38, background: "#aeaeb2" }} />
       {/* Left: volume down */}
-      <div className="absolute rounded-l-sm" style={{ left: -2, top: "36%", width: 3, height: 38, background: "#48484a" }} />
+      <div className="absolute rounded-l-sm" style={{ left: -2, top: "36%", width: 3, height: 38, background: "#aeaeb2" }} />
       {/* Right: power */}
-      <div className="absolute rounded-r-sm" style={{ right: -2, top: "27%", width: 3, height: 56, background: "#48484a" }} />
+      <div className="absolute rounded-r-sm" style={{ right: -2, top: "27%", width: 3, height: 56, background: "#aeaeb2" }} />
 
       {/* Screen bezel */}
-      <div className="absolute overflow-hidden rounded-[2.9rem] bg-black" style={{ inset: 4 }}>
-        {/* Dynamic Island */}
-        <div
-          className="absolute z-10"
-          style={{ top: 12, left: "50%", transform: "translateX(-50%)", width: 90, height: 28, background: "#000", borderRadius: 20, boxShadow: "inset 0 0 0 1px #1c1c1e" }}
-        />
+      <div className="absolute overflow-hidden rounded-[3rem] bg-black" style={{ inset: 5 }}>
+        {/* Video */}
         <video
           src="/demo.mp4"
           autoPlay
@@ -294,6 +290,13 @@ function PhoneMockup() {
           muted
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
+        />
+        {/* Black bar covering the video's status bar (22:02, recording dot, etc.) */}
+        <div className="absolute top-0 left-0 right-0 bg-black" style={{ height: 52 }} />
+        {/* Dynamic Island on top */}
+        <div
+          className="absolute z-10"
+          style={{ top: 12, left: "50%", transform: "translateX(-50%)", width: 92, height: 28, background: "#000", borderRadius: 20 }}
         />
       </div>
 
