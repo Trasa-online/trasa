@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { X, Heart, Star, ArrowRight, ChevronLeft, MapPin } from "lucide-react";
-import { MOCK_PLACES } from "@/lib/mockPlaces";
+import { getMockPlaces } from "@/lib/mockPlaces";
 import { useNavigate } from "react-router-dom";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -58,11 +58,6 @@ function CityDrum({ city, onSelect }: { city: string; onSelect: (c: string) => v
 
   return (
     <div className="relative w-full" style={{ height: ITEM_H * VISIBLE }}>
-      {/* Selection highlight */}
-      <div
-        className="absolute left-4 right-4 pointer-events-none z-10 rounded-2xl bg-orange-50 border border-orange-200"
-        style={{ top: PAD, height: ITEM_H }}
-      />
       {/* Fade top */}
       <div className="absolute inset-x-0 top-0 h-16 pointer-events-none z-10 bg-gradient-to-b from-white to-transparent" />
       {/* Fade bottom */}
@@ -215,11 +210,10 @@ export default function TrialModal({ open, onClose }: TrialModalProps) {
     }
   }, [open]);
 
-  const filteredPlaces = MOCK_PLACES.filter(p => {
-    const cityMatch = p.city === city || (city === "Trójmiasto" && p.city === "Gdańsk");
-    const catMatch = selectedCats.length === 0 || selectedCats.includes(p.category);
-    return cityMatch && catMatch;
-  });
+  const cityPlaces = getMockPlaces(city);
+  const filteredPlaces = selectedCats.length === 0
+    ? cityPlaces
+    : cityPlaces.filter(p => selectedCats.includes(p.category as string));
 
   const currentCard = filteredPlaces[cardIdx];
   const nextCard = filteredPlaces[cardIdx + 1];
@@ -303,7 +297,7 @@ export default function TrialModal({ open, onClose }: TrialModalProps) {
         {step === "categories" && (
           <div className="flex flex-col flex-1 overflow-hidden">
             <div className="px-5 mb-4">
-              <h2 className="text-2xl font-black text-foreground">Co Cię kręci?</h2>
+              <h2 className="text-2xl font-black text-foreground">Co wybierasz?</h2>
               <p className="text-sm text-muted-foreground mt-0.5">Wybierz kategorie — możesz zaznaczyć kilka</p>
             </div>
             <div className="flex-1 overflow-y-auto px-5">
@@ -335,7 +329,7 @@ export default function TrialModal({ open, onClose }: TrialModalProps) {
                 className="w-full h-12 rounded-full font-bold text-white text-base shadow-lg active:scale-95 transition-transform"
                 style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}
               >
-                {selectedCats.length === 0 ? "Pokaż wszystko" : `Pokaż miejsca (${filteredPlaces.length})`}
+                Przechodzę dalej
               </button>
             </div>
           </div>
