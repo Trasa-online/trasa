@@ -305,6 +305,52 @@ export default function ForBusinessPage() {
         </div>
       </section>
 
+      {/* ── Demo ── */}
+      <section className="py-16 px-5">
+        <div className="max-w-4xl mx-auto">
+          <FadeIn className="text-center mb-10">
+            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2">Demo</p>
+            <h2 className="text-3xl sm:text-4xl font-black text-foreground" style={{ textWrap: "balance" } as React.CSSProperties}>
+              Zobacz panel biznesowy w akcji
+            </h2>
+          </FadeIn>
+          <FadeIn>
+            <div className="rounded-2xl overflow-hidden shadow-2xl shadow-slate-200/80 border border-slate-200">
+              <div className="bg-slate-100 px-4 py-3 flex items-center gap-3 border-b border-slate-200">
+                <div className="flex gap-1.5">
+                  <div className="h-3 w-3 rounded-full bg-red-400" />
+                  <div className="h-3 w-3 rounded-full bg-amber-400" />
+                  <div className="h-3 w-3 rounded-full bg-green-400" />
+                </div>
+                <div className="flex-1 bg-white rounded-md px-3 py-1 text-xs text-slate-400 font-mono">
+                  trasa.travel/biznes
+                </div>
+              </div>
+              <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 aspect-video flex items-center justify-center group cursor-pointer">
+                <div className="absolute inset-0 opacity-20 overflow-hidden">
+                  <div className="absolute top-6 left-6 right-6 h-10 bg-white/10 rounded-xl" />
+                  <div className="absolute top-20 left-6 w-48 h-32 bg-white/10 rounded-xl" />
+                  <div className="absolute top-20 left-60 right-6 h-32 bg-white/10 rounded-xl" />
+                  <div className="absolute top-56 left-6 right-6 h-20 bg-white/10 rounded-xl" />
+                </div>
+                <div className="relative flex flex-col items-center gap-4">
+                  <div className="h-20 w-20 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center group-hover:bg-white/20 transition-all group-hover:scale-110 duration-300">
+                    <div className="ml-1.5 w-0 h-0" style={{ borderTop: "14px solid transparent", borderBottom: "14px solid transparent", borderLeft: "22px solid white" }} />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-white font-bold text-sm">Zobacz jak działa panel biznesowy</p>
+                    <p className="text-white/50 text-xs mt-1">demo • ~2 min</p>
+                  </div>
+                </div>
+                <div className="absolute bottom-4 right-4 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
+                  <p className="text-white/70 text-xs font-semibold">Demo już wkrótce</p>
+                </div>
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
       {/* ── Premium features ── */}
       <section className="py-24 px-5 bg-slate-50">
         <div className="max-w-5xl mx-auto">
