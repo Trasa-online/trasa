@@ -278,28 +278,37 @@ const LandingPage = () => {
     <div className="min-h-screen bg-[#FEFEFE] overflow-x-hidden">
 
       {/* ── Nav ── */}
-      <nav className="sticky top-0 z-50 bg-[#FEFEFE]/90 backdrop-blur-md border-b border-border/20">
-        <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
+      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl">
+        <div className="bg-[#1a1a1a] rounded-full px-5 h-14 flex items-center justify-between shadow-xl">
           <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-            <span className="font-black text-base tracking-tight">trasa</span>
+            <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            <span className="font-black text-base tracking-tight text-white">trasa</span>
           </button>
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/auth")} className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
-              Zaloguj się
+          <div className="hidden sm:flex items-center gap-6">
+            <button
+              onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}
+              className="text-sm text-white/60 hover:text-white/90 transition-colors"
+            >
+              Jak to działa
             </button>
             <button
-              onClick={() => document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" })}
-              className="text-sm font-bold px-4 py-2 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white shadow-sm active:scale-95 transition-transform"
+              onClick={() => document.getElementById("for-whom")?.scrollIntoView({ behavior: "smooth" })}
+              className="text-sm text-white/60 hover:text-white/90 transition-colors"
             >
-              Dołącz →
+              Dla kogo
             </button>
           </div>
+          <button
+            onClick={() => document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" })}
+            className="text-sm font-bold px-4 py-2 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all"
+          >
+            Dołącz →
+          </button>
         </div>
       </nav>
 
       {/* ── Hero ── */}
-      <section className="max-w-5xl mx-auto px-5 pt-20 pb-16 text-center">
+      <section className="max-w-5xl mx-auto px-5 pt-28 pb-16 text-center">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 text-xs font-bold mb-8">
           <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
           Early access — dołącz do listy oczekujących
@@ -356,7 +365,7 @@ const LandingPage = () => {
       </section>
 
       {/* ── Jak to działa ── */}
-      <section className="bg-slate-50 py-20 px-5">
+      <section id="how-it-works" className="bg-slate-50 py-20 px-5">
         <div className="max-w-5xl mx-auto">
           <FadeIn className="text-center mb-14">
             <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">Jak to działa</p>
@@ -378,7 +387,7 @@ const LandingPage = () => {
       </section>
 
       {/* ── Dla kogo ── */}
-      <section className="py-20 px-5">
+      <section id="for-whom" className="py-20 px-5">
         <div className="max-w-5xl mx-auto">
           <FadeIn className="text-center mb-12">
             <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">Dla kogo</p>
