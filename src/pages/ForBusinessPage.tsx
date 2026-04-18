@@ -209,8 +209,8 @@ function DashboardMockup() {
 
         {/* App shell */}
         <div className="flex bg-white" style={{ height: 460 }}>
-          {/* Sidebar */}
-          <div className="w-48 shrink-0 border-r border-slate-100 bg-white flex flex-col py-5 px-3 gap-1">
+          {/* Sidebar — desktop only */}
+          <div className="hidden sm:flex w-48 shrink-0 border-r border-slate-100 bg-white flex-col py-5 px-3 gap-1">
             <div className="flex items-center gap-2 px-2 mb-5">
               <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
               <span className="font-black text-sm text-foreground">trasa biznes</span>
@@ -243,6 +243,19 @@ function DashboardMockup() {
                   <p className="text-[10px] text-slate-400">właściciel</p>
                 </div>
               </div>
+            </div>
+
+            {/* Mobile tab strip — shown instead of sidebar on small screens */}
+            <div className="sm:hidden flex border-b border-slate-100 shrink-0">
+              {MOCK_TABS.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => switchTab(item.id)}
+                  className={`flex-1 py-2.5 text-[10px] font-semibold whitespace-nowrap px-1 transition-colors border-b-2 ${tab === item.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-400'}`}
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
 
             {/* Content — animated on tab change */}
@@ -387,7 +400,8 @@ function DashboardMockup() {
 
       {/* Tab hint */}
       <p className="text-center text-xs text-slate-400 mt-3">
-        Kliknij menu po lewej, żeby zobaczyć więcej
+        <span className="sm:hidden">Kliknij zakładkę, żeby zobaczyć więcej</span>
+        <span className="hidden sm:inline">Kliknij menu po lewej, żeby zobaczyć więcej</span>
       </p>
     </div>
   );
@@ -435,7 +449,7 @@ export default function ForBusinessPage() {
             </a>
             <a
               href="/auth?business=true"
-              className="hidden sm:flex items-center text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/50 hover:text-white transition-all whitespace-nowrap"
+              className="flex items-center text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/50 hover:text-white transition-all whitespace-nowrap"
             >
               Zaloguj się
             </a>

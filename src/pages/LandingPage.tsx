@@ -409,7 +409,7 @@ const LandingPage = () => {
                 animation: trial-flow 2.4s ease infinite, trial-pulse 2.4s ease infinite;
               }
             `}</style>
-            <button onClick={() => navigate("/auth")} className="hidden sm:flex items-center text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/50 hover:text-white transition-all whitespace-nowrap">
+            <button onClick={() => navigate("/auth")} className="flex items-center text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/50 hover:text-white transition-all whitespace-nowrap">
               Zaloguj się
             </button>
             <button onClick={() => document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" })} className="hidden sm:block text-sm font-bold px-4 py-2 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all whitespace-nowrap">
@@ -463,7 +463,7 @@ const LandingPage = () => {
             <div>
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 text-xs font-bold mb-8">
                 <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
-                Early access - dołącz do listy oczekujących
+                Dołącz do trasy
               </div>
               <h1
                 className="text-5xl sm:text-6xl md:text-7xl font-black text-foreground leading-[1.05] mb-6"
@@ -476,9 +476,14 @@ const LandingPage = () => {
                 Wyjazd z grupą kojarzy Ci się ze stresem i wiecznymi kłótniami na messengerze? Z trasą całą organizację macie z głowy.
               </p>
               <div id="cta-hero">
-                <EmailCapture large />
+                <button
+                  onClick={() => navigate("/auth")}
+                  className="rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold px-7 py-4 text-base shadow-md shadow-orange-200 hover:shadow-lg hover:shadow-orange-200/70 hover:opacity-95 active:scale-[0.98] active:translate-y-px transition-all"
+                >
+                  Dołącz do trasy →
+                </button>
               </div>
-              <p className="text-xs text-muted-foreground mt-4">Konto jest darmowe!</p>
+              <p className="text-xs text-muted-foreground mt-4 text-center sm:text-left">Konto jest darmowe</p>
             </div>
 
             {/* Right: phone mockup */}
