@@ -1,5 +1,4 @@
 import { useRef, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Check, X, BarChart2, ImagePlus, CalendarDays, TrendingUp, Eye, Star, MapPin } from "lucide-react";
 
 // ─── Scroll reveal ─────────────────────────────────────────────────────────────
@@ -37,22 +36,6 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 
 const TIERS = [
   {
-    name: "Model zero",
-    subtitle: "Cię nie ma",
-    price: null,
-    cta: null,
-    highlight: false,
-    danger: true,
-    features: [
-      { label: "Widoczność w trasach użytkowników", val: false },
-      { label: "Profil lokalu z opisem i zdjęciami", val: false },
-      { label: "Dodawanie do trasy przez użytkowników", val: false },
-      { label: "Analityka wyświetleń i kliknięć", val: false },
-      { label: "Zdjęcia i galeria", val: false },
-      { label: "Aktualności i promocje", val: false },
-    ],
-  },
-  {
     name: "Basic",
     subtitle: "Zaistniej na mapie",
     price: "Bezpłatny",
@@ -64,7 +47,7 @@ const TIERS = [
       { label: "Profil lokalu z opisem", val: true },
       { label: "Dodawanie do trasy przez użytkowników", val: true },
       { label: "1 zdjęcie profilowe", val: true },
-      { label: "Podstawowa analityka (wyświetlenia)", val: "ograniczona" },
+      { label: "Podstawowa analityka (wyświetlenia)", val: "limited" },
       { label: "Aktualności i promocje", val: false },
     ],
   },
@@ -84,6 +67,22 @@ const TIERS = [
       { label: "Aktualności i promocje w feedzie", val: true },
     ],
   },
+  {
+    name: "Enterprise",
+    subtitle: "Dla sieciówek i sieci lokali",
+    price: "Wycena indywidualna",
+    cta: "Porozmawiajmy",
+    highlight: false,
+    danger: false,
+    features: [
+      { label: "Wszystko z pakietu Premium", val: true },
+      { label: "Wiele lokalizacji pod jednym kontem", val: true },
+      { label: "Dedykowany opiekun konta", val: true },
+      { label: "Zbiorcza analityka dla wszystkich lokali", val: true },
+      { label: "Priorytetowe wyróżnienie w wynikach", val: true },
+      { label: "Integracja z systemem rezerwacji", val: true },
+    ],
+  },
 ];
 
 // ─── Feature icon ──────────────────────────────────────────────────────────────
@@ -91,7 +90,11 @@ const TIERS = [
 function FeatureVal({ val }: { val: boolean | string }) {
   if (val === true) return <Check className="h-4 w-4 text-blue-500 shrink-0" strokeWidth={2.5} />;
   if (val === false) return <X className="h-4 w-4 text-slate-300 shrink-0" strokeWidth={2} />;
-  return <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wide shrink-0">ograniczona</span>;
+  return (
+    <span className="text-[9px] font-black shrink-0 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 border border-amber-200 uppercase tracking-wide whitespace-nowrap">
+      podstawowa
+    </span>
+  );
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
@@ -106,7 +109,6 @@ const PREMIUM_FEATURES = [
 ];
 
 export default function ForBusinessPage() {
-  const navigate = useNavigate();
 
   return (
     <div className="min-h-[100dvh] bg-[#FEFEFE] overflow-x-hidden">
@@ -114,9 +116,8 @@ export default function ForBusinessPage() {
       {/* ── Nav ── */}
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl">
         <div className="bg-[#1a1a1a] rounded-full px-5 h-14 flex items-center justify-between shadow-xl">
-          <a href="/" className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-            <span className="font-black text-base tracking-tight text-white">trasa</span>
+          <a href="/" className="flex items-center">
+            <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
           </a>
           <div className="flex items-center gap-2">
             <a
@@ -307,7 +308,7 @@ export default function ForBusinessPage() {
             className="text-3xl sm:text-4xl font-black text-foreground mb-4"
             style={{ textWrap: "balance" } as React.CSSProperties}
           >
-            Zacznij być widoczny tam gdzie trzeba
+            Niech turyści sami Cię znajdą
           </h2>
           <p className="text-base text-muted-foreground mb-8 max-w-[40ch] mx-auto">
             Napisz do nas - ustalimy szczegóły i dodamy Twój lokal do bazy.
@@ -316,7 +317,7 @@ export default function ForBusinessPage() {
             href="mailto:trasa.app@gmail.com"
             className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-blue-600 text-white font-bold text-base hover:bg-blue-500 active:scale-95 transition-all shadow-lg shadow-blue-200"
           >
-            trasa.app@gmail.com →
+            Dodaj swój lokal →
           </a>
         </FadeIn>
       </section>
@@ -324,9 +325,8 @@ export default function ForBusinessPage() {
       {/* ── Footer ── */}
       <footer className="bg-foreground py-10 px-5">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-            <span className="font-black text-white text-sm">trasa</span>
           </div>
           <div className="flex items-center gap-6">
             <a href="/" className="text-xs text-white/50 hover:text-white/80 transition-colors">Dla podróżujących</a>
