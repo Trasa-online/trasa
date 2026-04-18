@@ -313,14 +313,14 @@ const LandingPage = () => {
   if (user) return <Navigate to="/home" replace />;
 
   const STEPS = [
-    { num: "01", title: "Wybierz miasto i datę", desc: "Kraków, Gdańsk, Warszawa — wybierz gdzie i kiedy. Reszta sama się ułoży.", anim: <CityAnim /> },
-    { num: "02", title: "Przeglądajcie miejsca razem", desc: "Każdy z grupy klika co go kręci. Restauracje, muzea, bary — bez kompromisów w messengerze.", anim: <SwipeAnim /> },
+    { num: "01", title: "Wybierz miasto i datę", desc: "Kraków, Gdańsk, Warszawa - wybierz gdzie i kiedy. Reszta sama się ułoży.", anim: <CityAnim /> },
+    { num: "02", title: "Przeglądajcie miejsca razem", desc: "Każdy z grupy klika co go kręci. Restauracje, muzea, bary - bez kompromisów w messengerze.", anim: <SwipeAnim /> },
     { num: "03", title: "Trasa gotowa w minutę", desc: "Na podstawie wspólnych wyborów trasa układa gotowy plan z kolejnością, mapą i godzinami.", anim: <RouteAnim /> },
   ];
 
   const FOR_WHOM = [
     { icon: <Users className="h-7 w-7 text-orange-600" />, title: "Grupy przyjaciół", desc: "Każdy chce coś innego? Trasa pogodzi wszystkich bez godzin negocjacji w grupce." },
-    { icon: <Heart className="h-6 w-6 text-orange-600" />, title: "Pary", desc: "Weekendowy wypad we dwoje — znajdźcie miejsca które kręcą was oboje." },
+    { icon: <Heart className="h-6 w-6 text-orange-600" />, title: "Pary", desc: "Weekendowy wypad we dwoje - znajdźcie miejsca które kręcą was oboje." },
     { icon: <Zap className="h-6 w-6 text-orange-600" />, title: "Spontaniczne wypady", desc: "Piątek wieczór, sobota wolna. Za 5 minut macie plan na cały dzień." },
   ];
 
@@ -375,7 +375,7 @@ const LandingPage = () => {
             <div>
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 text-xs font-bold mb-8">
                 <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
-                Early access — dołącz do listy oczekujących
+                Early access - dołącz do listy oczekujących
               </div>
               <h1
                 className="text-5xl sm:text-6xl md:text-7xl font-black text-foreground leading-[1.05] mb-6"
@@ -499,7 +499,7 @@ const LandingPage = () => {
               <div className="shrink-0">
                 <img
                   src="/founders.jpg"
-                  alt="Bart i Nat — twórcy Trasy"
+                  alt="Bart i Nat - twórcy Trasy"
                   className="w-48 h-64 object-cover rounded-2xl shadow-md"
                   style={{ objectPosition: "center top" }}
                 />
@@ -507,10 +507,10 @@ const LandingPage = () => {
               <div className="text-center sm:text-left">
                 <p className="text-base text-foreground leading-relaxed mb-3">
                   Jesteśmy małżeństwem, które uwielbia podróżować i robić krótkie wypady po Polsce i Europie.
-                  Razem stworzyliśmy Trasę — Nat odpowiada za produkt i techniczny aspekt, a Bart stoi za wizją, strategią i marketingiem.
+                  Razem stworzyliśmy Trasę - Nat odpowiada za produkt i techniczny aspekt, a Bart stoi za wizją, strategią i marketingiem.
                 </p>
                 <p className="text-base text-foreground leading-relaxed">
-                  Rozumiemy, że czasami ciężko jest ustalić co chcecie robić podczas szybkiego tripu —
+                  Rozumiemy, że czasami ciężko jest ustalić co chcecie robić podczas szybkiego tripu -
                   dlatego <span className="font-bold text-orange-600">Trasa pomaga, żeby wyjazd wyszedł poza messengera.</span>
                 </p>
               </div>

@@ -80,7 +80,7 @@ const TIERS = [
       { label: "Profil lokalu z opisem", val: true },
       { label: "Dodawanie do trasy przez użytkowników", val: true },
       { label: "Pełna galeria zdjęć (bez limitu)", val: true },
-      { label: "Pełna analityka — kliknięcia, dodania, oceny", val: true },
+      { label: "Pełna analityka - kliknięcia, dodania, oceny", val: true },
       { label: "Aktualności i promocje w feedzie", val: true },
     ],
   },
@@ -97,9 +97,9 @@ function FeatureVal({ val }: { val: boolean | string }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 const PREMIUM_FEATURES = [
-  { icon: <Eye className="h-6 w-6 text-blue-500" />, title: "Widoczność gdzie trzeba", desc: "Twój lokal pojawia się gdy ktoś planuje wyjazd do Twojego miasta — nie w ogłoszeniach, ale w planie dnia." },
+  { icon: <Eye className="h-6 w-6 text-blue-500" />, title: "Widoczność gdzie trzeba", desc: "Twój lokal pojawia się gdy ktoś planuje wyjazd do Twojego miasta - nie w ogłoszeniach, ale w planie dnia." },
   { icon: <BarChart2 className="h-6 w-6 text-blue-500" />, title: "Analityka w czasie rzeczywistym", desc: "Ile osób zobaczyło Twój profil, ile kliknęło, ile dodało do trasy. Wiesz co działa." },
-  { icon: <ImagePlus className="h-6 w-6 text-blue-500" />, title: "Pełna galeria zdjęć", desc: "Przesyłasz własne zdjęcia — kontrolujesz jak wygląda Twój lokal w trasach użytkowników." },
+  { icon: <ImagePlus className="h-6 w-6 text-blue-500" />, title: "Pełna galeria zdjęć", desc: "Przesyłasz własne zdjęcia - kontrolujesz jak wygląda Twój lokal w trasach użytkowników." },
   { icon: <CalendarDays className="h-6 w-6 text-blue-500" />, title: "Aktualności i promocje", desc: "Wrzuć specjalną ofertę, wydarzenie albo nowe danie. Użytkownicy planujący trasę zobaczą to w odpowiednim momencie." },
   { icon: <TrendingUp className="h-6 w-6 text-blue-500" />, title: "Oceny i opinie", desc: "Zbieraj oceny od osób które faktycznie odwiedziły Twój lokal przez Trasę. Autentyczny social proof." },
   { icon: <Star className="h-6 w-6 text-blue-500" />, title: "Wyróżnienie w wynikach", desc: "Lokale Premium wyświetlają się wyżej w rekomendacjach gdy użytkownik wybiera miejsca w Twoim mieście." },
@@ -141,7 +141,7 @@ export default function ForBusinessPage() {
         <div className="max-w-5xl mx-auto px-5 pt-28 pb-16 w-full text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-8">
             <MapPin className="h-3.5 w-3.5" />
-            Dla właścicieli lokali i restauracji
+            Lokalne biznesy
           </div>
           <h1
             className="text-5xl sm:text-6xl md:text-7xl font-black text-foreground leading-[1.05] mb-6 mx-auto"
@@ -149,24 +149,23 @@ export default function ForBusinessPage() {
           >
             Bądź tam, gdzie{" "}
             <span className="bg-gradient-to-r from-blue-500 to-blue-700 bg-clip-text text-transparent">
-              turyści planują.
+              turyści szukają
             </span>
           </h1>
           <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-[52ch] mx-auto">
-            Trasa to aplikacja którą turyści i lokalni używają do planowania wypadów.
-            Twój lokal może pojawiać się w ich planach — zanim jeszcze wyjdą z domu.
+            trasa to aplikacja, w której turyści poznają się z miastem. Twój lokal może pojawić się już dzisiaj w ich planach!
           </p>
           <a
             href="mailto:trasa.app@gmail.com"
             className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-blue-600 text-white font-bold text-base hover:bg-blue-500 active:scale-95 transition-all shadow-lg shadow-blue-200"
           >
-            Napisz do nas →
+            Daj się odkryć →
           </a>
           <p className="text-xs text-muted-foreground mt-4">Odpisujemy w ciągu 24h</p>
         </div>
       </section>
 
-      {/* ── Model zero — loss aversion ── */}
+      {/* ── Model zero - loss aversion ── */}
       <section className="py-24 px-5 bg-slate-900">
         <div className="max-w-4xl mx-auto">
           <FadeIn className="text-center mb-14">
@@ -175,21 +174,21 @@ export default function ForBusinessPage() {
               className="text-3xl sm:text-4xl font-black text-white mb-4"
               style={{ textWrap: "balance" } as React.CSSProperties}
             >
-              Gdy Cię nie ma na Trasie — tracisz.
+              Gdy Cię nie ma na Trasie - tracisz.
             </h2>
             <p className="text-base text-white/50 max-w-[48ch] mx-auto leading-relaxed">
               Użytkownicy planują wyjazd do Twojego miasta. Wybierają miejsca z listy.
-              Jeśli Cię tam nie ma — trafiają do konkurencji.
+              Jeśli Cię tam nie ma - trafiają do konkurencji.
             </p>
           </FadeIn>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               { num: "0", label: "wyświetleń Twojego lokalu", sub: "niewidoczny dla planujących" },
-              { num: "0 zł", label: "przychodów z Trafy", sub: "konkurencja zarabia zamiast Ciebie" },
+              { num: "0 zł", label: "przychodów z trasy", sub: "konkurencja zarabia zamiast Ciebie" },
               { num: "∞", label: "traconych okazji dziennie", sub: "każdy plan to szansa której nie masz" },
             ].map((item, i) => (
-              <FadeIn key={i} delay={i * 100}>
-                <div className="bg-white/5 border border-white/10 rounded-3xl p-6 text-center">
+              <FadeIn key={i} delay={i * 100} className="h-full">
+                <div className="bg-white/5 border border-white/10 rounded-3xl p-6 text-center h-full flex flex-col items-center justify-center min-h-[140px]">
                   <p className="text-4xl font-black text-red-400 mb-1">{item.num}</p>
                   <p className="text-sm font-bold text-white mb-1">{item.label}</p>
                   <p className="text-xs text-white/40">{item.sub}</p>
@@ -311,7 +310,7 @@ export default function ForBusinessPage() {
             Zacznij być widoczny tam gdzie trzeba
           </h2>
           <p className="text-base text-muted-foreground mb-8 max-w-[40ch] mx-auto">
-            Napisz do nas — ustalimy szczegóły i dodamy Twój lokal do bazy.
+            Napisz do nas - ustalimy szczegóły i dodamy Twój lokal do bazy.
           </p>
           <a
             href="mailto:trasa.app@gmail.com"
