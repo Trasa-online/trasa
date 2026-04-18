@@ -354,33 +354,34 @@ const LandingPage = () => {
     <div className="min-h-[100dvh] bg-[#FEFEFE] overflow-x-hidden">
 
       {/* ── Nav ── */}
-      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl">
-        <div className="bg-[#1a1a1a] rounded-full px-5 h-14 flex items-center shadow-xl">
-          {/* Left: logo */}
-          <div className="flex-1 flex items-center">
+      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl">
+        <div className="bg-[#1a1a1a] rounded-full px-5 h-14 flex items-center gap-3 shadow-xl">
+          {/* Left: logo + section links */}
+          <div className="flex items-center gap-4 shrink-0">
             <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center">
               <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
             </button>
-          </div>
-          {/* Center: section links */}
-          <div className="hidden sm:flex items-center gap-5">
-            <button onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })} className="text-sm text-white/60 hover:text-white/90 transition-colors">
+            <button onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })} className="hidden sm:block text-sm text-white/60 hover:text-white/90 transition-colors whitespace-nowrap">
               Jak to działa
             </button>
-            <button onClick={() => document.getElementById("for-whom")?.scrollIntoView({ behavior: "smooth" })} className="text-sm text-white/60 hover:text-white/90 transition-colors">
+            <button onClick={() => document.getElementById("for-whom")?.scrollIntoView({ behavior: "smooth" })} className="hidden sm:block text-sm text-white/60 hover:text-white/90 transition-colors whitespace-nowrap">
               Dla kogo
             </button>
           </div>
-          {/* Right: actions */}
-          <div className="flex-1 flex items-center justify-end gap-2">
-            <a href="/dla-firm" className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-all border border-blue-500/30">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Right: badge + zaloguj + dołącz */}
+          <div className="flex items-center gap-2 shrink-0">
+            <a href="/dla-firm" className="hidden md:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-all border border-blue-500/30 whitespace-nowrap">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
               Dla firm
             </a>
-            <button onClick={() => navigate("/auth")} className="text-sm text-white/60 hover:text-white/90 transition-colors">
+            <button onClick={() => navigate("/auth")} className="hidden sm:block text-sm text-white/60 hover:text-white/90 transition-colors whitespace-nowrap">
               Zaloguj
             </button>
-            <button onClick={() => document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" })} className="text-sm font-bold px-4 py-2 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all">
+            <button onClick={() => document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" })} className="text-sm font-bold px-4 py-2 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all whitespace-nowrap">
               Dołącz →
             </button>
           </div>
