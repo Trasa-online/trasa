@@ -264,33 +264,16 @@ function PhoneMockup() {
     <div className="relative w-60 h-[460px] mx-auto">
       {/* frame */}
       <div className="absolute inset-0 rounded-[3rem] bg-foreground shadow-2xl shadow-orange-400/10" />
-      <div className="absolute inset-[3px] rounded-[2.8rem] bg-white overflow-hidden">
+      <div className="absolute inset-[3px] rounded-[2.8rem] bg-black overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-6 bg-foreground rounded-b-2xl z-10" />
-        <div className="absolute inset-0 flex flex-col pt-7">
-          <div className="px-4 py-2 flex items-center gap-2 shrink-0">
-            <div className="h-5 w-5 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-            <span className="font-black text-sm">trasa</span>
-            <span className="ml-auto text-[9px] text-muted-foreground font-semibold">Kraków · 14 cze</span>
-          </div>
-          <div className="mx-3 flex-1 bg-gradient-to-b from-amber-100 to-orange-200 rounded-2xl flex flex-col justify-end overflow-hidden">
-            <div className="flex items-center justify-center py-6">
-              <Castle className="h-14 w-14 text-orange-500/50" strokeWidth={1} />
-            </div>
-            <div className="bg-black/40 px-3 py-2.5">
-              <p className="text-white font-bold text-xs">Zamek na Wawelu</p>
-              <p className="text-white/60 text-[9px]">Zabytek · Kraków</p>
-            </div>
-          </div>
-          <div className="flex justify-center gap-5 py-3 shrink-0">
-            <div className="h-11 w-11 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center text-slate-400 font-bold text-base">✕</div>
-            <div className="h-14 w-14 rounded-full flex items-center justify-center shadow-lg shadow-orange-300/50" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}>
-              <Heart className="h-6 w-6 text-white fill-white" />
-            </div>
-            <div className="h-11 w-11 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center">
-              <Star className="h-4.5 w-4.5 text-amber-400" />
-            </div>
-          </div>
-        </div>
+        <video
+          src="/demo.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        />
       </div>
       {/* notification bubbles */}
       <div className="absolute -left-28 top-20 hidden sm:flex bg-white rounded-2xl shadow-lg px-3 py-2 items-center gap-1.5 animate-bounce" style={{ animationDuration: "3s" }}>
