@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -9,8 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 function RootPage() {
   const { user, loading } = useAuth();
-  if (loading) return null;
-  if (user) return <Navigate to="/home" replace />;
+  // Render landing page immediately — redirect once auth resolves (avoids blank-screen FCP)
+  if (!loading && user) return <Navigate to="/home" replace />;
   return <LandingPage />;
 }
 
@@ -46,35 +46,37 @@ function BusinessGuard() {
   return null;
 }
 import CookieBanner from "./components/CookieBanner";
-import AppLayout from "./components/layout/AppLayout";
-import Home from "./pages/Home";
-import Auth from "./pages/Auth";
-import CreateRoute from "./pages/CreateRoute";
-import Settings from "./pages/Settings";
-import NotFound from "./pages/NotFound";
-import DayReview from "./pages/DayReview";
-import Terms from "./pages/Terms";
-import MyRoutes from "./pages/MyRoutes";
-import SetPassword from "./pages/SetPassword";
-import Admin from "./pages/Admin";
-import TravelerProfile from "./pages/TravelerProfile";
-import MyTrips from "./pages/MyTrips";
-import Journal from "./pages/Journal";
-import SwipeHistory from "./pages/SwipeHistory";
-import EditPlan from "./pages/EditPlan";
-import ReviewSummary from "./pages/ReviewSummary";
-import PlanWizard from "./pages/PlanWizard";
-import CreateGroupSession from "./pages/CreateGroupSession";
-import GroupSession from "./pages/GroupSession";
-import QuickPlanReview from "./pages/QuickPlanReview";
-import UserSearch from "./pages/UserSearch";
-import AdminRoutes from "./pages/AdminRoutes";
-import SharedRoute from "./pages/SharedRoute";
-import JoinPage from "./pages/JoinPage";
-import PublicProfile from "./pages/PublicProfile";
-import BusinessDashboard from "./pages/BusinessDashboard";
+// Eagerly loaded — public-facing pages that need fast FCP
 import LandingPage from "./pages/LandingPage";
 import ForBusinessPage from "./pages/ForBusinessPage";
+import Auth from "./pages/Auth";
+import Terms from "./pages/Terms";
+import NotFound from "./pages/NotFound";
+// Lazy loaded — only fetched when the user navigates to that route
+const AppLayout        = lazy(() => import("./components/layout/AppLayout"));
+const Home             = lazy(() => import("./pages/Home"));
+const CreateRoute      = lazy(() => import("./pages/CreateRoute"));
+const Settings         = lazy(() => import("./pages/Settings"));
+const DayReview        = lazy(() => import("./pages/DayReview"));
+const MyRoutes         = lazy(() => import("./pages/MyRoutes"));
+const SetPassword      = lazy(() => import("./pages/SetPassword"));
+const Admin            = lazy(() => import("./pages/Admin"));
+const TravelerProfile  = lazy(() => import("./pages/TravelerProfile"));
+const MyTrips          = lazy(() => import("./pages/MyTrips"));
+const Journal          = lazy(() => import("./pages/Journal"));
+const SwipeHistory     = lazy(() => import("./pages/SwipeHistory"));
+const EditPlan         = lazy(() => import("./pages/EditPlan"));
+const ReviewSummary    = lazy(() => import("./pages/ReviewSummary"));
+const PlanWizard       = lazy(() => import("./pages/PlanWizard"));
+const CreateGroupSession = lazy(() => import("./pages/CreateGroupSession"));
+const GroupSession     = lazy(() => import("./pages/GroupSession"));
+const QuickPlanReview  = lazy(() => import("./pages/QuickPlanReview"));
+const UserSearch       = lazy(() => import("./pages/UserSearch"));
+const AdminRoutes      = lazy(() => import("./pages/AdminRoutes"));
+const SharedRoute      = lazy(() => import("./pages/SharedRoute"));
+const JoinPage         = lazy(() => import("./pages/JoinPage"));
+const PublicProfile    = lazy(() => import("./pages/PublicProfile"));
+const BusinessDashboard = lazy(() => import("./pages/BusinessDashboard"));
 
 const queryClient = new QueryClient();
 
@@ -86,6 +88,7 @@ const App = () => (
         <RouteTracker />
         <BusinessGuard />
         <CookieBanner />
+        <Suspense fallback={null}>
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/terms" element={<Terms />} />
@@ -119,6 +122,7 @@ const App = () => (
           <Route path="/dla-firm" element={<ForBusinessPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
