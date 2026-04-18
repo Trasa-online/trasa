@@ -410,7 +410,7 @@ const BusinessDashboard = () => {
     } catch {}
 
     clearStorage();
-    window.location.replace("/auth");
+    window.location.replace("/auth?business=true");
   };
 
 
