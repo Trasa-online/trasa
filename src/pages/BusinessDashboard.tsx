@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 
@@ -17,9 +17,23 @@ interface BusinessPost {
   created_at: string;
 }
 
-const PLACE_TAGS = [
-  "Restauracja", "Kawiarnia", "Bar", "Klub nocny", "Muzeum", "Galeria",
-  "Hotel", "Sklep", "Park", "Kościół", "Punkt widokowy", "Atrakcja turystyczna", "Inne",
+const PLACE_CATEGORIES: Record<string, { label: string; icon: string; subcats: string[] }> = {
+  restaurant:    { label: 'Restauracja',   icon: '🍽️', subcats: ['Polska kuchnia', 'Włoska', 'Azjatycka', 'Burgery', 'Sushi', 'Vege/Vegan', 'Fine dining', 'Seafood', 'Pizza', 'Fast food'] },
+  cafe:          { label: 'Kawiarnia',     icon: '☕',  subcats: ['Specialty coffee', 'Cukiernia & ciasta', 'Śniadania & brunch', 'Lody & desery', 'Herbaciarnia'] },
+  bar:           { label: 'Bar',           icon: '🍸',  subcats: ['Koktajle', 'Craft beer', 'Wine bar', 'Pub & piwo', 'Whisky', 'Karaoke & imprezy'] },
+  museum:        { label: 'Muzeum',        icon: '🏛️', subcats: ['Historyczne', 'Sztuka nowoczesna', 'Nauka & technika', 'Militarne', 'Etnograficzne', 'Regionalne'] },
+  monument:      { label: 'Zabytek',       icon: '🏰',  subcats: ['Kościół / Katedra', 'Zamek / Pałac', 'Kamienica', 'Pomnik', 'Ruiny', 'Kaplica'] },
+  park:          { label: 'Park / Natura', icon: '🌿',  subcats: ['Park miejski', 'Ogród botaniczny', 'ZOO', 'Las / Góry', 'Plaża / Jezioro', 'Rezerwat'] },
+  experience:    { label: 'Atrakcja',      icon: '✨',  subcats: ['Punkt widokowy', 'Interaktywna', 'Escape room', 'Sporty / Aktywność', 'Spa & wellness', 'Targi / Rynki'] },
+  shopping:      { label: 'Sklep',         icon: '🛍️', subcats: ['Antyki', 'Design & rękodzieło', 'Pamiątki', 'Moda lokalna', 'Lokalny targ'] },
+  accommodation: { label: 'Nocleg',        icon: '🏨',  subcats: ['Hotel', 'Hostel', 'Apartament', 'Pensjonat / B&B', 'Kemping'] },
+};
+
+const VIBE_TAG_SUGGESTIONS = [
+  'must-see', 'romantycznie', 'historyczne', 'widok', 'instagramowe',
+  'family friendly', 'dog friendly', 'klimatycznie', 'nocne życie',
+  'lokalne smaki', 'ukryta perełka', 'vege-friendly', 'live music', 'na powietrzu',
+  'śniadania', 'slow food', 'tanie & dobre', 'luksusowo',
 ];
 
 type BizPlan = 'zero' | 'basic' | 'premium';
@@ -54,6 +68,8 @@ interface BusinessProfile {
   city: string | null;
   postal_code: string | null;
   tags: string[] | null;
+  main_category: string | null;
+  subcategories: string[] | null;
   is_verified: boolean;
   review_requested_at: string | null;
   verification_notified_at: string | null;
@@ -64,9 +80,63 @@ interface BusinessProfile {
   event_ends_at: string | null;
 }
 
-interface Stats { views: number; onRoutes: number; clicks: number; }
+interface Stats { views: number; onRoutes: number; websiteClicks: number; uniqueChoices: number; }
 
 const MAX_GALLERY = 10;
+
+function BusinessCardPreview({ logoUrl, coverImageUrl, businessName, city, street, tags, description, eventTitle, eventDescription, posts }: {
+  logoUrl: string; coverImageUrl: string; businessName: string; city: string; street: string;
+  tags: string[]; description: string; eventTitle: string; eventDescription: string;
+  posts: BusinessPost[];
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-sm sticky top-4">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide px-4 pt-3 pb-2">Podgląd wizytówki</p>
+      {coverImageUrl
+        ? <div className="h-28 w-full overflow-hidden bg-slate-100"><img src={coverImageUrl} className="w-full h-full object-cover" /></div>
+        : <div className="h-28 w-full bg-gradient-to-br from-orange-50 to-amber-100 flex items-center justify-center text-slate-300 text-xs">brak zdjęcia głównego</div>
+      }
+      <div className="px-4 pt-3 pb-2 flex items-start gap-3">
+        {logoUrl
+          ? <img src={logoUrl} className="h-10 w-10 rounded-xl object-cover shrink-0 shadow-sm" />
+          : <div className="h-10 w-10 rounded-xl bg-slate-100 shrink-0 flex items-center justify-center text-slate-300 text-lg">🏠</div>
+        }
+        <div>
+          <p className="font-black text-base leading-tight">{businessName || 'Nazwa lokalu'}</p>
+          {(city || street) && <p className="text-xs text-muted-foreground mt-0.5">{[street, city].filter(Boolean).join(', ')}</p>}
+        </div>
+      </div>
+      {tags.length > 0 && (
+        <div className="px-4 pb-2 flex flex-wrap gap-1">
+          {tags.slice(0, 3).map(t => <span key={t} className="text-[10px] px-2 py-0.5 bg-orange-50 text-orange-700 rounded-full font-semibold">#{t}</span>)}
+        </div>
+      )}
+      {description && <p className="px-4 pb-3 text-xs text-muted-foreground line-clamp-2 leading-relaxed">{description}</p>}
+      {eventTitle && (
+        <div className="mx-4 mb-3 px-3 py-2 bg-amber-50 border border-amber-100 rounded-xl">
+          <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-0.5">Wydarzenie</p>
+          <p className="text-xs font-semibold">{eventTitle}</p>
+          {eventDescription && <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{eventDescription}</p>}
+        </div>
+      )}
+      {posts.length > 0 && (
+        <div className="px-4 pb-4 space-y-2 border-t border-slate-50 pt-3">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Aktualności</p>
+          {posts.slice(0, 2).map(p => (
+            <div key={p.id} className="border border-slate-100 rounded-xl p-2.5">
+              {p.description && <p className="text-[11px] leading-relaxed line-clamp-2">{p.description}</p>}
+              {p.photo_urls.length > 0 && <img src={p.photo_urls[0]} className="w-full rounded-lg object-cover aspect-video mt-1.5" />}
+              <p className="text-[10px] text-muted-foreground mt-1">{formatDistanceToNow(new Date(p.created_at), { addSuffix: true, locale: pl })}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      {posts.length === 0 && !eventTitle && !description && (
+        <p className="text-xs text-slate-300 text-center pb-4 px-4">Uzupełnij dane lokalu żeby zobaczyć podgląd</p>
+      )}
+    </div>
+  );
+}
 
 const BusinessDashboard = () => {
   const { placeId } = useParams<{ placeId: string }>();
@@ -77,7 +147,7 @@ const BusinessDashboard = () => {
   const [accessDenied, setAccessDenied] = useState(false);
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [placeCategory, setPlaceCategory] = useState<string | null>(null);
-  const [stats, setStats] = useState<Stats>({ views: 0, onRoutes: 0, clicks: 0 });
+  const [stats, setStats] = useState<Stats>({ views: 0, onRoutes: 0, websiteClicks: 0, uniqueChoices: 0 });
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -90,6 +160,9 @@ const BusinessDashboard = () => {
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [mainCategory, setMainCategory] = useState("");
+  const [bizSubcategories, setBizSubcategories] = useState<string[]>([]);
+  const [customVibeTag, setCustomVibeTag] = useState("");
   const [description, setDescription] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
@@ -178,6 +251,8 @@ const BusinessDashboard = () => {
     setCity(profileData.city ?? "");
     setPostalCode(profileData.postal_code ?? "");
     setTags(profileData.tags ?? []);
+    setMainCategory(profileData.main_category ?? "");
+    setBizSubcategories(profileData.subcategories ?? []);
     setDescription(profileData.description ?? "");
     setLogoUrl(profileData.logo_url ?? "");
     setCoverImageUrl(profileData.cover_image_url ?? "");
@@ -204,13 +279,15 @@ const BusinessDashboard = () => {
     const since = new Date();
     since.setDate(since.getDate() - 30);
     const { data: eventsData } = await (supabase as any)
-      .from("place_events").select("event_type").eq("place_id", placeId).gte("created_at", since.toISOString());
+      .from("place_events").select("event_type, user_id").eq("place_id", placeId).gte("created_at", since.toISOString());
     if (eventsData) {
-      const events = eventsData as Array<{ event_type: string }>;
+      const events = eventsData as Array<{ event_type: string; user_id: string | null }>;
+      const routeEvents = events.filter(e => e.event_type === "add_to_route");
       setStats({
         views: events.filter(e => e.event_type === "view").length,
-        onRoutes: events.filter(e => e.event_type === "add_to_route").length,
-        clicks: events.filter(e => ["click_phone", "click_website", "click_booking"].includes(e.event_type)).length,
+        onRoutes: routeEvents.length,
+        websiteClicks: events.filter(e => e.event_type === "click_website").length,
+        uniqueChoices: new Set(routeEvents.filter(e => e.user_id).map(e => e.user_id)).size,
       });
     }
 
@@ -358,6 +435,8 @@ const BusinessDashboard = () => {
         city: city || null,
         postal_code: postalCode || null,
         tags: tags.length > 0 ? tags : null,
+        main_category: mainCategory || null,
+        subcategories: bizSubcategories.length > 0 ? bizSubcategories : null,
         description: description || null,
         logo_url: logoUrl || null,
         cover_image_url: coverImageUrl || null,
@@ -763,17 +842,86 @@ const BusinessDashboard = () => {
                   <Label htmlFor="website">Strona WWW</Label>
                   <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
                 </div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Typ miejsca</p>
-                <div className="flex flex-wrap gap-2">
-                  {PLACE_TAGS.map(tag => {
-                    const active = tags.includes(tag);
-                    return (
-                      <button key={tag} type="button" onClick={() => { setTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag]); setIsDirty(true); }}
-                        className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${active ? 'bg-primary border-orange-600 text-white' : 'bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground'}`}>
-                        {tag}
-                      </button>
-                    );
-                  })}
+                {/* Kategoria główna */}
+                <div className="pt-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Kategoria główna</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {Object.entries(PLACE_CATEGORIES).map(([key, cat]) => {
+                      const active = mainCategory === key;
+                      return (
+                        <button key={key} type="button"
+                          onClick={() => { setMainCategory(active ? "" : key); setBizSubcategories([]); setIsDirty(true); }}
+                          className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all ${active ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
+                          <span className="text-base">{cat.icon}</span>
+                          <span className="leading-tight text-center">{cat.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Podkategoria */}
+                {mainCategory && PLACE_CATEGORIES[mainCategory] && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Podkategoria</p>
+                    <div className="flex flex-wrap gap-2">
+                      {PLACE_CATEGORIES[mainCategory].subcats.map(sub => {
+                        const active = bizSubcategories.includes(sub);
+                        return (
+                          <button key={sub} type="button"
+                            onClick={() => { setBizSubcategories(prev => active ? prev.filter(s => s !== sub) : [...prev, sub]); setIsDirty(true); }}
+                            className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${active ? 'bg-blue-600 border-blue-600 text-white' : 'bg-background border-border text-muted-foreground hover:border-blue-300 hover:text-foreground'}`}>
+                            {sub}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tagi wizytówki */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Tagi wizytówki <span className="normal-case font-normal">(max 3, widoczne na karcie w aplikacji)</span></p>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {VIBE_TAG_SUGGESTIONS.map(tag => {
+                      const active = tags.includes(tag);
+                      const disabled = !active && tags.length >= 3;
+                      return (
+                        <button key={tag} type="button" disabled={disabled}
+                          onClick={() => { setTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag]); setIsDirty(true); }}
+                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors disabled:opacity-40 ${active ? 'bg-primary border-orange-600 text-white' : 'bg-background border-border text-muted-foreground hover:border-orange-400 hover:text-foreground'}`}>
+                          #{tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Custom tag input */}
+                  <div className="flex gap-2">
+                    <input
+                      value={customVibeTag} maxLength={20}
+                      onChange={e => setCustomVibeTag(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && customVibeTag.trim() && tags.length < 3) { setTags(prev => [...prev, customVibeTag.trim()]); setCustomVibeTag(""); setIsDirty(true); } }}
+                      placeholder="Własny tag..."
+                      disabled={tags.length >= 3}
+                      className="flex-1 rounded-xl border border-input bg-background px-3 py-1.5 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
+                    />
+                    <button type="button" disabled={!customVibeTag.trim() || tags.length >= 3}
+                      onClick={() => { if (customVibeTag.trim() && tags.length < 3) { setTags(prev => [...prev, customVibeTag.trim()]); setCustomVibeTag(""); setIsDirty(true); } }}
+                      className="px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-semibold disabled:opacity-40">
+                      Dodaj
+                    </button>
+                  </div>
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {tags.map(t => (
+                        <span key={t} className="flex items-center gap-1 px-2.5 py-1 bg-orange-50 border border-orange-200 rounded-full text-xs font-semibold text-orange-700">
+                          #{t}
+                          <button type="button" onClick={() => { setTags(prev => prev.filter(x => x !== t)); setIsDirty(true); }} className="text-orange-400 hover:text-orange-700 ml-0.5">×</button>
+                        </span>
+                      ))}
+                      <span className="text-[10px] text-slate-400 self-center">{tags.length}/3</span>
+                    </div>
+                  )}
                 </div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Opis</p>
                 <div className="space-y-1">
@@ -788,70 +936,85 @@ const BusinessDashboard = () => {
           {activeSection === 'posts' && (
             <div className="space-y-5">
               <div><h2 className="text-lg font-black">Aktualności</h2><p className="text-sm text-slate-400">Wydarzenia i posty widoczne w Twojej wizytówce.</p></div>
-              {/* Events */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Obecne wydarzenia</p>
-                <p className="text-xs text-muted-foreground -mt-2">Np. happy hour, promocja 1+1, koncert. Widoczne na wizytówce w aplikacji.</p>
-                <div className="space-y-1">
-                  <Label htmlFor="event_title">Tytuł</Label>
-                  <Input id="event_title" value={eventTitle} maxLength={80} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder="np. Drinki 1+1 do 20:00" />
-                  <p className="text-[11px] text-muted-foreground text-right">{eventTitle.length}/80</p>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="event_description">Opis</Label>
-                  <textarea id="event_description" rows={2} value={eventDescription} maxLength={300} onChange={e => { setEventDescription(e.target.value); setIsDirty(true); }} placeholder="Szczegóły wydarzenia..." className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
-                  <p className="text-[11px] text-muted-foreground text-right">{eventDescription.length}/300</p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1"><Label htmlFor="event_starts_at">Od</Label><Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" /></div>
-                  <div className="space-y-1"><Label htmlFor="event_ends_at">Do</Label><Input id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" /></div>
-                </div>
-              </div>
-              {/* Posts */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Posty</p>
-                <p className="text-xs text-muted-foreground -mt-2">Aktualizacje, nowości, zdjęcia — widoczne dla odwiedzających w Twojej wizytówce.</p>
-                <div className="space-y-3 border border-border/60 rounded-2xl p-3">
-                  <textarea rows={3} value={postDescription} maxLength={600} onChange={e => setPostDescription(e.target.value)} placeholder="Co nowego w Twoim lokalu?" className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
-                  <p className="text-[11px] text-muted-foreground text-right -mt-2">{postDescription.length}/600</p>
-                  {postPhotos.length > 0 && (
-                    <div className="flex gap-2 flex-wrap">
-                      {postPhotos.map((url, idx) => (
-                        <div key={idx} className="relative w-16 h-16 rounded-2xl overflow-hidden">
-                          <img src={url} className="w-full h-full object-cover" />
-                          <button onClick={() => setPostPhotos(prev => prev.filter((_, i) => i !== idx))} className="absolute top-0.5 right-0.5 h-4 w-4 rounded-full bg-black/60 flex items-center justify-center"><X className="h-2.5 w-2.5 text-white" /></button>
+              <div className="flex flex-col lg:flex-row gap-5 items-start">
+                {/* Form */}
+                <div className="flex-1 space-y-5">
+                  {/* Events */}
+                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Obecne wydarzenie</p>
+                    <p className="text-xs text-muted-foreground -mt-2">Np. happy hour, promocja 1+1, koncert. Widoczne na wizytówce w aplikacji.</p>
+                    <div className="space-y-1">
+                      <Label htmlFor="event_title">Tytuł</Label>
+                      <Input id="event_title" value={eventTitle} maxLength={80} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder="np. Drinki 1+1 do 20:00" />
+                      <p className="text-[11px] text-muted-foreground text-right">{eventTitle.length}/80</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="event_description">Opis</Label>
+                      <textarea id="event_description" rows={2} value={eventDescription} maxLength={300} onChange={e => { setEventDescription(e.target.value); setIsDirty(true); }} placeholder="Szczegóły wydarzenia..." className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                      <p className="text-[11px] text-muted-foreground text-right">{eventDescription.length}/300</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1"><Label htmlFor="event_starts_at">Od</Label><Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" /></div>
+                      <div className="space-y-1"><Label htmlFor="event_ends_at">Do</Label><Input id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" /></div>
+                    </div>
+                  </div>
+                  {/* Posts */}
+                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Posty</p>
+                    <p className="text-xs text-muted-foreground -mt-2">Aktualizacje, nowości, zdjęcia — widoczne dla odwiedzających w Twojej wizytówce.</p>
+                    <div className="space-y-3 border border-border/60 rounded-2xl p-3">
+                      <textarea rows={3} value={postDescription} maxLength={600} onChange={e => setPostDescription(e.target.value)} placeholder="Co nowego w Twoim lokalu?" className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                      <p className="text-[11px] text-muted-foreground text-right -mt-2">{postDescription.length}/600</p>
+                      {postPhotos.length > 0 && (
+                        <div className="flex gap-2 flex-wrap">
+                          {postPhotos.map((url, idx) => (
+                            <div key={idx} className="relative w-16 h-16 rounded-2xl overflow-hidden">
+                              <img src={url} className="w-full h-full object-cover" />
+                              <button onClick={() => setPostPhotos(prev => prev.filter((_, i) => i !== idx))} className="absolute top-0.5 right-0.5 h-4 w-4 rounded-full bg-black/60 flex items-center justify-center"><X className="h-2.5 w-2.5 text-white" /></button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => postPhotoInputRef.current?.click()} disabled={postPhotos.length >= 4} className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1.5 rounded-full bg-muted active:opacity-60 disabled:opacity-40">
+                          {postPhotoUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+                          Zdjęcia
+                        </button>
+                        <input ref={postPhotoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePostPhotoUpload} />
+                        <button onClick={handleAddPost} disabled={submittingPost || (!postDescription.trim() && postPhotos.length === 0)} className="ml-auto flex items-center gap-1.5 text-xs bg-primary text-white px-3 py-1.5 rounded-full font-semibold active:opacity-70 disabled:opacity-40">
+                          {submittingPost ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                          Opublikuj
+                        </button>
+                      </div>
+                    </div>
+                    {posts.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">Brak postów — dodaj pierwszy!</p>}
+                    <div className="space-y-3">
+                      {posts.map(post => (
+                        <div key={post.id} className="border border-border/50 rounded-2xl p-3 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            {post.description && <p className="text-sm leading-relaxed flex-1">{post.description}</p>}
+                            <button onClick={() => handleDeletePost(post.id)} className="flex-shrink-0 h-6 w-6 rounded-full bg-muted flex items-center justify-center active:opacity-60"><Trash2 className="h-3.5 w-3.5 text-muted-foreground" /></button>
+                          </div>
+                          {post.photo_urls.length > 0 && (
+                            <div className={`grid gap-1.5 ${post.photo_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                              {post.photo_urls.map((url, idx) => <img key={idx} src={url} className="w-full rounded-2xl object-cover aspect-square" />)}
+                            </div>
+                          )}
+                          <p className="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: pl })}</p>
                         </div>
                       ))}
                     </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => postPhotoInputRef.current?.click()} disabled={postPhotos.length >= 4} className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1.5 rounded-full bg-muted active:opacity-60 disabled:opacity-40">
-                      {postPhotoUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
-                      Zdjęcia
-                    </button>
-                    <input ref={postPhotoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePostPhotoUpload} />
-                    <button onClick={handleAddPost} disabled={submittingPost || (!postDescription.trim() && postPhotos.length === 0)} className="ml-auto flex items-center gap-1.5 text-xs bg-primary text-white px-3 py-1.5 rounded-full font-semibold active:opacity-70 disabled:opacity-40">
-                      {submittingPost ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                      Opublikuj
-                    </button>
                   </div>
                 </div>
-                {posts.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">Brak postów — dodaj pierwszy!</p>}
-                <div className="space-y-3">
-                  {posts.map(post => (
-                    <div key={post.id} className="border border-border/50 rounded-2xl p-3 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        {post.description && <p className="text-sm leading-relaxed flex-1">{post.description}</p>}
-                        <button onClick={() => handleDeletePost(post.id)} className="flex-shrink-0 h-6 w-6 rounded-full bg-muted flex items-center justify-center active:opacity-60"><Trash2 className="h-3.5 w-3.5 text-muted-foreground" /></button>
-                      </div>
-                      {post.photo_urls.length > 0 && (
-                        <div className={`grid gap-1.5 ${post.photo_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                          {post.photo_urls.map((url, idx) => <img key={idx} src={url} className="w-full rounded-2xl object-cover aspect-square" />)}
-                        </div>
-                      )}
-                      <p className="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: pl })}</p>
-                    </div>
-                  ))}
+                {/* Preview panel — right (desktop) / bottom (mobile/tablet) */}
+                <div className="w-full lg:w-72 shrink-0">
+                  <BusinessCardPreview
+                    logoUrl={logoUrl} coverImageUrl={coverImageUrl}
+                    businessName={businessName} city={city} street={street}
+                    tags={tags} description={description}
+                    eventTitle={eventTitle} eventDescription={eventDescription}
+                    posts={posts}
+                  />
                 </div>
               </div>
             </div>
@@ -870,11 +1033,12 @@ const BusinessDashboard = () => {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
                       { label: 'Wyświetlenia profilu', value: stats.views, desc: 'Ile razy użytkownicy zobaczyli Twój lokal', icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
-                      { label: 'Dodania do trasy', value: stats.onRoutes, desc: 'Ile razy lokal trafił do czyjejś trasy', icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                      { label: 'Kliknięcia kontaktowe', value: stats.clicks, desc: 'Kliknięcia w telefon, stronę lub rezerwację', icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
+                      { label: 'Wybór lokalu', value: stats.uniqueChoices, desc: 'Unikalnych osób, które wybrały ten lokal', icon: Users, color: 'text-rose-500', bg: 'bg-rose-50' },
+                      { label: 'Dodania do planu', value: stats.onRoutes, desc: 'Ile razy lokal trafił do czyjejś trasy', icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                      { label: 'Wejścia na stronę', value: stats.websiteClicks, desc: 'Kliknięcia w link do strony WWW', icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
                     ].map(({ label, value, desc, icon: Icon, color, bg }) => (
                       <div key={label} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
                         <div className={`h-10 w-10 rounded-xl ${bg} flex items-center justify-center mb-4`}>
@@ -896,7 +1060,7 @@ const BusinessDashboard = () => {
                         {recentEvents.map((ev, i) => {
                           const labels: Record<string, { txt: string; dot: string }> = {
                             view: { txt: 'Wyświetlenie profilu', dot: 'bg-blue-400' },
-                            add_to_route: { txt: 'Dodanie do trasy', dot: 'bg-emerald-400' },
+                            add_to_route: { txt: 'Dodanie do planu', dot: 'bg-emerald-400' },
                             click_phone: { txt: 'Kliknięcie - telefon', dot: 'bg-violet-400' },
                             click_website: { txt: 'Kliknięcie - strona WWW', dot: 'bg-violet-400' },
                             click_booking: { txt: 'Kliknięcie - rezerwacja', dot: 'bg-amber-400' },
