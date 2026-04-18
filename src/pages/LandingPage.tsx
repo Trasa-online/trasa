@@ -383,10 +383,11 @@ const LandingPage = () => {
             </a>
             <button
               onClick={() => setTrialOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/40 hover:text-white transition-all whitespace-nowrap"
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap active:scale-95 transition-all"
+              style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)", color: "white" }}
             >
               <Sparkles className="h-3.5 w-3.5" />
-              Wypróbuj
+              <span>Wypróbuj</span>
             </button>
             <button onClick={() => navigate("/auth")} className="hidden sm:flex items-center text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/50 hover:text-white transition-all whitespace-nowrap">
               Zaloguj się
