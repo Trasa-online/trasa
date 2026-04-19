@@ -5,24 +5,24 @@ const TOUR_KEY = "trasa_home_tour_v1";
 
 const STEPS = [
   {
-    emoji: "👥",
-    title: "Planuj razem ze znajomymi",
-    desc: "Stwórz sesję grupową, zaproś znajomych i razem swipe'ujcie miejsca. Trasa układa się sama z Waszych wspólnych wyborów.",
-    hint: "↑ Aktywne sesje i przycisk \u201EZaplanuj razem\u201D powyżej",
-    arrowUp: true,
+    emoji: "➕",
+    title: "Zacznij od przycisku +",
+    desc: "Na środku paska nawigacji masz przycisk +. Wybierz „Zaplanuj solo" żeby samodzielnie układać trasę, albo „Zaplanuj grupowo" żeby eksplorować ze znajomymi.",
+    hint: "↓ Przycisk + na środku paska nawigacji",
+    arrowUp: false,
   },
   {
-    emoji: "🗺️",
-    title: "Odkrywaj miasta",
-    desc: "Wybierz miasto i datę, wybierz gotowy szablon trasy lub zaplanuj od zera z pomocą AI.",
-    hint: "↑ Kliknij \u201EZaplanuj razem\u201D żeby zacząć",
+    emoji: "👥",
+    title: "Planuj razem ze znajomymi",
+    desc: "Stwórz sesję grupową, udostępnij kod znajomym i razem przeglądajcie miejsca. Trasa pokaże, co Was łączy!",
+    hint: "↑ '+' → Zaplanuj grupowo",
     arrowUp: true,
   },
   {
     emoji: "📖",
-    title: "Dziennik podróży",
-    desc: "Każda zakończona trasa ląduje w dzienniku. Oceń miejsca, dodaj zdjęcia i wspomnienia.",
-    hint: "↓ Zakładka \u201EDziennik\u201D na dole ekranu",
+    title: "Dziennik i trasy 🔒",
+    desc: "Chcesz zapisywać trasy i wracać do wspomnień z podróży? Dziennik i historia tras są dostępne po założeniu darmowego konta.",
+    hint: "↓ Zakładka „Dziennik" • wymaga konta",
     arrowUp: false,
   },
 ];

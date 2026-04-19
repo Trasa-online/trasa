@@ -294,15 +294,15 @@ const Home = () => {
 
       {/* ── Guest banner ── */}
       {isGuest && (
-        <div className="flex items-center justify-between gap-3 mb-5 px-4 py-3 rounded-2xl bg-orange-50 border border-orange-100">
-          <p className="text-xs text-orange-800 font-medium leading-snug">
-            Przeglądasz jako gość. Załóż konto, żeby zapisywać trasy.
+        <div className="flex items-center justify-between gap-3 mb-5 px-4 py-3.5 rounded-2xl bg-orange-50 border border-orange-100">
+          <p className="text-xs text-orange-800 font-semibold leading-snug">
+            🧳 Dołącz za darmo — zapisuj trasy i zbieraj wspomnienia z podróży!
           </p>
           <button
             onClick={() => navigate("/auth")}
-            className="shrink-0 text-xs font-bold text-white bg-primary px-3 py-1.5 rounded-full active:scale-95 transition-transform"
+            className="shrink-0 text-xs font-bold text-white bg-primary px-3.5 py-2 rounded-full active:scale-95 transition-transform whitespace-nowrap"
           >
-            Dołącz
+            Dołącz →
           </button>
         </div>
       )}
@@ -389,21 +389,27 @@ const Home = () => {
 
       {/* Empty state */}
       {!hasPersonalContent && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-6 py-16">
-          <div className="text-center space-y-2">
-            <p className="text-5xl">🗺️</p>
-            <h2 className="text-xl font-black">Zacznij planować</h2>
-            <p className="text-sm text-muted-foreground max-w-[220px] mx-auto">
-              Wybierz miasto i datę, a Trasa zaproponuje gotowy plan.
-            </p>
-          </div>
-          <button
-            onClick={() => navigate("/plan")}
-            className="flex items-center gap-2 px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-95 transition-transform shadow-lg shadow-primary/20"
-          >
-            <Sparkles className="h-4 w-4" />
-            Zaplanuj pierwszą trasę
-          </button>
+        <div className="flex-1 flex flex-col items-center justify-center py-16">
+          {isGuest ? (
+            <p className="text-6xl">🗺️</p>
+          ) : (
+            <div className="flex flex-col items-center gap-6">
+              <div className="text-center space-y-2">
+                <p className="text-5xl">🗺️</p>
+                <h2 className="text-xl font-black">Zacznij planować</h2>
+                <p className="text-sm text-muted-foreground max-w-[220px] mx-auto">
+                  Wybierz miasto i datę, a Trasa zaproponuje gotowy plan.
+                </p>
+              </div>
+              <button
+                onClick={() => navigate("/plan")}
+                className="flex items-center gap-2 px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-95 transition-transform shadow-lg shadow-primary/20"
+              >
+                <Sparkles className="h-4 w-4" />
+                Zaplanuj pierwszą trasę
+              </button>
+            </div>
+          )}
         </div>
       )}
 
