@@ -120,13 +120,19 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, businessName, city, stree
         </div>
       )}
       {posts.length > 0 && (
-        <div className="px-4 pb-4 space-y-2 border-t border-slate-50 pt-3">
+        <div className="px-4 pb-4 space-y-3 border-t border-slate-50 pt-3">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Aktualności</p>
           {posts.slice(0, 2).map(p => (
-            <div key={p.id} className="border border-slate-100 rounded-xl p-2.5">
-              {p.description && <p className="text-[11px] leading-relaxed line-clamp-2">{p.description}</p>}
-              {p.photo_urls.length > 0 && <img src={p.photo_urls[0]} className="w-full rounded-lg object-cover aspect-video mt-1.5" />}
-              <p className="text-[10px] text-muted-foreground mt-1">{formatDistanceToNow(new Date(p.created_at), { addSuffix: true, locale: pl })}</p>
+            <div key={p.id} className="border border-border/50 rounded-2xl p-3 space-y-2">
+              {p.description && <p className="text-xs leading-relaxed text-foreground/90 line-clamp-3">{p.description}</p>}
+              {p.photo_urls.length > 0 && (
+                <div className={`grid gap-1 ${p.photo_urls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                  {p.photo_urls.map((url, idx) => (
+                    <img key={idx} src={url} className="w-full rounded-xl object-cover aspect-square" />
+                  ))}
+                </div>
+              )}
+              <p className="text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(p.created_at), { addSuffix: true, locale: pl })}</p>
             </div>
           ))}
         </div>
@@ -776,7 +782,7 @@ const BusinessDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs font-medium mb-1.5">Zdjęcie główne</p>
-                    <button onClick={() => coverInputRef.current?.click()} className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
+                    <button onClick={() => coverInputRef.current?.click()} className="relative w-full aspect-video rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
                       {uploading === 'cover' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : coverImageUrl ? (<><img src={coverImageUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-5 w-5 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-6 w-6" /><span className="text-[11px]">Dodaj zdjęcie</span></div>)}
                     </button>
                     <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
