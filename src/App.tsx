@@ -88,7 +88,7 @@ const App = () => (
         <RouteTracker />
         <BusinessGuard />
         <CookieBanner />
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>}>
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/terms" element={<Terms />} />

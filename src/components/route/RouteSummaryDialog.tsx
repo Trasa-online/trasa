@@ -236,7 +236,7 @@ const RouteSummaryDialog = ({
       toast.success("Trasa zapisana! 🎉", { description: plan.city });
       onOpenChange(false);
       // Solo route: open the plan directly; group route: go home (session is already handled)
-      navigate((!groupSession && firstRouteId) ? `/edit-plan?route=${firstRouteId}` : "/");
+      navigate("/home");
     } catch (error) {
       console.error("Save error:", error);
       toast.error("Błąd zapisu", { description: "Spróbuj ponownie." });
