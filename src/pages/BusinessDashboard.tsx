@@ -10,7 +10,7 @@ import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays
 import { pl } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 interface BusinessPost {
   id: string;
@@ -86,6 +86,7 @@ interface BusinessProfile {
 interface Stats { views: number; onRoutes: number; websiteClicks: number; phoneClicks: number; uniqueChoices: number; }
 type AnalyticsRange = '7d' | '30d' | '90d' | 'custom';
 interface ChartDay { date: string; views: number; routes: number; clicks: number; }
+interface HourlyBucket { hour: number; label: string; total: number; }
 
 const MAX_GALLERY = 10;
 
@@ -164,6 +165,7 @@ const BusinessDashboard = () => {
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
   const [chartData, setChartData] = useState<ChartDay[]>([]);
+  const [hourlyData, setHourlyData] = useState<HourlyBucket[]>([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -354,6 +356,18 @@ const BusinessDashboard = () => {
         else if (e.event_type === "click_phone" || e.event_type === "click_website") dayMap[key].clicks++;
       });
       setChartData(Object.values(dayMap));
+
+      // Hourly breakdown (local timezone)
+      const hourBuckets: HourlyBucket[] = Array.from({ length: 24 }, (_, h) => ({
+        hour: h,
+        label: `${h}:00`,
+        total: 0,
+      }));
+      events.forEach(e => {
+        const h = new Date(e.created_at).getHours();
+        hourBuckets[h].total++;
+      });
+      setHourlyData(hourBuckets);
     }
     setAnalyticsLoading(false);
   }, []);
@@ -1201,21 +1215,40 @@ const BusinessDashboard = () => {
                     ))}
                   </div>
 
-                  {/* Bar chart */}
+                  {/* Daily activity chart */}
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Aktywność w czasie</p>
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Aktywność w czasie</p>
+                      <div className="flex items-center gap-3">
+                        {[
+                          { key: 'views', label: 'Wyświetlenia', color: '#3b82f6' },
+                          { key: 'routes', label: 'Trasa', color: '#10b981' },
+                          { key: 'clicks', label: 'Kliknięcia', color: '#8b5cf6' },
+                        ].map(({ key, label, color }) => (
+                          <div key={key} className="flex items-center gap-1.5">
+                            <div className="h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
+                            <span className="text-[10px] text-slate-400">{label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                     {analyticsLoading ? (
-                      <div className="flex items-center justify-center h-40">
+                      <div className="flex items-center justify-center h-48">
                         <Loader2 className="h-5 w-5 animate-spin text-slate-300" />
                       </div>
                     ) : chartData.every(d => d.views === 0 && d.routes === 0 && d.clicks === 0) ? (
-                      <div className="flex flex-col items-center justify-center h-40 gap-2">
+                      <div className="flex flex-col items-center justify-center h-48 gap-2">
                         <BarChart2 className="h-8 w-8 text-slate-200" />
                         <p className="text-sm text-slate-400">Brak danych w wybranym okresie</p>
                       </div>
                     ) : (
-                      <ResponsiveContainer width="100%" height={200}>
-                        <BarChart data={chartData} barSize={chartData.length <= 10 ? 16 : chartData.length <= 35 ? 7 : 4} barGap={2}>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <BarChart
+                          data={chartData}
+                          barSize={chartData.length <= 10 ? 18 : chartData.length <= 35 ? 8 : 4}
+                          barCategoryGap="30%"
+                          margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+                        >
                           <XAxis
                             dataKey="date"
                             tick={{ fontSize: 10, fill: '#94a3b8' }}
@@ -1223,28 +1256,111 @@ const BusinessDashboard = () => {
                             axisLine={false}
                             interval={chartData.length <= 10 ? 0 : chartData.length <= 35 ? 4 : 13}
                           />
-                          <YAxis hide allowDecimals={false} />
+                          <YAxis
+                            allowDecimals={false}
+                            tick={{ fontSize: 10, fill: '#cbd5e1' }}
+                            tickLine={false}
+                            axisLine={false}
+                            width={24}
+                          />
                           <Tooltip
-                            contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
-                            labelStyle={{ fontWeight: 700, marginBottom: 4 }}
+                            cursor={{ fill: '#f8fafc' }}
+                            contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.08)', padding: '10px 14px' }}
+                            labelStyle={{ fontWeight: 700, color: '#0f172a', marginBottom: 6, fontSize: 12 }}
                             formatter={(val: number, name: string) => {
                               const map: Record<string, string> = { views: 'Wyświetlenia', routes: 'Dodania do trasy', clicks: 'Kliknięcia' };
                               return [val, map[name] ?? name];
                             }}
                           />
-                          <Legend
-                            formatter={(value) => {
-                              const map: Record<string, string> = { views: 'Wyświetlenia', routes: 'Trasa', clicks: 'Kliknięcia' };
-                              return <span style={{ fontSize: 10, color: '#94a3b8' }}>{map[value] ?? value}</span>;
-                            }}
-                          />
-                          <Bar dataKey="views" fill="#3b82f6" radius={[3, 3, 0, 0]} />
-                          <Bar dataKey="routes" fill="#10b981" radius={[3, 3, 0, 0]} />
-                          <Bar dataKey="clicks" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
+                          <Bar dataKey="views" fill="#3b82f6" radius={[3, 3, 0, 0]} stackId="a" />
+                          <Bar dataKey="routes" fill="#10b981" radius={[0, 0, 0, 0]} stackId="a" />
+                          <Bar dataKey="clicks" fill="#8b5cf6" radius={[3, 3, 0, 0]} stackId="a" />
                         </BarChart>
                       </ResponsiveContainer>
                     )}
                   </div>
+
+                  {/* Hourly traffic chart */}
+                  {(() => {
+                    const maxVal = Math.max(...hourlyData.map(h => h.total), 1);
+                    const peakHour = hourlyData.reduce((best, h) => h.total > best.total ? h : best, hourlyData[0] ?? { hour: -1, total: 0 });
+                    const hasData = hourlyData.some(h => h.total > 0);
+                    return (
+                      <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Ruch według godziny</p>
+                          {hasData && !analyticsLoading && (
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-100">
+                              Szczyt: {peakHour.hour}:00–{peakHour.hour + 1}:00
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-300 mb-4">Łączna liczba zdarzeń w danej godzinie doby (czas lokalny)</p>
+                        {analyticsLoading ? (
+                          <div className="flex items-center justify-center h-36">
+                            <Loader2 className="h-5 w-5 animate-spin text-slate-300" />
+                          </div>
+                        ) : !hasData ? (
+                          <div className="flex flex-col items-center justify-center h-36 gap-2">
+                            <BarChart2 className="h-8 w-8 text-slate-200" />
+                            <p className="text-sm text-slate-400">Brak danych w wybranym okresie</p>
+                          </div>
+                        ) : (
+                          <ResponsiveContainer width="100%" height={160}>
+                            <BarChart
+                              data={hourlyData}
+                              barSize={10}
+                              barCategoryGap="15%"
+                              margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+                            >
+                              <XAxis
+                                dataKey="label"
+                                tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                tickLine={false}
+                                axisLine={false}
+                                interval={2}
+                              />
+                              <YAxis allowDecimals={false} hide />
+                              <Tooltip
+                                cursor={{ fill: '#f8fafc' }}
+                                contentStyle={{ fontSize: 12, borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.08)', padding: '10px 14px' }}
+                                labelStyle={{ fontWeight: 700, color: '#0f172a', marginBottom: 4, fontSize: 12 }}
+                                formatter={(val: number) => [val, 'Zdarzenia']}
+                                labelFormatter={(label) => `Godzina ${label}`}
+                              />
+                              <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                                {hourlyData.map((entry) => {
+                                  const ratio = entry.total / maxVal;
+                                  const fill = ratio >= 0.85
+                                    ? '#f97316'
+                                    : ratio >= 0.5
+                                    ? '#fb923c'
+                                    : ratio >= 0.2
+                                    ? '#93c5fd'
+                                    : '#dbeafe';
+                                  return <Cell key={entry.hour} fill={fill} />;
+                                })}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )}
+                        {hasData && !analyticsLoading && (
+                          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-50">
+                            {[
+                              { color: '#f97316', label: 'Szczyt ruchu' },
+                              { color: '#93c5fd', label: 'Aktywność' },
+                              { color: '#dbeafe', label: 'Niski ruch' },
+                            ].map(({ color, label }) => (
+                              <div key={label} className="flex items-center gap-1.5">
+                                <div className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: color }} />
+                                <span className="text-[10px] text-slate-400">{label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Activity feed */}
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
