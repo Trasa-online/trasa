@@ -618,7 +618,7 @@ const GroupSession = () => {
         <p className="text-sm text-muted-foreground">
           Twój znajomy zaprasza Cię do wspólnego parowania miejsc w <strong>{session.city}</strong>.
         </p>
-        <button onClick={() => navigate("/auth")} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base">
+        <button onClick={() => navigate(`/auth?return=/sesja/${joinCode}`)} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base">
           Zaloguj się
         </button>
       </div>
@@ -666,7 +666,7 @@ const GroupSession = () => {
             disabled={joining || members.length >= 10}
             className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
           >
-            {joining ? "Dołączam…" : members.length >= 10 ? "Sesja pełna (max 10)" : "Dołącz i zacznij swipe'ować"}
+            {joining ? "Dołączam…" : members.length >= 10 ? "Sesja pełna (max 10)" : "Dołącz i zacznij przeglądać"}
           </button>
         </div>
       </div>

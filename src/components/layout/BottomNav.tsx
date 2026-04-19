@@ -60,7 +60,6 @@ const BottomNav = () => {
           <button
             onClick={() => {
               setShowMenu(false);
-              if (isGuest) { setShowGuestModal(true); return; }
               navigate("/sesja/nowa");
             }}
             className="flex items-center gap-2.5 px-5 py-3 rounded-full bg-foreground text-background font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"

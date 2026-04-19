@@ -69,7 +69,8 @@ const Auth = () => {
           return;
         } catch {}
       }
-      navigate("/");
+      const returnTo = searchParams.get("return");
+      navigate(returnTo || "/");
     });
   }, [navigate]);
 
@@ -155,7 +156,8 @@ const Auth = () => {
         } catch {}
       }
 
-      navigate("/");
+      const returnTo = searchParams.get("return");
+      navigate(returnTo || "/");
     } catch (error: any) {
       toast.error(error.message || t("errors.login"));
     } finally {

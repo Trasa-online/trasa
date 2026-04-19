@@ -416,7 +416,7 @@ const CreateGroupSession = () => {
             <div className="text-center py-2">
               <p className="text-xl font-black mb-1">Zaproś znajomych</p>
               <p className="text-sm text-muted-foreground">
-                Wyślij znajomym powiadomienie, żeby dołączyli i razem swipe'owali w{" "}
+                Wyślij znajomym powiadomienie, żeby dołączyli i razem przeglądali miejsca w{" "}
                 <strong>{capitalizeCity(selectedCity)}</strong>.
               </p>
             </div>
