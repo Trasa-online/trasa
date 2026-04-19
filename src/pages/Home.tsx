@@ -289,7 +289,7 @@ const Home = () => {
   if (loading) return null;
 
   return (
-    <div className="flex-1 flex flex-col px-4 pt-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto w-full overflow-y-auto">
+    <div className={`flex-1 flex flex-col px-4 pt-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto w-full ${isGuest ? "overflow-hidden" : "overflow-y-auto"}`}>
 
       {/* ── Guest banner ── */}
       {isGuest && (
@@ -390,7 +390,13 @@ const Home = () => {
       {!hasPersonalContent && (
         <div className="flex-1 flex flex-col items-center justify-center py-16">
           {isGuest ? (
-            <p className="text-6xl">🗺️</p>
+            <div className="flex flex-col items-center gap-4 text-center">
+              <p className="text-6xl">🗺️</p>
+              <h2 className="text-xl font-black">Zacznij planować</h2>
+              <p className="text-sm text-muted-foreground max-w-[220px] mx-auto leading-relaxed">
+                Kliknij <strong>+</strong> żeby wybrać miasto i zaplanować trasę — solo lub ze znajomymi.
+              </p>
+            </div>
           ) : (
             <div className="flex flex-col items-center gap-6">
               <div className="text-center space-y-2">
