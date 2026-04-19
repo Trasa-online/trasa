@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, Phone } from "lucide-react";
-import { formatDistanceToNow, subDays, format } from "date-fns";
+import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
+import { Calendar } from "@/components/ui/calendar";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 interface BusinessPost {
@@ -82,7 +84,7 @@ interface BusinessProfile {
 }
 
 interface Stats { views: number; onRoutes: number; websiteClicks: number; phoneClicks: number; uniqueChoices: number; }
-type AnalyticsRange = '7d' | '30d' | '90d';
+type AnalyticsRange = '7d' | '30d' | '90d' | 'custom';
 interface ChartDay { date: string; views: number; routes: number; clicks: number; }
 
 const MAX_GALLERY = 10;
@@ -158,6 +160,9 @@ const BusinessDashboard = () => {
   const [placeCategory, setPlaceCategory] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats>({ views: 0, onRoutes: 0, websiteClicks: 0, phoneClicks: 0, uniqueChoices: 0 });
   const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>('30d');
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  const [showCalendar, setShowCalendar] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
   const [chartData, setChartData] = useState<ChartDay[]>([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -296,7 +301,8 @@ const BusinessDashboard = () => {
       .limit(8);
     if (recentEventsData) setRecentEvents(recentEventsData);
 
-    await loadAnalytics(placeId, analyticsRange);
+    const { from, to } = rangeFromPreset('30d');
+    await loadAnalytics(placeId, from, to);
 
     // Fetch posts
     const { data: postsData } = await (supabase as any)
@@ -306,17 +312,21 @@ const BusinessDashboard = () => {
     setLoading(false);
   };
 
-  const RANGE_DAYS: Record<AnalyticsRange, number> = { '7d': 7, '30d': 30, '90d': 90 };
+  const PRESET_DAYS: Record<Exclude<AnalyticsRange, 'custom'>, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
-  const loadAnalytics = useCallback(async (pid: string, range: AnalyticsRange) => {
+  const rangeFromPreset = (range: Exclude<AnalyticsRange, 'custom'>): { from: Date; to: Date } => ({
+    from: startOfDay(subDays(new Date(), PRESET_DAYS[range] - 1)),
+    to: endOfDay(new Date()),
+  });
+
+  const loadAnalytics = useCallback(async (pid: string, from: Date, to: Date) => {
     setAnalyticsLoading(true);
-    const days = RANGE_DAYS[range];
-    const since = subDays(new Date(), days);
     const { data } = await (supabase as any)
       .from("place_events")
       .select("event_type, user_id, created_at")
       .eq("place_id", pid)
-      .gte("created_at", since.toISOString());
+      .gte("created_at", from.toISOString())
+      .lte("created_at", to.toISOString());
 
     if (data) {
       const events = data as Array<{ event_type: string; user_id: string | null; created_at: string }>;
@@ -329,12 +339,12 @@ const BusinessDashboard = () => {
         uniqueChoices: new Set(routeEvents.filter(e => e.user_id).map(e => e.user_id)).size,
       });
 
-      // Build daily chart data
+      const numDays = differenceInCalendarDays(to, from) + 1;
       const dayMap: Record<string, ChartDay> = {};
-      for (let i = days - 1; i >= 0; i--) {
-        const d = subDays(new Date(), i);
+      for (let i = 0; i < numDays; i++) {
+        const d = addDays(from, i);
         const key = format(d, "yyyy-MM-dd");
-        dayMap[key] = { date: format(d, days <= 7 ? "EEE" : "d MMM", { locale: pl }), views: 0, routes: 0, clicks: 0 };
+        dayMap[key] = { date: format(d, numDays <= 14 ? "d MMM" : "d MMM", { locale: pl }), views: 0, routes: 0, clicks: 0 };
       }
       events.forEach(e => {
         const key = e.created_at.slice(0, 10);
@@ -348,10 +358,27 @@ const BusinessDashboard = () => {
     setAnalyticsLoading(false);
   }, []);
 
+  // Close calendar on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+        setShowCalendar(false);
+      }
+    };
+    if (showCalendar) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showCalendar]);
+
   useEffect(() => {
     if (!placeId || !profile) return;
-    loadAnalytics(placeId, analyticsRange);
-  }, [analyticsRange, placeId, profile, loadAnalytics]);
+    if (analyticsRange === 'custom') {
+      if (!customDateRange?.from) return;
+      loadAnalytics(placeId, startOfDay(customDateRange.from), endOfDay(customDateRange.to ?? customDateRange.from));
+    } else {
+      const { from, to } = rangeFromPreset(analyticsRange);
+      loadAnalytics(placeId, from, to);
+    }
+  }, [analyticsRange, customDateRange, placeId, profile, loadAnalytics]);
 
   const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"];
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -1073,18 +1100,76 @@ const BusinessDashboard = () => {
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div>
                   <h2 className="text-lg font-black">Analityka</h2>
-                  <p className="text-sm text-slate-400">Statystyki aktywności Twojego lokalu.</p>
+                  <p className="text-sm text-slate-400">
+                    {analyticsRange === 'custom' && customDateRange?.from
+                      ? `${format(customDateRange.from, 'd MMM', { locale: pl })}${customDateRange.to && customDateRange.to !== customDateRange.from ? ` — ${format(customDateRange.to, 'd MMM yyyy', { locale: pl })}` : ''}`
+                      : 'Statystyki aktywności Twojego lokalu.'}
+                  </p>
                 </div>
-                <div className="flex rounded-xl bg-slate-100 p-0.5 gap-0.5 shrink-0">
-                  {(['7d', '30d', '90d'] as AnalyticsRange[]).map(r => (
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex rounded-xl bg-slate-100 p-0.5 gap-0.5">
+                    {(['7d', '30d', '90d'] as Exclude<AnalyticsRange, 'custom'>[]).map(r => (
+                      <button
+                        key={r}
+                        onClick={() => setAnalyticsRange(r)}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${analyticsRange === r ? 'bg-white text-foreground shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      >
+                        {r === '7d' ? '7 dni' : r === '30d' ? '30 dni' : '90 dni'}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Custom date range picker */}
+                  <div className="relative" ref={calendarRef}>
                     <button
-                      key={r}
-                      onClick={() => setAnalyticsRange(r)}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${analyticsRange === r ? 'bg-white text-foreground shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      onClick={() => setShowCalendar(v => !v)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all ${analyticsRange === 'custom' ? 'bg-foreground text-background border-transparent' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
                     >
-                      {r === '7d' ? '7 dni' : r === '30d' ? '30 dni' : '90 dni'}
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <rect x="2" y="3" width="12" height="11" rx="2"/>
+                        <path d="M5 1v2M11 1v2M2 7h12"/>
+                      </svg>
+                      Zakres
                     </button>
-                  ))}
+                    {showCalendar && (
+                      <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+                        <Calendar
+                          mode="range"
+                          selected={customDateRange}
+                          onSelect={(range) => {
+                            setCustomDateRange(range);
+                            if (range?.from) {
+                              setAnalyticsRange('custom');
+                              if (range.to) setShowCalendar(false);
+                            }
+                          }}
+                          disabled={(d) => d > new Date()}
+                          locale={pl}
+                          className="p-3"
+                          classNames={{
+                            months: "flex flex-col",
+                            caption: "flex justify-center pt-1 relative items-center mb-3",
+                            caption_label: "text-sm font-bold",
+                            nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+                            nav_button_previous: "absolute left-1",
+                            nav_button_next: "absolute right-1",
+                            table: "w-full border-collapse",
+                            head_row: "flex",
+                            head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
+                            row: "flex w-full mt-1",
+                            cell: "w-9 text-center p-0 relative",
+                            day: "h-9 w-9 rounded-full text-sm hover:bg-muted transition-colors",
+                            day_selected: "bg-foreground text-background hover:bg-foreground hover:text-background",
+                            day_range_start: "rounded-l-full rounded-r-none bg-foreground text-background",
+                            day_range_end: "rounded-r-full rounded-l-none bg-foreground text-background",
+                            day_range_middle: "rounded-none bg-slate-100 text-foreground",
+                            day_today: "font-bold text-orange-600",
+                            day_outside: "opacity-30",
+                            day_disabled: "opacity-20 cursor-not-allowed",
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1130,13 +1215,13 @@ const BusinessDashboard = () => {
                       </div>
                     ) : (
                       <ResponsiveContainer width="100%" height={200}>
-                        <BarChart data={chartData} barSize={analyticsRange === '90d' ? 4 : analyticsRange === '30d' ? 7 : 16} barGap={2}>
+                        <BarChart data={chartData} barSize={chartData.length <= 10 ? 16 : chartData.length <= 35 ? 7 : 4} barGap={2}>
                           <XAxis
                             dataKey="date"
                             tick={{ fontSize: 10, fill: '#94a3b8' }}
                             tickLine={false}
                             axisLine={false}
-                            interval={analyticsRange === '90d' ? 13 : analyticsRange === '30d' ? 5 : 0}
+                            interval={chartData.length <= 10 ? 0 : chartData.length <= 35 ? 4 : 13}
                           />
                           <YAxis hide allowDecimals={false} />
                           <Tooltip
