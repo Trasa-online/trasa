@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const ALLOWED_ORIGINS = ["https://trasa.travel", "https://trasa.lovable.app", "http://localhost:8080", "http://localhost:5173"];
 
@@ -17,6 +18,8 @@ const categoryToPlaceType: Record<string, string> = {
   gallery: "art_gallery",
   walk: "park",
 };
+
+const CACHE_TTL_HOURS = 168; // 7 days
 
 serve(async (req) => {
   const reqOrigin = req.headers.get("Origin") ?? "";
@@ -47,13 +50,36 @@ serve(async (req) => {
       );
     }
 
+    const sb = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
     const placeType = categoryToPlaceType[category] ?? "tourist_attraction";
+    const query = `${placeType === "tourist_attraction" ? category : placeType} ${city}`;
+    const cacheKey = `alternatives|${query}`.toLowerCase().trim();
+
+    // Cache check
+    const { data: cached } = await sb
+      .from("place_details_cache")
+      .select("data, cached_at")
+      .eq("cache_key", cacheKey)
+      .single();
+
+    if (cached) {
+      const ageHours = (Date.now() - new Date(cached.cached_at).getTime()) / 3_600_000;
+      if (ageHours < CACHE_TTL_HOURS) {
+        return new Response(JSON.stringify(cached.data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
+        });
+      }
+    }
+
     const locationBias = (latitude && longitude)
       ? `&location=${latitude},${longitude}&radius=1500`
       : "";
 
-    const query = encodeURIComponent(`${placeType === "tourist_attraction" ? category : placeType} ${city}`);
-    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}${locationBias}&language=pl&key=${GOOGLE_API_KEY}`;
+    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}${locationBias}&language=pl&key=${GOOGLE_API_KEY}`;
 
     const response = await fetch(url);
     if (!response.ok) {
@@ -83,8 +109,15 @@ serve(async (req) => {
         distance_from_prev: null,
       }));
 
+    const responseBody = { alternatives };
+
+    // Write to cache (fire and forget)
+    sb.from("place_details_cache")
+      .upsert({ cache_key: cacheKey, data: responseBody, cached_at: new Date().toISOString() })
+      .then(() => {});
+
     return new Response(
-      JSON.stringify({ alternatives }),
+      JSON.stringify(responseBody),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

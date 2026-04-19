@@ -4,6 +4,12 @@ const BASE = "https://maps.googleapis.com/maps/api";
 const REFERER = "https://trasa.travel/";
 const CACHE_TTL_HOURS = 168; // 7 days
 
+// In-memory caches (live for the duration of the function instance)
+const citysearchCache = new Map<string, { results: any[]; ts: number }>();
+const textsearchCache = new Map<string, { results: any[]; ts: number }>();
+const CITYSEARCH_TTL_MS = 86_400_000;   // 24 hours
+const TEXTSEARCH_TTL_MS = 604_800_000;  // 7 days
+
 function nameMatches(requested: string, found: string): boolean {
   const tok = (s: string) =>
     s.toLowerCase().replace(/[^a-z0-9ąćęłńóśźż\s]/g, " ").split(/\s+/).filter(w => w.length > 2);
@@ -38,16 +44,25 @@ Deno.serve(async (req) => {
     // ── Non-detail actions (no cache needed) ─────────────────────────────────
 
     if (body.action === "citysearch") {
+      const cacheHit = citysearchCache.get(body.query);
+      if (cacheHit && Date.now() - cacheHit.ts < CITYSEARCH_TTL_MS) {
+        return new Response(JSON.stringify({ results: cacheHit.results }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" } });
+      }
       const res = await fetch(`${BASE}/place/autocomplete/json?input=${encodeURIComponent(body.query)}&types=(cities)&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
       const data = await res.json();
       const results = ((data.predictions ?? []) as any[]).slice(0, 5).map((p: any) => ({
         name: p.structured_formatting?.main_text ?? p.description,
         full_address: p.description,
       }));
+      citysearchCache.set(body.query, { results, ts: Date.now() });
       return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (body.action === "textsearch") {
+      const cacheHit = textsearchCache.get(body.query);
+      if (cacheHit && Date.now() - cacheHit.ts < TEXTSEARCH_TTL_MS) {
+        return new Response(JSON.stringify({ results: cacheHit.results }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" } });
+      }
       const res = await fetch(`${BASE}/place/textsearch/json?query=${encodeURIComponent(body.query)}&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
       const data = await res.json();
       const results = ((data.results ?? []) as any[]).slice(0, 6).map((r: any) => ({
@@ -57,6 +72,7 @@ Deno.serve(async (req) => {
         longitude: r.geometry?.location?.lng,
         types: r.types ?? [],
       }));
+      textsearchCache.set(body.query, { results, ts: Date.now() });
       return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

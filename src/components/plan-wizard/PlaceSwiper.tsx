@@ -230,9 +230,11 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
   const GRADIENT_BG = ["from-slate-700 to-slate-900", "from-stone-700 to-stone-900", "from-zinc-700 to-zinc-900"];
 
-  // Prefetch Google Places data + cache 1 photo when card is top or next-in-line
+  // Prefetch Google Places data only for the TOP card and only once per card
+  const hasFetchedRef = useRef(false);
   useEffect(() => {
-    if (offset > 1 || skipGoogleFetch) return;
+    if (offset !== 0 || skipGoogleFetch || hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
     supabase.functions
       .invoke("google-places-proxy", {
         body: {
@@ -277,7 +279,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         }
       })
       .catch((err) => { console.error("[PlaceSwiper] google-places-proxy error:", err); });
-  }, [offset, place.place_name, place.latitude, place.longitude]);
+  }, [offset]);
 
   const displayRating = place.rating || googleRating;
   const displayAddress = place.address || googleAddress;
