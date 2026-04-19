@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -22,7 +22,98 @@ function RouteTracker() {
   return null;
 }
 
-// Redirects business-only accounts away from the regular app
+// ── Splash screen shown on app boot ─────────────────────────────────────────
+
+function SplashScreen({ done }: { done: boolean }) {
+  const [progress, setProgress] = useState(5);
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    if (done) return;
+    const id = setInterval(() => {
+      setProgress(p => {
+        const next = p + Math.random() * 12 + 4;
+        if (next >= 85) { clearInterval(id); return 85; }
+        return next;
+      });
+    }, 130);
+    return () => clearInterval(id);
+  }, [done]);
+
+  useEffect(() => {
+    if (!done) return;
+    setProgress(100);
+    const t = setTimeout(() => setHidden(true), 500);
+    return () => clearTimeout(t);
+  }, [done]);
+
+  if (hidden) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] bg-background flex flex-col items-center justify-center gap-5"
+      style={{ transition: "opacity 0.4s", opacity: done ? 0 : 1 }}
+    >
+      <div
+        className="h-20 w-20 rounded-full shadow-lg"
+        style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
+      />
+      <p className="font-black text-2xl tracking-tight text-foreground">trasa</p>
+      <div className="flex flex-col items-center gap-1.5 w-44">
+        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full bg-primary"
+            style={{ width: `${progress}%`, transition: "width 0.3s ease-out" }}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground tabular-nums">{Math.round(progress)}%</p>
+      </div>
+    </div>
+  );
+}
+
+// Handles initial-boot auth check + business redirect while splash is visible
+function SplashController() {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const booted = useRef(false);
+
+  const skipSplash =
+    location.pathname.startsWith("/biznes") ||
+    location.pathname === "/auth" ||
+    location.pathname.startsWith("/set-password");
+
+  const [visible, setVisible] = useState(!skipSplash);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!visible || loading || booted.current) return;
+    booted.current = true;
+
+    if (!user) { setDone(true); setTimeout(() => setVisible(false), 500); return; }
+
+    (async () => {
+      try {
+        const { data: adminRow } = await supabase
+          .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
+        if (adminRow) return;
+
+        const { data: bp } = await (supabase as any)
+          .from("business_profiles").select("place_id, id").eq("owner_user_id", user.id).maybeSingle();
+        if (bp?.id) navigate(`/biznes/${bp.place_id ?? bp.id}`, { replace: true });
+      } finally {
+        setDone(true);
+        setTimeout(() => setVisible(false), 500);
+      }
+    })();
+  }, [loading, user, visible]);
+
+  if (!visible) return null;
+  return <SplashScreen done={done} />;
+}
+
+// Redirects business-only accounts away from the regular app (ongoing navigation guard)
 function BusinessGuard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -35,7 +126,7 @@ function BusinessGuard() {
     (async () => {
       const { data: adminRow } = await supabase
         .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
-      if (adminRow) return; // admins can go anywhere
+      if (adminRow) return;
 
       const { data: bp } = await (supabase as any)
         .from("business_profiles").select("place_id, id").eq("owner_user_id", user.id).maybeSingle();
@@ -86,6 +177,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <RouteTracker />
+        <SplashController />
         <BusinessGuard />
         <CookieBanner />
         <Suspense fallback={<div className="h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>}>
