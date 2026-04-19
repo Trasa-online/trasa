@@ -1,27 +1,57 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
-import { BookOpen, Home, Plus, X, MapPin, Users } from "lucide-react";
+import { BookOpen, Home, Plus, X, MapPin, Users, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+
+const GuestModal = ({ onClose }: { onClose: () => void }) => {
+  const navigate = useNavigate();
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="text-center space-y-1.5">
+          <p className="text-3xl">📒</p>
+          <h2 className="text-xl font-black">Twój dziennik czeka</h2>
+          <p className="text-sm text-muted-foreground">Zapisuj wspomnienia, zdjęcia i oceny miejsc z każdej podróży.</p>
+        </div>
+        <div className="flex flex-col gap-2.5">
+          <button
+            onClick={() => navigate("/auth")}
+            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+          >
+            Zaloguj się
+            <ArrowRight className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onClose}
+            className="w-full py-3 rounded-full border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
+          >
+            Wróć
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
+  const [showGuestModal, setShowGuestModal] = useState(false);
   const isGuest = !user;
-
-  const handleGuestGate = () => {
-    navigate("/auth");
-  };
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop for + menu */}
       {showMenu && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShowMenu(false)}
-        />
+        <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
       )}
 
       {/* Popup menu above "+" button */}
@@ -30,7 +60,7 @@ const BottomNav = () => {
           <button
             onClick={() => {
               setShowMenu(false);
-              if (isGuest) { handleGuestGate(); return; }
+              if (isGuest) { setShowGuestModal(true); return; }
               navigate("/sesja/nowa");
             }}
             className="flex items-center gap-2.5 px-5 py-3 rounded-full bg-foreground text-background font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
@@ -83,7 +113,7 @@ const BottomNav = () => {
           {/* Dziennik */}
           {isGuest ? (
             <button
-              onClick={handleGuestGate}
+              onClick={() => setShowGuestModal(true)}
               className="flex flex-col items-center justify-center gap-1 text-muted-foreground/40 transition-colors"
             >
               <BookOpen className="h-5 w-5 stroke-2" />
@@ -107,6 +137,9 @@ const BottomNav = () => {
 
         </div>
       </nav>
+
+      {/* Guest modal */}
+      {showGuestModal && <GuestModal onClose={() => setShowGuestModal(false)} />}
     </>
   );
 };
