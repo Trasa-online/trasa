@@ -60,7 +60,7 @@ type ActiveCountryCode = "PL";
 // ── Drum constants ─────────────────────────────────────────────────────────
 
 const ITEM_HEIGHT = 80;
-const VISIBLE_ITEMS = 5;
+const VISIBLE_ITEMS = 3;
 const CONTAINER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
 const PADDING = (CONTAINER_HEIGHT - ITEM_HEIGHT) / 2;
 
@@ -177,7 +177,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
       </div>
 
       {/* Drum picker */}
-      <div className="flex flex-col items-center justify-center py-4">
+      <div className="flex flex-col items-center justify-center py-6">
         <div className="relative w-full" style={{ height: CONTAINER_HEIGHT }}>
           <div
             className="absolute left-0 right-0 pointer-events-none z-10"
