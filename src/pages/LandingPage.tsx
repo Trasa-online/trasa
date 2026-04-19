@@ -397,12 +397,12 @@ const LandingPage = () => {
               Dla firm
             </a>
             <button
-              onClick={() => {}}
+              onClick={() => navigate("/home")}
               className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap active:scale-95 trial-btn"
               style={{ color: "white" }}
             >
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Wypróbuj bez konta</span>
+              <span>Przechodzę do aplikacji</span>
             </button>
             <style>{`
               @keyframes trial-flow {

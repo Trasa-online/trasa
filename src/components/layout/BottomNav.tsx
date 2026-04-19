@@ -2,10 +2,17 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { BookOpen, Home, Plus, X, MapPin, Users } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const BottomNav = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
+  const isGuest = !user;
+
+  const handleGuestGate = () => {
+    navigate("/auth");
+  };
 
   return (
     <>
@@ -21,7 +28,11 @@ const BottomNav = () => {
       {showMenu && (
         <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center pb-3">
           <button
-            onClick={() => { setShowMenu(false); navigate("/sesja/nowa"); }}
+            onClick={() => {
+              setShowMenu(false);
+              if (isGuest) { handleGuestGate(); return; }
+              navigate("/sesja/nowa");
+            }}
             className="flex items-center gap-2.5 px-5 py-3 rounded-full bg-foreground text-background font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
           >
             <Users className="h-4 w-4" />
@@ -42,7 +53,7 @@ const BottomNav = () => {
 
           {/* Główna */}
           <NavLink
-            to="/"
+            to="/home"
             end
             className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
             activeClassName="text-orange-600"
@@ -70,19 +81,29 @@ const BottomNav = () => {
           </button>
 
           {/* Dziennik */}
-          <NavLink
-            to="/dziennik"
-            end={false}
-            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-            activeClassName="text-orange-600"
-          >
-            {({ isActive }) => (
-              <>
-                <BookOpen className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
-                <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Dziennik</span>
-              </>
-            )}
-          </NavLink>
+          {isGuest ? (
+            <button
+              onClick={handleGuestGate}
+              className="flex flex-col items-center justify-center gap-1 text-muted-foreground/40 transition-colors"
+            >
+              <BookOpen className="h-5 w-5 stroke-2" />
+              <span className="text-[10px] font-medium">Dziennik</span>
+            </button>
+          ) : (
+            <NavLink
+              to="/dziennik"
+              end={false}
+              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+              activeClassName="text-orange-600"
+            >
+              {({ isActive }) => (
+                <>
+                  <BookOpen className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
+                  <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Dziennik</span>
+                </>
+              )}
+            </NavLink>
+          )}
 
         </div>
       </nav>

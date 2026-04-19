@@ -1,4 +1,4 @@
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -285,11 +285,27 @@ const Home = () => {
 
   const hasPersonalContent = soloRoutes.length > 0 || activeSessions.length > 0;
 
+  const isGuest = !loading && !user;
+
   if (loading) return null;
-  if (!user) return <Navigate to="/auth" replace />;
 
   return (
     <div className="flex-1 flex flex-col px-4 pt-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto w-full overflow-y-auto">
+
+      {/* ── Guest banner ── */}
+      {isGuest && (
+        <div className="flex items-center justify-between gap-3 mb-5 px-4 py-3 rounded-2xl bg-orange-50 border border-orange-100">
+          <p className="text-xs text-orange-800 font-medium leading-snug">
+            Przeglądasz jako gość. Załóż konto, żeby zapisywać trasy.
+          </p>
+          <button
+            onClick={() => navigate("/auth")}
+            className="shrink-0 text-xs font-bold text-white bg-primary px-3 py-1.5 rounded-full active:scale-95 transition-transform"
+          >
+            Dołącz
+          </button>
+        </div>
+      )}
 
       {/* ── Personal section ── */}
       {hasPersonalContent && (
