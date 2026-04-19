@@ -409,12 +409,6 @@ export default function ForBusinessPage() {
             >
               Pakiety
             </button>
-            <button
-              onClick={() => document.getElementById("faq-biznes")?.scrollIntoView({ behavior: "smooth" })}
-              className="hidden sm:block text-sm text-white/60 hover:text-white/90 transition-colors whitespace-nowrap"
-            >
-              FAQ
-            </button>
           </div>
 
           <div className="flex-1" />
@@ -595,70 +589,6 @@ export default function ForBusinessPage() {
               </FadeIn>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ── Premium features ── */}
-      <section className="py-24 px-5 bg-slate-50">
-        <div className="max-w-5xl mx-auto">
-          <FadeIn className="text-center mb-14">
-            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2">Premium</p>
-            <h2
-              className="text-3xl sm:text-4xl font-black text-foreground"
-              style={{ textWrap: "balance" } as React.CSSProperties}
-            >
-              Co dostajesz w pakiecie Premium
-            </h2>
-          </FadeIn>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-            {PREMIUM_FEATURES.map((feat, i) => (
-              <FadeIn key={i} delay={i * 60}>
-                <div className="bg-white rounded-3xl p-6 border border-border/40 shadow-sm hover:shadow-md hover:shadow-blue-100/60 transition-shadow h-full">
-                  <div className="h-12 w-12 rounded-2xl bg-blue-50 flex items-center justify-center mb-4">
-                    {feat.icon}
-                  </div>
-                  <h3 className="font-black text-base text-foreground mb-2">{feat.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{feat.desc}</p>
-                </div>
-              </FadeIn>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── FAQ ── */}
-      <section id="faq-biznes" className="py-24 px-5">
-        <div className="max-w-2xl mx-auto">
-          <FadeIn className="text-center mb-12">
-            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2">FAQ</p>
-            <h2 className="text-3xl sm:text-4xl font-black text-foreground" style={{ textWrap: "balance" } as React.CSSProperties}>
-              Najczęściej zadawane pytania
-            </h2>
-          </FadeIn>
-          <FadeIn>
-            <FaqAccordion items={[
-              {
-                q: "Jak dodać swój lokal do trasy?",
-                a: "Napisz do nas na trasa.app@gmail.com. Odpiszemy w ciągu 24h, dodamy Twój lokal do bazy i skonfigurujemy profil razem z Tobą.",
-              },
-              {
-                q: "Czym różni się Basic od Premium?",
-                a: "Basic daje Ci widoczność w trasach użytkowników, jedno zdjęcie profilowe i podstawowe statystyki wyświetleń. Premium to pełna galeria zdjęć, szczegółowa analityka (kliknięcia, dodania do trasy, oceny), aktualności i promocje w feedzie oraz wyróżnienie w wynikach wyszukiwania.",
-              },
-              {
-                q: "Ile kosztuje pakiet Premium?",
-                a: "Przez pierwsze 3 miesiące pakiet Premium jest całkowicie darmowy. Po tym czasie przechodzimy na wycenę indywidualną - napisz do nas, żeby ustalić szczegóły.",
-              },
-              {
-                q: "Jak wygląda analityka?",
-                a: "W panelu biznesowym widzisz ile osób wyświetliło Twój profil, ile kliknęło w szczegóły i ile dodało lokal do swojej trasy. W pakiecie Premium dane są podzielone na dni i źródła ruchu.",
-              },
-              {
-                q: "Czy mogę zarządzać wieloma lokalami?",
-                a: "Tak - pakiet Enterprise jest stworzony z myślą o sieciach i właścicielach kilku lokali. Jedno konto, wiele lokalizacji, zbiorcze statystyki. Napisz do nas po szczegóły.",
-              },
-            ]} />
-          </FadeIn>
         </div>
       </section>
 
