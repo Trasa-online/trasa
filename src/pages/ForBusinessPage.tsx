@@ -605,10 +605,10 @@ export default function ForBusinessPage() {
             className="text-3xl sm:text-4xl font-black text-foreground mb-4"
             style={{ textWrap: "balance" } as React.CSSProperties}
           >
-            Niech turyści sami Cię znajdą
+            Daj się odkryć turystom
           </h2>
           <p className="text-base text-muted-foreground mb-8 max-w-[40ch] mx-auto">
-            Napisz do nas - ustalimy szczegóły i dodamy Twój lokal do bazy.
+            Dołącz teraz i bądź jednym z pierwszych miejsc na Trasie.
           </p>
           <a
             href="/auth?business=true"
