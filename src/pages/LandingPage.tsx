@@ -424,9 +424,6 @@ const LandingPage = () => {
                 animation: trial-flow 2.4s ease infinite, trial-pulse 2.4s ease infinite;
               }
             `}</style>
-            <button onClick={() => document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" })} className="hidden sm:block text-sm font-bold px-4 py-2 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all whitespace-nowrap">
-              Dołącz →
-            </button>
             {/* Hamburger — mobile only */}
             <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
               {menuOpen ? <X className="h-4 w-4 text-white" /> : <Menu className="h-4 w-4 text-white" />}
