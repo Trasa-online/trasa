@@ -76,7 +76,7 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
             day_selected: "bg-foreground text-background hover:bg-foreground hover:text-background focus:bg-foreground focus:text-background",
             day_range_start: "rounded-l-full rounded-r-none bg-foreground text-background",
             day_range_end: "rounded-r-full rounded-l-none bg-foreground text-background",
-            day_range_middle: "rounded-none bg-foreground/10 text-foreground aria-selected:bg-foreground/10 aria-selected:text-foreground",
+            day_range_middle: "rounded-none bg-foreground text-background aria-selected:bg-foreground aria-selected:text-background",
             day_today: "font-bold text-orange-600",
             day_outside: "opacity-30",
             day_disabled: "opacity-20 cursor-not-allowed",

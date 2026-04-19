@@ -974,11 +974,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   };
 
   const handleProceed = () => {
-    if (!user) {
-      setShowBanner(false);
-      setShowUpsell(true);
-      return;
-    }
     const allLiked = [...likedPlaces, ...superLikedPlaces];
     navigate("/create", {
       state: {

@@ -28,7 +28,7 @@ interface MatchedRouteStub {
 }
 
 const CreateRoute = () => {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const wizardState = (location.state as {
@@ -125,10 +125,6 @@ const CreateRoute = () => {
   const { t } = useTranslation("create-route");
 
   if (loading) return null;
-  if (!user) {
-    navigate("/auth");
-    return null;
-  }
 
   // When viewing an existing route, wait for it to load before rendering PlanChatExperience
   // (otherwise it renders with no initialPlan and triggers the AI to generate a new plan)

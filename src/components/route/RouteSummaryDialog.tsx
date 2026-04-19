@@ -65,6 +65,7 @@ const RouteSummaryDialog = ({
   existingRouteId,
 }: RouteSummaryDialogProps) => {
   const [saving, setSaving] = useState(false);
+  const [showGuestAuth, setShowGuestAuth] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -88,7 +89,8 @@ const RouteSummaryDialog = ({
   const isMultiDay = days.length > 1;
 
   const saveRoute = useCallback(async () => {
-    if (!user || saving) return;
+    if (!user) { setShowGuestAuth(true); return; }
+    if (saving) return;
     if (existingRouteId) {
       toast.success("Trasa jest już zapisana!");
       onOpenChange(false);
@@ -386,6 +388,44 @@ const RouteSummaryDialog = ({
             Wróć do edycji
           </button>
         </div>
+
+        {/* Guest auth upsell */}
+        {showGuestAuth && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
+            <div className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+              <div className="text-center space-y-1">
+                <p className="text-2xl font-black">Zapisz trasę 🗺️</p>
+                <p className="text-sm text-muted-foreground">Załóż darmowe konto żeby zachować trasę i wrócić do niej kiedy chcesz.</p>
+              </div>
+              <div className="flex flex-col gap-2 text-sm">
+                {[
+                  { e: "📍", t: "Zapisz trasę i wróć do niej kiedy chcesz" },
+                  { e: "📖", t: "Prowadź dziennik podróży ze zdjęciami" },
+                  { e: "👥", t: "Planuj wyjazdy razem ze znajomymi" },
+                ].map(b => (
+                  <div key={b.t} className="flex items-center gap-3">
+                    <span className="text-xl shrink-0">{b.e}</span>
+                    <p className="font-medium">{b.t}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col gap-2.5">
+                <button
+                  onClick={() => navigate("/auth?tab=register")}
+                  className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+                >
+                  Zakładam konto — to darmowe →
+                </button>
+                <button
+                  onClick={() => setShowGuestAuth(false)}
+                  className="w-full py-3 rounded-full border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
+                >
+                  Wróć do trasy
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );
