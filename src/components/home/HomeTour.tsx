@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 
 const TOUR_KEY = "trasa_home_tour_v1";
+const GUEST_TOUR_KEY = "trasa_guest_tour_session";
 
 const STEPS = [
   {
@@ -102,15 +103,24 @@ const HomeTour = ({ onDone }: HomeTourProps) => {
   );
 };
 
-export const useHomeTour = () => {
+export const useHomeTour = (isGuest: boolean) => {
   const [showTour, setShowTour] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem(TOUR_KEY)) setShowTour(true);
-  }, []);
+    if (isGuest) {
+      // Show once per browser session for guests (sessionStorage resets on tab close)
+      if (!sessionStorage.getItem(GUEST_TOUR_KEY)) setShowTour(true);
+    } else {
+      if (!localStorage.getItem(TOUR_KEY)) setShowTour(true);
+    }
+  }, [isGuest]);
 
   const dismissTour = () => {
-    localStorage.setItem(TOUR_KEY, "1");
+    if (isGuest) {
+      sessionStorage.setItem(GUEST_TOUR_KEY, "1");
+    } else {
+      localStorage.setItem(TOUR_KEY, "1");
+    }
     setShowTour(false);
   };
 

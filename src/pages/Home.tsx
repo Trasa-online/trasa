@@ -150,7 +150,8 @@ function SoloTripCard({ route, onDelete }: { route: any; onDelete: () => void })
 const Home = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const { showTour, dismissTour } = useHomeTour();
+  const isGuest = !loading && !user;
+  const { showTour, dismissTour } = useHomeTour(isGuest);
   const queryClient = useQueryClient();
   const [previewSessionId, setPreviewSessionId] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<{
@@ -284,8 +285,6 @@ const Home = () => {
   });
 
   const hasPersonalContent = soloRoutes.length > 0 || activeSessions.length > 0;
-
-  const isGuest = !loading && !user;
 
   if (loading) return null;
 
