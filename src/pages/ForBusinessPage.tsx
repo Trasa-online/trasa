@@ -37,50 +37,36 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 const TIERS = [
   {
     name: "Basic",
-    subtitle: "Zaistniej na mapie",
+    subtitle: "Jesteś widoczny",
     price: "Bezpłatny",
     cta: null,
     highlight: false,
     danger: false,
     features: [
-      { label: "Widoczność w trasach użytkowników", val: true },
-      { label: "Profil lokalu z opisem", val: true },
-      { label: "Dodawanie do trasy przez użytkowników", val: true },
-      { label: "1 zdjęcie profilowe", val: true },
-      { label: "Podstawowa analityka (wyświetlenia)", val: "limited" },
-      { label: "Aktualności i promocje", val: false },
+      { label: "Profil biznesowy w aplikacji", val: true },
+      { label: "Możliwość bycia dodanym do trasy", val: true },
+      { label: "Adres", val: true },
+      { label: "Krótki opis", val: true },
+      { label: "1 zdjęcie (profilowe)", val: true },
+      { label: "Podstawowa analityka (wyświetlenia)", val: true },
     ],
   },
   {
     name: "Premium",
-    subtitle: "Pełna kontrola wizerunku",
-    price: "Wycena indywidualna",
-    cta: "Dołączam",
+    subtitle: "Wyróżniasz się",
+    price: "Bezpłatny",
+    priceNote: "(do momentu rozkręcenia aplikacji)",
+    cta: "Wybieram",
     highlight: true,
     danger: false,
     features: [
-      { label: "Widoczność w trasach użytkowników", val: true },
-      { label: "Profil lokalu z opisem", val: true },
-      { label: "Dodawanie do trasy przez użytkowników", val: true },
-      { label: "Pełna galeria zdjęć (bez limitu)", val: true },
-      { label: "Pełna analityka - kliknięcia, dodania, oceny", val: true },
-      { label: "Aktualności i promocje w feedzie", val: true },
-    ],
-  },
-  {
-    name: "Enterprise",
-    subtitle: "Dla sieciówek i sieci lokali",
-    price: "Wycena indywidualna",
-    cta: "Porozmawiajmy",
-    highlight: false,
-    danger: false,
-    features: [
-      { label: "Wszystko z pakietu Premium", val: true },
-      { label: "Wiele lokalizacji pod jednym kontem", val: true },
-      { label: "Dedykowany opiekun konta", val: true },
-      { label: "Zbiorcza analityka dla wszystkich lokali", val: true },
-      { label: "Priorytetowe wyróżnienie w wynikach", val: true },
-      { label: "Integracja z systemem rezerwacji", val: true },
+      { label: "Profil biznesowy w aplikacji", val: true },
+      { label: "Możliwość bycia dodanym do trasy", val: true },
+      { label: "Adres", val: true },
+      { label: "Krótki opis", val: true },
+      { label: "Pełna galeria zdjęć (bez limitu)", val: true, bold: true },
+      { label: "Pełna analityka - wyświetlenia, kliknięcia, dodania, oceny i inne", val: true, bold: true },
+      { label: "Sekcja aktualności i promocji okresowych", val: true, bold: true },
     ],
   },
 ];
@@ -506,15 +492,15 @@ export default function ForBusinessPage() {
             </span>
           </h1>
           <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-[52ch] mx-auto">
-            trasa to aplikacja, w której turyści poznają się z miastem. Twój lokal może pojawić się już dzisiaj w ich planach!
+            Trasa, to aplikacja, w której turyści poznają się z miastem, a Twój lokal może pojawić się już dzisiaj w ich planach!
           </p>
           <a
-            href="mailto:trasa.app@gmail.com"
+            href="/auth?business=true"
             className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-blue-600 text-white font-bold text-base hover:bg-blue-500 active:scale-95 transition-all shadow-lg shadow-blue-200"
           >
-            Daj się odkryć →
+            Stwórz profil biznesowy →
           </a>
-          <p className="text-xs text-muted-foreground mt-4">Odpisujemy w ciągu 24h</p>
+          <p className="text-xs text-muted-foreground mt-4">Rejestracja i prowadzenie konta jest darmowe</p>
 
           {/* ── Dashboard mockup ── */}
           <FadeIn>
@@ -527,27 +513,27 @@ export default function ForBusinessPage() {
       <section className="py-24 px-5 bg-slate-900">
         <div className="max-w-4xl mx-auto">
           <FadeIn className="text-center mb-14">
-            <p className="text-xs font-bold text-red-400 uppercase tracking-widest mb-3">Model zero</p>
+            <p className="text-xs font-bold text-orange-400 uppercase tracking-widest mb-3">Bądź pierwszy</p>
             <h2
               className="text-3xl sm:text-4xl font-black text-white mb-4"
               style={{ textWrap: "balance" } as React.CSSProperties}
             >
-              Gdy Cię nie ma na Trasie - tracisz.
+              Załóż konto zanim zrobi to konkurencja
             </h2>
-            <p className="text-base text-white/50 max-w-[48ch] mx-auto leading-relaxed">
-              Użytkownicy planują wyjazd do Twojego miasta. Wybierają miejsca z listy.
-              Jeśli Cię tam nie ma - trafiają do konkurencji.
+            <p className="text-base text-white/50 max-w-[52ch] mx-auto leading-relaxed">
+              Wprowadzamy nowy sposób planowania podróży. Lokale, które dołączą teraz,
+              będą pierwszym wyborem, gdy ruch zacznie rosnąć.
             </p>
           </FadeIn>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { num: "0", label: "wyświetleń Twojego lokalu", sub: "niewidoczny dla planujących" },
-              { num: "0 zł", label: "przychodów z trasy", sub: "konkurencja zarabia zamiast Ciebie" },
-              { num: "∞", label: "traconych okazji dziennie", sub: "każdy plan to szansa której nie masz" },
+              { num: "0 zł", label: "za prowadzenie konta", sub: "bez ryzyka, bez zobowiązań" },
+              { num: "+1", label: "nowy kanał komunikacji", sub: "skierowany do planujących wyjazd" },
+              { num: "1", label: "miejsca w kolejce", sub: "dołączasz zanim zrobi się tłoczno" },
             ].map((item, i) => (
               <FadeIn key={i} delay={i * 100} className="h-full">
                 <div className="bg-white/5 border border-white/10 rounded-3xl p-6 text-center h-full flex flex-col items-center justify-center min-h-[140px]">
-                  <p className="text-4xl font-black text-red-400 mb-1">{item.num}</p>
+                  <p className="text-4xl font-black text-orange-400 mb-1">{item.num}</p>
                   <p className="text-sm font-bold text-white mb-1">{item.label}</p>
                   <p className="text-xs text-white/40">{item.sub}</p>
                 </div>
@@ -566,39 +552,37 @@ export default function ForBusinessPage() {
               className="text-3xl sm:text-4xl font-black text-foreground"
               style={{ textWrap: "balance" } as React.CSSProperties}
             >
-              Wybierz jak chcesz być widoczny
+              Sprawdź pełne możliwości Trasy
             </h2>
           </FadeIn>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch max-w-3xl mx-auto">
             {TIERS.map((tier, i) => (
               <FadeIn key={i} delay={i * 80} className="h-full">
                 <div className={`rounded-3xl p-6 h-full flex flex-col ${
                   tier.highlight
-                    ? "bg-blue-600 text-white shadow-2xl shadow-blue-200 ring-2 ring-blue-400 ring-offset-2"
-                    : tier.danger
-                    ? "bg-slate-900 border border-white/10"
+                    ? "bg-white border-2 border-blue-500 shadow-2xl shadow-blue-100"
                     : "bg-white border border-border/50 shadow-sm"
                 }`}>
                   <div className="mb-6">
-                    <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${tier.highlight ? "text-blue-200" : tier.danger ? "text-red-400" : "text-muted-foreground"}`}>
+                    <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${tier.highlight ? "text-blue-600" : "text-muted-foreground"}`}>
                       {tier.name}
                     </p>
-                    <h3 className={`text-xl font-black mb-2 ${tier.highlight ? "text-white" : tier.danger ? "text-white" : "text-foreground"}`}>
+                    <h3 className={`text-xl font-black mb-2 ${tier.highlight ? "text-blue-600" : "text-foreground"}`}>
                       {tier.subtitle}
                     </h3>
-                    <p className={`text-sm font-bold ${tier.highlight ? "text-blue-100" : tier.danger ? "text-red-300" : "text-muted-foreground"}`}>
-                      {tier.price ?? "Brak obecności"}
+                    <p className={`text-sm font-bold ${tier.highlight ? "text-foreground" : "text-muted-foreground"}`}>
+                      {tier.price}
+                      {(tier as any).priceNote && (
+                        <span className="text-xs font-normal text-muted-foreground ml-1">{(tier as any).priceNote}</span>
+                      )}
                     </p>
                   </div>
                   <ul className="flex flex-col gap-3 flex-1 mb-6">
                     {tier.features.map((f, j) => (
                       <li key={j} className="flex items-start gap-2.5">
-                        {tier.danger
-                          ? <X className="h-4 w-4 text-red-400 shrink-0 mt-0.5" strokeWidth={2} />
-                          : <FeatureVal val={f.val} />
-                        }
+                        <FeatureVal val={f.val} />
                         <span className={`text-sm leading-snug ${
-                          tier.highlight ? "text-blue-100" : tier.danger ? "text-white/50" : "text-muted-foreground"
+                          (f as any).bold && tier.highlight ? "text-blue-600 font-semibold" : "text-muted-foreground"
                         }`}>
                           {f.label}
                         </span>
@@ -607,14 +591,10 @@ export default function ForBusinessPage() {
                   </ul>
                   {tier.cta && (
                     <a
-                      href={tier.highlight ? "/auth?business=true" : "mailto:trasa.app@gmail.com"}
-                      className={`mt-auto text-center text-sm font-bold px-4 py-3 rounded-2xl transition-all active:scale-95 ${
-                        tier.highlight
-                          ? "bg-white text-blue-600 hover:bg-blue-50"
-                          : "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
-                      }`}
+                      href="/auth?business=true"
+                      className="mt-auto text-center text-sm font-bold px-4 py-3 rounded-2xl transition-all active:scale-95 bg-blue-600 text-white hover:bg-blue-500"
                     >
-                      {tier.cta} →
+                      {tier.cta}
                     </a>
                   )}
                 </div>
