@@ -1,13 +1,14 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, Phone } from "lucide-react";
+import { formatDistanceToNow, subDays, format } from "date-fns";
 import { pl } from "date-fns/locale";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 interface BusinessPost {
   id: string;
@@ -80,7 +81,9 @@ interface BusinessProfile {
   event_ends_at: string | null;
 }
 
-interface Stats { views: number; onRoutes: number; websiteClicks: number; uniqueChoices: number; }
+interface Stats { views: number; onRoutes: number; websiteClicks: number; phoneClicks: number; uniqueChoices: number; }
+type AnalyticsRange = '7d' | '30d' | '90d';
+interface ChartDay { date: string; views: number; routes: number; clicks: number; }
 
 const MAX_GALLERY = 10;
 
@@ -153,7 +156,10 @@ const BusinessDashboard = () => {
   const [accessDenied, setAccessDenied] = useState(false);
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [placeCategory, setPlaceCategory] = useState<string | null>(null);
-  const [stats, setStats] = useState<Stats>({ views: 0, onRoutes: 0, websiteClicks: 0, uniqueChoices: 0 });
+  const [stats, setStats] = useState<Stats>({ views: 0, onRoutes: 0, websiteClicks: 0, phoneClicks: 0, uniqueChoices: 0 });
+  const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>('30d');
+  const [chartData, setChartData] = useState<ChartDay[]>([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -282,21 +288,6 @@ const BusinessDashboard = () => {
       setShowVerifiedBanner(true);
     }
 
-    const since = new Date();
-    since.setDate(since.getDate() - 30);
-    const { data: eventsData } = await (supabase as any)
-      .from("place_events").select("event_type, user_id").eq("place_id", placeId).gte("created_at", since.toISOString());
-    if (eventsData) {
-      const events = eventsData as Array<{ event_type: string; user_id: string | null }>;
-      const routeEvents = events.filter(e => e.event_type === "add_to_route");
-      setStats({
-        views: events.filter(e => e.event_type === "view").length,
-        onRoutes: routeEvents.length,
-        websiteClicks: events.filter(e => e.event_type === "click_website").length,
-        uniqueChoices: new Set(routeEvents.filter(e => e.user_id).map(e => e.user_id)).size,
-      });
-    }
-
     const { data: recentEventsData } = await (supabase as any)
       .from("place_events")
       .select("event_type, created_at")
@@ -305,6 +296,8 @@ const BusinessDashboard = () => {
       .limit(8);
     if (recentEventsData) setRecentEvents(recentEventsData);
 
+    await loadAnalytics(placeId, analyticsRange);
+
     // Fetch posts
     const { data: postsData } = await (supabase as any)
       .from("business_posts").select("*").eq("place_id", placeId).order("created_at", { ascending: false });
@@ -312,6 +305,53 @@ const BusinessDashboard = () => {
 
     setLoading(false);
   };
+
+  const RANGE_DAYS: Record<AnalyticsRange, number> = { '7d': 7, '30d': 30, '90d': 90 };
+
+  const loadAnalytics = useCallback(async (pid: string, range: AnalyticsRange) => {
+    setAnalyticsLoading(true);
+    const days = RANGE_DAYS[range];
+    const since = subDays(new Date(), days);
+    const { data } = await (supabase as any)
+      .from("place_events")
+      .select("event_type, user_id, created_at")
+      .eq("place_id", pid)
+      .gte("created_at", since.toISOString());
+
+    if (data) {
+      const events = data as Array<{ event_type: string; user_id: string | null; created_at: string }>;
+      const routeEvents = events.filter(e => e.event_type === "add_to_route");
+      setStats({
+        views: events.filter(e => e.event_type === "view").length,
+        onRoutes: routeEvents.length,
+        websiteClicks: events.filter(e => e.event_type === "click_website").length,
+        phoneClicks: events.filter(e => e.event_type === "click_phone").length,
+        uniqueChoices: new Set(routeEvents.filter(e => e.user_id).map(e => e.user_id)).size,
+      });
+
+      // Build daily chart data
+      const dayMap: Record<string, ChartDay> = {};
+      for (let i = days - 1; i >= 0; i--) {
+        const d = subDays(new Date(), i);
+        const key = format(d, "yyyy-MM-dd");
+        dayMap[key] = { date: format(d, days <= 7 ? "EEE" : "d MMM", { locale: pl }), views: 0, routes: 0, clicks: 0 };
+      }
+      events.forEach(e => {
+        const key = e.created_at.slice(0, 10);
+        if (!dayMap[key]) return;
+        if (e.event_type === "view") dayMap[key].views++;
+        else if (e.event_type === "add_to_route") dayMap[key].routes++;
+        else if (e.event_type === "click_phone" || e.event_type === "click_website") dayMap[key].clicks++;
+      });
+      setChartData(Object.values(dayMap));
+    }
+    setAnalyticsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (!placeId || !profile) return;
+    loadAnalytics(placeId, analyticsRange);
+  }, [analyticsRange, placeId, profile, loadAnalytics]);
 
   const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"];
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -652,8 +692,8 @@ const BusinessDashboard = () => {
                   {[
                     { label: 'Wyświetlenia profilu', value: stats.views, icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
                     { label: 'Dodania do trasy', value: stats.onRoutes, icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                    { label: 'Kliknięcia', value: stats.clicks, icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
-                    { label: 'Łączna aktywność', value: stats.views + stats.onRoutes + stats.clicks, icon: BarChart2, color: 'text-orange-500', bg: 'bg-orange-50' },
+                    { label: 'Kliknięcia', value: stats.websiteClicks + stats.phoneClicks, icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
+                    { label: 'Łączna aktywność', value: stats.views + stats.onRoutes + stats.websiteClicks + stats.phoneClicks, icon: BarChart2, color: 'text-orange-500', bg: 'bg-orange-50' },
                   ].map(({ label, value, icon: Icon, color, bg }) => (
                     <div key={label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
                       <div className={`h-8 w-8 rounded-xl ${bg} flex items-center justify-center mb-3`}>
@@ -1029,7 +1069,25 @@ const BusinessDashboard = () => {
           {/* ── ANALITYKA ── */}
           {activeSection === 'analytics' && (
             <div className="space-y-5">
-              <div><h2 className="text-lg font-black">Analityka</h2><p className="text-sm text-slate-400">Statystyki aktywności Twojego lokalu z ostatnich 30 dni.</p></div>
+              {/* Header + range picker */}
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <h2 className="text-lg font-black">Analityka</h2>
+                  <p className="text-sm text-slate-400">Statystyki aktywności Twojego lokalu.</p>
+                </div>
+                <div className="flex rounded-xl bg-slate-100 p-0.5 gap-0.5 shrink-0">
+                  {(['7d', '30d', '90d'] as AnalyticsRange[]).map(r => (
+                    <button
+                      key={r}
+                      onClick={() => setAnalyticsRange(r)}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${analyticsRange === r ? 'bg-white text-foreground shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                      {r === '7d' ? '7 dni' : r === '30d' ? '30 dni' : '90 dni'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {plan !== 'premium' ? (
                 <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center shadow-sm">
                   <span className="text-3xl">🔒</span>
@@ -1039,24 +1097,71 @@ const BusinessDashboard = () => {
                 </div>
               ) : (
                 <>
+                  {/* Stat cards */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                      { label: 'Wyświetlenia profilu', value: stats.views, desc: 'Ile razy użytkownicy zobaczyli Twój lokal', icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
-                      { label: 'Wybór lokalu', value: stats.uniqueChoices, desc: 'Unikalnych osób, które wybrały ten lokal', icon: Users, color: 'text-rose-500', bg: 'bg-rose-50' },
-                      { label: 'Dodania do planu', value: stats.onRoutes, desc: 'Ile razy lokal trafił do czyjejś trasy', icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                      { label: 'Wejścia na stronę', value: stats.websiteClicks, desc: 'Kliknięcia w link do strony WWW', icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
+                      { label: 'Wyświetlenia', value: stats.views, desc: 'otwarć profilu', icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
+                      { label: 'Unikalni goście', value: stats.uniqueChoices, desc: 'dodało do trasy', icon: Users, color: 'text-rose-500', bg: 'bg-rose-50' },
+                      { label: 'Dodania do trasy', value: stats.onRoutes, desc: 'razy w planie', icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                      { label: 'Kliknięcia', value: stats.websiteClicks + stats.phoneClicks, desc: `WWW: ${stats.websiteClicks} · Tel: ${stats.phoneClicks}`, icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
                     ].map(({ label, value, desc, icon: Icon, color, bg }) => (
-                      <div key={label} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                        <div className={`h-10 w-10 rounded-xl ${bg} flex items-center justify-center mb-4`}>
-                          <Icon className={`h-5 w-5 ${color}`} />
+                      <div key={label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                        <div className={`h-9 w-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
+                          <Icon className={`h-4 w-4 ${color}`} />
                         </div>
-                        <p className="text-3xl font-black text-foreground leading-none mb-1">{value}</p>
-                        <p className="text-sm font-semibold text-foreground mb-1">{label}</p>
-                        <p className="text-xs text-slate-400 leading-relaxed">{desc}</p>
-                        <p className="text-[10px] text-slate-300 mt-2">ostatnie 30 dni</p>
+                        <p className="text-2xl font-black text-foreground leading-none mb-1">{analyticsLoading ? '—' : value}</p>
+                        <p className="text-xs font-semibold text-foreground mb-0.5">{label}</p>
+                        <p className="text-[10px] text-slate-400 leading-snug">{desc}</p>
                       </div>
                     ))}
                   </div>
+
+                  {/* Bar chart */}
+                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Aktywność w czasie</p>
+                    {analyticsLoading ? (
+                      <div className="flex items-center justify-center h-40">
+                        <Loader2 className="h-5 w-5 animate-spin text-slate-300" />
+                      </div>
+                    ) : chartData.every(d => d.views === 0 && d.routes === 0 && d.clicks === 0) ? (
+                      <div className="flex flex-col items-center justify-center h-40 gap-2">
+                        <BarChart2 className="h-8 w-8 text-slate-200" />
+                        <p className="text-sm text-slate-400">Brak danych w wybranym okresie</p>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={chartData} barSize={analyticsRange === '90d' ? 4 : analyticsRange === '30d' ? 7 : 16} barGap={2}>
+                          <XAxis
+                            dataKey="date"
+                            tick={{ fontSize: 10, fill: '#94a3b8' }}
+                            tickLine={false}
+                            axisLine={false}
+                            interval={analyticsRange === '90d' ? 13 : analyticsRange === '30d' ? 5 : 0}
+                          />
+                          <YAxis hide allowDecimals={false} />
+                          <Tooltip
+                            contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
+                            labelStyle={{ fontWeight: 700, marginBottom: 4 }}
+                            formatter={(val: number, name: string) => {
+                              const map: Record<string, string> = { views: 'Wyświetlenia', routes: 'Dodania do trasy', clicks: 'Kliknięcia' };
+                              return [val, map[name] ?? name];
+                            }}
+                          />
+                          <Legend
+                            formatter={(value) => {
+                              const map: Record<string, string> = { views: 'Wyświetlenia', routes: 'Trasa', clicks: 'Kliknięcia' };
+                              return <span style={{ fontSize: 10, color: '#94a3b8' }}>{map[value] ?? value}</span>;
+                            }}
+                          />
+                          <Bar dataKey="views" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                          <Bar dataKey="routes" fill="#10b981" radius={[3, 3, 0, 0]} />
+                          <Bar dataKey="clicks" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+
+                  {/* Activity feed */}
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Ostatnia aktywność</p>
                     {recentEvents.length === 0 ? (
@@ -1067,9 +1172,9 @@ const BusinessDashboard = () => {
                           const labels: Record<string, { txt: string; dot: string }> = {
                             view: { txt: 'Wyświetlenie profilu', dot: 'bg-blue-400' },
                             add_to_route: { txt: 'Dodanie do planu', dot: 'bg-emerald-400' },
-                            click_phone: { txt: 'Kliknięcie - telefon', dot: 'bg-violet-400' },
-                            click_website: { txt: 'Kliknięcie - strona WWW', dot: 'bg-violet-400' },
-                            click_booking: { txt: 'Kliknięcie - rezerwacja', dot: 'bg-amber-400' },
+                            click_phone: { txt: 'Kliknięcie — telefon', dot: 'bg-violet-400' },
+                            click_website: { txt: 'Kliknięcie — strona WWW', dot: 'bg-violet-400' },
+                            click_booking: { txt: 'Kliknięcie — rezerwacja', dot: 'bg-amber-400' },
                           };
                           const info = labels[ev.event_type] ?? { txt: ev.event_type, dot: 'bg-slate-300' };
                           return (
