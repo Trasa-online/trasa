@@ -452,10 +452,6 @@ const LandingPage = () => {
                 Dla firm
               </a>
               <div className="mx-5 my-1 border-t border-white/10" />
-              <button onClick={() => { setMenuOpen(false); }} className="px-5 py-3 text-sm font-bold text-white/80 hover:text-white hover:bg-white/5 text-left flex items-center gap-2 transition-colors">
-                <Sparkles className="h-3.5 w-3.5 text-orange-400" />
-                Wypróbuj bez konta
-              </button>
               <div className="px-5 pb-3 pt-1">
                 <button onClick={() => { navigate("/auth"); setMenuOpen(false); }} className="w-full flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-full border border-white/25 text-white/80 hover:border-white/50 hover:text-white active:scale-95 transition-all">
                   <User className="h-4 w-4" />

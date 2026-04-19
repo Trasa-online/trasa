@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell } from "lucide-react";
+import { Bell, UserCircle2 } from "lucide-react";
 import NotificationsDrawer from "./NotificationsDrawer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -61,7 +61,13 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
     enabled: !!user,
   });
 
-  if (!user) return null;
+  if (!user) return (
+    <header className="sticky top-0 z-50 bg-background border-b border-border/40 px-4 pt-safe-4 pb-2 flex items-center">
+      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+        <UserCircle2 className="h-5 w-5 text-muted-foreground" />
+      </div>
+    </header>
+  );
 
   return (
     <>
