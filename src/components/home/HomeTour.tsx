@@ -8,7 +8,7 @@ const STEPS = [
   {
     emoji: "➕",
     title: "Zacznij od przycisku +",
-    desc: "Na środku paska nawigacji masz przycisk +. Wybierz „Zaplanuj solo" żeby samodzielnie układać trasę, albo „Zaplanuj grupowo" żeby eksplorować ze znajomymi.",
+    desc: "Na środku paska nawigacji masz przycisk +. Wybierz 'Zaplanuj solo' żeby samodzielnie układać trasę, albo 'Zaplanuj grupowo' żeby eksplorować ze znajomymi.",
     hint: "↓ Przycisk + na środku paska nawigacji",
     arrowUp: false,
   },
@@ -23,7 +23,7 @@ const STEPS = [
     emoji: "📖",
     title: "Dziennik i trasy 🔒",
     desc: "Chcesz zapisywać trasy i wracać do wspomnień z podróży? Dziennik i historia tras są dostępne po założeniu darmowego konta.",
-    hint: "↓ Zakładka „Dziennik" • wymaga konta",
+    hint: "↓ Zakładka 'Dziennik' • wymaga konta",
     arrowUp: false,
   },
 ];
