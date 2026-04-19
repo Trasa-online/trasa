@@ -415,6 +415,12 @@ export default function ForBusinessPage() {
 
           {/* Right: badge + zaloguj */}
           <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={() => document.getElementById("pakiety")?.scrollIntoView({ behavior: "smooth" })}
+              className="hidden md:flex items-center text-xs font-bold px-4 py-2 rounded-full border border-white/20 text-white/70 hover:text-white hover:border-white/40 transition-all whitespace-nowrap"
+            >
+              Pakiety
+            </button>
             <a
               href="/"
               className="hidden md:flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 transition-all border border-orange-500/30 whitespace-nowrap"
