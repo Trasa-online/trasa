@@ -419,26 +419,20 @@ export default function ForBusinessPage() {
 
           <div className="flex-1" />
 
-          {/* Right: badge + zaloguj + kontakt */}
+          {/* Right: badge + zaloguj */}
           <div className="flex items-center gap-3 shrink-0">
             <a
               href="/"
-              className="hidden md:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 transition-all border border-orange-500/30 whitespace-nowrap"
+              className="hidden md:flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 transition-all border border-orange-500/30 whitespace-nowrap"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-orange-400 shrink-0" />
               Dla podróżujących
             </a>
             <a
               href="/auth?business=true"
-              className="flex items-center text-xs font-bold px-3 py-1.5 rounded-full border border-white/25 text-white/70 hover:border-white/50 hover:text-white transition-all whitespace-nowrap"
+              className="hidden sm:flex items-center text-sm font-bold px-4 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all whitespace-nowrap"
             >
               Zaloguj się
-            </a>
-            <a
-              href="mailto:trasa.app@gmail.com"
-              className="hidden sm:block text-sm font-bold px-4 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all whitespace-nowrap"
-            >
-              Kontakt →
             </a>
             {/* Hamburger — mobile only */}
             <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
