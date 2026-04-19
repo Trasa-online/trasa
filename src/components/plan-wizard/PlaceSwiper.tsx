@@ -1111,33 +1111,49 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     // Batch mode: category exhausted → go back to category picker
     if (onBatchComplete) {
       return (
-        <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
-          <div className="text-5xl">✅</div>
-          <div>
-            <p className="font-bold text-lg">Kategoria wyczerpana!</p>
-            <p className="text-muted-foreground text-sm mt-1">
-              {likedPlaces.length > 0
-                ? `Wybrałeś ${likedPlaces.length} miejsc. Wybierz kolejną kategorię lub zakończ.`
-                : "Nie wybrałeś żadnego miejsca — spróbuj innej kategorii."}
-            </p>
-          </div>
-          <div className="w-full space-y-3">
-            <button
-              onClick={() => onBatchComplete([...likedPlaces, ...superLikedPlaces].map(p => p.place_name))}
-              className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
-            >
-              Wybierz kolejną kategorię →
-            </button>
-            {likedPlaces.length > 0 && (
+        <>
+          <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
+            <div className="text-5xl">✅</div>
+            <div>
+              <p className="font-bold text-lg">Kategoria wyczerpana!</p>
+              <p className="text-muted-foreground text-sm mt-1">
+                {likedPlaces.length > 0
+                  ? `Wybrałeś ${likedPlaces.length} miejsc. Wybierz kolejną kategorię lub zakończ.`
+                  : "Nie wybrałeś żadnego miejsca — spróbuj innej kategorii."}
+              </p>
+            </div>
+            <div className="w-full space-y-3">
               <button
-                onClick={handleProceed}
-                className="w-full py-3.5 rounded-full border border-border text-sm font-semibold active:scale-[0.97] transition-transform"
+                onClick={() => onBatchComplete([...likedPlaces, ...superLikedPlaces].map(p => p.place_name))}
+                className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
               >
-                Zaplanuj trasę z {likedPlaces.length} miejsc
+                Wybierz kolejną kategorię →
               </button>
-            )}
+              {likedPlaces.length > 0 && (
+                <button
+                  onClick={handleProceed}
+                  className="w-full py-3.5 rounded-full border border-border text-sm font-semibold active:scale-[0.97] transition-transform"
+                >
+                  Zaplanuj trasę z {likedPlaces.length} miejsc
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+          {showUpsell && (
+            <GuestUpsellModal
+              onSignUp={() => {
+                const allLiked = [...likedPlaces, ...superLikedPlaces];
+                localStorage.setItem("trasa_guest_plan", JSON.stringify({
+                  city,
+                  date: date.toISOString(),
+                  likedPlaceNames: allLiked.map(p => p.place_name),
+                }));
+                navigate("/auth?return=plan");
+              }}
+              onDismiss={() => setShowUpsell(false)}
+            />
+          )}
+        </>
       );
     }
 
