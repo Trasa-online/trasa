@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { Check, X, BarChart2, ImagePlus, CalendarDays, TrendingUp, Eye, Star, MapPin, Menu } from "lucide-react";
+import { Check, X, BarChart2, ImagePlus, CalendarDays, TrendingUp, Eye, Star, MapPin, Menu, User } from "lucide-react";
 
 // ─── Scroll reveal ─────────────────────────────────────────────────────────────
 
@@ -456,9 +456,12 @@ export default function ForBusinessPage() {
                 Dla podróżujących
               </a>
               <div className="mx-5 my-1 border-t border-white/10" />
-              <a href="/auth?business=true" className="px-5 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
-                Zaloguj się
-              </a>
+              <div className="px-5 pb-3 pt-1">
+                <a href="/auth?business=true" className="w-full flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-full border border-white/25 text-white/80 hover:border-white/50 hover:text-white active:scale-95 transition-all">
+                  <User className="h-4 w-4" />
+                  Zaloguj się
+                </a>
+              </div>
               <div className="px-5 py-3">
                 <a href="mailto:trasa.app@gmail.com" className="block w-full text-center text-sm font-bold px-4 py-2.5 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all">
                   Kontakt →
