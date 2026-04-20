@@ -8,6 +8,7 @@ import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
+import { getSubcategoryIds, getMainCategoryFor } from "@/lib/categories";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,49 +35,38 @@ export interface MockPlace {
 }
 
 export type PlaceCategory =
-  | "restaurant"
-  | "cafe"
-  | "museum"
-  | "park"
-  | "bar"
-  | "club"
-  | "monument"
-  | "gallery"
-  | "market"
-  | "viewpoint"
-  | "shopping"
-  | "experience";
+  | "restaurant" | "cafe" | "bar" | "club"
+  | "museum" | "monument" | "gallery"
+  | "experience" | "market" | "shopping"
+  | "park" | "viewpoint";
 
 // ─── Category config ──────────────────────────────────────────────────────────
 
 const CATEGORY_LABELS: Record<PlaceCategory, string> = {
   restaurant: "Restauracja",
-  cafe: "Kawiarnia",
-  museum: "Muzeum",
-  park: "Park",
-  bar: "Bar",
-  club: "Klub",
-  monument: "Zabytek",
-  gallery: "Galeria",
-  market: "Targ",
-  viewpoint: "Widok",
-  shopping: "Zakupy",
-  experience: "Rozrywka",
+  cafe:       "Kawiarnia",
+  bar:        "Bar",
+  club:       "Klub",
+  museum:     "Muzeum",
+  monument:   "Zabytek",
+  gallery:    "Galeria",
+  experience: "Doświadczenie",
+  market:     "Targ",
+  shopping:   "Sklep",
+  park:       "Park",
+  viewpoint:  "Widok",
 };
 
-const CATEGORY_COLORS: Record<PlaceCategory, string> = {
-  restaurant: "bg-primary/80 text-white",
-  cafe: "bg-amber-500/80 text-white",
-  museum: "bg-violet-600/80 text-white",
-  park: "bg-emerald-600/80 text-white",
-  bar: "bg-blue-600/80 text-white",
-  club: "bg-pink-600/80 text-white",
-  monument: "bg-stone-600/80 text-white",
-  gallery: "bg-purple-600/80 text-white",
-  market: "bg-yellow-600/80 text-white",
-  viewpoint: "bg-sky-600/80 text-white",
-  shopping: "bg-rose-600/80 text-white",
-  experience: "bg-teal-600/80 text-white",
+const MAIN_CATEGORY_COLORS: Record<string, string> = {
+  food:        "bg-orange-500/80 text-white",
+  culture:     "bg-violet-600/80 text-white",
+  attractions: "bg-teal-600/80 text-white",
+  nature:      "bg-emerald-600/80 text-white",
+};
+
+const getCategoryColor = (cat: PlaceCategory): string => {
+  const main = getMainCategoryFor(cat);
+  return main ? (MAIN_CATEGORY_COLORS[main.id] ?? "bg-slate-500/80 text-white") : "bg-slate-500/80 text-white";
 };
 
 
@@ -388,7 +378,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       <div className="absolute bottom-0 left-0 right-0 px-5 pt-5 pb-[76px] space-y-2">
         {/* Category (hidden for business cards — replaced by logo row) */}
         {place.businessLogoUrl === undefined && (
-          <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full", CATEGORY_COLORS[place.category])}>
+          <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full", getCategoryColor(place.category))}>
             {CATEGORY_LABELS[place.category]}
           </span>
         )}
@@ -804,8 +794,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
 
       // Batch mode: single category, max 20 places
       if (categoryFilter) {
+        const subIds = getSubcategoryIds(categoryFilter);
         const pool = remaining
-          .filter(p => p.category === categoryFilter)
+          .filter(p => subIds.length > 0 ? subIds.includes(p.category) : p.category === categoryFilter)
           .sort(() => Math.random() - 0.5)
           .slice(0, 20);
         setQueue(pool);

@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, Phone, LayoutDashboard, Images, Store, Megaphone, TrendingUp } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp } from "lucide-react";
+import { MAIN_CATEGORIES } from "@/lib/categories";
 import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
@@ -20,17 +21,6 @@ interface BusinessPost {
   created_at: string;
 }
 
-const PLACE_CATEGORIES: Record<string, { label: string; icon: string; subcats: string[] }> = {
-  restaurant:    { label: 'Restauracja',   icon: '🍽️', subcats: ['Polska kuchnia', 'Włoska', 'Azjatycka', 'Burgery', 'Sushi', 'Vege/Vegan', 'Fine dining', 'Seafood', 'Pizza', 'Fast food'] },
-  cafe:          { label: 'Kawiarnia',     icon: '☕',  subcats: ['Specialty coffee', 'Cukiernia & ciasta', 'Śniadania & brunch', 'Lody & desery', 'Herbaciarnia'] },
-  bar:           { label: 'Bar',           icon: '🍸',  subcats: ['Koktajle', 'Craft beer', 'Wine bar', 'Pub & piwo', 'Whisky', 'Karaoke & imprezy'] },
-  museum:        { label: 'Muzeum',        icon: '🏛️', subcats: ['Historyczne', 'Sztuka nowoczesna', 'Nauka & technika', 'Militarne', 'Etnograficzne', 'Regionalne'] },
-  monument:      { label: 'Zabytek',       icon: '🏰',  subcats: ['Kościół / Katedra', 'Zamek / Pałac', 'Kamienica', 'Pomnik', 'Ruiny', 'Kaplica'] },
-  park:          { label: 'Park / Natura', icon: '🌿',  subcats: ['Park miejski', 'Ogród botaniczny', 'ZOO', 'Las / Góry', 'Plaża / Jezioro', 'Rezerwat'] },
-  experience:    { label: 'Atrakcja',      icon: '✨',  subcats: ['Punkt widokowy', 'Interaktywna', 'Escape room', 'Sporty / Aktywność', 'Spa & wellness', 'Targi / Rynki'] },
-  shopping:      { label: 'Sklep',         icon: '🛍️', subcats: ['Antyki', 'Design & rękodzieło', 'Pamiątki', 'Moda lokalna', 'Lokalny targ'] },
-  accommodation: { label: 'Nocleg',        icon: '🏨',  subcats: ['Hotel', 'Hostel', 'Apartament', 'Pensjonat / B&B', 'Kemping'] },
-};
 
 const VIBE_TAG_SUGGESTIONS = [
   'must-see', 'romantycznie', 'historyczne', 'widok', 'instagramowe',
@@ -982,15 +972,18 @@ const BusinessDashboard = () => {
                 {/* Kategoria główna */}
                 <div className="pt-2">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Kategoria główna</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {Object.entries(PLACE_CATEGORIES).map(([key, cat]) => {
-                      const active = mainCategory === key;
+                  <div className="grid grid-cols-2 gap-2">
+                    {MAIN_CATEGORIES.map(cat => {
+                      const active = mainCategory === cat.id;
                       return (
-                        <button key={key} type="button"
-                          onClick={() => { setMainCategory(active ? "" : key); setBizSubcategories([]); setIsDirty(true); }}
-                          className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all ${active ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
-                          <span className="text-base">{cat.icon}</span>
-                          <span className="leading-tight text-center">{cat.label}</span>
+                        <button key={cat.id} type="button"
+                          onClick={() => { setMainCategory(active ? "" : cat.id); setBizSubcategories([]); setIsDirty(true); }}
+                          className={`flex items-center gap-2.5 px-3 py-3 rounded-xl border-2 text-left transition-all ${active ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
+                          <span className="text-xl shrink-0">{cat.emoji}</span>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold leading-tight">{cat.label}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{cat.hint}</p>
+                          </div>
                         </button>
                       );
                     })}
@@ -998,17 +991,17 @@ const BusinessDashboard = () => {
                 </div>
 
                 {/* Podkategoria */}
-                {mainCategory && PLACE_CATEGORIES[mainCategory] && (
+                {mainCategory && (
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Podkategoria</p>
                     <div className="flex flex-wrap gap-2">
-                      {PLACE_CATEGORIES[mainCategory].subcats.map(sub => {
-                        const active = bizSubcategories.includes(sub);
+                      {(MAIN_CATEGORIES.find(c => c.id === mainCategory)?.subcategories ?? []).map(sub => {
+                        const active = bizSubcategories.includes(sub.label);
                         return (
-                          <button key={sub} type="button"
-                            onClick={() => { setBizSubcategories(prev => active ? prev.filter(s => s !== sub) : [...prev, sub]); setIsDirty(true); }}
-                            className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${active ? 'bg-blue-600 border-blue-600 text-white' : 'bg-background border-border text-muted-foreground hover:border-blue-300 hover:text-foreground'}`}>
-                            {sub}
+                          <button key={sub.id} type="button"
+                            onClick={() => { setBizSubcategories(prev => active ? prev.filter(s => s !== sub.label) : [...prev, sub.label]); setIsDirty(true); }}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${active ? 'bg-orange-500 border-orange-500 text-white' : 'bg-background border-border text-muted-foreground hover:border-orange-300 hover:text-foreground'}`}>
+                            <span>{sub.emoji}</span>{sub.label}
                           </button>
                         );
                       })}
