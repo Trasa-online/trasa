@@ -46,6 +46,7 @@ const Admin = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [tab, setTab] = useState<"waitlist" | "cities" | "businesses" | "bugs">("waitlist");
+  const [bizTab, setBizTab] = useState<"action" | "claims" | "all">("action");
 
   // Waitlist state
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
@@ -100,6 +101,25 @@ const Admin = () => {
   }>>([]);
   const [approvingReviewId, setApprovingReviewId] = useState<string | null>(null);
 
+  // All businesses
+  const [allBusinesses, setAllBusinesses] = useState<Array<{
+    id: string;
+    place_id: string | null;
+    business_name: string;
+    city: string | null;
+    plan: string;
+    is_verified: boolean;
+    is_active: boolean;
+    activated_at: string | null;
+    main_category: string | null;
+    created_at: string;
+    email: string | null;
+    phone: string | null;
+    website: string | null;
+  }>>([]);
+  const [fetchingAll, setFetchingAll] = useState(false);
+  const [bizSearch, setBizSearch] = useState("");
+
   // Pending custom subcategories
   const [pendingSubcats, setPendingSubcats] = useState<Array<{
     id: string;
@@ -128,6 +148,7 @@ const Admin = () => {
         loadBugReports();
         loadPendingReviews();
         loadPendingSubcats();
+        loadAllBusinesses();
       });
   }, [user, loading, navigate]);
 
@@ -255,6 +276,16 @@ const Admin = () => {
       setPendingReviews(prev => prev.map(r => r.id === id ? { ...r, is_verified: true } : r));
     }
     setApprovingReviewId(null);
+  };
+
+  const loadAllBusinesses = async () => {
+    setFetchingAll(true);
+    const { data } = await (supabase as any)
+      .from("business_profiles")
+      .select("id, place_id, business_name, city, plan, is_verified, is_active, activated_at, main_category, created_at, email, phone, website")
+      .order("created_at", { ascending: false });
+    setAllBusinesses(data ?? []);
+    setFetchingAll(false);
   };
 
   const loadPendingSubcats = async () => {
@@ -560,257 +591,231 @@ const Admin = () => {
         )}
 
         {/* ── Businesses Tab ── */}
-        {tab === "businesses" && (
-          <>
-          {/* Pending custom subcategories */}
-          {pendingSubcats.length > 0 && (
-            <div className="p-4 space-y-3 border-b border-border/40">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Propozycje podkategorii ({pendingSubcats.length})
-              </p>
-              {pendingSubcats.map(s => (
-                <div key={s.id} className="flex items-center gap-3 p-3 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800/40">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-foreground truncate">{s.business_name}</p>
-                    <p className="text-sm font-bold text-amber-700 dark:text-amber-400 mt-0.5">„{s.custom_subcategory}"</p>
-                    {s.main_category && <p className="text-[11px] text-muted-foreground mt-0.5">Kategoria: {s.main_category}</p>}
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button size="sm" disabled={subcatActionId === s.id}
-                      onClick={() => handleApproveSubcat(s.id, s.custom_subcategory, s.main_category)}
-                      className="h-7 px-3 text-xs rounded-xl bg-green-600 hover:bg-green-700 text-white border-0">
-                      Zatwierdź
-                    </Button>
-                    <Button size="sm" variant="outline" disabled={subcatActionId === s.id}
-                      onClick={() => handleRejectSubcat(s.id)}
-                      className="h-7 px-3 text-xs rounded-xl text-red-600 border-red-200 hover:bg-red-50">
-                      Odrzuć
-                    </Button>
-                  </div>
+        {tab === "businesses" && (() => {
+          const actionCount = pendingSubcats.length
+            + pendingReviews.filter(r => !r.is_verified).length
+            + sortedClaims.filter(c => c.status === "pending").length;
+          const filteredAll = allBusinesses.filter(b =>
+            !bizSearch
+            || b.business_name.toLowerCase().includes(bizSearch.toLowerCase())
+            || b.city?.toLowerCase().includes(bizSearch.toLowerCase())
+          );
+
+          const renderClaimCard = (claim: BusinessClaim) => (
+            <div key={claim.id} className="border border-border rounded-xl p-4 bg-card space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">
+                    {claim.business_name ?? claim.places?.place_name ?? claim.place_id ?? "—"}
+                  </p>
+                  {(claim.place_name_text || claim.places?.city) && (
+                    <p className="text-xs text-muted-foreground">{claim.place_name_text ?? claim.places?.city}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {claim.contact_email}{claim.contact_phone && ` · ${claim.contact_phone}`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{format(new Date(claim.created_at), "dd.MM.yyyy HH:mm")}</p>
                 </div>
-              ))}
-            </div>
-          )}
-          {/* Pending verification reviews */}
-          {pendingReviews.length > 0 && (
-            <div className="p-4 space-y-4 border-b border-border/40">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Do weryfikacji ({pendingReviews.filter(r => !r.is_verified).length})
-              </p>
-              {pendingReviews.map(review => (
-                <div key={review.id} className={`border rounded-2xl bg-card overflow-hidden ${review.is_verified ? "opacity-60 border-border/30" : "border-blue-200 dark:border-blue-800/40"}`}>
-                  {/* Cover image */}
-                  <div className="relative w-full h-36 bg-gradient-to-br from-slate-700 to-slate-900">
-                    {review.cover_image_url && (
-                      <img src={review.cover_image_url} className="absolute inset-0 w-full h-full object-cover" />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                    {/* Logo */}
-                    {review.logo_url && (
-                      <img src={review.logo_url} className="absolute bottom-3 left-3 w-10 h-10 rounded-full object-cover border-2 border-white/40" />
-                    )}
-                    <div className={`absolute bottom-3 ${review.logo_url ? "left-16" : "left-3"} right-3`}>
-                      <p className="text-white font-black text-base leading-tight">{review.business_name}</p>
-                      {(review.street || review.city) && (
-                        <p className="text-white/70 text-xs mt-0.5">{[review.street, review.city, review.postal_code].filter(Boolean).join(", ")}</p>
-                      )}
-                    </div>
-                    {review.is_verified && (
-                      <div className="absolute top-2 right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">✓ Zatwierdzona</div>
-                    )}
-                    {review.event_title && (
-                      <div className="absolute top-2 left-2 bg-amber-500/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">🎉 {review.event_title}</div>
-                    )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    claim.status === "pending" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                    : claim.status === "approved" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                  }`}>
+                    {claim.status === "pending" ? "Oczekuje" : claim.status === "approved" ? "Zatwierdzono" : "Odrzucono"}
+                  </span>
+                  <button onClick={() => handleDeleteClaim(claim)} disabled={deletingClaimId === claim.id}
+                    className="h-7 w-7 flex items-center justify-center rounded-2xl text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50">
+                    {deletingClaimId === claim.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+              </div>
+              {claim.message && (
+                <p className="text-xs text-muted-foreground bg-muted/40 rounded-2xl px-3 py-2">{claim.message}</p>
+              )}
+              {claim.status === "pending" && (
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+                    onClick={() => handleRejectClaim(claim)} disabled={rejectingId === claim.id || approvingId === claim.id}>
+                    {rejectingId === claim.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Odrzuć"}
+                  </Button>
+                  <Button size="sm" className="flex-1 bg-primary hover:bg-primary text-white"
+                    onClick={() => handleApproveClaim(claim)} disabled={approvingId === claim.id || rejectingId === claim.id}>
+                    {approvingId === claim.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Generuję...</> : "Zatwierdź i wyślij link"}
+                  </Button>
+                </div>
+              )}
+              {claim.status === "approved" && (
+                <div className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-2xl w-fit ${
+                  claim.business_profiles?.activated_at
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                }`}>
+                  <div className={`h-1.5 w-1.5 rounded-full ${claim.business_profiles?.activated_at ? "bg-green-500" : "bg-amber-500"}`} />
+                  {claim.business_profiles?.activated_at
+                    ? `Konto aktywowane ${format(new Date(claim.business_profiles.activated_at), "dd.MM.yyyy HH:mm")}`
+                    : "Link nie użyty"}
+                </div>
+              )}
+              {claim.status === "approved" && !bizInviteLinks[claim.id] && (
+                <Button size="sm" variant="outline" className="w-full" onClick={() => handleGenerateBizLink(claim)} disabled={approvingId === claim.id}>
+                  {approvingId === claim.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Generuję...</> : "Wyślij link aktywacyjny"}
+                </Button>
+              )}
+              {bizInviteLinks[claim.id] && (
+                <div className="space-y-2 pt-1">
+                  <div className="flex gap-2">
+                    <div className="flex-1 bg-muted rounded-2xl px-3 py-2 text-xs text-muted-foreground font-mono truncate">{bizInviteLinks[claim.id]}</div>
+                    <button onClick={() => { navigator.clipboard.writeText(bizInviteLinks[claim.id]); setCopiedId(claim.id); setTimeout(() => setCopiedId(null), 2000); toast.success("Link skopiowany!"); }}
+                      className="shrink-0 h-9 w-9 flex items-center justify-center rounded-2xl border border-border bg-card hover:bg-muted transition-colors">
+                      {copiedId === claim.id ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                    </button>
                   </div>
+                  <button onClick={() => handleGenerateBizLink(claim)} disabled={approvingId === claim.id}
+                    className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 disabled:opacity-50 flex items-center justify-center gap-1">
+                    {approvingId === claim.id ? <><Loader2 className="h-3 w-3 animate-spin" />Generuję...</> : "Wygeneruj nowy link (użyty lub wygasły)"}
+                  </button>
+                </div>
+              )}
+            </div>
+          );
 
-                  {/* Body */}
-                  <div className="p-3 space-y-3">
-                    {/* Tags */}
-                    {review.tags && review.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {review.tags.map(tag => (
-                          <span key={tag} className="text-[11px] font-semibold bg-muted px-2 py-0.5 rounded-full">{tag}</span>
-                        ))}
-                      </div>
-                    )}
+          const renderReviewCard = (review: (typeof pendingReviews)[0]) => (
+            <div key={review.id} className="border border-border rounded-xl p-4 bg-card space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">{review.business_name}</p>
+                  <p className="text-xs text-muted-foreground">{[review.city, review.street].filter(Boolean).join(" · ")}</p>
+                  <p className="text-xs text-muted-foreground">Zgłoszono: {format(new Date(review.review_requested_at), "dd.MM.yyyy HH:mm")}</p>
+                </div>
+                {review.is_verified && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 shrink-0">✓ Zweryfikowana</span>
+                )}
+              </div>
+              {review.description && (
+                <p className="text-xs text-muted-foreground bg-muted/40 rounded-xl px-3 py-2">{review.description}</p>
+              )}
+              {(review.cover_image_url || (review.gallery_urls ?? []).length > 0) && (
+                <div className="flex gap-2 flex-wrap">
+                  {review.cover_image_url && <img src={review.cover_image_url} alt="cover" className="h-16 w-24 object-cover rounded-xl border border-border/30" />}
+                  {(review.gallery_urls ?? []).slice(0, 2).map((url, i) => <img key={i} src={url} alt="gallery" className="h-16 w-16 object-cover rounded-xl border border-border/30" />)}
+                </div>
+              )}
+              {!review.is_verified && (
+                <Button size="sm" onClick={() => handleApproveReview(review.id)} disabled={approvingReviewId === review.id}
+                  className="w-full rounded-2xl bg-green-600 hover:bg-green-700 text-white border-0">
+                  {approvingReviewId === review.id ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Zatwierdzam...</> : "Zatwierdź wizytówkę"}
+                </Button>
+              )}
+            </div>
+          );
 
-                    {/* Description */}
-                    {review.description && (
-                      <p className="text-sm text-muted-foreground leading-relaxed">{review.description}</p>
-                    )}
+          return (
+            <>
+              {/* Sub-tabs bar */}
+              <div className="flex gap-1 px-4 pt-4 pb-2 border-b border-border/30">
+                {([
+                  { id: "action", label: "Do działania", badge: actionCount },
+                  { id: "claims", label: "Zgłoszenia", badge: sortedClaims.length },
+                  { id: "all",    label: "Wszystkie biznesy", badge: allBusinesses.length },
+                ] as const).map(t => (
+                  <button key={t.id} onClick={() => setBizTab(t.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${bizTab === t.id ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
+                    {t.label}
+                    {t.badge > 0 && <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${bizTab === t.id ? "bg-background/20" : "bg-muted"}`}>{t.badge}</span>}
+                  </button>
+                ))}
+              </div>
 
-                    {/* Contact info */}
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                      {review.phone && <span className="text-muted-foreground">📞 {review.phone}</span>}
-                      {review.email && <span className="text-muted-foreground truncate">✉ {review.email}</span>}
-                      {review.website && <span className="text-muted-foreground truncate col-span-2">🌐 {review.website}</span>}
+              {/* ── Do działania ── */}
+              {bizTab === "action" && (
+                <div className="p-4 space-y-6">
+                  {actionCount === 0 && <p className="text-sm text-muted-foreground text-center py-8">Nic do zrobienia 🎉</p>}
+                  {sortedClaims.filter(c => c.status === "pending").length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nowe zgłoszenia ({sortedClaims.filter(c => c.status === "pending").length})</p>
+                      {sortedClaims.filter(c => c.status === "pending").map(renderClaimCard)}
                     </div>
-
-                    {/* Gallery thumbnails */}
-                    {review.gallery_urls && review.gallery_urls.length > 0 && (
-                      <div className="flex gap-1.5 overflow-x-auto">
-                        {review.gallery_urls.slice(0, 5).map((url, i) => (
-                          <img key={i} src={url} className="h-14 w-14 rounded-xl object-cover flex-shrink-0" />
-                        ))}
-                        {review.gallery_urls.length > 5 && (
-                          <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
-                            <span className="text-xs font-bold text-muted-foreground">+{review.gallery_urls.length - 5}</span>
+                  )}
+                  {pendingReviews.filter(r => !r.is_verified).length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Do weryfikacji ({pendingReviews.filter(r => !r.is_verified).length})</p>
+                      {pendingReviews.filter(r => !r.is_verified).map(renderReviewCard)}
+                    </div>
+                  )}
+                  {pendingSubcats.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Propozycje podkategorii ({pendingSubcats.length})</p>
+                      {pendingSubcats.map(s => (
+                        <div key={s.id} className="flex items-center gap-3 p-3 rounded-2xl border border-amber-200 bg-amber-50">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold truncate">{s.business_name}</p>
+                            <p className="text-sm font-bold text-amber-700 mt-0.5">„{s.custom_subcategory}"</p>
+                            {s.main_category && <p className="text-[11px] text-muted-foreground mt-0.5">{s.main_category}</p>}
                           </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Footer: date + approve button */}
-                    <div className="flex items-center justify-between pt-1">
-                      <p className="text-[11px] text-muted-foreground">
-                        Zgłoszono {format(new Date(review.review_requested_at), "dd.MM.yyyy HH:mm")}
-                      </p>
-                      {!review.is_verified && (
-                        <Button
-                          size="sm"
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
-                          onClick={() => handleApproveReview(review.id)}
-                          disabled={approvingReviewId === review.id}
-                        >
-                          {approvingReviewId === review.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Zatwierdź wizytówkę"}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {fetchingClaims ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : sortedClaims.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-12">Brak zgłoszeń biznesowych.</p>
-          ) : (
-            <div className="space-y-3 p-4">
-              {sortedClaims.map(claim => (
-                <div key={claim.id} className="border border-border rounded-xl p-4 bg-card space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">
-                        {claim.business_name ?? claim.places?.place_name ?? claim.place_id ?? "—"}
-                      </p>
-                      {(claim.place_name_text || claim.places?.city) && (
-                        <p className="text-xs text-muted-foreground">
-                          {claim.place_name_text ?? claim.places?.city}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {claim.contact_email}
-                        {claim.contact_phone && ` · ${claim.contact_phone}`}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(claim.created_at), "dd.MM.yyyy HH:mm")}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        claim.status === "pending"
-                          ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                          : claim.status === "approved"
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                      }`}>
-                        {claim.status === "pending" ? "Oczekuje" : claim.status === "approved" ? "Zatwierdzono" : "Odrzucono"}
-                      </span>
-                      <button
-                        onClick={() => handleDeleteClaim(claim)}
-                        disabled={deletingClaimId === claim.id}
-                        className="h-7 w-7 flex items-center justify-center rounded-2xl text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                      >
-                        {deletingClaimId === claim.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                      </button>
-                    </div>
-                  </div>
-                  {claim.message && (
-                    <p className="text-xs text-muted-foreground bg-muted/40 rounded-2xl px-3 py-2">
-                      {claim.message}
-                    </p>
-                  )}
-                  {claim.status === "pending" && (
-                    <div className="flex gap-2 pt-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
-                        onClick={() => handleRejectClaim(claim)}
-                        disabled={rejectingId === claim.id || approvingId === claim.id}
-                      >
-                        {rejectingId === claim.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Odrzuć"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="flex-1 bg-primary hover:bg-primary text-white"
-                        onClick={() => handleApproveClaim(claim)}
-                        disabled={approvingId === claim.id || rejectingId === claim.id}
-                      >
-                        {approvingId === claim.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Generuję...</> : "Zatwierdź i wyślij link"}
-                      </Button>
-                    </div>
-                  )}
-                  {claim.status === "approved" && (
-                    <div className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-2xl w-fit ${
-                      claim.business_profiles?.activated_at
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                    }`}>
-                      <div className={`h-1.5 w-1.5 rounded-full ${claim.business_profiles?.activated_at ? "bg-green-500" : "bg-amber-500"}`} />
-                      {claim.business_profiles?.activated_at
-                        ? `Konto aktywowane ${format(new Date(claim.business_profiles.activated_at), "dd.MM.yyyy HH:mm")}`
-                        : "Link nie użyty"}
-                    </div>
-                  )}
-                  {claim.status === "approved" && !bizInviteLinks[claim.id] && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => handleGenerateBizLink(claim)}
-                      disabled={approvingId === claim.id}
-                    >
-                      {approvingId === claim.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Generuję...</> : "Wyślij link aktywacyjny"}
-                    </Button>
-                  )}
-                  {bizInviteLinks[claim.id] && (
-                    <div className="space-y-2 pt-1">
-                      <div className="flex gap-2">
-                        <div className="flex-1 bg-muted rounded-2xl px-3 py-2 text-xs text-muted-foreground font-mono truncate">
-                          {bizInviteLinks[claim.id]}
+                          <div className="flex gap-2 shrink-0">
+                            <Button size="sm" disabled={subcatActionId === s.id} onClick={() => handleApproveSubcat(s.id, s.custom_subcategory, s.main_category)} className="h-7 px-3 text-xs rounded-xl bg-green-600 hover:bg-green-700 text-white border-0">Zatwierdź</Button>
+                            <Button size="sm" variant="outline" disabled={subcatActionId === s.id} onClick={() => handleRejectSubcat(s.id)} className="h-7 px-3 text-xs rounded-xl text-red-600 border-red-200 hover:bg-red-50">Odrzuć</Button>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(bizInviteLinks[claim.id]);
-                            setCopiedId(claim.id);
-                            setTimeout(() => setCopiedId(null), 2000);
-                            toast.success("Link skopiowany!");
-                          }}
-                          className="shrink-0 h-9 w-9 flex items-center justify-center rounded-2xl border border-border bg-card hover:bg-muted transition-colors"
-                        >
-                          {copiedId === claim.id ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                        </button>
-                      </div>
-                      <button
-                        onClick={() => handleGenerateBizLink(claim)}
-                        disabled={approvingId === claim.id}
-                        className="w-full text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 disabled:opacity-50 flex items-center justify-center gap-1"
-                      >
-                        {approvingId === claim.id ? <><Loader2 className="h-3 w-3 animate-spin" />Generuję...</> : "Wygeneruj nowy link (użyty lub wygasły)"}
-                      </button>
+                      ))}
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
-          )}
-          </>
-        )}
+              )}
+
+              {/* ── Zgłoszenia ── */}
+              {bizTab === "claims" && (
+                fetchingClaims
+                  ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                  : sortedClaims.length === 0
+                    ? <p className="text-sm text-muted-foreground text-center py-12">Brak zgłoszeń.</p>
+                    : <div className="space-y-3 p-4">{sortedClaims.map(renderClaimCard)}</div>
+              )}
+
+              {/* ── Wszystkie biznesy ── */}
+              {bizTab === "all" && (
+                <div className="p-4 space-y-3">
+                  <input value={bizSearch} onChange={e => setBizSearch(e.target.value)} placeholder="Szukaj po nazwie lub mieście..."
+                    className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+                  {fetchingAll
+                    ? <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                    : filteredAll.length === 0
+                      ? <p className="text-sm text-muted-foreground text-center py-8">Brak wyników.</p>
+                      : filteredAll.map(b => (
+                          <div key={b.id} className="border border-border rounded-2xl bg-card p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-semibold text-sm">{b.business_name}</p>
+                                  {b.is_verified && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">✓ Zweryfikowana</span>}
+                                  {!b.is_active && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">Nieaktywna</span>}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-0.5">{[b.city, b.main_category].filter(Boolean).join(" · ")}</p>
+                                <p className="text-xs text-muted-foreground">{b.email}{b.phone ? ` · ${b.phone}` : ""}</p>
+                              </div>
+                              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${b.plan === "premium" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}`}>{b.plan}</span>
+                                <p className="text-[10px] text-muted-foreground">{format(new Date(b.created_at), "dd.MM.yyyy")}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 pt-1">
+                              {b.activated_at
+                                ? <span className="text-[11px] text-green-700 font-medium">Aktywowane {format(new Date(b.activated_at), "dd.MM.yyyy")}</span>
+                                : <span className="text-[11px] text-amber-600 font-medium">Nie aktywowane</span>
+                              }
+                              {(b.place_id || b.id) && (
+                                <a href={`/biznes/${b.place_id ?? b.id}`} target="_blank" rel="noopener noreferrer" className="ml-auto text-[11px] text-blue-600 underline underline-offset-2">Otwórz panel →</a>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                  }
+                </div>
+              )}
+            </>
+          );
+        })()}
         {/* ── Bug Reports Tab ── */}
         {tab === "bugs" && (
           fetchingBugs ? (
