@@ -449,6 +449,11 @@ const LandingPage = () => {
                   Dołącz →
                 </button>
               </div>
+              <div className="px-5 pb-4">
+                <button onClick={() => { navigate("/home"); setMenuOpen(false); }} className="w-full text-sm font-semibold px-4 py-2.5 rounded-full border border-orange-500/40 text-orange-400 hover:bg-orange-500/10 active:scale-95 transition-all">
+                  Wypróbuj bez konta →
+                </button>
+              </div>
             </div>
           </div>
         )}
