@@ -97,7 +97,7 @@ const BottomNav = () => {
 
           {/* Center FAB */}
           <button
-            onClick={() => setShowMenu(!showMenu)}
+            onClick={() => isGuest ? setShowGuestModal(true) : setShowMenu(!showMenu)}
             className="flex items-center justify-center"
             aria-label="Dodaj trasę"
           >
