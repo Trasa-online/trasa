@@ -8,6 +8,14 @@
 
 Trasa to aplikacja do planowania podróży grupowych. Użytkownicy przeglądają miejsca, dopasowują je wspólnie (nie nazywamy tego "swipe" ani "match" — zakazane słowa), tworzą trasy i prowadzą dziennik podróży. Firmy mogą dodać swój lokal jako wizytówkę i zarządzać wizerunkiem.
 
+### Źródło danych miejsc (KRYTYCZNE)
+
+Aplikacja pokazuje **wyłącznie miejsca z bazy Supabase** (tabela `places`). Nie ma żadnego trybu mock ani fallbacku do lokalnych danych.
+
+- `src/lib/mockPlaces.ts` — **USUNIĘTY**, nie przywracać
+- Jeśli miasto nie ma miejsc w DB → pokazujemy pusty stan, NIE generujemy fake danych
+- `MOCK_MODE`, `getMockPlaces`, `MOCK_PLACE_DETAIL` — nie istnieją, nie używać
+
 ---
 
 ## Brand Guidelines

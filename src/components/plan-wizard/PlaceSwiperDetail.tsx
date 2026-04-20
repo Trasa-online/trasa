@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import type { MockPlace } from "./PlaceSwiper";
-import { MOCK_MODE, MOCK_PLACE_DETAIL, MOCK_BUSINESS_POSTS } from "@/lib/mockPlaces";
 import BusinessActionButtons from "@/components/business/BusinessActionButtons";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -110,21 +109,17 @@ const PlaceSwiperDetail = ({
     }
 
     const fetchAll = async () => {
-      if (MOCK_MODE || skipGoogleFetch) {
-        setDetail({ ...MOCK_PLACE_DETAIL, name: place.place_name } as any);
+      if (skipGoogleFetch) {
+        setDetail(null);
         setPhotos([place.photo_url, ...(place.galleryPhotos ?? [])].filter(Boolean) as string[]);
         if (place.businessLogoUrl !== undefined) {
-          if (place.id.startsWith("mock-")) {
-            setBusinessPosts(MOCK_BUSINESS_POSTS);
-          } else {
-            const { data } = await (supabase as any)
-              .from("business_posts")
-              .select("id, description, photo_urls, created_at")
-              .eq("place_id", place.id)
-              .order("created_at", { ascending: false })
-              .limit(10);
-            if (data) setBusinessPosts(data);
-          }
+          const { data } = await (supabase as any)
+            .from("business_posts")
+            .select("id, description, photo_urls, created_at")
+            .eq("place_id", place.id)
+            .order("created_at", { ascending: false })
+            .limit(10);
+          if (data) setBusinessPosts(data);
         }
         setLoading(false);
         return;

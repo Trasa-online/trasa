@@ -8,7 +8,6 @@ import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
-import { MOCK_MODE, getMockPlaces } from "@/lib/mockPlaces";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -730,17 +729,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     setLoading(true);
     const fetchPlaces = async () => {
 
-      // ── Mock mode: use local data, zero API/DB cost ──────────────────────
-      if (MOCK_MODE) {
-        const mocks = getMockPlaces(city);
-        // In group sessions, show 10 places per round; solo = all
-        const limit = groupSessionId ? 10 : mocks.length;
-        const shuffled = [...mocks.slice(0, limit)].sort(() => Math.random() - 0.5);
-        setAllPlaces(shuffled);
-        setQueue(shuffled);
-        setLoading(false);
-        return;
-      }
 
       // ── Group round mode: load exactly the round's place IDs in order ──
       if (roundPlaceIds?.length) {
