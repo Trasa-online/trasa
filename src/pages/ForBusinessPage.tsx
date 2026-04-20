@@ -55,7 +55,7 @@ const TIERS = [
     name: "Premium",
     subtitle: "Wyróżniasz się",
     price: "Bezpłatny",
-    priceNote: "(do momentu rozkręcenia aplikacji)",
+    priceNote: "(na pierwsze trzy miesiące)",
     cta: "Wybieram",
     highlight: true,
     danger: false,
