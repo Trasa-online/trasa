@@ -631,12 +631,22 @@ export default function ForBusinessPage() {
       {/* ── Footer ── */}
       <footer className="bg-foreground py-10 px-5">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
             <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            <span className="font-black text-white">trasa.travel</span>
           </div>
-          <div className="flex items-center gap-6">
-            <a href="/" className="text-xs text-white/50 hover:text-white/80 transition-colors">Dla podróżujących</a>
-            <a href="mailto:trasa.app@gmail.com" className="text-xs font-bold text-white hover:text-blue-300 transition-colors">trasa.app@gmail.com</a>
+          <p className="text-xs text-white/40 text-center">© {new Date().getFullYear()} Trasa · Stworzone z ❤ w Polsce</p>
+          <div className="flex items-center gap-4">
+            <a href="https://instagram.com/trasa.travel" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/80 transition-colors">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none" />
+              </svg>
+              @trasa.travel
+            </a>
+            <a href="/terms" className="text-xs text-white/50 hover:text-white/80 transition-colors">Regulamin</a>
+            <a href="/auth?business=true" className="text-xs font-bold text-white hover:text-orange-300 transition-colors">Zaloguj się →</a>
           </div>
         </div>
       </footer>
