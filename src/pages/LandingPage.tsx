@@ -396,14 +396,6 @@ const LandingPage = () => {
               <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
               Dla firm
             </a>
-            <button
-              onClick={() => navigate("/home")}
-              className="flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-full whitespace-nowrap active:scale-95 trial-btn"
-              style={{ color: "white" }}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Przechodzę do aplikacji</span>
-            </button>
             <style>{`
               @keyframes trial-flow {
                 0%   { background-position: 0% 50%; }
