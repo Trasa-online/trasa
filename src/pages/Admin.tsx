@@ -100,6 +100,15 @@ const Admin = () => {
   }>>([]);
   const [approvingReviewId, setApprovingReviewId] = useState<string | null>(null);
 
+  // Pending custom subcategories
+  const [pendingSubcats, setPendingSubcats] = useState<Array<{
+    id: string;
+    business_name: string;
+    custom_subcategory: string;
+    main_category: string | null;
+  }>>([]);
+  const [subcatActionId, setSubcatActionId] = useState<string | null>(null);
+
   useEffect(() => {
     if (loading) return;
     if (!user) { navigate("/auth"); return; }
@@ -118,6 +127,7 @@ const Admin = () => {
         loadClaims();
         loadBugReports();
         loadPendingReviews();
+        loadPendingSubcats();
       });
   }, [user, loading, navigate]);
 
@@ -245,6 +255,38 @@ const Admin = () => {
       setPendingReviews(prev => prev.map(r => r.id === id ? { ...r, is_verified: true } : r));
     }
     setApprovingReviewId(null);
+  };
+
+  const loadPendingSubcats = async () => {
+    const { data } = await (supabase as any)
+      .from("business_profiles")
+      .select("id, business_name, custom_subcategory, main_category")
+      .eq("custom_subcategory_status", "pending")
+      .not("custom_subcategory", "is", null);
+    setPendingSubcats(data ?? []);
+  };
+
+  const handleApproveSubcat = async (id: string, value: string, mainCat: string | null) => {
+    setSubcatActionId(id);
+    const { data: bp } = await (supabase as any).from("business_profiles").select("subcategories").eq("id", id).single();
+    const existing: string[] = bp?.subcategories ?? [];
+    const { error } = await (supabase as any).from("business_profiles").update({
+      subcategories: [...existing, value],
+      custom_subcategory_status: "approved",
+    }).eq("id", id);
+    if (error) toast.error("Błąd zatwierdzania");
+    else { toast.success("Podkategoria zatwierdzona!"); setPendingSubcats(prev => prev.filter(s => s.id !== id)); }
+    setSubcatActionId(null);
+  };
+
+  const handleRejectSubcat = async (id: string) => {
+    setSubcatActionId(id);
+    const { error } = await (supabase as any).from("business_profiles").update({
+      custom_subcategory_status: "rejected",
+    }).eq("id", id);
+    if (error) toast.error("Błąd odrzucania");
+    else { toast.success("Odrzucono."); setPendingSubcats(prev => prev.filter(s => s.id !== id)); }
+    setSubcatActionId(null);
   };
 
   const handleApproveClaim = async (claim: BusinessClaim) => {
@@ -520,6 +562,35 @@ const Admin = () => {
         {/* ── Businesses Tab ── */}
         {tab === "businesses" && (
           <>
+          {/* Pending custom subcategories */}
+          {pendingSubcats.length > 0 && (
+            <div className="p-4 space-y-3 border-b border-border/40">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Propozycje podkategorii ({pendingSubcats.length})
+              </p>
+              {pendingSubcats.map(s => (
+                <div key={s.id} className="flex items-center gap-3 p-3 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800/40">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-foreground truncate">{s.business_name}</p>
+                    <p className="text-sm font-bold text-amber-700 dark:text-amber-400 mt-0.5">„{s.custom_subcategory}"</p>
+                    {s.main_category && <p className="text-[11px] text-muted-foreground mt-0.5">Kategoria: {s.main_category}</p>}
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button size="sm" disabled={subcatActionId === s.id}
+                      onClick={() => handleApproveSubcat(s.id, s.custom_subcategory, s.main_category)}
+                      className="h-7 px-3 text-xs rounded-xl bg-green-600 hover:bg-green-700 text-white border-0">
+                      Zatwierdź
+                    </Button>
+                    <Button size="sm" variant="outline" disabled={subcatActionId === s.id}
+                      onClick={() => handleRejectSubcat(s.id)}
+                      className="h-7 px-3 text-xs rounded-xl text-red-600 border-red-200 hover:bg-red-50">
+                      Odrzuć
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           {/* Pending verification reviews */}
           {pendingReviews.length > 0 && (
             <div className="p-4 space-y-4 border-b border-border/40">

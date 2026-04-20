@@ -182,6 +182,8 @@ const BusinessDashboard = () => {
   const [eventEndsAt, setEventEndsAt] = useState("");
 
   const [tagsExpanded, setTagsExpanded] = useState(false);
+  const [customSubcategory, setCustomSubcategory] = useState("");
+  const [customSubcategoryStatus, setCustomSubcategoryStatus] = useState<string | null>(null);
   const [plan, setPlan] = useState<BizPlan>('premium');
   const [previewTab, setPreviewTab] = useState<'basic' | 'premium'>('premium');
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
@@ -264,6 +266,8 @@ const BusinessDashboard = () => {
     setTags(profileData.tags ?? []);
     setMainCategory(profileData.main_category ?? "");
     setBizSubcategories(profileData.subcategories ?? []);
+    setCustomSubcategory((profileData as any).custom_subcategory ?? "");
+    setCustomSubcategoryStatus((profileData as any).custom_subcategory_status ?? null);
     setDescription(profileData.description ?? "");
     setLogoUrl(profileData.logo_url ?? "");
     setCoverImageUrl(profileData.cover_image_url ?? "");
@@ -516,6 +520,8 @@ const BusinessDashboard = () => {
         tags: tags.length > 0 ? tags : null,
         main_category: mainCategory || null,
         subcategories: bizSubcategories.length > 0 ? bizSubcategories : null,
+        custom_subcategory: customSubcategory.trim() || null,
+        custom_subcategory_status: customSubcategory.trim() ? 'pending' : null,
         description: description || null,
         logo_url: logoUrl || null,
         cover_image_url: coverImageUrl || null,
@@ -1016,6 +1022,30 @@ const BusinessDashboard = () => {
                           </button>
                         );
                       })}
+                    </div>
+                    {/* Własna podkategoria */}
+                    <div className="mt-3 space-y-1.5">
+                      <p className="text-[11px] text-muted-foreground">Nie widzisz swojej? Zaproponuj własną — sprawdzimy i dodamy.</p>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          value={customSubcategory}
+                          onChange={e => { setCustomSubcategory(e.target.value); setIsDirty(true); }}
+                          maxLength={40}
+                          placeholder="np. Browar rzemieślniczy..."
+                          className="flex-1 rounded-xl border border-input bg-background px-3 py-1.5 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        />
+                      </div>
+                      {customSubcategory.trim() && (
+                        <p className={`text-[11px] font-medium ${
+                          customSubcategoryStatus === 'approved' ? 'text-green-600' :
+                          customSubcategoryStatus === 'rejected' ? 'text-red-500' :
+                          'text-amber-600'
+                        }`}>
+                          {customSubcategoryStatus === 'approved' ? '✓ Zatwierdzona' :
+                           customSubcategoryStatus === 'rejected' ? '✗ Odrzucona — zmień propozycję' :
+                           '⏳ Oczekuje na akceptację'}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
