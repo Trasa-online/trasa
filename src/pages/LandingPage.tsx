@@ -405,13 +405,6 @@ const LandingPage = () => {
               <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
               Dla firm
             </a>
-            {/* Blue "Dołącz" — mobile only */}
-            <button
-              onClick={() => navigate("/auth")}
-              className="sm:hidden px-4 h-9 rounded-full text-white text-sm font-bold active:scale-95 transition-all whitespace-nowrap bg-blue-600 hover:bg-blue-500"
-            >
-              Dołącz
-            </button>
             {/* Hamburger — mobile only */}
             <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
               {menuOpen ? <X className="h-4 w-4 text-white" /> : <Menu className="h-4 w-4 text-white" />}
