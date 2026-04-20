@@ -388,23 +388,22 @@ const LandingPage = () => {
             </button>
           </div>
 
-          {/* Mobile: orange pill "Przejdź" — compact, not flex-1 */}
-          <button
-            onClick={() => navigate("/home")}
-            className="sm:hidden px-4 h-9 rounded-full text-white text-sm font-bold active:scale-95 transition-all whitespace-nowrap"
-            style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}
-          >
-            Przejdź do aplikacji
-          </button>
-
           <div className="flex-1" />
 
-          {/* Right: badge + zaloguj + dołącz (desktop only) + mobile buttons */}
+          {/* Right: desktop links + mobile buttons */}
           <div className="flex items-center gap-2 shrink-0">
             <a href="/dla-firm" className="hidden md:flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-all border border-blue-500/30 whitespace-nowrap">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
               Dla firm
             </a>
+            {/* Orange pill — mobile only, directly left of hamburger */}
+            <button
+              onClick={() => navigate("/home")}
+              className="sm:hidden px-4 h-9 rounded-full text-white text-sm font-bold active:scale-95 transition-all whitespace-nowrap"
+              style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}
+            >
+              Przejdź do aplikacji
+            </button>
             {/* Hamburger — mobile only */}
             <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
               {menuOpen ? <X className="h-4 w-4 text-white" /> : <Menu className="h-4 w-4 text-white" />}
