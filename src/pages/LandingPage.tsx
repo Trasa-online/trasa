@@ -416,7 +416,10 @@ const LandingPage = () => {
                 animation: trial-flow 2.4s ease infinite, trial-pulse 2.4s ease infinite;
               }
             `}</style>
-            {/* Hamburger — mobile only */}
+            {/* Wypróbuj + Hamburger — mobile only */}
+            <button onClick={() => navigate("/home")} className="sm:hidden text-xs font-bold px-3 py-1.5 rounded-full border border-orange-500/50 text-orange-400 active:scale-95 transition-all whitespace-nowrap">
+              Wypróbuj →
+            </button>
             <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
               {menuOpen ? <X className="h-4 w-4 text-white" /> : <Menu className="h-4 w-4 text-white" />}
             </button>
