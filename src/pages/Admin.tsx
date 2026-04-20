@@ -47,6 +47,7 @@ const Admin = () => {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [tab, setTab] = useState<"waitlist" | "cities" | "businesses" | "bugs">("waitlist");
   const [bizTab, setBizTab] = useState<"action" | "claims" | "all">("action");
+  const [userTab, setUserTab] = useState<"pending" | "created">("pending");
 
   // Waitlist state
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
@@ -435,7 +436,7 @@ const Admin = () => {
   const pendingWaitlist = waitlist.filter(w => !w.notified_at).length;
 
   const tabLabels: Record<string, string> = {
-    waitlist: "Oczekujący",
+    waitlist: "Użytkownicy",
     cities: "Miasta",
     businesses: "Biznesy",
     bugs: "Błędy",
@@ -487,85 +488,88 @@ const Admin = () => {
       </div>
 
       <div className="p-4 max-w-2xl mx-auto">
-        {/* ── Waitlist Tab ── */}
-        {tab === "waitlist" && (
-          fetchingList ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : waitlist.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-12">
-              Brak zgłoszeń na liście oczekujących.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {waitlist.map(entry => {
-                const link = generatedLinks[entry.id];
-                return (
-                  <div key={entry.id} className="border border-border rounded-xl p-4 bg-card space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm">{entry.email}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Zgłoszono: {format(new Date(entry.created_at), "dd.MM.yyyy HH:mm")}
-                          {entry.notified_at && (
-                            <> · Zaproszono: {format(new Date(entry.notified_at), "dd.MM.yyyy HH:mm")}</>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {entry.referral_code && (
-                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
-                            🔗 Zaproszony
-                          </span>
-                        )}
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          entry.has_account
-                            ? "bg-blue-100 text-blue-700"
-                            : entry.notified_at
-                              ? "bg-green-100 text-green-700"
-                              : "bg-yellow-100 text-yellow-700"
-                        }`}>
-                          {entry.has_account ? "Konto stworzone" : entry.notified_at ? "Zaproszono" : "Oczekuje"}
-                        </span>
-                        <button
-                          onClick={() => handleDelete(entry)}
-                          disabled={deleting === entry.id}
-                          className="h-7 w-7 flex items-center justify-center rounded-2xl text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                        >
-                          {deleting === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-                    {link ? (
-                      <div className="flex gap-2">
-                        <div className="flex-1 bg-muted rounded-2xl px-3 py-2 text-xs text-muted-foreground font-mono truncate">{link}</div>
-                        <button
-                          onClick={() => copyLink(entry.id, link)}
-                          className="shrink-0 h-9 w-9 flex items-center justify-center rounded-2xl border border-border bg-card hover:bg-muted transition-colors"
-                        >
-                          {copiedId === entry.id ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant={entry.notified_at ? "outline" : "default"}
-                        onClick={() => handleInvite(entry)}
-                        disabled={inviting === entry.id}
-                        className="w-full rounded-2xl"
-                      >
-                        {inviting === entry.id ? (
-                          <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Generuję link...</>
-                        ) : entry.notified_at ? "Wygeneruj nowy link" : "Generuj link aktywacyjny"}
-                      </Button>
-                    )}
+        {/* ── Users Tab ── */}
+        {tab === "waitlist" && (() => {
+          const pending = waitlist.filter(w => !w.has_account);
+          const created = waitlist.filter(w => w.has_account);
+          const list = userTab === "pending" ? pending : created;
+
+          const renderEntry = (entry: WaitlistEntry) => {
+            const link = generatedLinks[entry.id];
+            return (
+              <div key={entry.id} className="border border-border rounded-xl p-4 bg-card space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{entry.email}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Zgłoszono: {format(new Date(entry.created_at), "dd.MM.yyyy HH:mm")}
+                      {entry.notified_at && (
+                        <> · Zaproszono: {format(new Date(entry.notified_at), "dd.MM.yyyy HH:mm")}</>
+                      )}
+                    </p>
                   </div>
-                );
-              })}
-            </div>
-          )
-        )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {entry.referral_code && (
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                        🔗 Zaproszony
+                      </span>
+                    )}
+                    {userTab === "pending" && (
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${entry.notified_at ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+                        {entry.notified_at ? "Zaproszono" : "Oczekuje"}
+                      </span>
+                    )}
+                    <button onClick={() => handleDelete(entry)} disabled={deleting === entry.id}
+                      className="h-7 w-7 flex items-center justify-center rounded-2xl text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50">
+                      {deleting === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                </div>
+                {userTab === "pending" && (
+                  link ? (
+                    <div className="flex gap-2">
+                      <div className="flex-1 bg-muted rounded-2xl px-3 py-2 text-xs text-muted-foreground font-mono truncate">{link}</div>
+                      <button onClick={() => copyLink(entry.id, link)}
+                        className="shrink-0 h-9 w-9 flex items-center justify-center rounded-2xl border border-border bg-card hover:bg-muted transition-colors">
+                        {copiedId === entry.id ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  ) : (
+                    <Button size="sm" variant={entry.notified_at ? "outline" : "default"}
+                      onClick={() => handleInvite(entry)} disabled={inviting === entry.id} className="w-full rounded-2xl">
+                      {inviting === entry.id ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Generuję link...</> : entry.notified_at ? "Wygeneruj nowy link" : "Generuj link aktywacyjny"}
+                    </Button>
+                  )
+                )}
+              </div>
+            );
+          };
+
+          return (
+            <>
+              {/* Sub-tabs */}
+              <div className="flex gap-1 pb-4 border-b border-border/30 -mx-4 px-4 mb-4">
+                {([
+                  { id: "pending", label: "Oczekujący", badge: pending.length },
+                  { id: "created", label: "Stworzone",  badge: created.length },
+                ] as const).map(t => (
+                  <button key={t.id} onClick={() => setUserTab(t.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${userTab === t.id ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
+                    {t.label}
+                    {t.badge > 0 && <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${userTab === t.id ? "bg-background/20" : "bg-muted"}`}>{t.badge}</span>}
+                  </button>
+                ))}
+              </div>
+
+              {fetchingList
+                ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                : list.length === 0
+                  ? <p className="text-sm text-muted-foreground text-center py-12">{userTab === "pending" ? "Brak oczekujących." : "Brak kont."}</p>
+                  : <div className="space-y-3">{list.map(renderEntry)}</div>
+              }
+            </>
+          );
+        })()}
 
 
         {/* ── Cities Tab ── */}
