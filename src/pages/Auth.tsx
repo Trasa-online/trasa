@@ -25,7 +25,6 @@ const Auth = () => {
   const [businessMode, setBusinessMode] = useState(searchParams.get("business") === "true");
   const [bizMode, setBizMode] = useState<BizMode>("login");
   // Business registration fields
-  const [bizName, setBizName] = useState("");
   const [bizPlace, setBizPlace] = useState("");
   const [bizPhone, setBizPhone] = useState("");
   const [bizMessage, setBizMessage] = useState("");
@@ -70,7 +69,7 @@ const Auth = () => {
         } catch {}
       }
       const returnTo = searchParams.get("return");
-      navigate(returnTo || "/");
+      navigate(returnTo || "/home");
     });
   }, [navigate]);
 
@@ -157,7 +156,7 @@ const Auth = () => {
       }
 
       const returnTo = searchParams.get("return");
-      navigate(returnTo || "/");
+      navigate(returnTo || "/home");
     } catch (error: any) {
       toast.error(error.message || t("errors.login"));
     } finally {
