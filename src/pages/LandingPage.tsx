@@ -482,7 +482,12 @@ const LandingPage = () => {
                 >
                   Dołącz do trasy →
                 </button>
-                <p className="text-xs text-muted-foreground">Konto jest darmowe</p>
+                <button
+                  onClick={() => navigate("/home")}
+                  className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors"
+                >
+                  Przejdź do aplikacji bez konta
+                </button>
               </div>
             </div>
 

@@ -193,7 +193,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/" element={<RootPage />} />
-          <Route path="/home" element={<RequireAuth><AppLayout><Home /></AppLayout></RequireAuth>} />
+          <Route path="/home" element={<AppLayout><Home /></AppLayout>} />
           <Route path="/create" element={<RequireAuth><CreateRoute /></RequireAuth>} />
           <Route path="/my-routes" element={<RequireAuth><AppLayout><MyRoutes /></AppLayout></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
