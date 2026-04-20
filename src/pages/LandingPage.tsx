@@ -394,7 +394,6 @@ const LandingPage = () => {
             className="sm:hidden flex-1 flex items-center justify-center gap-2 h-9 rounded-full text-white text-sm font-bold active:scale-95 transition-all mx-2"
             style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}
           >
-            <span>✨</span>
             Przejdź do aplikacji
           </button>
 
