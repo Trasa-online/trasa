@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle } from "lucide-react";
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -197,6 +197,9 @@ const BusinessDashboard = () => {
   const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'posts' | 'analytics'>('overview');
   const [recentEvents, setRecentEvents] = useState<Array<{event_type: string, created_at: string}>>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [supportMessage, setSupportMessage] = useState("");
+  const [supportSubmitting, setSupportSubmitting] = useState(false);
 
   // Posts state
   const [posts, setPosts] = useState<BusinessPost[]>([]);
@@ -556,6 +559,24 @@ const BusinessDashboard = () => {
       .eq("id", profile.id);
   };
 
+  const handleSupportSubmit = async () => {
+    if (!supportMessage.trim()) return;
+    setSupportSubmitting(true);
+    const { error } = await (supabase as any).from("bug_reports").insert({
+      user_id: user?.id ?? null,
+      description: `[Panel biznesowy — ${profile?.business_name ?? ""}]\n\n${supportMessage.trim()}`,
+      status: "new",
+    });
+    setSupportSubmitting(false);
+    if (error) {
+      toast.error("Nie udało się wysłać zgłoszenia.");
+    } else {
+      toast.success("Zgłoszenie wysłane! Odezwiemy się wkrótce.");
+      setSupportMessage("");
+      setShowSupportModal(false);
+    }
+  };
+
   const handleLogout = async () => {
     // Clear Supabase session from all storage
     const clearStorage = () => {
@@ -631,8 +652,12 @@ const BusinessDashboard = () => {
             {sidebarOpen && item.label}
           </button>
         ))}
-        {/* Logout at bottom */}
-        <div className={`mt-auto px-1 ${!sidebarOpen && 'flex justify-center'}`}>
+        {/* Logout + support at bottom */}
+        <div className={`mt-auto px-1 space-y-1 ${!sidebarOpen && 'flex flex-col items-center'}`}>
+          <button onClick={() => setShowSupportModal(true)} title="Zgłoś problem" className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
+            <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+            {sidebarOpen && 'Zgłoś problem'}
+          </button>
           <button onClick={handleLogout} title="Wyloguj się" className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
             <LogOut className="h-3.5 w-3.5 shrink-0" />
             {sidebarOpen && 'Wyloguj się'}
@@ -1496,6 +1521,36 @@ const BusinessDashboard = () => {
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             Zapisz zmiany
           </button>
+        </div>
+      )}
+      {/* ── Support modal ── */}
+      {showSupportModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4" onClick={() => setShowSupportModal(false)}>
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-base">Zgłoś problem</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Opisz co nie działa — odezwiemy się wkrótce.</p>
+              </div>
+              <button onClick={() => setShowSupportModal(false)} className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <textarea
+              value={supportMessage}
+              onChange={e => setSupportMessage(e.target.value)}
+              placeholder="Np. nie mogę dodać zdjęcia do galerii, przycisk nie reaguje..."
+              rows={5}
+              className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+            />
+            <button
+              onClick={handleSupportSubmit}
+              disabled={supportSubmitting || !supportMessage.trim()}
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {supportSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" />Wysyłam...</> : "Wyślij zgłoszenie"}
+            </button>
+          </div>
         </div>
       )}
     </div>
