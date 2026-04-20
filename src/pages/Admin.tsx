@@ -46,7 +46,7 @@ const Admin = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [tab, setTab] = useState<"waitlist" | "cities" | "businesses" | "bugs">("waitlist");
-  const [bizTab, setBizTab] = useState<"action" | "claims" | "all">("action");
+  const [bizTab, setBizTab] = useState<"action" | "claims" | "all" | "support">("action");
   const [userTab, setUserTab] = useState<"pending" | "created">("pending");
 
   // Waitlist state
@@ -719,9 +719,10 @@ const Admin = () => {
               {/* Sub-tabs bar */}
               <div className="flex gap-1 px-4 pt-4 pb-2 border-b border-border/30">
                 {([
-                  { id: "action", label: "Do działania", badge: actionCount },
-                  { id: "claims", label: "Zgłoszenia", badge: sortedClaims.length },
-                  { id: "all",    label: "Wszystkie biznesy", badge: allBusinesses.length },
+                  { id: "action",  label: "Do działania",    badge: actionCount },
+                  { id: "claims",  label: "Zgłoszenia",      badge: sortedClaims.length },
+                  { id: "all",     label: "Wszystkie",        badge: allBusinesses.length },
+                  { id: "support", label: "Problemy",         badge: bugReports.filter(r => r.description?.startsWith("[Panel biznesowy") && r.status === "new").length },
                 ] as const).map(t => (
                   <button key={t.id} onClick={() => setBizTab(t.id)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${bizTab === t.id ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
@@ -817,6 +818,45 @@ const Admin = () => {
                   }
                 </div>
               )}
+
+              {/* ── Problemy (zgłoszenia z panelu biznesowego) ── */}
+              {bizTab === "support" && (() => {
+                const bizReports = bugReports.filter(r => r.description?.startsWith("[Panel biznesowy"));
+                return bizReports.length === 0
+                  ? <p className="text-sm text-muted-foreground text-center py-12">Brak zgłoszeń problemów.</p>
+                  : (
+                    <div className="space-y-3 p-4">
+                      {bizReports.map(r => {
+                        const nameMatch = r.description?.match(/^\[Panel biznesowy — ([^\]]+)\]/);
+                        const bizName = nameMatch?.[1] ?? "Nieznany lokal";
+                        const body = r.description?.replace(/^\[Panel biznesowy[^\]]*\]\n\n/, "") ?? "";
+                        return (
+                          <div key={r.id} className={`rounded-2xl border p-4 space-y-2.5 ${r.status === "resolved" ? "opacity-50 border-border/30" : "border-border/60 bg-card"}`}>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <span className="text-xs font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full truncate">{bizName}</span>
+                                  <span className="text-xs text-muted-foreground/50">·</span>
+                                  <span className="text-xs text-muted-foreground/50">{format(new Date(r.created_at), "dd.MM.yyyy HH:mm")}</span>
+                                </div>
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{body}</p>
+                              </div>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${r.status === "resolved" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
+                                {r.status === "resolved" ? "Rozwiązane" : "Nowe"}
+                              </span>
+                            </div>
+                            {r.status !== "resolved" && (
+                              <button onClick={() => markBugResolved(r.id)}
+                                className="w-full py-1.5 rounded-xl border border-border/40 text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors">
+                                Oznacz jako rozwiązane
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+              })()}
             </>
           );
         })()}
