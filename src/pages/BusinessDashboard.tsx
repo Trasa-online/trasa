@@ -181,6 +181,7 @@ const BusinessDashboard = () => {
   const [eventStartsAt, setEventStartsAt] = useState("");
   const [eventEndsAt, setEventEndsAt] = useState("");
 
+  const [tagsExpanded, setTagsExpanded] = useState(false);
   const [plan, setPlan] = useState<BizPlan>('premium');
   const [previewTab, setPreviewTab] = useState<'basic' | 'premium'>('premium');
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
@@ -589,10 +590,22 @@ const BusinessDashboard = () => {
 
       {/* ── Sidebar (desktop only) ── */}
       <aside className={`hidden md:flex shrink-0 flex-col fixed h-full bg-white border-r border-slate-100 py-5 z-20 transition-all duration-200 ${sidebarOpen ? 'w-56 px-3' : 'w-14 px-2'}`}>
-        {/* Logo */}
-        <div className={`flex items-center gap-2 px-2 mb-8 ${!sidebarOpen && 'justify-center'}`}>
-          <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-          {sidebarOpen && <span className="font-black text-sm">trasa.biznes</span>}
+        {/* Logo + collapse toggle */}
+        <div className="mb-6">
+          <div className={`flex items-center gap-2 px-2 mb-2 ${!sidebarOpen && 'justify-center'}`}>
+            <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            {sidebarOpen && <span className="font-black text-sm">trasa.biznes</span>}
+          </div>
+          <button
+            onClick={() => setSidebarOpen(v => !v)}
+            title={sidebarOpen ? undefined : 'Rozwiń menu'}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors text-xs ${!sidebarOpen && 'justify-center w-full'}`}
+          >
+            <svg className={`h-3.5 w-3.5 shrink-0 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M10 3L5 8l5 5"/>
+            </svg>
+            {sidebarOpen && <span>Schowaj</span>}
+          </button>
         </div>
         {/* Nav items */}
         {([
@@ -612,19 +625,11 @@ const BusinessDashboard = () => {
             {sidebarOpen && item.label}
           </button>
         ))}
-        {/* Logout + collapse at bottom */}
-        <div className={`mt-auto flex flex-col gap-1 px-1 ${!sidebarOpen && 'items-center'}`}>
+        {/* Logout at bottom */}
+        <div className={`mt-auto px-1 ${!sidebarOpen && 'flex justify-center'}`}>
           <button onClick={handleLogout} title="Wyloguj się" className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
             <LogOut className="h-3.5 w-3.5 shrink-0" />
             {sidebarOpen && 'Wyloguj się'}
-          </button>
-          <button
-            onClick={() => setSidebarOpen(v => !v)}
-            className="flex items-center justify-center h-7 w-7 rounded-lg text-slate-300 hover:bg-slate-50 hover:text-slate-500 transition-colors self-center"
-          >
-            <svg className={`h-4 w-4 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M10 3L5 8l5 5"/>
-            </svg>
           </button>
         </div>
       </aside>
@@ -906,30 +911,36 @@ const BusinessDashboard = () => {
             <div className="space-y-5">
               <div><h2 className="text-lg font-black">Dane lokalu</h2><p className="text-sm text-slate-400">Informacje kontaktowe, opis i tagi widoczne w wizytówce.</p></div>
 
-              {/* Wizytówka preview */}
+              {/* Wizytówka preview — wygląd jak karta w swiperze */}
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Podgląd wizytówki</p>
-                <div className="w-56 rounded-3xl overflow-hidden border border-slate-100 shadow-md bg-white">
-                  {/* Cover */}
-                  <div className="relative h-32 bg-gradient-to-br from-orange-100 to-orange-200">
-                    {coverImageUrl
-                      ? <img src={coverImageUrl} className="w-full h-full object-cover" />
-                      : <div className="w-full h-full flex items-center justify-center text-orange-300"><ImagePlus className="h-8 w-8" /></div>
-                    }
-                    {logoUrl && (
-                      <div className="absolute bottom-0 left-3 translate-y-1/2 h-10 w-10 rounded-xl border-2 border-white bg-white overflow-hidden shadow-sm">
-                        <img src={logoUrl} className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                  </div>
-                  {/* Info */}
-                  <div className={`px-3 pb-3 ${logoUrl ? 'pt-7' : 'pt-3'}`}>
-                    <p className="font-bold text-sm leading-tight text-foreground">{businessName || 'Nazwa lokalu'}</p>
-                    {description && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{description}</p>}
+                <div className="w-52 h-80 rounded-3xl overflow-hidden shadow-lg relative bg-slate-800">
+                  {/* Tło */}
+                  {coverImageUrl
+                    ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
+                    : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
+                  }
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
+                  {/* Treść */}
+                  <div className="absolute bottom-0 left-0 right-0 px-4 pb-5 space-y-1.5">
+                    {/* Logo + kategoria */}
+                    <div className="flex items-center gap-2">
+                      {logoUrl
+                        ? <img src={logoUrl} className="w-7 h-7 rounded-full object-cover border border-white/30" />
+                        : <div className="w-7 h-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                      }
+                      <span className="text-white/60 text-[11px]">
+                        {mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : 'Kategoria'} · @trasa
+                      </span>
+                    </div>
+                    {/* Nazwa */}
+                    <h3 className="text-xl font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+                    {/* Tagi */}
                     {tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
+                      <div className="flex flex-wrap gap-1">
                         {tags.slice(0, 3).map(t => (
-                          <span key={t} className="px-2 py-0.5 bg-orange-50 border border-orange-100 rounded-full text-[10px] font-semibold text-orange-600">#{t}</span>
+                          <span key={t} className="px-2 py-0.5 bg-white/15 rounded-full text-[10px] font-semibold text-white/80">#{t}</span>
                         ))}
                       </div>
                     )}
@@ -1013,7 +1024,7 @@ const BusinessDashboard = () => {
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Tagi wizytówki <span className="normal-case font-normal">(max 3, widoczne na karcie w aplikacji)</span></p>
                   <div className="flex flex-wrap gap-2 mb-2">
-                    {VIBE_TAG_SUGGESTIONS.map(tag => {
+                    {(tagsExpanded ? VIBE_TAG_SUGGESTIONS : VIBE_TAG_SUGGESTIONS.slice(0, 4)).map(tag => {
                       const active = tags.includes(tag);
                       const disabled = !active && tags.length >= 3;
                       return (
@@ -1024,6 +1035,14 @@ const BusinessDashboard = () => {
                         </button>
                       );
                     })}
+                    <button
+                      type="button"
+                      onClick={() => setTagsExpanded(v => !v)}
+                      className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border border-dashed border-border text-muted-foreground hover:border-slate-400 transition-colors"
+                    >
+                      {tagsExpanded ? 'Zwiń' : `+${VIBE_TAG_SUGGESTIONS.length - 4} więcej`}
+                      <svg className={`h-3 w-3 transition-transform ${tagsExpanded ? 'rotate-180' : ''}`} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4l4 4 4-4"/></svg>
+                    </button>
                   </div>
                   {/* Custom tag input */}
                   <div className="flex gap-2">
