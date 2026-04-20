@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, Phone } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, Phone, LayoutDashboard, Images, Store, Megaphone, TrendingUp } from "lucide-react";
 import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
@@ -606,11 +606,11 @@ const BusinessDashboard = () => {
         </div>
         {/* Nav items */}
         {([
-          { id: 'overview', label: 'Przegląd' },
-          { id: 'gallery', label: 'Galeria zdjęć' },
-          { id: 'profile', label: 'Dane lokalu' },
-          { id: 'posts', label: 'Aktualności' },
-          { id: 'analytics', label: 'Analityka' },
+          { id: 'overview',   label: 'Przegląd',      icon: LayoutDashboard },
+          { id: 'gallery',    label: 'Galeria zdjęć',  icon: Images },
+          { id: 'profile',    label: 'Dane lokalu',    icon: Store },
+          { id: 'posts',      label: 'Aktualności',    icon: Megaphone },
+          { id: 'analytics',  label: 'Analityka',      icon: TrendingUp },
         ] as const).map(item => (
           <button
             key={item.id}
@@ -618,7 +618,7 @@ const BusinessDashboard = () => {
             title={!sidebarOpen ? item.label : undefined}
             className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-0.5 ${sidebarOpen ? 'text-left' : 'justify-center'} ${activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
           >
-            <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${activeSection === item.id ? 'bg-blue-500' : 'bg-slate-300'}`} />
+            <item.icon className="h-4 w-4 shrink-0" />
             {sidebarOpen && item.label}
           </button>
         ))}
