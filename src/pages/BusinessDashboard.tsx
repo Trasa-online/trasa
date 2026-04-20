@@ -203,6 +203,7 @@ const BusinessDashboard = () => {
 
   const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'posts' | 'analytics'>('overview');
   const [recentEvents, setRecentEvents] = useState<Array<{event_type: string, created_at: string}>>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Posts state
   const [posts, setPosts] = useState<BusinessPost[]>([]);
@@ -597,18 +598,13 @@ const BusinessDashboard = () => {
     <div className="min-h-screen flex bg-slate-50">
 
       {/* ── Sidebar (desktop only) ── */}
-      <aside className="hidden md:flex w-56 shrink-0 flex-col fixed h-full bg-white border-r border-slate-100 py-5 px-3 z-20">
+      <aside className={`hidden md:flex shrink-0 flex-col fixed h-full bg-white border-r border-slate-100 py-5 z-20 transition-all duration-200 ${sidebarOpen ? 'w-56 px-3' : 'w-14 px-2'}`}>
         {/* Logo */}
-        <div className="flex items-center gap-2 px-2 mb-8">
+        <div className={`flex items-center gap-2 px-2 mb-8 ${!sidebarOpen && 'justify-center'}`}>
           <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-          <span className="font-black text-sm">trasa.biznes</span>
-        </div>
-        {/* Plan badge */}
-        <div className="px-2 mb-6">
-          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
+          {sidebarOpen && <span className="font-black text-sm">trasa.biznes</span>}
         </div>
         {/* Nav items */}
-        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Menu</p>
         {([
           { id: 'overview', label: 'Przegląd' },
           { id: 'gallery', label: 'Galeria zdjęć' },
@@ -619,23 +615,32 @@ const BusinessDashboard = () => {
           <button
             key={item.id}
             onClick={() => setActiveSection(item.id)}
-            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-0.5 text-left ${activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+            title={!sidebarOpen ? item.label : undefined}
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-0.5 ${sidebarOpen ? 'text-left' : 'justify-center'} ${activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
           >
             <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${activeSection === item.id ? 'bg-blue-500' : 'bg-slate-300'}`} />
-            {item.label}
+            {sidebarOpen && item.label}
           </button>
         ))}
-        {/* Logout at bottom */}
-        <div className="mt-auto px-2">
-          <button onClick={handleLogout} className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2">
-            <LogOut className="h-3.5 w-3.5" />
-            Wyloguj się
+        {/* Logout + collapse at bottom */}
+        <div className={`mt-auto flex flex-col gap-1 px-1 ${!sidebarOpen && 'items-center'}`}>
+          <button onClick={handleLogout} title="Wyloguj się" className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
+            <LogOut className="h-3.5 w-3.5 shrink-0" />
+            {sidebarOpen && 'Wyloguj się'}
+          </button>
+          <button
+            onClick={() => setSidebarOpen(v => !v)}
+            className="flex items-center justify-center h-7 w-7 rounded-lg text-slate-300 hover:bg-slate-50 hover:text-slate-500 transition-colors self-center"
+          >
+            <svg className={`h-4 w-4 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M10 3L5 8l5 5"/>
+            </svg>
           </button>
         </div>
       </aside>
 
       {/* ── Main ── */}
-      <div className="flex-1 md:ml-56 flex flex-col min-h-screen">
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${sidebarOpen ? 'md:ml-56' : 'md:ml-14'}`}>
 
         {/* ── Top bar ── */}
         <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 md:px-6 h-14 flex items-center gap-3 shrink-0">
@@ -723,16 +728,29 @@ const BusinessDashboard = () => {
           {/* ── PRZEGLĄD ── */}
           {activeSection === 'overview' && (
             <div className="space-y-5">
-              <div>
-                <h2 className="text-lg font-black text-foreground">Przegląd</h2>
-                <p className="text-sm text-slate-400">Oto co dzieje się z Twoim lokalem w ostatnich 30 dniach.</p>
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <h2 className="text-lg font-black text-foreground">Przegląd</h2>
+                  <p className="text-sm text-slate-400">Oto co dzieje się z Twoim lokalem.</p>
+                </div>
+                <div className="flex rounded-xl bg-slate-100 p-0.5 gap-0.5 shrink-0">
+                  {(['7d', '30d', '90d'] as Exclude<AnalyticsRange, 'custom'>[]).map(r => (
+                    <button
+                      key={r}
+                      onClick={() => setAnalyticsRange(r)}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${analyticsRange === r ? 'bg-white text-foreground shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                      {r === '7d' ? '7 dni' : r === '30d' ? '30 dni' : '3 miesiące'}
+                    </button>
+                  ))}
+                </div>
               </div>
               {/* Stats 4 cards */}
               {plan === 'premium' ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
                     { label: 'Wyświetlenia profilu', value: stats.views, icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
-                    { label: 'Dodania do trasy', value: stats.onRoutes, icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                    { label: 'Dodania do planu dnia', value: stats.onRoutes, icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
                     { label: 'Kliknięcia', value: stats.websiteClicks + stats.phoneClicks, icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
                     { label: 'Łączna aktywność', value: stats.views + stats.onRoutes + stats.websiteClicks + stats.phoneClicks, icon: BarChart2, color: 'text-orange-500', bg: 'bg-orange-50' },
                   ].map(({ label, value, icon: Icon, color, bg }) => (
@@ -740,9 +758,9 @@ const BusinessDashboard = () => {
                       <div className={`h-8 w-8 rounded-xl ${bg} flex items-center justify-center mb-3`}>
                         <Icon className={`h-4 w-4 ${color}`} />
                       </div>
-                      <p className="text-2xl font-black text-foreground leading-none mb-1">{value}</p>
+                      <p className="text-2xl font-black text-foreground leading-none mb-1">{analyticsLoading ? '—' : value}</p>
                       <p className="text-xs text-slate-400 leading-snug">{label}</p>
-                      <p className="text-[10px] text-slate-300 mt-0.5">ostatnie 30 dni</p>
+                      <p className="text-[10px] text-slate-300 mt-0.5">ostatnie {analyticsRange === '7d' ? '7 dni' : analyticsRange === '30d' ? '30 dni' : '3 miesiące'}</p>
                     </div>
                   ))}
                 </div>
@@ -769,7 +787,7 @@ const BusinessDashboard = () => {
                     {recentEvents.map((ev, i) => {
                       const labels: Record<string, { txt: string; dot: string }> = {
                         view: { txt: 'Ktoś wyświetlił Twój profil', dot: 'bg-blue-400' },
-                        add_to_route: { txt: 'Lokal dodany do trasy', dot: 'bg-emerald-400' },
+                        add_to_route: { txt: 'Lokal dodany do planu dnia', dot: 'bg-emerald-400' },
                         click_phone: { txt: 'Kliknięcie w numer telefonu', dot: 'bg-violet-400' },
                         click_website: { txt: 'Kliknięcie w stronę WWW', dot: 'bg-violet-400' },
                         click_booking: { txt: 'Kliknięcie w rezerwację', dot: 'bg-amber-400' },
@@ -863,7 +881,7 @@ const BusinessDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs font-medium mb-1.5">Zdjęcie główne</p>
-                    <button onClick={() => coverInputRef.current?.click()} className="relative w-full aspect-video rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
+                    <button onClick={() => coverInputRef.current?.click()} className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
                       {uploading === 'cover' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : coverImageUrl ? (<><img src={coverImageUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-5 w-5 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-6 w-6" /><span className="text-[11px]">Dodaj zdjęcie</span></div>)}
                     </button>
                     <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
@@ -897,6 +915,38 @@ const BusinessDashboard = () => {
           {activeSection === 'profile' && (
             <div className="space-y-5">
               <div><h2 className="text-lg font-black">Dane lokalu</h2><p className="text-sm text-slate-400">Informacje kontaktowe, opis i tagi widoczne w wizytówce.</p></div>
+
+              {/* Wizytówka preview */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Podgląd wizytówki</p>
+                <div className="w-56 rounded-3xl overflow-hidden border border-slate-100 shadow-md bg-white">
+                  {/* Cover */}
+                  <div className="relative h-32 bg-gradient-to-br from-orange-100 to-orange-200">
+                    {coverImageUrl
+                      ? <img src={coverImageUrl} className="w-full h-full object-cover" />
+                      : <div className="w-full h-full flex items-center justify-center text-orange-300"><ImagePlus className="h-8 w-8" /></div>
+                    }
+                    {logoUrl && (
+                      <div className="absolute bottom-0 left-3 translate-y-1/2 h-10 w-10 rounded-xl border-2 border-white bg-white overflow-hidden shadow-sm">
+                        <img src={logoUrl} className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+                  {/* Info */}
+                  <div className={`px-3 pb-3 ${logoUrl ? 'pt-7' : 'pt-3'}`}>
+                    <p className="font-bold text-sm leading-tight text-foreground">{businessName || 'Nazwa lokalu'}</p>
+                    {description && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{description}</p>}
+                    {tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {tags.slice(0, 3).map(t => (
+                          <span key={t} className="px-2 py-0.5 bg-orange-50 border border-orange-100 rounded-full text-[10px] font-semibold text-orange-600">#{t}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                 <div className="space-y-1">
                   <Label htmlFor="business_name">Nazwa lokalu</Label>
@@ -1199,9 +1249,9 @@ const BusinessDashboard = () => {
                   {/* Stat cards */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                      { label: 'Wyświetlenia', value: stats.views, desc: 'otwarć profilu', icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
+                      { label: 'Wyświetlenia', value: stats.views, desc: 'zobaczenie wizytówki', icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
                       { label: 'Unikalni goście', value: stats.uniqueChoices, desc: 'dodało do trasy', icon: Users, color: 'text-rose-500', bg: 'bg-rose-50' },
-                      { label: 'Dodania do trasy', value: stats.onRoutes, desc: 'razy w planie', icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                      { label: 'Dodania do planu dnia', value: stats.onRoutes, desc: 'razy w planie dnia', icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
                       { label: 'Kliknięcia', value: stats.websiteClicks + stats.phoneClicks, desc: `WWW: ${stats.websiteClicks} · Tel: ${stats.phoneClicks}`, icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
                     ].map(({ label, value, desc, icon: Icon, color, bg }) => (
                       <div key={label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
@@ -1372,7 +1422,7 @@ const BusinessDashboard = () => {
                         {recentEvents.map((ev, i) => {
                           const labels: Record<string, { txt: string; dot: string }> = {
                             view: { txt: 'Wyświetlenie profilu', dot: 'bg-blue-400' },
-                            add_to_route: { txt: 'Dodanie do planu', dot: 'bg-emerald-400' },
+                            add_to_route: { txt: 'Dodanie do planu dnia', dot: 'bg-emerald-400' },
                             click_phone: { txt: 'Kliknięcie — telefon', dot: 'bg-violet-400' },
                             click_website: { txt: 'Kliknięcie — strona WWW', dot: 'bg-violet-400' },
                             click_booking: { txt: 'Kliknięcie — rezerwacja', dot: 'bg-amber-400' },
