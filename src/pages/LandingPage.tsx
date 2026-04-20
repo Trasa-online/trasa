@@ -388,38 +388,25 @@ const LandingPage = () => {
             </button>
           </div>
 
-          <div className="flex-1" />
+          {/* Mobile: big orange pill CTA */}
+          <button
+            onClick={() => navigate("/home")}
+            className="sm:hidden flex-1 flex items-center justify-center gap-2 h-9 rounded-full text-white text-sm font-bold active:scale-95 transition-all mx-2"
+            style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}
+          >
+            <span>✨</span>
+            Przejdź do aplikacji
+          </button>
 
-          {/* Right: badge + zaloguj + dołącz */}
+          <div className="hidden sm:flex flex-1" />
+
+          {/* Right: badge + zaloguj + dołącz (desktop only) */}
           <div className="flex items-center gap-3 shrink-0">
             <a href="/dla-firm" className="hidden md:flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-all border border-blue-500/30 whitespace-nowrap">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
               Dla firm
             </a>
-            <style>{`
-              @keyframes trial-flow {
-                0%   { background-position: 0% 50%; }
-                50%  { background-position: 100% 50%; }
-                100% { background-position: 0% 50%; }
-              }
-              .trial-btn {
-                background: linear-gradient(135deg, #fbbf7a, #F4A259, #F9662B, #ea580c);
-                background-size: 250% 250%;
-                animation: trial-flow 2.4s ease infinite;
-                box-shadow: 0 0 0 0 rgba(249,102,43,0.5);
-              }
-              @keyframes trial-pulse {
-                0%, 100% { box-shadow: 0 0 0 0 rgba(249,102,43,0.5); }
-                50%       { box-shadow: 0 0 0 5px rgba(249,102,43,0); }
-              }
-              .trial-btn {
-                animation: trial-flow 2.4s ease infinite, trial-pulse 2.4s ease infinite;
-              }
-            `}</style>
-            {/* Wypróbuj + Hamburger — mobile only */}
-            <button onClick={() => navigate("/home")} className="sm:hidden text-xs font-bold px-3 py-1.5 rounded-full border border-orange-500/50 text-orange-400 active:scale-95 transition-all whitespace-nowrap">
-              Wypróbuj →
-            </button>
+            {/* Hamburger — mobile only */}
             <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
               {menuOpen ? <X className="h-4 w-4 text-white" /> : <Menu className="h-4 w-4 text-white" />}
             </button>
