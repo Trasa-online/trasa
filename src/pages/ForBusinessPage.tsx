@@ -138,6 +138,7 @@ const MOCK_GALLERY = [
 ];
 
 const MOCK_COVER = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&h=400&fit=crop&q=80";
+const MOCK_LOGO  = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120&h=120&fit=crop&q=80";
 
 function DashboardMockup() {
   const [tab, setTab] = useState<MockTab>('gallery');
@@ -297,29 +298,46 @@ function DashboardMockup() {
               {tab === 'gallery' && (
                 <>
                   <h3 className="text-sm font-black text-foreground mb-0.5">Galeria zdjęć</h3>
-                  <p className="text-[10px] text-slate-400 mb-3">Logo, zdjęcie główne i galeria widoczne na wizytówce.</p>
-                  <div className="grid grid-cols-2 gap-3 mb-3">
+                  <p className="text-[10px] text-slate-400 mb-3">Logo, zdjęcie główne i galeria widoczne na Twojej wizytówce.</p>
+
+                  <div className="bg-white border border-slate-100 rounded-xl p-3 shadow-sm space-y-3">
+                    {/* Logo */}
                     <div>
-                      <p className="text-[9px] font-semibold text-slate-400 mb-1.5">Logo</p>
-                      <div className="h-16 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
-                        <div className="h-7 w-7 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                      <p className="text-[9px] font-medium text-slate-500 mb-1.5">Logo</p>
+                      <div className="h-12 w-12 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
+                        <img src={MOCK_LOGO} className="w-full h-full object-cover" alt="" />
                       </div>
                     </div>
-                    <div>
-                      <p className="text-[9px] font-semibold text-slate-400 mb-1.5">Zdjęcie główne</p>
-                      <div className="h-16 rounded-xl overflow-hidden">
-                        <img src={MOCK_COVER} className="w-full h-full object-cover" alt="" />
+
+                    {/* Zdjęcie główne + Galeria dodatkowa — 2 col */}
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {/* Main photo */}
+                      <div>
+                        <p className="text-[9px] font-medium text-slate-500 mb-1.5">Zdjęcie główne</p>
+                        <div className="aspect-square rounded-xl overflow-hidden border-2 border-dashed border-slate-200">
+                          <img src={MOCK_COVER} className="w-full h-full object-cover" alt="" />
+                        </div>
+                      </div>
+
+                      {/* Gallery additional */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-[9px] font-medium text-slate-500">Galeria dodatkowa</p>
+                          <p className="text-[8px] text-slate-400">2/10</p>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          {MOCK_GALLERY.slice(0, 2).map((url, i) => (
+                            <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-slate-100">
+                              <img src={url} className="w-full h-full object-cover" alt="" />
+                              <div className="absolute top-0.5 right-0.5 h-3.5 w-3.5 rounded-full bg-black/60 flex items-center justify-center">
+                                <span className="text-white leading-none" style={{ fontSize: 7 }}>✕</span>
+                              </div>
+                            </div>
+                          ))}
+                          <div className="aspect-square rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-300 text-base font-light">+</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <p className="text-[9px] font-semibold text-slate-400 mb-1.5">Galeria (3/10)</p>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {MOCK_GALLERY.map((url, i) => (
-                      <div key={i} className="aspect-square rounded-lg overflow-hidden">
-                        <img src={url} className="w-full h-full object-cover" alt="" />
-                      </div>
-                    ))}
-                    <div className="aspect-square rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-300 text-xl font-light">+</div>
                   </div>
                 </>
               )}
