@@ -894,44 +894,44 @@ const BusinessDashboard = () => {
 
                   {/* LEFT: upload controls */}
                   <div className="flex-1 min-w-0 space-y-4">
-                    {/* Logo */}
-                    <div>
-                      <p className="text-xs font-medium mb-1.5">Logo</p>
-                      <button onClick={() => logoInputRef.current?.click()} className="relative h-20 w-20 rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
-                        {uploading === 'logo' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : logoUrl ? (<><img src={logoUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-4 w-4 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-5 w-5" /><span className="text-[10px]">Logo</span></div>)}
-                      </button>
-                      <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-                    </div>
-
-                    {/* Cover + Gallery — 2-col */}
+                    {/* Logo + Cover — 2-col */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
+                        <p className="text-xs font-medium mb-1.5">Logo</p>
+                        <button onClick={() => logoInputRef.current?.click()} className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
+                          {uploading === 'logo' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : logoUrl ? (<><img src={logoUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-4 w-4 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-5 w-5" /><span className="text-[10px]">Logo</span></div>)}
+                        </button>
+                        <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                      </div>
+                      <div>
                         <p className="text-xs font-medium mb-1.5">Zdjęcie główne</p>
-                        <button onClick={() => coverInputRef.current?.click()} className="relative w-full aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
+                        <button onClick={() => coverInputRef.current?.click()} className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
                           {uploading === 'cover' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : coverImageUrl ? (<><img src={coverImageUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-5 w-5 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-6 w-6" /><span className="text-[11px]">Dodaj zdjęcie</span></div>)}
                         </button>
                         <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
                       </div>
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className="text-xs font-medium">Galeria dodatkowa</p>
-                          <p className="text-[11px] text-muted-foreground">{galleryUrls.length}/{MAX_GALLERY}</p>
-                        </div>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {galleryUrls.map((url, idx) => (
-                            <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted">
-                              <img src={url} className="w-full h-full object-cover" />
-                              <button onClick={() => removeGalleryPhoto(idx)} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70"><X className="h-3 w-3 text-white" /></button>
-                            </div>
-                          ))}
-                          {galleryUrls.length < MAX_GALLERY && (
-                            <button onClick={() => galleryInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
-                              {uploading === 'gallery' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-5 w-5 text-muted-foreground" />}
-                            </button>
-                          )}
-                        </div>
-                        <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
+                    </div>
+
+                    {/* Gallery — full width below */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-xs font-medium">Galeria dodatkowa</p>
+                        <p className="text-[11px] text-muted-foreground">{galleryUrls.length}/{MAX_GALLERY}</p>
                       </div>
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {galleryUrls.map((url, idx) => (
+                          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted">
+                            <img src={url} className="w-full h-full object-cover" />
+                            <button onClick={() => removeGalleryPhoto(idx)} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70"><X className="h-3 w-3 text-white" /></button>
+                          </div>
+                        ))}
+                        {galleryUrls.length < MAX_GALLERY && (
+                          <button onClick={() => galleryInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
+                            {uploading === 'gallery' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-5 w-5 text-muted-foreground" />}
+                          </button>
+                        )}
+                      </div>
+                      <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
                     </div>
                   </div>
 
