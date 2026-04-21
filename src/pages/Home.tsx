@@ -154,6 +154,16 @@ const Home = () => {
   const { showTour, dismissTour } = useHomeTour(isGuest);
   const queryClient = useQueryClient();
   const [previewSessionId, setPreviewSessionId] = useState<string | null>(null);
+
+  const { data: isAdmin = false } = useQuery({
+    queryKey: ["is-admin", user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
+      return !!data;
+    },
+    enabled: !!user,
+  });
   const [selectedPlace, setSelectedPlace] = useState<{
     place_name: string; photo_url?: string | null;
     latitude?: number | null; longitude?: number | null;
@@ -289,7 +299,7 @@ const Home = () => {
   if (loading) return null;
 
   return (
-    <div className={`flex-1 flex flex-col px-4 pt-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto w-full ${isGuest ? "overflow-hidden" : "overflow-y-auto"}`}>
+    <div className={`flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto w-full ${isGuest ? "overflow-hidden" : "overflow-y-auto"}`}>
 
       {/* ── Guest banner ── */}
       {isGuest && (
@@ -304,6 +314,17 @@ const Home = () => {
             Dołącz →
           </button>
         </div>
+      )}
+
+      {/* ── Admin link ── */}
+      {isAdmin && (
+        <button
+          onClick={() => navigate("/admin")}
+          className="w-full flex items-center justify-between mb-4 px-4 py-3 rounded-2xl bg-muted border border-border/40 text-sm font-semibold text-foreground active:scale-[0.98] transition-transform"
+        >
+          <span>⚙️ Panel admina</span>
+          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+        </button>
       )}
 
       {/* ── Personal section ── */}

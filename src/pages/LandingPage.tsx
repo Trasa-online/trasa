@@ -432,20 +432,15 @@ const LandingPage = () => {
                 Dla firm
               </a>
               <div className="mx-5 my-1 border-t border-white/10" />
-              <div className="px-5 pb-3 pt-1">
+              <div className="px-5 pt-1 pb-2">
                 <button onClick={() => { navigate("/auth"); setMenuOpen(false); }} className="w-full flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-full border border-white/25 text-white/80 hover:border-white/50 hover:text-white active:scale-95 transition-all">
                   <User className="h-4 w-4" />
                   Zaloguj się
                 </button>
               </div>
-              <div className="px-5 py-3">
+              <div className="px-5 pb-4">
                 <button onClick={() => { document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="w-full text-sm font-bold px-4 py-2.5 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all">
                   Dołącz →
-                </button>
-              </div>
-              <div className="px-5 pb-4">
-                <button onClick={() => { navigate("/home"); setMenuOpen(false); }} className="w-full text-sm font-semibold px-4 py-2.5 rounded-full border border-orange-500/40 text-orange-400 hover:bg-orange-500/10 active:scale-95 transition-all">
-                  Wypróbuj bez konta →
                 </button>
               </div>
             </div>
