@@ -903,8 +903,8 @@ const BusinessDashboard = () => {
                   </div>
                 </div>
 
-                {/* Cover + Gallery — 2-col on desktop */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Cover + Gallery — always 2-col */}
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs font-medium mb-1.5">Zdjęcie główne</p>
                     <button onClick={() => coverInputRef.current?.click()} className="relative w-full aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
