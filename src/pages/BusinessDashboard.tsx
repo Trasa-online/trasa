@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand } from "lucide-react";
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -198,6 +198,7 @@ const BusinessDashboard = () => {
   const [recentEvents, setRecentEvents] = useState<Array<{event_type: string, created_at: string}>>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showCardPreview, setShowCardPreview] = useState(false);
   const [supportMessage, setSupportMessage] = useState("");
   const [supportSubmitting, setSupportSubmitting] = useState(false);
 
@@ -903,6 +904,38 @@ const BusinessDashboard = () => {
                   </div>
                 </div>
 
+                {/* Wizytówka preview */}
+                <div>
+                  <p className="text-xs font-medium mb-2">Podgląd wizytówki</p>
+                  <div className="relative w-36 h-56 rounded-3xl overflow-hidden shadow-md cursor-pointer group" onClick={() => setShowCardPreview(true)}>
+                    {coverImageUrl
+                      ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
+                      : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
+                    }
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
+                    <div className="absolute bottom-0 left-0 right-0 px-3 pb-4 space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        {logoUrl
+                          ? <img src={logoUrl} className="w-5 h-5 rounded-full object-cover border border-white/30" />
+                          : <div className="w-5 h-5 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                        }
+                        <span className="text-white/60 text-[9px]">{mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : 'Kategoria'}</span>
+                      </div>
+                      <h3 className="text-sm font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+                      {tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {tags.slice(0, 2).map(t => (
+                            <span key={t} className="px-1.5 py-0.5 bg-white/15 rounded-full text-[8px] font-semibold text-white/80">#{t}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Expand className="h-3 w-3 text-white" />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Cover + Gallery — always 2-col */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1524,6 +1557,39 @@ const BusinessDashboard = () => {
         </div>
       )}
       {/* ── Support modal ── */}
+      {showCardPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowCardPreview(false)}>
+          <div className="relative w-64 h-[400px] rounded-3xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            {coverImageUrl
+              ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
+              : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
+            }
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
+            <div className="absolute bottom-0 left-0 right-0 px-5 pb-6 space-y-2">
+              <div className="flex items-center gap-2">
+                {logoUrl
+                  ? <img src={logoUrl} className="w-7 h-7 rounded-full object-cover border border-white/30" />
+                  : <div className="w-7 h-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                }
+                <span className="text-white/60 text-[11px]">{mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : 'Kategoria'} · @trasa</span>
+              </div>
+              <h3 className="text-xl font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {tags.slice(0, 3).map(t => (
+                    <span key={t} className="px-2 py-0.5 bg-white/15 rounded-full text-[10px] font-semibold text-white/80">#{t}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={() => setShowCardPreview(false)} className="absolute top-3 right-3 h-7 w-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+              <X className="h-3.5 w-3.5 text-white" />
+            </button>
+          </div>
+          <p className="absolute bottom-6 text-white/50 text-xs">Kliknij gdziekolwiek, żeby zamknąć</p>
+        </div>
+      )}
+
       {showSupportModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4" onClick={() => setShowSupportModal(false)}>
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
