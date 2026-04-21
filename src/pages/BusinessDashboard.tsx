@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn } from "lucide-react";
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -199,6 +199,7 @@ const BusinessDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showCardPreview, setShowCardPreview] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<{ url: string; label: string } | null>(null);
   const [supportMessage, setSupportMessage] = useState("");
   const [supportSubmitting, setSupportSubmitting] = useState(false);
 
@@ -895,19 +896,49 @@ const BusinessDashboard = () => {
                   {/* LEFT: upload controls */}
                   <div className="flex-1 min-w-0 space-y-4">
                     {/* Logo + Cover — 2-col */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3 md:max-w-[280px]">
                       <div>
                         <p className="text-xs font-medium mb-1.5">Logo</p>
-                        <button onClick={() => logoInputRef.current?.click()} className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
-                          {uploading === 'logo' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : logoUrl ? (<><img src={logoUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-4 w-4 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-5 w-5" /><span className="text-[10px]">Logo</span></div>)}
-                        </button>
+                        <div className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group">
+                          {uploading === 'logo'
+                            ? <div className="absolute inset-0 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                            : logoUrl
+                              ? <>
+                                  <img src={logoUrl} className="w-full h-full object-cover" />
+                                  <button onClick={() => logoInputRef.current?.click()} className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:opacity-70">
+                                    <ImagePlus className="h-4 w-4 text-white" />
+                                  </button>
+                                  <button onClick={() => setPhotoPreview({ url: logoUrl, label: 'Logo' })} className="absolute bottom-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <ZoomIn className="h-3 w-3 text-white" />
+                                  </button>
+                                </>
+                              : <button onClick={() => logoInputRef.current?.click()} className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground active:opacity-70">
+                                  <Plus className="h-5 w-5" /><span className="text-[10px]">Logo</span>
+                                </button>
+                          }
+                        </div>
                         <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                       </div>
                       <div>
                         <p className="text-xs font-medium mb-1.5">Zdjęcie główne</p>
-                        <button onClick={() => coverInputRef.current?.click()} className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
-                          {uploading === 'cover' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : coverImageUrl ? (<><img src={coverImageUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-5 w-5 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-6 w-6" /><span className="text-[11px]">Dodaj zdjęcie</span></div>)}
-                        </button>
+                        <div className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group">
+                          {uploading === 'cover'
+                            ? <div className="absolute inset-0 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                            : coverImageUrl
+                              ? <>
+                                  <img src={coverImageUrl} className="w-full h-full object-cover" />
+                                  <button onClick={() => coverInputRef.current?.click()} className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:opacity-70">
+                                    <ImagePlus className="h-5 w-5 text-white" />
+                                  </button>
+                                  <button onClick={() => setPhotoPreview({ url: coverImageUrl, label: 'Zdjęcie główne' })} className="absolute bottom-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <ZoomIn className="h-3 w-3 text-white" />
+                                  </button>
+                                </>
+                              : <button onClick={() => coverInputRef.current?.click()} className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground active:opacity-70">
+                                  <Plus className="h-6 w-6" /><span className="text-[11px]">Dodaj zdjęcie</span>
+                                </button>
+                          }
+                        </div>
                         <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
                       </div>
                     </div>
@@ -920,9 +951,10 @@ const BusinessDashboard = () => {
                       </div>
                       <div className="grid grid-cols-5 gap-1.5">
                         {galleryUrls.map((url, idx) => (
-                          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted">
+                          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted group">
                             <img src={url} className="w-full h-full object-cover" />
-                            <button onClick={() => removeGalleryPhoto(idx)} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70"><X className="h-3 w-3 text-white" /></button>
+                            <button onClick={() => removeGalleryPhoto(idx)} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70 z-10"><X className="h-3 w-3 text-white" /></button>
+                            <button onClick={() => setPhotoPreview({ url, label: `Galeria ${idx + 1}` })} className="absolute bottom-1 right-1 h-5 w-5 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"><ZoomIn className="h-2.5 w-2.5 text-white" /></button>
                           </div>
                         ))}
                         {galleryUrls.length < MAX_GALLERY && (
@@ -1558,7 +1590,22 @@ const BusinessDashboard = () => {
           </button>
         </div>
       )}
-      {/* ── Support modal ── */}
+      {/* ── Photo lightbox ── */}
+      {photoPreview && (
+        <div className="fixed inset-0 z-[70] bg-black/90 flex flex-col items-center justify-center p-4" onClick={() => setPhotoPreview(null)}>
+          <div className="max-w-2xl w-full space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-1">
+              <p className="text-white/70 text-sm font-medium">{photoPreview.label}</p>
+              <button onClick={() => setPhotoPreview(null)} className="h-8 w-8 flex items-center justify-center rounded-full bg-white/20 text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <img src={photoPreview.url} className="w-full rounded-2xl object-contain max-h-[75vh]" />
+          </div>
+        </div>
+      )}
+
+      {/* ── Card preview modal ── */}
       {showCardPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowCardPreview(false)}>
           <div className="relative w-64 h-[400px] rounded-3xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
