@@ -891,7 +891,7 @@ const BusinessDashboard = () => {
             <div className="space-y-5">
               <div><h2 className="text-lg font-black">Galeria zdjęć</h2><p className="text-sm text-slate-400">Logo, zdjęcie główne i galeria widoczne na Twojej wizytówce.</p></div>
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                <div className="flex gap-5">
+                <div className="flex flex-col md:flex-row md:gap-5 gap-4">
 
                   {/* LEFT: upload controls */}
                   <div className="flex-1 min-w-0 space-y-4">
@@ -908,7 +908,7 @@ const BusinessDashboard = () => {
                                   <button onClick={() => logoInputRef.current?.click()} className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:opacity-70">
                                     <ImagePlus className="h-4 w-4 text-white" />
                                   </button>
-                                  <button onClick={() => setPhotoPreview({ url: logoUrl, label: 'Logo' })} className="absolute bottom-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button onClick={() => setPhotoPreview({ url: logoUrl, label: 'Logo' })} className="absolute bottom-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                     <ZoomIn className="h-3 w-3 text-white" />
                                   </button>
                                 </>
@@ -930,7 +930,7 @@ const BusinessDashboard = () => {
                                   <button onClick={() => coverInputRef.current?.click()} className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:opacity-70">
                                     <ImagePlus className="h-5 w-5 text-white" />
                                   </button>
-                                  <button onClick={() => setPhotoPreview({ url: coverImageUrl, label: 'Zdjęcie główne' })} className="absolute bottom-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button onClick={() => setPhotoPreview({ url: coverImageUrl, label: 'Zdjęcie główne' })} className="absolute bottom-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                     <ZoomIn className="h-3 w-3 text-white" />
                                   </button>
                                 </>
@@ -949,12 +949,14 @@ const BusinessDashboard = () => {
                         <p className="text-xs font-medium">Galeria dodatkowa</p>
                         <p className="text-[11px] text-muted-foreground">{galleryUrls.length}/{MAX_GALLERY}</p>
                       </div>
-                      <div className="grid grid-cols-5 gap-1.5">
+                      <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
                         {galleryUrls.map((url, idx) => (
-                          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted group">
+                          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted group cursor-pointer" onClick={() => setPhotoPreview({ url, label: `Galeria ${idx + 1}` })}>
                             <img src={url} className="w-full h-full object-cover" />
-                            <button onClick={() => removeGalleryPhoto(idx)} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70 z-10"><X className="h-3 w-3 text-white" /></button>
-                            <button onClick={() => setPhotoPreview({ url, label: `Galeria ${idx + 1}` })} className="absolute bottom-1 right-1 h-5 w-5 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"><ZoomIn className="h-2.5 w-2.5 text-white" /></button>
+                            <button onClick={(e) => { e.stopPropagation(); removeGalleryPhoto(idx); }} className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center active:opacity-70 z-10"><X className="h-3 w-3 text-white" /></button>
+                            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-start px-1.5 pb-1.5">
+                              <ZoomIn className="h-3 w-3 text-white/80" />
+                            </div>
                           </div>
                         ))}
                         {galleryUrls.length < MAX_GALLERY && (
@@ -968,7 +970,7 @@ const BusinessDashboard = () => {
                   </div>
 
                   {/* RIGHT: card preview */}
-                  <div className="shrink-0">
+                  <div className="shrink-0 flex flex-col items-center md:items-start">
                     <p className="text-xs font-medium mb-1.5">Podgląd wizytówki</p>
                     <div className="relative w-36 h-56 rounded-3xl overflow-hidden shadow-md cursor-pointer group" onClick={() => setShowCardPreview(true)}>
                       {coverImageUrl
