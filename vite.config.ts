@@ -9,6 +9,16 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      "/api/place-photo": {
+        target: "https://trasa.travel",
+        changeOrigin: true,
+      },
+      "/api/demo-places": {
+        target: "https://trasa.travel",
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [
     react(),
