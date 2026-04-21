@@ -131,8 +131,16 @@ const ANNOTATIONS: Record<MockTab, { text: string; sub?: string; top: string }> 
   analytics: { text: 'Pełna analityka jednym rzutem',          sub: 'bez arkuszy, bez zgadywania',        top: '34%' },
 };
 
+const MOCK_GALLERY = [
+  "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=300&h=300&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&h=300&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop&q=80",
+];
+
+const MOCK_COVER = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&h=400&fit=crop&q=80";
+
 function DashboardMockup() {
-  const [tab, setTab] = useState<MockTab>('overview');
+  const [tab, setTab] = useState<MockTab>('gallery');
   const [animKey, setAnimKey] = useState(0);
 
   const switchTab = (t: MockTab) => { setTab(t); setAnimKey(k => k + 1); };
@@ -288,28 +296,30 @@ function DashboardMockup() {
               {/* ── GALERIA ── */}
               {tab === 'gallery' && (
                 <>
-                  <h3 className="text-sm font-black text-foreground mb-1">Galeria zdjęć</h3>
-                  <p className="text-[10px] text-slate-400 mb-4">Logo, zdjęcie główne i galeria widoczne na wizytówce.</p>
+                  <h3 className="text-sm font-black text-foreground mb-0.5">Galeria zdjęć</h3>
+                  <p className="text-[10px] text-slate-400 mb-3">Logo, zdjęcie główne i galeria widoczne na wizytówce.</p>
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     <div>
                       <p className="text-[9px] font-semibold text-slate-400 mb-1.5">Logo</p>
-                      <div className="aspect-square rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
-                        <div className="h-8 w-8 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                      <div className="h-16 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
+                        <div className="h-7 w-7 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
                       </div>
                     </div>
                     <div>
                       <p className="text-[9px] font-semibold text-slate-400 mb-1.5">Zdjęcie główne</p>
-                      <div className="aspect-square rounded-xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center overflow-hidden">
-                        <div className="text-2xl">🍽️</div>
+                      <div className="h-16 rounded-xl overflow-hidden">
+                        <img src={MOCK_COVER} className="w-full h-full object-cover" alt="" />
                       </div>
                     </div>
                   </div>
                   <p className="text-[9px] font-semibold text-slate-400 mb-1.5">Galeria (3/10)</p>
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {['from-blue-100 to-sky-200', 'from-green-100 to-emerald-200', 'from-purple-100 to-violet-200'].map((g, i) => (
-                      <div key={i} className={`aspect-square rounded-lg bg-gradient-to-br ${g}`} />
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {MOCK_GALLERY.map((url, i) => (
+                      <div key={i} className="aspect-square rounded-lg overflow-hidden">
+                        <img src={url} className="w-full h-full object-cover" alt="" />
+                      </div>
                     ))}
-                    <div className="aspect-square rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 text-lg">+</div>
+                    <div className="aspect-square rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-300 text-xl font-light">+</div>
                   </div>
                 </>
               )}
