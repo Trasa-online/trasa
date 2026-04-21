@@ -293,59 +293,96 @@ function DashboardMockup() {
                   <h3 className="text-sm font-black text-foreground mb-0.5">Galeria zdjęć</h3>
                   <p className="text-[10px] text-slate-400 mb-3">Logo, zdjęcie główne i galeria widoczne na Twojej wizytówce.</p>
 
-                  <div className="bg-white border border-slate-100 rounded-xl p-3 shadow-sm space-y-3">
+                  <div className="bg-white border border-slate-100 rounded-xl p-3 shadow-sm">
 
-                    {/* Logo + Cover — 2-col grid */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <p className="text-[9px] font-medium text-slate-500 mb-1">Logo</p>
-                        <div className="relative w-full aspect-square rounded-xl border-2 border-dashed border-slate-200 overflow-hidden bg-slate-50">
-                          <img src={MOCK_LOGO} className="w-full h-full object-cover" alt="" />
+                    {/* ── MOBILE layout (< sm): Logo+Cover 2-col → Gallery → Preview centered ── */}
+                    <div className="flex flex-col gap-3 sm:hidden">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-[9px] font-medium text-slate-500 mb-1">Logo</p>
+                          <div className="w-full aspect-square rounded-xl border-2 border-dashed border-slate-200 overflow-hidden bg-slate-50">
+                            <img src={MOCK_LOGO} className="w-full h-full object-cover" alt="" />
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-medium text-slate-500 mb-1">Zdjęcie główne</p>
+                          <div className="w-full aspect-square rounded-xl border-2 border-dashed border-slate-200 overflow-hidden bg-slate-50">
+                            <img src={MOCK_COVER} className="w-full h-full object-cover" alt="" />
+                          </div>
                         </div>
                       </div>
                       <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-[9px] font-medium text-slate-500">Galeria dodatkowa</p>
+                          <p className="text-[8px] text-slate-400">2/10</p>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {MOCK_GALLERY.slice(0, 2).map((url, i) => (
+                            <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-slate-100">
+                              <img src={url} className="w-full h-full object-cover" alt="" />
+                              <div className="absolute top-0.5 right-0.5 h-3.5 w-3.5 rounded-full bg-black/60 flex items-center justify-center"><span className="text-white leading-none" style={{ fontSize: 6 }}>✕</span></div>
+                            </div>
+                          ))}
+                          <div className="aspect-square rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-300 text-sm font-light">+</div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <p className="text-[9px] font-medium text-slate-500 mb-1.5">Podgląd wizytówki</p>
+                        <div className="relative w-28 h-44 rounded-2xl overflow-hidden shadow-md">
+                          <img src={MOCK_COVER} className="absolute inset-0 w-full h-full object-cover" alt="" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+                          <div className="absolute bottom-0 left-0 right-0 px-2 pb-2.5 space-y-0.5">
+                            <div className="flex items-center gap-1"><img src={MOCK_LOGO} className="w-3.5 h-3.5 rounded-full object-cover border border-white/30" alt="" /><span className="text-white/60 text-[7px]">Restauracja</span></div>
+                            <p className="text-[10px] font-black text-white leading-tight">Bulaj Kraków</p>
+                            <div className="flex gap-0.5">{['#lunch','#polska'].map(t=><span key={t} className="px-1 py-0.5 bg-white/15 rounded-full text-[6px] font-semibold text-white/80">{t}</span>)}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ── DESKTOP layout (sm+): 3 columns — Logo+Gallery | Cover | Preview ── */}
+                    <div className="hidden sm:flex gap-3">
+                      {/* Col 1: Logo + Gallery */}
+                      <div className="flex-1 space-y-2">
+                        <div>
+                          <p className="text-[9px] font-medium text-slate-500 mb-1">Logo</p>
+                          <div className="w-full aspect-square rounded-xl border-2 border-dashed border-slate-200 overflow-hidden bg-slate-50">
+                            <img src={MOCK_LOGO} className="w-full h-full object-cover" alt="" />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-[9px] font-medium text-slate-500">Galeria dodatkowa</p>
+                            <p className="text-[8px] text-slate-400">2/10</p>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1">
+                            {MOCK_GALLERY.slice(0, 2).map((url, i) => (
+                              <div key={i} className="relative aspect-square rounded-md overflow-hidden bg-slate-100">
+                                <img src={url} className="w-full h-full object-cover" alt="" />
+                                <div className="absolute top-0.5 right-0.5 h-3 w-3 rounded-full bg-black/60 flex items-center justify-center"><span className="text-white" style={{ fontSize: 6 }}>✕</span></div>
+                              </div>
+                            ))}
+                            <div className="aspect-square rounded-md border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-300 text-sm">+</div>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Col 2: Cover */}
+                      <div className="flex-1">
                         <p className="text-[9px] font-medium text-slate-500 mb-1">Zdjęcie główne</p>
-                        <div className="relative w-full aspect-square rounded-xl border-2 border-dashed border-slate-200 overflow-hidden bg-slate-50">
+                        <div className="w-full aspect-square rounded-xl border-2 border-dashed border-slate-200 overflow-hidden bg-slate-50">
                           <img src={MOCK_COVER} className="w-full h-full object-cover" alt="" />
                         </div>
                       </div>
-                    </div>
-
-                    {/* Galeria dodatkowa — full width, 3-col */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-[9px] font-medium text-slate-500">Galeria dodatkowa</p>
-                        <p className="text-[8px] text-slate-400">2/10</p>
-                      </div>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {MOCK_GALLERY.slice(0, 2).map((url, i) => (
-                          <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-slate-100">
-                            <img src={url} className="w-full h-full object-cover" alt="" />
-                            <div className="absolute top-0.5 right-0.5 h-3.5 w-3.5 rounded-full bg-black/60 flex items-center justify-center">
-                              <span className="text-white leading-none" style={{ fontSize: 6 }}>✕</span>
-                            </div>
-                          </div>
-                        ))}
-                        <div className="aspect-square rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-300 text-sm font-light">+</div>
-                      </div>
-                    </div>
-
-                    {/* Podgląd wizytówki — centered */}
-                    <div className="flex flex-col items-center pt-1">
-                      <p className="text-[9px] font-medium text-slate-500 mb-1.5">Podgląd wizytówki</p>
-                      <div className="relative w-28 h-44 rounded-2xl overflow-hidden shadow-md">
-                        <img src={MOCK_COVER} className="absolute inset-0 w-full h-full object-cover" alt="" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-                        <div className="absolute bottom-0 left-0 right-0 px-2 pb-2.5 space-y-0.5">
-                          <div className="flex items-center gap-1">
-                            <img src={MOCK_LOGO} className="w-3.5 h-3.5 rounded-full object-cover border border-white/30" alt="" />
-                            <span className="text-white/60 text-[7px]">Restauracja</span>
-                          </div>
-                          <p className="text-[10px] font-black text-white leading-tight">Bulaj Kraków</p>
-                          <div className="flex gap-0.5">
-                            {['#lunch', '#polska'].map(t => (
-                              <span key={t} className="px-1 py-0.5 bg-white/15 rounded-full text-[6px] font-semibold text-white/80">{t}</span>
-                            ))}
+                      {/* Col 3: Preview */}
+                      <div className="shrink-0">
+                        <p className="text-[9px] font-medium text-slate-500 mb-1">Podgląd wizytówki</p>
+                        <div className="relative w-20 h-32 rounded-2xl overflow-hidden shadow-md">
+                          <img src={MOCK_COVER} className="absolute inset-0 w-full h-full object-cover" alt="" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+                          <div className="absolute bottom-0 left-0 right-0 px-1.5 pb-2 space-y-0.5">
+                            <div className="flex items-center gap-0.5"><img src={MOCK_LOGO} className="w-3 h-3 rounded-full object-cover border border-white/30" alt="" /><span className="text-white/60 text-[6px]">Restauracja</span></div>
+                            <p className="text-[9px] font-black text-white leading-tight">Bulaj Kraków</p>
+                            <div className="flex gap-0.5">{['#lunch','#polska'].map(t=><span key={t} className="px-0.5 py-0.5 bg-white/15 rounded-full text-[5px] font-semibold text-white/80">{t}</span>)}</div>
                           </div>
                         </div>
                       </div>
