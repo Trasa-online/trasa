@@ -239,7 +239,8 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         if (error) { console.error("[PlaceSwiper] proxy error:", error); return; }
         // Prefer full photo_url returned by proxy (no client key needed)
         const photo = data?.result?.photos?.[0];
-        const url = photo?.photo_url ?? (photo?.photo_reference ? getPhotoUrl(photo.photo_reference, 800) : null);
+        const resolvedPlaceId: string | undefined = data?.result?.place_id ?? undefined;
+        const url = photo?.photo_url ?? (photo?.photo_reference ? getPhotoUrl(photo.photo_reference, 800, resolvedPlaceId) : null);
         if (!url) console.warn("[PlaceSwiper] no photo returned for:", place.place_name, data);
         if (url) {
           setPhotoUrls([url]);

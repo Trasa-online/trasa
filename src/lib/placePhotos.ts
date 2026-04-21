@@ -1,9 +1,14 @@
 /**
  * Returns a URL routed through our Edge proxy (/api/place-photo).
- * The proxy adds Cache-Control: immutable so Vercel CDN serves each photo
- * from cache after the first request — Google is billed only once per unique photo_reference.
+ * Supports both Old Places API (CmRaAAAA... format) and New Places API (AU_... format).
+ * For AU_ references, placeId is required to build the correct v1 photo name.
  */
-export function getPhotoUrl(photoReference: string, maxWidth = 800): string | null {
+export function getPhotoUrl(photoReference: string, maxWidth = 800, placeId?: string): string | null {
   if (!photoReference) return null;
-  return `/api/place-photo?ref=${encodeURIComponent(photoReference)}&w=${maxWidth}`;
+  const ref = encodeURIComponent(photoReference);
+  const base = `/api/place-photo?ref=${ref}&w=${maxWidth}`;
+  if (photoReference.startsWith("AU_") && placeId) {
+    return `${base}&place_id=${encodeURIComponent(placeId)}`;
+  }
+  return base;
 }

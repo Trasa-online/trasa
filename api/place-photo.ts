@@ -3,6 +3,7 @@ export const config = { runtime: "edge" };
 export default async function handler(req: Request): Promise<Response> {
   const { searchParams } = new URL(req.url);
   const ref = searchParams.get("ref");
+  const placeId = searchParams.get("place_id");
   const maxWidth = searchParams.get("w") ?? "800";
 
   if (!ref) {
@@ -14,7 +15,11 @@ export default async function handler(req: Request): Promise<Response> {
     return new Response("API key not configured", { status: 500 });
   }
 
-  const googleUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${encodeURIComponent(ref)}&key=${apiKey}`;
+  // AU_... format = New Places API (v1). Requires placeId for full photo name.
+  // Older CmRaAAAA... format uses the legacy Photos endpoint.
+  const googleUrl = ref.startsWith("AU_") && placeId
+    ? `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}/photos/${encodeURIComponent(ref)}/media?maxHeightPx=${maxWidth}&key=${apiKey}`
+    : `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${encodeURIComponent(ref)}&key=${apiKey}`;
 
   const upstream = await fetch(googleUrl);
 
@@ -29,7 +34,6 @@ export default async function handler(req: Request): Promise<Response> {
     status: 200,
     headers: {
       "Content-Type": contentType,
-      // Cache at the CDN edge for 1 year — Google is called only once per unique photo_reference
       "Cache-Control": "public, max-age=31536000, immutable",
       "CDN-Cache-Control": "public, max-age=31536000, immutable",
     },
