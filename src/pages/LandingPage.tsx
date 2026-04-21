@@ -396,6 +396,12 @@ const LandingPage = () => {
               <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
               Dla firm
             </a>
+            <button
+              onClick={() => navigate("/auth")}
+              className="hidden sm:flex items-center text-sm font-semibold px-4 py-2 rounded-full border border-white/25 text-white/80 hover:border-white/50 hover:text-white active:scale-95 transition-all whitespace-nowrap"
+            >
+              Zaloguj się
+            </button>
             {/* Orange pill — mobile only, directly left of hamburger */}
             <button
               onClick={() => navigate("/home")}
