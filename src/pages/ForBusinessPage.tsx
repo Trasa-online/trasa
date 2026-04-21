@@ -523,29 +523,28 @@ export default function ForBusinessPage() {
         {/* Mobile dropdown */}
         {menuOpen && (
           <div className="sm:hidden mt-2 bg-[#1a1a1a] rounded-2xl shadow-xl overflow-hidden">
-            <div className="flex flex-col py-3 px-4 gap-2">
-              <a href="/" className="flex items-center gap-2 px-1 py-2 text-sm font-bold text-orange-300 hover:text-orange-200 transition-colors">
+            <div className="flex flex-col py-2">
+              <button onClick={() => { document.getElementById("pakiety")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="px-5 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 text-left transition-colors">
+                Pakiety
+              </button>
+              <button onClick={() => { document.getElementById("faq-biznes")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="px-5 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 text-left transition-colors">
+                FAQ
+              </button>
+              <a href="/" className="px-5 py-3 text-sm font-bold text-orange-300 hover:text-orange-200 hover:bg-white/5 flex items-center gap-2 transition-colors">
                 <span className="h-1.5 w-1.5 rounded-full bg-orange-400 shrink-0" />
                 Dla podróżujących
               </a>
-              <button
-                onClick={() => { document.getElementById("pakiety")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }}
-                className="w-full flex items-center justify-center text-sm font-semibold px-4 py-2.5 rounded-full border border-blue-500/60 text-blue-400 hover:border-blue-400 hover:text-blue-300 active:scale-95 transition-all"
-              >
-                Pakiety
-              </button>
-              <a
-                href="/auth?business=true"
-                className="w-full flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-full border border-blue-500/60 text-blue-400 hover:border-blue-400 hover:text-blue-300 active:scale-95 transition-all"
-              >
-                Zaloguj się
-              </a>
-              <a
-                href="/auth?business=true"
-                className="w-full flex items-center justify-center text-sm font-bold px-4 py-2.5 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all"
-              >
-                Dołącz →
-              </a>
+              <div className="mx-5 my-1 border-t border-white/10" />
+              <div className="px-5 pb-3 pt-1">
+                <a href="/auth?business=true" className="w-full flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-full border border-white/25 text-white/80 hover:border-white/50 hover:text-white active:scale-95 transition-all">
+                  Zaloguj się
+                </a>
+              </div>
+              <div className="px-5 py-3">
+                <a href="mailto:trasa.app@gmail.com" className="block w-full text-center text-sm font-bold px-4 py-2.5 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all">
+                  Kontakt →
+                </a>
+              </div>
             </div>
           </div>
         )}
