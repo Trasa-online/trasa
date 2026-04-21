@@ -395,30 +395,65 @@ function DashboardMockup() {
               {/* ── ANALITYKA ── */}
               {tab === 'analytics' && (
                 <>
-                  <h3 className="text-sm font-black text-foreground mb-1">Analityka</h3>
-                  <p className="text-[10px] text-slate-400 mb-4">Ostatnie 30 dni · aktualizowane na bieżąco</p>
-                  <div className="grid grid-cols-3 gap-2 mb-4">
+                  {/* Header + range selector */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="text-sm font-black text-foreground">Analityka</h3>
+                      <p className="text-[10px] text-slate-400">Statystyki aktywności Twojego lokalu.</p>
+                    </div>
+                    <div className="flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5 shrink-0">
+                      {['7 dni', '30 dni', '90 dni'].map(r => (
+                        <div key={r} className={`px-1.5 py-0.5 rounded-md text-[8px] font-semibold ${r === '30 dni' ? 'bg-white text-foreground shadow-sm' : 'text-slate-400'}`}>{r}</div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 2×2 stat cards */}
+                  <div className="grid grid-cols-2 gap-1.5 mb-2.5">
                     {[
-                      { label: 'Wyświetlenia profilu', val: '1 284', icon: '👁', color: 'bg-blue-50 text-blue-600' },
-                      { label: 'Dodania do trasy', val: '347', icon: '📍', color: 'bg-emerald-50 text-emerald-600' },
-                      { label: 'Kliknięcia', val: '89', icon: '👆', color: 'bg-violet-50 text-violet-600' },
+                      { label: 'Wyświetlenia',       sub: 'zobaczenie wizytówki', val: '1 284', bg: 'bg-blue-50',    dot: 'bg-blue-400' },
+                      { label: 'Unikalni goście',     sub: 'dodało do trasy',      val: '347',   bg: 'bg-rose-50',    dot: 'bg-rose-400' },
+                      { label: 'Dodania do planu',    sub: 'razy w planie dnia',   val: '892',   bg: 'bg-emerald-50', dot: 'bg-emerald-400' },
+                      { label: 'Kliknięcia',          sub: 'WWW: 61 · Tel: 28',    val: '89',    bg: 'bg-violet-50',  dot: 'bg-violet-400' },
                     ].map(s => (
-                      <div key={s.label} className="bg-white border border-slate-100 rounded-xl p-3 shadow-sm">
-                        <div className={`h-7 w-7 rounded-lg ${s.color} flex items-center justify-center text-sm mb-2`}>{s.icon}</div>
-                        <p className="text-base font-black text-foreground leading-none mb-0.5">{s.val}</p>
-                        <p className="text-[9px] text-slate-400 leading-snug">{s.label}</p>
+                      <div key={s.label} className="bg-white border border-slate-100 rounded-xl p-2.5 shadow-sm">
+                        <div className={`h-6 w-6 rounded-lg ${s.bg} flex items-center justify-center mb-1.5`}>
+                          <div className={`h-2 w-2 rounded-full ${s.dot}`} />
+                        </div>
+                        <p className="text-lg font-black text-foreground leading-none mb-0.5">{s.val}</p>
+                        <p className="text-[9px] font-semibold text-foreground leading-none mb-0.5">{s.label}</p>
+                        <p className="text-[8px] text-slate-400">{s.sub}</p>
                       </div>
                     ))}
                   </div>
-                  {/* Mini bar chart */}
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-2">Wyświetlenia — ostatnie 7 dni</p>
-                  <div className="flex items-end gap-1.5 h-16">
-                    {[40, 65, 55, 80, 70, 90, 75].map((h, i) => (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                        <div className="w-full rounded-t-md bg-blue-200" style={{ height: `${h}%` }} />
-                        <span className="text-[7px] text-slate-300">{['Pn','Wt','Śr','Cz','Pt','So','Nd'][i]}</span>
+
+                  {/* Chart */}
+                  <div className="bg-white border border-slate-100 rounded-xl p-2.5">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wide">Aktywność w czasie</p>
+                      <div className="flex items-center gap-2">
+                        {[['bg-blue-400','Wyśw.'],['bg-emerald-400','Trasa'],['bg-violet-400','Kliknięcia']].map(([c,l]) => (
+                          <div key={l} className="flex items-center gap-0.5">
+                            <div className={`h-1.5 w-1.5 rounded-full ${c}`} />
+                            <span className="text-[7px] text-slate-400">{l}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
+                    <div className="flex items-end gap-1" style={{ height: 52 }}>
+                      {([
+                        [58,24,14],[42,28,18],[76,38,22],[52,18,9],[88,48,28],[72,32,16],[63,26,12]
+                      ] as [number,number,number][]).map((bars, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                          <div className="w-full flex flex-col gap-px" style={{ height: 44 }}>
+                            <div className="w-full rounded-sm bg-violet-300 shrink-0" style={{ height: `${bars[2] * 0.44}px` }} />
+                            <div className="w-full rounded-sm bg-emerald-300 shrink-0" style={{ height: `${bars[1] * 0.44}px` }} />
+                            <div className="w-full rounded-sm bg-blue-300 flex-1 rounded-t-sm" />
+                          </div>
+                          <span className="text-[7px] text-slate-300">{['Pn','Wt','Śr','Cz','Pt','So','Nd'][i]}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </>
               )}
