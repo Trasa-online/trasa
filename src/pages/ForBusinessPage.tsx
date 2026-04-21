@@ -314,7 +314,7 @@ function DashboardMockup() {
                       {/* Main photo */}
                       <div>
                         <p className="text-[9px] font-medium text-slate-500 mb-1.5">Zdjęcie główne</p>
-                        <div className="aspect-square rounded-xl overflow-hidden border-2 border-dashed border-slate-200">
+                        <div className="aspect-[4/3] rounded-xl overflow-hidden border-2 border-dashed border-slate-200">
                           <img src={MOCK_COVER} className="w-full h-full object-cover" alt="" />
                         </div>
                       </div>

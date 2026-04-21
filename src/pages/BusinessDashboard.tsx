@@ -907,7 +907,7 @@ const BusinessDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs font-medium mb-1.5">Zdjęcie główne</p>
-                    <button onClick={() => coverInputRef.current?.click()} className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
+                    <button onClick={() => coverInputRef.current?.click()} className="relative w-full aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
                       {uploading === 'cover' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : coverImageUrl ? (<><img src={coverImageUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-5 w-5 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-6 w-6" /><span className="text-[11px]">Dodaj zdjęcie</span></div>)}
                     </button>
                     <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
