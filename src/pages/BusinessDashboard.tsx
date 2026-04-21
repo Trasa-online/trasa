@@ -892,79 +892,84 @@ const BusinessDashboard = () => {
           {activeSection === 'gallery' && (
             <div className="space-y-5">
               <div><h2 className="text-lg font-black">Galeria zdjęć</h2><p className="text-sm text-slate-400">Logo, zdjęcie główne i galeria widoczne na Twojej wizytówce.</p></div>
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-5">
-                {/* Logo — compact */}
-                <div className="flex items-start gap-4">
-                  <div>
-                    <p className="text-xs font-medium mb-1.5">Logo</p>
-                    <button onClick={() => logoInputRef.current?.click()} className="relative h-20 w-20 rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
-                      {uploading === 'logo' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : logoUrl ? (<><img src={logoUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-4 w-4 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-5 w-5" /><span className="text-[10px]">Logo</span></div>)}
-                    </button>
-                    <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-                  </div>
-                </div>
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                <div className="flex gap-5">
 
-                {/* Wizytówka preview */}
-                <div>
-                  <p className="text-xs font-medium mb-2">Podgląd wizytówki</p>
-                  <div className="relative w-36 h-56 rounded-3xl overflow-hidden shadow-md cursor-pointer group" onClick={() => setShowCardPreview(true)}>
-                    {coverImageUrl
-                      ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
-                      : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
-                    }
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
-                    <div className="absolute bottom-0 left-0 right-0 px-3 pb-4 space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        {logoUrl
-                          ? <img src={logoUrl} className="w-5 h-5 rounded-full object-cover border border-white/30" />
-                          : <div className="w-5 h-5 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-                        }
-                        <span className="text-white/60 text-[9px]">{mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : 'Kategoria'}</span>
-                      </div>
-                      <h3 className="text-sm font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
-                      {tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {tags.slice(0, 2).map(t => (
-                            <span key={t} className="px-1.5 py-0.5 bg-white/15 rounded-full text-[8px] font-semibold text-white/80">#{t}</span>
-                          ))}
-                        </div>
-                      )}
+                  {/* LEFT: upload controls */}
+                  <div className="flex-1 min-w-0 space-y-4">
+                    {/* Logo */}
+                    <div>
+                      <p className="text-xs font-medium mb-1.5">Logo</p>
+                      <button onClick={() => logoInputRef.current?.click()} className="relative h-20 w-20 rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
+                        {uploading === 'logo' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : logoUrl ? (<><img src={logoUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-4 w-4 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-5 w-5" /><span className="text-[10px]">Logo</span></div>)}
+                      </button>
+                      <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                     </div>
-                    <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Expand className="h-3 w-3 text-white" />
-                    </div>
-                  </div>
-                </div>
 
-                {/* Cover + Gallery — always 2-col */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs font-medium mb-1.5">Zdjęcie główne</p>
-                    <button onClick={() => coverInputRef.current?.click()} className="relative w-full aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
-                      {uploading === 'cover' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : coverImageUrl ? (<><img src={coverImageUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-5 w-5 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-6 w-6" /><span className="text-[11px]">Dodaj zdjęcie</span></div>)}
-                    </button>
-                    <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-xs font-medium">Galeria dodatkowa</p>
-                      <p className="text-[11px] text-muted-foreground">{galleryUrls.length}/{MAX_GALLERY}</p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {galleryUrls.map((url, idx) => (
-                        <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden bg-muted">
-                          <img src={url} className="w-full h-full object-cover" />
-                          <button onClick={() => removeGalleryPhoto(idx)} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70"><X className="h-3 w-3 text-white" /></button>
-                        </div>
-                      ))}
-                      {galleryUrls.length < MAX_GALLERY && (
-                        <button onClick={() => galleryInputRef.current?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
-                          {uploading === 'gallery' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-6 w-6 text-muted-foreground" />}
+                    {/* Cover + Gallery — 2-col */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs font-medium mb-1.5">Zdjęcie główne</p>
+                        <button onClick={() => coverInputRef.current?.click()} className="relative w-full aspect-[4/3] rounded-2xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30 active:opacity-70">
+                          {uploading === 'cover' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : coverImageUrl ? (<><img src={coverImageUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><ImagePlus className="h-5 w-5 text-white" /></div></>) : (<div className="flex flex-col items-center gap-1 text-muted-foreground"><Plus className="h-6 w-6" /><span className="text-[11px]">Dodaj zdjęcie</span></div>)}
                         </button>
-                      )}
+                        <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-xs font-medium">Galeria dodatkowa</p>
+                          <p className="text-[11px] text-muted-foreground">{galleryUrls.length}/{MAX_GALLERY}</p>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {galleryUrls.map((url, idx) => (
+                            <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted">
+                              <img src={url} className="w-full h-full object-cover" />
+                              <button onClick={() => removeGalleryPhoto(idx)} className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center active:opacity-70"><X className="h-3 w-3 text-white" /></button>
+                            </div>
+                          ))}
+                          {galleryUrls.length < MAX_GALLERY && (
+                            <button onClick={() => galleryInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
+                              {uploading === 'gallery' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-5 w-5 text-muted-foreground" />}
+                            </button>
+                          )}
+                        </div>
+                        <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
+                      </div>
                     </div>
-                    <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
                   </div>
+
+                  {/* RIGHT: card preview */}
+                  <div className="shrink-0">
+                    <p className="text-xs font-medium mb-1.5">Podgląd wizytówki</p>
+                    <div className="relative w-36 h-56 rounded-3xl overflow-hidden shadow-md cursor-pointer group" onClick={() => setShowCardPreview(true)}>
+                      {coverImageUrl
+                        ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
+                        : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
+                      }
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
+                      <div className="absolute bottom-0 left-0 right-0 px-3 pb-4 space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          {logoUrl
+                            ? <img src={logoUrl} className="w-5 h-5 rounded-full object-cover border border-white/30" />
+                            : <div className="w-5 h-5 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                          }
+                          <span className="text-white/60 text-[9px]">{mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : 'Kategoria'}</span>
+                        </div>
+                        <h3 className="text-sm font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+                        {tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {tags.slice(0, 2).map(t => (
+                              <span key={t} className="px-1.5 py-0.5 bg-white/15 rounded-full text-[8px] font-semibold text-white/80">#{t}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Expand className="h-3 w-3 text-white" />
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               </div>
             </div>
