@@ -673,9 +673,6 @@ const BusinessDashboard = () => {
         <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 md:px-6 h-14 flex items-center gap-3 shrink-0">
           {/* Mobile: orb logo */}
           <div className="md:hidden h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-          <div className="flex-1 hidden md:flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 max-w-xs">
-            <span className="text-xs text-slate-400">Szukaj w panelu...</span>
-          </div>
           <div className="flex-1 md:flex-none flex items-center gap-2">
             <p className="text-sm font-bold truncate">{profile.business_name}</p>
             <span className={`hidden md:inline text-[10px] font-bold px-2 py-0.5 rounded-full ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
