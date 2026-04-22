@@ -522,9 +522,10 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
           });
           const result = data?.result;
           if (result) {
-            const photoRef = result.photos?.[0]?.photo_reference;
-            if (photoRef) {
-              photoUrl = getPhotoUrl(photoRef, 800) ?? undefined;
+            // Only use Google photo if no business/custom photo already set
+            if (!photoUrl) {
+              const photoRef = result.photos?.[0]?.photo_reference;
+              if (photoRef) photoUrl = getPhotoUrl(photoRef, 800) ?? null;
             }
             rating = result.rating ?? null;
             ratingsTotal = result.user_ratings_total ?? null;

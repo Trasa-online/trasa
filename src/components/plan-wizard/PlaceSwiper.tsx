@@ -33,6 +33,7 @@ export interface MockPlace {
   businessPhone?: string | null;
   businessWebsite?: string | null;
   galleryPhotos?: string[]; // extra photos shown in carousel (swipe card + detail)
+  businessSubcategories?: string[]; // subcategories from business_profiles (for custom filtering)
 }
 
 export type PlaceCategory =
@@ -685,12 +686,14 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     businessPlan: plan,
     // basic+: override photo with business cover if set
     photo_url: (plan === 'basic' || plan === 'premium') && bp.cover_image_url ? bp.cover_image_url : p.photo_url,
-    // premium only: logo row + event pill + gallery
-    businessLogoUrl: plan === 'premium' ? (bp.logo_url ?? '') : undefined,
-    businessEventTitle: plan === 'premium' ? (bp.event_title ?? undefined) : undefined,
+    // basic+: show business section (logo, events, CTA)
+    businessLogoUrl: plan !== 'zero' ? (bp.logo_url ?? '') : undefined,
+    businessEventTitle: plan !== 'zero' ? (bp.event_title ?? undefined) : undefined,
     businessPhone: bp.phone ?? null,
     businessWebsite: bp.website ?? null,
-    galleryPhotos: plan === 'premium' ? (bp.gallery_urls ?? []) : [],
+    // gallery shown for all plans with uploaded photos
+    galleryPhotos: bp.gallery_urls ?? [],
+    businessSubcategories: bp.subcategories ?? [],
   } as MockPlace;
 }
 
@@ -797,8 +800,14 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // Batch mode: single category, max 20 places
       if (categoryFilter) {
         const subIds = getSubcategoryIds(categoryFilter);
+        const isStandard = subIds.length > 0 || MAIN_CATEGORIES.some(c =>
+          c.id === categoryFilter || c.subcategories.some(s => s.id === categoryFilter)
+        );
         const pool = remaining
-          .filter(p => subIds.length > 0 ? subIds.includes(p.category) : p.category === categoryFilter)
+          .filter(p => isStandard
+            ? (subIds.length > 0 ? subIds.includes(p.category) : p.category === categoryFilter)
+            : (p as any).businessSubcategories?.includes(categoryFilter)
+          )
           .sort(() => Math.random() - 0.5)
           .slice(0, 20);
         setQueue(pool);

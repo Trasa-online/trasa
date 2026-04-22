@@ -281,7 +281,7 @@ const PlaceSwiperDetail = ({
               {/* ── X close button — always on top, inside photo div ── */}
               <button
                 onClick={() => onOpenChange(false)}
-                className="absolute top-3 right-3 z-30 h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+                className="absolute top-3 right-3 z-30 h-10 w-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center shadow-lg ring-1 ring-white/30 active:scale-95 transition-transform"
               >
                 <X className="h-5 w-5 text-white" />
               </button>

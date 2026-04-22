@@ -306,8 +306,19 @@ const Admin = () => {
       subcategories: [...existing, value],
       custom_subcategory_status: "approved",
     }).eq("id", id);
-    if (error) toast.error("Błąd zatwierdzania");
-    else { toast.success("Podkategoria zatwierdzona!"); setPendingSubcats(prev => prev.filter(s => s.id !== id)); }
+    if (!error) {
+      // Register in global approved_subcategories so it appears in CityPicker
+      const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+      await (supabase as any).from("approved_subcategories").upsert({
+        id: value,
+        label: value,
+        main_category_id: mainCat ?? "food",
+      }, { onConflict: "id" });
+      toast.success("Podkategoria zatwierdzona!");
+      setPendingSubcats(prev => prev.filter(s => s.id !== id));
+    } else {
+      toast.error("Błąd zatwierdzania");
+    }
     setSubcatActionId(null);
   };
 

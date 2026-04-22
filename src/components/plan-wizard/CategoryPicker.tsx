@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { MAIN_CATEGORIES } from "@/lib/categories";
+import { useState, useEffect } from "react";
+import { MAIN_CATEGORIES, type MainCategory, type Subcategory } from "@/lib/categories";
+import { supabase } from "@/integrations/supabase/client";
 
 export { MAIN_CATEGORIES as CATEGORIES };
 
@@ -12,7 +13,20 @@ interface CategoryPickerProps {
 
 const CategoryPicker = ({ onSelect, onShowAll, visitedCategories = [], likedCount = 0 }: CategoryPickerProps) => {
   const [selectedMain, setSelectedMain] = useState<string | null>(null);
+  const [categories, setCategories] = useState<MainCategory[]>(MAIN_CATEGORIES);
   const isReturn = visitedCategories.length > 0;
+
+  useEffect(() => {
+    (supabase as any).from("approved_subcategories").select("id, label, emoji, main_category_id").then(({ data }: { data: any[] | null }) => {
+      if (!data?.length) return;
+      setCategories(MAIN_CATEGORIES.map(cat => {
+        const extras: Subcategory[] = data
+          .filter(s => s.main_category_id === cat.id)
+          .map(s => ({ id: s.id, label: s.label, emoji: s.emoji }));
+        return extras.length ? { ...cat, subcategories: [...cat.subcategories, ...extras] } : cat;
+      }));
+    });
+  }, []);
 
   const handleMainClick = (id: string) => {
     setSelectedMain(prev => (prev === id ? null : id));
@@ -32,7 +46,7 @@ const CategoryPicker = ({ onSelect, onShowAll, visitedCategories = [], likedCoun
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-2.5">
-        {MAIN_CATEGORIES.map(cat => {
+        {categories.map(cat => {
           const isActive = selectedMain === cat.id;
           const visited = visitedCategories.some(v =>
             cat.subcategories.some(s => s.id === v) || v === cat.id
