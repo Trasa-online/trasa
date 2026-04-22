@@ -324,51 +324,38 @@ const BusinessDashboard = () => {
 
   const loadAnalytics = useCallback(async (pid: string, from: Date, to: Date) => {
     setAnalyticsLoading(true);
-    const { data } = await (supabase as any)
-      .from("place_events")
-      .select("event_type, user_id, created_at")
-      .eq("place_id", pid)
-      .gte("created_at", from.toISOString())
-      .lte("created_at", to.toISOString());
+    const rangeDays = differenceInCalendarDays(to, from) + 1;
 
-    if (data) {
-      const events = data as Array<{ event_type: string; user_id: string | null; created_at: string }>;
-      const routeEvents = events.filter(e => e.event_type === "add_to_route");
+    // Query PostHog via Edge Function (primary source)
+    const { data: phData, error: phError } = await supabase.functions.invoke("posthog-analytics", {
+      body: { place_id: pid, range_days: rangeDays },
+    });
+
+    if (phData && !phError) {
       setStats({
-        views: events.filter(e => e.event_type === "view").length,
-        onRoutes: routeEvents.length,
-        websiteClicks: events.filter(e => e.event_type === "click_website").length,
-        phoneClicks: events.filter(e => e.event_type === "click_phone").length,
-        uniqueChoices: new Set(routeEvents.filter(e => e.user_id).map(e => e.user_id)).size,
+        views: phData.views ?? 0,
+        onRoutes: phData.onRoutes ?? 0,
+        websiteClicks: phData.websiteClicks ?? 0,
+        phoneClicks: phData.phoneClicks ?? 0,
+        uniqueChoices: 0,
       });
 
-      const numDays = differenceInCalendarDays(to, from) + 1;
+      const numDays = rangeDays;
       const dayMap: Record<string, ChartDay> = {};
       for (let i = 0; i < numDays; i++) {
         const d = addDays(from, i);
         const key = format(d, "yyyy-MM-dd");
         dayMap[key] = { date: format(d, numDays <= 14 ? "d MMM" : "d MMM", { locale: pl }), views: 0, routes: 0, clicks: 0 };
       }
-      events.forEach(e => {
-        const key = e.created_at.slice(0, 10);
-        if (!dayMap[key]) return;
-        if (e.event_type === "view") dayMap[key].views++;
-        else if (e.event_type === "add_to_route") dayMap[key].routes++;
-        else if (e.event_type === "click_phone" || e.event_type === "click_website") dayMap[key].clicks++;
+      (phData.chartData ?? []).forEach((row: { date: string; views: number; routes: number; clicks: number }) => {
+        if (dayMap[row.date]) {
+          dayMap[row.date].views = row.views;
+          dayMap[row.date].routes = row.routes;
+          dayMap[row.date].clicks = row.clicks;
+        }
       });
       setChartData(Object.values(dayMap));
-
-      // Hourly breakdown (local timezone)
-      const hourBuckets: HourlyBucket[] = Array.from({ length: 24 }, (_, h) => ({
-        hour: h,
-        label: `${h}:00`,
-        total: 0,
-      }));
-      events.forEach(e => {
-        const h = new Date(e.created_at).getHours();
-        hourBuckets[h].total++;
-      });
-      setHourlyData(hourBuckets);
+      setHourlyData(Array.from({ length: 24 }, (_, h) => ({ hour: h, label: `${h}:00`, total: 0 })));
     }
     setAnalyticsLoading(false);
   }, []);

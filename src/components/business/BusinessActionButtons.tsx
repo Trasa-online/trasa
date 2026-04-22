@@ -1,6 +1,6 @@
 import { Phone, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import posthog from "posthog-js";
 
 interface BusinessActionButtonsProps {
   phone?: string | null;
@@ -9,15 +9,10 @@ interface BusinessActionButtonsProps {
   userId?: string | null;
 }
 
-const BusinessActionButtons = ({ phone, website, placeId, userId }: BusinessActionButtonsProps) => {
-  const trackEvent = async (type: string) => {
+const BusinessActionButtons = ({ phone, website, placeId }: BusinessActionButtonsProps) => {
+  const trackEvent = (type: "place_phone_clicked" | "place_website_clicked") => {
     if (!placeId) return;
-    // Fire-and-forget — don't block the navigation
-    (supabase as any).from("place_events").insert({
-      place_id: placeId,
-      event_type: type,
-      user_id: userId ?? null,
-    });
+    posthog.capture(type, { place_id: placeId });
   };
 
   if (!phone && !website) return null;
@@ -29,7 +24,7 @@ const BusinessActionButtons = ({ phone, website, placeId, userId }: BusinessActi
           variant="outline"
           className="flex-col h-auto py-3 gap-1"
           onClick={() => {
-            trackEvent("click_phone");
+            trackEvent("place_phone_clicked");
             window.location.href = `tel:${phone}`;
           }}
         >
@@ -42,7 +37,7 @@ const BusinessActionButtons = ({ phone, website, placeId, userId }: BusinessActi
           variant="outline"
           className="flex-col h-auto py-3 gap-1"
           onClick={() => {
-            trackEvent("click_website");
+            trackEvent("place_website_clicked");
             window.open(website, "_blank", "noopener,noreferrer");
           }}
         >

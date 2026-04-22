@@ -31,3 +31,4 @@ dist-ssr
 # Local-only documentation
 PRODUCT_SPEC.md
 ARCHITECTURE.md
+.vercel

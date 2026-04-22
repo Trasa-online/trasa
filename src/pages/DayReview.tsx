@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { usePostHog } from "@posthog/react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Settings, Loader2, ArrowLeft, Send, Mic, MicOff, ChevronDown } from "lucide-react";
@@ -21,6 +22,7 @@ const hasVoiceSupport =
 const DayReview = () => {
   const { user, session } = useAuth();
   const navigate = useNavigate();
+  const posthog = usePostHog();
   const [searchParams] = useSearchParams();
   const routeId = searchParams.get("route");
 
@@ -176,6 +178,7 @@ const DayReview = () => {
         setMessages(prev => [...prev, { role: "assistant", content: stripMarkdown(data.message) }]);
         setIsDone(true);
         setReviewSummary(data.summary ?? null);
+        posthog.capture("day_review_completed", { route_id: routeId, city: route?.city, day_number: route?.day_number });
         // Mark route as reviewed and completed so it moves to Dziennik and leaves active trips
         supabase.from("routes").update({ chat_status: "completed", trip_type: "completed" } as any).eq("id", routeId).then(() => {});
         // Fire-and-forget: embed AAR into user memory for cross-trip recall

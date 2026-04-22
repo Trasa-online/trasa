@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import posthog from "posthog-js";
+import { PostHogProvider, PostHogErrorBoundary } from "@posthog/react";
 import App from "./App.tsx";
 import "./index.css";
 import "./i18n";
@@ -12,6 +14,12 @@ import { getConsent } from "@/lib/consent";
 if (getConsent() === "granted" && typeof (window as any)._clarityInit === "function") {
   (window as any)._clarityInit();
 }
+
+// ─── PostHog analytics ────────────────────────────────────────────────────────
+posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN, {
+  api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+  defaults: "2026-01-30",
+});
 
 // ─── Sentry error tracking ────────────────────────────────────────────────────
 if (import.meta.env.PROD) {
@@ -35,8 +43,12 @@ if (import.meta.env.PROD) {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
-    <Analytics />
-    <SpeedInsights />
+    <PostHogProvider client={posthog}>
+      <PostHogErrorBoundary>
+        <App />
+        <Analytics />
+        <SpeedInsights />
+      </PostHogErrorBoundary>
+    </PostHogProvider>
   </StrictMode>
 );

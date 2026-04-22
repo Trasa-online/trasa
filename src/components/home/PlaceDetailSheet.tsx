@@ -7,6 +7,7 @@ import { Loader2, Star, MapPin, ExternalLink, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import BusinessActionButtons from "@/components/business/BusinessActionButtons";
+import posthog from "posthog-js";
 
 interface Pin {
   id: string;
@@ -61,13 +62,9 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
     setBusinessProfile(null);
     setShowClaimForm(false);
 
-    // Track view event
+    // Track view event via PostHog
     if (pin.place_id) {
-      (supabase as any).from("place_events").insert({
-        place_id: pin.place_id,
-        event_type: "view",
-        user_id: user?.id ?? null,
-      });
+      posthog.capture("place_viewed", { place_id: pin.place_id });
 
       // Load business profile
       (supabase as any)

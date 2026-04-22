@@ -8,6 +8,7 @@ import type { MockPlace } from "./PlaceSwiper";
 import BusinessActionButtons from "@/components/business/BusinessActionButtons";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
+import posthog from "posthog-js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,11 +102,7 @@ const PlaceSwiperDetail = ({
     // Track view event for real places (UUID, not mock)
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (UUID_RE.test(place.id)) {
-      (supabase as any).from("place_events").insert({
-        place_id: place.id,
-        event_type: "view",
-        user_id: null,
-      });
+      posthog.capture("place_viewed", { place_id: place.id });
     }
 
     const fetchAll = async () => {

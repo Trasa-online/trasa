@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, X, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePostHog } from "@posthog/react";
 import CityPicker from "@/components/plan-wizard/CityPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import CategoryPicker from "@/components/plan-wizard/CategoryPicker";
@@ -14,6 +15,7 @@ const PlanWizard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const posthog = usePostHog();
   const returnState = location.state as { step?: number; city?: string; date?: string; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; exploreMode?: boolean } | null;
 
   const [step, setStep] = useState<Step>((returnState?.step as Step) ?? 1);
@@ -43,6 +45,7 @@ const PlanWizard = () => {
   const handleSelectCategory = (category: string) => {
     setCurrentCategory(category);
     setVisitedCategories(prev => prev.includes(category) ? prev : [...prev, category]);
+    posthog.capture("plan_category_selected", { category, city, liked_so_far: allLikedNames.length });
     setStep(4);
   };
 
@@ -140,6 +143,7 @@ const PlanWizard = () => {
         {step === 1 && (
           <CityPicker onConfirm={(selectedCity) => {
             setCity(selectedCity);
+            posthog.capture("plan_city_selected", { city: selectedCity, explore_mode: exploreMode });
             if (exploreMode) { setDate(new Date()); setCurrentCategory(""); setStep(4); }
             else setStep(2);
           }} />

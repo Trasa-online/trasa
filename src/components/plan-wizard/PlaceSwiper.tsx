@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { MapPin, Star, ArrowRight, ChevronUp, RotateCcw } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { cn } from "@/lib/utils";
+import posthog from "posthog-js";
 import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import { supabase } from "@/integrations/supabase/client";
@@ -916,7 +917,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     // Track add_to_route for real (non-mock) places
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (UUID_RE.test(top.id)) {
-      (supabase as any).from("place_events").insert({ place_id: top.id, event_type: "add_to_route", user_id: user?.id ?? null });
+      posthog.capture("place_added_to_route", { place_id: top.id });
     }
   };
 

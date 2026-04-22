@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Copy, Check, ArrowRight, Users, Trash2, LogOut, Search, UserPlus, CalendarDays, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePostHog } from "@posthog/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, parseISO, startOfToday } from "date-fns";
@@ -25,6 +26,7 @@ function capitalizeCity(city: string): string {
 const CreateGroupSession = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const posthog = usePostHog();
   const queryClient = useQueryClient();
   const [sessionName, setSessionName] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
@@ -142,9 +144,11 @@ const CreateGroupSession = () => {
         .from("group_session_members")
         .insert({ session_id: session.id, user_id: user.id });
 
+      posthog.capture("group_session_created", { city: selectedCity, has_date: !!tripDate, has_name: !!sessionName.trim() });
       setCreatedCode(code);
       setCreatedSessionId(session.id);
     } catch (e: any) {
+      posthog.captureException(e);
       toast.error(e.message || "Błąd podczas tworzenia sesji");
     } finally {
       setLoading(false);
@@ -169,6 +173,7 @@ const CreateGroupSession = () => {
         .from("group_session_members")
         .upsert({ session_id: session.id, user_id: user.id }, { onConflict: "session_id,user_id", ignoreDuplicates: true });
 
+      posthog.capture("group_session_joined", { city: session.city });
       navigate(`/sesja/${code}`);
     } catch (e: any) {
       toast.error(e.message || "Błąd podczas dołączania");
@@ -221,6 +226,7 @@ const CreateGroupSession = () => {
         )
       );
       setSendingInvites(false);
+      posthog.capture("group_invites_sent", { invite_count: ids.length, city: selectedCity });
       toast.success(`Zaproszono ${ids.length} ${ids.length === 1 ? "osobę" : "osoby"} 🔔`);
     }
     navigate(`/sesja/${createdCode}`);

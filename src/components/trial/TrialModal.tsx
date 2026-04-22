@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { X, Heart, Star, ArrowRight, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { usePostHog } from "@posthog/react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -238,6 +239,7 @@ function SwipeCard({
 
 export default function TrialModal({ open, onClose }: TrialModalProps) {
   const navigate = useNavigate();
+  const posthog = usePostHog();
   const [step, setStep] = useState<Step>("city");
   const [city, setCity] = useState("Kraków");
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
@@ -251,7 +253,10 @@ export default function TrialModal({ open, onClose }: TrialModalProps) {
   }, [open]);
 
   useEffect(() => {
-    if (open) { setStep("city"); setCity("Kraków"); setSelectedCat(null); setCardIdx(0); setLiked([]); }
+    if (open) {
+      posthog.capture("trial_modal_opened");
+      setStep("city"); setCity("Kraków"); setSelectedCat(null); setCardIdx(0); setLiked([]);
+    }
   }, [open]);
 
   // Selected category places first, rest after — always 10+ cards
@@ -265,9 +270,12 @@ export default function TrialModal({ open, onClose }: TrialModalProps) {
   const isDone = cardIdx >= swipePlaces.length;
 
   const handleLike = useCallback(() => {
-    if (currentCard) setLiked(prev => [...prev, currentCard]);
+    if (currentCard) {
+      setLiked(prev => [...prev, currentCard]);
+      posthog.capture("trial_place_liked", { place_name: currentCard.place_name, category: currentCard.category, city });
+    }
     setCardIdx(i => i + 1);
-  }, [currentCard]);
+  }, [currentCard, city]);
 
   const handleSkip = useCallback(() => setCardIdx(i => i + 1), []);
 
@@ -318,7 +326,7 @@ export default function TrialModal({ open, onClose }: TrialModalProps) {
               <CityDrum city={city} onSelect={setCity} />
             </div>
             <div className="px-5 pb-6 pt-3 shrink-0">
-              <button onClick={() => setStep("categories")} className="w-full h-12 rounded-full font-bold text-white text-base shadow-lg active:scale-95 transition-transform" style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}>
+              <button onClick={() => { posthog.capture("trial_city_selected", { city }); setStep("categories"); }} className="w-full h-12 rounded-full font-bold text-white text-base shadow-lg active:scale-95 transition-transform" style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}>
                 Dalej
               </button>
             </div>
@@ -397,7 +405,7 @@ export default function TrialModal({ open, onClose }: TrialModalProps) {
 
             <div className="px-5 pb-6 pt-4 shrink-0">
               <button
-                onClick={() => setStep("results")}
+                onClick={() => { posthog.capture("trial_results_viewed", { liked_count: liked.length, city, category: selectedCat }); setStep("results"); }}
                 disabled={liked.length === 0}
                 className={`w-full h-12 rounded-full font-bold text-base transition-all active:scale-95 ${liked.length > 0 ? "text-white shadow-lg" : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
                 style={liked.length > 0 ? { background: "linear-gradient(135deg, #F4A259, #F9662B)" } : {}}
@@ -434,7 +442,7 @@ export default function TrialModal({ open, onClose }: TrialModalProps) {
 
             <div className="px-5 pb-6 pt-4 shrink-0 border-t border-slate-100">
               <button
-                onClick={() => navigate("/auth?tab=register")}
+                onClick={() => { posthog.capture("trial_signup_cta_clicked", { liked_count: liked.length, city }); navigate("/auth?tab=register"); }}
                 className="w-full py-3.5 rounded-full font-black text-white text-base shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
                 style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}
               >

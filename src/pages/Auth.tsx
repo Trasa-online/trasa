@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { usePostHog } from "@posthog/react";
 
 type Mode = "login" | "register";
 type BizMode = "login" | "register";
@@ -13,6 +14,7 @@ type BizMode = "login" | "register";
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const { t } = useTranslation("auth");
+  const posthog = usePostHog();
   const [mode, setMode] = useState<Mode>(searchParams.get("tab") === "register" ? "register" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -89,8 +91,10 @@ const Auth = () => {
       });
       if (claimError) throw claimError;
 
+      posthog.capture("business_claim_submitted", { place_name: bizPlace.trim() });
       setBizDone(true);
     } catch (err: any) {
+      posthog.captureException(err);
       toast.error(err.message || "Błąd rejestracji");
     } finally {
       setLoading(false);
@@ -119,6 +123,9 @@ const Auth = () => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+
+      posthog.identify(data.user!.id, { email: data.user!.email });
+      posthog.capture("user_signed_in", { business_mode: businessMode });
 
       // Check for business profile (covers both businessMode and regular login for biz accounts)
       const { data: bp } = await (supabase as any)
@@ -158,6 +165,7 @@ const Auth = () => {
       const returnTo = searchParams.get("return");
       navigate(returnTo || "/home");
     } catch (error: any) {
+      posthog.captureException(error);
       toast.error(error.message || t("errors.login"));
     } finally {
       setLoading(false);
@@ -201,8 +209,10 @@ const Auth = () => {
         return;
       }
       localStorage.removeItem("pending_referral_code");
+      posthog.capture("user_waitlisted", { source: referralCode ? "referral" : "website" });
       setWaitlistDone(true);
     } catch (error: any) {
+      posthog.captureException(error);
       toast.error(error.message || t("errors.register"));
     } finally {
       setLoading(false);
