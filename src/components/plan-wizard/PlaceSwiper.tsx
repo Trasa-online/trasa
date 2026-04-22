@@ -905,8 +905,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     rebalanceQueue(updated);
   };
 
-  const handleLike = (overridePhotoUrl?: string) => {
-    const top = displayQueue[0];
+  const handleLike = (overridePhotoUrl?: string, placeOverride?: MockPlace) => {
+    const top = placeOverride ?? displayQueue[0];
     if (!top) return;
     setHistory(prev => [...prev, { place: top, reaction: "liked" }]);
     setLikedPlaces(prev => [...prev, top]);
@@ -918,6 +918,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (UUID_RE.test(top.id)) {
       posthog.capture("place_added_to_route", { place_id: top.id });
+      posthog.flush();
     }
   };
 
@@ -1302,7 +1303,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         open={detailOpen}
         onOpenChange={setDetailOpen}
         place={detailPlace}
-        onLike={() => { handleLike(); }}
+        onLike={() => { handleLike(undefined, detailPlace ?? undefined); }}
         onSkip={() => { handleSkip(); }}
       />
     </div>
