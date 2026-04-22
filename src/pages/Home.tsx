@@ -299,7 +299,16 @@ const Home = () => {
   if (loading) return null;
 
   return (
-    <div className={`flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto w-full ${isGuest ? "overflow-hidden" : "overflow-y-auto"}`}>
+    <div className={`flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto w-full overflow-y-auto`}>
+
+      {/* ── Maintenance banner ── */}
+      <div className="flex items-start gap-3 mb-5 px-4 py-4 rounded-2xl bg-amber-50 border border-amber-200">
+        <span className="text-xl shrink-0">🔧</span>
+        <div>
+          <p className="text-sm font-bold text-amber-900 leading-snug">Trwa rozbudowa bazy miejsc</p>
+          <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">Aplikacja jest chwilowo niedostępna. Wracamy wkrótce z nowymi miastami i miejscami!</p>
+        </div>
+      </div>
 
       {/* ── Guest banner ── */}
       {isGuest && (

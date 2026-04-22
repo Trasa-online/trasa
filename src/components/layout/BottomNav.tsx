@@ -95,17 +95,14 @@ const BottomNav = () => {
             )}
           </NavLink>
 
-          {/* Center FAB */}
+          {/* Center FAB — disabled during maintenance */}
           <button
-            onClick={() => isGuest ? setShowGuestModal(true) : setShowMenu(!showMenu)}
-            className="flex items-center justify-center"
+            disabled
+            className="flex items-center justify-center cursor-not-allowed"
             aria-label="Dodaj trasę"
           >
-            <span className="h-10 w-10 rounded-full bg-primary flex items-center justify-center active:scale-95 transition-transform">
-              {showMenu
-                ? <X className="h-5 w-5 text-white stroke-[2.5px]" />
-                : <Plus className="h-5 w-5 text-white stroke-[2.5px]" />
-              }
+            <span className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+              <Plus className="h-5 w-5 text-muted-foreground/40 stroke-[2.5px]" />
             </span>
           </button>
 
