@@ -19,6 +19,9 @@ if (getConsent() === "granted" && typeof (window as any)._clarityInit === "funct
 posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN, {
   api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
   defaults: "2026-01-30",
+  autocapture: true,
+  capture_pageview: true,
+  capture_pageleave: true,
 });
 
 // ─── Sentry error tracking ────────────────────────────────────────────────────
