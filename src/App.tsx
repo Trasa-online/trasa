@@ -117,7 +117,7 @@ function SplashController() {
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>;
-  if (!user) return <Navigate to="/" replace />;
+  if (!user) return <Navigate to="/auth" replace />;
   return <>{children}</>;
 }
 
@@ -193,7 +193,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/" element={<RootPage />} />
-          <Route path="/home" element={<AppLayout><Home /></AppLayout>} />
+          <Route path="/home" element={<RequireAuth><AppLayout><Home /></AppLayout></RequireAuth>} />
           <Route path="/create" element={<RequireAuth><CreateRoute /></RequireAuth>} />
           <Route path="/my-routes" element={<RequireAuth><AppLayout><MyRoutes /></AppLayout></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
