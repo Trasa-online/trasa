@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -262,6 +263,10 @@ const BusinessDashboard = () => {
     // All businesses get premium access
     setPlan('premium');
     setBusinessName(profileData.business_name ?? "");
+
+    // Identify user and group by business in PostHog
+    posthog.identify(user.id, { email: user.email });
+    posthog.group("business", profileData.id, { name: profileData.business_name ?? "Bez nazwy", place_id: placeId });
     setPhone(profileData.phone ?? "");
     setEmail(profileData.email ?? "");
     setWebsite(profileData.website ?? "");
