@@ -4,7 +4,7 @@ import * as Sentry from "@sentry/react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import posthog from "posthog-js";
-import { PostHogProvider, PostHogErrorBoundary } from "@posthog/react";
+import { PostHogProvider } from "@posthog/react";
 import App from "./App.tsx";
 import "./index.css";
 import "./i18n";
@@ -47,11 +47,9 @@ if (import.meta.env.PROD) {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <PostHogProvider client={posthog}>
-      <PostHogErrorBoundary>
-        <App />
-        <Analytics />
-        <SpeedInsights />
-      </PostHogErrorBoundary>
+      <App />
+      <Analytics />
+      <SpeedInsights />
     </PostHogProvider>
   </StrictMode>
 );

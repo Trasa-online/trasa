@@ -301,13 +301,11 @@ const BusinessDashboard = () => {
       setShowVerifiedBanner(true);
     }
 
-    const { data: recentEventsData } = await (supabase as any)
-      .from("place_events")
-      .select("event_type, created_at")
-      .eq("place_id", placeId)
-      .order("created_at", { ascending: false })
-      .limit(8);
-    if (recentEventsData) setRecentEvents(recentEventsData);
+    // Fetch recent events from PostHog
+    const { data: phRecent } = await supabase.functions.invoke("posthog-analytics", {
+      body: { place_id: placeId, range_days: 90, include_recent: true },
+    });
+    if (phRecent?.recentEvents) setRecentEvents(phRecent.recentEvents);
 
     const { from, to } = rangeFromPreset('30d');
     await loadAnalytics(placeId, from, to);
