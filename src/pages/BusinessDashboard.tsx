@@ -1090,7 +1090,7 @@ const BusinessDashboard = () => {
 
                 {/* Podkategoria */}
                 {mainCategory && (
-                  <div>
+                  <div className="pt-2 border-t border-border/40">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Podkategoria</p>
                     <div className="flex flex-wrap gap-2">
                       {(MAIN_CATEGORIES.find(c => c.id === mainCategory)?.subcategories ?? []).map(sub => {
@@ -1105,18 +1105,26 @@ const BusinessDashboard = () => {
                       })}
                     </div>
                     {/* Własna podkategoria */}
-                    <div className="mt-3 space-y-1.5">
-                      <p className="text-[11px] text-muted-foreground">Nie widzisz swojej? Zaproponuj własną — sprawdzimy i dodamy.</p>
+                    <div className="mt-4 p-3 rounded-xl bg-muted/50 border border-border/40 space-y-2">
+                      <p className="text-[11px] text-muted-foreground leading-snug">Nie widzisz swojej? Zaproponuj własną — sprawdzimy i dodamy.</p>
                       <div className="flex gap-2 items-center">
                         <input
                           value={customSubcategory}
-                          onChange={e => { setCustomSubcategory(e.target.value); setIsDirty(true); }}
+                          onChange={e => { setCustomSubcategory(e.target.value); setCustomSubcategoryStatus(null); setIsDirty(true); }}
                           maxLength={40}
                           placeholder="np. Browar rzemieślniczy..."
                           className="flex-1 rounded-xl border border-input bg-background px-3 py-1.5 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         />
+                        <button
+                          type="button"
+                          disabled={!customSubcategory.trim() || customSubcategoryStatus === 'pending' || customSubcategoryStatus === 'approved'}
+                          onClick={() => { if (customSubcategory.trim()) { setCustomSubcategoryStatus('pending'); setIsDirty(true); } }}
+                          className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold bg-primary text-white disabled:opacity-40 transition-opacity"
+                        >
+                          Zaproponuj
+                        </button>
                       </div>
-                      {customSubcategory.trim() && (
+                      {customSubcategoryStatus && (
                         <p className={`text-[11px] font-medium ${
                           customSubcategoryStatus === 'approved' ? 'text-green-600' :
                           customSubcategoryStatus === 'rejected' ? 'text-red-500' :
@@ -1124,7 +1132,7 @@ const BusinessDashboard = () => {
                         }`}>
                           {customSubcategoryStatus === 'approved' ? '✓ Zatwierdzona' :
                            customSubcategoryStatus === 'rejected' ? '✗ Odrzucona — zmień propozycję' :
-                           '⏳ Oczekuje na akceptację'}
+                           '⏳ Propozycja wysłana — oczekuje na akceptację'}
                         </p>
                       )}
                     </div>
@@ -1132,7 +1140,7 @@ const BusinessDashboard = () => {
                 )}
 
                 {/* Tagi wizytówki */}
-                <div>
+                <div className="pt-2 border-t border-border/40">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Tagi wizytówki <span className="normal-case font-normal">(max 3, widoczne na karcie w aplikacji)</span></p>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {(tagsExpanded ? VIBE_TAG_SUGGESTIONS : VIBE_TAG_SUGGESTIONS.slice(0, 4)).map(tag => {
@@ -1183,10 +1191,12 @@ const BusinessDashboard = () => {
                     </div>
                   )}
                 </div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Opis</p>
-                <div className="space-y-1">
-                  <textarea rows={3} value={description} maxLength={500} onChange={e => { setDescription(e.target.value); setIsDirty(true); }} placeholder="Opisz swój lokal..." className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
-                  <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
+                <div className="pt-2 border-t border-border/40">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Opis</p>
+                  <div className="space-y-1">
+                    <textarea rows={3} value={description} maxLength={500} onChange={e => { setDescription(e.target.value); setIsDirty(true); }} placeholder="Opisz swój lokal..." className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                    <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
+                  </div>
                 </div>
               </div>
             </div>
