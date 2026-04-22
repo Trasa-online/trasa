@@ -301,14 +301,17 @@ const BusinessDashboard = () => {
       setShowVerifiedBanner(true);
     }
 
+    // Use places.id for PostHog queries — events are tracked with places.id, not business_profiles.id
+    const analyticsPlaceId = profileData.place_id ?? placeId;
+
     // Fetch recent events from PostHog
     const { data: phRecent } = await supabase.functions.invoke("posthog-analytics", {
-      body: { place_id: placeId, range_days: 90, include_recent: true },
+      body: { place_id: analyticsPlaceId, range_days: 90, include_recent: true },
     });
     if (phRecent?.recentEvents) setRecentEvents(phRecent.recentEvents);
 
     const { from, to } = rangeFromPreset('30d');
-    await loadAnalytics(placeId, from, to);
+    await loadAnalytics(analyticsPlaceId, from, to);
 
     // Fetch posts
     const { data: postsData } = await (supabase as any)
@@ -376,12 +379,13 @@ const BusinessDashboard = () => {
 
   useEffect(() => {
     if (!placeId || !profile) return;
+    const analyticsPlaceId = profile.place_id ?? placeId;
     if (analyticsRange === 'custom') {
       if (!customDateRange?.from) return;
-      loadAnalytics(placeId, startOfDay(customDateRange.from), endOfDay(customDateRange.to ?? customDateRange.from));
+      loadAnalytics(analyticsPlaceId, startOfDay(customDateRange.from), endOfDay(customDateRange.to ?? customDateRange.from));
     } else {
       const { from, to } = rangeFromPreset(analyticsRange);
-      loadAnalytics(placeId, from, to);
+      loadAnalytics(analyticsPlaceId, from, to);
     }
   }, [analyticsRange, customDateRange, placeId, profile, loadAnalytics]);
 
