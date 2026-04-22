@@ -149,6 +149,7 @@ const BusinessDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
+  const analyticsRequestId = useRef(0);
   const [placeCategory, setPlaceCategory] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats>({ views: 0, onRoutes: 0, websiteClicks: 0, phoneClicks: 0, uniqueChoices: 0 });
   const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>('30d');
@@ -310,8 +311,7 @@ const BusinessDashboard = () => {
     });
     if (phRecent?.recentEvents) setRecentEvents(phRecent.recentEvents);
 
-    const { from, to } = rangeFromPreset('30d');
-    await loadAnalytics(analyticsPlaceId, from, to);
+    // loadAnalytics is triggered by useEffect when profile state updates
 
     // Fetch posts
     const { data: postsData } = await (supabase as any)
@@ -329,6 +329,7 @@ const BusinessDashboard = () => {
   });
 
   const loadAnalytics = useCallback(async (pid: string, from: Date, to: Date) => {
+    const reqId = ++analyticsRequestId.current;
     setAnalyticsLoading(true);
     const rangeDays = differenceInCalendarDays(to, from) + 1;
 
@@ -336,6 +337,9 @@ const BusinessDashboard = () => {
     const { data: phData, error: phError } = await supabase.functions.invoke("posthog-analytics", {
       body: { place_id: pid, range_days: rangeDays },
     });
+
+    // Ignore stale responses (user switched range while request was in flight)
+    if (reqId !== analyticsRequestId.current) return;
 
     if (phData && !phError) {
       setStats({
