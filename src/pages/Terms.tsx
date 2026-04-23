@@ -136,10 +136,7 @@ const Terms = () => {
             Aplikacja korzysta z narzędzi analitycznych wyłącznie po udzieleniu przez Ciebie wyraźnej zgody.
           </p>
           <p className="text-muted-foreground mt-2">
-            <strong>Google Analytics 4</strong> — analiza ruchu: anonimizowane adresy IP, odwiedzane podstrony, czas trwania sesji, typ urządzenia.
-          </p>
-          <p className="text-muted-foreground mt-2">
-            <strong>Microsoft Clarity</strong> — nagrania sesji i mapy ciepła (heatmaps), obejmujące kliknięcia, przewijanie i interakcje z interfejsem.
+            <strong>PostHog</strong> — analiza ruchu i zachowań użytkowników: odwiedzane podstrony, czas trwania sesji, typ urządzenia, interakcje z interfejsem.
           </p>
           <p className="text-muted-foreground mt-2">
             Dane mogą być przekazywane poza Europejski Obszar Gospodarczy (np. do USA) na podstawie standardowych klauzul umownych oraz odpowiednich mechanizmów zgodnych z RODO.
@@ -156,8 +153,7 @@ const Terms = () => {
             <li>Supabase — baza danych i uwierzytelnianie</li>
             <li>Google Gemini — przetwarzanie zapytań AI</li>
             <li>Google Maps / Google Places API — mapy i wyszukiwanie miejsc</li>
-            <li>Google Analytics 4 — analiza ruchu</li>
-            <li>Microsoft Clarity — analiza zachowań użytkowników</li>
+            <li>PostHog — analiza ruchu i zachowań użytkowników</li>
           </ul>
           <p className="text-muted-foreground mt-2">
             Dane są przekazywane wyłącznie w zakresie niezbędnym do działania Aplikacji.
