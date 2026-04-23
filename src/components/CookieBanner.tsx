@@ -35,26 +35,27 @@ const CookieBanner = () => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[60] p-4 bg-card border-t border-border/60 shadow-lg">
-      <div className="max-w-lg mx-auto space-y-3">
-        <p className="text-sm text-foreground leading-relaxed">
-          Używamy plików cookies do analizy ruchu (Google Analytics) oraz nagrań sesji (Microsoft Clarity), żeby lepiej rozumieć jak korzystasz z aplikacji.{" "}
-          <Link to="/terms" className="underline text-muted-foreground hover:text-foreground">
+    <div className="fixed bottom-4 left-0 right-0 z-[60] flex justify-center px-4">
+      <div className="bg-[#1a1a1a] rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3 max-w-md w-full">
+        <span className="text-xl shrink-0">🍪</span>
+        <p className="text-xs text-white/70 leading-snug flex-1">
+          Używamy cookies do analizy ruchu.{" "}
+          <Link to="/terms" className="text-white/50 underline hover:text-white/80 transition-colors">
             Polityka prywatności
           </Link>
         </p>
-        <div className="flex gap-2">
-          <button
-            onClick={handleGrant}
-            className="flex-1 py-2.5 rounded-xl bg-foreground text-background text-sm font-semibold"
-          >
-            Akceptuję
-          </button>
+        <div className="flex gap-1.5 shrink-0">
           <button
             onClick={handleDeny}
-            className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground bg-card"
+            className="px-3 py-1.5 rounded-xl border border-white/20 text-white/60 text-xs font-medium hover:border-white/40 hover:text-white/80 transition-colors"
           >
-            Tylko niezbędne
+            Niezbędne
+          </button>
+          <button
+            onClick={handleGrant}
+            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white text-xs font-bold shadow-md transition-opacity hover:opacity-90"
+          >
+            OK
           </button>
         </div>
       </div>
