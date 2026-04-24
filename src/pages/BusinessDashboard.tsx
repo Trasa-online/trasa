@@ -453,7 +453,14 @@ const BusinessDashboard = () => {
     }
     setUploading("cover_video");
     try {
-      const url = await uploadFile(file, "cover_video");
+      const ext = file.name.split(".").pop() ?? "mp4";
+      const folder_key = profile?.id ?? placeId;
+      const path = `${folder_key}/cover_video/${Date.now()}.${ext}`;
+      const { data, error } = await supabase.storage
+        .from("business-photos")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (error) throw new Error(error.message);
+      const url = supabase.storage.from("business-photos").getPublicUrl(data.path).data.publicUrl;
       setCoverVideoUrl(url);
       setIsDirty(true);
     } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać filmiku"); }
