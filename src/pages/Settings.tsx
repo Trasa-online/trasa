@@ -533,4 +533,34 @@ const Settings = () => {
   );
 };
 
-export default Settings;
+import { Component, ErrorInfo, ReactNode } from "react";
+
+class SettingsErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[Settings] render error:", error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="p-6 text-sm text-red-600 bg-red-50 m-4 rounded-2xl border border-red-200">
+          <p className="font-bold mb-2">Błąd renderowania Settings:</p>
+          <pre className="whitespace-pre-wrap text-xs">{String(this.state.error)}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function SettingsPage() {
+  return (
+    <SettingsErrorBoundary>
+      <Settings />
+    </SettingsErrorBoundary>
+  );
+}
