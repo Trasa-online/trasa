@@ -6,7 +6,7 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play } from "lucide-react";
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -177,6 +177,7 @@ const BusinessDashboard = () => {
   const [description, setDescription] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
+  const [coverVideoUrl, setCoverVideoUrl] = useState("");
   const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
   const [eventTitle, setEventTitle] = useState("");
   const [eventDescription, setEventDescription] = useState("");
@@ -214,6 +215,7 @@ const BusinessDashboard = () => {
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const coverVideoInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const postPhotoInputRef = useRef<HTMLInputElement>(null);
 
@@ -282,6 +284,7 @@ const BusinessDashboard = () => {
     setDescription(profileData.description ?? "");
     setLogoUrl(profileData.logo_url ?? "");
     setCoverImageUrl(profileData.cover_image_url ?? "");
+    setCoverVideoUrl((profileData as any).cover_video_url ?? "");
     setGalleryUrls(profileData.gallery_urls ?? []);
     setEventTitle(profileData.event_title ?? "");
     setEventDescription(profileData.event_description ?? "");
@@ -432,6 +435,32 @@ const BusinessDashboard = () => {
     setUploading(null);
   };
 
+  const handleCoverVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // validate duration
+    const duration = await new Promise<number>((resolve, reject) => {
+      const vid = document.createElement("video");
+      vid.preload = "metadata";
+      vid.onloadedmetadata = () => { URL.revokeObjectURL(vid.src); resolve(vid.duration); };
+      vid.onerror = reject;
+      vid.src = URL.createObjectURL(file);
+    }).catch(() => Infinity);
+    if (duration > 7.5) {
+      toast.error("Filmik może mieć maksymalnie 7 sekund");
+      e.target.value = "";
+      return;
+    }
+    setUploading("cover_video");
+    try {
+      const url = await uploadFile(file, "cover_video");
+      setCoverVideoUrl(url);
+      setIsDirty(true);
+    } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać filmiku"); }
+    setUploading(null);
+    e.target.value = "";
+  };
+
   const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -528,6 +557,7 @@ const BusinessDashboard = () => {
         description: description || null,
         logo_url: logoUrl || null,
         cover_image_url: coverImageUrl || null,
+        cover_video_url: coverVideoUrl || null,
         gallery_urls: galleryUrls,
         event_title: eventTitle || null,
         event_description: eventDescription || null,
@@ -939,6 +969,66 @@ const BusinessDashboard = () => {
                         </div>
                         <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
                       </div>
+                    </div>
+
+                    {/* Cover video */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-xs font-medium">Filmik okładkowy</p>
+                        <span className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">max 7 sek.</span>
+                      </div>
+                      <div
+                        className="relative w-full rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group cursor-pointer"
+                        style={{ aspectRatio: "16/7" }}
+                        onClick={() => coverVideoInputRef.current?.click()}
+                      >
+                        {uploading === "cover_video" ? (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                            <span className="text-xs">Przesyłanie…</span>
+                          </div>
+                        ) : coverVideoUrl ? (
+                          <>
+                            <video
+                              src={coverVideoUrl}
+                              className="w-full h-full object-cover"
+                              autoPlay
+                              loop
+                              muted
+                              playsInline
+                            />
+                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
+                              <div className="flex flex-col items-center gap-1 text-white">
+                                <Video className="h-5 w-5" />
+                                <span className="text-xs font-semibold">Zmień filmik</span>
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setCoverVideoUrl(""); setIsDirty(true); }}
+                              className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center z-10"
+                            >
+                              <X className="h-3 w-3 text-white" />
+                            </button>
+                          </>
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                              <Play className="h-5 w-5 ml-0.5" />
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs font-semibold">Dodaj filmik okładkowy</p>
+                              <p className="text-[10px] mt-0.5 text-muted-foreground/70">MP4, MOV · max 7 sekund</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <input
+                        ref={coverVideoInputRef}
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={handleCoverVideoUpload}
+                      />
                     </div>
 
                     {/* Gallery — full width below */}
