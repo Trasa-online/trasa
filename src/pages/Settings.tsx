@@ -404,7 +404,7 @@ const Settings = () => {
     setAvatarUrl(publicUrl);
   };
 
-  if (loading || !user) return null;
+  if (!user) return null;
 
   const displayName = firstName || username || "";
 
