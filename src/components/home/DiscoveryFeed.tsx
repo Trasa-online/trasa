@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 type DiscoveryItem = {
@@ -10,8 +10,8 @@ type DiscoveryItem = {
   place_name: string;
   short_desc: string | null;
   photo_url: string | null;
-  latitude: number | null;
-  longitude: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 type DiscoveryCollection = {
@@ -24,7 +24,15 @@ type DiscoveryCollection = {
   items: DiscoveryItem[];
 };
 
-// ── Leaflet map HTML ───────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+const PLACEHOLDER_GRADIENTS = [
+  "from-amber-200 to-orange-300",
+  "from-rose-200 to-pink-300",
+  "from-sky-200 to-blue-300",
+  "from-emerald-200 to-teal-300",
+  "from-violet-200 to-purple-300",
+];
 
 function buildLeafletHtml(items: DiscoveryItem[]) {
   const pins = items
@@ -52,24 +60,45 @@ function AuthorChip({ name, avatar }: { name: string; avatar: string | null }) {
   );
 }
 
+function PlacePhoto({
+  item,
+  className,
+  placeholderIdx = 0,
+}: {
+  item: DiscoveryItem;
+  className?: string;
+  placeholderIdx?: number;
+}) {
+  const gradient = PLACEHOLDER_GRADIENTS[placeholderIdx % PLACEHOLDER_GRADIENTS.length];
+  return item.photo_url ? (
+    <img src={item.photo_url} alt={item.place_name} className={`object-cover ${className ?? ""}`} loading="lazy" />
+  ) : (
+    <div className={`bg-gradient-to-br ${gradient} flex items-center justify-center ${className ?? ""}`}>
+      <span className="text-2xl opacity-60">📍</span>
+    </div>
+  );
+}
+
 function PhotoGrid({ items }: { items: DiscoveryItem[] }) {
-  const photos = items.filter((i) => i.photo_url).slice(0, 3);
-  if (photos.length === 0) return null;
-  const [main, ...rest] = photos;
+  const displayItems = items.slice(0, 3);
+  if (displayItems.length === 0) return null;
+  const [main, ...rest] = displayItems;
 
   return (
     <div className="flex gap-1 h-40 overflow-hidden">
+      {/* Big photo — left 2/3 */}
       <div className="relative flex-[2] min-w-0 overflow-hidden rounded-l-xl">
-        <img src={main.photo_url!} alt={main.place_name} className="w-full h-full object-cover" loading="lazy" />
+        <PlacePhoto item={main} placeholderIdx={0} className="w-full h-full" />
         <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 bg-gradient-to-t from-black/60 to-transparent">
           <p className="text-white text-[10px] font-semibold leading-tight line-clamp-1">{main.place_name}</p>
         </div>
       </div>
+      {/* Side photos — right 1/3 stacked */}
       {rest.length > 0 && (
         <div className="flex-1 min-w-0 flex flex-col gap-1">
           {rest.slice(0, 2).map((item, idx) => (
             <div key={item.id} className={`relative flex-1 overflow-hidden ${idx === 0 ? "rounded-tr-xl" : "rounded-br-xl"}`}>
-              <img src={item.photo_url!} alt={item.place_name} className="w-full h-full object-cover" loading="lazy" />
+              <PlacePhoto item={item} placeholderIdx={idx + 1} className="w-full h-full" />
               <div className="absolute bottom-0 left-0 right-0 px-1.5 py-1 bg-gradient-to-t from-black/60 to-transparent">
                 <p className="text-white text-[9px] font-semibold leading-tight line-clamp-1">{item.place_name}</p>
               </div>
@@ -118,31 +147,23 @@ function CollectionCard({ col, onOpen }: { col: DiscoveryCollection; onOpen: () 
 
 // ── Detail sheet ───────────────────────────────────────────────────────────────
 
-function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose: () => void }) {
+function CollectionDetail({ col }: { col: DiscoveryCollection }) {
   const leafletHtml = buildLeafletHtml(col.items);
   const hasPins = col.items.some((i) => i.latitude && i.longitude);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-border/20 shrink-0">
-        <button
-          onClick={onClose}
-          className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-90 transition-transform shrink-0"
-        >
-          <X className="h-4 w-4" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-base leading-tight line-clamp-1">{col.title}</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <AuthorChip name={col.author_name} avatar={col.author_avatar} />
-            {col.city && (
-              <>
-                <span className="text-muted-foreground/40 text-xs">·</span>
-                <span className="text-xs text-muted-foreground">{col.city}</span>
-              </>
-            )}
-          </div>
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header — sits below the SheetContent's built-in close button */}
+      <div className="px-4 pt-5 pb-3 border-b border-border/20 shrink-0">
+        <p className="font-bold text-base leading-tight line-clamp-2 pr-8">{col.title}</p>
+        <div className="flex items-center gap-2 mt-1">
+          <AuthorChip name={col.author_name} avatar={col.author_avatar} />
+          {col.city && (
+            <>
+              <span className="text-muted-foreground/40 text-xs">·</span>
+              <span className="text-xs text-muted-foreground">{col.city}</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -153,28 +174,19 @@ function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose:
         </div>
       )}
 
-      {/* Place list — scrollable */}
+      {/* Scrollable place list */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {col.description && (
           <p className="text-sm text-muted-foreground leading-relaxed">{col.description}</p>
         )}
         {col.items.map((item, idx) => (
           <div key={item.id} className="space-y-2">
-            {/* Photo */}
-            {item.photo_url && (
-              <div className="relative rounded-2xl overflow-hidden h-44">
-                <img
-                  src={item.photo_url}
-                  alt={item.place_name}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-                <div className="absolute top-2.5 left-2.5 h-7 w-7 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shadow-md">
-                  <span className="text-white text-[11px] font-black">{idx + 1}</span>
-                </div>
+            <div className="relative rounded-2xl overflow-hidden h-44">
+              <PlacePhoto item={item} placeholderIdx={idx} className="w-full h-full" />
+              <div className="absolute top-2.5 left-2.5 h-7 w-7 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shadow-md">
+                <span className="text-white text-[11px] font-black">{idx + 1}</span>
               </div>
-            )}
-            {/* Text */}
+            </div>
             <div className="px-0.5">
               <p className="font-bold text-sm leading-snug">{item.place_name}</p>
               {item.short_desc && (
@@ -183,7 +195,6 @@ function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose:
             </div>
           </div>
         ))}
-        {/* Bottom padding for safe area */}
         <div className="h-4" />
       </div>
     </div>
@@ -213,24 +224,46 @@ export default function DiscoveryFeed() {
   const { data: collections = [], isLoading } = useQuery({
     queryKey: ["discovery-collections"],
     queryFn: async () => {
-      const { data: cols } = await (supabase as any)
+      // 1. Fetch collections
+      const { data: cols, error: colsErr } = await (supabase as any)
         .from("discovery_collections")
         .select("id, title, city, description, author_name, author_avatar")
         .eq("is_public", true)
         .order("created_at", { ascending: false })
         .limit(10);
-      if (!cols?.length) return [];
+      if (colsErr || !cols?.length) return [];
 
       const ids = cols.map((c: any) => c.id);
+
+      // 2. Fetch items — without lat/lng to avoid errors if migration not yet applied
       const { data: items } = await (supabase as any)
         .from("discovery_items")
-        .select("id, collection_id, order_index, place_name, short_desc, photo_url, latitude, longitude")
+        .select("id, collection_id, order_index, place_name, short_desc, photo_url")
         .in("collection_id", ids)
         .order("order_index", { ascending: true });
 
+      // 3. Try to fetch lat/lng separately (optional — ignored if columns don't exist)
+      const coordMap = new Map<string, { latitude: number; longitude: number }>();
+      try {
+        const { data: coords, error: coordErr } = await (supabase as any)
+          .from("discovery_items")
+          .select("id, latitude, longitude")
+          .in("collection_id", ids)
+          .not("latitude", "is", null);
+        if (!coordErr && coords) {
+          for (const c of coords) {
+            if (c.latitude && c.longitude) coordMap.set(c.id, { latitude: c.latitude, longitude: c.longitude });
+          }
+        }
+      } catch {
+        // lat/lng columns not yet available — map will be hidden
+      }
+
       return cols.map((col: any): DiscoveryCollection => ({
         ...col,
-        items: (items ?? []).filter((i: any) => i.collection_id === col.id),
+        items: (items ?? [])
+          .filter((i: any) => i.collection_id === col.id)
+          .map((i: any) => ({ ...i, ...coordMap.get(i.id) })),
       }));
     },
     staleTime: 5 * 60 * 1000,
@@ -249,25 +282,22 @@ export default function DiscoveryFeed() {
 
   return (
     <>
-      {/* Horizontal carousel — bleeds past parent padding */}
+      {/* Horizontal carousel */}
       <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mx-4 px-4 pb-1">
         {collections.map((col) => (
           <CollectionCard key={col.id} col={col} onOpen={() => setActiveCol(col)} />
         ))}
-        {/* Trailing spacer so last card doesn't stick to edge */}
         <div className="shrink-0 w-2" />
       </div>
 
-      {/* Detail sheet */}
+      {/* Detail sheet — hide SheetContent's built-in X since we rely on the drag handle / overlay to close */}
       <Sheet open={!!activeCol} onOpenChange={(open) => { if (!open) setActiveCol(null); }}>
         <SheetContent
           side="bottom"
-          className="rounded-t-2xl p-0 flex flex-col"
+          className="rounded-t-2xl p-0 [&>button:last-child]:hidden"
           style={{ maxHeight: "92vh", height: "92vh" }}
         >
-          {activeCol && (
-            <CollectionDetail col={activeCol} onClose={() => setActiveCol(null)} />
-          )}
+          {activeCol && <CollectionDetail col={activeCol} />}
         </SheetContent>
       </Sheet>
     </>

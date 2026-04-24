@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ArrowRight, CalendarDays, ArrowLeft, CheckCircle, Sparkles, Trash2, Link2, X } from "lucide-react";
+import { Users, ArrowRight, CalendarDays, ArrowLeft, CheckCircle, Sparkles, Trash2, Link2 } from "lucide-react";
 import { parseISO, isValid, format, formatDistanceToNow, startOfToday, differenceInDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useState } from "react";
@@ -482,12 +482,6 @@ const Home = () => {
               <p className="font-bold text-base">Dołącz do sesji</p>
               <p className="text-xs text-muted-foreground mt-0.5">Wpisz kod sesji otrzymany od znajomych</p>
             </div>
-            <button
-              onClick={() => setShowJoinSheet(false)}
-              className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-90 transition-transform shrink-0"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
 
           <div className="flex-1 px-4 py-5">
