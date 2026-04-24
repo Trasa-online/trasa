@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin } from "lucide-react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { MapPin, X } from "lucide-react";
+import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 
 type DiscoveryItem = {
   id: string;
@@ -153,18 +153,23 @@ function CollectionDetail({ col }: { col: DiscoveryCollection }) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header — sits below the SheetContent's built-in close button */}
-      <div className="px-4 pt-5 pb-3 border-b border-border/20 shrink-0">
-        <p className="font-bold text-base leading-tight line-clamp-2 pr-8">{col.title}</p>
-        <div className="flex items-center gap-2 mt-1">
-          <AuthorChip name={col.author_name} avatar={col.author_avatar} />
-          {col.city && (
-            <>
-              <span className="text-muted-foreground/40 text-xs">·</span>
-              <span className="text-xs text-muted-foreground">{col.city}</span>
-            </>
-          )}
+      {/* Header */}
+      <div className="flex items-start gap-3 px-4 pt-4 pb-3 border-b border-border/20 shrink-0">
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-base leading-tight line-clamp-2">{col.title}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <AuthorChip name={col.author_name} avatar={col.author_avatar} />
+            {col.city && (
+              <>
+                <span className="text-muted-foreground/40 text-xs">·</span>
+                <span className="text-xs text-muted-foreground">{col.city}</span>
+              </>
+            )}
+          </div>
         </div>
+        <SheetClose className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-90 transition-transform shrink-0 mt-0.5">
+          <X className="h-4 w-4" />
+        </SheetClose>
       </div>
 
       {/* Map */}
