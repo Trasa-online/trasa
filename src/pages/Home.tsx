@@ -2,13 +2,14 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ArrowRight, CalendarDays, ArrowLeft, CheckCircle, Sparkles, Trash2 } from "lucide-react";
+import { Users, ArrowRight, CalendarDays, ArrowLeft, CheckCircle, Sparkles, Trash2, Link2, X } from "lucide-react";
 import { parseISO, isValid, format, formatDistanceToNow, startOfToday, differenceInDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
+import DiscoveryBanner from "@/components/home/DiscoveryBanner";
 import HomeTour, { useHomeTour } from "@/components/home/HomeTour";
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -154,6 +155,8 @@ const Home = () => {
   const { showTour, dismissTour } = useHomeTour(isGuest);
   const queryClient = useQueryClient();
   const [previewSessionId, setPreviewSessionId] = useState<string | null>(null);
+  const [showJoinSheet, setShowJoinSheet] = useState(false);
+  const [joinCodeInput, setJoinCodeInput] = useState("");
 
   const { data: isAdmin = false } = useQuery({
     queryKey: ["is-admin", user?.id],
@@ -336,6 +339,21 @@ const Home = () => {
         </button>
       )}
 
+      {/* ── Join session button ── */}
+      <button
+        onClick={() => { setJoinCodeInput(""); setShowJoinSheet(true); }}
+        className="w-full flex items-center gap-3 mb-5 px-4 py-3.5 rounded-2xl bg-card border border-border/50 active:scale-[0.98] transition-transform text-left"
+      >
+        <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
+          <Link2 className="h-5 w-5 text-orange-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold">Dołącz do sesji</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Wpisz kod od znajomych</p>
+        </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+      </button>
+
       {/* ── Personal section ── */}
       {hasPersonalContent && (
         <div className="space-y-3 mb-8">
@@ -447,6 +465,66 @@ const Home = () => {
           )}
         </div>
       )}
+
+      {/* ── Discovery section ── */}
+      <div className="mb-8">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-3">
+          Odkrywaj
+        </p>
+        <DiscoveryBanner />
+      </div>
+
+      {/* ── Join session sheet ── */}
+      <Sheet open={showJoinSheet} onOpenChange={setShowJoinSheet}>
+        <SheetContent side="bottom" className="rounded-t-2xl flex flex-col p-0" style={{ maxHeight: "50vh" }}>
+          <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-border/20 shrink-0">
+            <div className="flex-1">
+              <p className="font-bold text-base">Dołącz do sesji</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Wpisz kod sesji otrzymany od znajomych</p>
+            </div>
+            <button
+              onClick={() => setShowJoinSheet(false)}
+              className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-90 transition-transform shrink-0"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="flex-1 px-4 py-5">
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              Numer sesji
+            </label>
+            <input
+              type="text"
+              value={joinCodeInput}
+              onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && joinCodeInput.trim()) {
+                  setShowJoinSheet(false);
+                  navigate(`/sesja/${joinCodeInput.trim()}`);
+                }
+              }}
+              placeholder="np. ABC123"
+              maxLength={10}
+              autoFocus
+              className="w-full px-4 py-3.5 rounded-2xl border border-border bg-muted/40 text-base font-mono font-semibold tracking-widest text-center placeholder:text-muted-foreground/50 placeholder:font-normal placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition-colors"
+            />
+          </div>
+
+          <div className="px-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] shrink-0">
+            <button
+              disabled={!joinCodeInput.trim()}
+              onClick={() => {
+                setShowJoinSheet(false);
+                navigate(`/sesja/${joinCodeInput.trim()}`);
+              }}
+              className="w-full py-3.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-[0.97] transition-transform disabled:opacity-40 disabled:pointer-events-none shadow-md shadow-orange-500/20"
+            >
+              Dołącz →
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* ── Session preview sheet ── */}
       {(() => {
