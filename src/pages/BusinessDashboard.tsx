@@ -6,7 +6,7 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera } from "lucide-react";
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -468,6 +468,50 @@ const BusinessDashboard = () => {
     e.target.value = "";
   };
 
+  const handleCoverMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const isVideo = file.type.startsWith("video/");
+    if (isVideo) {
+      const duration = await new Promise<number>((resolve) => {
+        const vid = document.createElement("video");
+        vid.preload = "metadata";
+        vid.onloadedmetadata = () => { URL.revokeObjectURL(vid.src); resolve(vid.duration); };
+        vid.onerror = () => resolve(Infinity);
+        vid.src = URL.createObjectURL(file);
+      });
+      if (duration > 7.5) {
+        toast.error("Filmik może mieć maksymalnie 7 sekund");
+        e.target.value = "";
+        return;
+      }
+      setUploading("cover_video");
+      try {
+        const ext = file.name.split(".").pop() ?? "mp4";
+        const folder_key = profile?.id ?? placeId;
+        const path = `${folder_key}/cover_video/${Date.now()}.${ext}`;
+        const { data, error } = await supabase.storage
+          .from("business-photos")
+          .upload(path, file, { upsert: true, contentType: file.type });
+        if (error) throw new Error(error.message);
+        const url = supabase.storage.from("business-photos").getPublicUrl(data.path).data.publicUrl;
+        setCoverVideoUrl(url);
+        setCoverImageUrl("");
+        setIsDirty(true);
+      } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać filmiku"); }
+    } else {
+      setUploading("cover");
+      try {
+        const url = await uploadFile(file, "cover");
+        setCoverImageUrl(url);
+        setCoverVideoUrl("");
+        setIsDirty(true);
+      } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać okładki"); }
+    }
+    setUploading(null);
+    e.target.value = "";
+  };
+
   const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -650,7 +694,7 @@ const BusinessDashboard = () => {
   );
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-slate-50 overflow-x-hidden">
 
       {/* ── Sidebar (desktop only) ── */}
       <aside className={`hidden md:flex shrink-0 flex-col fixed h-full bg-white border-r border-slate-100 py-5 z-20 transition-all duration-200 ${sidebarOpen ? 'w-56 px-3' : 'w-14 px-2'}`}>
@@ -926,82 +970,31 @@ const BusinessDashboard = () => {
             <div className="space-y-4">
               <div>
                 <h2 className="text-lg font-black">Galeria zdjęć</h2>
-                <p className="text-sm text-slate-400">Logo, zdjęcie główne, filmik i galeria widoczne na Twojej wizytówce.</p>
+                <p className="text-sm text-slate-400">Okładka i galeria dodatkowa widoczne na Twojej wizytówce.</p>
               </div>
 
-              {/* ── SEKCJA 1: Logo + Zdjęcie główne ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-3">
-                <p className="text-sm font-bold text-foreground">Identyfikacja wizualna</p>
-                <div className="grid grid-cols-2 gap-4 max-w-xs">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1.5">Logo</p>
-                    <div className="relative isolate w-full aspect-square rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group">
-                      {uploading === 'logo'
-                        ? <div className="absolute inset-0 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-                        : logoUrl
-                          ? <>
-                              <img src={logoUrl} className="w-full h-full object-cover" />
-                              <button onClick={() => logoInputRef.current?.click()} className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:opacity-70">
-                                <ImagePlus className="h-4 w-4 text-white" />
-                              </button>
-                              <button onClick={() => setPhotoPreview({ url: logoUrl, label: 'Logo' })} className="absolute bottom-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 flex items-center justify-center z-10">
-                                <ZoomIn className="h-3 w-3 text-white" />
-                              </button>
-                            </>
-                          : <button onClick={() => logoInputRef.current?.click()} className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground active:opacity-70">
-                              <Plus className="h-5 w-5" /><span className="text-[10px]">Logo</span>
-                            </button>
-                      }
-                    </div>
-                    <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1.5">Zdjęcie główne</p>
-                    <div className="relative isolate w-full aspect-square rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group">
-                      {uploading === 'cover'
-                        ? <div className="absolute inset-0 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-                        : coverImageUrl
-                          ? <>
-                              <img src={coverImageUrl} className="w-full h-full object-cover" />
-                              <button onClick={() => coverInputRef.current?.click()} className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:opacity-70">
-                                <ImagePlus className="h-5 w-5 text-white" />
-                              </button>
-                              <button onClick={() => setPhotoPreview({ url: coverImageUrl, label: 'Zdjęcie główne' })} className="absolute bottom-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 flex items-center justify-center z-10">
-                                <ZoomIn className="h-3 w-3 text-white" />
-                              </button>
-                            </>
-                          : <button onClick={() => coverInputRef.current?.click()} className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground active:opacity-70">
-                              <Plus className="h-6 w-6" /><span className="text-[11px]">Dodaj zdjęcie</span>
-                            </button>
-                      }
-                    </div>
-                    <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
-                  </div>
-                </div>
-              </div>
-
-              {/* ── SEKCJA 2+3: Filmik okładkowy + Podgląd wizytówki ── */}
+              {/* ── SEKCJA 1: Okładka wizytówki (zdjęcie lub filmik) + Podgląd ── */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-bold text-foreground">Filmik okładkowy</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Wyświetlany zamiast zdjęcia na wizytówce w aplikacji</p>
+                    <p className="text-sm font-bold text-foreground">Okładka wizytówki</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Zdjęcie lub filmik wyświetlany na wizytówce w aplikacji</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0 mt-0.5">
                     <span className="text-[11px] text-muted-foreground font-medium">Podgląd w aplikacji</span>
-                    <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">max 7 sek.</span>
+                    <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">film max 7 sek.</span>
                   </div>
                 </div>
 
-                {/* 2-col: video upload | card preview */}
+                {/* 2-col: media upload | card preview */}
                 <div className="flex gap-4 items-start">
-                  {/* Left: video upload area */}
+                  {/* Left: cover media upload area */}
                   <div className="w-36 shrink-0 space-y-2">
                     <div
                       className="relative w-full h-60 rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group cursor-pointer"
                       onClick={() => coverVideoInputRef.current?.click()}
                     >
-                      {uploading === "cover_video" ? (
+                      {(uploading === "cover_video" || uploading === "cover") ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
                           <Loader2 className="h-6 w-6 animate-spin" />
                           <span className="text-xs">Przesyłanie…</span>
@@ -1019,8 +1012,8 @@ const BusinessDashboard = () => {
                           />
                           <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
                             <div className="flex flex-col items-center gap-2 text-white">
-                              <Video className="h-5 w-5" />
-                              <span className="text-sm font-semibold">Zmień filmik</span>
+                              <Camera className="h-5 w-5" />
+                              <span className="text-sm font-semibold">Zmień okładkę</span>
                             </div>
                           </div>
                           <button
@@ -1030,14 +1023,30 @@ const BusinessDashboard = () => {
                             <X className="h-3.5 w-3.5 text-white" />
                           </button>
                         </>
+                      ) : coverImageUrl ? (
+                        <>
+                          <img src={coverImageUrl} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
+                            <div className="flex flex-col items-center gap-2 text-white">
+                              <Camera className="h-5 w-5" />
+                              <span className="text-sm font-semibold">Zmień okładkę</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setCoverImageUrl(""); setIsDirty(true); }}
+                            className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 flex items-center justify-center z-10"
+                          >
+                            <X className="h-3.5 w-3.5 text-white" />
+                          </button>
+                        </>
                       ) : (
                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
                           <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                            <Play className="h-6 w-6 ml-1" />
+                            <ImagePlus className="h-6 w-6" />
                           </div>
-                          <div className="text-center">
-                            <p className="text-sm font-semibold">Dodaj filmik okładkowy</p>
-                            <p className="text-xs mt-0.5 text-muted-foreground/70">MP4, MOV · max 7 sek. · max 50 MB</p>
+                          <div className="text-center px-2">
+                            <p className="text-sm font-semibold">Dodaj okładkę</p>
+                            <p className="text-xs mt-0.5 text-muted-foreground/70">Zdjęcie lub filmik (max 7 sek.)</p>
                           </div>
                         </div>
                       )}
@@ -1045,9 +1054,9 @@ const BusinessDashboard = () => {
                     <input
                       ref={coverVideoInputRef}
                       type="file"
-                      accept="video/*"
+                      accept="image/*,video/*"
                       className="hidden"
-                      onChange={handleCoverVideoUpload}
+                      onChange={handleCoverMediaUpload}
                     />
                   </div>
 
@@ -1121,6 +1130,37 @@ const BusinessDashboard = () => {
           {activeSection === 'profile' && (
             <div className="space-y-5">
               <div><h2 className="text-lg font-black">Dane lokalu</h2><p className="text-sm text-slate-400">Informacje kontaktowe, opis i tagi widoczne w wizytówce.</p></div>
+
+              {/* ── Logo — avatar style ── */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+                <p className="text-sm font-bold text-foreground mb-4">Logo lokalu</p>
+                <div className="flex items-center gap-5">
+                  <div className="relative shrink-0">
+                    <div className="h-20 w-20 rounded-full overflow-hidden border-[3px] border-orange-500 bg-muted">
+                      {uploading === 'logo'
+                        ? <div className="w-full h-full flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+                        : logoUrl
+                          ? <img src={logoUrl} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center"><Store className="h-8 w-8 text-muted-foreground/40" /></div>
+                      }
+                    </div>
+                    <button
+                      onClick={() => logoInputRef.current?.click()}
+                      className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-foreground flex items-center justify-center shadow-md active:scale-95 transition-transform"
+                    >
+                      <Camera className="h-3.5 w-3.5 text-background" />
+                    </button>
+                    <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{businessName || 'Nazwa lokalu'}</p>
+                    <button onClick={() => logoInputRef.current?.click()} className="mt-1 text-xs text-orange-600 font-medium active:opacity-70">
+                      {logoUrl ? 'Zmień logo' : 'Dodaj logo'}
+                    </button>
+                    <p className="text-xs text-muted-foreground mt-0.5">JPG, PNG · widoczne na wizytówce</p>
+                  </div>
+                </div>
+              </div>
 
               {/* Wizytówka preview — wygląd jak karta w swiperze */}
               <div>
