@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Camera, X, Globe, Lock, Star } from "lucide-react";
+import CreatePolecajkaSheet from "@/components/home/CreatePolecajkaSheet";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -36,6 +37,8 @@ const ReviewSummary = () => {
   const [notVisited, setNotVisited] = useState<Record<string, boolean>>({});
   const [notVisitedReason, setNotVisitedReason] = useState<Record<string, string>>({});
   const [notVisitedSaved, setNotVisitedSaved] = useState<Record<string, boolean>>({});
+  const [showPolecajkaSheet, setShowPolecajkaSheet] = useState(false);
+  const [polecajkaPublished, setPolecajkaPublished] = useState(false);
   const notVisitedTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const narrativeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -633,7 +636,44 @@ const ReviewSummary = () => {
           />
         </div>
 
+        {/* ── Polecajka CTA ── */}
+        {pins.length >= 2 && (
+          <div className="px-5 pt-5 pb-6">
+            {polecajkaPublished ? (
+              <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4 text-center">
+                <p className="text-2xl mb-1">✓</p>
+                <p className="font-bold text-sm text-emerald-800">Polecajka opublikowana!</p>
+                <p className="text-xs text-emerald-600 mt-0.5">Widoczna dla wszystkich na stronie głównej</p>
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100 p-4">
+                <p className="text-base font-black leading-tight">Podziel się tą trasą 🗺️</p>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Twoje miejsca trafią na discovery feed innych. Ktoś zaplanuje trasę dzięki Tobie!
+                </p>
+                <button
+                  onClick={() => setShowPolecajkaSheet(true)}
+                  className="mt-3 w-full py-3 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-sm shadow-orange-400/20"
+                >
+                  Stwórz polecajkę →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
+
+      {user && (
+        <CreatePolecajkaSheet
+          open={showPolecajkaSheet}
+          onClose={() => setShowPolecajkaSheet(false)}
+          onPublished={() => setPolecajkaPublished(true)}
+          city={route?.city ?? ""}
+          pins={pins}
+          userId={user.id}
+        />
+      )}
 
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30"
