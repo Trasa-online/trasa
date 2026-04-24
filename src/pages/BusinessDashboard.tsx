@@ -980,111 +980,113 @@ const BusinessDashboard = () => {
                 </div>
               </div>
 
-              {/* ── SEKCJA 2: Filmik okładkowy ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-3">
-                <div className="flex items-center justify-between">
+              {/* ── SEKCJA 2+3: Filmik okładkowy + Podgląd wizytówki ── */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm font-bold text-foreground">Filmik okładkowy</p>
                     <p className="text-xs text-muted-foreground mt-0.5">Wyświetlany zamiast zdjęcia na wizytówce w aplikacji</p>
                   </div>
-                  <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">max 7 sek.</span>
+                  <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0 mt-0.5">max 7 sek.</span>
                 </div>
-                <div
-                  className="relative w-full max-w-sm mx-auto rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group cursor-pointer"
-                  style={{ aspectRatio: "16/9" }}
-                  onClick={() => coverVideoInputRef.current?.click()}
-                >
-                  {uploading === "cover_video" ? (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                      <span className="text-xs">Przesyłanie…</span>
-                    </div>
-                  ) : coverVideoUrl ? (
-                    <>
-                      <video
-                        src={coverVideoUrl}
-                        className="w-full h-full object-cover"
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        controls={false}
-                      />
-                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
-                        <div className="flex flex-col items-center gap-2 text-white">
-                          <Video className="h-6 w-6" />
-                          <span className="text-sm font-semibold">Zmień filmik</span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setCoverVideoUrl(""); setIsDirty(true); }}
-                        className="absolute top-3 right-3 h-7 w-7 rounded-full bg-black/60 flex items-center justify-center z-10"
-                      >
-                        <X className="h-3.5 w-3.5 text-white" />
-                      </button>
-                    </>
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                      <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
-                        <Play className="h-7 w-7 ml-1" />
-                      </div>
-                      <div className="text-center">
-                        <p className="text-sm font-semibold">Dodaj filmik okładkowy</p>
-                        <p className="text-xs mt-0.5 text-muted-foreground/70">MP4, MOV · max 7 sekund · max 50 MB</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <input
-                  ref={coverVideoInputRef}
-                  type="file"
-                  accept="video/*"
-                  className="hidden"
-                  onChange={handleCoverVideoUpload}
-                />
-              </div>
 
-              {/* ── SEKCJA 3: Podgląd wizytówki ── */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-3">
-                <div>
-                  <p className="text-sm font-bold text-foreground">Podgląd wizytówki</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Tak wygląda Twój lokal w aplikacji</p>
-                </div>
-                <div className="flex justify-center py-2">
-                  <div className="relative w-56 h-96 rounded-3xl overflow-hidden shadow-lg cursor-pointer group" onClick={() => setShowCardPreview(true)}>
-                    {coverVideoUrl ? (
-                      <video src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" autoPlay loop muted playsInline />
-                    ) : coverImageUrl ? (
-                      <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
-                    <div className="absolute bottom-0 left-0 right-0 px-4 pb-5 space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        {logoUrl
-                          ? <img src={logoUrl} className="w-6 h-6 rounded-full object-cover border border-white/30" />
-                          : <div className="w-6 h-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-                        }
-                        <span className="text-white/60 text-[10px]">{mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : 'Kategoria'}</span>
-                      </div>
-                      <h3 className="text-base font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
-                      {tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {tags.slice(0, 2).map(t => (
-                            <span key={t} className="px-2 py-0.5 bg-white/15 rounded-full text-[9px] font-semibold text-white/80">#{t}</span>
-                          ))}
+                {/* 2-col: video upload | card preview */}
+                <div className="flex gap-4 items-start">
+                  {/* Left: video upload area */}
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div
+                      className="relative w-full rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group cursor-pointer"
+                      style={{ aspectRatio: "16/9" }}
+                      onClick={() => coverVideoInputRef.current?.click()}
+                    >
+                      {uploading === "cover_video" ? (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                          <span className="text-xs">Przesyłanie…</span>
+                        </div>
+                      ) : coverVideoUrl ? (
+                        <>
+                          <video
+                            src={coverVideoUrl}
+                            className="w-full h-full object-cover"
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            controls={false}
+                          />
+                          <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
+                            <div className="flex flex-col items-center gap-2 text-white">
+                              <Video className="h-5 w-5" />
+                              <span className="text-sm font-semibold">Zmień filmik</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setCoverVideoUrl(""); setIsDirty(true); }}
+                            className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 flex items-center justify-center z-10"
+                          >
+                            <X className="h-3.5 w-3.5 text-white" />
+                          </button>
+                        </>
+                      ) : (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                          <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                            <Play className="h-6 w-6 ml-1" />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-sm font-semibold">Dodaj filmik okładkowy</p>
+                            <p className="text-xs mt-0.5 text-muted-foreground/70">MP4, MOV · max 7 sek. · max 50 MB</p>
+                          </div>
                         </div>
                       )}
                     </div>
-                    <div className="absolute top-3 right-3 h-7 w-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Expand className="h-3.5 w-3.5 text-white" />
-                    </div>
+                    <input
+                      ref={coverVideoInputRef}
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={handleCoverVideoUpload}
+                    />
                   </div>
-                </div>
-              </div>
 
-              {/* ── SEKCJA 4: Galeria dodatkowa ── */}
+                  {/* Right: card preview */}
+                  <div className="shrink-0 flex flex-col items-center gap-1.5">
+                    <p className="text-[11px] text-muted-foreground font-medium">Podgląd w aplikacji</p>
+                    <div className="relative w-36 h-60 rounded-3xl overflow-hidden shadow-md cursor-pointer group" onClick={() => setShowCardPreview(true)}>
+                      {coverVideoUrl ? (
+                        <video src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" autoPlay loop muted playsInline />
+                      ) : coverImageUrl ? (
+                        <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
+                      <div className="absolute bottom-0 left-0 right-0 px-3 pb-4 space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          {logoUrl
+                            ? <img src={logoUrl} className="w-5 h-5 rounded-full object-cover border border-white/30" />
+                            : <div className="w-5 h-5 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                          }
+                          <span className="text-white/60 text-[9px]">{mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : 'Kategoria'}</span>
+                        </div>
+                        <h3 className="text-sm font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+                        {tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {tags.slice(0, 2).map(t => (
+                              <span key={t} className="px-1.5 py-0.5 bg-white/15 rounded-full text-[8px] font-semibold text-white/80">#{t}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Expand className="h-3 w-3 text-white" />
+                      </div>
+                    </div>{/* end card */}
+                  </div>{/* end right column */}
+                </div>{/* end 2-col */}
+              </div>{/* end outer section card */}
+
+              {/* ── SEKCJA 3: Galeria dodatkowa ── */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
