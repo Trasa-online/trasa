@@ -111,26 +111,36 @@ function SoloTripCard({ route, onDelete }: { route: any; onDelete: () => void })
       )}
 
       {/* Action buttons */}
-      <div className="px-4 pb-4 pt-1 flex gap-2">
-        <button
-          onClick={() => navigate(`/edit-plan?route=${route.id}`)}
-          className="flex-1 py-2.5 rounded-full bg-foreground text-background font-bold text-xs active:scale-95 transition-transform"
-        >
-          Podejrzyj plan →
-        </button>
-        <button
-          onClick={() => navigate("/plan", {
-            state: {
-              city: route.city,
-              step: 3,
-              date: route.start_date,
-              likedPlaceNames: pins.map((p: any) => p.place_name),
-            },
-          })}
-          className="flex-1 py-2.5 rounded-full border border-border/60 text-foreground font-bold text-xs active:scale-95 transition-transform bg-card"
-        >
-          Dodaj miejsca
-        </button>
+      <div className="px-4 pb-4 pt-1 space-y-2">
+        <div className="flex gap-2">
+          <button
+            onClick={() => navigate(`/edit-plan?route=${route.id}`)}
+            className="flex-1 py-2.5 rounded-full bg-foreground text-background font-bold text-xs active:scale-95 transition-transform"
+          >
+            Podejrzyj plan →
+          </button>
+          <button
+            onClick={() => navigate("/plan", {
+              state: {
+                city: route.city,
+                step: 3,
+                date: route.start_date,
+                likedPlaceNames: pins.map((p: any) => p.place_name),
+              },
+            })}
+            className="flex-1 py-2.5 rounded-full border border-border/60 text-foreground font-bold text-xs active:scale-95 transition-transform bg-card"
+          >
+            Dodaj miejsca
+          </button>
+        </div>
+        {pins.length >= 2 && (
+          <button
+            onClick={() => navigate(`/review-summary?route=${route.id}`)}
+            className="w-full py-2.5 rounded-full border border-orange-200 bg-orange-50 text-orange-700 font-bold text-xs active:scale-95 transition-transform"
+          >
+            🗺️ Stwórz polecajkę z tej trasy
+          </button>
+        )}
       </div>
 
       {selectedPin && (
