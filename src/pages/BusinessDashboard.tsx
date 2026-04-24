@@ -996,7 +996,7 @@ const BusinessDashboard = () => {
                 {/* 2-col: video upload | card preview */}
                 <div className="flex gap-4 items-start">
                   {/* Left: video upload area */}
-                  <div className="w-52 shrink-0 space-y-2">
+                  <div className="w-36 shrink-0 space-y-2">
                     <div
                       className="relative w-full h-60 rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group cursor-pointer"
                       onClick={() => coverVideoInputRef.current?.click()}
@@ -1732,9 +1732,11 @@ const BusinessDashboard = () => {
       {showCardPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowCardPreview(false)}>
           <div className="relative w-64 h-[400px] rounded-3xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-            {coverImageUrl
-              ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
-              : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
+            {coverVideoUrl
+              ? <video src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" autoPlay loop muted playsInline />
+              : coverImageUrl
+                ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
+                : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
             }
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
             <div className="absolute bottom-0 left-0 right-0 px-5 pb-6 space-y-2">
