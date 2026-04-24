@@ -9,7 +9,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
-import DiscoveryBanner from "@/components/home/DiscoveryBanner";
+import DiscoveryFeed from "@/components/home/DiscoveryFeed";
 import HomeTour, { useHomeTour } from "@/components/home/HomeTour";
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -471,7 +471,7 @@ const Home = () => {
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-3">
           Odkrywaj
         </p>
-        <DiscoveryBanner />
+        <DiscoveryFeed />
       </div>
 
       {/* ── Join session sheet ── */}
