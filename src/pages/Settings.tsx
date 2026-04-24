@@ -4,11 +4,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { getConsent, grantConsent, denyConsent } from "@/lib/consent";
 
-import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X } from "lucide-react";
+import { Camera, Shield, Bell, LogOut, ChevronRight, Cookie, FileText, Trash2, KeyRound, AlertCircle, X, ArrowLeft } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { toast } from "sonner";
@@ -413,8 +412,16 @@ const Settings = () => {
   const displayName = firstName || username || "";
 
   return (
-    <div className="min-h-screen bg-background pb-[calc(3rem+env(safe-area-inset-bottom,0px))]">
-      <PageHeader title={t("title")} showBack />
+    <div className="pb-[calc(3rem+env(safe-area-inset-bottom,0px))]">
+      <div className="flex items-center gap-2 px-2 pt-2 pb-1">
+        <button
+          onClick={() => navigate(-1)}
+          className="h-9 w-9 flex items-center justify-center rounded-full text-muted-foreground active:bg-muted transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h1 className="text-lg font-bold">{t("title")}</h1>
+      </div>
 
       <div className="p-4 space-y-6 max-w-lg mx-auto">
 

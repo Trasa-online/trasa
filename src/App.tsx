@@ -203,7 +203,7 @@ const App = () => (
           <Route path="/home" element={<RequireAuth><AppLayout><Home /></AppLayout></RequireAuth>} />
           <Route path="/create" element={<RequireAuth><CreateRoute /></RequireAuth>} />
           <Route path="/my-routes" element={<RequireAuth><AppLayout><MyRoutes /></AppLayout></RequireAuth>} />
-          <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+          <Route path="/settings" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
           <Route path="/day-review" element={<RequireAuth><DayReview /></RequireAuth>} />
           <Route path="/onboarding" element={<Navigate to="/" replace />} />
           <Route path="/set-password" element={<SetPassword />} />
