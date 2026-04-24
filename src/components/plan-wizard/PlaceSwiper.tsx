@@ -34,6 +34,7 @@ export interface MockPlace {
   businessWebsite?: string | null;
   galleryPhotos?: string[]; // extra photos shown in carousel (swipe card + detail)
   businessSubcategories?: string[]; // subcategories from business_profiles (for custom filtering)
+  coverVideoUrl?: string; // business cover video (premium)
 }
 
 export type PlaceCategory =
@@ -347,9 +348,18 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         isTop ? "cursor-grab active:cursor-grabbing" : "pointer-events-none"
       )}
     >
-      {/* Photo */}
+      {/* Photo / Video */}
       <div className="absolute inset-0">
-        {photoUrls.length === 0 || imgFailed ? (
+        {place.coverVideoUrl ? (
+          <video
+            src={place.coverVideoUrl}
+            className="w-full h-full object-cover"
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
+        ) : photoUrls.length === 0 || imgFailed ? (
           <div className={cn("w-full h-full bg-gradient-to-br", GRADIENT_BG[offset % 3])} />
         ) : (
           <img
@@ -365,8 +375,8 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         )}
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
-        {/* Photo dots */}
-        {isTop && photoUrls.length > 1 && (
+        {/* Photo dots — only for multi-photo, not video */}
+        {isTop && !place.coverVideoUrl && photoUrls.length > 1 && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
             {photoUrls.map((_, i) => (
               <div key={i} className={cn("h-1 rounded-full transition-all", i === photoIdx ? "w-4 bg-white" : "w-1.5 bg-white/50")} />
@@ -694,6 +704,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     // gallery shown for all plans with uploaded photos
     galleryPhotos: bp.gallery_urls ?? [],
     businessSubcategories: bp.subcategories ?? [],
+    coverVideoUrl: (plan === 'basic' || plan === 'premium') && bp.cover_video_url ? bp.cover_video_url : undefined,
   } as MockPlace;
 }
 
@@ -729,7 +740,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       if (roundPlaceIds?.length) {
         const { data } = await (supabase as any)
           .from("places")
-          .select("*, business_profiles(plan, logo_url, cover_image_url, event_title, gallery_urls, phone, website)")
+          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, gallery_urls, phone, website)")
           .in("id", roundPlaceIds);
 
         if (!data?.length) { setLoading(false); return; }
@@ -750,7 +761,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // ── Normal mode ──────────────────────────────────────────────────────
       const { data } = await (supabase as any)
         .from("places")
-        .select("*, business_profiles(plan, logo_url, cover_image_url, event_title, gallery_urls, phone, website)")
+        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, gallery_urls, phone, website)")
         .ilike("city", city)
         .eq("is_active", true);
 
