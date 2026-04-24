@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Star, MapPin, Loader2, Heart, ChevronDown } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import type { MockPlace } from "./PlaceSwiper";
 import BusinessActionButtons from "@/components/business/BusinessActionButtons";
@@ -87,6 +87,7 @@ const PlaceSwiperDetail = ({
   const [photos, setPhotos] = useState<string[]>([]);
   const [businessPosts, setBusinessPosts] = useState<BusinessPost[]>([]);
   const swipeStartX = useRef<number | null>(null);
+  const swipeStartY = useRef<number | null>(null);
 
   useEffect(() => {
     if (!open || !place) {
@@ -183,16 +184,35 @@ const PlaceSwiperDetail = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-[85vh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden"
+        className="h-[90vh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden"
       >
         {!place ? null : (
           <>
-            {/* ── HERO PHOTO (top ~48% of drawer) ── */}
-            {/* No overflow-hidden here — SheetContent already clips rounded-t-3xl.
-                Keeping overflow-hidden would clip the X button at the top corner. */}
+            {/* ── HANDLE BAR — zawsze widoczny, swipe w dół zamyka ── */}
+            <div
+              className="shrink-0 flex items-center justify-between px-4 pt-3 pb-2 border-b border-border/10"
+              onTouchStart={(e) => { swipeStartY.current = e.touches[0].clientY; }}
+              onTouchEnd={(e) => {
+                if (swipeStartY.current === null) return;
+                const dy = e.changedTouches[0].clientY - swipeStartY.current;
+                swipeStartY.current = null;
+                if (dy > 80) onOpenChange(false);
+              }}
+            >
+              <div className="w-8" />
+              <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+              <button
+                onClick={() => onOpenChange(false)}
+                className="h-8 w-8 rounded-full bg-muted flex items-center justify-center active:bg-muted-foreground/20 transition-colors"
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            {/* ── HERO PHOTO ── */}
             <div
               className="relative shrink-0 bg-muted"
-              style={{ height: "48%", touchAction: "pan-y" }}
+              style={{ height: "44%", touchAction: "pan-y" }}
               onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
               onTouchEnd={(e) => {
                 if (swipeStartX.current === null) return;
@@ -274,17 +294,6 @@ const PlaceSwiperDetail = ({
                   )}
                 </div>
               )}
-
-              {/* ── Drag handle — always on top ── */}
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 w-10 h-1 rounded-full bg-white/60 pointer-events-none" />
-
-              {/* ── X close button — always on top, inside photo div ── */}
-              <button
-                onClick={() => onOpenChange(false)}
-                className="absolute top-3 right-3 z-30 h-10 w-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center shadow-lg ring-1 ring-white/30 active:scale-95 transition-transform"
-              >
-                <X className="h-5 w-5 text-white" />
-              </button>
             </div>
 
             {/* ── SCROLLABLE CONTENT ── */}

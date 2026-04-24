@@ -206,6 +206,7 @@ interface SwipeCardProps {
 
 export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhotoFetched, isTop, offset, skipGoogleFetch = false }: SwipeCardProps) => {
   const [imgFailed, setImgFailed] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<string[]>(
     [place.photo_url, ...(place.galleryPhotos ?? [])]
       .filter((u): u is string => !!u && (u.startsWith("http") || u.startsWith("/api/")) && !u.includes("picsum") && !u.includes("lorem"))
@@ -350,14 +351,15 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
     >
       {/* Photo / Video */}
       <div className="absolute inset-0">
-        {place.coverVideoUrl ? (
+        {place.coverVideoUrl && !videoFailed ? (
           <video
             src={place.coverVideoUrl}
             className="w-full h-full object-cover"
-            autoPlay
+            autoPlay={isTop}
             loop
             muted
             playsInline
+            onError={() => setVideoFailed(true)}
           />
         ) : photoUrls.length === 0 || imgFailed ? (
           <div className={cn("w-full h-full bg-gradient-to-br", GRADIENT_BG[offset % 3])} />
