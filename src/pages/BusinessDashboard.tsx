@@ -935,7 +935,7 @@ const BusinessDashboard = () => {
                 <div className="grid grid-cols-2 gap-4 max-w-xs">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1.5">Logo</p>
-                    <div className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group">
+                    <div className="relative isolate w-full aspect-square rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group">
                       {uploading === 'logo'
                         ? <div className="absolute inset-0 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
                         : logoUrl
@@ -944,7 +944,7 @@ const BusinessDashboard = () => {
                               <button onClick={() => logoInputRef.current?.click()} className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:opacity-70">
                                 <ImagePlus className="h-4 w-4 text-white" />
                               </button>
-                              <button onClick={() => setPhotoPreview({ url: logoUrl, label: 'Logo' })} className="absolute bottom-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center z-10">
+                              <button onClick={() => setPhotoPreview({ url: logoUrl, label: 'Logo' })} className="absolute bottom-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 flex items-center justify-center z-10">
                                 <ZoomIn className="h-3 w-3 text-white" />
                               </button>
                             </>
@@ -957,7 +957,7 @@ const BusinessDashboard = () => {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1.5">Zdjęcie główne</p>
-                    <div className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group">
+                    <div className="relative isolate w-full aspect-square rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group">
                       {uploading === 'cover'
                         ? <div className="absolute inset-0 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
                         : coverImageUrl
@@ -966,7 +966,7 @@ const BusinessDashboard = () => {
                               <button onClick={() => coverInputRef.current?.click()} className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:opacity-70">
                                 <ImagePlus className="h-5 w-5 text-white" />
                               </button>
-                              <button onClick={() => setPhotoPreview({ url: coverImageUrl, label: 'Zdjęcie główne' })} className="absolute bottom-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center z-10">
+                              <button onClick={() => setPhotoPreview({ url: coverImageUrl, label: 'Zdjęcie główne' })} className="absolute bottom-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 flex items-center justify-center z-10">
                                 <ZoomIn className="h-3 w-3 text-white" />
                               </button>
                             </>
@@ -993,7 +993,7 @@ const BusinessDashboard = () => {
                 {/* 2-col: video upload | card preview */}
                 <div className="flex gap-4 items-start">
                   {/* Left: video upload area */}
-                  <div className="flex-1 min-w-0 space-y-2">
+                  <div className="w-52 shrink-0 space-y-2">
                     <div
                       className="relative w-full h-60 rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group cursor-pointer"
                       onClick={() => coverVideoInputRef.current?.click()}
