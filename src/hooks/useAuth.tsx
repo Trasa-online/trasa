@@ -22,13 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set initial session from local storage immediately
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
+    // Subscribe first — fires INITIAL_SESSION almost immediately from localStorage
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
@@ -37,12 +31,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    // Fallback: getSession in case onAuthStateChange doesn't fire
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+
+    // Safety net: never leave loading:true longer than 3s
+    const timeout = setTimeout(() => setLoading(false), 3000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    // Navigation handled by the component calling signOut
   };
 
   return (
