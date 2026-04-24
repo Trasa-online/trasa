@@ -190,7 +190,7 @@ const PlaceSwiperDetail = ({
           <>
             {/* ── HANDLE BAR — zawsze widoczny, swipe w dół zamyka ── */}
             <div
-              className="shrink-0 flex items-center justify-between px-4 pt-3 pb-2 border-b border-border/10"
+              className="shrink-0 relative flex items-center justify-center h-11 bg-white border-b border-gray-100"
               onTouchStart={(e) => { swipeStartY.current = e.touches[0].clientY; }}
               onTouchEnd={(e) => {
                 if (swipeStartY.current === null) return;
@@ -199,13 +199,13 @@ const PlaceSwiperDetail = ({
                 if (dy > 80) onOpenChange(false);
               }}
             >
-              <div className="w-8" />
-              <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+              <div className="w-10 h-[5px] rounded-full bg-gray-300" />
               <button
                 onClick={() => onOpenChange(false)}
-                className="h-8 w-8 rounded-full bg-muted flex items-center justify-center active:bg-muted-foreground/20 transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center active:bg-gray-200 transition-colors"
+                aria-label="Zamknij"
               >
-                <X className="h-4 w-4 text-muted-foreground" />
+                <X className="h-4 w-4 text-gray-600" />
               </button>
             </div>
 
