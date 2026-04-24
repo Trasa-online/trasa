@@ -990,7 +990,7 @@ const BusinessDashboard = () => {
                   <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">max 7 sek.</span>
                 </div>
                 <div
-                  className="relative w-full rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group cursor-pointer"
+                  className="relative w-full max-w-sm mx-auto rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group cursor-pointer"
                   style={{ aspectRatio: "16/9" }}
                   onClick={() => coverVideoInputRef.current?.click()}
                 >
