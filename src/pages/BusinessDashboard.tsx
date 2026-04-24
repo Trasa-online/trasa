@@ -995,8 +995,7 @@ const BusinessDashboard = () => {
                   {/* Left: video upload area */}
                   <div className="flex-1 min-w-0 space-y-2">
                     <div
-                      className="relative w-full rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group cursor-pointer"
-                      style={{ aspectRatio: "16/9" }}
+                      className="relative w-full h-60 rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group cursor-pointer"
                       onClick={() => coverVideoInputRef.current?.click()}
                     >
                       {uploading === "cover_video" ? (
