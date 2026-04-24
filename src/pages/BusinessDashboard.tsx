@@ -987,7 +987,10 @@ const BusinessDashboard = () => {
                     <p className="text-sm font-bold text-foreground">Filmik okładkowy</p>
                     <p className="text-xs text-muted-foreground mt-0.5">Wyświetlany zamiast zdjęcia na wizytówce w aplikacji</p>
                   </div>
-                  <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0 mt-0.5">max 7 sek.</span>
+                  <div className="flex items-center gap-3 shrink-0 mt-0.5">
+                    <span className="text-[11px] text-muted-foreground font-medium">Podgląd w aplikacji</span>
+                    <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">max 7 sek.</span>
+                  </div>
                 </div>
 
                 {/* 2-col: video upload | card preview */}
@@ -1049,8 +1052,7 @@ const BusinessDashboard = () => {
                   </div>
 
                   {/* Right: card preview */}
-                  <div className="shrink-0 flex flex-col items-center gap-1.5">
-                    <p className="text-[11px] text-muted-foreground font-medium">Podgląd w aplikacji</p>
+                  <div className="shrink-0">
                     <div className="relative w-36 h-60 rounded-3xl overflow-hidden shadow-md cursor-pointer group" onClick={() => setShowCardPreview(true)}>
                       {coverVideoUrl ? (
                         <video src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" autoPlay loop muted playsInline />
