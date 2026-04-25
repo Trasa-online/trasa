@@ -124,7 +124,7 @@ function CardInner({
   onExpand?: () => void;
 }) {
   return (
-    <div className="relative w-full h-full overflow-hidden" style={{ WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}>
+    <div className="relative w-full h-full overflow-hidden" style={{ WebkitMaskImage: "linear-gradient(white, white)" }}>
       {videoSrc ? (
         <BgVideo src={videoSrc} fallbackGradient="from-orange-900 via-orange-700 to-amber-600" />
       ) : (
@@ -681,7 +681,7 @@ function PhoneMockup({ phase, setPhase, onScrollDown }: { phase: Phase; setPhase
         <div className="absolute top-[9px] left-1/2 -translate-x-1/2 w-14 h-[14px] bg-slate-900 rounded-full z-20 pointer-events-none" />
         <div
           className="absolute inset-[9px] rounded-[34px] overflow-hidden bg-black"
-          style={{ WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
+          style={{ WebkitMaskImage: "linear-gradient(white, white)" }}
         >
           <AnimatePresence mode="wait">{phaseEl[phase]}</AnimatePresence>
         </div>

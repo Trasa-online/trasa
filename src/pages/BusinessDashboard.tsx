@@ -81,6 +81,29 @@ interface HourlyBucket { hour: number; label: string; total: number; }
 
 const MAX_GALLERY = 10;
 
+// iOS Safari: imperative play() required for dynamically-inserted muted videos
+function AutoVideo({ src, className }: { src: string; className?: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    v.muted = true;
+    v.play().catch(() => {});
+  }, [src]);
+  return (
+    <video
+      ref={ref}
+      src={src}
+      autoPlay
+      loop
+      muted
+      playsInline
+      preload="auto"
+      className={className}
+    />
+  );
+}
+
 function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessName, mainCategory, tags, eventTitle }: {
   logoUrl: string; coverImageUrl: string; coverVideoUrl: string; businessName: string; mainCategory: string;
   tags: string[]; eventTitle: string;
@@ -89,9 +112,9 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
   return (
     <div className="sticky top-20">
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Podgląd wizytówki</p>
-      <div className="relative w-full rounded-3xl overflow-hidden shadow-xl" style={{ aspectRatio: '3/4', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}>
+      <div className="relative w-full rounded-3xl overflow-hidden shadow-xl" style={{ aspectRatio: '3/4', WebkitMaskImage: 'linear-gradient(white, white)' }}>
         {coverVideoUrl ? (
-          <video src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" autoPlay loop muted playsInline />
+          <AutoVideo src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
         ) : coverImageUrl ? (
           <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
         ) : (
@@ -973,7 +996,7 @@ const BusinessDashboard = () => {
                 <div className="w-36 space-y-2">
                     <div
                       className="relative w-full h-60 rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group cursor-pointer"
-                      style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
+                      style={{ WebkitMaskImage: 'linear-gradient(white, white)' }}
                       onClick={() => coverVideoInputRef.current?.click()}
                     >
                       {(uploading === "cover_video" || uploading === "cover") ? (
@@ -983,15 +1006,7 @@ const BusinessDashboard = () => {
                         </div>
                       ) : coverVideoUrl ? (
                         <>
-                          <video
-                            src={coverVideoUrl}
-                            className="w-full h-full object-cover"
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            controls={false}
-                          />
+                          <AutoVideo src={coverVideoUrl} className="w-full h-full object-cover" />
                           <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
                             <div className="flex flex-col items-center gap-2 text-white">
                               <Camera className="h-5 w-5" />
@@ -1077,11 +1092,11 @@ const BusinessDashboard = () => {
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Podgląd karty</p>
                 <div
                   className="relative w-40 h-64 rounded-3xl overflow-hidden shadow-lg cursor-pointer group"
-                  style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
+                  style={{ WebkitMaskImage: 'linear-gradient(white, white)' }}
                   onClick={() => setShowCardPreview(true)}
                 >
                   {coverVideoUrl ? (
-                    <video src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" autoPlay loop muted playsInline />
+                    <AutoVideo src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
                   ) : coverImageUrl ? (
                     <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
@@ -1374,11 +1389,11 @@ const BusinessDashboard = () => {
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Podgląd karty</p>
                 <div
                   className="relative w-40 h-64 rounded-3xl overflow-hidden shadow-lg cursor-pointer group"
-                  style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
+                  style={{ WebkitMaskImage: 'linear-gradient(white, white)' }}
                   onClick={() => setShowCardPreview(true)}
                 >
                   {coverVideoUrl ? (
-                    <video src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" autoPlay loop muted playsInline />
+                    <AutoVideo src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
                   ) : coverImageUrl ? (
                     <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
@@ -1839,9 +1854,9 @@ const BusinessDashboard = () => {
       {/* ── Card preview modal ── */}
       {showCardPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowCardPreview(false)}>
-          <div className="relative w-64 h-[400px] rounded-3xl overflow-hidden shadow-2xl" style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }} onClick={e => e.stopPropagation()}>
+          <div className="relative w-64 h-[400px] rounded-3xl overflow-hidden shadow-2xl" style={{ WebkitMaskImage: 'linear-gradient(white, white)' }} onClick={e => e.stopPropagation()}>
             {coverVideoUrl
-              ? <video src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" autoPlay loop muted playsInline />
+              ? <AutoVideo src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
               : coverImageUrl
                 ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
                 : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />

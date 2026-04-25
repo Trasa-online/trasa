@@ -344,6 +344,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         transition: dragging ? "none" : "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
         zIndex: 10 - offset,
         touchAction: "none",
+        WebkitMaskImage: "linear-gradient(white, white)",
       }}
       className={cn(
         "absolute inset-0 rounded-3xl overflow-hidden shadow-md select-none",
