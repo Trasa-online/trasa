@@ -4,7 +4,6 @@ import {
   AnimatePresence,
   useMotionValue,
   useTransform,
-  useMotionValueEvent,
   animate,
   type MotionValue,
 } from "framer-motion";
@@ -82,7 +81,35 @@ const DEMO_PLACES: DemoPlace[] = [
   },
 ];
 
-// ─── Shared: card content rendered inside the phone ───────────────────────────
+// ─── Video with fallback ───────────────────────────────────────────────────────
+function BgVideo({ src, fallbackGradient }: { src: string; fallbackGradient: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    v.muted = true;
+    v.play().catch(() => {});
+  }, [src]);
+
+  return (
+    <>
+      <div className={`absolute inset-0 bg-gradient-to-br ${fallbackGradient}`} />
+      <video
+        ref={ref}
+        src={src}
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+    </>
+  );
+}
+
+// ─── Shared: card content ─────────────────────────────────────────────────────
 function CardInner({
   place,
   videoSrc,
@@ -96,29 +123,12 @@ function CardInner({
   skipOpacity?: MotionValue<number>;
   onExpand?: () => void;
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.play().catch(() => {});
-  }, [videoSrc]);
-
   return (
     <div className="relative w-full h-full overflow-hidden">
-      {/* Gradient always visible as fallback while video loads */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${place.gradient}`} />
-      {videoSrc && (
-        <video
-          ref={videoRef}
-          src={videoSrc}
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+      {videoSrc ? (
+        <BgVideo src={videoSrc} fallbackGradient="from-orange-900 via-orange-700 to-amber-600" />
+      ) : (
+        <div className={`absolute inset-0 bg-gradient-to-br ${place.gradient}`} />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/5" />
 
@@ -143,9 +153,7 @@ function CardInner({
         <div className="flex items-center gap-2">
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm text-white border-2 border-white/30 shrink-0"
-            style={{
-              background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
-            }}
+            style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
           >
             {place.logoChar}
           </div>
@@ -188,10 +196,7 @@ function CardInner({
             </button>
             {onExpand && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onExpand();
-                }}
+                onPointerUp={(e) => { e.stopPropagation(); onExpand(); }}
                 className="w-7 h-7 rounded-full bg-white/20 backdrop-blur flex items-center justify-center"
               >
                 <ChevronUp className="h-3 w-3 text-white" />
@@ -205,29 +210,34 @@ function CardInner({
 }
 
 // ─── Loading Screen ────────────────────────────────────────────────────────────
-const RING_R = 88;
-const RING_CIRC = 2 * Math.PI * RING_R;
+// Pure CSS approach — no framer-motion SVG, no MotionValue for progress
+// (avoids framer-motion v12 onComplete + SVG strokeDashoffset bugs)
+const RING_SIZE = 220; // px
+const RING_R = 88;     // px, radius of progress ring
 
 function LoadingScreen({ onEnter }: { onEnter: () => void }) {
-  const progress = useMotionValue(0);
-  const [pctText, setPctText] = useState("0 %");
+  const [pct, setPct] = useState(0);
   const [showCTA, setShowCTA] = useState(false);
-
-  const dashOffset = useTransform(progress, [0, 1], [RING_CIRC, 0]);
-  const orbitAngle = useTransform(progress, [0, 1], [0, 360]);
-
-  useMotionValueEvent(progress, "change", (v) => {
-    setPctText(`${Math.round(v * 100)} %`);
-  });
+  const rafRef = useRef<number>(0);
 
   useEffect(() => {
-    const controls = animate(progress, 1, {
-      duration: 2.6,
-      ease: "linear",
-      onComplete: () => setShowCTA(true),
-    });
-    return controls.stop;
+    const DURATION = 2600;
+    const start = performance.now();
+
+    const tick = (now: number) => {
+      const p = Math.min((now - start) / DURATION, 1);
+      setPct(Math.round(p * 100));
+      if (p < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        setTimeout(() => setShowCTA(true), 200);
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
   }, []);
+
+  const angleDeg = (pct / 100) * 360;
 
   return (
     <motion.div
@@ -235,51 +245,47 @@ function LoadingScreen({ onEnter }: { onEnter: () => void }) {
       className="fixed inset-0 z-50 flex flex-col items-center justify-center"
       style={{ background: "#0E0E0E" }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.4 }}
     >
-      {/* Ring + orb container */}
-      <div className="relative" style={{ width: 240, height: 240 }}>
-        {/* SVG rings */}
-        <svg
-          viewBox="0 0 240 240"
-          className="absolute inset-0 w-full h-full"
-          style={{ overflow: "visible" }}
-        >
-          {/* Track ring */}
-          <circle
-            cx="120" cy="120" r={RING_R}
-            fill="none"
-            stroke="rgba(249,102,43,0.12)"
-            strokeWidth="1.5"
-          />
-          {/* Inner decorative ring */}
-          <circle
-            cx="120" cy="120" r="66"
-            fill="none"
-            stroke="rgba(249,102,43,0.06)"
-            strokeWidth="10"
-          />
-          {/* Progress ring */}
-          <motion.circle
-            cx="120" cy="120" r={RING_R}
-            fill="none"
-            stroke="#F9662B"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            style={{
-              strokeDasharray: RING_CIRC,
-              strokeDashoffset: dashOffset,
-              rotate: -90,
-              transformOrigin: "120px 120px",
-              filter: "drop-shadow(0 0 5px rgba(249,102,43,0.85))",
-            }}
-          />
-        </svg>
+      <div className="relative" style={{ width: RING_SIZE, height: RING_SIZE }}>
+        {/* Track ring */}
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{ border: "1.5px solid rgba(249,102,43,0.12)" }}
+        />
+
+        {/* Progress ring — conic-gradient + mask for thin ring effect */}
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{
+            background: `conic-gradient(from -90deg, #F9662B 0deg ${angleDeg}deg, rgba(249,102,43,0.08) ${angleDeg}deg 360deg)`,
+            WebkitMaskImage: `radial-gradient(farthest-side, transparent calc(100% - 2.5px), black calc(100% - 2.5px))`,
+            maskImage: `radial-gradient(farthest-side, transparent calc(100% - 2.5px), black calc(100% - 2.5px))`,
+            filter: angleDeg > 5 ? "drop-shadow(0 0 5px rgba(249,102,43,0.7))" : "none",
+          }}
+        />
+
+        {/* Inner decorative ring */}
+        <div
+          className="absolute rounded-full"
+          style={{
+            inset: RING_SIZE / 2 - 66,
+            width: 132,
+            height: 132,
+            border: "8px solid rgba(249,102,43,0.06)",
+          }}
+        />
 
         {/* Orbiting dot */}
-        <motion.div
+        <div
           className="absolute pointer-events-none"
-          style={{ left: "50%", top: "50%", width: 0, height: 0, rotate: orbitAngle }}
+          style={{
+            left: "50%",
+            top: "50%",
+            width: 0,
+            height: 0,
+            transform: `rotate(${angleDeg}deg)`,
+          }}
         >
           <div
             style={{
@@ -290,23 +296,21 @@ function LoadingScreen({ onEnter }: { onEnter: () => void }) {
               background: "radial-gradient(circle at 35% 35%, #fb923c, #F9662B)",
               top: -(RING_R + 5),
               left: -5,
-              boxShadow:
-                "0 0 8px rgba(249,102,43,0.9), 0 0 18px rgba(249,102,43,0.55)",
+              boxShadow: "0 0 8px rgba(249,102,43,0.9), 0 0 18px rgba(249,102,43,0.5)",
             }}
           />
-        </motion.div>
+        </div>
 
         {/* Center orb */}
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.div
-            className="rounded-full cursor-pointer"
+            className="rounded-full"
             style={{
               width: 90,
               height: 90,
-              background:
-                "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
-              boxShadow:
-                "0 0 28px rgba(249,102,43,0.55), 0 0 56px rgba(249,102,43,0.25)",
+              background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
+              boxShadow: "0 0 28px rgba(249,102,43,0.55), 0 0 56px rgba(249,102,43,0.25)",
+              cursor: showCTA ? "pointer" : "default",
             }}
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
@@ -316,7 +320,7 @@ function LoadingScreen({ onEnter }: { onEnter: () => void }) {
       </div>
 
       {/* Counter / CTA */}
-      <div className="mt-5 h-7 flex items-center justify-center">
+      <div className="mt-5 h-8 flex items-center justify-center">
         <AnimatePresence mode="wait">
           {!showCTA ? (
             <motion.p
@@ -325,7 +329,7 @@ function LoadingScreen({ onEnter }: { onEnter: () => void }) {
               style={{ color: "#F4A259" }}
               exit={{ opacity: 0 }}
             >
-              {pctText}
+              {pct} %
             </motion.p>
           ) : (
             <motion.button
@@ -334,8 +338,8 @@ function LoadingScreen({ onEnter }: { onEnter: () => void }) {
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="font-bold text-sm tracking-widest transition-colors"
-              style={{ color: "#F4A259" }}
+              className="font-bold text-sm tracking-widest"
+              style={{ color: "#F4A259", background: "none", border: "none", cursor: "pointer" }}
             >
               Kliknij aby uruchomić
             </motion.button>
@@ -357,7 +361,7 @@ function PhaseA({ onNext }: { onNext: () => void }) {
     reviews: 0,
     event: "Filmik założycieli 🎬",
     tags: ["#miejsca", "#planowanie", "#razem"],
-    gradient: "from-slate-900 to-slate-800",
+    gradient: "from-orange-900 via-orange-700 to-amber-600",
     logoChar: "T",
     description: "",
   };
@@ -371,10 +375,10 @@ function PhaseA({ onNext }: { onNext: () => void }) {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.35 }}
     >
-      <div className="relative flex-1">
+      <div className="relative flex-1 min-h-0">
         <CardInner place={place} videoSrc="/founders_intro.mp4" />
       </div>
-      <div className="flex gap-2 px-3 py-2.5 bg-white">
+      <div className="flex gap-2 px-3 py-2.5 bg-white shrink-0">
         <button
           onClick={onNext}
           className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold rounded-full py-3 text-[12px] active:scale-95 transition-transform"
@@ -429,16 +433,13 @@ function PhaseB({ onNext, onExpand }: { onNext: () => void; onExpand: () => void
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Hint */}
-      <div className="h-6 flex items-center justify-center">
+      <div className="h-6 flex items-center justify-center shrink-0">
         <p className="text-[9px] text-slate-400 font-semibold tracking-widest uppercase">
           Przeciągnij i wybierz
         </p>
       </div>
 
-      {/* Card stack */}
-      <div className="relative flex-1 mx-1.5">
-        {/* Background cards (decorative) */}
+      <div className="relative flex-1 min-h-0 mx-1.5">
         {remaining >= 3 && (
           <div
             className="absolute inset-0 rounded-3xl overflow-hidden"
@@ -456,7 +457,6 @@ function PhaseB({ onNext, onExpand }: { onNext: () => void; onExpand: () => void
           </div>
         )}
 
-        {/* Top draggable card */}
         <motion.div
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
@@ -474,16 +474,15 @@ function PhaseB({ onNext, onExpand }: { onNext: () => void; onExpand: () => void
         </motion.div>
       </div>
 
-      {/* Buttons */}
-      <div className="flex gap-2 px-3 py-2.5 bg-white">
+      <div className="flex gap-2 px-3 py-2.5 bg-white shrink-0">
         <button
-          onClick={() => flyOut("skip")}
+          onPointerUp={() => flyOut("skip")}
           className="flex-1 py-3 rounded-full border-2 border-slate-200 text-slate-700 font-bold text-[12px] active:scale-95 transition-transform bg-white"
         >
           Odrzuć
         </button>
         <button
-          onClick={() => flyOut("like")}
+          onPointerUp={() => flyOut("like")}
           className="flex-1 py-3 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-[12px] active:scale-95 transition-transform"
         >
           Dodaj
@@ -505,7 +504,6 @@ function PhaseC({ onNext }: { onNext: () => void }) {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Frozen card behind */}
       <div className={`absolute inset-0 bg-gradient-to-br ${place.gradient}`} />
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
       <div className="absolute top-4 left-0 right-0 px-4">
@@ -513,7 +511,6 @@ function PhaseC({ onNext }: { onNext: () => void }) {
         <h3 className="text-white font-black text-sm">{place.name}</h3>
       </div>
 
-      {/* Detail sheet */}
       <motion.div
         className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[26px] overflow-hidden"
         style={{ height: "72%" }}
@@ -524,20 +521,13 @@ function PhaseC({ onNext }: { onNext: () => void }) {
         <div className="flex justify-center pt-2.5 pb-1">
           <div className="w-8 h-1 rounded-full bg-slate-200" />
         </div>
-
-        {/* Mock photo strip */}
         <div className="flex gap-1.5 px-3 mb-3">
           {[place.gradient, "from-slate-400 to-slate-500", "from-amber-300 to-amber-500"].map(
             (g, i) => (
-              <div
-                key={i}
-                className={`rounded-xl bg-gradient-to-br ${g} flex-1`}
-                style={{ height: 56 }}
-              />
+              <div key={i} className={`rounded-xl bg-gradient-to-br ${g} flex-1`} style={{ height: 56 }} />
             )
           )}
         </div>
-
         <div className="px-3 space-y-2.5">
           <div className="flex items-start justify-between">
             <div>
@@ -549,9 +539,7 @@ function PhaseC({ onNext }: { onNext: () => void }) {
               <span className="text-[10px] font-bold">{place.rating}</span>
             </div>
           </div>
-
           <p className="text-[9px] text-[#979797] leading-relaxed">{place.description}</p>
-
           <div className="flex gap-3 text-[9px] text-[#979797]">
             <span className="flex items-center gap-1">
               <Clock className="h-2.5 w-2.5" /> pon–pt 11:00–20:00
@@ -560,18 +548,11 @@ function PhaseC({ onNext }: { onNext: () => void }) {
               <Globe className="h-2.5 w-2.5" /> stolowkagdanska.pl
             </span>
           </div>
-
           <div className="flex flex-wrap gap-1">
             {place.tags.map((t) => (
-              <span
-                key={t}
-                className="text-[8px] bg-orange-50 text-orange-600 rounded-full px-2 py-0.5 font-medium"
-              >
-                {t}
-              </span>
+              <span key={t} className="text-[8px] bg-orange-50 text-orange-600 rounded-full px-2 py-0.5 font-medium">{t}</span>
             ))}
           </div>
-
           <button
             onClick={onNext}
             className="w-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold rounded-2xl py-2.5 text-[11px] active:scale-95 transition-transform"
@@ -587,36 +568,22 @@ function PhaseC({ onNext }: { onNext: () => void }) {
 // ─── Phase D: Business CTA with video ─────────────────────────────────────────
 function PhaseD({ onNext }: { onNext: () => void }) {
   const navigate = useNavigate();
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const t = setTimeout(onNext, 5000);
     return () => clearTimeout(t);
   }, [onNext]);
 
-  useEffect(() => {
-    videoRef.current?.play().catch(() => {});
-  }, []);
-
   return (
     <motion.div
       key="D"
-      className="absolute inset-0 flex flex-col bg-slate-900"
+      className="absolute inset-0 flex flex-col"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <video
-        ref={videoRef}
-        src="/founders_business.mp4"
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="auto"
-        className="absolute inset-0 w-full h-full object-cover"
-      />
+      <BgVideo src="/founders_business.mp4" fallbackGradient="from-slate-900 to-slate-800" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/40 to-black/10" />
 
       <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 space-y-3">
@@ -628,51 +595,23 @@ function PhaseD({ onNext }: { onNext: () => void }) {
         >
           <span className="text-xl">🏠</span>
         </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="space-y-1"
-        >
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="space-y-1">
           <p className="text-white font-black text-[15px] leading-tight">Twój lokal w Trasie?</p>
-          <p className="text-white/55 text-[10px] leading-relaxed">
-            Dotrzyj do osób planujących wyjazdy w Twoim mieście
-          </p>
+          <p className="text-white/55 text-[10px] leading-relaxed">Dotrzyj do osób planujących wyjazdy w Twoim mieście</p>
         </motion.div>
-
-        <motion.div
-          className="flex gap-3"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
-        >
-          {[["12k+", "użytkowników"], ["4.8★", "ocena app"], ["0 zł", "na start"]].map(
-            ([val, label]) => (
-              <div key={label} className="text-center">
-                <p className="text-white font-black text-[11px]">{val}</p>
-                <p className="text-white/45 text-[8px]">{label}</p>
-              </div>
-            )
-          )}
+        <motion.div className="flex gap-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}>
+          {[["12k+", "użytkowników"], ["4.8★", "ocena app"], ["0 zł", "na start"]].map(([val, label]) => (
+            <div key={label} className="text-center">
+              <p className="text-white font-black text-[11px]">{val}</p>
+              <p className="text-white/45 text-[8px]">{label}</p>
+            </div>
+          ))}
         </motion.div>
-
-        <motion.div
-          className="space-y-1.5"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9 }}
-        >
-          <button
-            onClick={() => navigate("/dla-firm")}
-            className="w-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold rounded-2xl py-2.5 text-[11px] active:scale-95 transition-transform"
-          >
+        <motion.div className="space-y-1.5" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}>
+          <button onClick={() => navigate("/dla-firm")} className="w-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold rounded-2xl py-2.5 text-[11px] active:scale-95 transition-transform">
             Zarejestruj lokal →
           </button>
-          <button
-            onClick={onNext}
-            className="w-full text-white/40 text-[9px] py-1 active:text-white/70"
-          >
+          <button onClick={onNext} className="w-full text-white/40 text-[9px] py-1 active:text-white/70">
             Pomiń
           </button>
         </motion.div>
@@ -683,44 +622,21 @@ function PhaseD({ onNext }: { onNext: () => void }) {
 
 // ─── Phase E: Founders scroll CTA ─────────────────────────────────────────────
 function PhaseE({ onScrollDown }: { onScrollDown: () => void }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  useEffect(() => {
-    videoRef.current?.play().catch(() => {});
-  }, []);
-
   return (
     <motion.div
       key="E"
-      className="absolute inset-0 flex flex-col justify-between py-6 bg-slate-900"
+      className="absolute inset-0 flex flex-col justify-between py-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <video
-        ref={videoRef}
-        src="/founders_business.mp4"
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="auto"
-        className="absolute inset-0 w-full h-full object-cover"
-      />
+      <BgVideo src="/founders_business.mp4" fallbackGradient="from-slate-900 to-slate-800" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/50" />
 
-      <motion.div
-        className="relative flex flex-col items-center gap-2 mt-4"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
-        <p className="text-white font-black text-[13px] text-center px-4 leading-tight">
-          Stworzone przez Natka i Jurka
-        </p>
-        <p className="text-white/50 text-[9px] text-center">
-          Bo sami potrzebowaliśmy czegoś takiego 🤷
-        </p>
+      <motion.div className="relative flex flex-col items-center gap-2 mt-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+        <p className="text-white font-black text-[13px] text-center px-4 leading-tight">Stworzone przez Natka i Jurka</p>
+        <p className="text-white/50 text-[9px] text-center">Bo sami potrzebowaliśmy czegoś takiego 🤷</p>
       </motion.div>
 
       <motion.button
@@ -730,13 +646,8 @@ function PhaseE({ onScrollDown }: { onScrollDown: () => void }) {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8 }}
       >
-        <span className="text-[8px] tracking-widest uppercase font-semibold">
-          Dowiedz się więcej
-        </span>
-        <motion.div
-          animate={{ y: [0, 5, 0] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-        >
+        <span className="text-[8px] tracking-widest uppercase font-semibold">Dowiedz się więcej</span>
+        <motion.div animate={{ y: [0, 5, 0] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}>
           <ChevronDown className="h-4 w-4" />
         </motion.div>
       </motion.button>
@@ -745,20 +656,11 @@ function PhaseE({ onScrollDown }: { onScrollDown: () => void }) {
 }
 
 // ─── Phone Mockup ──────────────────────────────────────────────────────────────
-function PhoneMockup({
-  phase,
-  setPhase,
-  onScrollDown,
-}: {
-  phase: Phase;
-  setPhase: (p: Phase) => void;
-  onScrollDown: () => void;
-}) {
+function PhoneMockup({ phase, setPhase, onScrollDown }: { phase: Phase; setPhase: (p: Phase) => void; onScrollDown: () => void }) {
   const nextPhase = () => {
     const idx = PHASES.indexOf(phase);
     if (idx < PHASES.length - 1) setPhase(PHASES[idx + 1]);
   };
-
   const goToPhase = (p: Phase) => setPhase(p);
 
   const phaseEl: Record<Phase, React.ReactNode> = {
@@ -771,11 +673,7 @@ function PhoneMockup({
 
   return (
     <div className="flex flex-col items-center gap-5">
-      {/* Phone frame */}
-      <div
-        className="relative mx-auto select-none"
-        style={{ width: "clamp(270px, 82vw, 310px)", aspectRatio: "9/19.5" }}
-      >
+      <div className="relative mx-auto select-none" style={{ width: "clamp(270px, 82vw, 310px)", aspectRatio: "9/19.5" }}>
         <div className="absolute inset-0 rounded-[42px] border-[9px] border-slate-800 bg-slate-900 shadow-[0_32px_80px_-12px_rgba(0,0,0,0.5)] z-10 pointer-events-none" />
         <div className="absolute -right-[11px] top-[22%] w-[4px] h-10 bg-slate-700 rounded-r-full z-20 pointer-events-none" />
         <div className="absolute -left-[11px] top-[18%] w-[4px] h-7 bg-slate-700 rounded-l-full z-20 pointer-events-none" />
@@ -786,17 +684,12 @@ function PhoneMockup({
         </div>
       </div>
 
-      {/* Phase dots */}
       <div className="flex items-center gap-2">
         {PHASES.map((p) => (
           <button key={p} onClick={() => setPhase(p)} aria-label={`Faza ${p}`}>
             <motion.div
               className="rounded-full"
-              animate={{
-                width: p === phase ? 20 : 8,
-                height: 8,
-                backgroundColor: p === phase ? "#F9662B" : "rgb(203 213 225)",
-              }}
+              animate={{ width: p === phase ? 20 : 8, height: 8, backgroundColor: p === phase ? "#F9662B" : "rgb(203 213 225)" }}
               transition={{ duration: 0.25 }}
             />
           </button>
@@ -807,16 +700,9 @@ function PhoneMockup({
 }
 
 // ─── Hero Section ──────────────────────────────────────────────────────────────
-function HeroSection({
-  phase,
-  setPhase,
-}: {
-  phase: Phase;
-  setPhase: (p: Phase) => void;
-}) {
+function HeroSection({ phase, setPhase }: { phase: Phase; setPhase: (p: Phase) => void }) {
   const contentRef = useRef<HTMLDivElement>(null);
-  const scrollToContent = () =>
-    contentRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToContent = () => contentRef.current?.scrollIntoView({ behavior: "smooth" });
 
   return (
     <>
@@ -828,67 +714,37 @@ function HeroSection({
           transition={{ duration: 0.6, delay: 0.15 }}
         >
           <div className="inline-flex items-center gap-2 mb-5">
-            <div
-              className="w-6 h-6 rounded-full animate-orb-flow"
-              style={{
-                background:
-                  "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
-              }}
-            />
+            <div className="w-6 h-6 rounded-full animate-orb-flow" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
             <span className="text-sm font-semibold text-[#979797]">Trasa.travel</span>
           </div>
           <h1 className="text-4xl lg:text-5xl font-black text-[#0E0E0E] leading-[1.1] mb-4">
-            Odkryj miejsca.
-            <br />
-            <span className="bg-gradient-to-r from-[#F4A259] to-[#F9662B] bg-clip-text text-transparent">
-              Razem.
-            </span>
+            Odkryj miejsca.<br />
+            <span className="bg-gradient-to-r from-[#F4A259] to-[#F9662B] bg-clip-text text-transparent">Razem.</span>
           </h1>
           <p className="text-[#979797] text-base leading-relaxed mb-8 max-w-[280px] mx-auto lg:mx-0">
-            Planujcie wyjazdy grupowo — wybierajcie miejsca, twórzcie trasy i dzielcie się
-            wspomnieniami.
+            Planujcie wyjazdy grupowo — wybierajcie miejsca, twórzcie trasy i dzielcie się wspomnieniami.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-            <a
-              href="/auth"
-              className="bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold rounded-2xl px-7 py-3 text-sm shadow-lg shadow-orange-200 active:scale-95 transition-transform text-center"
-            >
+            <a href="/auth" className="bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold rounded-2xl px-7 py-3 text-sm shadow-lg shadow-orange-200 active:scale-95 transition-transform text-center">
               Zacznij za darmo
             </a>
-            <button
-              onClick={scrollToContent}
-              className="border border-slate-200 text-[#0E0E0E] font-semibold rounded-2xl px-7 py-3 text-sm active:scale-95 transition-transform"
-            >
+            <button onClick={scrollToContent} className="border border-slate-200 text-[#0E0E0E] font-semibold rounded-2xl px-7 py-3 text-sm active:scale-95 transition-transform">
               Jak to działa?
             </button>
           </div>
         </motion.div>
 
-        <motion.div
-          className="order-1 lg:order-2"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.25 }}
-        >
+        <motion.div className="order-1 lg:order-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}>
           <PhoneMockup phase={phase} setPhase={setPhase} onScrollDown={scrollToContent} />
         </motion.div>
       </section>
 
       <div ref={contentRef} className="bg-slate-50 py-24 px-6 text-center">
         <div className="max-w-sm mx-auto space-y-4">
-          <div
-            className="w-10 h-10 rounded-full mx-auto animate-orb-flow"
-            style={{
-              background:
-                "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
-            }}
-          />
+          <div className="w-10 h-10 rounded-full mx-auto animate-orb-flow" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
           <h2 className="text-2xl font-black text-[#0E0E0E]">Więcej sekcji wkrótce</h2>
           <p className="text-[#979797] text-sm">Landing page jest w trakcie budowy.</p>
-          <a
-            href="/auth"
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold rounded-2xl px-7 py-3 text-sm shadow-lg shadow-orange-200 active:scale-95 transition-transform"
-          >
+          <a href="/auth" className="inline-flex items-center gap-2 bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold rounded-2xl px-7 py-3 text-sm shadow-lg shadow-orange-200 active:scale-95 transition-transform">
             Dołącz teraz <ArrowRight className="h-4 w-4" />
           </a>
         </div>
@@ -908,11 +764,7 @@ export default function LandingPageV2() {
         {showLoading && <LoadingScreen onEnter={() => setShowLoading(false)} />}
       </AnimatePresence>
       {!showLoading && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
           <HeroSection phase={phase} setPhase={setPhase} />
         </motion.div>
       )}
