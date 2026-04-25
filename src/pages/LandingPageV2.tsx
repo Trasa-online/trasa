@@ -16,6 +16,8 @@ import {
   RotateCcw,
   Clock,
   Globe,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -81,9 +83,10 @@ const DEMO_PLACES: DemoPlace[] = [
   },
 ];
 
-// ─── Video with fallback ───────────────────────────────────────────────────────
+// ─── Video with fallback + mute toggle ───────────────────────────────────────
 function BgVideo({ src, fallbackGradient }: { src: string; fallbackGradient: string }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(true);
 
   useEffect(() => {
     const v = ref.current;
@@ -91,6 +94,14 @@ function BgVideo({ src, fallbackGradient }: { src: string; fallbackGradient: str
     v.muted = true;
     v.play().catch(() => {});
   }, [src]);
+
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const v = ref.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setMuted(v.muted);
+  };
 
   return (
     <>
@@ -106,6 +117,16 @@ function BgVideo({ src, fallbackGradient }: { src: string; fallbackGradient: str
         className="absolute inset-0 w-full h-full object-cover"
         style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
       />
+      <button
+        onPointerUp={toggleMute}
+        className="absolute top-3 right-3 z-30 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
+        aria-label={muted ? "Włącz dźwięk" : "Wycisz"}
+      >
+        {muted
+          ? <VolumeX className="h-3.5 w-3.5 text-white/80" />
+          : <Volume2 className="h-3.5 w-3.5 text-white" />
+        }
+      </button>
     </>
   );
 }
