@@ -89,7 +89,7 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
   return (
     <div className="sticky top-20">
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Podgląd wizytówki</p>
-      <div className="relative w-full rounded-3xl overflow-hidden shadow-xl" style={{ aspectRatio: '3/4' }}>
+      <div className="relative w-full rounded-3xl overflow-hidden shadow-xl" style={{ aspectRatio: '3/4', WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}>
         {coverVideoUrl ? (
           <video src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" autoPlay loop muted playsInline />
         ) : coverImageUrl ? (
@@ -973,6 +973,7 @@ const BusinessDashboard = () => {
                 <div className="w-36 space-y-2">
                     <div
                       className="relative w-full h-60 rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted/30 group cursor-pointer"
+                      style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
                       onClick={() => coverVideoInputRef.current?.click()}
                     >
                       {(uploading === "cover_video" || uploading === "cover") ? (
@@ -1076,6 +1077,7 @@ const BusinessDashboard = () => {
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Podgląd karty</p>
                 <div
                   className="relative w-40 h-64 rounded-3xl overflow-hidden shadow-lg cursor-pointer group"
+                  style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
                   onClick={() => setShowCardPreview(true)}
                 >
                   {coverVideoUrl ? (
@@ -1372,6 +1374,7 @@ const BusinessDashboard = () => {
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Podgląd karty</p>
                 <div
                   className="relative w-40 h-64 rounded-3xl overflow-hidden shadow-lg cursor-pointer group"
+                  style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
                   onClick={() => setShowCardPreview(true)}
                 >
                   {coverVideoUrl ? (
@@ -1836,7 +1839,7 @@ const BusinessDashboard = () => {
       {/* ── Card preview modal ── */}
       {showCardPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowCardPreview(false)}>
-          <div className="relative w-64 h-[400px] rounded-3xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="relative w-64 h-[400px] rounded-3xl overflow-hidden shadow-2xl" style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }} onClick={e => e.stopPropagation()}>
             {coverVideoUrl
               ? <video src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" autoPlay loop muted playsInline />
               : coverImageUrl
