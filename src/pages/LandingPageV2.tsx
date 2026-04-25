@@ -84,9 +84,18 @@ const DEMO_PLACES: DemoPlace[] = [
 ];
 
 // ─── Video with fallback + mute toggle ───────────────────────────────────────
-function BgVideo({ src, fallbackGradient }: { src: string; fallbackGradient: string }) {
+function BgVideo({
+  src,
+  fallbackGradient,
+  muted,
+  onToggleMute,
+}: {
+  src: string;
+  fallbackGradient: string;
+  muted: boolean;
+  onToggleMute: () => void;
+}) {
   const ref = useRef<HTMLVideoElement>(null);
-  const [muted, setMuted] = useState(true);
 
   useEffect(() => {
     const v = ref.current;
@@ -95,12 +104,14 @@ function BgVideo({ src, fallbackGradient }: { src: string; fallbackGradient: str
     v.play().catch(() => {});
   }, [src]);
 
-  const toggleMute = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  useEffect(() => {
     const v = ref.current;
-    if (!v) return;
-    v.muted = !v.muted;
-    setMuted(v.muted);
+    if (v) v.muted = muted;
+  }, [muted]);
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleMute();
   };
 
   return (
@@ -118,7 +129,7 @@ function BgVideo({ src, fallbackGradient }: { src: string; fallbackGradient: str
         style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
       />
       <button
-        onPointerUp={toggleMute}
+        onPointerUp={handleToggle}
         className="absolute top-3 right-3 z-30 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
         aria-label={muted ? "Włącz dźwięk" : "Wycisz"}
       >
@@ -135,12 +146,16 @@ function BgVideo({ src, fallbackGradient }: { src: string; fallbackGradient: str
 function CardInner({
   place,
   videoSrc,
+  videoMuted = true,
+  onToggleMute,
   likeOpacity,
   skipOpacity,
   onExpand,
 }: {
   place: DemoPlace;
   videoSrc?: string;
+  videoMuted?: boolean;
+  onToggleMute?: () => void;
   likeOpacity?: MotionValue<number>;
   skipOpacity?: MotionValue<number>;
   onExpand?: () => void;
@@ -148,7 +163,12 @@ function CardInner({
   return (
     <div className="relative w-full h-full overflow-hidden">
       {videoSrc ? (
-        <BgVideo src={videoSrc} fallbackGradient="from-orange-900 via-orange-700 to-amber-600" />
+        <BgVideo
+          src={videoSrc}
+          fallbackGradient="from-orange-900 via-orange-700 to-amber-600"
+          muted={videoMuted}
+          onToggleMute={onToggleMute ?? (() => {})}
+        />
       ) : (
         <div className={`absolute inset-0 bg-gradient-to-br ${place.gradient}`} />
       )}
@@ -373,7 +393,7 @@ function LoadingScreen({ onEnter }: { onEnter: () => void }) {
 }
 
 // ─── Phase A: Founders video card ─────────────────────────────────────────────
-function PhaseA({ onNext }: { onNext: () => void }) {
+function PhaseA({ onNext, audioMuted, onToggleMute }: { onNext: () => void; audioMuted: boolean; onToggleMute: () => void }) {
   const place: DemoPlace = {
     id: "a",
     name: "Co możesz robić w Trasie?",
@@ -398,7 +418,7 @@ function PhaseA({ onNext }: { onNext: () => void }) {
       transition={{ duration: 0.35 }}
     >
       <div className="relative flex-1 min-h-0">
-        <CardInner place={place} videoSrc="/founders_intro.mp4" />
+        <CardInner place={place} videoSrc="/founders_intro.mp4" videoMuted={audioMuted} onToggleMute={onToggleMute} />
       </div>
       <div className="flex gap-2 px-3 py-2.5 bg-white shrink-0">
         <button
@@ -588,7 +608,7 @@ function PhaseC({ onNext }: { onNext: () => void }) {
 }
 
 // ─── Phase D: Business CTA with video ─────────────────────────────────────────
-function PhaseD({ onNext }: { onNext: () => void }) {
+function PhaseD({ onNext, audioMuted, onToggleMute }: { onNext: () => void; audioMuted: boolean; onToggleMute: () => void }) {
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -605,7 +625,7 @@ function PhaseD({ onNext }: { onNext: () => void }) {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <BgVideo src="/founders_business.mp4" fallbackGradient="from-slate-900 to-slate-800" />
+      <BgVideo src="/founders_business.mp4" fallbackGradient="from-slate-900 to-slate-800" muted={audioMuted} onToggleMute={onToggleMute} />
       <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/40 to-black/10" />
 
       <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 space-y-3">
@@ -643,7 +663,7 @@ function PhaseD({ onNext }: { onNext: () => void }) {
 }
 
 // ─── Phase E: Founders scroll CTA ─────────────────────────────────────────────
-function PhaseE({ onScrollDown }: { onScrollDown: () => void }) {
+function PhaseE({ onScrollDown, audioMuted, onToggleMute }: { onScrollDown: () => void; audioMuted: boolean; onToggleMute: () => void }) {
   return (
     <motion.div
       key="E"
@@ -653,7 +673,7 @@ function PhaseE({ onScrollDown }: { onScrollDown: () => void }) {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <BgVideo src="/founders_business.mp4" fallbackGradient="from-slate-900 to-slate-800" />
+      <BgVideo src="/founders_business.mp4" fallbackGradient="from-slate-900 to-slate-800" muted={audioMuted} onToggleMute={onToggleMute} />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/50" />
 
       <motion.div className="relative flex flex-col items-center gap-2 mt-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
@@ -679,18 +699,24 @@ function PhaseE({ onScrollDown }: { onScrollDown: () => void }) {
 
 // ─── Phone Mockup ──────────────────────────────────────────────────────────────
 function PhoneMockup({ phase, setPhase, onScrollDown }: { phase: Phase; setPhase: (p: Phase) => void; onScrollDown: () => void }) {
+  const [audioMuted, setAudioMuted] = useState(true);
+
+  // Mute whenever the phase changes — no audio leaks between cards
+  useEffect(() => { setAudioMuted(true); }, [phase]);
+
   const nextPhase = () => {
     const idx = PHASES.indexOf(phase);
     if (idx < PHASES.length - 1) setPhase(PHASES[idx + 1]);
   };
   const goToPhase = (p: Phase) => setPhase(p);
+  const toggleAudio = () => setAudioMuted(m => !m);
 
   const phaseEl: Record<Phase, React.ReactNode> = {
-    A: <PhaseA key="A" onNext={nextPhase} />,
+    A: <PhaseA key="A" onNext={nextPhase} audioMuted={audioMuted} onToggleMute={toggleAudio} />,
     B: <PhaseB key="B" onNext={nextPhase} onExpand={() => goToPhase("C")} />,
     C: <PhaseC key="C" onNext={nextPhase} />,
-    D: <PhaseD key="D" onNext={nextPhase} />,
-    E: <PhaseE key="E" onScrollDown={onScrollDown} />,
+    D: <PhaseD key="D" onNext={nextPhase} audioMuted={audioMuted} onToggleMute={toggleAudio} />,
+    E: <PhaseE key="E" onScrollDown={onScrollDown} audioMuted={audioMuted} onToggleMute={toggleAudio} />,
   };
 
   return (
