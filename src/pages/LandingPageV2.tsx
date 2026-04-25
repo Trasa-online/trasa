@@ -273,7 +273,7 @@ function PhaseA({ onNext }: { onNext: () => void }) {
       transition={{ duration: 0.35 }}
     >
       <div className="relative flex-1">
-        <CardInner place={place} videoSrc="/IMG_0294.MOV" />
+        <CardInner place={place} videoSrc="/founders_intro.mp4" />
       </div>
       <div className="flex gap-2 px-3 py-2.5 bg-white">
         <button
@@ -504,7 +504,7 @@ function PhaseD({ onNext }: { onNext: () => void }) {
       transition={{ duration: 0.4 }}
     >
       <video
-        src="/IMG_0295.MOV"
+        src="/founders_business.mp4"
         autoPlay
         loop
         muted
@@ -587,7 +587,7 @@ function PhaseE({ onScrollDown }: { onScrollDown: () => void }) {
       transition={{ duration: 0.4 }}
     >
       <video
-        src="/IMG_0295.MOV"
+        src="/founders_business.mp4"
         autoPlay
         loop
         muted
