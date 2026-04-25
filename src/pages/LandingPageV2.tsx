@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   motion,
   AnimatePresence,
@@ -95,19 +95,29 @@ function CardInner({
   skipOpacity?: MotionValue<number>;
   onExpand?: () => void;
 }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.play().catch(() => {});
+  }, [videoSrc]);
+
   return (
     <div className="relative w-full h-full overflow-hidden">
-      {videoSrc ? (
+      {/* Gradient always visible as fallback while video loads */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${place.gradient}`} />
+      {videoSrc && (
         <video
+          ref={videoRef}
           src={videoSrc}
           autoPlay
           loop
           muted
           playsInline
+          preload="auto"
           className="absolute inset-0 w-full h-full object-cover"
         />
-      ) : (
-        <div className={`absolute inset-0 bg-gradient-to-br ${place.gradient}`} />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/5" />
 
@@ -196,10 +206,10 @@ function CardInner({
 // ─── Loading Screen ────────────────────────────────────────────────────────────
 function LoadingScreen({ onEnter }: { onEnter: () => void }) {
   const [showCTA, setShowCTA] = useState(false);
-  useState(() => {
+  useEffect(() => {
     const t = setTimeout(() => setShowCTA(true), 1200);
     return () => clearTimeout(t);
-  });
+  }, []);
 
   return (
     <motion.div
@@ -488,27 +498,34 @@ function PhaseC({ onNext }: { onNext: () => void }) {
 // ─── Phase D: Business CTA with video ─────────────────────────────────────────
 function PhaseD({ onNext }: { onNext: () => void }) {
   const navigate = useNavigate();
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-  useState(() => {
+  useEffect(() => {
     const t = setTimeout(onNext, 5000);
     return () => clearTimeout(t);
-  });
+  }, [onNext]);
+
+  useEffect(() => {
+    videoRef.current?.play().catch(() => {});
+  }, []);
 
   return (
     <motion.div
       key="D"
-      className="absolute inset-0 flex flex-col"
+      className="absolute inset-0 flex flex-col bg-slate-900"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
     >
       <video
+        ref={videoRef}
         src="/founders_business.mp4"
         autoPlay
         loop
         muted
         playsInline
+        preload="auto"
         className="absolute inset-0 w-full h-full object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/40 to-black/10" />
@@ -577,21 +594,28 @@ function PhaseD({ onNext }: { onNext: () => void }) {
 
 // ─── Phase E: Founders scroll CTA ─────────────────────────────────────────────
 function PhaseE({ onScrollDown }: { onScrollDown: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    videoRef.current?.play().catch(() => {});
+  }, []);
+
   return (
     <motion.div
       key="E"
-      className="absolute inset-0 flex flex-col justify-between py-6"
+      className="absolute inset-0 flex flex-col justify-between py-6 bg-slate-900"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
     >
       <video
+        ref={videoRef}
         src="/founders_business.mp4"
         autoPlay
         loop
         muted
         playsInline
+        preload="auto"
         className="absolute inset-0 w-full h-full object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/50" />
