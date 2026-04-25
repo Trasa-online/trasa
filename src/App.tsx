@@ -153,6 +153,7 @@ function BusinessGuard() {
 import CookieBanner from "./components/CookieBanner";
 // Eagerly loaded — public-facing pages that need fast FCP
 import LandingPage from "./pages/LandingPage";
+import LandingPageV2 from "./pages/LandingPageV2";
 import ForBusinessPage from "./pages/ForBusinessPage";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
@@ -227,6 +228,7 @@ const App = () => (
           <Route path="/quick-plan-review" element={<RequireAuth><QuickPlanReview /></RequireAuth>} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
           <Route path="/dla-firm" element={<ForBusinessPage />} />
+          <Route path="/v2" element={<LandingPageV2 />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
