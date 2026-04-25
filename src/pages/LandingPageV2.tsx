@@ -104,6 +104,7 @@ function BgVideo({ src, fallbackGradient }: { src: string; fallbackGradient: str
         playsInline
         preload="auto"
         className="absolute inset-0 w-full h-full object-cover"
+        style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
       />
     </>
   );
@@ -124,7 +125,7 @@ function CardInner({
   onExpand?: () => void;
 }) {
   return (
-    <div className="relative w-full h-full overflow-hidden" style={{ WebkitMaskImage: "linear-gradient(white, white)" }}>
+    <div className="relative w-full h-full overflow-hidden">
       {videoSrc ? (
         <BgVideo src={videoSrc} fallbackGradient="from-orange-900 via-orange-700 to-amber-600" />
       ) : (
@@ -673,18 +674,21 @@ function PhoneMockup({ phase, setPhase, onScrollDown }: { phase: Phase; setPhase
 
   return (
     <div className="flex flex-col items-center gap-5">
-      <div className="relative mx-auto select-none" style={{ width: "clamp(270px, 82vw, 310px)", aspectRatio: "9/19.5" }}>
-        <div className="absolute inset-0 rounded-[42px] border-[9px] border-slate-800 bg-slate-900 shadow-[0_32px_80px_-12px_rgba(0,0,0,0.5)] z-10 pointer-events-none" />
-        <div className="absolute -right-[11px] top-[22%] w-[4px] h-10 bg-slate-700 rounded-r-full z-20 pointer-events-none" />
-        <div className="absolute -left-[11px] top-[18%] w-[4px] h-7 bg-slate-700 rounded-l-full z-20 pointer-events-none" />
-        <div className="absolute -left-[11px] top-[27%] w-[4px] h-7 bg-slate-700 rounded-l-full z-20 pointer-events-none" />
-        <div className="absolute top-[9px] left-1/2 -translate-x-1/2 w-14 h-[14px] bg-slate-900 rounded-full z-20 pointer-events-none" />
-        <div
-          className="absolute inset-[9px] rounded-[34px] overflow-hidden bg-black"
-          style={{ WebkitMaskImage: "linear-gradient(white, white)" }}
-        >
+      {/* Phone wrapper — bg-slate-800 provides the frame colour, no z-index overlay needed */}
+      <div
+        className="relative mx-auto select-none rounded-[42px] bg-slate-800 shadow-[0_32px_80px_-12px_rgba(0,0,0,0.55)]"
+        style={{ width: "clamp(270px, 82vw, 310px)", aspectRatio: "9/19.5" }}
+      >
+        {/* Side buttons */}
+        <div className="absolute -right-[3px] top-[22%] w-[4px] h-10 bg-slate-700 rounded-r-full pointer-events-none" />
+        <div className="absolute -left-[3px] top-[18%] w-[4px] h-7 bg-slate-700 rounded-l-full pointer-events-none" />
+        <div className="absolute -left-[3px] top-[27%] w-[4px] h-7 bg-slate-700 rounded-l-full pointer-events-none" />
+        {/* Screen — z-1 so it's above the wrapper bg, notch goes on top via z-10 */}
+        <div className="absolute inset-[9px] rounded-[34px] overflow-hidden bg-black" style={{ zIndex: 1 }}>
           <AnimatePresence mode="wait">{phaseEl[phase]}</AnimatePresence>
         </div>
+        {/* Notch above screen */}
+        <div className="absolute top-[9px] left-1/2 -translate-x-1/2 w-14 h-[14px] bg-slate-800 rounded-full pointer-events-none" style={{ zIndex: 10 }} />
       </div>
 
       <div className="flex items-center gap-2">
