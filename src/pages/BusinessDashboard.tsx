@@ -973,6 +973,8 @@ const BusinessDashboard = () => {
                 <p className="text-sm text-slate-400">Okładka i galeria dodatkowa widoczne na Twojej wizytówce.</p>
               </div>
 
+              <div className="flex flex-col lg:flex-row gap-5 items-start">
+              <div className="flex-1 min-w-0 space-y-4">
               {/* ── SEKCJA 1: Okładka wizytówki (zdjęcie lub filmik) + Podgląd ── */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                 <div className="flex items-start justify-between">
@@ -1077,9 +1079,14 @@ const BusinessDashboard = () => {
                             ? <img src={logoUrl} className="w-5 h-5 rounded-full object-cover border border-white/30" />
                             : <div className="w-5 h-5 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
                           }
-                          <span className="text-white/60 text-[9px]">{mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : 'Kategoria'}</span>
+                          <span className="text-white/60 text-[9px]">{mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : 'Kategoria'} · @trasa</span>
                         </div>
                         <h3 className="text-sm font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+                        {eventTitle && (
+                          <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2 py-0.5 text-white font-semibold text-[9px]">
+                            🎉 {eventTitle.length > 15 ? `${eventTitle.slice(0, 15)}…` : eventTitle}
+                          </div>
+                        )}
                         {tags.length > 0 && (
                           <div className="flex flex-wrap gap-1">
                             {tags.slice(0, 2).map(t => (
@@ -1088,7 +1095,7 @@ const BusinessDashboard = () => {
                           </div>
                         )}
                       </div>
-                      <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <Expand className="h-3 w-3 text-white" />
                       </div>
                     </div>{/* end card */}
@@ -1123,6 +1130,54 @@ const BusinessDashboard = () => {
                 </div>
                 <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
               </div>
+              </div> {/* end flex-1 min-w-0 */}
+
+              {/* Desktop sticky card preview */}
+              <div className="hidden lg:flex flex-col gap-3 w-40 shrink-0 sticky top-20">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Podgląd karty</p>
+                <div
+                  className="relative w-40 h-64 rounded-3xl overflow-hidden shadow-lg cursor-pointer group"
+                  onClick={() => setShowCardPreview(true)}
+                >
+                  {coverVideoUrl ? (
+                    <video src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" autoPlay loop muted playsInline />
+                  ) : coverImageUrl ? (
+                    <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
+                  <div className="absolute bottom-0 left-0 right-0 px-3 pb-4 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      {logoUrl
+                        ? <img src={logoUrl} className="w-5 h-5 rounded-full object-cover border border-white/30" />
+                        : <div className="w-5 h-5 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                      }
+                      <span className="text-white/60 text-[9px]">{mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : 'Kategoria'} · @trasa</span>
+                    </div>
+                    <h3 className="text-sm font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+                    {eventTitle && (
+                      <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2 py-0.5 text-white font-semibold text-[9px]">
+                        🎉 {eventTitle.length > 15 ? `${eventTitle.slice(0, 15)}…` : eventTitle}
+                      </div>
+                    )}
+                    {tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {tags.slice(0, 2).map(t => (
+                          <span key={t} className="px-1.5 py-0.5 bg-white/15 rounded-full text-[8px] font-semibold text-white/80">#{t}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Expand className="h-3 w-3 text-white" />
+                  </div>
+                </div>
+                <button onClick={() => setShowCardPreview(true)} className="text-[11px] text-slate-400 hover:text-slate-600 text-center transition-colors">
+                  Powiększ →
+                </button>
+              </div>
+              </div> {/* end flex flex-col lg:flex-row */}
             </div>
           )}
 
@@ -1131,6 +1186,8 @@ const BusinessDashboard = () => {
             <div className="space-y-5">
               <div><h2 className="text-lg font-black">Dane lokalu</h2><p className="text-sm text-slate-400">Informacje kontaktowe, opis i tagi widoczne w wizytówce.</p></div>
 
+              <div className="flex flex-col lg:flex-row gap-5 items-start">
+              <div className="flex-1 min-w-0 space-y-5">
               {/* ── Logo — avatar style ── */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
                 <p className="text-sm font-bold text-foreground mb-4">Logo lokalu</p>
@@ -1163,7 +1220,7 @@ const BusinessDashboard = () => {
               </div>
 
               {/* Wizytówka preview — wygląd jak karta w swiperze */}
-              <div>
+              <div className="lg:hidden">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Podgląd wizytówki</p>
                 <div className="w-52 h-80 rounded-3xl overflow-hidden shadow-lg relative bg-slate-800">
                   {/* Tło */}
@@ -1187,6 +1244,12 @@ const BusinessDashboard = () => {
                     </div>
                     {/* Nazwa */}
                     <h3 className="text-xl font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+                    {/* Event pill */}
+                    {eventTitle && (
+                      <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2 py-0.5 text-white font-semibold text-[10px]">
+                        🎉 {eventTitle.length > 20 ? `${eventTitle.slice(0, 20)}…` : eventTitle}
+                      </div>
+                    )}
                     {/* Tagi */}
                     {tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">
@@ -1363,6 +1426,54 @@ const BusinessDashboard = () => {
                   </div>
                 </div>
               </div>
+              </div> {/* end flex-1 min-w-0 */}
+
+              {/* Desktop sticky card preview */}
+              <div className="hidden lg:flex flex-col gap-3 w-40 shrink-0 sticky top-20">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Podgląd karty</p>
+                <div
+                  className="relative w-40 h-64 rounded-3xl overflow-hidden shadow-lg cursor-pointer group"
+                  onClick={() => setShowCardPreview(true)}
+                >
+                  {coverVideoUrl ? (
+                    <video src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" autoPlay loop muted playsInline />
+                  ) : coverImageUrl ? (
+                    <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
+                  <div className="absolute bottom-0 left-0 right-0 px-3 pb-4 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      {logoUrl
+                        ? <img src={logoUrl} className="w-5 h-5 rounded-full object-cover border border-white/30" />
+                        : <div className="w-5 h-5 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                      }
+                      <span className="text-white/60 text-[9px]">{mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : 'Kategoria'} · @trasa</span>
+                    </div>
+                    <h3 className="text-sm font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+                    {eventTitle && (
+                      <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2 py-0.5 text-white font-semibold text-[9px]">
+                        🎉 {eventTitle.length > 15 ? `${eventTitle.slice(0, 15)}…` : eventTitle}
+                      </div>
+                    )}
+                    {tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {tags.slice(0, 2).map(t => (
+                          <span key={t} className="px-1.5 py-0.5 bg-white/15 rounded-full text-[8px] font-semibold text-white/80">#{t}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Expand className="h-3 w-3 text-white" />
+                  </div>
+                </div>
+                <button onClick={() => setShowCardPreview(true)} className="text-[11px] text-slate-400 hover:text-slate-600 text-center transition-colors">
+                  Powiększ →
+                </button>
+              </div>
+              </div> {/* end flex flex-col lg:flex-row */}
             </div>
           )}
 
@@ -1744,6 +1855,19 @@ const BusinessDashboard = () => {
         </div>
       </div>
 
+      {/* Mobile FAB — card preview */}
+      {(activeSection === 'gallery' || activeSection === 'profile' || activeSection === 'posts') && (
+        <button
+          className="fixed md:hidden flex flex-col items-center justify-center h-14 w-14 rounded-full bg-white border border-slate-200 shadow-xl z-40 active:scale-95 transition-transform"
+          style={{ bottom: isDirty ? '5.5rem' : '1.5rem', right: '1rem' }}
+          onClick={() => setShowCardPreview(true)}
+          aria-label="Podgląd wizytówki"
+        >
+          <ZoomIn className="h-5 w-5 text-slate-600" />
+          <span className="text-[8px] text-slate-500 font-semibold mt-0.5">Podgląd</span>
+        </button>
+      )}
+
       {/* Sticky save bar */}
       {isDirty && (
         <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-safe-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent">
@@ -1788,6 +1912,11 @@ const BusinessDashboard = () => {
                 <span className="text-white/60 text-[11px]">{mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : 'Kategoria'} · @trasa</span>
               </div>
               <h3 className="text-xl font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+              {eventTitle && (
+                <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2.5 py-1 text-white font-semibold text-xs">
+                  🎉 {eventTitle}
+                </div>
+              )}
               {tags.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {tags.slice(0, 3).map(t => (
@@ -1796,7 +1925,7 @@ const BusinessDashboard = () => {
                 </div>
               )}
             </div>
-            <button onClick={() => setShowCardPreview(false)} className="absolute top-3 right-3 h-7 w-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+            <button onClick={() => setShowCardPreview(false)} className="absolute top-3 right-3 h-7 w-7 rounded-full bg-black/40 flex items-center justify-center">
               <X className="h-3.5 w-3.5 text-white" />
             </button>
           </div>

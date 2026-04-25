@@ -175,9 +175,13 @@ const PlaceSwiperDetail = ({
     !!url && (url.startsWith("http") || url.startsWith("/")) &&
     !url.includes("staticmap") && !url.includes("maps/api/staticmap");
 
-  const displayPhotos = [
+  const googleAndCover = [
     ...photos.filter(validUrl),
     ...(!photos.length && validUrl(place?.photo_url) ? [place!.photo_url!] : []),
+  ];
+  const displayPhotos = [
+    ...googleAndCover,
+    ...(place?.galleryPhotos ?? []).filter(validUrl).filter(u => !googleAndCover.includes(u)),
   ];
   const hasPhoto = displayPhotos.length > 0;
   return (
@@ -237,6 +241,15 @@ const PlaceSwiperDetail = ({
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-black/30" />
+
+                  {/* Close button overlaid on photo */}
+                  <button
+                    onClick={() => onOpenChange(false)}
+                    className="absolute top-3 right-3 z-30 h-9 w-9 rounded-full bg-black/40 flex items-center justify-center active:bg-black/60 transition-colors"
+                    aria-label="Zamknij"
+                  >
+                    <X className="h-4 w-4 text-white" />
+                  </button>
 
                   {/* Tap areas for prev/next */}
                   <button className="absolute left-0 inset-y-0 w-1/3 z-10" onClick={() => setActivePhoto((n) => Math.max(0, n - 1))} />
