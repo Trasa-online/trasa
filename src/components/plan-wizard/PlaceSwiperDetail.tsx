@@ -107,7 +107,8 @@ const PlaceSwiperDetail = ({
     }
 
     const fetchAll = async () => {
-      if (skipGoogleFetch) {
+      // Business with own photos → use their media, skip Google photos
+      if (skipGoogleFetch || place.businessHasOwnPhoto) {
         setDetail(null);
         setPhotos([place.photo_url, ...(place.galleryPhotos ?? [])].filter(Boolean) as string[]);
         if (place.businessLogoUrl !== undefined) {

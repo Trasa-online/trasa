@@ -113,6 +113,7 @@ Klient → supabase.functions.invoke("google-places-proxy", ...) → Google Plac
 3. `GOOGLE_MAPS_API_KEY` = tylko server-side (NIE VITE_ prefix)
 4. Gdy `photo_url` w DB jest null → fallback do `/api/demo-places?city=...&category=...`
 5. `skipGoogleFetch` prop w PlaceSwiperDetail/SwipeCard: używaj `false` dla fullscreen drawer (żeby były recenzje i zdjęcia Google), `true` tylko gdy zależy Ci na szybkości i masz własne zdjęcia
+6. **Biznes z własnymi zdjęciami → blokuj Google Photos (KRYTYCZNE):** Gdy lokal ma choć jedno własne zdjęcie (cover image, cover video, lub galeria `gallery_urls`), NIE pobieraj zdjęć z Google Places. Pole `businessHasOwnPhoto: boolean` w `MockPlace` (ustawiane w `enrichWithBusinessProfile`) jest źródłem prawdy — `PlaceSwiperDetail` respektuje je automatycznie. Nie nadpisuj tego zachowania bez wyraźnego powodu.
 
 ### Supabase
 

@@ -35,6 +35,7 @@ export interface MockPlace {
   galleryPhotos?: string[]; // extra photos shown in carousel (swipe card + detail)
   businessSubcategories?: string[]; // subcategories from business_profiles (for custom filtering)
   coverVideoUrl?: string; // business cover video (premium)
+  businessHasOwnPhoto?: boolean; // true when business uploaded cover image/video or gallery — skip Google photos
 }
 
 export type PlaceCategory =
@@ -707,6 +708,11 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     galleryPhotos: bp.gallery_urls ?? [],
     businessSubcategories: bp.subcategories ?? [],
     coverVideoUrl: (plan === 'basic' || plan === 'premium') && bp.cover_video_url ? bp.cover_video_url : undefined,
+    // skip Google photos when business has uploaded their own media
+    businessHasOwnPhoto: !!(
+      ((plan === 'basic' || plan === 'premium') && (bp.cover_image_url || bp.cover_video_url)) ||
+      (bp.gallery_urls && bp.gallery_urls.length > 0)
+    ),
   } as MockPlace;
 }
 
