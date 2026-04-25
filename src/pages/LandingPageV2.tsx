@@ -4,6 +4,7 @@ import {
   AnimatePresence,
   useMotionValue,
   useTransform,
+  useMotionValueEvent,
   animate,
   type MotionValue,
 } from "framer-motion";
@@ -204,55 +205,143 @@ function CardInner({
 }
 
 // ─── Loading Screen ────────────────────────────────────────────────────────────
+const RING_R = 88;
+const RING_CIRC = 2 * Math.PI * RING_R;
+
 function LoadingScreen({ onEnter }: { onEnter: () => void }) {
+  const progress = useMotionValue(0);
+  const [pctText, setPctText] = useState("0 %");
   const [showCTA, setShowCTA] = useState(false);
+
+  const dashOffset = useTransform(progress, [0, 1], [RING_CIRC, 0]);
+  const orbitAngle = useTransform(progress, [0, 1], [0, 360]);
+
+  useMotionValueEvent(progress, "change", (v) => {
+    setPctText(`${Math.round(v * 100)} %`);
+  });
+
   useEffect(() => {
-    const t = setTimeout(() => setShowCTA(true), 1200);
-    return () => clearTimeout(t);
+    const controls = animate(progress, 1, {
+      duration: 2.6,
+      ease: "linear",
+      onComplete: () => setShowCTA(true),
+    });
+    return controls.stop;
   }, []);
 
   return (
     <motion.div
       key="loading"
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#FEFEFE]"
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={{ duration: 0.4 }}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+      style={{ background: "#0E0E0E" }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.5 }}
     >
-      <motion.div
-        className="absolute rounded-full pointer-events-none"
-        style={{
-          width: 140,
-          height: 140,
-          background: "radial-gradient(circle, rgba(249,102,43,0.18) 0%, transparent 70%)",
-        }}
-        animate={{ scale: [1, 1.7, 1], opacity: [0.7, 0, 0.7] }}
-        transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <div
-        className="rounded-full animate-orb-flow"
-        style={{
-          width: 72,
-          height: 72,
-          background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
-        }}
-      />
-      <AnimatePresence>
-        {showCTA && (
+      {/* Ring + orb container */}
+      <div className="relative" style={{ width: 240, height: 240 }}>
+        {/* SVG rings */}
+        <svg
+          viewBox="0 0 240 240"
+          className="absolute inset-0 w-full h-full"
+          style={{ overflow: "visible" }}
+        >
+          {/* Track ring */}
+          <circle
+            cx="120" cy="120" r={RING_R}
+            fill="none"
+            stroke="rgba(249,102,43,0.12)"
+            strokeWidth="1.5"
+          />
+          {/* Inner decorative ring */}
+          <circle
+            cx="120" cy="120" r="66"
+            fill="none"
+            stroke="rgba(249,102,43,0.06)"
+            strokeWidth="10"
+          />
+          {/* Progress ring */}
+          <motion.circle
+            cx="120" cy="120" r={RING_R}
+            fill="none"
+            stroke="#F9662B"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            style={{
+              strokeDasharray: RING_CIRC,
+              strokeDashoffset: dashOffset,
+              rotate: -90,
+              transformOrigin: "120px 120px",
+              filter: "drop-shadow(0 0 5px rgba(249,102,43,0.85))",
+            }}
+          />
+        </svg>
+
+        {/* Orbiting dot */}
+        <motion.div
+          className="absolute pointer-events-none"
+          style={{ left: "50%", top: "50%", width: 0, height: 0, rotate: orbitAngle }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              width: 10,
+              height: 10,
+              borderRadius: "50%",
+              background: "radial-gradient(circle at 35% 35%, #fb923c, #F9662B)",
+              top: -(RING_R + 5),
+              left: -5,
+              boxShadow:
+                "0 0 8px rgba(249,102,43,0.9), 0 0 18px rgba(249,102,43,0.55)",
+            }}
+          />
+        </motion.div>
+
+        {/* Center orb */}
+        <div className="absolute inset-0 flex items-center justify-center">
           <motion.div
-            className="mt-10 flex flex-col items-center gap-3"
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <p className="text-sm text-[#979797]">Aplikacja do planowania podróży</p>
-            <button
-              onClick={onEnter}
-              className="flex items-center gap-2 bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-semibold rounded-full px-7 py-3 text-sm active:scale-95 transition-transform shadow-lg shadow-orange-200"
+            className="rounded-full cursor-pointer"
+            style={{
+              width: 90,
+              height: 90,
+              background:
+                "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
+              boxShadow:
+                "0 0 28px rgba(249,102,43,0.55), 0 0 56px rgba(249,102,43,0.25)",
+            }}
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+            onClick={showCTA ? onEnter : undefined}
+          />
+        </div>
+      </div>
+
+      {/* Counter / CTA */}
+      <div className="mt-5 h-7 flex items-center justify-center">
+        <AnimatePresence mode="wait">
+          {!showCTA ? (
+            <motion.p
+              key="pct"
+              className="font-bold text-sm tracking-widest"
+              style={{ color: "#F4A259" }}
+              exit={{ opacity: 0 }}
             >
-              Odkryj Trasę <ArrowRight className="h-4 w-4" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              {pctText}
+            </motion.p>
+          ) : (
+            <motion.button
+              key="cta"
+              onClick={onEnter}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="font-bold text-sm tracking-widest transition-colors"
+              style={{ color: "#F4A259" }}
+            >
+              Kliknij aby uruchomić
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </div>
     </motion.div>
   );
 }
