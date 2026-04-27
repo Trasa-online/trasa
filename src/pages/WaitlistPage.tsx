@@ -283,7 +283,11 @@ function FullscreenIntroVideo({
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    const onTouch = () => { if (el.paused) { el.muted = true; el.play().catch(() => {}); } };
+    // setAttribute sets the HTML attribute — iOS Safari requires this (not just el.muted = true)
+    el.setAttribute("muted", "");
+    el.muted = true;
+    el.play().catch(() => {});
+    const onTouch = () => { if (el.paused) { el.setAttribute("muted", ""); el.muted = true; el.play().catch(() => {}); } };
     document.addEventListener("touchstart", onTouch, { once: true, passive: true });
     return () => document.removeEventListener("touchstart", onTouch);
   }, []);
@@ -302,6 +306,7 @@ function FullscreenIntroVideo({
         ref={(el) => {
           videoRef.current = el;
           if (!el) return;
+          el.setAttribute("muted", "");
           el.muted = true;
           el.play().catch(() => {});
         }}
@@ -565,21 +570,22 @@ export default function WaitlistPage() {
           <div className="flex-1 flex flex-col items-center px-2"
             style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 20px)" }}>
 
-            {/* Orb always visible (z-50, above intro video z-40). "speed dating" overlaps
-                the orb from below so the text appears stamped on the logo. */}
-            <div className="relative flex flex-col items-center" style={{ zIndex: 50 }}>
-              <motion.div
-                className="w-20 h-20 rounded-full"
-                style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
-              />
-              <p className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap -mt-8"
-                style={{ fontSize: HEADLINE_SIZE }}>
-                speed dating
-              </p>
-            </div>
+            {/* Orb — z-50 always, visible above intro video (z-40) from the first frame */}
+            <motion.div
+              className="w-20 h-20 rounded-full"
+              style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", position: "relative", zIndex: 50 }}
+            />
 
-            {/* Phone or postcard — z-10, overlaps headlines */}
-            <div className="relative z-10 -mt-5 -mb-5">
+            {/* "speed dating" — z-5 during intro (hidden by video z-40), z-60 after (on top of orb z-50) */}
+            <p
+              className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap -mt-8"
+              style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: scene === "intro" ? 5 : 60 }}
+            >
+              speed dating
+            </p>
+
+            {/* Phone or postcard — z-1 during intro (below video), z-70 after (above text z-60) */}
+            <div className="relative -mt-5 -mb-5" style={{ zIndex: scene === "intro" ? 1 : 70 }}>
               <AnimatePresence mode="wait">
                 {scene !== "postcard" ? (
                   <motion.div key="phone" initial={false} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
