@@ -576,20 +576,15 @@ export default function WaitlistPage() {
               style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", position: "relative", zIndex: 50 }}
             />
 
-            {/* "speed dating" — z-5 during intro (hidden by video z-40), z-60 after (on top of orb z-50) */}
-            <p
-              className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap -mt-8"
-              style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: scene === "intro" ? 5 : 60 }}
-            >
-              speed dating
-            </p>
-
-            {/* Phone or postcard — z-1 during intro (below video), z-70 after (above text z-60) */}
-            <div className="relative -mt-5 -mb-5" style={{ zIndex: scene === "intro" ? 1 : 70 }}>
+            {/* Phone / postcard — ABOVE text (before text in DOM = higher on screen).
+                key changes intro→demo so phases B→C→E replay fresh after intro ends.
+                z-1 during intro (hidden behind video z-40), z-70 after (above text z-60). */}
+            <div className="relative -mt-3" style={{ zIndex: scene === "intro" ? 1 : 70 }}>
               <AnimatePresence mode="wait">
                 {scene !== "postcard" ? (
                   <motion.div key="phone" initial={false} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
                     <PhoneMockup
+                      key={scene === "intro" ? "phone-intro" : "phone-demo"}
                       ref={phoneBodyRef}
                       compact
                       initialPhase="B"
@@ -607,6 +602,14 @@ export default function WaitlistPage() {
                 )}
               </AnimatePresence>
             </div>
+
+            {/* "speed dating" — below phone. z-5 during intro (behind video), z-60 after. */}
+            <p
+              className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap -mt-4"
+              style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: scene === "intro" ? 5 : 60 }}
+            >
+              speed dating
+            </p>
 
             <p className="relative z-0 font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap"
               style={{ fontSize: HEADLINE_SIZE }}>

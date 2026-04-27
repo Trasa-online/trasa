@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getPhotoUrl } from "@/lib/placePhotos";
+import { MAIN_CATEGORIES } from "@/lib/categories";
 import { ArrowLeft, Lock, Sparkles, Users, User, Copy, Check, Loader2, Search, UserPlus } from "lucide-react";
 import { SwipeCard } from "@/components/plan-wizard/PlaceSwiper";
 import type { MockPlace, PlaceCategory } from "@/components/plan-wizard/PlaceSwiper";
@@ -52,17 +53,22 @@ interface DemoPlace {
   longitude?: number;
 }
 
-type CategoryKey = "cafe" | "restaurant" | "bar" | "museum" | "park" | "experience" | "shopping";
+type CategoryKey = "cafe" | "restaurant" | "bar" | "museum" | "park" | "experience" | "shopping" | "food" | "culture" | "attractions" | "nature";
 
-// Maps UI category id → DB category values (one id can cover multiple DB values)
+// Maps UI category id → DB category values (covers both main and subcategory IDs)
 const CATEGORY_DB_VALUES: Record<string, string[]> = {
-  cafe:       ["cafe"],
-  restaurant: ["restaurant"],
-  bar:        ["bar"],
-  museum:     ["museum", "monument"],
-  park:       ["park", "viewpoint"],
-  experience: ["experience"],
-  shopping:   ["shopping", "market"],
+  cafe:        ["cafe"],
+  restaurant:  ["restaurant"],
+  bar:         ["bar"],
+  museum:      ["museum", "monument"],
+  park:        ["park", "viewpoint"],
+  experience:  ["experience"],
+  shopping:    ["shopping", "market"],
+  // Main categories from lib/categories.ts
+  food:        ["restaurant", "cafe", "bar"],
+  culture:     ["museum", "monument", "gallery"],
+  attractions: ["experience", "market", "shopping", "club"],
+  nature:      ["park", "viewpoint"],
 };
 
 const DEMO_CITIES_DATA = [
@@ -686,7 +692,7 @@ export default function DemoSession() {
               {/* Hero */}
               <div className="overflow-hidden flex items-center gap-2">
                 <div className="flex-1 z-10">
-                  <h1 className="text-3xl font-black leading-tight">Speed dating<br/>z miastem.</h1>
+                  <h1 className="text-3xl font-black leading-tight">Speed dating<br/>z miastem</h1>
                   <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[170px]">
                     Odkryj kawiarnie, restauracje i atrakcje razem z ekipą.
                   </p>
@@ -725,50 +731,14 @@ export default function DemoSession() {
                 </div>
               </div>
 
-              {/* CTAs */}
-              <div className="space-y-3">
+              {/* CTA */}
+              <div>
                 <button
-                  onClick={handleStartGroup}
+                  onClick={() => { setMode("solo"); setCity("Warszawa"); setStep("category"); }}
                   className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
                 >
-                  <Users className="h-5 w-5" />
-                  Zacznij z grupą
+                  Zacznij
                 </button>
-                <button
-                  onClick={handleStartSolo}
-                  className="w-full py-3.5 rounded-full bg-white border-2 border-orange-600 text-orange-600 font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-                >
-                  <User className="h-5 w-5" />
-                  Zacznij solo
-                </button>
-                <p className="text-center text-xs text-muted-foreground">
-                  Masz konto?{" "}
-                  <button onClick={() => navigate("/auth")} className="text-orange-600 font-semibold">
-                    Zaloguj się →
-                  </button>
-                </p>
-              </div>
-
-              {/* Join by code */}
-              <div className="rounded-2xl border border-border/50 bg-card px-4 py-4 space-y-2.5">
-                <p className="text-sm font-semibold">Masz kod zaproszenia?</p>
-                <div className="flex gap-2">
-                  <input
-                    value={joinInput}
-                    onChange={e => setJoinInput(e.target.value.toUpperCase())}
-                    onKeyDown={e => e.key === "Enter" && handleJoinByCode()}
-                    placeholder="np. ABC123"
-                    maxLength={8}
-                    className="flex-1 px-3 py-2.5 rounded-2xl border border-border/60 bg-background text-sm font-mono font-bold tracking-widest uppercase placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-orange-600/30"
-                  />
-                  <button
-                    onClick={handleJoinByCode}
-                    disabled={joinInput.trim().length < 4 || joinLoading}
-                    className="px-4 py-2.5 rounded-full bg-primary text-white text-sm font-bold disabled:opacity-40 active:scale-[0.97] transition-transform flex items-center gap-1.5"
-                  >
-                    {joinLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Dołącz"}
-                  </button>
-                </div>
               </div>
             </div>
           )}
@@ -921,17 +891,20 @@ export default function DemoSession() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {DEMO_CATEGORIES.map(cat => {
+              {MAIN_CATEGORIES.map(cat => {
                 const isLoading = (placesLoading || groupLoading) && category === cat.id;
                 return (
                   <button
                     key={cat.id}
                     onClick={() => handleCategorySelect(cat.id as CategoryKey)}
                     disabled={placesLoading || groupLoading}
-                    className="px-4 py-3 rounded-full text-sm font-semibold border border-border/60 bg-card flex items-center gap-2 active:scale-[0.97] transition-transform hover:border-orange-600/40 disabled:opacity-50"
+                    className="px-4 py-3 rounded-2xl text-sm font-semibold border border-border/60 bg-card flex items-center gap-2 active:scale-[0.97] transition-transform hover:border-orange-600/40 disabled:opacity-50"
                   >
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>{cat.emoji}</span>}
-                    <span>{cat.label}</span>
+                    <div className="flex flex-col items-start">
+                      <span className="font-semibold">{cat.label}</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">{cat.hint}</span>
+                    </div>
                   </button>
                 );
               })}
