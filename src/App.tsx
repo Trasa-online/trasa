@@ -153,7 +153,6 @@ import CookieBanner from "./components/CookieBanner";
 // Eagerly loaded — public-facing pages that need fast FCP
 import WaitlistPage from "./pages/WaitlistPage";
 import LandingPage from "./pages/LandingPage";
-import LandingPageV2 from "./pages/LandingPageV2";
 const DemoSession = lazy(() => import("./pages/DemoSession"));
 import ForBusinessPage from "./pages/ForBusinessPage";
 import Auth from "./pages/Auth";
@@ -230,8 +229,7 @@ const App = () => (
           <Route path="/biznes/demo" element={<Navigate to="/demo?city=Warszawa&skip=category" replace />} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
           <Route path="/dla-firm" element={<ForBusinessPage />} />
-          <Route path="/v2" element={<LandingPageV2 />} />
-          <Route path="*" element={<NotFound />} />
+<Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
         </AuthProvider>

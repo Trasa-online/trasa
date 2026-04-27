@@ -9,8 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 // ─── Types & Data ─────────────────────────────────────────────────────────────
 
-type Phase = "A" | "B" | "C" | "D" | "E";
-const PHASES: Phase[] = ["A", "B", "C", "D", "E"];
+type Phase = "A" | "B" | "C";
 
 type DemoPlace = {
   id: string; name: string; category: string; address: string;
@@ -23,26 +22,6 @@ const DEMO_PLACES: DemoPlace[] = [
   { id: "2", name: "Brovarnia Gdańsk", category: "Bar & Browar", address: "Szafarnia 9", rating: 4.5, reviews: 189, event: null, tags: ["piwo", "craft", "centrum"], gradient: "from-slate-700 via-slate-600 to-slate-800", logoChar: "B", description: "Jeden z najlepszych browarów w Trójmieście. Piwo warzone na miejscu." },
   { id: "3", name: "Lody Mariacka", category: "Kawiarnia", address: "Mariacka 16", rating: 4.9, reviews: 412, event: "Nowy smak: mango-chili 🌶️", tags: ["lody", "kawiarnia", "instagramowe"], gradient: "from-pink-500 via-rose-500 to-pink-600", logoChar: "L", description: "Najlepsza lodziarnia rzemieślnicza na Mariackiej. Sezonowe smaki, kolejki od rana." },
 ];
-
-// ─── BgVideo ──────────────────────────────────────────────────────────────────
-
-function BgVideo({ src, fallbackGradient, muted, onToggleMute }: { src: string; fallbackGradient: string; muted: boolean; onToggleMute: () => void }) {
-  const ref = useRef<HTMLVideoElement>(null);
-  useEffect(() => { const v = ref.current; if (!v) return; v.muted = true; v.play().catch(() => {}); }, [src]);
-  useEffect(() => { const v = ref.current; if (v) v.muted = muted; }, [muted]);
-  return (
-    <>
-      <div className={`absolute inset-0 bg-gradient-to-br ${fallbackGradient}`} />
-      <video ref={ref} src={src} autoPlay loop muted playsInline preload="auto"
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }} />
-      <button onPointerUp={(e) => { e.stopPropagation(); onToggleMute(); }}
-        className="absolute top-3 right-3 z-30 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
-        {muted ? <VolumeX className="h-3.5 w-3.5 text-white/80" /> : <Volume2 className="h-3.5 w-3.5 text-white" />}
-      </button>
-    </>
-  );
-}
 
 // ─── CardInner ────────────────────────────────────────────────────────────────
 
@@ -85,32 +64,18 @@ function CardInner({ place, videoSrc, videoMuted = true, onToggleMute, likeOpaci
 
 // ─── Phases ───────────────────────────────────────────────────────────────────
 
-function PhaseA({ onNext, audioMuted, onToggleMute }: { onNext: () => void; audioMuted: boolean; onToggleMute: () => void }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  useEffect(() => { const v = videoRef.current; if (v) v.muted = audioMuted; }, [audioMuted]);
+function PhaseA({ onNext }: { onNext: () => void }) {
   useEffect(() => { const t = setTimeout(onNext, 9000); return () => clearTimeout(t); }, [onNext]);
   return (
     <motion.div key="A" className="absolute inset-0 bg-black cursor-pointer" onClick={onNext} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
       <video
-        ref={(el) => {
-          videoRef.current = el;
-          if (!el) return;
-          // Set muted imperatively before play() — React's muted prop has a known bug on iOS
-          el.muted = true;
-          el.play().catch(() => {});
-        }}
+        ref={(el) => { if (!el) return; el.muted = true; el.play().catch(() => {}); }}
         src="/founders_intro.mp4"
-        playsInline
-        muted
-        preload="auto"
+        playsInline muted preload="auto"
         onEnded={onNext}
         className="absolute inset-0 w-full h-full object-cover"
         style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
       />
-      <button onPointerUp={(e) => { e.stopPropagation(); onToggleMute(); }}
-        className="absolute top-3 right-3 z-30 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
-        {audioMuted ? <VolumeX className="h-3.5 w-3.5 text-white/80" /> : <Volume2 className="h-3.5 w-3.5 text-white" />}
-      </button>
     </motion.div>
   );
 }
@@ -181,45 +146,6 @@ function PhaseC({ onNext }: { onNext: () => void }) {
   );
 }
 
-function PhaseD({ onNext, audioMuted, onToggleMute }: { onNext: () => void; audioMuted: boolean; onToggleMute: () => void }) {
-  const navigate = useNavigate();
-  useEffect(() => { const t = setTimeout(onNext, 5000); return () => clearTimeout(t); }, [onNext]);
-  return (
-    <motion.div key="D" className="absolute inset-0 flex flex-col" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
-      <BgVideo src="/founders_business.mp4" fallbackGradient="from-slate-900 to-slate-800" muted={audioMuted} onToggleMute={onToggleMute} />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/40 to-black/10" />
-      <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 space-y-3">
-        <motion.div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shadow-lg" initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.3 }}><span className="text-xl">🏠</span></motion.div>
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="space-y-1"><p className="text-white font-black text-[15px] leading-tight">Twój lokal w Trasie?</p><p className="text-white/55 text-[10px] leading-relaxed">Dotrzyj do osób planujących wyjazdy w Twoim mieście</p></motion.div>
-        <motion.div className="space-y-1.5" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}>
-          <button onClick={() => navigate("/dla-firm")} className="w-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold rounded-2xl py-2.5 text-[11px] active:scale-95 transition-transform">Dowiedz się więcej →</button>
-          <button onClick={onNext} className="w-full text-white/40 text-[9px] py-1">Pomiń</button>
-        </motion.div>
-      </div>
-    </motion.div>
-  );
-}
-
-function PhaseE({ onNext, onComplete, audioMuted, onToggleMute }: { onNext: () => void; onComplete?: () => void; audioMuted: boolean; onToggleMute: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(() => { onComplete ? onComplete() : onNext(); }, 5000);
-    return () => clearTimeout(t);
-  }, [onNext, onComplete]);
-  return (
-    <motion.div key="E" className="absolute inset-0 flex flex-col justify-between py-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
-      <BgVideo src="/founders_business.mp4" fallbackGradient="from-slate-900 to-slate-800" muted={audioMuted} onToggleMute={onToggleMute} />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/50" />
-      <motion.div className="relative flex flex-col items-center gap-2 mt-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-        <p className="text-white font-black text-[13px] text-center px-4 leading-tight">Stworzone przez Nat i Barta</p>
-        <p className="text-white/50 text-[9px] text-center">Bo sami potrzebowaliśmy czegoś takiego 🤷</p>
-      </motion.div>
-      <motion.button onClick={() => onComplete ? onComplete() : onNext()} className="relative flex flex-col items-center gap-1 text-white/55 pb-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
-        <span className="text-[8px] tracking-widest uppercase font-semibold">Dalej →</span>
-      </motion.button>
-    </motion.div>
-  );
-}
-
 // ─── Phone Mockup ─────────────────────────────────────────────────────────────
 
 type PhoneMockupProps = {
@@ -235,24 +161,20 @@ const PhoneMockup = forwardRef<HTMLDivElement, PhoneMockupProps>(
   ({ compact = false, initialPhase = "A" as Phase, onComplete, onPhaseChange, showBezel = true }, ref) => {
 
   const [phase, setPhase] = useState<Phase>(initialPhase);
-  const [audioMuted, setAudioMuted] = useState(true);
-  useEffect(() => { setAudioMuted(true); }, [phase]);
 
   const nextPhase = useCallback(() => {
     setPhase(p => {
-      const next = PHASES[(PHASES.indexOf(p) + 1) % PHASES.length];
+      // A→B, then loops B↔C
+      const next: Phase = p === "A" ? "B" : p === "B" ? "C" : "B";
       onPhaseChange?.(next);
       return next;
     });
   }, [onPhaseChange]);
-  const toggleAudio = useCallback(() => setAudioMuted(m => !m), []);
 
   const phaseEl: Record<Phase, React.ReactNode> = {
-    A: <PhaseA key="A" onNext={nextPhase} audioMuted={audioMuted} onToggleMute={toggleAudio} />,
+    A: <PhaseA key="A" onNext={nextPhase} />,
     B: <PhaseB key="B" onNext={nextPhase} onExpand={() => setPhase("C")} />,
     C: <PhaseC key="C" onNext={nextPhase} />,
-    D: <PhaseD key="D" onNext={nextPhase} audioMuted={audioMuted} onToggleMute={toggleAudio} />,
-    E: <PhaseE key="E" onNext={nextPhase} onComplete={onComplete} audioMuted={audioMuted} onToggleMute={toggleAudio} />,
   };
 
   const w = compact ? "min(54vw, 195px)" : "clamp(270px, 42vw, 310px)";
@@ -598,12 +520,10 @@ export default function WaitlistPage() {
           <AnimatePresence>
             {scene === "intro" && (
               <motion.div
-                className="fixed inset-0 z-50 pointer-events-none flex flex-col items-center justify-between"
-                style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+                className="fixed inset-0 z-50 pointer-events-none flex flex-col items-end justify-end"
+                style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }}
               >
-                <div className="mt-10 w-14 h-14 rounded-full shadow-lg shrink-0"
-                  style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
                 <div className="flex gap-2 w-full px-4 mb-6" style={{ filter: "grayscale(1)", opacity: 0.45 }}>
                   <div className="flex-1"><AppStoreBadge store="ios" /></div>
                   <div className="flex-1"><AppStoreBadge store="android" /></div>
@@ -616,10 +536,14 @@ export default function WaitlistPage() {
           <div className="flex-1 flex flex-col items-center px-2"
             style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 56px)" }}>
 
-            {/* Orb logo */}
+            {/* Orb logo — hidden during intro, fades in as video shrinks away */}
             <div className="relative z-0 mb-[-8px]">
-              <div className="w-12 h-12 rounded-full"
-                style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+              <motion.div
+                className="w-12 h-12 rounded-full"
+                style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
+                animate={{ opacity: scene !== "intro" ? 1 : 0 }}
+                transition={{ duration: 0.5 }}
+              />
             </div>
 
             <p className="relative z-0 font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap"
