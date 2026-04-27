@@ -566,14 +566,26 @@ export default function WaitlistPage() {
             )}
           </AnimatePresence>
 
-          {/* Top-aligned content — anchored to top so bottom CTA is always visible */}
+          {/* Content — flex column: "speed dating" → orb → phone → "z miastem" */}
           <div className="flex-1 flex flex-col items-center px-2"
             style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 20px)" }}>
 
-            {/* Phone / postcard — at the top.
-                key changes intro→demo so phases B→C→E replay fresh after intro ends.
-                z-1 during intro (hidden behind video z-40), z-70 after (above text). */}
-            <div className="relative" style={{ zIndex: scene === "intro" ? 1 : 70 }}>
+            {/* "speed dating" — at top. Hidden during intro (z-5 behind video z-40), visible after (z-60). */}
+            <p
+              className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap"
+              style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: scene === "intro" ? 5 : 60 }}
+            >
+              speed dating
+            </p>
+
+            {/* Orb — BELOW "speed dating". Always z-50 (visible above intro video z-40). */}
+            <div
+              className="w-16 h-16 rounded-full mt-2 shrink-0"
+              style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", position: "relative", zIndex: 50 }}
+            />
+
+            {/* Phone / postcard — z-1 during intro (hidden behind video), z-70 after (above text). */}
+            <div className="relative shrink-0" style={{ zIndex: scene === "intro" ? 1 : 70 }}>
               <AnimatePresence mode="wait">
                 {scene !== "postcard" ? (
                   <motion.div key="phone" initial={false} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
@@ -597,23 +609,10 @@ export default function WaitlistPage() {
               </AnimatePresence>
             </div>
 
-            {/* "speed dating" — below phone, above the orb. z-5 during intro, z-60 after. */}
+            {/* "z miastem" — pushed to bottom of available space */}
             <p
-              className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap -mt-5"
-              style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: scene === "intro" ? 5 : 60 }}
-            >
-              speed dating
-            </p>
-
-            {/* Orb — the dot, between "speed dating" and "z miastem". z-50 always. */}
-            <motion.div
-              className="w-20 h-20 rounded-full -mt-2"
-              style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", position: "relative", zIndex: 50 }}
-            />
-
-            <p
-              className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap -mt-2"
-              style={{ fontSize: HEADLINE_SIZE }}
+              className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap mt-auto"
+              style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: 60 }}
             >
               z miastem
             </p>
