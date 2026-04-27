@@ -3,13 +3,13 @@ import {
   motion, AnimatePresence, useMotionValue, useTransform, animate,
   type MotionValue, type PanInfo,
 } from "framer-motion";
-import { Check, Star, Clock, Globe, VolumeX, Volume2, ChevronUp, RotateCcw } from "lucide-react";
+import { Check, Star, Clock, Globe, VolumeX, Volume2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 // ─── Types & Data ─────────────────────────────────────────────────────────────
 
-type Phase = "A" | "B" | "C";
+type Phase = "A" | "B" | "C" | "E";
 
 type DemoPlace = {
   id: string; name: string; category: string; address: string;
@@ -25,15 +25,13 @@ const DEMO_PLACES: DemoPlace[] = [
 
 // ─── CardInner ────────────────────────────────────────────────────────────────
 
-function CardInner({ place, videoSrc, videoMuted = true, onToggleMute, likeOpacity, skipOpacity, onExpand }: {
-  place: DemoPlace; videoSrc?: string; videoMuted?: boolean; onToggleMute?: () => void;
-  likeOpacity?: MotionValue<number>; skipOpacity?: MotionValue<number>; onExpand?: () => void;
+function CardInner({ place, likeOpacity, skipOpacity }: {
+  place: DemoPlace;
+  likeOpacity?: MotionValue<number>; skipOpacity?: MotionValue<number>;
 }) {
   return (
     <div className="relative w-full h-full overflow-hidden">
-      {videoSrc
-        ? <BgVideo src={videoSrc} fallbackGradient="from-orange-900 via-orange-700 to-amber-600" muted={videoMuted} onToggleMute={onToggleMute ?? (() => {})} />
-        : <div className={`absolute inset-0 bg-gradient-to-br ${place.gradient}`} />}
+      <div className={`absolute inset-0 bg-gradient-to-br ${place.gradient}`} />
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/5" />
       {likeOpacity && <motion.div className="absolute left-3 top-5 z-20 border-2 border-green-400 rounded-lg px-2 py-0.5 -rotate-12" style={{ opacity: likeOpacity }}><span className="text-green-400 font-black text-[10px] tracking-widest">TAK</span></motion.div>}
       {skipOpacity && <motion.div className="absolute right-3 top-5 z-20 border-2 border-red-400 rounded-lg px-2 py-0.5 rotate-12" style={{ opacity: skipOpacity }}><span className="text-red-400 font-black text-[10px] tracking-widest">NIE</span></motion.div>}
@@ -48,14 +46,8 @@ function CardInner({ place, videoSrc, videoMuted = true, onToggleMute, likeOpaci
           <span className="text-white/55 text-[9px]">📍 {place.address}</span>
         </div>
         {place.event && <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2.5 py-[3px]"><span className="text-[8px]">🎉</span><span className="text-white font-semibold text-[8.5px]">{place.event}</span></div>}
-        <div className="flex items-center gap-1">
-          <div className="flex flex-wrap gap-1 flex-1 min-w-0 overflow-hidden">
-            {place.tags.map((t) => <span key={t} className="text-white/55 text-[8px] bg-white/10 rounded-full px-2 py-0.5 whitespace-nowrap">{t}</span>)}
-          </div>
-          <div className="flex gap-1.5 shrink-0 ml-1">
-            <button className="w-7 h-7 rounded-full bg-white/20 backdrop-blur flex items-center justify-center"><RotateCcw className="h-3 w-3 text-white" /></button>
-            {onExpand && <button onPointerUp={(e) => { e.stopPropagation(); onExpand(); }} className="w-7 h-7 rounded-full bg-white/20 backdrop-blur flex items-center justify-center"><ChevronUp className="h-3 w-3 text-white" /></button>}
-          </div>
+        <div className="flex flex-wrap gap-1">
+          {place.tags.map((t) => <span key={t} className="text-white/55 text-[8px] bg-white/10 rounded-full px-2 py-0.5 whitespace-nowrap">{t}</span>)}
         </div>
       </div>
     </div>
@@ -80,7 +72,7 @@ function PhaseA({ onNext }: { onNext: () => void }) {
   );
 }
 
-function PhaseB({ onNext, onExpand }: { onNext: () => void; onExpand: () => void }) {
+function PhaseB({ onNext }: { onNext: () => void }) {
   const [cardIdx, setCardIdx] = useState(0);
   const [decided, setDecided] = useState(false);
   const dragX = useMotionValue(0);
@@ -113,12 +105,8 @@ function PhaseB({ onNext, onExpand }: { onNext: () => void; onExpand: () => void
         <motion.div drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.72}
           onDragEnd={(_: unknown, info: PanInfo) => { if (decided) return; if (info.offset.x > 60) flyOut("like"); else if (info.offset.x < -60) flyOut("skip"); else animate(dragX, 0, { type: "spring", stiffness: 300, damping: 30 }); }}
           style={{ x: dragX, rotate, zIndex: 10, touchAction: "pan-y" }} className="absolute inset-0 rounded-3xl overflow-hidden cursor-grab active:cursor-grabbing shadow-xl">
-          <CardInner place={DEMO_PLACES[cardIdx]} likeOpacity={likeOpacity} skipOpacity={skipOpacity} onExpand={onExpand} />
+          <CardInner place={DEMO_PLACES[cardIdx]} likeOpacity={likeOpacity} skipOpacity={skipOpacity} />
         </motion.div>
-      </div>
-      <div className="flex gap-2 px-3 py-2.5 bg-white shrink-0">
-        <button onPointerUp={() => flyOut("skip")} className="flex-1 py-3 rounded-full border-2 border-slate-200 text-slate-700 font-bold text-[12px] active:scale-95 bg-white">Odrzuć</button>
-        <button onPointerUp={() => flyOut("like")} className="flex-1 py-3 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-[12px] active:scale-95">Dodaj</button>
       </div>
     </motion.div>
   );
@@ -146,6 +134,35 @@ function PhaseC({ onNext }: { onNext: () => void }) {
   );
 }
 
+function PhaseE({ onNext, onComplete }: { onNext: () => void; onComplete?: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(() => { onComplete ? onComplete() : onNext(); }, 6000);
+    return () => clearTimeout(t);
+  }, [onNext, onComplete]);
+  return (
+    <motion.div key="E" className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800" />
+      <video
+        ref={(el) => { if (!el) return; el.muted = true; el.play().catch(() => {}); }}
+        src="/founders_business.mp4"
+        playsInline muted preload="auto" loop
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/50" />
+      <motion.div className="absolute bottom-0 left-0 right-0 px-4 pb-6 flex flex-col items-center gap-2"
+        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+        <p className="text-white font-black text-[14px] text-center leading-tight">Dołącz do pierwszych użytkowników</p>
+        <p className="text-white/55 text-[10px] text-center">Trasa — speed dating z miastem 🧡</p>
+        <button onClick={() => onComplete ? onComplete() : onNext()}
+          className="mt-2 text-white/45 text-[8px] tracking-widest uppercase font-semibold">
+          Dalej →
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ─── Phone Mockup ─────────────────────────────────────────────────────────────
 
 type PhoneMockupProps = {
@@ -164,8 +181,8 @@ const PhoneMockup = forwardRef<HTMLDivElement, PhoneMockupProps>(
 
   const nextPhase = useCallback(() => {
     setPhase(p => {
-      // A→B, then loops B↔C
-      const next: Phase = p === "A" ? "B" : p === "B" ? "C" : "B";
+      // A→B→C→E→(onComplete/postcard); E loops to B if onComplete not set
+      const next: Phase = p === "A" ? "B" : p === "B" ? "C" : p === "C" ? "E" : "B";
       onPhaseChange?.(next);
       return next;
     });
@@ -173,8 +190,9 @@ const PhoneMockup = forwardRef<HTMLDivElement, PhoneMockupProps>(
 
   const phaseEl: Record<Phase, React.ReactNode> = {
     A: <PhaseA key="A" onNext={nextPhase} />,
-    B: <PhaseB key="B" onNext={nextPhase} onExpand={() => setPhase("C")} />,
+    B: <PhaseB key="B" onNext={nextPhase} />,
     C: <PhaseC key="C" onNext={nextPhase} />,
+    E: <PhaseE key="E" onNext={nextPhase} onComplete={onComplete} />,
   };
 
   const w = compact ? "min(54vw, 195px)" : "clamp(270px, 42vw, 310px)";
