@@ -618,7 +618,7 @@ export default function WaitlistPage() {
 
           {/* Sticky bottom CTA — hidden during intro, fades in after */}
           <div
-            className="shrink-0 bg-white/96 backdrop-blur-sm border-t border-slate-100 px-4 pt-5 space-y-3"
+            className="shrink-0 px-4 pt-4 space-y-3"
             style={{
               position: "relative",
               zIndex: 80,
@@ -628,9 +628,6 @@ export default function WaitlistPage() {
               paddingBottom: "max(env(safe-area-inset-bottom, 0px), 24px)",
             }}
           >
-            <p className="text-xs text-slate-500 text-center font-medium">
-              {scene === "postcard" ? "Dołącz do pierwszych użytkowników Trasy" : "Bądź pierwszy na liście oczekujących"}
-            </p>
             <EmailCapture inputRef={inputRef} />
             <div className="flex gap-2">
               <div className="flex-1"><AppStoreBadge store="ios" /></div>
