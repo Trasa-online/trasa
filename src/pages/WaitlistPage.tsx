@@ -1,12 +1,526 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, forwardRef, type RefObject } from "react";
+import {
+  motion, AnimatePresence, useMotionValue, useTransform, animate,
+  type MotionValue, type PanInfo,
+} from "framer-motion";
+import { Check, Star, Clock, Globe, VolumeX, Volume2, ChevronUp, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-function EmailCapture() {
+// ─── Types & Data ─────────────────────────────────────────────────────────────
+
+type Phase = "A" | "B" | "C" | "D" | "E";
+const PHASES: Phase[] = ["A", "B", "C", "D", "E"];
+
+type DemoPlace = {
+  id: string; name: string; category: string; address: string;
+  rating: number; reviews: number; event: string | null;
+  tags: string[]; gradient: string; logoChar: string; description: string;
+};
+
+const DEMO_PLACES: DemoPlace[] = [
+  { id: "1", name: "Stołówka Gdańska", category: "Restauracja", address: "Długie Ogrody 27", rating: 4.7, reviews: 234, event: "Dzisiaj zupa+drugie za 29,90zł", tags: ["restauracja", "jedzenie", "lokalne"], gradient: "from-amber-800 via-orange-700 to-amber-600", logoChar: "S", description: "Kultowe miejsce w centrum Gdańska. Domowe obiady, prosty wystrój i zawsze pełna sala." },
+  { id: "2", name: "Brovarnia Gdańsk", category: "Bar & Browar", address: "Szafarnia 9", rating: 4.5, reviews: 189, event: null, tags: ["piwo", "craft", "centrum"], gradient: "from-slate-700 via-slate-600 to-slate-800", logoChar: "B", description: "Jeden z najlepszych browarów w Trójmieście. Piwo warzone na miejscu." },
+  { id: "3", name: "Lody Mariacka", category: "Kawiarnia", address: "Mariacka 16", rating: 4.9, reviews: 412, event: "Nowy smak: mango-chili 🌶️", tags: ["lody", "kawiarnia", "instagramowe"], gradient: "from-pink-500 via-rose-500 to-pink-600", logoChar: "L", description: "Najlepsza lodziarnia rzemieślnicza na Mariackiej. Sezonowe smaki, kolejki od rana." },
+];
+
+// ─── BgVideo ──────────────────────────────────────────────────────────────────
+
+function BgVideo({ src, fallbackGradient, muted, onToggleMute }: { src: string; fallbackGradient: string; muted: boolean; onToggleMute: () => void }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => { const v = ref.current; if (!v) return; v.muted = true; v.play().catch(() => {}); }, [src]);
+  useEffect(() => { const v = ref.current; if (v) v.muted = muted; }, [muted]);
+  return (
+    <>
+      <div className={`absolute inset-0 bg-gradient-to-br ${fallbackGradient}`} />
+      <video ref={ref} src={src} autoPlay loop muted playsInline preload="auto"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }} />
+      <button onPointerUp={(e) => { e.stopPropagation(); onToggleMute(); }}
+        className="absolute top-3 right-3 z-30 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
+        {muted ? <VolumeX className="h-3.5 w-3.5 text-white/80" /> : <Volume2 className="h-3.5 w-3.5 text-white" />}
+      </button>
+    </>
+  );
+}
+
+// ─── CardInner ────────────────────────────────────────────────────────────────
+
+function CardInner({ place, videoSrc, videoMuted = true, onToggleMute, likeOpacity, skipOpacity, onExpand }: {
+  place: DemoPlace; videoSrc?: string; videoMuted?: boolean; onToggleMute?: () => void;
+  likeOpacity?: MotionValue<number>; skipOpacity?: MotionValue<number>; onExpand?: () => void;
+}) {
+  return (
+    <div className="relative w-full h-full overflow-hidden">
+      {videoSrc
+        ? <BgVideo src={videoSrc} fallbackGradient="from-orange-900 via-orange-700 to-amber-600" muted={videoMuted} onToggleMute={onToggleMute ?? (() => {})} />
+        : <div className={`absolute inset-0 bg-gradient-to-br ${place.gradient}`} />}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/5" />
+      {likeOpacity && <motion.div className="absolute left-3 top-5 z-20 border-2 border-green-400 rounded-lg px-2 py-0.5 -rotate-12" style={{ opacity: likeOpacity }}><span className="text-green-400 font-black text-[10px] tracking-widest">TAK</span></motion.div>}
+      {skipOpacity && <motion.div className="absolute right-3 top-5 z-20 border-2 border-red-400 rounded-lg px-2 py-0.5 rotate-12" style={{ opacity: skipOpacity }}><span className="text-red-400 font-black text-[10px] tracking-widest">NIE</span></motion.div>}
+      <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5 space-y-1.5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm text-white border-2 border-white/30 shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}>{place.logoChar}</div>
+          <span className="text-white/70 text-[10px] font-medium">{place.category} · @trasa</span>
+        </div>
+        <h3 className="text-white font-black text-[17px] leading-tight">{place.name}</h3>
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" /><span className="text-white text-[10px] font-semibold">{place.rating}</span></span>
+          <span className="text-white/55 text-[9px]">📍 {place.address}</span>
+        </div>
+        {place.event && <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2.5 py-[3px]"><span className="text-[8px]">🎉</span><span className="text-white font-semibold text-[8.5px]">{place.event}</span></div>}
+        <div className="flex items-center gap-1">
+          <div className="flex flex-wrap gap-1 flex-1 min-w-0 overflow-hidden">
+            {place.tags.map((t) => <span key={t} className="text-white/55 text-[8px] bg-white/10 rounded-full px-2 py-0.5 whitespace-nowrap">{t}</span>)}
+          </div>
+          <div className="flex gap-1.5 shrink-0 ml-1">
+            <button className="w-7 h-7 rounded-full bg-white/20 backdrop-blur flex items-center justify-center"><RotateCcw className="h-3 w-3 text-white" /></button>
+            {onExpand && <button onPointerUp={(e) => { e.stopPropagation(); onExpand(); }} className="w-7 h-7 rounded-full bg-white/20 backdrop-blur flex items-center justify-center"><ChevronUp className="h-3 w-3 text-white" /></button>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Phases ───────────────────────────────────────────────────────────────────
+
+function PhaseA({ onNext, audioMuted, onToggleMute }: { onNext: () => void; audioMuted: boolean; onToggleMute: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  useEffect(() => { const v = videoRef.current; if (v) v.muted = audioMuted; }, [audioMuted]);
+  useEffect(() => { const t = setTimeout(onNext, 9000); return () => clearTimeout(t); }, [onNext]);
+  return (
+    <motion.div key="A" className="absolute inset-0 bg-black cursor-pointer" onClick={onNext} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
+      <video
+        ref={(el) => {
+          videoRef.current = el;
+          if (!el) return;
+          // Set muted imperatively before play() — React's muted prop has a known bug on iOS
+          el.muted = true;
+          el.play().catch(() => {});
+        }}
+        src="/founders_intro.mp4"
+        playsInline
+        muted
+        preload="auto"
+        onEnded={onNext}
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
+      />
+      <button onPointerUp={(e) => { e.stopPropagation(); onToggleMute(); }}
+        className="absolute top-3 right-3 z-30 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform">
+        {audioMuted ? <VolumeX className="h-3.5 w-3.5 text-white/80" /> : <Volume2 className="h-3.5 w-3.5 text-white" />}
+      </button>
+    </motion.div>
+  );
+}
+
+function PhaseB({ onNext, onExpand }: { onNext: () => void; onExpand: () => void }) {
+  const [cardIdx, setCardIdx] = useState(0);
+  const [decided, setDecided] = useState(false);
+  const dragX = useMotionValue(0);
+  const rotate = useTransform(dragX, [-120, 0, 120], [-12, 0, 12]);
+  const likeOpacity = useTransform(dragX, [20, 80], [0, 1]);
+  const skipOpacity = useTransform(dragX, [-80, -20], [1, 0]);
+
+  const flyOut = (dir: "like" | "skip") => {
+    if (decided) return;
+    setDecided(true);
+    animate(dragX, dir === "like" ? 450 : -450, { duration: 0.36 });
+    setTimeout(() => { dragX.set(0); const next = cardIdx + 1; if (next >= DEMO_PLACES.length) onNext(); else { setCardIdx(next); setDecided(false); } }, 400);
+  };
+  const flyOutRef = useRef(flyOut);
+  useEffect(() => { flyOutRef.current = flyOut; });
+  useEffect(() => {
+    const t1 = setTimeout(() => flyOutRef.current("like"), 1800);
+    const t2 = setTimeout(() => flyOutRef.current("like"), 3400);
+    const t3 = setTimeout(() => flyOutRef.current("like"), 5000);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+
+  const remaining = DEMO_PLACES.length - cardIdx;
+  return (
+    <motion.div key="B" className="absolute inset-0 flex flex-col bg-[#f5f5f5]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+      <div className="h-6 flex items-center justify-center shrink-0"><p className="text-[9px] text-slate-400 font-semibold tracking-widest uppercase">Przeciągnij i wybierz</p></div>
+      <div className="relative flex-1 min-h-0 mx-1.5">
+        {remaining >= 3 && <div className="absolute inset-0 rounded-3xl overflow-hidden" style={{ transform: "scale(0.88) translateY(10px)", zIndex: 1, opacity: 0.6 }}><div className={`w-full h-full bg-gradient-to-br ${DEMO_PLACES[cardIdx + 2]?.gradient ?? DEMO_PLACES[0].gradient}`} /></div>}
+        {remaining >= 2 && <div className="absolute inset-0 rounded-3xl overflow-hidden" style={{ transform: "scale(0.94) translateY(5px)", zIndex: 2, opacity: 0.8 }}><div className={`w-full h-full bg-gradient-to-br ${DEMO_PLACES[cardIdx + 1]?.gradient ?? DEMO_PLACES[0].gradient}`} /></div>}
+        <motion.div drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.72}
+          onDragEnd={(_: unknown, info: PanInfo) => { if (decided) return; if (info.offset.x > 60) flyOut("like"); else if (info.offset.x < -60) flyOut("skip"); else animate(dragX, 0, { type: "spring", stiffness: 300, damping: 30 }); }}
+          style={{ x: dragX, rotate, zIndex: 10, touchAction: "pan-y" }} className="absolute inset-0 rounded-3xl overflow-hidden cursor-grab active:cursor-grabbing shadow-xl">
+          <CardInner place={DEMO_PLACES[cardIdx]} likeOpacity={likeOpacity} skipOpacity={skipOpacity} onExpand={onExpand} />
+        </motion.div>
+      </div>
+      <div className="flex gap-2 px-3 py-2.5 bg-white shrink-0">
+        <button onPointerUp={() => flyOut("skip")} className="flex-1 py-3 rounded-full border-2 border-slate-200 text-slate-700 font-bold text-[12px] active:scale-95 bg-white">Odrzuć</button>
+        <button onPointerUp={() => flyOut("like")} className="flex-1 py-3 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-[12px] active:scale-95">Dodaj</button>
+      </div>
+    </motion.div>
+  );
+}
+
+function PhaseC({ onNext }: { onNext: () => void }) {
+  useEffect(() => { const t = setTimeout(onNext, 4000); return () => clearTimeout(t); }, [onNext]);
+  const place = DEMO_PLACES[0];
+  return (
+    <motion.div key="C" className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+      <div className={`absolute inset-0 bg-gradient-to-br ${place.gradient}`} />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+      <div className="absolute top-4 left-0 right-0 px-4"><p className="text-white/65 text-[9px]">{place.category}</p><h3 className="text-white font-black text-sm">{place.name}</h3></div>
+      <motion.div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[26px] overflow-hidden" style={{ height: "72%" }} initial={{ y: "100%" }} animate={{ y: 0 }} transition={{ type: "spring", stiffness: 260, damping: 34, delay: 0.15 }}>
+        <div className="flex justify-center pt-2.5 pb-1"><div className="w-8 h-1 rounded-full bg-slate-200" /></div>
+        <div className="flex gap-1.5 px-3 mb-3">{[place.gradient, "from-slate-400 to-slate-500", "from-amber-300 to-amber-500"].map((g, i) => <div key={i} className={`rounded-xl bg-gradient-to-br ${g} flex-1`} style={{ height: 56 }} />)}</div>
+        <div className="px-3 space-y-2.5">
+          <div className="flex items-start justify-between"><div><h3 className="font-black text-sm text-[#0E0E0E]">{place.name}</h3><p className="text-[10px] text-[#979797]">{place.category} · Gdańsk</p></div><div className="flex items-center gap-0.5 bg-slate-50 rounded-xl px-2 py-1"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" /><span className="text-[10px] font-bold">{place.rating}</span></div></div>
+          <p className="text-[9px] text-[#979797] leading-relaxed">{place.description}</p>
+          <div className="flex gap-3 text-[9px] text-[#979797]"><span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" /> pon-pt 11:00-20:00</span><span className="flex items-center gap-1"><Globe className="h-2.5 w-2.5" /> stolowkagdanska.pl</span></div>
+          <button onClick={onNext} className="w-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold rounded-2xl py-2.5 text-[11px] active:scale-95 transition-transform">Dodaj do trasy ✓</button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function PhaseD({ onNext, audioMuted, onToggleMute }: { onNext: () => void; audioMuted: boolean; onToggleMute: () => void }) {
+  const navigate = useNavigate();
+  useEffect(() => { const t = setTimeout(onNext, 5000); return () => clearTimeout(t); }, [onNext]);
+  return (
+    <motion.div key="D" className="absolute inset-0 flex flex-col" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+      <BgVideo src="/founders_business.mp4" fallbackGradient="from-slate-900 to-slate-800" muted={audioMuted} onToggleMute={onToggleMute} />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/40 to-black/10" />
+      <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 space-y-3">
+        <motion.div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shadow-lg" initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.3 }}><span className="text-xl">🏠</span></motion.div>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="space-y-1"><p className="text-white font-black text-[15px] leading-tight">Twój lokal w Trasie?</p><p className="text-white/55 text-[10px] leading-relaxed">Dotrzyj do osób planujących wyjazdy w Twoim mieście</p></motion.div>
+        <motion.div className="space-y-1.5" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}>
+          <button onClick={() => navigate("/dla-firm")} className="w-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold rounded-2xl py-2.5 text-[11px] active:scale-95 transition-transform">Dowiedz się więcej →</button>
+          <button onClick={onNext} className="w-full text-white/40 text-[9px] py-1">Pomiń</button>
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+}
+
+function PhaseE({ onNext, onComplete, audioMuted, onToggleMute }: { onNext: () => void; onComplete?: () => void; audioMuted: boolean; onToggleMute: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(() => { onComplete ? onComplete() : onNext(); }, 5000);
+    return () => clearTimeout(t);
+  }, [onNext, onComplete]);
+  return (
+    <motion.div key="E" className="absolute inset-0 flex flex-col justify-between py-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+      <BgVideo src="/founders_business.mp4" fallbackGradient="from-slate-900 to-slate-800" muted={audioMuted} onToggleMute={onToggleMute} />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/50" />
+      <motion.div className="relative flex flex-col items-center gap-2 mt-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+        <p className="text-white font-black text-[13px] text-center px-4 leading-tight">Stworzone przez Nat i Barta</p>
+        <p className="text-white/50 text-[9px] text-center">Bo sami potrzebowaliśmy czegoś takiego 🤷</p>
+      </motion.div>
+      <motion.button onClick={() => onComplete ? onComplete() : onNext()} className="relative flex flex-col items-center gap-1 text-white/55 pb-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
+        <span className="text-[8px] tracking-widest uppercase font-semibold">Dalej →</span>
+      </motion.button>
+    </motion.div>
+  );
+}
+
+// ─── Phone Mockup ─────────────────────────────────────────────────────────────
+
+type PhoneMockupProps = {
+  compact?: boolean;
+  initialPhase?: Phase;
+  onComplete?: () => void;
+  onPhaseChange?: (p: Phase) => void;
+  // showBezel: false hides buttons/shadow/notch (used during mobile intro transition)
+  showBezel?: boolean;
+};
+
+const PhoneMockup = forwardRef<HTMLDivElement, PhoneMockupProps>(
+  ({ compact = false, initialPhase = "A" as Phase, onComplete, onPhaseChange, showBezel = true }, ref) => {
+
+  const [phase, setPhase] = useState<Phase>(initialPhase);
+  const [audioMuted, setAudioMuted] = useState(true);
+  useEffect(() => { setAudioMuted(true); }, [phase]);
+
+  const nextPhase = useCallback(() => {
+    setPhase(p => {
+      const next = PHASES[(PHASES.indexOf(p) + 1) % PHASES.length];
+      onPhaseChange?.(next);
+      return next;
+    });
+  }, [onPhaseChange]);
+  const toggleAudio = useCallback(() => setAudioMuted(m => !m), []);
+
+  const phaseEl: Record<Phase, React.ReactNode> = {
+    A: <PhaseA key="A" onNext={nextPhase} audioMuted={audioMuted} onToggleMute={toggleAudio} />,
+    B: <PhaseB key="B" onNext={nextPhase} onExpand={() => setPhase("C")} />,
+    C: <PhaseC key="C" onNext={nextPhase} />,
+    D: <PhaseD key="D" onNext={nextPhase} audioMuted={audioMuted} onToggleMute={toggleAudio} />,
+    E: <PhaseE key="E" onNext={nextPhase} onComplete={onComplete} audioMuted={audioMuted} onToggleMute={toggleAudio} />,
+  };
+
+  const w = compact ? "min(54vw, 195px)" : "clamp(270px, 42vw, 310px)";
+
+  return (
+    <div className="flex flex-col items-center">
+      <div
+        ref={ref}
+        className="relative mx-auto select-none rounded-[42px] bg-slate-800"
+        style={{ width: w, aspectRatio: "9/19.5" }}
+      >
+        {/* Shadow */}
+        <motion.div
+          className="absolute inset-0 rounded-[42px] pointer-events-none"
+          animate={{ opacity: showBezel ? 1 : 0 }}
+          transition={{ duration: 0.5 }}
+          style={{ boxShadow: "0 32px 80px -12px rgba(0,0,0,0.4)" }}
+        />
+
+        {/* Physical buttons + notch — fade in after intro */}
+        <motion.div
+          animate={{ opacity: showBezel ? 1 : 0 }}
+          transition={{ duration: 0.5 }}
+          className="absolute inset-0 pointer-events-none"
+        >
+          <div className="absolute -right-[3px] top-[22%] w-[4px] h-10 bg-slate-700 rounded-r-full" />
+          <div className="absolute -left-[3px] top-[18%] w-[4px] h-7 bg-slate-700 rounded-l-full" />
+          <div className="absolute -left-[3px] top-[27%] w-[4px] h-7 bg-slate-700 rounded-l-full" />
+          <div className="absolute top-[9px] left-1/2 -translate-x-1/2 w-14 h-[14px] bg-slate-800 rounded-full" style={{ zIndex: 10 }} />
+        </motion.div>
+
+        {/* Screen */}
+        <div className="absolute inset-[9px] rounded-[34px] overflow-hidden bg-black" style={{ zIndex: 1 }}>
+          <AnimatePresence mode="wait">{phaseEl[phase]}</AnimatePresence>
+        </div>
+      </div>
+    </div>
+  );
+});
+PhoneMockup.displayName = "PhoneMockup";
+
+// ─── FullscreenIntroVideo ─────────────────────────────────────────────────────
+// Video lives at root level (no CSS transform parent) to avoid the iOS Safari
+// "video inside scale() = black screen" WebKit compositing bug.
+// When done it spring-shrinks to the phone screen rect, then fades out.
+
+function FullscreenIntroVideo({
+  phoneBodyRef,
+  onBezelShow,
+  onDone,
+}: {
+  phoneBodyRef: RefObject<HTMLDivElement>;
+  onBezelShow: () => void;
+  onDone: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const doneRef = useRef(false);
+  const [audioMuted, setAudioMuted] = useState(true);
+
+  useEffect(() => { if (videoRef.current) videoRef.current.muted = audioMuted; }, [audioMuted]);
+
+  const triggerShrink = useCallback(() => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+
+    const phoneEl = phoneBodyRef.current;
+    const containerEl = containerRef.current;
+    if (!phoneEl || !containerEl) { onDone(); return; }
+
+    const r = phoneEl.getBoundingClientRect();
+    // Target = phone screen rect (9px inset from phone body)
+    const target = { top: r.top + 9, left: r.left + 9, width: r.width - 18, height: r.height - 18 };
+
+    onBezelShow();
+
+    animate(containerEl, {
+      top: target.top, left: target.left, width: target.width, height: target.height, borderRadius: "34px",
+    }, { type: "spring", stiffness: 120, damping: 20 })
+      .then(() => animate(containerEl, { opacity: 0 }, { duration: 0.25 }))
+      .then(() => onDone());
+  }, [phoneBodyRef, onBezelShow, onDone]);
+
+  useEffect(() => {
+    const t = setTimeout(triggerShrink, 9000);
+    return () => clearTimeout(t);
+  }, [triggerShrink]);
+
+  return (
+    <div
+      ref={containerRef}
+      onClick={triggerShrink}
+      style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", borderRadius: 0, overflow: "hidden", zIndex: 40 }}
+    >
+      <video
+        ref={(el) => {
+          videoRef.current = el;
+          if (!el) return;
+          el.muted = true;
+          el.play().catch(() => {});
+        }}
+        src="/founders_intro.mp4"
+        playsInline muted preload="auto"
+        onEnded={triggerShrink}
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
+      />
+      <button
+        onPointerUp={(e) => { e.stopPropagation(); setAudioMuted(m => !m); }}
+        className="absolute top-3 right-3 z-30 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
+      >
+        {audioMuted ? <VolumeX className="h-3.5 w-3.5 text-white/80" /> : <Volume2 className="h-3.5 w-3.5 text-white" />}
+      </button>
+    </div>
+  );
+}
+
+// ─── Postcard ─────────────────────────────────────────────────────────────────
+
+function PostcardFront({ w, h }: { w: number; h: number }) {
+  const pad = Math.round(w * 0.05);
+  const bottomPad = Math.round(w * 0.18);
+  return (
+    <div className="w-full h-full rounded-2xl overflow-hidden bg-white shadow-2xl flex flex-col"
+      style={{ padding: `${pad}px ${pad}px ${bottomPad}px` }}>
+      {/* Photo */}
+      <div className="relative flex-1 overflow-hidden rounded-sm bg-slate-200">
+        <img
+          src="/IMG_9609.jpg"
+          alt="Nat i Bart"
+          className="absolute inset-0 w-full h-full object-cover object-top"
+        />
+      </div>
+      {/* Polaroid bottom strip */}
+      <div className="flex items-end justify-between" style={{ paddingTop: pad * 0.7 }}>
+        <p className="font-black text-[#0E0E0E]" style={{ fontSize: w * 0.105 }}>2026</p>
+        <div className="text-right">
+          <p className="font-bold text-[#0E0E0E]" style={{ fontSize: w * 0.062 }}>Nat i Bart</p>
+          <p style={{ fontSize: w * 0.052, color: "#979797" }}>trasa.travel</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const BACK_MESSAGE = [
+  "Hej!",
+  "",
+  "Ile frajdy będziemy",
+  "mieć razem,",
+  "odkrywając nowe miasta.",
+  "Nie możemy się doczekać!",
+  "",
+  "do zobaczenia,",
+];
+
+function PostcardBack({ w, h, isVisible }: { w: number; h: number; isVisible: boolean }) {
+  const pad = Math.round(w * 0.09);
+  return (
+    <div className="w-full h-full rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+      style={{ background: "#FEFEFE", padding: `${pad}px` }}>
+
+      {/* Top: address — full-width single row */}
+      <div className="mb-3 flex justify-between items-baseline w-full">
+        <span style={{ fontFamily: "monospace", fontSize: w * 0.038, color: "#aaa", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+          Nat i Bart
+        </span>
+        <span style={{ fontFamily: "monospace", fontSize: w * 0.038, color: "#aaa", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+          Gdańsk · 2026
+        </span>
+      </div>
+
+      {/* Horizontal rule */}
+      <div className="mb-3" style={{ height: 1, background: "#e8e0d5" }} />
+
+      {/* Handwritten message */}
+      <div className="flex-1 flex flex-col justify-start">
+        {BACK_MESSAGE.map((line, i) => (
+          <motion.p
+            key={i}
+            style={{
+              fontFamily: "'Caveat', 'Bradley Hand', cursive",
+              fontSize: w * 0.082,
+              color: "#2d1505",
+              lineHeight: 1.5,
+              minHeight: line ? undefined : `${w * 0.082 * 0.75}px`,
+            }}
+            initial={{ opacity: 0 }}
+            animate={isVisible ? { opacity: 1 } : { opacity: 0 }}
+            transition={{ delay: 0.3 + i * 0.07, duration: 0.3 }}
+          >
+            {line || ""}
+          </motion.p>
+        ))}
+      </div>
+
+      {/* Signature */}
+      <motion.div
+        className="mt-auto"
+        initial={{ opacity: 0 }}
+        animate={isVisible ? { opacity: 1 } : { opacity: 0 }}
+        transition={{ delay: 1.1, duration: 0.4 }}
+      >
+        <div className="mb-2" style={{ height: 1, background: "#e8e0d5" }} />
+        <p style={{
+          fontFamily: "'Caveat', cursive",
+          fontSize: w * 0.088,
+          color: "#2d1505",
+          fontWeight: 600,
+          textAlign: "center",
+        }}>
+          Nat i Bart 🧡
+        </p>
+      </motion.div>
+    </div>
+  );
+}
+
+// Phone compact height: min(54vw, 195px) * (19.5/9) ≈ 423px — postcard matches this
+function PostcardReveal({ large = false }: { large?: boolean }) {
+  const w = large ? 300 : 238;
+  const h = large ? 530 : 423;
+  const [flipped, setFlipped] = useState(false);
+
+  // Front shows for 3s, back for 8s — asymmetric timing
+  useEffect(() => {
+    const delay = flipped ? 8000 : 3000;
+    const id = setTimeout(() => setFlipped(f => !f), delay);
+    return () => clearTimeout(id);
+  }, [flipped]);
+
+  return (
+    // Outer wrapper provides the static tilt so it doesn't fight framer-motion transforms
+    <div style={{ transform: "rotate(-2.5deg)", transformOrigin: "center" }}>
+      <div style={{ width: w, height: h, perspective: "900px" }}>
+        <motion.div
+          animate={{ rotateY: flipped ? 180 : 0 }}
+          transition={{ duration: 0.85, type: "spring", stiffness: 82, damping: 17 }}
+          style={{
+            transformStyle: "preserve-3d",
+            WebkitTransformStyle: "preserve-3d",
+            width: w, height: h,
+            position: "relative",
+          }}
+        >
+          {/* Front face */}
+          <div style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", position: "absolute", inset: 0 }}>
+            <PostcardFront w={w} h={h} />
+          </div>
+          {/* Back face */}
+          <div style={{
+            backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden",
+            transform: "rotateY(180deg)", WebkitTransform: "rotateY(180deg)",
+            position: "absolute", inset: 0,
+          }}>
+            <PostcardBack w={w} h={h} isVisible={flipped} />
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Email Capture ────────────────────────────────────────────────────────────
+
+function EmailCapture({ inputRef }: { inputRef?: React.RefObject<HTMLInputElement> }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || status !== "idle") return;
@@ -14,33 +528,18 @@ function EmailCapture() {
     await (supabase as any).from("waitlist").insert({ email: email.trim().toLowerCase() });
     setStatus("done");
   };
-
-  if (status === "done") {
-    return (
-      <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-orange-50 border border-orange-200 max-w-sm">
-        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shrink-0">
-          <Check className="h-4 w-4 text-white" />
-        </div>
-        <p className="text-sm font-semibold text-[#0E0E0E]">Powiadomimy Cię o premierze.</p>
-      </div>
-    );
-  }
-
+  if (status === "done") return (
+    <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-orange-50 border border-orange-200">
+      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" /></div>
+      <p className="text-sm font-semibold text-[#0E0E0E]">Powiadomimy Cię o premierze.</p>
+    </div>
+  );
   return (
-    <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2.5 w-full max-w-sm">
-      <input
-        type="email"
-        required
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-        placeholder="twoj@email.pl"
-        className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-[#0E0E0E] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-orange-300"
-      />
-      <button
-        type="submit"
-        disabled={status === "loading"}
-        className="rounded-2xl bg-orange-700 hover:bg-orange-800 text-white font-bold px-6 py-3.5 text-sm whitespace-nowrap shadow-md shadow-orange-200 active:scale-[0.98] transition-all"
-      >
+    <form onSubmit={submit} className="flex gap-2 w-full">
+      <input ref={inputRef} type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="twoj@email.pl"
+        className="flex-1 min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-[#0E0E0E] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-orange-300" />
+      <button type="submit" disabled={status === "loading"}
+        className="rounded-2xl bg-orange-700 hover:bg-orange-800 text-white font-bold px-5 py-3.5 text-sm whitespace-nowrap shadow-md shadow-orange-200 active:scale-[0.98] transition-all shrink-0">
         {status === "loading" ? "..." : "Zapisz się"}
       </button>
     </form>
@@ -49,152 +548,170 @@ function EmailCapture() {
 
 function AppStoreBadge({ store }: { store: "ios" | "android" }) {
   return (
-    <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 select-none">
-      {store === "ios" ? (
-        <svg className="h-6 w-6 text-slate-500" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-        </svg>
-      ) : (
-        <svg className="h-6 w-6 text-slate-500" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3.18 23.76a2 2 0 0 0 2.37-.08l.11-.08 9.5-5.48-2.35-2.35zM1.5 2.27A2 2 0 0 0 1 3.73v16.54a2 2 0 0 0 .5 1.46l.08.08 9.26-9.26v-.22zM20.49 10.7l-2.7-1.56-2.62 2.62 2.62 2.62 2.71-1.56a2 2 0 0 0 0-3.12zM5.55.4 14.93 5.8l-2.35 2.35L5.18.65A2 2 0 0 1 5.55.4z"/>
-        </svg>
-      )}
-      <div>
-        <p className="text-[9px] text-slate-400 uppercase tracking-wider leading-none">
-          {store === "ios" ? "Pobierz w" : "Dostępne w"}
-        </p>
-        <p className="text-[13px] font-semibold text-slate-600 leading-tight">
-          {store === "ios" ? "App Store" : "Google Play"}
-        </p>
+    <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 select-none h-[52px]">
+      {store === "ios"
+        ? <svg className="h-5 w-5 text-slate-500 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" /></svg>
+        : <svg className="h-5 w-5 text-slate-500 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76a2 2 0 0 0 2.37-.08l.11-.08 9.5-5.48-2.35-2.35zM1.5 2.27A2 2 0 0 0 1 3.73v16.54a2 2 0 0 0 .5 1.46l.08.08 9.26-9.26v-.22zM20.49 10.7l-2.7-1.56-2.62 2.62 2.62 2.62 2.71-1.56a2 2 0 0 0 0-3.12zM5.55.4 14.93 5.8l-2.35 2.35L5.18.65A2 2 0 0 1 5.55.4z" /></svg>}
+      <div className="flex-1 min-w-0">
+        <p className="text-[9px] text-slate-400 uppercase tracking-wider leading-none">{store === "ios" ? "Pobierz w" : "Dostępne w"}</p>
+        <p className="text-[12px] font-semibold text-slate-600 leading-tight whitespace-nowrap">{store === "ios" ? "App Store" : "Google Play"}</p>
       </div>
-      <span className="ml-1 text-[9px] text-slate-400 font-medium bg-slate-100 rounded-full px-2 py-0.5">Wkrótce</span>
+      <span className="text-[9px] text-slate-400 font-medium bg-slate-100 rounded-full px-1.5 py-0.5 shrink-0">Wkrótce</span>
     </div>
   );
 }
 
-function PhoneMockupVideo() {
-  const ref = useRef<HTMLVideoElement>(null);
+// ─── WaitlistPage ─────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    const v = ref.current;
-    if (!v) return;
-    v.muted = true;
-    v.play().catch(() => {});
-  }, []);
-
-  return (
-    <div className="relative mx-auto select-none" style={{ width: "clamp(220px, 42vw, 280px)" }}>
-      {/* Phone shell */}
-      <div
-        className="relative rounded-[42px] bg-slate-800 shadow-[0_32px_80px_-12px_rgba(0,0,0,0.35)]"
-        style={{ aspectRatio: "9/19.5" }}
-      >
-        {/* Side buttons */}
-        <div className="absolute -right-[3px] top-[22%] w-[4px] h-10 bg-slate-700 rounded-r-full" />
-        <div className="absolute -left-[3px] top-[18%] w-[4px] h-7 bg-slate-700 rounded-l-full" />
-        <div className="absolute -left-[3px] top-[27%] w-[4px] h-7 bg-slate-700 rounded-l-full" />
-        {/* Screen */}
-        <div className="absolute inset-[9px] rounded-[34px] overflow-hidden bg-black" style={{ zIndex: 1 }}>
-          {/* Gradient fallback */}
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-900 via-orange-700 to-amber-600" />
-          {/* Video */}
-          <video
-            ref={ref}
-            src="/founders_intro.mp4"
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/10" />
-          {/* Card info */}
-          <div className="absolute bottom-4 left-3 right-3 space-y-1.5">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-              <span className="text-white/65 text-[10px]">Poradnik · @trasa</span>
-            </div>
-            <p className="text-white font-black text-[14px] leading-tight">Co możesz robić w Trasie?</p>
-            <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2 py-[3px]">
-              <span className="text-white font-semibold text-[9px]">Filmik założycieli</span>
-            </div>
-          </div>
-        </div>
-        {/* Notch */}
-        <div className="absolute top-[9px] left-1/2 -translate-x-1/2 w-14 h-[14px] bg-slate-800 rounded-full" style={{ zIndex: 10 }} />
-      </div>
-    </div>
-  );
-}
+type Scene = "intro" | "demo" | "postcard";
 
 export default function WaitlistPage() {
   const navigate = useNavigate();
+  // "intro" = phone at expanded (fullscreen) scale; "demo" = phone compact; "postcard" = postcard
+  const [scene, setScene] = useState<Scene>("intro");
+  const [showPhoneBezel, setShowPhoneBezel] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const phoneBodyRef = useRef<HTMLDivElement>(null);
+
+  const goDemo = useCallback(() => setScene("demo"), []);
+  const goPostcard = useCallback(() => setScene("postcard"), []);
+
+  const HEADLINE_SIZE = "clamp(44px, 13vw, 64px)";
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#FEFEFE" }}>
-      {/* Main content — two columns on large screens */}
-      <div className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-20 px-6 py-16 lg:py-0 max-w-5xl mx-auto w-full">
+    <div style={{ background: "#FEFEFE" }}>
 
-        {/* Left column — text + form */}
-        <div className="flex flex-col items-center lg:items-start text-center lg:text-left max-w-sm w-full order-2 lg:order-1">
-          {/* Orb */}
-          <div
-            className="w-14 h-14 rounded-full mb-6"
-            style={{
-              background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
-              boxShadow: "0 0 32px rgba(249,102,43,0.35), 0 0 64px rgba(249,102,43,0.10)",
-            }}
+      {/* ── MOBILE ─────────────────────────────────────────────────────────────── */}
+      <div className="lg:hidden">
+        {/* Fullscreen founders video — at root level (outside any transform) for iOS Safari */}
+        {scene === "intro" && (
+          <FullscreenIntroVideo
+            phoneBodyRef={phoneBodyRef}
+            onBezelShow={() => setShowPhoneBezel(true)}
+            onDone={goDemo}
           />
+        )}
 
-          {/* Headline */}
-          <h1 className="text-4xl sm:text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-4">
-            speed dating<br />
-            <span
-              className="bg-clip-text text-transparent"
-              style={{ backgroundImage: "linear-gradient(135deg, #F4A259, #F9662B)" }}
-            >
+        <div className="flex flex-col" style={{ minHeight: "100dvh" }}>
+
+          {/* Intro overlays (z-50, above video): orb top + grayed badges bottom */}
+          <AnimatePresence>
+            {scene === "intro" && (
+              <motion.div
+                className="fixed inset-0 z-50 pointer-events-none flex flex-col items-center justify-between"
+                style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }}
+              >
+                <div className="mt-10 w-14 h-14 rounded-full shadow-lg shrink-0"
+                  style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                <div className="flex gap-2 w-full px-4 mb-6" style={{ filter: "grayscale(1)", opacity: 0.45 }}>
+                  <div className="flex-1"><AppStoreBadge store="ios" /></div>
+                  <div className="flex-1"><AppStoreBadge store="android" /></div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Top-aligned content — anchored to top so bottom CTA is always visible */}
+          <div className="flex-1 flex flex-col items-center px-2"
+            style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 56px)" }}>
+
+            {/* Orb logo */}
+            <div className="relative z-0 mb-[-8px]">
+              <div className="w-12 h-12 rounded-full"
+                style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            </div>
+
+            <p className="relative z-0 font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap"
+              style={{ fontSize: HEADLINE_SIZE }}>
+              speed dating
+            </p>
+
+            {/* Phone or postcard — z-10, overlaps headlines */}
+            <div className="relative z-10 -mt-5 -mb-5">
+              <AnimatePresence mode="wait">
+                {scene !== "postcard" ? (
+                  <motion.div key="phone" initial={false} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
+                    <PhoneMockup
+                      ref={phoneBodyRef}
+                      key={scene === "intro" ? "phone-intro" : "phone-demo"}
+                      compact
+                      initialPhase="B"
+                      showBezel={showPhoneBezel || scene !== "intro"}
+                      onComplete={goPostcard}
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.div key="postcard"
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 220, damping: 26 }}>
+                    <PostcardReveal />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <p className="relative z-0 font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap"
+              style={{ fontSize: HEADLINE_SIZE }}>
               z miastem
-            </span>
-          </h1>
-
-          {/* Subheadline */}
-          <p className="text-slate-500 text-base leading-relaxed mb-3 max-w-xs">
-            Planujcie wyjazdy grupowo. Wybierajcie miejsca, twórzcie trasy i dzielcie sie wspomnieniami.
-          </p>
-
-          {/* Mobile badge */}
-          <div className="inline-flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-full px-4 py-1.5 mb-8">
-            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-            <span className="text-orange-700 text-xs font-medium">Aplikacja mobilna w budowie</span>
+            </p>
           </div>
 
-          {/* Email capture */}
-          <div className="w-full mb-3">
-            <EmailCapture />
-          </div>
-
-          <p className="text-slate-400 text-xs mb-8">Powiadomimy Cie o premierze na iOS i Androidzie.</p>
-
-          {/* Store badges */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-8">
-            <AppStoreBadge store="ios" />
-            <AppStoreBadge store="android" />
-          </div>
-
-          {/* Business link */}
-          <button
-            onClick={() => navigate("/dla-firm")}
-            className="text-slate-500 text-sm hover:text-slate-700 transition-colors underline underline-offset-4"
+          {/* Sticky bottom CTA — hidden during intro, fades in after */}
+          <div
+            className="shrink-0 bg-white/96 backdrop-blur-sm border-t border-slate-100 px-4 pt-3 space-y-3"
+            style={{
+              opacity: scene === "intro" ? 0 : 1,
+              pointerEvents: scene === "intro" ? "none" : "auto",
+              transition: "opacity 0.5s ease 0.2s",
+              paddingBottom: "max(env(safe-area-inset-bottom, 0px), 24px)",
+            }}
           >
-            Prowadzisz lokal? Dowiedz sie wiecej
-          </button>
+            <p className="text-xs text-slate-500 text-center font-medium">
+              {scene === "postcard" ? "Dołącz do pierwszych użytkowników Trasy" : "Bądź pierwszy na liście oczekujących"}
+            </p>
+            <EmailCapture inputRef={inputRef} />
+            <div className="flex gap-2">
+              <div className="flex-1"><AppStoreBadge store="ios" /></div>
+              <div className="flex-1"><AppStoreBadge store="android" /></div>
+            </div>
+            <button onClick={() => navigate("/dla-firm")} className="w-full text-slate-500 text-xs hover:text-slate-700 transition-colors text-center">
+              Prowadzisz lokal? Dowiedz się więcej →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── DESKTOP ─────────────────────────────────────────────────────────────── */}
+      <div className="hidden lg:flex min-h-screen items-center justify-center gap-20 px-8 py-16 max-w-5xl mx-auto">
+        {/* Left */}
+        <div className="flex flex-col items-start text-left max-w-sm w-full">
+          <div className="w-14 h-14 rounded-full mb-6" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", boxShadow: "0 0 32px rgba(249,102,43,0.35), 0 0 64px rgba(249,102,43,0.10)" }} />
+          <h1 className="text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-4">
+            speed dating<br />
+            z miastem
+          </h1>
+          <p className="text-slate-500 text-base leading-relaxed mb-8 max-w-xs">Planujcie wyjazdy grupowo. Wybierajcie miejsca, twórzcie trasy i dzielcie się wspomnieniami.</p>
+          <div className="w-full mb-3"><EmailCapture inputRef={inputRef} /></div>
+          <p className="text-slate-400 text-xs mb-8">Powiadomimy Cię o premierze na iOS i Androidzie.</p>
+          <div className="flex gap-3 mb-8"><AppStoreBadge store="ios" /><AppStoreBadge store="android" /></div>
+          <button onClick={() => navigate("/dla-firm")} className="text-slate-500 text-sm hover:text-slate-700 transition-colors underline underline-offset-4">Prowadzisz lokal? Dowiedz się więcej</button>
         </div>
 
-        {/* Right column — phone mockup */}
-        <div className="order-1 lg:order-2 shrink-0">
-          <PhoneMockupVideo />
+        {/* Right: phone → postcard */}
+        <div className="shrink-0">
+          <AnimatePresence mode="wait">
+            {scene !== "postcard" ? (
+              <motion.div key="phone-desk" exit={{ opacity: 0, scale: 0.88 }} transition={{ duration: 0.4 }}>
+                <PhoneMockup onComplete={goPostcard} />
+              </motion.div>
+            ) : (
+              <motion.div key="postcard-desk" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+                <PostcardReveal large />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
