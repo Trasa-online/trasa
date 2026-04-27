@@ -141,8 +141,7 @@ Klient → supabase.functions.invoke("google-places-proxy", ...) → Google Plac
 **NIE zmieniaj układu, z-indeksów ani logiki animacji.** Układ jest zatwierdzony i wymaga długiego debugowania — każda zmiana może go zepsuć.
 
 **Co jest zamrożone:**
-- Układ mobile: `"speed dating"` (shrink-0, z-5/60) → orba (w-14, z-50, mb-2) → telefon (flex-1 min-h-0, **z-45** po intro) → `"z miastem"` (shrink-0 mt-2, z-5/60)
-- Orb ma z-50, telefon po intro ma z-45 — celowo: orba jest powyżej telefonu żeby nie była przykryta overflowem karty pocztówki
+- Układ mobile: `"speed dating"` (shrink-0, z-5/60) → orba (w-14, z-50) → telefon (flex-1 min-h-0) → `"z miastem"` (shrink-0 mt-2, z-5/60)
 - Outer container: `height: 100dvh` — NIE zmieniać na minHeight
 - Sekcja content: `flex-1 min-h-0` — NIE dodawać overflow-hidden ani zmieniać flex
 - `FullscreenIntroVideo`: `position: fixed`, `overflow: hidden`, `zIndex: 40` → rośnie do `60` przy shrink
