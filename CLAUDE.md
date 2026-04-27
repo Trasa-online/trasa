@@ -136,6 +136,28 @@ Klient → supabase.functions.invoke("google-places-proxy", ...) → Google Plac
 - Lokalizacja: `api/` (root), NIE `src/api/`
 - Sekretne zmienne: Vercel Dashboard → Environment Variables (bez VITE_ prefix)
 
+### ⛔ WaitlistPage — układ i animacja ZAMROŻONE (src/pages/WaitlistPage.tsx)
+
+**NIE zmieniaj układu, z-indeksów ani logiki animacji.** Układ jest zatwierdzony i wymaga długiego debugowania — każda zmiana może go zepsuć.
+
+**Co jest zamrożone:**
+- Układ mobile: `"speed dating"` (shrink-0, z-5/60) → orba (w-14, z-50) → telefon (flex-1 min-h-0) → `"z miastem"` (shrink-0 mt-2, z-5/60)
+- Outer container: `height: 100dvh` — NIE zmieniać na minHeight
+- Sekcja content: `flex-1 min-h-0` — NIE dodawać overflow-hidden ani zmieniać flex
+- `FullscreenIntroVideo`: `position: fixed`, `overflow: hidden`, `zIndex: 40` → rośnie do `60` przy shrink
+- Animacja przejścia: spring shrink (stiffness 120, damping 20) do rect ekranu telefonu (inset 9px, borderRadius 34px), potem fade 0.25s
+- `PhoneMockup` (compact): height-based sizing (`height: min(100%, 423px)`, `aspectRatio: 9/19.5`)
+- `phoneBodyRef` → przekazywany do `FullscreenIntroVideo` i `PhoneMockup ref=` — NIE usuwać
+- `shrinking` state → podnosi telefon z z-1 do z-50 przy starcie animacji (żeby bezel był widoczny)
+- `onShrinkStart` callback → dwa rAF frames przed startem spring (żeby React zdążył odmalować)
+
+**Co MOŻNA zmieniać:**
+- Pliki wideo wewnątrz mockupu telefonu (`src` w `PhaseA`, `PhaseE` itp.)
+- Plik intro video (`/founders_intro.mp4` → `src` w `FullscreenIntroVideo`)
+- Treść faz (tekst, karty demo w `PhaseB`, `PhaseC`, `PhaseE`)
+- Sekcja bottom CTA (email capture, badges, link do `/dla-firm`)
+- Desktop layout (`hidden lg:flex` — osobna sekcja, niezależna od mobile)
+
 ---
 
 ## Znane problemy do naprawy
