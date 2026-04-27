@@ -572,22 +572,22 @@ export default function WaitlistPage() {
           <div className="flex-1 min-h-0 flex flex-col items-center px-2"
             style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 6px)" }}>
 
-            {/* "speed dating" — at top. Hidden during intro (z-5 behind video z-40), visible after (z-60). */}
+            {/* "speed dating" — always z-60 (above intro video z-40) so orb is always visually below this text. */}
             <p
               className="shrink-0 font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap"
-              style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: scene === "intro" ? 5 : 60 }}
+              style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: 60 }}
             >
               speed dating
             </p>
 
-            {/* Orb — BELOW "speed dating". z-50 always (above intro video z-40, above phone z-45 after intro). */}
+            {/* Orb — always z-55 (above video z-40, below text z-60, above phone z-45). Always visible under "speed dating". */}
             <div
               className="w-14 h-14 rounded-full mt-1 mb-2 shrink-0"
-              style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", position: "relative", zIndex: 50 }}
+              style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", position: "relative", zIndex: 55 }}
             />
 
-            {/* Phone / postcard — flex-1 min-h-0. z-45 after intro (below orb z-50 so orb stays visible on top of any overflow). */}
-            <div className="relative flex-1 min-h-0 flex items-center justify-center w-full"
+            {/* Phone / postcard — flex-1 min-h-0. z-45 after intro (below orb z-55). overflow:hidden prevents postcard from floating over orb. */}
+            <div className="relative flex-1 min-h-0 flex items-center justify-center w-full overflow-hidden"
               style={{ zIndex: scene === "intro" ? (shrinking ? 50 : 1) : 45 }}>
               <AnimatePresence mode="wait">
                 {scene !== "postcard" ? (
