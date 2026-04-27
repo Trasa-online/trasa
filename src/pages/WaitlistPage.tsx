@@ -618,8 +618,10 @@ export default function WaitlistPage() {
 
           {/* Sticky bottom CTA — hidden during intro, fades in after */}
           <div
-            className="shrink-0 bg-white/96 backdrop-blur-sm border-t border-slate-100 px-4 pt-3 space-y-3"
+            className="shrink-0 bg-white/96 backdrop-blur-sm border-t border-slate-100 px-4 pt-5 space-y-3"
             style={{
+              position: "relative",
+              zIndex: 80,
               opacity: scene === "intro" ? 0 : 1,
               pointerEvents: scene === "intro" ? "none" : "auto",
               transition: "opacity 0.5s ease 0.2s",
