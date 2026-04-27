@@ -183,6 +183,7 @@ const SharedRoute      = lazy(() => import("./pages/SharedRoute"));
 const JoinPage         = lazy(() => import("./pages/JoinPage"));
 const PublicProfile    = lazy(() => import("./pages/PublicProfile"));
 const BusinessDashboard = lazy(() => import("./pages/BusinessDashboard"));
+const BusinessOnePager  = lazy(() => import("./pages/BusinessOnePager"));
 
 const queryClient = new QueryClient();
 
@@ -229,6 +230,7 @@ const App = () => (
           <Route path="/biznes/demo" element={<Navigate to="/demo?city=Warszawa&skip=category" replace />} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
           <Route path="/dla-firm" element={<ForBusinessPage />} />
+          <Route path="/dla-firm/start" element={<BusinessOnePager />} />
 <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
