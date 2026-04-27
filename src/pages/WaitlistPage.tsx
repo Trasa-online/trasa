@@ -587,7 +587,7 @@ export default function WaitlistPage() {
                 background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
                 position: "relative",
                 zIndex: scene === "intro" ? 50 : 49,
-                marginTop: "-20px",
+                marginTop: "-36px",
                 marginBottom: "12px",
               }}
             />
