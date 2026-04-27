@@ -572,7 +572,7 @@ export default function WaitlistPage() {
           <div className="flex-1 min-h-0 flex flex-col items-center px-2"
             style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 6px)" }}>
 
-            {/* "speed dating" — at top. Hidden during intro (z-5 behind video z-40), visible after (z-60). */}
+            {/* "speed dating" — z-60 after intro (above orb z-49), z-5 during intro (hidden behind video). */}
             <p
               className="shrink-0 font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap"
               style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: scene === "intro" ? 5 : 60 }}
@@ -580,10 +580,16 @@ export default function WaitlistPage() {
               speed dating
             </p>
 
-            {/* Orb — BELOW "speed dating". Always z-50 (visible above intro video z-40). */}
+            {/* Orb — slides under "speed dating" via negative marginTop. z-50 during intro (above video), z-49 after (below text z-60). */}
             <div
-              className="w-14 h-14 rounded-full mt-1 shrink-0"
-              style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", position: "relative", zIndex: 50 }}
+              className="w-14 h-14 rounded-full shrink-0"
+              style={{
+                background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
+                position: "relative",
+                zIndex: scene === "intro" ? 50 : 49,
+                marginTop: "-20px",
+                marginBottom: "12px",
+              }}
             />
 
             {/* Phone / postcard — flex-1 min-h-0: fills available space, adapts to screen height. */}
