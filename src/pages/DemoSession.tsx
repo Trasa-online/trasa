@@ -675,10 +675,10 @@ export default function DemoSession() {
           <div className="flex items-center justify-between px-5 pt-4 pb-0">
             <div className="h-7 w-7 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
             <button
-              onClick={() => setBusinessMode(b => !b)}
+              onClick={() => navigate("/dla-firm")}
               className="text-xs font-semibold px-3 py-1.5 rounded-full active:scale-95 transition-transform text-blue-600 bg-blue-600/10"
             >
-              {businessMode ? "← dla turystów" : "dla firm →"}
+              dla firm →
             </button>
           </div>
 
