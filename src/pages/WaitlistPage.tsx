@@ -580,15 +580,15 @@ export default function WaitlistPage() {
               speed dating
             </p>
 
-            {/* Orb — BELOW "speed dating". Always z-50 (visible above intro video z-40). */}
+            {/* Orb — BELOW "speed dating". z-50 always (above intro video z-40, above phone z-45 after intro). */}
             <div
-              className="w-14 h-14 rounded-full mt-1 shrink-0"
+              className="w-14 h-14 rounded-full mt-1 mb-2 shrink-0"
               style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", position: "relative", zIndex: 50 }}
             />
 
-            {/* Phone / postcard — flex-1 min-h-0: fills available space, adapts to screen height. */}
+            {/* Phone / postcard — flex-1 min-h-0. z-45 after intro (below orb z-50 so orb stays visible on top of any overflow). */}
             <div className="relative flex-1 min-h-0 flex items-center justify-center w-full"
-              style={{ zIndex: scene === "intro" ? (shrinking ? 50 : 1) : 70 }}>
+              style={{ zIndex: scene === "intro" ? (shrinking ? 50 : 1) : 45 }}>
               <AnimatePresence mode="wait">
                 {scene !== "postcard" ? (
                   <motion.div key="phone" className="h-full" initial={false} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
