@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, forwardRef, type RefObject } from "react";
+import { useState, useRef, useEffect, useCallback, forwardRef } from "react";
 import {
   motion, AnimatePresence, useMotionValue, useTransform, animate,
   type MotionValue, type PanInfo,
@@ -237,15 +237,9 @@ PhoneMockup.displayName = "PhoneMockup";
 // "video inside scale() = black screen" WebKit compositing bug.
 // When done it spring-shrinks to the phone screen rect, then fades out.
 
-function FullscreenIntroVideo({
-  phoneBodyRef,
-  onBezelShow,
-  onDone,
-}: {
-  phoneBodyRef: RefObject<HTMLDivElement>;
-  onBezelShow: () => void;
-  onDone: () => void;
-}) {
+// Intro video fades out — works regardless of where the phone is positioned on the page.
+// (The old "shrink to phone rect" animation broke when the phone moved from the top of the layout.)
+function FullscreenIntroVideo({ onDone }: { onDone: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const doneRef = useRef(false);
@@ -253,37 +247,22 @@ function FullscreenIntroVideo({
 
   useEffect(() => { if (videoRef.current) videoRef.current.muted = audioMuted; }, [audioMuted]);
 
-  const triggerShrink = useCallback(() => {
+  const triggerFade = useCallback(() => {
     if (doneRef.current) return;
     doneRef.current = true;
-
-    const phoneEl = phoneBodyRef.current;
     const containerEl = containerRef.current;
-    if (!phoneEl || !containerEl) { onDone(); return; }
-
-    const r = phoneEl.getBoundingClientRect();
-    // Target = phone screen rect (9px inset from phone body)
-    const target = { top: r.top + 9, left: r.left + 9, width: r.width - 18, height: r.height - 18 };
-
-    onBezelShow();
-
-    animate(containerEl, {
-      top: target.top, left: target.left, width: target.width, height: target.height, borderRadius: "34px",
-    }, { type: "spring", stiffness: 120, damping: 20 })
-      .then(() => animate(containerEl, { opacity: 0 }, { duration: 0.25 }))
-      .then(() => onDone());
-  }, [phoneBodyRef, onBezelShow, onDone]);
+    if (!containerEl) { onDone(); return; }
+    animate(containerEl, { opacity: 0 }, { duration: 0.5 }).then(() => onDone());
+  }, [onDone]);
 
   useEffect(() => {
-    const t = setTimeout(triggerShrink, 9000);
+    const t = setTimeout(triggerFade, 9000);
     return () => clearTimeout(t);
-  }, [triggerShrink]);
+  }, [triggerFade]);
 
-  // Retry play on first user touch — handles iOS autoplay block gracefully
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    // setAttribute sets the HTML attribute — iOS Safari requires this (not just el.muted = true)
     el.setAttribute("muted", "");
     el.muted = true;
     el.play().catch(() => {});
@@ -298,9 +277,9 @@ function FullscreenIntroVideo({
       onClick={() => {
         const el = videoRef.current;
         if (el && el.paused) { el.muted = true; el.play().catch(() => {}); return; }
-        triggerShrink();
+        triggerFade();
       }}
-      style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", borderRadius: 0, background: "#000", zIndex: 40, WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
+      style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "#000", zIndex: 40, WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
     >
       <video
         ref={(el) => {
@@ -312,7 +291,7 @@ function FullscreenIntroVideo({
         }}
         src="/founders_intro.mp4"
         autoPlay playsInline muted preload="auto"
-        onEnded={triggerShrink}
+        onEnded={triggerFade}
         className="absolute inset-0 w-full h-full object-cover"
         style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
       />
@@ -525,9 +504,7 @@ export default function WaitlistPage() {
   const navigate = useNavigate();
   // "intro" = phone at expanded (fullscreen) scale; "demo" = phone compact; "postcard" = postcard
   const [scene, setScene] = useState<Scene>("intro");
-  const [showPhoneBezel, setShowPhoneBezel] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const phoneBodyRef = useRef<HTMLDivElement>(null);
 
   const goDemo = useCallback(() => setScene("demo"), []);
   const goPostcard = useCallback(() => setScene("postcard"), []);
@@ -541,16 +518,12 @@ export default function WaitlistPage() {
       <div className="lg:hidden">
         {/* Fullscreen founders video — at root level (outside any transform) for iOS Safari */}
         {scene === "intro" && (
-          <FullscreenIntroVideo
-            phoneBodyRef={phoneBodyRef}
-            onBezelShow={() => setShowPhoneBezel(true)}
-            onDone={goDemo}
-          />
+          <FullscreenIntroVideo onDone={goDemo} />
         )}
 
         <div className="flex flex-col" style={{ minHeight: "100dvh" }}>
 
-          {/* Intro overlays (z-50, above video): orb top + grayed badges bottom */}
+          {/* Intro overlay — fixed z-50 (above video z-40): grayed app store badges */}
           <AnimatePresence>
             {scene === "intro" && (
               <motion.div
@@ -591,10 +564,9 @@ export default function WaitlistPage() {
                   <motion.div key="phone" initial={false} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
                     <PhoneMockup
                       key={scene === "intro" ? "phone-intro" : "phone-demo"}
-                      ref={phoneBodyRef}
                       compact
                       initialPhase="B"
-                      showBezel={showPhoneBezel || scene !== "intro"}
+                      showBezel={scene !== "intro"}
                       onComplete={goPostcard}
                     />
                   </motion.div>
@@ -609,10 +581,10 @@ export default function WaitlistPage() {
               </AnimatePresence>
             </div>
 
-            {/* "z miastem" — pushed to bottom of available space */}
+            {/* "z miastem" — pushed to bottom. Hidden during intro (z-5 behind video z-40). */}
             <p
               className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap mt-auto"
-              style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: 60 }}
+              style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: scene === "intro" ? 5 : 60 }}
             >
               z miastem
             </p>
