@@ -98,8 +98,7 @@ function PhaseB({ onNext }: { onNext: () => void }) {
   const remaining = DEMO_PLACES.length - cardIdx;
   return (
     <motion.div key="B" className="absolute inset-0 flex flex-col bg-[#f5f5f5]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-      <div className="h-6 flex items-center justify-center shrink-0"><p className="text-[9px] text-slate-400 font-semibold tracking-widest uppercase">Przeciągnij i wybierz</p></div>
-      <div className="relative flex-1 min-h-0 mx-1.5">
+      <div className="relative flex-1 min-h-0 mx-1.5 mt-1.5">
         {remaining >= 3 && <div className="absolute inset-0 rounded-3xl overflow-hidden" style={{ transform: "scale(0.88) translateY(10px)", zIndex: 1, opacity: 0.6 }}><div className={`w-full h-full bg-gradient-to-br ${DEMO_PLACES[cardIdx + 2]?.gradient ?? DEMO_PLACES[0].gradient}`} /></div>}
         {remaining >= 2 && <div className="absolute inset-0 rounded-3xl overflow-hidden" style={{ transform: "scale(0.94) translateY(5px)", zIndex: 2, opacity: 0.8 }}><div className={`w-full h-full bg-gradient-to-br ${DEMO_PLACES[cardIdx + 1]?.gradient ?? DEMO_PLACES[0].gradient}`} /></div>}
         <motion.div drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.72}
@@ -127,7 +126,6 @@ function PhaseC({ onNext }: { onNext: () => void }) {
           <div className="flex items-start justify-between"><div><h3 className="font-black text-sm text-[#0E0E0E]">{place.name}</h3><p className="text-[10px] text-[#979797]">{place.category} · Gdańsk</p></div><div className="flex items-center gap-0.5 bg-slate-50 rounded-xl px-2 py-1"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" /><span className="text-[10px] font-bold">{place.rating}</span></div></div>
           <p className="text-[9px] text-[#979797] leading-relaxed">{place.description}</p>
           <div className="flex gap-3 text-[9px] text-[#979797]"><span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" /> pon-pt 11:00-20:00</span><span className="flex items-center gap-1"><Globe className="h-2.5 w-2.5" /> stolowkagdanska.pl</span></div>
-          <button onClick={onNext} className="w-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold rounded-2xl py-2.5 text-[11px] active:scale-95 transition-transform">Dodaj do trasy ✓</button>
         </div>
       </motion.div>
     </motion.div>
@@ -285,7 +283,7 @@ function FullscreenIntroVideo({
     <div
       ref={containerRef}
       onClick={triggerShrink}
-      style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", borderRadius: 0, overflow: "hidden", zIndex: 40 }}
+      style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", borderRadius: 0, background: "#000", zIndex: 40 }}
     >
       <video
         ref={(el) => {
@@ -576,9 +574,8 @@ export default function WaitlistPage() {
                   <motion.div key="phone" initial={false} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
                     <PhoneMockup
                       ref={phoneBodyRef}
-                      key={scene === "intro" ? "phone-intro" : "phone-demo"}
                       compact
-                      initialPhase="B"
+                      initialPhase="A"
                       showBezel={showPhoneBezel || scene !== "intro"}
                       onComplete={goPostcard}
                     />
