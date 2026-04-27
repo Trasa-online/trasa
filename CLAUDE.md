@@ -36,6 +36,14 @@ W Tailwind odpowiedniki klas:
 - Tekst główny = `text-foreground` (mapuje na #0E0E0E)
 - Tekst secondary = `text-muted-foreground`
 
+### ⛔ Zakaz ciemnych teł na stronach publicznych
+
+**NIGDY nie używaj czarnego ani ciemnoszarego tła (`#0E0E0E`, `bg-slate-900`, `bg-black`, dark mode)** na stronach widocznych dla użytkowników (landing, waitlist, one-pager, itp.). Zawsze tło = `#FEFEFE` (złamana biel) lub bardzo jasny odcień (np. `bg-slate-50`). Ciemne tła są zarezerwowane wyłącznie dla nakładek wideo/overlay wewnątrz komponentów (np. phone mockup).
+
+### Claim / tagline
+
+Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery małe, bez kropek na końcu). Używaj go w headerach stron marketingowych. Nie zastępuj innymi sformułowaniami bez wyraźnej prośby.
+
 ### Typografia
 
 - **Główna:** Inter (wszystkie wagi)
