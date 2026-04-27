@@ -279,10 +279,23 @@ function FullscreenIntroVideo({
     return () => clearTimeout(t);
   }, [triggerShrink]);
 
+  // Retry play on first user touch — handles iOS autoplay block gracefully
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const onTouch = () => { if (el.paused) { el.muted = true; el.play().catch(() => {}); } };
+    document.addEventListener("touchstart", onTouch, { once: true, passive: true });
+    return () => document.removeEventListener("touchstart", onTouch);
+  }, []);
+
   return (
     <div
       ref={containerRef}
-      onClick={triggerShrink}
+      onClick={() => {
+        const el = videoRef.current;
+        if (el && el.paused) { el.muted = true; el.play().catch(() => {}); return; }
+        triggerShrink();
+      }}
       style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", borderRadius: 0, background: "#000", zIndex: 40, WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
     >
       <video
@@ -552,19 +565,17 @@ export default function WaitlistPage() {
           <div className="flex-1 flex flex-col items-center px-2"
             style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 20px)" }}>
 
-            <p className="relative z-0 font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap"
-              style={{ fontSize: HEADLINE_SIZE }}>
-              speed dating
-            </p>
-
-            {/* Orb logo — below "speed dating", hidden during intro, fades in as video shrinks away */}
-            <div className="relative z-0 mt-[-6px] mb-[-6px]">
+            {/* Orb always visible (z-50, above intro video z-40). "speed dating" overlaps
+                the orb from below so the text appears stamped on the logo. */}
+            <div className="relative flex flex-col items-center" style={{ zIndex: 50 }}>
               <motion.div
-                className="w-12 h-12 rounded-full"
+                className="w-20 h-20 rounded-full"
                 style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
-                animate={{ opacity: scene !== "intro" ? 1 : 0 }}
-                transition={{ duration: 0.5 }}
               />
+              <p className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap -mt-8"
+                style={{ fontSize: HEADLINE_SIZE }}>
+                speed dating
+              </p>
             </div>
 
             {/* Phone or postcard — z-10, overlaps headlines */}
