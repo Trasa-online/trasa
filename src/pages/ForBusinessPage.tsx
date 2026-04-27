@@ -1,5 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { Check, X, BarChart2, ImagePlus, CalendarDays, TrendingUp, Eye, Star, MapPin, Menu } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // ─── Scroll reveal ─────────────────────────────────────────────────────────────
 
@@ -36,46 +38,148 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 
 const TIERS = [
   {
-    name: "Basic",
+    id: "basic",
+    planLabel: "PLAN PODSTAWOWY",
     subtitle: "Jesteś widoczny",
-    price: "Bezpłatny",
-    cta: null,
-    highlight: false,
-    danger: false,
+    price: null,
+    priceNote: "Bezpłatny",
+    badge: null,
+    blueTitle: false,
     features: [
-      { label: "Profil biznesowy w aplikacji", val: true },
-      { label: "Możliwość bycia dodanym do trasy", val: true },
-      { label: "Adres", val: true },
-      { label: "Krótki opis", val: true },
-      { label: "1 zdjęcie (profilowe)", val: true },
-      { label: "Podstawowa analityka (wyświetlenia)", val: true },
+      { label: "Profil biznesowy w aplikacji" },
+      { label: "Galeria zdjęć" },
+      { label: "Opis" },
+      { label: "Adres" },
+      { label: "Podstawowa analityka (wyświetlenia)" },
     ],
   },
   {
-    name: "Premium",
-    subtitle: "Wyróżniasz się",
-    price: "Bezpłatny",
-    priceNote: "(na pierwsze trzy miesiące)",
-    cta: "Wybieram",
-    highlight: true,
-    danger: false,
+    id: "pro",
+    planLabel: "PLAN PROFESJONALNY",
+    subtitle: "Masz kontrolę",
+    price: "89zł",
+    priceNote: null,
+    badge: "DO WRZEŚNIA za 0zł",
+    blueTitle: false,
     features: [
-      { label: "Profil biznesowy w aplikacji", val: true },
-      { label: "Możliwość bycia dodanym do trasy", val: true },
-      { label: "Adres", val: true },
-      { label: "Krótki opis", val: true },
-      { label: "Pełna galeria zdjęć (bez limitu)", val: true, bold: true },
-      { label: "Pełna analityka - wyświetlenia, kliknięcia, dodania, oceny i inne", val: true, bold: true },
-      { label: "Sekcja aktualności i promocji okresowych", val: true, bold: true },
+      { label: "Profil biznesowy w aplikacji" },
+      { label: "Galeria zdjęć i filmów", bold: true },
+      { label: "Opis" },
+      { label: "Adres" },
+      { label: "Pełna analityka - wyświetlenia, dodania do planu dnia, długość sesji i inne", bold: true },
+      { label: "Sekcja aktualności i wyróżnionych promocji", bold: true },
+    ],
+  },
+  {
+    id: "premium",
+    planLabel: "PLAN PREMIUM",
+    subtitle: "Wyróżniasz się",
+    price: "139zł",
+    priceNote: null,
+    badge: "DO WRZEŚNIA za 0zł",
+    blueTitle: true,
+    features: [
+      { label: "Profil biznesowy w aplikacji" },
+      { label: "Galeria zdjęć i filmów", bold: true },
+      { label: "Opis" },
+      { label: "Adres" },
+      { label: "Pełna analityka - wyświetlenia, dodania do planu dnia, długość sesji i inne", bold: true },
+      { label: "Sekcja aktualności i wyróżnione promocje", bold: true },
+      { label: "Powiadomienia push dla użytkowników", bold: true },
+      { label: "Personalizowany wygląd profilu", bold: true },
     ],
   },
 ];
 
-// ─── Feature icon ──────────────────────────────────────────────────────────────
+// ─── Business claim form ───────────────────────────────────────────────────────
 
-function FeatureVal({ val }: { val: boolean | string }) {
-  if (val === false) return <X className="h-4 w-4 text-slate-300 shrink-0" strokeWidth={2} />;
-  return <Check className="h-4 w-4 text-blue-500 shrink-0" strokeWidth={2.5} />;
+function BizClaimForm({ selectedPlan, onPlanChange }: { selectedPlan: string | null; onPlanChange: (p: string | null) => void }) {
+  const [placeName, setPlaceName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!placeName.trim() || !email.trim()) return;
+    setLoading(true);
+    try {
+      const fullMessage = [
+        selectedPlan ? `Plan: ${selectedPlan}` : null,
+        message.trim() || null,
+      ].filter(Boolean).join("\n") || null;
+      const { error } = await (supabase as any).from("business_claims").insert({
+        contact_email: email.trim().toLowerCase(),
+        contact_phone: phone.trim() || null,
+        place_name_text: placeName.trim(),
+        message: fullMessage,
+        status: "pending",
+      });
+      if (error) throw error;
+      setDone(true);
+    } catch (err: any) {
+      toast.error(err.message || "Błąd wysyłania zgłoszenia");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <div className="text-center py-12">
+        <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+          <Check className="h-8 w-8 text-blue-600" />
+        </div>
+        <h3 className="text-2xl font-black text-foreground mb-2">Zgłoszenie przyjęte!</h3>
+        <p className="text-muted-foreground max-w-xs mx-auto">Odezwiemy się do Ciebie w ciągu 24h i pomożemy uruchomić profil Twojego lokalu.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4 max-w-lg mx-auto">
+      {selectedPlan && (
+        <div className="flex items-center justify-between px-4 py-3 bg-blue-50 border border-blue-200 rounded-2xl">
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4 text-blue-600 shrink-0" />
+            <span className="text-sm text-blue-700 font-semibold">Wybrany plan: <strong>{selectedPlan}</strong></span>
+          </div>
+          <button type="button" onClick={() => onPlanChange(null)} className="text-blue-400 hover:text-blue-600 text-xs">zmień</button>
+        </div>
+      )}
+      <div>
+        <label className="block text-sm font-semibold text-foreground mb-1.5">Nazwa lokalu *</label>
+        <input required value={placeName} onChange={e => setPlaceName(e.target.value)}
+          placeholder="np. Kawiarnia Pod Lipą"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+      </div>
+      <div>
+        <label className="block text-sm font-semibold text-foreground mb-1.5">Email kontaktowy *</label>
+        <input required type="email" value={email} onChange={e => setEmail(e.target.value)}
+          placeholder="twoj@email.pl"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+      </div>
+      <div>
+        <label className="block text-sm font-semibold text-foreground mb-1.5">Telefon <span className="font-normal text-slate-400">(opcjonalnie)</span></label>
+        <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+          placeholder="+48 000 000 000"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+      </div>
+      <div>
+        <label className="block text-sm font-semibold text-foreground mb-1.5">Wiadomość <span className="font-normal text-slate-400">(opcjonalnie)</span></label>
+        <textarea value={message} onChange={e => setMessage(e.target.value)}
+          placeholder="Cokolwiek, co chcesz nam przekazać..."
+          rows={3}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none" />
+      </div>
+      <button type="submit" disabled={loading}
+        className="w-full rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 text-sm active:scale-[0.98] transition-all shadow-lg shadow-blue-200 disabled:opacity-60">
+        {loading ? "Wysyłanie..." : "Wyślij zgłoszenie →"}
+      </button>
+    </form>
+  );
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
@@ -503,6 +607,12 @@ function DashboardMockup() {
 
 export default function ForBusinessPage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+
+  const scrollToForm = (plan: string) => {
+    setSelectedPlan(plan);
+    setTimeout(() => document.getElementById("formularz")?.scrollIntoView({ behavior: "smooth" }), 50);
+  };
 
   return (
     <div className="min-h-[100dvh] bg-[#FEFEFE] overflow-x-hidden">
@@ -535,16 +645,16 @@ export default function ForBusinessPage() {
               <span className="h-1.5 w-1.5 rounded-full bg-orange-400 shrink-0" />
               Dla podróżujących
             </a>
-            <a
-              href="/auth?business=true"
+            <button
+              onClick={() => document.getElementById("formularz")?.scrollIntoView({ behavior: "smooth" })}
               className="hidden sm:flex items-center text-sm font-bold px-4 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all whitespace-nowrap"
             >
-              Zaloguj się
-            </a>
+              Zgłoś lokal
+            </button>
             {/* Blue "Dołącz" — mobile only */}
-            <a href="/auth?business=true" className="sm:hidden px-4 h-9 rounded-full text-white text-sm font-bold active:scale-95 transition-all whitespace-nowrap bg-blue-600 hover:bg-blue-500 flex items-center">
+            <button onClick={() => document.getElementById("formularz")?.scrollIntoView({ behavior: "smooth" })} className="sm:hidden px-4 h-9 rounded-full text-white text-sm font-bold active:scale-95 transition-all whitespace-nowrap bg-blue-600 hover:bg-blue-500 flex items-center">
               Dołącz
-            </a>
+            </button>
             {/* Hamburger — mobile only */}
             <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
               {menuOpen ? <X className="h-4 w-4 text-white" /> : <Menu className="h-4 w-4 text-white" />}
@@ -564,15 +674,11 @@ export default function ForBusinessPage() {
                 Dla podróżujących
               </a>
               <div className="mx-5 my-1 border-t border-white/10" />
-              <div className="px-5 pt-2 pb-2">
-                <a href="/auth?business=true" className="w-full flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-full border border-white/25 text-white/80 hover:border-white/50 hover:text-white active:scale-95 transition-all">
-                  Zaloguj się
-                </a>
-              </div>
               <div className="px-5 pt-0 pb-4">
-                <a href="mailto:trasa.app@gmail.com" className="block w-full text-center text-sm font-bold px-4 py-2.5 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all">
-                  Kontakt →
-                </a>
+                <button onClick={() => { document.getElementById("formularz")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }}
+                  className="w-full text-center text-sm font-bold px-4 py-2.5 rounded-full bg-blue-600 text-white hover:bg-blue-500 active:scale-95 transition-all">
+                  Zgłoś lokal →
+                </button>
               </div>
             </div>
           </div>
@@ -598,12 +704,12 @@ export default function ForBusinessPage() {
           <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-[52ch] mx-auto">
             Trasa, to aplikacja, w której turyści poznają się z miastem, a Twój lokal może pojawić się już dzisiaj w ich planach!
           </p>
-          <a
-            href="/auth?business=true"
+          <button
+            onClick={() => document.getElementById("formularz")?.scrollIntoView({ behavior: "smooth" })}
             className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-blue-600 text-white font-bold text-base hover:bg-blue-500 active:scale-95 transition-all shadow-lg shadow-blue-200"
           >
-            Stwórz profil biznesowy →
-          </a>
+            Zgłoś swój lokal →
+          </button>
           <p className="text-xs text-muted-foreground mt-4">Rejestracja i prowadzenie konta jest darmowe</p>
 
           {/* ── Dashboard mockup ── */}
@@ -659,52 +765,73 @@ export default function ForBusinessPage() {
               Sprawdź pełne możliwości Trasy
             </h2>
           </FadeIn>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
             {TIERS.map((tier, i) => (
               <FadeIn key={i} delay={i * 80} className="h-full">
-                <div className={`rounded-3xl p-6 h-full flex flex-col ${
-                  tier.highlight
-                    ? "bg-white border-2 border-blue-500 shadow-2xl shadow-blue-100"
-                    : "bg-white border border-border/50 shadow-sm"
-                }`}>
-                  <div className="mb-6">
-                    <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${tier.highlight ? "text-blue-600" : "text-muted-foreground"}`}>
-                      {tier.name}
+                <div className="rounded-3xl p-6 h-full flex flex-col bg-white border border-slate-200 shadow-sm">
+                  {/* Header row */}
+                  <div className="flex items-center justify-between mb-1 min-h-[24px]">
+                    <p className={`text-xs font-bold uppercase tracking-widest ${tier.id === "basic" ? "text-slate-400" : "text-foreground"}`}>
+                      {tier.planLabel}
                     </p>
-                    <h3 className={`text-xl font-black mb-2 ${tier.highlight ? "text-blue-600" : "text-foreground"}`}>
-                      {tier.subtitle}
-                    </h3>
-                    <p className={`text-sm font-bold ${tier.highlight ? "text-foreground" : "text-muted-foreground"}`}>
-                      {tier.price}
-                      {(tier as any).priceNote && (
-                        <span className="text-xs font-normal text-muted-foreground ml-1">{(tier as any).priceNote}</span>
-                      )}
-                    </p>
+                    {tier.badge && (
+                      <span className="bg-blue-600 text-white text-[9px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ml-2">
+                        {tier.badge}
+                      </span>
+                    )}
                   </div>
-                  <ul className="flex flex-col gap-3 flex-1 mb-6">
+                  {/* Title */}
+                  <h3 className={`text-xl font-black mb-2 ${tier.blueTitle ? "text-blue-600" : "text-foreground"}`}>
+                    {tier.subtitle}
+                  </h3>
+                  {/* Price */}
+                  <div className="mb-5 h-5">
+                    {tier.price
+                      ? <p className="text-sm text-slate-400 line-through">{tier.price}</p>
+                      : <p className="text-sm font-bold text-slate-600">{tier.priceNote}</p>
+                    }
+                  </div>
+                  {/* Features */}
+                  <ul className="flex flex-col gap-2.5 flex-1 mb-6">
                     {tier.features.map((f, j) => (
                       <li key={j} className="flex items-start gap-2.5">
-                        <FeatureVal val={f.val} />
-                        <span className={`text-sm leading-snug ${
-                          (f as any).bold && tier.highlight ? "text-blue-600 font-semibold" : "text-muted-foreground"
-                        }`}>
+                        <Check className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" strokeWidth={2.5} />
+                        <span className={`text-sm leading-snug ${f.bold ? "font-bold text-foreground" : "text-muted-foreground"}`}>
                           {f.label}
                         </span>
                       </li>
                     ))}
                   </ul>
-                  {tier.cta && (
-                    <a
-                      href="/auth?business=true"
-                      className="mt-auto text-center text-sm font-bold px-4 py-3 rounded-2xl transition-all active:scale-95 bg-blue-600 text-white hover:bg-blue-500"
-                    >
-                      {tier.cta}
-                    </a>
-                  )}
+                  {/* CTA */}
+                  <button
+                    onClick={() => scrollToForm(tier.subtitle)}
+                    className="mt-auto text-center text-sm font-bold px-4 py-3 rounded-2xl bg-foreground text-white hover:bg-slate-700 active:scale-95 transition-all"
+                  >
+                    Wybieram
+                  </button>
                 </div>
               </FadeIn>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── Formularz zgłoszeniowy ── */}
+      <section id="formularz" className="py-24 px-5 bg-slate-50">
+        <div className="max-w-5xl mx-auto">
+          <FadeIn className="text-center mb-12">
+            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2">Zgłoszenie</p>
+            <h2
+              className="text-3xl sm:text-4xl font-black text-foreground mb-4"
+              style={{ textWrap: "balance" } as React.CSSProperties}
+            >
+              Zgłoś swój lokal
+            </h2>
+            <p className="text-base text-muted-foreground max-w-[48ch] mx-auto">
+              Wypełnij formularz — odezwiemy się w ciągu 24h i pomożemy uruchomić Twój profil.
+            </p>
+          </FadeIn>
+          <BizClaimForm selectedPlan={selectedPlan} onPlanChange={setSelectedPlan} />
         </div>
       </section>
 
@@ -726,12 +853,12 @@ export default function ForBusinessPage() {
           <p className="text-base text-muted-foreground mb-8 max-w-[40ch] mx-auto">
             Dołącz teraz i bądź jednym z pierwszych miejsc na Trasie.
           </p>
-          <a
-            href="/auth?business=true"
+          <button
+            onClick={() => document.getElementById("formularz")?.scrollIntoView({ behavior: "smooth" })}
             className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-blue-600 text-white font-bold text-base hover:bg-blue-500 active:scale-95 transition-all shadow-lg shadow-blue-200"
           >
-            Dodaj swój lokal →
-          </a>
+            Zgłoś swój lokal →
+          </button>
         </FadeIn>
       </section>
 
@@ -753,7 +880,7 @@ export default function ForBusinessPage() {
               @trasa.travel
             </a>
             <a href="/terms" className="text-xs text-white/50 hover:text-white/80 transition-colors">Regulamin</a>
-            <a href="/auth?business=true" className="text-xs font-bold text-white hover:text-orange-300 transition-colors">Zaloguj się →</a>
+            <a href="/auth?business=true" className="text-xs font-bold text-white hover:text-orange-300 transition-colors">Panel logowania →</a>
           </div>
         </div>
       </footer>
