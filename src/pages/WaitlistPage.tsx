@@ -344,7 +344,7 @@ function PostcardFront({ w, h }: { w: number; h: number }) {
   const pad = Math.round(w * 0.05);
   const bottomPad = Math.round(w * 0.18);
   return (
-    <div className="w-full h-full rounded-2xl overflow-hidden bg-white shadow-2xl flex flex-col"
+    <div className="w-full h-full rounded-2xl overflow-hidden bg-white shadow-md flex flex-col"
       style={{ padding: `${pad}px ${pad}px ${bottomPad}px` }}>
       {/* Photo */}
       <div className="relative flex-1 overflow-hidden rounded-sm bg-slate-200">
@@ -380,7 +380,7 @@ const BACK_MESSAGE = [
 function PostcardBack({ w, h, isVisible }: { w: number; h: number; isVisible: boolean }) {
   const pad = Math.round(w * 0.09);
   return (
-    <div className="w-full h-full rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+    <div className="w-full h-full rounded-2xl overflow-hidden shadow-md flex flex-col"
       style={{ background: "#FEFEFE", padding: `${pad}px` }}>
 
       {/* Top: address — full-width single row */}
@@ -455,8 +455,7 @@ function PostcardReveal({ large = false, targetH }: { large?: boolean; targetH?:
   }, [flipped]);
 
   return (
-    // Outer wrapper provides the static tilt so it doesn't fight framer-motion transforms
-    <div style={{ transform: "rotate(-2.5deg)", transformOrigin: "center" }}>
+    <div>
       <div style={{ width: w, height: h, perspective: "900px" }}>
         <motion.div
           animate={{ rotateY: flipped ? 180 : 0 }}
