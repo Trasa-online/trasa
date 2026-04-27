@@ -193,13 +193,13 @@ const PhoneMockup = forwardRef<HTMLDivElement, PhoneMockupProps>(
     E: <PhaseE key="E" onNext={nextPhase} onComplete={onComplete} />,
   };
 
-  // compact mode: dvh-based so phone is independent of flex container and can overlap texts
+  // compact mode: width-based (vw) so phone size is independent of flex container height
   const phoneStyle = compact
-    ? { height: "min(78dvh, 540px)", width: "auto", aspectRatio: "9/19.5" }
+    ? { width: "60vw", maxWidth: "265px", aspectRatio: "9/19.5" }
     : { width: "clamp(270px, 42vw, 310px)", aspectRatio: "9/19.5" };
 
   return (
-    <div className="flex flex-col items-center" style={compact ? { height: "100%" } : {}}>
+    <div className="flex flex-col items-center">
       <div
         ref={ref}
         className="relative mx-auto select-none rounded-[42px] bg-slate-800"
@@ -605,7 +605,7 @@ export default function WaitlistPage() {
               style={{ zIndex: scene === "intro" ? (shrinking ? 50 : 1) : 70 }}>
               <AnimatePresence mode="wait">
                 {scene !== "postcard" ? (
-                  <motion.div key="phone" className="h-full" initial={false} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
+                  <motion.div key="phone" initial={false} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
                     <PhoneMockup
                       ref={phoneBodyRef}
                       key={scene === "intro" ? "phone-intro" : "phone-demo"}
@@ -620,7 +620,7 @@ export default function WaitlistPage() {
                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 220, damping: 26 }}>
-                    <PostcardReveal targetH={Math.min(Math.round(window.innerHeight * 0.72), 490)} />
+                    <PostcardReveal targetH={Math.min(Math.round(window.innerWidth * 0.6 * (19.5 / 9) * 0.88), 430)} />
                   </motion.div>
                 )}
               </AnimatePresence>

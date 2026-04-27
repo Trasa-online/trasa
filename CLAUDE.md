@@ -146,7 +146,7 @@ Klient → supabase.functions.invoke("google-places-proxy", ...) → Google Plac
 - Sekcja content: `flex-1 min-h-0` — NIE dodawać overflow-hidden ani zmieniać flex
 - `FullscreenIntroVideo`: `position: fixed`, `overflow: hidden`, `zIndex: 40` → rośnie do `60` przy shrink
 - Animacja przejścia: spring shrink (stiffness 120, damping 20) do rect ekranu telefonu (inset 9px, borderRadius 34px), potem fade 0.25s
-- `PhoneMockup` (compact): height-based sizing (`height: min(100%, 423px)`, `aspectRatio: 9/19.5`)
+- `PhoneMockup` (compact): **width-based** sizing (`width: 60vw, maxWidth: 265px, aspectRatio: 9/19.5`) — NIE używaj height-based dvh (nie działa w Safari flex context)
 - `phoneBodyRef` → przekazywany do `FullscreenIntroVideo` i `PhoneMockup ref=` — NIE usuwać
 - `shrinking` state → podnosi telefon z z-1 do z-50 przy starcie animacji (żeby bezel był widoczny)
 - `onShrinkStart` callback → dwa rAF frames przed startem spring (żeby React zdążył odmalować)
