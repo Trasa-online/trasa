@@ -63,7 +63,7 @@ function PhaseA({ onNext }: { onNext: () => void }) {
       <video
         ref={(el) => { if (!el) return; el.muted = true; el.play().catch(() => {}); }}
         src="/founders_intro.mp4"
-        playsInline muted preload="auto"
+        autoPlay playsInline muted preload="auto"
         onEnded={onNext}
         className="absolute inset-0 w-full h-full object-cover"
         style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
@@ -143,7 +143,7 @@ function PhaseE({ onNext, onComplete }: { onNext: () => void; onComplete?: () =>
       <video
         ref={(el) => { if (!el) return; el.muted = true; el.play().catch(() => {}); }}
         src="/founders_business.mp4"
-        playsInline muted preload="auto" loop
+        autoPlay playsInline muted preload="auto" loop
         className="absolute inset-0 w-full h-full object-cover"
         style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
       />
@@ -283,7 +283,7 @@ function FullscreenIntroVideo({
     <div
       ref={containerRef}
       onClick={triggerShrink}
-      style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", borderRadius: 0, background: "#000", zIndex: 40 }}
+      style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", borderRadius: 0, background: "#000", zIndex: 40, WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
     >
       <video
         ref={(el) => {
@@ -293,7 +293,7 @@ function FullscreenIntroVideo({
           el.play().catch(() => {});
         }}
         src="/founders_intro.mp4"
-        playsInline muted preload="auto"
+        autoPlay playsInline muted preload="auto"
         onEnded={triggerShrink}
         className="absolute inset-0 w-full h-full object-cover"
         style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
@@ -550,10 +550,15 @@ export default function WaitlistPage() {
 
           {/* Top-aligned content — anchored to top so bottom CTA is always visible */}
           <div className="flex-1 flex flex-col items-center px-2"
-            style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 56px)" }}>
+            style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 20px)" }}>
 
-            {/* Orb logo — hidden during intro, fades in as video shrinks away */}
-            <div className="relative z-0 mb-[-8px]">
+            <p className="relative z-0 font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap"
+              style={{ fontSize: HEADLINE_SIZE }}>
+              speed dating
+            </p>
+
+            {/* Orb logo — below "speed dating", hidden during intro, fades in as video shrinks away */}
+            <div className="relative z-0 mt-[-6px] mb-[-6px]">
               <motion.div
                 className="w-12 h-12 rounded-full"
                 style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
@@ -561,11 +566,6 @@ export default function WaitlistPage() {
                 transition={{ duration: 0.5 }}
               />
             </div>
-
-            <p className="relative z-0 font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap"
-              style={{ fontSize: HEADLINE_SIZE }}>
-              speed dating
-            </p>
 
             {/* Phone or postcard — z-10, overlaps headlines */}
             <div className="relative z-10 -mt-5 -mb-5">
@@ -575,7 +575,7 @@ export default function WaitlistPage() {
                     <PhoneMockup
                       ref={phoneBodyRef}
                       compact
-                      initialPhase="A"
+                      initialPhase="B"
                       showBezel={showPhoneBezel || scene !== "intro"}
                       onComplete={goPostcard}
                     />
