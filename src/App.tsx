@@ -154,7 +154,7 @@ import CookieBanner from "./components/CookieBanner";
 import WaitlistPage from "./pages/WaitlistPage";
 import LandingPage from "./pages/LandingPage";
 import LandingPageV2 from "./pages/LandingPageV2";
-const BusinessDashboardDemo = lazy(() => import("./pages/BusinessDashboardDemo"));
+const DemoSession = lazy(() => import("./pages/DemoSession"));
 import ForBusinessPage from "./pages/ForBusinessPage";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
@@ -218,7 +218,7 @@ const App = () => (
           <Route path="/edit-plan" element={<RequireAuth><EditPlan /></RequireAuth>} />
           <Route path="/review-summary" element={<RequireAuth><ReviewSummary /></RequireAuth>} />
           <Route path="/plan" element={<RequireAuth><PlanWizard /></RequireAuth>} />
-          <Route path="/demo" element={<Navigate to="/" replace />} />
+          <Route path="/demo" element={<DemoSession />} />
           <Route path="/sesja/nowa" element={<RequireAuth><CreateGroupSession /></RequireAuth>} />
           <Route path="/sesja/:joinCode" element={<RequireAuth><GroupSession /></RequireAuth>} />
           <Route path="/search" element={<RequireAuth><UserSearch /></RequireAuth>} />
@@ -227,7 +227,7 @@ const App = () => (
           <Route path="/join/:code" element={<JoinPage />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
           <Route path="/quick-plan-review" element={<RequireAuth><QuickPlanReview /></RequireAuth>} />
-          <Route path="/biznes/demo" element={<BusinessDashboardDemo />} />
+          <Route path="/biznes/demo" element={<Navigate to="/demo?city=Warszawa&skip=category" replace />} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
           <Route path="/dla-firm" element={<ForBusinessPage />} />
           <Route path="/v2" element={<LandingPageV2 />} />

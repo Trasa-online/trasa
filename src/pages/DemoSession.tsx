@@ -333,6 +333,17 @@ export default function DemoSession() {
   const [drumIndex, setDrumIndex] = useState(0);
   const drumRef = useRef<HTMLDivElement>(null);
 
+  // Handle ?city=X&skip=category — business demo pre-selects city and skips to category
+  useEffect(() => {
+    const startCity = searchParams.get("city");
+    const skip = searchParams.get("skip");
+    if (startCity && skip === "category") {
+      setCity(startCity);
+      setMode("solo");
+      setStep("category");
+    }
+  }, []);
+
   // Handle ?join=CODE — second user joins existing session
   useEffect(() => {
     const joinCode = searchParams.get("join");

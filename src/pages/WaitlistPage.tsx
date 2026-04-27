@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,17 +17,17 @@ function EmailCapture() {
 
   if (status === "done") {
     return (
-      <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-orange-50 border border-orange-200 max-w-sm mx-auto">
+      <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-orange-50 border border-orange-200 max-w-sm">
         <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shrink-0">
           <Check className="h-4 w-4 text-white" />
         </div>
-        <p className="text-sm font-semibold text-[#0E0E0E]">Dzięki! Powiadomimy Cię o premierze.</p>
+        <p className="text-sm font-semibold text-[#0E0E0E]">Powiadomimy Cię o premierze.</p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2.5 w-full max-w-sm mx-auto">
+    <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2.5 w-full max-w-sm">
       <input
         type="email"
         required
@@ -72,72 +72,131 @@ function AppStoreBadge({ store }: { store: "ios" | "android" }) {
   );
 }
 
+function PhoneMockupVideo() {
+  const ref = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    v.muted = true;
+    v.play().catch(() => {});
+  }, []);
+
+  return (
+    <div className="relative mx-auto select-none" style={{ width: "clamp(220px, 42vw, 280px)" }}>
+      {/* Phone shell */}
+      <div
+        className="relative rounded-[42px] bg-slate-800 shadow-[0_32px_80px_-12px_rgba(0,0,0,0.35)]"
+        style={{ aspectRatio: "9/19.5" }}
+      >
+        {/* Side buttons */}
+        <div className="absolute -right-[3px] top-[22%] w-[4px] h-10 bg-slate-700 rounded-r-full" />
+        <div className="absolute -left-[3px] top-[18%] w-[4px] h-7 bg-slate-700 rounded-l-full" />
+        <div className="absolute -left-[3px] top-[27%] w-[4px] h-7 bg-slate-700 rounded-l-full" />
+        {/* Screen */}
+        <div className="absolute inset-[9px] rounded-[34px] overflow-hidden bg-black" style={{ zIndex: 1 }}>
+          {/* Gradient fallback */}
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-900 via-orange-700 to-amber-600" />
+          {/* Video */}
+          <video
+            ref={ref}
+            src="/founders_intro.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          {/* Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/10" />
+          {/* Card info */}
+          <div className="absolute bottom-4 left-3 right-3 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+              <span className="text-white/65 text-[10px]">Poradnik · @trasa</span>
+            </div>
+            <p className="text-white font-black text-[14px] leading-tight">Co możesz robić w Trasie?</p>
+            <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2 py-[3px]">
+              <span className="text-white font-semibold text-[9px]">Filmik założycieli</span>
+            </div>
+          </div>
+        </div>
+        {/* Notch */}
+        <div className="absolute top-[9px] left-1/2 -translate-x-1/2 w-14 h-[14px] bg-slate-800 rounded-full" style={{ zIndex: 10 }} />
+      </div>
+    </div>
+  );
+}
+
 export default function WaitlistPage() {
   const navigate = useNavigate();
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center px-6 py-16 text-center relative overflow-hidden"
-      style={{ background: "#FEFEFE" }}
-    >
-      {/* Subtle background glow */}
-      <div
-        className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(249,102,43,0.06) 0%, transparent 70%)" }}
-      />
+    <div className="min-h-screen flex flex-col" style={{ background: "#FEFEFE" }}>
+      {/* Main content — two columns on large screens */}
+      <div className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-20 px-6 py-16 lg:py-0 max-w-5xl mx-auto w-full">
 
-      {/* Logo */}
-      <img
-        src="/app-icon-base.png"
-        alt="Trasa"
-        className="w-16 h-16 rounded-2xl mb-6 shadow-md shadow-orange-100"
-      />
+        {/* Left column — text + form */}
+        <div className="flex flex-col items-center lg:items-start text-center lg:text-left max-w-sm w-full order-2 lg:order-1">
+          {/* Orb */}
+          <div
+            className="w-14 h-14 rounded-full mb-6"
+            style={{
+              background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
+              boxShadow: "0 0 32px rgba(249,102,43,0.35), 0 0 64px rgba(249,102,43,0.10)",
+            }}
+          />
 
-      {/* Wordmark */}
-      <p className="text-slate-400 text-xs font-semibold tracking-[0.2em] uppercase mb-4">Trasa.travel</p>
+          {/* Headline */}
+          <h1 className="text-4xl sm:text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-4">
+            speed dating<br />
+            <span
+              className="bg-clip-text text-transparent"
+              style={{ backgroundImage: "linear-gradient(135deg, #F4A259, #F9662B)" }}
+            >
+              z miastem
+            </span>
+          </h1>
 
-      {/* Headline */}
-      <h1 className="text-4xl sm:text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-4 max-w-sm">
-        speed dating<br />
-        <span
-          className="bg-clip-text text-transparent"
-          style={{ backgroundImage: "linear-gradient(135deg, #F4A259, #F9662B)" }}
-        >
-          z miastem
-        </span>
-      </h1>
+          {/* Subheadline */}
+          <p className="text-slate-500 text-base leading-relaxed mb-3 max-w-xs">
+            Planujcie wyjazdy grupowo. Wybierajcie miejsca, twórzcie trasy i dzielcie sie wspomnieniami.
+          </p>
 
-      {/* Subheadline */}
-      <p className="text-slate-500 text-base leading-relaxed mb-3 max-w-xs">
-        Planujcie wyjazdy grupowo. Wybierajcie miejsca, twórzcie trasy i dzielcie się wspomnieniami.
-      </p>
+          {/* Mobile badge */}
+          <div className="inline-flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-full px-4 py-1.5 mb-8">
+            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+            <span className="text-orange-700 text-xs font-medium">Aplikacja mobilna w budowie</span>
+          </div>
 
-      {/* Mobile app badge */}
-      <div className="inline-flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-full px-4 py-1.5 mb-10">
-        <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-        <span className="text-orange-700 text-xs font-medium">Aplikacja mobilna w budowie</span>
+          {/* Email capture */}
+          <div className="w-full mb-3">
+            <EmailCapture />
+          </div>
+
+          <p className="text-slate-400 text-xs mb-8">Powiadomimy Cie o premierze na iOS i Androidzie.</p>
+
+          {/* Store badges */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-8">
+            <AppStoreBadge store="ios" />
+            <AppStoreBadge store="android" />
+          </div>
+
+          {/* Business link */}
+          <button
+            onClick={() => navigate("/dla-firm")}
+            className="text-slate-500 text-sm hover:text-slate-700 transition-colors underline underline-offset-4"
+          >
+            Prowadzisz lokal? Dowiedz sie wiecej
+          </button>
+        </div>
+
+        {/* Right column — phone mockup */}
+        <div className="order-1 lg:order-2 shrink-0">
+          <PhoneMockupVideo />
+        </div>
       </div>
-
-      {/* Email capture */}
-      <div className="w-full max-w-sm mb-3">
-        <EmailCapture />
-      </div>
-
-      <p className="text-slate-400 text-xs mb-10">Powiadomimy Cię o premierze na iOS i Androidzie.</p>
-
-      {/* Store badges */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-16">
-        <AppStoreBadge store="ios" />
-        <AppStoreBadge store="android" />
-      </div>
-
-      {/* Business link */}
-      <button
-        onClick={() => navigate("/dla-firm")}
-        className="text-slate-500 text-sm hover:text-slate-700 transition-colors underline underline-offset-4"
-      >
-        Prowadzisz lokal? Dowiedz się więcej
-      </button>
     </div>
   );
 }
