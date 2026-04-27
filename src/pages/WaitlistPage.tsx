@@ -195,7 +195,7 @@ const PhoneMockup = forwardRef<HTMLDivElement, PhoneMockupProps>(
 
   // compact mode: width-based (vw) so phone size is independent of flex container height
   const phoneStyle = compact
-    ? { width: "60vw", maxWidth: "265px", aspectRatio: "9/19.5" }
+    ? { width: "50vw", maxWidth: "250px", aspectRatio: "9/19.5" }
     : { width: "clamp(270px, 42vw, 310px)", aspectRatio: "9/19.5" };
 
   return (
@@ -546,7 +546,7 @@ export default function WaitlistPage() {
   const goDemo = useCallback(() => setScene("demo"), []);
   const goPostcard = useCallback(() => setScene("postcard"), []);
 
-  const HEADLINE_SIZE = "clamp(44px, 13vw, 64px)";
+  const HEADLINE_SIZE = "clamp(38px, 10.5vw, 58px)";
 
   return (
     <div style={{ background: "#FEFEFE" }}>
@@ -620,7 +620,7 @@ export default function WaitlistPage() {
                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 220, damping: 26 }}>
-                    <PostcardReveal targetH={Math.min(Math.round(window.innerWidth * 0.6 * (19.5 / 9) * 0.88), 430)} />
+                    <PostcardReveal targetH={Math.min(Math.round(window.innerWidth * 0.50 * (19.5 / 9) * 0.88), 380)} />
                   </motion.div>
                 )}
               </AnimatePresence>
