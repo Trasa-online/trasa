@@ -195,7 +195,7 @@ const PhoneMockup = forwardRef<HTMLDivElement, PhoneMockupProps>(
 
   // compact mode: dvh-based so phone is independent of flex container and can overlap texts
   const phoneStyle = compact
-    ? { height: "min(62dvh, 500px)", width: "auto", aspectRatio: "9/19.5" }
+    ? { height: "min(78dvh, 540px)", width: "auto", aspectRatio: "9/19.5" }
     : { width: "clamp(270px, 42vw, 310px)", aspectRatio: "9/19.5" };
 
   return (
@@ -439,10 +439,12 @@ function PostcardBack({ w, h, isVisible }: { w: number; h: number; isVisible: bo
   );
 }
 
-// Phone compact height: min(54vw, 195px) * (19.5/9) ≈ 423px — postcard matches this
-function PostcardReveal({ large = false }: { large?: boolean }) {
-  const w = large ? 300 : 238;
-  const h = large ? 530 : 423;
+function PostcardReveal({ large = false, targetH }: { large?: boolean; targetH?: number }) {
+  const baseW = large ? 300 : 238;
+  const baseH = large ? 530 : 423;
+  const scale = targetH ? targetH / baseH : 1;
+  const w = Math.round(baseW * scale);
+  const h = Math.round(baseH * scale);
   const [flipped, setFlipped] = useState(false);
 
   // Front shows for 3s, back for 8s — asymmetric timing
@@ -618,7 +620,7 @@ export default function WaitlistPage() {
                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 220, damping: 26 }}>
-                    <PostcardReveal />
+                    <PostcardReveal targetH={Math.min(Math.round(window.innerHeight * 0.72), 490)} />
                   </motion.div>
                 )}
               </AnimatePresence>
