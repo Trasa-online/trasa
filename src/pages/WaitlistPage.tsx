@@ -546,8 +546,6 @@ export default function WaitlistPage() {
   const goDemo = useCallback(() => setScene("demo"), []);
   const goPostcard = useCallback(() => setScene("postcard"), []);
 
-  const HEADLINE_SIZE = "clamp(38px, 10.5vw, 58px)";
-
   return (
     <div style={{ background: "#FEFEFE" }}>
 
@@ -576,31 +574,22 @@ export default function WaitlistPage() {
             )}
           </AnimatePresence>
 
-          {/* Content — flex column: "speed dating" → orb → phone (flex-1) → "z miastem" */}
+          {/* Content — flex column: orb → phone (flex-1) */}
           <div className="flex-1 min-h-0 flex flex-col items-center px-2"
-            style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 6px)" }}>
+            style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 10px)" }}>
 
-            {/* "speed dating" — z-60 after intro (above orb z-49), z-5 during intro (hidden behind video). */}
-            <p
-              className="shrink-0 font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap"
-              style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: scene === "intro" ? 5 : 60 }}
-            >
-              speed dating
-            </p>
-
-            {/* Orb — slides under "speed dating" via negative marginTop. z-50 during intro (above video), z-49 after (below text z-60). */}
+            {/* Orb */}
             <div
               className="w-14 h-14 rounded-full shrink-0"
               style={{
                 background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
                 position: "relative",
                 zIndex: scene === "intro" ? 50 : 49,
-                marginTop: "-36px",
                 marginBottom: "12px",
               }}
             />
 
-            {/* Phone / postcard — flex-1 min-h-0: fills available space, adapts to screen height. */}
+            {/* Phone / postcard — flex-1 min-h-0: fills available space */}
             <div className="relative flex-1 min-h-0 flex items-center justify-center w-full"
               style={{ zIndex: scene === "intro" ? (shrinking ? 50 : 1) : 70 }}>
               <AnimatePresence mode="wait">
@@ -625,14 +614,6 @@ export default function WaitlistPage() {
                 )}
               </AnimatePresence>
             </div>
-
-            {/* "z miastem" — right below phone. Hidden during intro (z-5 behind video z-40). */}
-            <p
-              className="shrink-0 font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap mt-2"
-              style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: scene === "intro" ? 5 : 60 }}
-            >
-              z miastem
-            </p>
           </div>
 
           {/* Sticky bottom CTA — hidden during intro, fades in after */}
