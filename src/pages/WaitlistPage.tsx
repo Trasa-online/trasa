@@ -570,16 +570,10 @@ export default function WaitlistPage() {
           <div className="flex-1 flex flex-col items-center px-2"
             style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 20px)" }}>
 
-            {/* Orb — z-50 always, visible above intro video (z-40) from the first frame */}
-            <motion.div
-              className="w-20 h-20 rounded-full"
-              style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", position: "relative", zIndex: 50 }}
-            />
-
-            {/* Phone / postcard — ABOVE text (before text in DOM = higher on screen).
+            {/* Phone / postcard — at the top.
                 key changes intro→demo so phases B→C→E replay fresh after intro ends.
-                z-1 during intro (hidden behind video z-40), z-70 after (above text z-60). */}
-            <div className="relative -mt-3" style={{ zIndex: scene === "intro" ? 1 : 70 }}>
+                z-1 during intro (hidden behind video z-40), z-70 after (above text). */}
+            <div className="relative" style={{ zIndex: scene === "intro" ? 1 : 70 }}>
               <AnimatePresence mode="wait">
                 {scene !== "postcard" ? (
                   <motion.div key="phone" initial={false} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
@@ -603,16 +597,24 @@ export default function WaitlistPage() {
               </AnimatePresence>
             </div>
 
-            {/* "speed dating" — below phone. z-5 during intro (behind video), z-60 after. */}
+            {/* "speed dating" — below phone, above the orb. z-5 during intro, z-60 after. */}
             <p
-              className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap -mt-4"
+              className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap -mt-5"
               style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: scene === "intro" ? 5 : 60 }}
             >
               speed dating
             </p>
 
-            <p className="relative z-0 font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap"
-              style={{ fontSize: HEADLINE_SIZE }}>
+            {/* Orb — the dot, between "speed dating" and "z miastem". z-50 always. */}
+            <motion.div
+              className="w-20 h-20 rounded-full -mt-2"
+              style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", position: "relative", zIndex: 50 }}
+            />
+
+            <p
+              className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap -mt-2"
+              style={{ fontSize: HEADLINE_SIZE }}
+            >
               z miastem
             </p>
           </div>

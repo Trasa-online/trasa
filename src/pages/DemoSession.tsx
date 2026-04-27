@@ -51,6 +51,7 @@ interface DemoPlace {
   description: string;
   latitude?: number;
   longitude?: number;
+  category?: string;
 }
 
 type CategoryKey = "cafe" | "restaurant" | "bar" | "museum" | "park" | "experience" | "shopping" | "food" | "culture" | "attractions" | "nature";
@@ -99,11 +100,11 @@ type Step = "city" | "location" | "mode" | "category" | "swipe" | "results" | "i
 
 // ─── Convert DemoPlace → MockPlace ────────────────────────────────────────────
 
-function toMock(p: DemoPlace, city: string, category: string): MockPlace {
+function toMock(p: DemoPlace, city: string, fallbackCategory: string): MockPlace {
   return {
     id: p.id,
     place_name: p.name,
-    category: category as PlaceCategory,
+    category: (p.category || fallbackCategory) as PlaceCategory,
     city,
     address: p.address,
     latitude: p.latitude ?? 0,
@@ -338,6 +339,68 @@ export default function DemoSession() {
   const [placesLoading, setPlacesLoading] = useState(false);
   const [drumIndex, setDrumIndex] = useState(0);
   const drumRef = useRef<HTMLDivElement>(null);
+  const [selectedSubcats, setSelectedSubcats] = useState<Set<string>>(new Set());
+
+  const toggleSubcat = (id: string) => {
+    setSelectedSubcats(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleMainCat = (mainCat: typeof MAIN_CATEGORIES[0]) => {
+    const ids = mainCat.subcategories.map(s => s.id);
+    const allSel = ids.every(id => selectedSubcats.has(id));
+    setSelectedSubcats(prev => {
+      const next = new Set(prev);
+      if (allSel) ids.forEach(id => next.delete(id));
+      else ids.forEach(id => next.add(id));
+      return next;
+    });
+  };
+
+  const handleMultiStart = async () => {
+    if (selectedSubcats.size === 0) return;
+    const subcats = [...selectedSubcats];
+    const dbValues = [...new Set(subcats.flatMap(c => CATEGORY_DB_VALUES[c] ?? [c]))];
+    setCategory(subcats[0] as CategoryKey);
+    setRealPlaces(null);
+    setPlacesLoading(true);
+    try {
+      const { data } = await (supabase as any)
+        .from("places")
+        .select("id, place_name, category, address, rating, photo_url, vibe_tags, description, latitude, longitude")
+        .ilike("city", city)
+        .in("category", dbValues)
+        .eq("is_active", true)
+        .order("id")
+        .limit(20);
+      const hasPhotos = (data ?? []).some((p: any) => p.photo_url);
+      if (data && data.length > 0 && hasPhotos) {
+        const seed = city + subcats.join(",");
+        const shuffled = seededShuffle(data as any[], seed);
+        setRealPlaces(shuffled.map((p: any) => ({
+          id: p.id, name: p.place_name,
+          photo: !p.photo_url ? "" : (p.photo_url.startsWith("http") || p.photo_url.startsWith("/api/")) ? p.photo_url : (getPhotoUrl(p.photo_url) ?? ""),
+          rating: p.rating ?? 4.5, address: p.address ?? "", tags: p.vibe_tags ?? [],
+          description: p.description ?? "", latitude: p.latitude ?? undefined, longitude: p.longitude ?? undefined,
+          category: p.category ?? undefined,
+        })));
+      } else {
+        const resp = await fetch(`/api/demo-places?city=${encodeURIComponent(city)}&category=${subcats[0]}`);
+        if (resp.ok) {
+          const gp: DemoPlace[] = await resp.json();
+          setRealPlaces(gp.length > 0 ? seededShuffle(gp, city + subcats.join(",")) : null);
+        }
+      }
+    } catch (e) {
+      console.error("[demo] multi places fetch error:", e);
+    } finally {
+      setPlacesLoading(false);
+      setStep("swipe");
+    }
+  };
 
   // Handle ?city=X&skip=category — business demo pre-selects city and skips to category
   useEffect(() => {
@@ -429,6 +492,7 @@ export default function DemoSession() {
           description: p.description ?? "",
           latitude: p.latitude ?? undefined,
           longitude: p.longitude ?? undefined,
+          category: p.category ?? undefined,
         })));
       } else {
         // No photos in DB → fetch from Google Places (cached 24h at CDN)
@@ -521,6 +585,9 @@ export default function DemoSession() {
   };
 
   const catLabel = DEMO_CATEGORIES.find(c => c.id === category);
+  const swipeCategoryLabel = selectedSubcats.size > 1
+    ? `${selectedSubcats.size} kategorie`
+    : catLabel ? `${catLabel.emoji} ${catLabel.label}` : null;
 
   // Group matches: places liked by both devices
   const groupMatches: DemoPlace[] = mode === "group" && otherDeviceDone
@@ -570,9 +637,9 @@ export default function DemoSession() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <p className="font-bold text-base leading-tight">{city}</p>
-              {catLabel && (
+              {swipeCategoryLabel && (
                 <span className="text-sm font-semibold text-orange-600">
-                  {catLabel.emoji} {catLabel.label}
+                  {swipeCategoryLabel}
                 </span>
               )}
             </div>
@@ -883,34 +950,74 @@ export default function DemoSession() {
       {/* ── STEP: category ── */}
       {step === "category" && (
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto px-4 pt-6 pb-4 space-y-5">
+          <div className="flex-1 overflow-y-auto px-4 pt-6 pb-4 space-y-4">
             <div>
-              <p className="text-xl font-black mb-1">Wybierz kategorię</p>
+              <p className="text-xl font-black mb-1">Co Cię interesuje?</p>
               <p className="text-sm text-muted-foreground">
-                {mode === "group" ? "Wybierz kategorię i zaproś znajomego — oboje będziecie swipe'ować te same miejsca." : "W demo możesz wybrać 1 kategorię i przejrzeć 8 miejsc."}
+                Wybierz kategorie — zobaczysz miejsca ze wszystkich wybranych.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {MAIN_CATEGORIES.map(cat => {
-                const isLoading = (placesLoading || groupLoading) && category === cat.id;
-                return (
+            {MAIN_CATEGORIES.map(cat => {
+              const allSel = cat.subcategories.every(s => selectedSubcats.has(s.id));
+              const someSel = cat.subcategories.some(s => selectedSubcats.has(s.id));
+              return (
+                <div key={cat.id} className="space-y-2">
                   <button
-                    key={cat.id}
-                    onClick={() => handleCategorySelect(cat.id as CategoryKey)}
-                    disabled={placesLoading || groupLoading}
-                    className="px-4 py-3 rounded-2xl text-sm font-semibold border border-border/60 bg-card flex items-center gap-2 active:scale-[0.97] transition-transform hover:border-orange-600/40 disabled:opacity-50"
+                    onClick={() => toggleMainCat(cat)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-2xl border text-left transition-all active:scale-[0.98]",
+                      allSel
+                        ? "bg-orange-600/10 border-orange-600/40"
+                        : someSel
+                          ? "bg-muted/40 border-border/60"
+                          : "bg-card border-border/40"
+                    )}
                   >
-                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>{cat.emoji}</span>}
-                    <div className="flex flex-col items-start">
-                      <span className="font-semibold">{cat.label}</span>
-                      <span className="text-[10px] text-muted-foreground font-normal">{cat.hint}</span>
+                    <span className="text-2xl leading-none">{cat.emoji}</span>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">{cat.label}</p>
+                      <p className="text-xs text-muted-foreground">{cat.hint}</p>
                     </div>
+                    {allSel && <Check className="h-4 w-4 text-orange-600 shrink-0" />}
                   </button>
-                );
-              })}
-            </div>
+                  <div className="flex flex-wrap gap-2 pl-2">
+                    {cat.subcategories.map(sub => {
+                      const sel = selectedSubcats.has(sub.id);
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => toggleSubcat(sub.id)}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all active:scale-95",
+                            sel
+                              ? "bg-orange-600 text-white border-orange-600"
+                              : "bg-card text-muted-foreground border-border/60"
+                          )}
+                        >
+                          <span>{sub.emoji}</span>
+                          {sub.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div className="shrink-0 px-4 pb-8 pt-2">
+          <div className="shrink-0 px-4 pb-8 pt-2 space-y-3">
+            <button
+              onClick={handleMultiStart}
+              disabled={selectedSubcats.size === 0 || placesLoading}
+              className={cn(
+                "w-full py-3.5 rounded-full font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform",
+                selectedSubcats.size > 0
+                  ? "bg-primary text-white shadow-lg shadow-primary/25"
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              {placesLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {selectedSubcats.size > 0 ? `Eksploruj (${selectedSubcats.size})` : "Wybierz kategorie"}
+            </button>
             <div className="rounded-2xl bg-muted/50 px-4 py-3 flex items-center gap-3">
               <Lock className="h-4 w-4 text-muted-foreground/60 shrink-0" />
               <p className="text-xs text-muted-foreground">
@@ -1071,7 +1178,7 @@ export default function DemoSession() {
               Załóż konto — zajmuje 30 sekund →
             </button>
             <button
-              onClick={() => { setStep("category"); setCategory(null); setLikedPlaces([]); setGroupReactions({}); setOtherDeviceDone(false); }}
+              onClick={() => { setStep("category"); setCategory(null); setLikedPlaces([]); setGroupReactions({}); setOtherDeviceDone(false); setSelectedSubcats(new Set()); }}
               className="w-full py-3 rounded-full border border-border/50 text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform"
             >
               Spróbuj innej kategorii
