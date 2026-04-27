@@ -9,9 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 function RootPage() {
   const { user, loading } = useAuth();
-  // Render landing page immediately — redirect once auth resolves (avoids blank-screen FCP)
   if (!loading && user) return <Navigate to="/home" replace />;
-  return <LandingPage />;
+  return <WaitlistPage />;
 }
 
 function RouteTracker() {
@@ -152,8 +151,10 @@ function BusinessGuard() {
 }
 import CookieBanner from "./components/CookieBanner";
 // Eagerly loaded — public-facing pages that need fast FCP
+import WaitlistPage from "./pages/WaitlistPage";
 import LandingPage from "./pages/LandingPage";
 import LandingPageV2 from "./pages/LandingPageV2";
+const BusinessDashboardDemo = lazy(() => import("./pages/BusinessDashboardDemo"));
 import ForBusinessPage from "./pages/ForBusinessPage";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
@@ -226,6 +227,7 @@ const App = () => (
           <Route path="/join/:code" element={<JoinPage />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
           <Route path="/quick-plan-review" element={<RequireAuth><QuickPlanReview /></RequireAuth>} />
+          <Route path="/biznes/demo" element={<BusinessDashboardDemo />} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
           <Route path="/dla-firm" element={<ForBusinessPage />} />
           <Route path="/v2" element={<LandingPageV2 />} />
