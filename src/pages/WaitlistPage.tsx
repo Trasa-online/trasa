@@ -240,9 +240,11 @@ PhoneMockup.displayName = "PhoneMockup";
 function FullscreenIntroVideo({
   phoneBodyRef,
   onDone,
+  onShrinkStart,
 }: {
   phoneBodyRef: RefObject<HTMLDivElement>;
   onDone: () => void;
+  onShrinkStart?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -254,22 +256,28 @@ function FullscreenIntroVideo({
   const triggerShrink = useCallback(() => {
     if (doneRef.current) return;
     doneRef.current = true;
-    const phoneEl = phoneBodyRef.current;
-    const containerEl = containerRef.current;
-    if (!phoneEl || !containerEl) { onDone(); return; }
-    const r = phoneEl.getBoundingClientRect();
-    // Target = inner screen rect (9px inset, 34px border-radius)
-    const target = { top: r.top + 9, left: r.left + 9, width: r.width - 18, height: r.height - 18 };
-    animate(containerEl, {
-      top: target.top,
-      left: target.left,
-      width: target.width,
-      height: target.height,
-      borderRadius: "34px",
-    }, { type: "spring", stiffness: 120, damping: 20 })
-      .then(() => animate(containerEl, { opacity: 0 }, { duration: 0.25 }))
-      .then(() => onDone());
-  }, [phoneBodyRef, onDone]);
+    // Tell parent to raise phone to z-50 and show bezel; two rAF frames for React to flush
+    onShrinkStart?.();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const phoneEl = phoneBodyRef.current;
+      const containerEl = containerRef.current;
+      if (!phoneEl || !containerEl) { onDone(); return; }
+      // Raise video above phone (z-50) so it visually enters the frame
+      containerEl.style.zIndex = "60";
+      const r = phoneEl.getBoundingClientRect();
+      // Target = inner screen rect (9px inset, 34px border-radius)
+      const target = { top: r.top + 9, left: r.left + 9, width: r.width - 18, height: r.height - 18 };
+      animate(containerEl, {
+        top: target.top,
+        left: target.left,
+        width: target.width,
+        height: target.height,
+        borderRadius: "34px",
+      }, { type: "spring", stiffness: 120, damping: 20 })
+        .then(() => animate(containerEl, { opacity: 0 }, { duration: 0.25 }))
+        .then(() => onDone());
+    }));
+  }, [phoneBodyRef, onDone, onShrinkStart]);
 
   useEffect(() => {
     const t = setTimeout(triggerShrink, 9000);
@@ -520,6 +528,7 @@ export default function WaitlistPage() {
   const navigate = useNavigate();
   // "intro" = phone at expanded (fullscreen) scale; "demo" = phone compact; "postcard" = postcard
   const [scene, setScene] = useState<Scene>("intro");
+  const [shrinking, setShrinking] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const phoneBodyRef = useRef<HTMLDivElement>(null);
 
@@ -535,7 +544,7 @@ export default function WaitlistPage() {
       <div className="lg:hidden">
         {/* Fullscreen founders video — at root level (outside any transform) for iOS Safari */}
         {scene === "intro" && (
-          <FullscreenIntroVideo phoneBodyRef={phoneBodyRef} onDone={goDemo} />
+          <FullscreenIntroVideo phoneBodyRef={phoneBodyRef} onDone={goDemo} onShrinkStart={() => setShrinking(true)} />
         )}
 
         <div className="flex flex-col" style={{ minHeight: "100dvh" }}>
@@ -574,8 +583,8 @@ export default function WaitlistPage() {
               style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", position: "relative", zIndex: 50 }}
             />
 
-            {/* Phone / postcard — z-1 during intro (hidden behind video), z-70 after (above text). */}
-            <div className="relative shrink-0" style={{ zIndex: scene === "intro" ? 1 : 70 }}>
+            {/* Phone / postcard — z-1 during intro (hidden behind video), z-50 when shrinking (bezel visible behind video z-60), z-70 after. */}
+            <div className="relative shrink-0" style={{ zIndex: scene === "intro" ? (shrinking ? 50 : 1) : 70 }}>
               <AnimatePresence mode="wait">
                 {scene !== "postcard" ? (
                   <motion.div key="phone" initial={false} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
@@ -584,7 +593,7 @@ export default function WaitlistPage() {
                       key={scene === "intro" ? "phone-intro" : "phone-demo"}
                       compact
                       initialPhase="B"
-                      showBezel={scene !== "intro"}
+                      showBezel={scene !== "intro" || shrinking}
                       onComplete={goPostcard}
                     />
                   </motion.div>
