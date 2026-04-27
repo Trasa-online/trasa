@@ -193,14 +193,17 @@ const PhoneMockup = forwardRef<HTMLDivElement, PhoneMockupProps>(
     E: <PhaseE key="E" onNext={nextPhase} onComplete={onComplete} />,
   };
 
-  const w = compact ? "min(54vw, 195px)" : "clamp(270px, 42vw, 310px)";
+  // compact mode: fills parent height (flex-1 container), capped at 423px (= 195px width)
+  const phoneStyle = compact
+    ? { height: "min(100%, 423px)", width: "auto", aspectRatio: "9/19.5" }
+    : { width: "clamp(270px, 42vw, 310px)", aspectRatio: "9/19.5" };
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center" style={compact ? { height: "100%" } : {}}>
       <div
         ref={ref}
         className="relative mx-auto select-none rounded-[42px] bg-slate-800"
-        style={{ width: w, aspectRatio: "9/19.5" }}
+        style={phoneStyle}
       >
         {/* Shadow */}
         <motion.div
@@ -303,7 +306,7 @@ function FullscreenIntroVideo({
         if (el && el.paused) { el.muted = true; el.play().catch(() => {}); return; }
         triggerShrink();
       }}
-      style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "#000", zIndex: 40, WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
+      style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "#000", zIndex: 40, overflow: "hidden", WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
     >
       <video
         ref={(el) => {
@@ -547,7 +550,7 @@ export default function WaitlistPage() {
           <FullscreenIntroVideo phoneBodyRef={phoneBodyRef} onDone={goDemo} onShrinkStart={() => setShrinking(true)} />
         )}
 
-        <div className="flex flex-col" style={{ minHeight: "100dvh" }}>
+        <div className="flex flex-col" style={{ height: "100dvh" }}>
 
           {/* Intro overlay — fixed z-50 (above video z-40): grayed app store badges */}
           <AnimatePresence>
@@ -565,13 +568,13 @@ export default function WaitlistPage() {
             )}
           </AnimatePresence>
 
-          {/* Content — flex column: "speed dating" → orb → phone → "z miastem" */}
-          <div className="flex-1 flex flex-col items-center px-2"
-            style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 20px)" }}>
+          {/* Content — flex column: "speed dating" → orb → phone (flex-1) → "z miastem" */}
+          <div className="flex-1 min-h-0 flex flex-col items-center px-2"
+            style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 6px)" }}>
 
             {/* "speed dating" — at top. Hidden during intro (z-5 behind video z-40), visible after (z-60). */}
             <p
-              className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap"
+              className="shrink-0 font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap"
               style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: scene === "intro" ? 5 : 60 }}
             >
               speed dating
@@ -579,15 +582,16 @@ export default function WaitlistPage() {
 
             {/* Orb — BELOW "speed dating". Always z-50 (visible above intro video z-40). */}
             <div
-              className="w-16 h-16 rounded-full mt-2 shrink-0"
+              className="w-14 h-14 rounded-full mt-1 shrink-0"
               style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", position: "relative", zIndex: 50 }}
             />
 
-            {/* Phone / postcard — z-1 during intro (hidden behind video), z-50 when shrinking (bezel visible behind video z-60), z-70 after. */}
-            <div className="relative shrink-0" style={{ zIndex: scene === "intro" ? (shrinking ? 50 : 1) : 70 }}>
+            {/* Phone / postcard — flex-1 min-h-0: fills available space, adapts to screen height. */}
+            <div className="relative flex-1 min-h-0 flex items-center justify-center w-full"
+              style={{ zIndex: scene === "intro" ? (shrinking ? 50 : 1) : 70 }}>
               <AnimatePresence mode="wait">
                 {scene !== "postcard" ? (
-                  <motion.div key="phone" initial={false} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
+                  <motion.div key="phone" className="h-full" initial={false} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
                     <PhoneMockup
                       ref={phoneBodyRef}
                       key={scene === "intro" ? "phone-intro" : "phone-demo"}
@@ -608,9 +612,9 @@ export default function WaitlistPage() {
               </AnimatePresence>
             </div>
 
-            {/* "z miastem" — pushed to bottom. Hidden during intro (z-5 behind video z-40). */}
+            {/* "z miastem" — right below phone. Hidden during intro (z-5 behind video z-40). */}
             <p
-              className="font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap mt-auto"
+              className="shrink-0 font-black text-[#0E0E0E] text-center leading-none select-none whitespace-nowrap mt-2"
               style={{ fontSize: HEADLINE_SIZE, position: "relative", zIndex: scene === "intro" ? 5 : 60 }}
             >
               z miastem
