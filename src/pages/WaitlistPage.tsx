@@ -193,9 +193,9 @@ const PhoneMockup = forwardRef<HTMLDivElement, PhoneMockupProps>(
     E: <PhaseE key="E" onNext={nextPhase} onComplete={onComplete} />,
   };
 
-  // compact mode: fills parent height (flex-1 container), capped at 423px (= 195px width)
+  // compact mode: dvh-based so phone is independent of flex container and can overlap texts
   const phoneStyle = compact
-    ? { height: "min(100%, 423px)", width: "auto", aspectRatio: "9/19.5" }
+    ? { height: "min(62dvh, 500px)", width: "auto", aspectRatio: "9/19.5" }
     : { width: "clamp(270px, 42vw, 310px)", aspectRatio: "9/19.5" };
 
   return (
@@ -319,6 +319,12 @@ function FullscreenIntroVideo({
         src="/founders_intro.mp4"
         autoPlay playsInline muted preload="auto"
         onEnded={triggerShrink}
+        onCanPlay={(e) => {
+          const el = e.currentTarget;
+          el.setAttribute("muted", "");
+          el.muted = true;
+          el.play().catch(() => {});
+        }}
         className="absolute inset-0 w-full h-full object-cover"
         style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
       />
