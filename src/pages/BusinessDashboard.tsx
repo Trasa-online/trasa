@@ -160,6 +160,8 @@ const BusinessDashboard = () => {
   const [accessDenied, setAccessDenied] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState(false);
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const analyticsRequestId = useRef(0);
   const [placeCategory, setPlaceCategory] = useState<string | null>(null);
@@ -248,9 +250,9 @@ const BusinessDashboard = () => {
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
 
-  const loadData = async () => {
+  const loadData = async (bypass = false) => {
     if (!placeId) return;
-    if (!user && !previewToken) return;
+    if (!user && !previewToken && !bypass) return;
     setLoading(true);
 
     // Try to find by place_id first, then fall back to business_profiles.id
@@ -264,7 +266,9 @@ const BusinessDashboard = () => {
 
     if (!profileData) { setAccessDenied(true); setLoading(false); return; }
 
-    if (user) {
+    if (bypass) {
+      setPreviewMode(true);
+    } else if (user) {
       const { data: roleData } = await supabase
         .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
       const isAdmin = !!roleData;
@@ -290,8 +294,10 @@ const BusinessDashboard = () => {
     setBusinessName(profileData.business_name ?? "");
 
     // Identify user and group by business in PostHog
-    posthog.identify(user.id, { email: user.email });
-    posthog.group("business", profileData.id, { name: profileData.business_name ?? "Bez nazwy", place_id: placeId });
+    if (user) {
+      posthog.identify(user.id, { email: user.email });
+      posthog.group("business", profileData.id, { name: profileData.business_name ?? "Bez nazwy", place_id: placeId });
+    }
     setPhone(profileData.phone ?? "");
     setEmail(profileData.email ?? "");
     setWebsite(profileData.website ?? "");
@@ -709,9 +715,49 @@ const BusinessDashboard = () => {
   );
 
   if (accessDenied || !profile) return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center py-24 px-6 text-center">
-      <p className="text-lg font-semibold mb-2">Brak dostępu</p>
-      <p className="text-sm text-muted-foreground">Nie masz uprawnień do zarządzania tą wizytówką.</p>
+    <div className="min-h-screen bg-[#FEFEFE] flex flex-col items-center justify-center px-6">
+      <div className="w-full max-w-xs flex flex-col items-center gap-5">
+        <div className="h-14 w-14 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+        <div className="text-center">
+          <h1 className="text-xl font-black text-foreground">Panel biznesowy</h1>
+          <p className="text-sm text-muted-foreground mt-1">Podaj hasło dostępu</p>
+        </div>
+        <div className="w-full space-y-3">
+          <input
+            type="password"
+            value={passwordInput}
+            onChange={e => { setPasswordInput(e.target.value); setPasswordError(false); }}
+            onKeyDown={e => {
+              if (e.key === "Enter" && passwordInput === "trasa2026") {
+                setAccessDenied(false);
+                setLoading(true);
+                loadData(true);
+              } else if (e.key === "Enter") {
+                setPasswordError(true);
+              }
+            }}
+            placeholder="Haslo dostępu"
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-center placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-300"
+          />
+          {passwordError && (
+            <p className="text-xs text-center text-red-500">Nieprawidlowe haslo</p>
+          )}
+          <button
+            onClick={() => {
+              if (passwordInput === "trasa2026") {
+                setAccessDenied(false);
+                setLoading(true);
+                loadData(true);
+              } else {
+                setPasswordError(true);
+              }
+            }}
+            className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-[0.98] transition-transform"
+          >
+            Otwórz panel
+          </button>
+        </div>
+      </div>
     </div>
   );
 
