@@ -106,6 +106,32 @@ function AutoVideo({ src, className }: { src: string; className?: string }) {
   );
 }
 
+function DashboardLoadingScreen() {
+  const [progress, setProgress] = useState(5);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setProgress(p => {
+        const next = p + Math.random() * 10 + 3;
+        if (next >= 90) { clearInterval(id); return 90; }
+        return next;
+      });
+    }, 150);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-5">
+      <div className="h-16 w-16 rounded-full shadow-lg" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+      <p className="font-black text-xl tracking-tight text-foreground">trasa</p>
+      <div className="flex flex-col items-center gap-1.5 w-44">
+        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+          <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%`, transition: "width 0.3s ease-out" }} />
+        </div>
+        <p className="text-xs text-muted-foreground tabular-nums">{Math.round(progress)}%</p>
+      </div>
+    </div>
+  );
+}
+
 function StarRow({ count = 5, size = "sm" }: { count?: number; size?: "xs" | "sm" }) {
   const cls = size === "xs" ? "h-3 w-3" : "h-4 w-4";
   return (
@@ -943,11 +969,7 @@ const BusinessDashboard = () => {
   };
 
 
-  if (loading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-    </div>
-  );
+  if (loading) return <DashboardLoadingScreen />;
 
   if (accessDenied || !profile) return (
     <div className="min-h-screen bg-[#FEFEFE] flex flex-col items-center justify-center px-6">
@@ -1000,18 +1022,25 @@ const BusinessDashboard = () => {
     <div className="min-h-screen flex bg-slate-50 overflow-x-hidden">
 
       {/* ── Draft mode banner ── */}
-      {isDraft && (
-        <div className="fixed top-0 left-0 right-0 z-[60] bg-amber-500 text-white px-4 py-2 flex items-center justify-between gap-3">
-          <p className="text-xs font-semibold leading-snug">Wersja robocza - dodaj zdjęcia i uzupełnij profil</p>
-          <button
-            onClick={handleDraftConvert}
-            disabled={convertingDraft}
-            className="shrink-0 bg-white text-amber-600 font-bold text-xs px-3 py-1.5 rounded-full whitespace-nowrap active:scale-95 transition-transform disabled:opacity-60"
-          >
-            Zakładam konto →
-          </button>
-        </div>
-      )}
+      {isDraft && (() => {
+        const ready = businessName.trim().length > 0 && !!(coverImageUrl || coverVideoUrl || galleryUrls.length > 0);
+        return (
+          <div className="fixed top-0 left-0 right-0 z-[60] bg-orange-50 border-b border-orange-100 px-4 py-2 flex items-center justify-between gap-3">
+            <p className="text-xs font-medium text-orange-700 leading-snug">
+              {ready ? "Twój profil wygląda swietnie! Gotowy na launch." : "Uzupełnij nazwę lokalu i dodaj zdjęcia, żeby opublikować wizytówkę"}
+            </p>
+            {ready && (
+              <button
+                onClick={handleDraftConvert}
+                disabled={convertingDraft}
+                className="shrink-0 bg-white text-slate-900 font-bold text-xs px-3 py-1.5 rounded-full whitespace-nowrap border border-orange-200 active:scale-95 transition-transform disabled:opacity-60"
+              >
+                {convertingDraft ? "Chwilę..." : "Zakładam konto →"}
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Preview mode banner ── */}
       {previewMode && !isDraft && (
@@ -1069,10 +1098,12 @@ const BusinessDashboard = () => {
             <MessageCircle className="h-3.5 w-3.5 shrink-0" />
             {sidebarOpen && 'Zgłoś problem'}
           </button>
-          <button onClick={handleLogout} title="Wyloguj się" className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
-            <LogOut className="h-3.5 w-3.5 shrink-0" />
-            {sidebarOpen && 'Wyloguj się'}
-          </button>
+          {!isDraft && (
+            <button onClick={handleLogout} title="Wyloguj się" className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
+              <LogOut className="h-3.5 w-3.5 shrink-0" />
+              {sidebarOpen && 'Wyloguj się'}
+            </button>
+          )}
         </div>
       </aside>
 
@@ -1112,9 +1143,11 @@ const BusinessDashboard = () => {
             <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600 shrink-0">
               {profile.business_name?.slice(0, 2).toUpperCase() || 'BK'}
             </div>
-            <button onClick={handleLogout} className="md:hidden flex items-center gap-1 text-xs text-muted-foreground px-2 py-1.5 rounded-full bg-slate-100">
-              <LogOut className="h-3.5 w-3.5" />
-            </button>
+            {!isDraft && (
+              <button onClick={handleLogout} className="md:hidden flex items-center gap-1 text-xs text-muted-foreground px-2 py-1.5 rounded-full bg-slate-100">
+                <LogOut className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -1791,7 +1824,7 @@ const BusinessDashboard = () => {
                   </div>
                 </div>
                 {/* Preview panel - right (desktop) / bottom (mobile/tablet) */}
-                <div className="w-full lg:w-72 shrink-0">
+                <div className="hidden lg:block w-72 shrink-0">
                   <BusinessCardPreview
                     logoUrl={logoUrl}
                     coverImageUrl={coverImageUrl}
@@ -1895,13 +1928,28 @@ const BusinessDashboard = () => {
                 </div>
               ) : (
                 <>
+                  {/* Draft: mock data banner */}
+                  {isDraft && (
+                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl px-5 py-4 flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                      <div>
+                        <p className="text-sm font-bold text-orange-900">Tak mogą wyglądać Twoje statystyki z Trasy</p>
+                        <p className="text-xs text-orange-600 mt-0.5">Poniżej przykładowe dane — po uruchomieniu profilu zobaczysz tu prawdziwe liczby.</p>
+                      </div>
+                    </div>
+                  )}
                   {/* Stat cards */}
+                  {(() => {
+                    const s = isDraft
+                      ? { views: 1247, uniqueChoices: 156, onRoutes: 89, websiteClicks: 34, phoneClicks: 21 }
+                      : stats;
+                    return (
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                      { label: 'Wyświetlenia', value: stats.views, desc: 'zobaczenie wizytówki', icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
-                      { label: 'Unikalni goście', value: stats.uniqueChoices, desc: 'dodało do trasy', icon: Users, color: 'text-rose-500', bg: 'bg-rose-50' },
-                      { label: 'Dodania do planu dnia', value: stats.onRoutes, desc: 'razy w planie dnia', icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                      { label: 'Kliknięcia', value: stats.websiteClicks + stats.phoneClicks, desc: `WWW: ${stats.websiteClicks} · Tel: ${stats.phoneClicks}`, icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
+                      { label: 'Wyświetlenia', value: s.views, desc: 'zobaczenie wizytówki', icon: BarChart2, color: 'text-blue-500', bg: 'bg-blue-50' },
+                      { label: 'Unikalni goście', value: s.uniqueChoices, desc: 'dodało do trasy', icon: Users, color: 'text-rose-500', bg: 'bg-rose-50' },
+                      { label: 'Dodania do planu dnia', value: s.onRoutes, desc: 'razy w planie dnia', icon: MapPin, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                      { label: 'Kliknięcia', value: s.websiteClicks + s.phoneClicks, desc: `WWW: ${s.websiteClicks} · Tel: ${s.phoneClicks}`, icon: MousePointerClick, color: 'text-violet-500', bg: 'bg-violet-50' },
                     ].map(({ label, value, desc, icon: Icon, color, bg }) => (
                       <div key={label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
                         <div className={`h-9 w-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
@@ -1913,6 +1961,8 @@ const BusinessDashboard = () => {
                       </div>
                     ))}
                   </div>
+                    );
+                  })()}
 
                   {/* Daily activity chart */}
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
