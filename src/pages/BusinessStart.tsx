@@ -6,7 +6,7 @@ const DRAFT_KEY = "draft_profile_id";
 
 export default function BusinessStart() {
   const navigate = useNavigate();
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -64,7 +64,7 @@ export default function BusinessStart() {
         navigate(`/biznes/${profile.id}`, { replace: true });
       } catch (err: any) {
         console.error("[BusinessStart]", err);
-        setError(true);
+        setError(err?.message || err?.error_description || String(err) || "Nieznany błąd");
       }
     })();
   }, []);
@@ -73,11 +73,12 @@ export default function BusinessStart() {
     return (
       <div className="min-h-screen bg-[#FEFEFE] flex flex-col items-center justify-center gap-5 px-6">
         <div className="h-14 w-14 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-        <p className="text-center text-muted-foreground text-sm max-w-[28ch]">
+        <p className="text-center text-muted-foreground text-sm max-w-[32ch]">
           Coś poszło nie tak. Odśwież stronę i spróbuj ponownie.
         </p>
+        <p className="text-center text-red-500 text-xs font-mono max-w-xs break-words">{error}</p>
         <button
-          onClick={() => { setError(false); window.location.reload(); }}
+          onClick={() => { setError(null); window.location.reload(); }}
           className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm"
         >
           Odśwież
