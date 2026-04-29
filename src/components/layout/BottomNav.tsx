@@ -40,7 +40,7 @@ const GuestModal = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-const MAINTENANCE_BYPASS = new Set(["nat.maz98@gmail.com"]);
+const MAINTENANCE_BYPASS = new Set(["nat.maz98@gmail.com", "tomalab97@gmail.com"]);
 
 const BottomNav = () => {
   const navigate = useNavigate();
