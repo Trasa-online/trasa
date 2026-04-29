@@ -33,6 +33,10 @@ const Auth = () => {
   const [bizDone, setBizDone] = useState(false);
   const navigate = useNavigate();
 
+  // Draft upgrade mode — business came from /biznes/start, wants to create a real account
+  const draftProfileId = searchParams.get("draft");
+  const isDraftMode = !!draftProfileId;
+
   // Pick up referral code from URL (?ref=CODE) or landing page (localStorage)
   useEffect(() => {
     const refFromUrl = searchParams.get("ref");
@@ -40,8 +44,11 @@ const Auth = () => {
   }, [searchParams]);
 
   useEffect(() => {
+    // In draft upgrade mode we stay on this page — the anonymous session should upgrade
+    if (isDraftMode) return;
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) return;
+      if (session.user.is_anonymous) return; // anonymous user should not be auto-redirected
       // Always check for business profile first - business users must not land on /home
       const { data: bp } = await (supabase as any)
         .from("business_profiles")
@@ -73,7 +80,7 @@ const Auth = () => {
       const returnTo = searchParams.get("return");
       navigate(returnTo || "/home");
     });
-  }, [navigate]);
+  }, [navigate, isDraftMode]);
 
   const handleBizRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,6 +179,31 @@ const Auth = () => {
     }
   };
 
+  const [draftUpgradeDone, setDraftUpgradeDone] = useState(false);
+
+  const handleDraftUpgrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) return;
+    if (password.length < 6) { toast.error("Hasło musi mieć co najmniej 6 znaków"); return; }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (error) throw error;
+      // Clear draft key from localStorage — profile is now a real account
+      localStorage.removeItem("draft_profile_id");
+      setDraftUpgradeDone(true);
+      // Navigate to their dashboard after short delay
+      setTimeout(() => navigate(`/biznes/${draftProfileId}`), 1500);
+    } catch (err: any) {
+      toast.error(err.message || "Błąd zakładania konta");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const [waitlistDone, setWaitlistDone] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -218,6 +250,71 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  if (isDraftMode) {
+    return (
+      <div className="min-h-screen bg-[#FEFEFE] flex flex-col items-center justify-center px-6">
+        <div className="w-full max-w-sm flex flex-col items-center gap-6">
+          <div className="h-14 w-14 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+          {draftUpgradeDone ? (
+            <div className="text-center space-y-2">
+              <p className="text-2xl">🎉</p>
+              <h1 className="text-xl font-black text-foreground">Konto założone!</h1>
+              <p className="text-sm text-muted-foreground">Zaraz wrócimy do Twojego profilu...</p>
+            </div>
+          ) : (
+            <>
+              <div className="text-center">
+                <h1 className="text-2xl font-black text-foreground leading-tight">
+                  Twój profil jest prawie gotowy!
+                </h1>
+                <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                  Podaj email i hasło, żeby na stałe zapisać Twój lokal w Trasie.
+                </p>
+              </div>
+              <form onSubmit={handleDraftUpgrade} className="w-full space-y-3">
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-semibold text-foreground">Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="twoj@email.pl"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-semibold text-foreground">Haslo (min. 6 znaków)</label>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-[0.98] transition-transform shadow-lg shadow-orange-200 disabled:opacity-60"
+                >
+                  {loading ? "Zakładam konto..." : "Zapisz profil i załóż konto →"}
+                </button>
+              </form>
+              <button
+                onClick={() => navigate(`/biznes/${draftProfileId}`)}
+                className="text-sm text-muted-foreground active:opacity-60"
+              >
+                Wróć do edycji
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen flex flex-col ${businessMode ? "bg-blue-950" : "bg-background"}`}>

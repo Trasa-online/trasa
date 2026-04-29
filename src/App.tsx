@@ -210,6 +210,7 @@ const JoinPage         = lazy(() => import("./pages/JoinPage"));
 const PublicProfile    = lazy(() => import("./pages/PublicProfile"));
 const BusinessDashboard = lazy(() => import("./pages/BusinessDashboard"));
 const BusinessOnePager  = lazy(() => import("./pages/BusinessOnePager"));
+const BusinessStart     = lazy(() => import("./pages/BusinessStart"));
 
 const queryClient = new QueryClient();
 
@@ -255,6 +256,7 @@ const App = () => (
           <Route path="/profil/:username" element={<PublicProfile />} />
           <Route path="/quick-plan-review" element={<RequireAuth><QuickPlanReview /></RequireAuth>} />
           <Route path="/biznes/demo" element={<Navigate to="/" replace />} />
+          <Route path="/biznes/start" element={<BusinessStart />} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
           <Route path="/dla-firm" element={<ForBusinessPage />} />
           <Route path="/dla-firm/start" element={<Navigate to="/" replace />} />

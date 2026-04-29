@@ -72,6 +72,7 @@ interface BusinessProfile {
   event_description: string | null;
   event_starts_at: string | null;
   event_ends_at: string | null;
+  is_draft?: boolean;
 }
 
 interface Stats { views: number; onRoutes: number; websiteClicks: number; phoneClicks: number; uniqueChoices: number; }
@@ -151,7 +152,7 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
 
 const BusinessDashboard = () => {
   const { placeId } = useParams<{ placeId: string }>();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const previewToken = searchParams.get("t");
@@ -217,6 +218,9 @@ const BusinessDashboard = () => {
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showCardPreview, setShowCardPreview] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<{ url: string; label: string } | null>(null);
+  const [isDraft, setIsDraft] = useState(false);
+  const [showDraftPopup, setShowDraftPopup] = useState(false);
+  const [convertingDraft, setConvertingDraft] = useState(false);
   const [supportMessage, setSupportMessage] = useState("");
   const [supportSubmitting, setSupportSubmitting] = useState(false);
 
@@ -235,12 +239,13 @@ const BusinessDashboard = () => {
 
   useEffect(() => {
     if (!placeId) return;
+    if (authLoading) return; // wait for Supabase session to resolve before deciding what to show
     if (!user && !previewToken) {
       setLoading(false); // show password screen for unauthenticated visitors
       return;
     }
     loadData();
-  }, [user, placeId, previewToken]);
+  }, [user, placeId, previewToken, authLoading]);
 
   // Warn before leaving with unsaved changes
   useEffect(() => {
@@ -303,6 +308,7 @@ const BusinessDashboard = () => {
     setPlaceCategory((placeData as any)?.category ?? null);
 
     setProfile(profileData as BusinessProfile);
+    setIsDraft(!!(profileData as any).is_draft);
     // All businesses get premium access
     setPlan('premium');
     setBusinessName(profileData.business_name ?? "");
@@ -703,6 +709,33 @@ const BusinessDashboard = () => {
     }
   };
 
+  const handleDraftConvert = async () => {
+    if (!profile) return;
+    setConvertingDraft(true);
+    try {
+      // Persist current business name before leaving
+      if (businessName.trim()) {
+        await (supabase as any)
+          .from("business_profiles")
+          .update({ business_name: businessName })
+          .eq("id", profile.id);
+      }
+      // Record conversion intent
+      await (supabase as any)
+        .from("draft_conversions")
+        .insert({ profile_id: profile.id, business_name: businessName || null });
+      // Notify via email (fire and forget)
+      supabase.functions.invoke("notify-draft-conversion", {
+        body: { profile_id: profile.id, business_name: businessName || null },
+      }).catch(() => {});
+      navigate(`/auth?draft=${profile.id}`);
+    } catch {
+      toast.error("Spróbuj ponownie za chwilę.");
+    } finally {
+      setConvertingDraft(false);
+    }
+  };
+
   const handleLogout = async () => {
     // Clear Supabase session from all storage
     const clearStorage = () => {
@@ -781,8 +814,22 @@ const BusinessDashboard = () => {
   return (
     <div className="min-h-screen flex bg-slate-50 overflow-x-hidden">
 
+      {/* ── Draft mode banner ── */}
+      {isDraft && (
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-amber-500 text-white px-4 py-2 flex items-center justify-between gap-3">
+          <p className="text-xs font-semibold leading-snug">Wersja robocza - dodaj zdjęcia i uzupełnij profil</p>
+          <button
+            onClick={handleDraftConvert}
+            disabled={convertingDraft}
+            className="shrink-0 bg-white text-amber-600 font-bold text-xs px-3 py-1.5 rounded-full whitespace-nowrap active:scale-95 transition-transform disabled:opacity-60"
+          >
+            Zakładam konto →
+          </button>
+        </div>
+      )}
+
       {/* ── Preview mode banner ── */}
-      {previewMode && (
+      {previewMode && !isDraft && (
         <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white px-4 py-2.5 flex items-center justify-between gap-3">
           <p className="text-xs font-semibold leading-snug">To jest podgląd Twojego panelu w Trasie. Edycja wymagana logowania.</p>
           <button
@@ -845,7 +892,7 @@ const BusinessDashboard = () => {
       </aside>
 
       {/* ── Main ── */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${sidebarOpen ? 'md:ml-56' : 'md:ml-14'} ${previewMode ? 'pt-10' : ''}`}>
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${sidebarOpen ? 'md:ml-56' : 'md:ml-14'} ${(previewMode || isDraft) ? 'pt-10' : ''}`}>
 
         {/* ── Top bar ── */}
         <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 md:px-6 h-14 flex items-center gap-3 shrink-0">
@@ -856,6 +903,15 @@ const BusinessDashboard = () => {
             <span className={`hidden md:inline text-[10px] font-bold px-2 py-0.5 rounded-full ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
+            {isDraft && (
+              <button
+                onClick={() => setShowDraftPopup(true)}
+                className="flex items-center gap-1.5 text-xs font-bold text-white px-3 py-1.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] active:scale-95 transition-transform whitespace-nowrap"
+              >
+                <Play className="h-3 w-3" />
+                Przetestuj w aplikacji
+              </button>
+            )}
             {isAdminUser && (profile as any).preview_token && (
               <button
                 onClick={() => {
@@ -1989,6 +2045,80 @@ const BusinessDashboard = () => {
             </button>
           </div>
           <p className="absolute bottom-6 text-white/50 text-xs">Kliknij gdziekolwiek, żeby zamknąć</p>
+        </div>
+      )}
+
+      {/* ── Draft swiper popup ── */}
+      {showDraftPopup && (
+        <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm px-6">
+          <button
+            onClick={() => setShowDraftPopup(false)}
+            className="absolute top-5 right-5 h-9 w-9 flex items-center justify-center rounded-full bg-white/20 active:scale-95 transition-transform"
+          >
+            <X className="h-5 w-5 text-white" />
+          </button>
+
+          <div className="flex flex-col items-center gap-5 w-full max-w-xs">
+            <div className="text-center">
+              <p className="text-white font-black text-lg">Tak wyglądasz w Trasie</p>
+              <p className="text-white/60 text-xs mt-1">Tak Cię widzi użytkownik przeglądając trasy</p>
+            </div>
+
+            {/* Phone frame */}
+            <div
+              className="relative rounded-[28px] overflow-hidden shadow-2xl border-[3px] border-white/20"
+              style={{ width: 220, aspectRatio: '9/19.5' }}
+            >
+              {coverVideoUrl
+                ? <AutoVideo src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
+                : coverImageUrl
+                  ? <img src={coverImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                  : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
+              }
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/10" />
+              <div className="absolute bottom-0 left-0 right-0 px-4 pb-5 space-y-2">
+                <div className="flex items-center gap-2">
+                  {logoUrl
+                    ? <img src={logoUrl} className="w-6 h-6 rounded-full object-cover border border-white/30 shrink-0" />
+                    : <div className="w-6 h-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+                  }
+                  <span className="text-white/60 text-[10px]">{mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : 'Kategoria'} · @trasa</span>
+                </div>
+                <h3 className="text-base font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {tags.slice(0, 3).map(t => (
+                      <span key={t} className="px-2 py-0.5 bg-white/15 rounded-full text-[9px] font-semibold text-white/80">#{t}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Swipe gesture hint */}
+              <div className="absolute top-1/2 -translate-y-1/2 inset-x-0 flex items-center justify-between px-3 pointer-events-none">
+                <div className="h-10 w-10 rounded-full bg-red-500/80 flex items-center justify-center">
+                  <X className="h-5 w-5 text-white" />
+                </div>
+                <div className="h-10 w-10 rounded-full bg-green-500/80 flex items-center justify-center">
+                  <span className="text-white text-lg font-black">+</span>
+                </div>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <button
+              onClick={handleDraftConvert}
+              disabled={convertingDraft}
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-[0.98] transition-transform shadow-lg disabled:opacity-60"
+            >
+              {convertingDraft ? "Chwilę..." : "Zakładam konto i zapisuję profil →"}
+            </button>
+            <button
+              onClick={() => setShowDraftPopup(false)}
+              className="text-white/50 text-sm active:opacity-60"
+            >
+              Wróć do edycji
+            </button>
+          </div>
         </div>
       )}
 
