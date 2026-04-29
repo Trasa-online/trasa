@@ -218,7 +218,7 @@ const App = () => (
           <Route path="/edit-plan" element={<RequireAuth><EditPlan /></RequireAuth>} />
           <Route path="/review-summary" element={<RequireAuth><ReviewSummary /></RequireAuth>} />
           <Route path="/plan" element={<RequireAuth><PlanWizard /></RequireAuth>} />
-          <Route path="/demo" element={<DemoSession />} />
+          <Route path="/demo" element={<Navigate to="/" replace />} />
           <Route path="/sesja/nowa" element={<RequireAuth><CreateGroupSession /></RequireAuth>} />
           <Route path="/sesja/:joinCode" element={<RequireAuth><GroupSession /></RequireAuth>} />
           <Route path="/search" element={<RequireAuth><UserSearch /></RequireAuth>} />
@@ -227,10 +227,10 @@ const App = () => (
           <Route path="/join/:code" element={<JoinPage />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
           <Route path="/quick-plan-review" element={<RequireAuth><QuickPlanReview /></RequireAuth>} />
-          <Route path="/biznes/demo" element={<Navigate to="/demo?biznes=1" replace />} />
+          <Route path="/biznes/demo" element={<Navigate to="/" replace />} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
           <Route path="/dla-firm" element={<ForBusinessPage />} />
-          <Route path="/dla-firm/start" element={<BusinessOnePager />} />
+          <Route path="/dla-firm/start" element={<Navigate to="/" replace />} />
 <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
