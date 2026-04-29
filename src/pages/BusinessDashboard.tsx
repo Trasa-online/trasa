@@ -193,19 +193,6 @@ function AppLikePreviewModal({
                 </div>
               )}
               {/* Expand to detail button */}
-              <button
-                onClick={() => setView('detail')}
-                className="absolute top-4 right-4 h-9 w-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md active:scale-90 transition-transform"
-              >
-                <ChevronUp className="h-5 w-5 text-slate-700" />
-              </button>
-              {/* Close button */}
-              <button
-                onClick={onClose}
-                className="absolute top-4 left-1/2 -translate-x-1/2 h-7 w-7 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform"
-              >
-                <X className="h-3.5 w-3.5 text-white" />
-              </button>
               {/* Info overlay */}
               <div className="absolute left-0 right-0 px-4 space-y-1.5" style={{ bottom: '5rem' }}>
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -216,16 +203,24 @@ function AppLikePreviewModal({
                 <h3 className="text-xl font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
                 {description && <p className="text-white/70 text-sm line-clamp-2 leading-snug">{description}</p>}
                 {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  <div className="flex flex-wrap gap-1.5 pt-0.5 pr-14">
                     {tags.slice(0, 4).map(t => (
                       <span key={t} className="px-2.5 py-0.5 bg-white/15 rounded-full text-xs text-white/80">{t}</span>
                     ))}
                   </div>
                 )}
               </div>
+              {/* Expand to detail — bottom-right, above action buttons */}
+              <button
+                onClick={() => setView('detail')}
+                className="absolute right-4 h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-md active:scale-90 transition-transform"
+                style={{ bottom: '5rem' }}
+              >
+                <ChevronUp className="h-5 w-5 text-slate-700" />
+              </button>
               {/* Action buttons on the card */}
               <div className="absolute bottom-4 left-3 right-3 flex gap-2.5">
-                <button onClick={onClose} className="flex-1 py-3.5 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white font-bold text-sm active:scale-95 transition-transform">
+                <button onClick={onClose} className="flex-1 py-3.5 rounded-full bg-white text-slate-900 font-bold text-sm active:scale-95 transition-transform">
                   Odrzuć
                 </button>
                 <button className="flex-1 py-3.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-95 transition-transform shadow-lg">
