@@ -6,7 +6,7 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical } from "lucide-react";
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -145,14 +145,16 @@ function StarRow({ count = 5, size = "sm" }: { count?: number; size?: "xs" | "sm
 
 function AppLikePreviewModal({
   onClose, onConvert, isDraft, convertingDraft,
-  businessName, mainCategory, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl,
+  businessName, mainCategory, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls,
 }: {
   onClose: () => void; onConvert: () => void; isDraft: boolean; convertingDraft: boolean;
   businessName: string; mainCategory: string; tags: string[]; description: string;
-  street: string; city: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string;
+  street: string; city: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[];
 }) {
   const [view, setView] = useState<'card' | 'detail'>('card');
+  const [photoIdx, setPhotoIdx] = useState(0);
   const catLabel = mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : null;
+  const allPhotos = [coverImageUrl, ...galleryUrls].filter(Boolean);
 
   const CoverMedia = ({ className }: { className: string }) => (
     coverVideoUrl
@@ -231,15 +233,38 @@ function AppLikePreviewModal({
           ) : (
             /* Detail view */
             <>
-              <div className="shrink-0 h-52 relative">
-                <CoverMedia className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent" />
+              {/* Photo strip — horizontal scroll snap */}
+              <div className="shrink-0 h-56 relative overflow-hidden bg-slate-900">
+                <div
+                  className="flex h-full overflow-x-auto snap-x snap-mandatory scrollbar-none"
+                  style={{ scrollbarWidth: "none" }}
+                  onScroll={e => {
+                    const el = e.currentTarget;
+                    setPhotoIdx(Math.round(el.scrollLeft / el.offsetWidth));
+                  }}
+                >
+                  {allPhotos.length > 0 ? allPhotos.map((src, i) => (
+                    <div key={i} className="shrink-0 w-full h-full snap-center">
+                      <img src={src} className="w-full h-full object-cover" />
+                    </div>
+                  )) : (
+                    <div className="w-full h-full bg-gradient-to-br from-orange-400 to-orange-700" />
+                  )}
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent pointer-events-none" />
                 <button
                   onClick={() => setView('card')}
                   className="absolute top-4 left-4 h-8 w-8 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform"
                 >
                   <ChevronLeft className="h-4 w-4 text-white" />
                 </button>
+                {allPhotos.length > 1 && (
+                  <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 pointer-events-none">
+                    {allPhotos.map((_, i) => (
+                      <div key={i} className={`h-1.5 rounded-full transition-all ${i === photoIdx ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`} />
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex-1 overflow-y-auto">
                 <div className="px-4 py-4 space-y-4">
@@ -462,6 +487,7 @@ const BusinessDashboard = () => {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const coverVideoInputRef = useRef<HTMLInputElement>(null);
+  const dragSrcIdx = useRef<number | null>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const postPhotoInputRef = useRef<HTMLInputElement>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1455,11 +1481,31 @@ const BusinessDashboard = () => {
                 </div>
                 <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
                   {galleryUrls.map((url, idx) => (
-                    <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted group cursor-pointer" onClick={() => setPhotoPreview({ url, label: `Galeria ${idx + 1}` })}>
-                      <img src={url} className="w-full h-full object-cover" />
+                    <div
+                      key={idx}
+                      draggable
+                      onDragStart={() => { dragSrcIdx.current = idx; }}
+                      onDragOver={e => e.preventDefault()}
+                      onDrop={e => {
+                        e.preventDefault();
+                        if (dragSrcIdx.current === null || dragSrcIdx.current === idx) return;
+                        const next = [...galleryUrls];
+                        const [moved] = next.splice(dragSrcIdx.current, 1);
+                        next.splice(idx, 0, moved);
+                        dragSrcIdx.current = null;
+                        setGalleryUrls(next);
+                        autoSaveDraft({ galleryUrls: next });
+                        setIsDirty(true);
+                      }}
+                      onDragEnd={() => { dragSrcIdx.current = null; }}
+                      className="relative aspect-square rounded-xl overflow-hidden bg-muted group cursor-grab active:cursor-grabbing active:opacity-60 transition-opacity"
+                      onClick={() => setPhotoPreview({ url, label: `Galeria ${idx + 1}` })}
+                    >
+                      <img src={url} className="w-full h-full object-cover pointer-events-none" />
                       <button onClick={(e) => { e.stopPropagation(); removeGalleryPhoto(idx); }} className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center active:opacity-70 z-10"><X className="h-3 w-3 text-white" /></button>
-                      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-start px-1.5 pb-1.5">
+                      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-between px-1.5 pb-1.5">
                         <ZoomIn className="h-3 w-3 text-white/80" />
+                        <GripVertical className="h-3 w-3 text-white/50" />
                       </div>
                     </div>
                   ))}
@@ -2231,6 +2277,7 @@ const BusinessDashboard = () => {
           logoUrl={logoUrl}
           coverImageUrl={coverImageUrl}
           coverVideoUrl={coverVideoUrl}
+          galleryUrls={galleryUrls}
         />
       )}
 
