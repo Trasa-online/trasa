@@ -548,7 +548,7 @@ export default function WaitlistPage() {
   const goPostcard = useCallback(() => setScene("postcard"), []);
 
   return (
-    <div style={{ background: "#FEFEFE" }}>
+    <div style={{ background: "#FAFAFA" }}>
 
       {/* ── MOBILE ─────────────────────────────────────────────────────────────── */}
       <div className="lg:hidden">

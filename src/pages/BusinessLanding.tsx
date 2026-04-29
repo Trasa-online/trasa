@@ -308,7 +308,7 @@ export default function BusinessLanding() {
   const goPostcard = useCallback(() => setScene("postcard"), []);
 
   return (
-    <div style={{ background: "#FEFEFE", minHeight: "100dvh" }}>
+    <div style={{ background: "#FAFAFA", minHeight: "100dvh" }}>
 
       {/* ── MOBILE ── */}
       <div className="lg:hidden flex flex-col items-center px-5 pt-12 pb-10 gap-8">
