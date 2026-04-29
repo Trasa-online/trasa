@@ -494,7 +494,9 @@ function EmailCapture({ inputRef }: { inputRef?: React.RefObject<HTMLInputElemen
     e.preventDefault();
     if (!email.trim() || status !== "idle") return;
     setStatus("loading");
-    await (supabase as any).from("waitlist").insert({ email: email.trim().toLowerCase() });
+    const trimmed = email.trim().toLowerCase();
+    await (supabase as any).from("waitlist").insert({ email: trimmed });
+    supabase.functions.invoke("send-waitlist-email", { body: { email: trimmed } });
     setStatus("done");
   };
   if (status === "done") return (
