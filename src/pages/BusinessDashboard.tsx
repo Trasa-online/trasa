@@ -145,16 +145,25 @@ function StarRow({ count = 5, size = "sm" }: { count?: number; size?: "xs" | "sm
 
 function AppLikePreviewModal({
   onClose, onConvert, isDraft, convertingDraft,
-  businessName, mainCategory, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls,
+  businessName, mainCategory, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, posts,
 }: {
   onClose: () => void; onConvert: () => void; isDraft: boolean; convertingDraft: boolean;
   businessName: string; mainCategory: string; tags: string[]; description: string;
   street: string; city: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[];
+  posts: BusinessPost[];
 }) {
   const [view, setView] = useState<'card' | 'detail'>('card');
   const [photoIdx, setPhotoIdx] = useState(0);
+  const photoStripRef = useRef<HTMLDivElement>(null);
   const catLabel = mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : null;
   const allPhotos = [coverImageUrl, ...galleryUrls].filter(Boolean);
+
+  const goToPhoto = (idx: number) => {
+    const el = photoStripRef.current;
+    if (!el) return;
+    el.scrollTo({ left: idx * el.offsetWidth, behavior: 'smooth' });
+    setPhotoIdx(idx);
+  };
 
   const CoverMedia = ({ className }: { className: string }) => (
     coverVideoUrl
@@ -236,6 +245,7 @@ function AppLikePreviewModal({
               {/* Photo strip — horizontal scroll snap */}
               <div className="shrink-0 h-56 relative overflow-hidden bg-slate-900">
                 <div
+                  ref={photoStripRef}
                   className="flex h-full overflow-x-auto snap-x snap-mandatory scrollbar-none"
                   style={{ scrollbarWidth: "none" }}
                   onScroll={e => {
@@ -259,11 +269,23 @@ function AppLikePreviewModal({
                   <ChevronLeft className="h-4 w-4 text-white" />
                 </button>
                 {allPhotos.length > 1 && (
-                  <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 pointer-events-none">
-                    {allPhotos.map((_, i) => (
-                      <div key={i} className={`h-1.5 rounded-full transition-all ${i === photoIdx ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`} />
-                    ))}
-                  </div>
+                  <>
+                    <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 pointer-events-none">
+                      {allPhotos.map((_, i) => (
+                        <div key={i} className={`h-1.5 rounded-full transition-all ${i === photoIdx ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`} />
+                      ))}
+                    </div>
+                    {photoIdx > 0 && (
+                      <button onClick={() => goToPhoto(photoIdx - 1)} className="absolute left-3 top-1/2 -translate-y-1/2 h-8 w-8 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
+                        <ChevronLeft className="h-4 w-4 text-white" />
+                      </button>
+                    )}
+                    {photoIdx < allPhotos.length - 1 && (
+                      <button onClick={() => goToPhoto(photoIdx + 1)} className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center active:scale-90 transition-transform">
+                        <svg className="h-4 w-4 text-white" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 3l5 5-5 5"/></svg>
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
               <div className="flex-1 overflow-y-auto">
@@ -295,14 +317,32 @@ function AppLikePreviewModal({
                       {tags.map(t => <span key={t} className="px-3 py-1 bg-slate-100 rounded-full text-xs text-slate-600">{t}</span>)}
                     </div>
                   )}
-                  {/* Aktualnosci zero state */}
+                  {/* Aktualnosci */}
                   <div>
                     <h3 className="font-bold text-base mb-2">Aktualnosci</h3>
-                    <div className="flex flex-col items-center gap-1.5 py-5 rounded-2xl bg-slate-50 border border-slate-100">
-                      <Megaphone className="h-7 w-7 text-slate-300" />
-                      <p className="text-xs font-medium text-muted-foreground">Brak aktualnosci</p>
-                      <p className="text-[11px] text-muted-foreground/70 text-center px-4">Lokal nie dodal jeszcze zadnych wpisow</p>
-                    </div>
+                    {posts.length === 0 ? (
+                      <div className="flex flex-col items-center gap-1.5 py-5 rounded-2xl bg-slate-50 border border-slate-100">
+                        <Megaphone className="h-7 w-7 text-slate-300" />
+                        <p className="text-xs font-medium text-muted-foreground">Brak aktualnosci</p>
+                        <p className="text-[11px] text-muted-foreground/70 text-center px-4">Dodaj pierwsza aktualnosc w zakladce Aktualnosci</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {posts.slice(0, 3).map(post => (
+                          <div key={post.id} className="border border-slate-100 rounded-2xl p-3 space-y-2 bg-slate-50">
+                            {post.description && <p className="text-sm leading-relaxed">{post.description}</p>}
+                            {post.photo_urls.length > 0 && (
+                              <div className={`grid gap-1.5 ${post.photo_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                                {post.photo_urls.slice(0, 2).map((url, idx) => (
+                                  <img key={idx} src={url} className="w-full rounded-xl object-cover aspect-square" />
+                                ))}
+                              </div>
+                            )}
+                            <p className="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: pl })}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   {/* Feed zero state */}
                   <div>
@@ -360,46 +400,67 @@ function AppLikePreviewModal({
   );
 }
 
-function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessName, mainCategory, tags, eventTitle }: {
+function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessName, mainCategory, tags, eventTitle, street, description, onPreviewClick, previewReady }: {
   logoUrl: string; coverImageUrl: string; coverVideoUrl: string; businessName: string; mainCategory: string;
-  tags: string[]; eventTitle: string;
+  tags: string[]; eventTitle: string; street?: string; description?: string;
+  onPreviewClick?: () => void; previewReady?: boolean;
 }) {
   const catLabel = mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : null;
   return (
     <div className="sticky top-20">
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Podgląd wizytówki</p>
-      <div className="relative w-full rounded-3xl overflow-hidden shadow-xl" style={{ aspectRatio: '3/4' }}>
-        {coverVideoUrl ? (
-          <AutoVideo src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
-        ) : coverImageUrl ? (
-          <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/10" />
-        <div className="absolute bottom-0 left-0 right-0 px-4 pb-5 space-y-2">
-          <div className="flex items-center gap-2">
-            {logoUrl
-              ? <img src={logoUrl} className="w-7 h-7 rounded-full object-cover border border-white/30 shrink-0" />
-              : <div className="w-7 h-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-            }
-            <span className="text-white/60 text-xs leading-tight">{[catLabel, '@trasa'].filter(Boolean).join(' · ')}</span>
+      <div className="relative rounded-3xl overflow-hidden shadow-xl bg-slate-900" style={{ aspectRatio: '9/16' }}>
+        {coverVideoUrl
+          ? <AutoVideo src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
+          : coverImageUrl
+            ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
+            : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
+        }
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
+        {catLabel && (
+          <div className="absolute top-3 left-3 bg-orange-500 text-white px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
+            {catLabel}
           </div>
-          <h3 className="text-xl font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+        )}
+        <div className="absolute left-0 right-0 px-3 space-y-1" style={{ bottom: '3.5rem' }}>
+          <div className="flex items-center gap-1 flex-wrap">
+            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+            <span className="text-white/70 text-[10px]">4.6</span>
+            {street && <><span className="text-white/40 text-[10px]">·</span><span className="text-white/70 text-[10px] truncate max-w-[120px]">{street}</span></>}
+          </div>
+          <h3 className="text-base font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+          {description && <p className="text-white/70 text-[10px] line-clamp-2 leading-snug">{description}</p>}
           {eventTitle && (
-            <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-3 py-1 text-white font-semibold text-xs">
+            <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2 py-0.5 text-white font-semibold text-[9px]">
               🎉 {eventTitle}
             </div>
           )}
           {tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1 pt-0.5 pr-10">
               {tags.slice(0, 3).map(t => (
-                <span key={t} className="px-2.5 py-0.5 bg-white/15 rounded-full text-xs font-semibold text-white/80">#{t}</span>
+                <span key={t} className="px-2 py-0.5 bg-white/15 rounded-full text-[9px] font-medium text-white/80">{t}</span>
               ))}
             </div>
           )}
         </div>
+        <div className="absolute right-3 h-8 w-8 bg-white rounded-full flex items-center justify-center shadow-md" style={{ bottom: '3.5rem' }}>
+          <ChevronUp className="h-4 w-4 text-slate-700" />
+        </div>
+        <div className="absolute bottom-2 left-2 right-2 flex gap-2">
+          <div className="flex-1 py-2 rounded-full bg-white text-slate-900 font-bold text-[10px] text-center">Odrzuć</div>
+          <div className="flex-1 py-2 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-[10px] text-center">Dodaj</div>
+        </div>
       </div>
+      {onPreviewClick && (
+        <button
+          onClick={() => previewReady && onPreviewClick()}
+          disabled={!previewReady}
+          title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie okładkowe" : undefined}
+          className="mt-2 w-full text-xs text-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-slate-400 hover:text-slate-600 disabled:hover:text-slate-400"
+        >
+          Otwórz pełny podgląd →
+        </button>
+      )}
     </div>
   );
 }
@@ -865,9 +926,26 @@ const BusinessDashboard = () => {
   };
 
   const handleAddPost = async () => {
+    if (!postDescription.trim() && postPhotos.length === 0) return;
     const effectivePlaceId = profile?.place_id ?? placeId;
-    if (!effectivePlaceId || (!postDescription.trim() && postPhotos.length === 0)) return;
     setSubmittingPost(true);
+    if (!effectivePlaceId) {
+      // Draft without a real place — add locally so user can preview
+      const localPost: BusinessPost = {
+        id: `local-${Date.now()}`,
+        place_id: "",
+        description: postDescription.trim() || null,
+        photo_urls: postPhotos,
+        created_at: new Date().toISOString(),
+      };
+      setPosts(prev => [localPost, ...prev]);
+      setPostDescription("");
+      setPostPhotos([]);
+      if (postPhotoInputRef.current) postPhotoInputRef.current.value = "";
+      toast.success("Post dodany do podglądu!");
+      setSubmittingPost(false);
+      return;
+    }
     const { data, error } = await (supabase as any)
       .from("business_posts")
       .insert({ place_id: effectivePlaceId, description: postDescription.trim() || null, photo_urls: postPhotos })
@@ -1526,15 +1604,9 @@ const BusinessDashboard = () => {
                 <BusinessCardPreview
                   logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
                   businessName={businessName} mainCategory={mainCategory} tags={tags} eventTitle={eventTitle}
+                  street={street} description={description}
+                  onPreviewClick={() => setShowAppPreview(true)} previewReady={previewReady}
                 />
-                <button
-                  onClick={() => previewReady && setShowAppPreview(true)}
-                  disabled={!previewReady}
-                  title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie okładkowe" : undefined}
-                  className="mt-2 w-full text-xs text-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-slate-400 hover:text-slate-600 disabled:hover:text-slate-400"
-                >
-                  Podgląd w aplikacji →
-                </button>
               </div>
               </div> {/* end flex flex-col lg:flex-row */}
             </div>
@@ -1574,55 +1646,6 @@ const BusinessDashboard = () => {
                       {logoUrl ? 'Zmień logo' : 'Dodaj logo'}
                     </button>
                     <p className="text-xs text-muted-foreground mt-0.5">JPG, PNG · widoczne na wizytówce</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Wizytówka preview - wygląd jak karta w swiperze */}
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Podgląd wizytówki</p>
-                {/* Karta — proporcje jak w aplikacji */}
-                <div className="relative rounded-3xl overflow-hidden shadow-lg bg-slate-900" style={{ aspectRatio: '9/16', maxWidth: 240 }}>
-                  {/* Tło */}
-                  {coverVideoUrl
-                    ? <AutoVideo src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
-                    : coverImageUrl
-                      ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
-                      : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
-                  }
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
-                  {/* Kategoria — góra lewo */}
-                  {mainCategory && (
-                    <div className="absolute top-3 left-3 bg-orange-500 text-white px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
-                      {MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label}
-                    </div>
-                  )}
-                  {/* Info overlay */}
-                  <div className="absolute left-0 right-0 px-3 space-y-1" style={{ bottom: '3.5rem' }}>
-                    <div className="flex items-center gap-1 flex-wrap">
-                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                      <span className="text-white/70 text-[10px]">4.6</span>
-                      {street && <><span className="text-white/40 text-[10px]">·</span><span className="text-white/70 text-[10px] truncate max-w-[120px]">{street}</span></>}
-                    </div>
-                    <h3 className="text-base font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
-                    {description && <p className="text-white/70 text-[10px] line-clamp-2 leading-snug">{description}</p>}
-                    {tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-0.5 pr-10">
-                        {tags.slice(0, 3).map(t => (
-                          <span key={t} className="px-2 py-0.5 bg-white/15 rounded-full text-[9px] font-medium text-white/80">{t}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {/* ChevronUp */}
-                  <div className="absolute right-3 h-8 w-8 bg-white rounded-full flex items-center justify-center shadow-md" style={{ bottom: '3.5rem' }}>
-                    <ChevronUp className="h-4 w-4 text-slate-700" />
-                  </div>
-                  {/* Przyciski akcji */}
-                  <div className="absolute bottom-2 left-2 right-2 flex gap-2">
-                    <div className="flex-1 py-2 rounded-full bg-white text-slate-900 font-bold text-[10px] text-center">Odrzuć</div>
-                    <div className="flex-1 py-2 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-[10px] text-center">Dodaj</div>
                   </div>
                 </div>
               </div>
@@ -1809,15 +1832,9 @@ const BusinessDashboard = () => {
                 <BusinessCardPreview
                   logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
                   businessName={businessName} mainCategory={mainCategory} tags={tags} eventTitle={eventTitle}
+                  street={street} description={description}
+                  onPreviewClick={() => setShowAppPreview(true)} previewReady={previewReady}
                 />
-                <button
-                  onClick={() => previewReady && setShowAppPreview(true)}
-                  disabled={!previewReady}
-                  title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie okładkowe" : undefined}
-                  className="mt-2 w-full text-xs text-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-slate-400 hover:text-slate-600 disabled:hover:text-slate-400"
-                >
-                  Podgląd w aplikacji →
-                </button>
               </div>
               </div> {/* end flex flex-col lg:flex-row */}
             </div>
@@ -1834,12 +1851,6 @@ const BusinessDashboard = () => {
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Obecne wydarzenie</p>
                     <p className="text-xs text-muted-foreground -mt-2">Np. happy hour, promocja 1+1, koncert. Widoczne na wizytówce w aplikacji.</p>
-                    {isDraft && !profile?.place_id && (
-                      <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
-                        <Megaphone className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                        <p className="text-xs text-amber-800 leading-relaxed">Możesz tu wpisać dane, ale wydarzenie pojawi się w aplikacji po zatwierdzeniu wizytówki.</p>
-                      </div>
-                    )}
                     <div className="space-y-1">
                       <Label htmlFor="event_title">Tytuł</Label>
                       <Input id="event_title" value={eventTitle} maxLength={80} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder="np. Drinki 1+1 do 20:00" />
@@ -1848,7 +1859,10 @@ const BusinessDashboard = () => {
                     <div className="space-y-1">
                       <Label htmlFor="event_description">Opis</Label>
                       <textarea id="event_description" rows={2} value={eventDescription} maxLength={300} onChange={e => { setEventDescription(e.target.value); setIsDirty(true); }} placeholder="Szczegóły wydarzenia..." className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
-                      <p className="text-[11px] text-muted-foreground text-right">{eventDescription.length}/300</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] text-muted-foreground">wyswietli sie po kliknieciu w guzik z tytułem promocji</p>
+                        <p className="text-[11px] text-muted-foreground">{eventDescription.length}/300</p>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1"><Label htmlFor="event_starts_at">Od</Label><Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" /></div>
@@ -1859,13 +1873,7 @@ const BusinessDashboard = () => {
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Posty</p>
                     <p className="text-xs text-muted-foreground -mt-2">Aktualizacje, nowości, zdjęcia - widoczne dla odwiedzających w Twojej wizytówce.</p>
-                    {isDraft && !profile?.place_id && (
-                      <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
-                        <Megaphone className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                        <p className="text-xs text-amber-800 leading-relaxed">Posty będą dostępne po zatwierdzeniu wizytówki. Wypełnij dane lokalu i prześlij do weryfikacji.</p>
-                      </div>
-                    )}
-                    <div className={`space-y-3 border border-border/60 rounded-2xl p-3 ${isDraft && !profile?.place_id ? 'opacity-40 pointer-events-none select-none' : ''}`}>
+                    <div className="space-y-3 border border-border/60 rounded-2xl p-3">
                       <textarea rows={3} value={postDescription} maxLength={600} onChange={e => setPostDescription(e.target.value)} placeholder="Co nowego w Twoim lokalu?" className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
                       <p className="text-[11px] text-muted-foreground text-right -mt-2">{postDescription.length}/600</p>
                       {postPhotos.length > 0 && (
@@ -1919,6 +1927,10 @@ const BusinessDashboard = () => {
                     mainCategory={mainCategory}
                     tags={tags}
                     eventTitle={eventTitle}
+                    street={street}
+                    description={description}
+                    onPreviewClick={() => setShowAppPreview(true)}
+                    previewReady={previewReady}
                   />
                 </div>
               </div>
@@ -2292,6 +2304,7 @@ const BusinessDashboard = () => {
           coverImageUrl={coverImageUrl}
           coverVideoUrl={coverVideoUrl}
           galleryUrls={galleryUrls}
+          posts={posts}
         />
       )}
 
