@@ -24,12 +24,11 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   if (!MAINTENANCE_MODE) return <>{children}</>;
   if (loading) return null;
-  const searchParams = new URLSearchParams(location.search);
   const isPublicRoute =
     location.pathname === "/auth" ||
     location.pathname.startsWith("/set-password") ||
     location.pathname.startsWith("/join/") ||
-    (location.pathname.startsWith("/biznes/") && searchParams.has("t"));
+    location.pathname.startsWith("/biznes/");
   if (!user && !isPublicRoute) return <MaintenanceScreen />;
   return <>{children}</>;
 }
