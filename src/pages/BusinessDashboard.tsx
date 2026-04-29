@@ -254,6 +254,7 @@ const BusinessDashboard = () => {
     if (!placeId) return;
     if (!user && !previewToken && !bypass) return;
     setLoading(true);
+    try {
 
     // Try to find by place_id first, then fall back to business_profiles.id
     let { data: profileData } = await (supabase as any)
@@ -346,11 +347,13 @@ const BusinessDashboard = () => {
     // Use places.id for PostHog queries - events are tracked with places.id, not business_profiles.id
     const analyticsPlaceId = profileData.place_id ?? placeId;
 
-    // Fetch recent events from PostHog
-    const { data: phRecent } = await supabase.functions.invoke("posthog-analytics", {
-      body: { place_id: analyticsPlaceId, range_days: 90, include_recent: true },
-    });
-    if (phRecent?.recentEvents) setRecentEvents(phRecent.recentEvents);
+    // Fetch recent events from PostHog (skip in preview/bypass — anon may not have access)
+    if (user) {
+      const { data: phRecent } = await supabase.functions.invoke("posthog-analytics", {
+        body: { place_id: analyticsPlaceId, range_days: 90, include_recent: true },
+      });
+      if (phRecent?.recentEvents) setRecentEvents(phRecent.recentEvents);
+    }
 
     // loadAnalytics is triggered by useEffect when profile state updates
 
@@ -358,8 +361,9 @@ const BusinessDashboard = () => {
     const { data: postsData } = await (supabase as any)
       .from("business_posts").select("*").eq("place_id", placeId).order("created_at", { ascending: false });
     if (postsData) setPosts(postsData as BusinessPost[]);
-
-    setLoading(false);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const PRESET_DAYS: Record<Exclude<AnalyticsRange, 'custom'>, number> = { '7d': 7, '30d': 30, '90d': 90 };
