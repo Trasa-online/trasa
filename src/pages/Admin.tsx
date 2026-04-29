@@ -120,6 +120,8 @@ const Admin = () => {
   }>>([]);
   const [fetchingAll, setFetchingAll] = useState(false);
   const [bizSearch, setBizSearch] = useState("");
+  const [deletingBizId, setDeletingBizId] = useState<string | null>(null);
+  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
 
   // Pending custom subcategories
   const [pendingSubcats, setPendingSubcats] = useState<Array<{
@@ -403,6 +405,24 @@ const Admin = () => {
     setDeletingClaimId(null);
     setClaims(prev => prev.filter(c => c.id !== claim.id));
     toast.success("Usunięto zgłoszenie");
+  };
+
+  const handleDeleteBusiness = async (id: string) => {
+    if (!window.confirm("Na pewno usunąć ten profil biznesowy? Tej operacji nie można cofnąć.")) return;
+    setDeletingBizId(id);
+    await (supabase as any).from("business_profiles").delete().eq("id", id);
+    setDeletingBizId(null);
+    setAllBusinesses(prev => prev.filter(b => b.id !== id));
+    toast.success("Usunięto profil");
+  };
+
+  const handleDeleteReview = async (id: string) => {
+    if (!window.confirm("Na pewno usunąć tę wizytówkę? Tej operacji nie można cofnąć.")) return;
+    setDeletingReviewId(id);
+    await (supabase as any).from("business_profiles").delete().eq("id", id);
+    setDeletingReviewId(null);
+    setPendingReviews(prev => prev.filter(r => r.id !== id));
+    toast.success("Usunięto wizytówkę");
   };
 
   const handleInvite = async (entry: WaitlistEntry) => {
@@ -716,12 +736,18 @@ const Admin = () => {
                   {(review.gallery_urls ?? []).slice(0, 2).map((url, i) => <img key={i} src={url} alt="gallery" className="h-16 w-16 object-cover rounded-xl border border-border/30" />)}
                 </div>
               )}
-              {!review.is_verified && (
-                <Button size="sm" onClick={() => handleApproveReview(review.id)} disabled={approvingReviewId === review.id}
-                  className="w-full rounded-2xl bg-green-600 hover:bg-green-700 text-white border-0">
-                  {approvingReviewId === review.id ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Zatwierdzam...</> : "Zatwierdź wizytówkę"}
+              <div className="flex gap-2">
+                {!review.is_verified && (
+                  <Button size="sm" onClick={() => handleApproveReview(review.id)} disabled={approvingReviewId === review.id}
+                    className="flex-1 rounded-2xl bg-green-600 hover:bg-green-700 text-white border-0">
+                    {approvingReviewId === review.id ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Zatwierdzam...</> : "Zatwierdź wizytówkę"}
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" onClick={() => handleDeleteReview(review.id)} disabled={deletingReviewId === review.id}
+                  className="rounded-2xl border-red-200 text-red-600 hover:bg-red-50 shrink-0">
+                  {deletingReviewId === review.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Usuń"}
                 </Button>
-              )}
+              </div>
             </div>
           );
 
@@ -815,7 +841,7 @@ const Admin = () => {
                                 <p className="text-[10px] text-muted-foreground">{format(new Date(b.created_at), "dd.MM.yyyy")}</p>
                               </div>
                             </div>
-                            <div className="flex gap-2 pt-1">
+                            <div className="flex items-center gap-2 pt-1">
                               {b.activated_at
                                 ? <span className="text-[11px] text-green-700 font-medium">Aktywowane {format(new Date(b.activated_at), "dd.MM.yyyy")}</span>
                                 : <span className="text-[11px] text-amber-600 font-medium">Nie aktywowane</span>
@@ -823,6 +849,13 @@ const Admin = () => {
                               {(b.place_id || b.id) && (
                                 <a href={`/biznes/${b.place_id ?? b.id}`} target="_blank" rel="noopener noreferrer" className="ml-auto text-[11px] text-blue-600 underline underline-offset-2">Otwórz panel →</a>
                               )}
+                              <button
+                                onClick={() => handleDeleteBusiness(b.id)}
+                                disabled={deletingBizId === b.id}
+                                className="text-[11px] text-red-500 hover:text-red-700 underline underline-offset-2 disabled:opacity-50 shrink-0"
+                              >
+                                {deletingBizId === b.id ? "Usuwam..." : "Usuń"}
+                              </button>
                             </div>
                           </div>
                         ))

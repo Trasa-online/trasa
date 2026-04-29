@@ -464,6 +464,7 @@ const BusinessDashboard = () => {
   const coverVideoInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const postPhotoInputRef = useRef<HTMLInputElement>(null);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!placeId) return;
@@ -485,6 +486,14 @@ const BusinessDashboard = () => {
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
+
+  // Debounced auto-save for draft text fields (1.5s after last keystroke)
+  useEffect(() => {
+    if (!isDraft || !isDirty) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => { autoSaveDraft(); }, 1500);
+    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
+  }, [businessName, description, street, city, phone, email, website, tags, mainCategory]);
 
   const loadData = async (bypass = false) => {
     if (!placeId) return;
@@ -698,6 +707,7 @@ const BusinessDashboard = () => {
       const url = await uploadFile(file, "logo");
       setLogoUrl(url);
       setIsDirty(true);
+      if (isDraft) await autoSaveDraft({ logoUrl: url });
     } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać logo"); }
     setUploading(null);
   };
@@ -710,6 +720,7 @@ const BusinessDashboard = () => {
       const url = await uploadFile(file, "cover");
       setCoverImageUrl(url);
       setIsDirty(true);
+      if (isDraft) await autoSaveDraft({ coverImageUrl: url });
     } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać zdjęcia okładkowego"); }
     setUploading(null);
   };
@@ -742,6 +753,7 @@ const BusinessDashboard = () => {
       const url = supabase.storage.from("business-photos").getPublicUrl(data.path).data.publicUrl;
       setCoverVideoUrl(url);
       setIsDirty(true);
+      if (isDraft) await autoSaveDraft({ coverVideoUrl: url });
     } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać filmiku"); }
     setUploading(null);
     e.target.value = "";
@@ -777,6 +789,7 @@ const BusinessDashboard = () => {
         setCoverVideoUrl(url);
         setCoverImageUrl("");
         setIsDirty(true);
+        if (isDraft) await autoSaveDraft({ coverVideoUrl: url, coverImageUrl: "" });
       } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać filmiku"); }
     } else {
       setUploading("cover");
@@ -785,6 +798,7 @@ const BusinessDashboard = () => {
         setCoverImageUrl(url);
         setCoverVideoUrl("");
         setIsDirty(true);
+        if (isDraft) await autoSaveDraft({ coverImageUrl: url, coverVideoUrl: "" });
       } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać okładki"); }
     }
     setUploading(null);
@@ -910,6 +924,32 @@ const BusinessDashboard = () => {
     }
     setSaving(false);
   };
+
+  // Silent auto-save for draft mode — called on tab switch and after media uploads
+  const autoSaveDraft = useCallback(async (overrides?: Partial<{
+    businessName: string; description: string; street: string; city: string; phone: string; email: string;
+    website: string; tags: string[]; mainCategory: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[];
+  }>) => {
+    if (!profile || !isDraft) return;
+    const payload = {
+      business_name: overrides?.businessName ?? businessName,
+      description: overrides?.description ?? description || null,
+      street: overrides?.street ?? street || null,
+      city: overrides?.city ?? city || null,
+      phone: overrides?.phone ?? phone || null,
+      email: overrides?.email ?? email || null,
+      website: overrides?.website ?? website || null,
+      tags: (overrides?.tags ?? tags).length > 0 ? (overrides?.tags ?? tags) : null,
+      main_category: overrides?.mainCategory ?? mainCategory || null,
+      logo_url: overrides?.logoUrl ?? logoUrl || null,
+      cover_image_url: overrides?.coverImageUrl ?? coverImageUrl || null,
+      cover_video_url: overrides?.coverVideoUrl ?? coverVideoUrl || null,
+      gallery_urls: overrides?.galleryUrls ?? galleryUrls,
+      updated_at: new Date().toISOString(),
+    };
+    await (supabase as any).from("business_profiles").update(payload).eq("id", profile.id);
+    setIsDirty(false);
+  }, [profile, isDraft, businessName, description, street, city, phone, email, website, tags, mainCategory, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls]);
 
   const dismissVerifiedBanner = async () => {
     setShowVerifiedBanner(false);
@@ -1103,7 +1143,7 @@ const BusinessDashboard = () => {
         ] as const).map(item => (
           <button
             key={item.id}
-            onClick={() => setActiveSection(item.id)}
+            onClick={async () => { if (isDirty) await autoSaveDraft(); setActiveSection(item.id); }}
             title={!sidebarOpen ? item.label : undefined}
             className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-0.5 ${sidebarOpen ? 'text-left' : 'justify-center'} ${activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
           >
@@ -1184,7 +1224,7 @@ const BusinessDashboard = () => {
           ] as const).map(item => (
             <button
               key={item.id}
-              onClick={() => setActiveSection(item.id)}
+              onClick={async () => { if (isDirty) await autoSaveDraft(); setActiveSection(item.id); }}
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}
             >
               {item.label}
