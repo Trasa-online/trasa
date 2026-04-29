@@ -2223,7 +2223,7 @@ const BusinessDashboard = () => {
         <button
           className="fixed lg:hidden flex items-center gap-2 px-4 rounded-full shadow-xl z-40 active:scale-95 transition-transform h-12 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
           style={{
-            bottom: isDirty ? '5.5rem' : '1.5rem', right: '1rem',
+            bottom: (isDirty && !isDraft) ? '5.5rem' : '1.5rem', right: '1rem',
             background: previewReady ? '#0e0e0e' : '#cbd5e1',
             color: previewReady ? '#fefefe' : '#64748b',
           }}
@@ -2238,7 +2238,7 @@ const BusinessDashboard = () => {
       )}
 
       {/* Sticky save bar */}
-      {isDirty && !previewMode && (
+      {isDirty && !previewMode && !isDraft && (
         <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-safe-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent">
           <button onClick={handleSave} disabled={saving || uploading !== null} className="w-full max-w-2xl mx-auto flex py-3.5 rounded-2xl bg-primary hover:bg-primary text-white font-semibold text-sm transition-colors disabled:opacity-50 items-center justify-center gap-2">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}

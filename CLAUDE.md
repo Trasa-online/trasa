@@ -138,7 +138,13 @@ Klient → supabase.functions.invoke("google-places-proxy", ...) → Google Plac
 
 ### ⛔ ForBusinessPage — ZAMROŻONA, nie ruszać (src/pages/ForBusinessPage.tsx)
 
-**NIE edytuj tego pliku.** Strona `/dla-firm` jest zachowana do późniejszego wykorzystania. Nie przepisuj, nie refaktoruj, nie usuwaj. Nowy one-pager dla firm to osobny plik `src/pages/BusinessLanding.tsx` pod routem `/dla-firm/landing` (lub `/dla-firm` po decyzji).
+**NIE edytuj tego pliku.** Strona `/dla-firm` jest zachowana do późniejszego wykorzystania. Nie przepisuj, nie refaktoruj, nie usuwaj. Nowy one-pager dla firm to osobny plik `src/pages/BusinessLanding.tsx` pod routem `/dla-firm/landing`.
+
+---
+
+### ⛔ BusinessDashboard — główny dashboard firm ZAMROŻONY (src/pages/BusinessDashboard.tsx)
+
+**NIE wprowadzaj żadnych zmian** w głównym dashboardzie biznesowym (`/biznes/:id`) bez wyraźnej zgody użytkownika. Dotyczy to zarówno layoutu, logiki, jak i stylów. Każda zmiana wymaga explicit "możesz zmienić X w dashboardzie".
 
 ---
 
