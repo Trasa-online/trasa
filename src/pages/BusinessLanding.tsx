@@ -352,7 +352,7 @@ export default function BusinessLanding() {
           </button>
           <button
             onClick={() => navigate("/biznes/start")}
-            className="w-full rounded-2xl border border-slate-200 text-[#0E0E0E] font-semibold py-3.5 text-sm hover:bg-slate-50 transition-colors"
+            className="w-full rounded-2xl border border-orange-400 text-[#0E0E0E] font-semibold py-3.5 text-sm hover:bg-orange-50 transition-colors"
           >
             Zobacz jak to dziala →
           </button>
@@ -388,7 +388,7 @@ export default function BusinessLanding() {
             </button>
             <button
               onClick={() => navigate("/biznes/start")}
-              className="flex-1 rounded-2xl border border-slate-200 text-[#0E0E0E] font-semibold py-4 text-sm hover:bg-slate-50 transition-colors"
+              className="flex-1 rounded-2xl border border-orange-400 text-[#0E0E0E] font-semibold py-4 text-sm hover:bg-orange-50 transition-colors"
             >
               Zobacz jak to dziala →
             </button>
