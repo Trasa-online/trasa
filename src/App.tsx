@@ -157,6 +157,7 @@ function BusinessGuard() {
     if (!user) return;
     if (
       location.pathname.startsWith("/biznes") ||
+      location.pathname.startsWith("/dla-firm") ||
       location.pathname === "/auth" ||
       location.pathname.startsWith("/set-password") ||
       location.pathname === "/settings" ||
