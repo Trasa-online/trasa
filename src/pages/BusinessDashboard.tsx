@@ -1356,58 +1356,6 @@ const BusinessDashboard = () => {
                   </div>
                 )}
               </div>
-              {/* Preview card */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-3">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Podgląd wizytówki</p>
-                <div className="flex rounded-2xl bg-muted p-0.5 gap-0.5">
-                  {(['basic', 'premium'] as const).map(tab => (
-                    <button key={tab} onClick={() => { if (tab === 'premium' && plan === 'basic') setShowUpgradeBanner(true); setPreviewTab(tab); }}
-                      className={`flex-1 py-1.5 text-xs font-semibold rounded-2xl transition-all ${previewTab === tab ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
-                      {tab === 'basic' ? '✦ Basic' : '★ Premium'}
-                      {tab === 'premium' && plan !== 'premium' && <span className="ml-1 text-[9px] font-bold bg-amber-400 text-amber-900 px-1 py-0.5 rounded-full">PRO</span>}
-                    </button>
-                  ))}
-                </div>
-                <div className="relative w-full max-w-xs mx-auto" style={{ aspectRatio: '3/4', maxHeight: 300 }}>
-                  <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-lg">
-                    {coverImageUrl ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 bg-gradient-to-br from-orange-800 to-orange-600" />}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-4 space-y-1.5">
-                      {previewTab === 'premium' && logoUrl && <img src={logoUrl} className="w-8 h-8 rounded-full object-cover border-2 border-white/30 mb-1" />}
-                      <p className="text-white font-black text-xl leading-tight">{businessName || 'Nazwa lokalu'}</p>
-                      <p className="text-white/70 text-sm">{[placeCategory, '@trasa'].filter(Boolean).join(' · ')}</p>
-                      {previewTab === 'premium' && description && <p className="text-white/60 text-xs leading-relaxed line-clamp-2">{description}</p>}
-                      {previewTab === 'premium' && eventTitle && (
-                        <div className="inline-flex items-center gap-1 bg-amber-500/80 backdrop-blur-sm rounded-full px-2.5 py-1 text-white text-xs font-semibold">🎉 {eventTitle}</div>
-                      )}
-                    </div>
-                    {previewTab === 'basic' && <div className="absolute top-3 left-3 bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">✦ Basic</div>}
-                    {previewTab === 'premium' && <div className="absolute top-3 left-3 bg-amber-500/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">★ Premium</div>}
-                    {previewTab === 'premium' && plan !== 'premium' && (
-                      <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
-                        <span className="text-2xl">🔒</span>
-                        <p className="text-white font-bold text-sm text-center px-6">Plan Premium</p>
-                        <button onClick={() => setShowUpgradeBanner(true)} className="mt-2 px-4 py-2 rounded-2xl bg-amber-500 text-white text-xs font-bold active:opacity-80">Dowiedz się więcej →</button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <p className="text-[11px] text-muted-foreground text-center">{previewTab === 'basic' ? 'Basic: zdjęcie główne + dane kontaktowe' : 'Premium: logo, galeria, wydarzenia, posty, analityka'}</p>
-              </div>
-              {showUpgradeBanner && (
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-bold text-sm">★ Przejdź na Premium</p>
-                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Odblokuj logo, galerię do 10 zdjęć, wydarzenia, posty i pełną analitykę.</p>
-                    </div>
-                    <button onClick={() => setShowUpgradeBanner(false)} className="text-muted-foreground mt-0.5 active:opacity-60"><X className="h-4 w-4" /></button>
-                  </div>
-                  <a href="mailto:kontakt@trasa.app?subject=Upgrade do Premium" className="flex items-center justify-center w-full py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm active:opacity-80">
-                    Napisz do nas → kontakt@trasa.app
-                  </a>
-                </div>
-              )}
             </div>
           )}
 
