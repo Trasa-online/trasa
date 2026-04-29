@@ -1040,12 +1040,14 @@ const BusinessDashboard = () => {
     </div>
   );
 
+  const previewReady = businessName.trim().length > 0 && !!(coverImageUrl || coverVideoUrl || galleryUrls.length > 0);
+
   return (
     <div className="min-h-screen flex bg-slate-50 overflow-x-hidden">
 
       {/* ── Draft mode banner ── */}
       {isDraft && (() => {
-        const ready = businessName.trim().length > 0 && !!(coverImageUrl || coverVideoUrl || galleryUrls.length > 0);
+        const ready = previewReady;
         return (
           <div className="fixed top-0 left-0 right-0 z-[60] bg-orange-50 border-b border-orange-100 px-4 py-2 flex items-center justify-between gap-3">
             <p className="text-xs font-medium text-orange-700 leading-snug">
@@ -1143,8 +1145,11 @@ const BusinessDashboard = () => {
           <div className="flex items-center gap-2 ml-auto">
             {isDraft && (
               <button
-                onClick={() => setShowAppPreview(true)}
-                className="flex items-center gap-1.5 text-xs font-bold text-white px-3 py-1.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] active:scale-95 transition-transform whitespace-nowrap"
+                onClick={() => previewReady && setShowAppPreview(true)}
+                disabled={!previewReady}
+                title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie okładkowe" : undefined}
+                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full active:scale-95 transition-transform whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+                style={previewReady ? { background: 'linear-gradient(90deg, #F4A259, #F9662B)', color: 'white' } : { background: '#e2e8f0', color: '#94a3b8' }}
               >
                 <Play className="h-3 w-3" />
                 Przetestuj w aplikacji
@@ -1491,7 +1496,12 @@ const BusinessDashboard = () => {
                   logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
                   businessName={businessName} mainCategory={mainCategory} tags={tags} eventTitle={eventTitle}
                 />
-                <button onClick={() => setShowAppPreview(true)} className="mt-2 w-full text-xs text-slate-400 hover:text-slate-600 text-center transition-colors">
+                <button
+                  onClick={() => previewReady && setShowAppPreview(true)}
+                  disabled={!previewReady}
+                  title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie okładkowe" : undefined}
+                  className="mt-2 w-full text-xs text-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-slate-400 hover:text-slate-600 disabled:hover:text-slate-400"
+                >
                   Podgląd w aplikacji →
                 </button>
               </div>
@@ -1763,7 +1773,12 @@ const BusinessDashboard = () => {
                   logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
                   businessName={businessName} mainCategory={mainCategory} tags={tags} eventTitle={eventTitle}
                 />
-                <button onClick={() => setShowAppPreview(true)} className="mt-2 w-full text-xs text-slate-400 hover:text-slate-600 text-center transition-colors">
+                <button
+                  onClick={() => previewReady && setShowAppPreview(true)}
+                  disabled={!previewReady}
+                  title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie okładkowe" : undefined}
+                  className="mt-2 w-full text-xs text-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-slate-400 hover:text-slate-600 disabled:hover:text-slate-400"
+                >
                   Podgląd w aplikacji →
                 </button>
               </div>
@@ -2171,9 +2186,15 @@ const BusinessDashboard = () => {
       {/* Mobile FAB - app preview */}
       {(activeSection === 'gallery' || activeSection === 'profile' || activeSection === 'posts') && (
         <button
-          className="fixed lg:hidden flex items-center gap-2 px-4 rounded-full bg-foreground text-background shadow-xl z-40 active:scale-95 transition-transform h-12"
-          style={{ bottom: isDirty ? '5.5rem' : '1.5rem', right: '1rem' }}
-          onClick={() => setShowAppPreview(true)}
+          className="fixed lg:hidden flex items-center gap-2 px-4 rounded-full shadow-xl z-40 active:scale-95 transition-transform h-12 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+          style={{
+            bottom: isDirty ? '5.5rem' : '1.5rem', right: '1rem',
+            background: previewReady ? '#0e0e0e' : '#cbd5e1',
+            color: previewReady ? '#fefefe' : '#64748b',
+          }}
+          onClick={() => previewReady && setShowAppPreview(true)}
+          disabled={!previewReady}
+          title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie okładkowe" : undefined}
           aria-label="Podgląd w aplikacji"
         >
           <Play className="h-4 w-4 fill-current" />
