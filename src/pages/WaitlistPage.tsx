@@ -640,7 +640,7 @@ export default function WaitlistPage() {
       <div className="hidden lg:flex min-h-screen items-center justify-center gap-20 px-8 py-16 max-w-5xl mx-auto">
         {/* Left */}
         <div className="flex flex-col items-start text-left max-w-sm w-full">
-          <div className="w-14 h-14 rounded-full mb-6" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", boxShadow: "0 0 32px rgba(249,102,43,0.35), 0 0 64px rgba(249,102,43,0.10)" }} />
+          <div className="w-14 h-14 rounded-full mb-6" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
           <h1 className="text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-4">
             speed dating<br />
             z miastem

@@ -312,19 +312,18 @@ export default function BusinessLanding() {
 
       {/* ── MOBILE ── */}
       <div className="lg:hidden flex flex-col items-center px-5 pt-12 pb-10 gap-8">
-        <div className="w-14 h-14 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", boxShadow: "0 0 32px rgba(249,102,43,0.3)" }} />
+        <div className="w-14 h-14 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
         <div className="text-center">
-          <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#F4A259" }}>PRZED LAUNCHEM</p>
-          <h1 className="text-4xl font-black text-[#0E0E0E] leading-[1.05] mb-4">
-            Dolacz do Trasy<br />jako Founding<br />Partner
-          </h1>
-          <p className="text-[#979797] text-base leading-relaxed max-w-xs mx-auto mb-5">
-            Budujemy aplikacje do grupowego planowania podrozy. Szukamy pierwszych 100 lokali w Warszawie - wchodzisz bezplatnie i zostajesz na mapie zanim uzytkownicy tu trafią.
-          </p>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-white">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-white mb-4">
             <span className="text-base">🚀</span>
             <span className="text-sm font-semibold text-[#0E0E0E]">Premiera: czerwiec 2026</span>
           </div>
+          <h1 className="text-4xl font-black text-[#0E0E0E] leading-[1.05] mb-4">
+            Dołącz do Trasy<br />jako jeden<br />z pierwszych
+          </h1>
+          <p className="text-[#979797] text-base leading-relaxed max-w-xs mx-auto">
+            Budujemy aplikację do planowania city breaków. Szukamy pierwszych 100 lokali w Warszawie - wchodzisz bezpłatnie i zostajesz na mapie zanim użytkownicy tu trafią!
+          </p>
         </div>
 
         {/* Phone → Postcard */}
@@ -368,18 +367,17 @@ export default function BusinessLanding() {
       <div className="hidden lg:flex min-h-screen items-center justify-center gap-20 px-8 py-16 max-w-5xl mx-auto">
         {/* Left */}
         <div className="flex flex-col items-start text-left max-w-sm w-full">
-          <div className="w-14 h-14 rounded-full mb-6 shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)", boxShadow: "0 0 32px rgba(249,102,43,0.35), 0 0 64px rgba(249,102,43,0.10)" }} />
-          <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#F4A259" }}>PRZED LAUNCHEM</p>
-          <h1 className="text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-5">
-            Dolacz do Trasy<br />jako Founding<br />Partner
-          </h1>
-          <p className="text-[#979797] text-base leading-relaxed mb-6 max-w-xs">
-            Budujemy aplikacje do grupowego planowania podrozy po Polsce. Szukamy pierwszych 100 lokali w Warszawie - wchodzisz bezplatnie i zostajesz na mapie zanim uzytkownicy tu trafią.
-          </p>
-          <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-slate-200 bg-white mb-8">
+          <div className="w-14 h-14 rounded-full mb-6 shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+          <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-slate-200 bg-white mb-5">
             <span className="text-lg">🚀</span>
             <span className="text-sm font-semibold text-[#0E0E0E]">Premiera: czerwiec 2026</span>
           </div>
+          <h1 className="text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-5">
+            Dołącz do Trasy<br />jako jeden<br />z pierwszych
+          </h1>
+          <p className="text-[#979797] text-base leading-relaxed mb-8 max-w-xs">
+            Budujemy aplikację do planowania city breaków. Szukamy pierwszych 100 lokali w Warszawie - wchodzisz bezpłatnie i zostajesz na mapie zanim użytkownicy tu trafią!
+          </p>
           <div className="flex gap-3 w-full mb-4">
             <button
               onClick={() => navigate("/biznes/start")}
