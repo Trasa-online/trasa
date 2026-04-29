@@ -632,9 +632,6 @@ export default function WaitlistPage() {
               <div className="flex-1"><AppStoreBadge store="ios" /></div>
               <div className="flex-1"><AppStoreBadge store="android" /></div>
             </div>
-            <button onClick={() => navigate("/dla-firm")} className="w-full text-slate-500 text-xs hover:text-slate-700 transition-colors text-center">
-              Prowadzisz lokal? Dowiedz się więcej →
-            </button>
           </div>
         </div>
       </div>
@@ -652,7 +649,6 @@ export default function WaitlistPage() {
           <div className="w-full mb-3"><EmailCapture inputRef={inputRef} /></div>
           <p className="text-slate-400 text-xs mb-8">Powiadomimy Cię o premierze na iOS i Androidzie.</p>
           <div className="flex gap-3 mb-8"><AppStoreBadge store="ios" /><AppStoreBadge store="android" /></div>
-          <button onClick={() => navigate("/dla-firm")} className="text-slate-500 text-sm hover:text-slate-700 transition-colors underline underline-offset-4">Prowadzisz lokal? Dowiedz się więcej</button>
         </div>
 
         {/* Right: phone → postcard */}
