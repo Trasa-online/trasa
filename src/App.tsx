@@ -7,7 +7,7 @@ import { trackPageView } from "@/lib/analytics";
 import { useAuth, AuthProvider } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
-const MAINTENANCE_MODE = false; // LOCAL ONLY — nie commitować!
+const MAINTENANCE_MODE = true;
 
 function MaintenanceScreen() {
   return (
