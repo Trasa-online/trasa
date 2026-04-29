@@ -264,9 +264,19 @@ const BusinessDashboard = () => {
       profileData = byId;
     }
 
-    if (!profileData) { setAccessDenied(true); setLoading(false); return; }
+    if (!profileData) {
+      setAccessDenied(true);
+      setLoading(false);
+      if (bypass) toast.error("Nie znaleziono profilu. Uruchom migrację SQL w Supabase.");
+      return;
+    }
 
-    if (bypass) {
+    const HARDCODED_ADMINS = new Set(["nat.maz98@gmail.com", "tomalab97@gmail.com"]);
+    const isHardcodedAdmin = !!(user?.email && HARDCODED_ADMINS.has(user.email));
+
+    if (isHardcodedAdmin) {
+      setIsAdminUser(true);
+    } else if (bypass) {
       setPreviewMode(true);
     } else if (user) {
       const { data: roleData } = await supabase
