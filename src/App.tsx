@@ -7,7 +7,7 @@ import { trackPageView } from "@/lib/analytics";
 import { useAuth, AuthProvider } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
-const MAINTENANCE_MODE = true;
+const MAINTENANCE_MODE = false; // LOCAL ONLY — nie commitować!
 
 function MaintenanceScreen() {
   return (
@@ -28,7 +28,8 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
     location.pathname === "/auth" ||
     location.pathname.startsWith("/set-password") ||
     location.pathname.startsWith("/join/") ||
-    location.pathname.startsWith("/biznes/");
+    location.pathname.startsWith("/biznes/") ||
+    location.pathname.startsWith("/dla-firm/");
   if (!user && !isPublicRoute) return <MaintenanceScreen />;
   return <>{children}</>;
 }
@@ -211,6 +212,7 @@ const PublicProfile    = lazy(() => import("./pages/PublicProfile"));
 const BusinessDashboard = lazy(() => import("./pages/BusinessDashboard"));
 const BusinessOnePager  = lazy(() => import("./pages/BusinessOnePager"));
 const BusinessStart     = lazy(() => import("./pages/BusinessStart"));
+const BusinessLanding   = lazy(() => import("./pages/BusinessLanding"));
 
 const queryClient = new QueryClient();
 
@@ -259,6 +261,7 @@ const App = () => (
           <Route path="/biznes/start" element={<BusinessStart />} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
           <Route path="/dla-firm" element={<ForBusinessPage />} />
+          <Route path="/dla-firm/landing" element={<BusinessLanding />} />
           <Route path="/dla-firm/start" element={<Navigate to="/" replace />} />
 <Route path="*" element={<NotFound />} />
         </Routes>

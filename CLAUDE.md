@@ -136,6 +136,12 @@ Klient → supabase.functions.invoke("google-places-proxy", ...) → Google Plac
 - Lokalizacja: `api/` (root), NIE `src/api/`
 - Sekretne zmienne: Vercel Dashboard → Environment Variables (bez VITE_ prefix)
 
+### ⛔ ForBusinessPage — ZAMROŻONA, nie ruszać (src/pages/ForBusinessPage.tsx)
+
+**NIE edytuj tego pliku.** Strona `/dla-firm` jest zachowana do późniejszego wykorzystania. Nie przepisuj, nie refaktoruj, nie usuwaj. Nowy one-pager dla firm to osobny plik `src/pages/BusinessLanding.tsx` pod routem `/dla-firm/landing` (lub `/dla-firm` po decyzji).
+
+---
+
 ### ⛔ WaitlistPage — układ i animacja ZAMROŻONE (src/pages/WaitlistPage.tsx)
 
 **NIE zmieniaj układu, z-indeksów ani logiki animacji.** Układ jest zatwierdzony i wymaga długiego debugowania — każda zmiana może go zepsuć.
