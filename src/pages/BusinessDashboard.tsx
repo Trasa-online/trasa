@@ -235,7 +235,10 @@ const BusinessDashboard = () => {
 
   useEffect(() => {
     if (!placeId) return;
-    if (!user && !previewToken) return;
+    if (!user && !previewToken) {
+      setLoading(false); // show password screen for unauthenticated visitors
+      return;
+    }
     loadData();
   }, [user, placeId, previewToken]);
 
