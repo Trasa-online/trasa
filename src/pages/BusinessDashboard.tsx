@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import posthog from "posthog-js";
@@ -153,9 +153,13 @@ const BusinessDashboard = () => {
   const { placeId } = useParams<{ placeId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const previewToken = searchParams.get("t");
 
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const analyticsRequestId = useRef(0);
   const [placeCategory, setPlaceCategory] = useState<string | null>(null);
@@ -228,9 +232,10 @@ const BusinessDashboard = () => {
   const postPhotoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!user || !placeId) return;
+    if (!placeId) return;
+    if (!user && !previewToken) return;
     loadData();
-  }, [user, placeId]);
+  }, [user, placeId, previewToken]);
 
   // Warn before leaving with unsaved changes
   useEffect(() => {
@@ -244,7 +249,8 @@ const BusinessDashboard = () => {
   }, [isDirty]);
 
   const loadData = async () => {
-    if (!placeId || !user) return;
+    if (!placeId) return;
+    if (!user && !previewToken) return;
     setLoading(true);
 
     // Try to find by place_id first, then fall back to business_profiles.id
@@ -258,12 +264,20 @@ const BusinessDashboard = () => {
 
     if (!profileData) { setAccessDenied(true); setLoading(false); return; }
 
-    const { data: roleData } = await supabase
-      .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
-    const isAdmin = !!roleData;
+    if (user) {
+      const { data: roleData } = await supabase
+        .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
+      const isAdmin = !!roleData;
+      setIsAdminUser(isAdmin);
 
-    if (profileData.owner_user_id !== user.id && !isAdmin) {
-      setAccessDenied(true); setLoading(false); return;
+      if (profileData.owner_user_id !== user.id && !isAdmin) {
+        setAccessDenied(true); setLoading(false); return;
+      }
+    } else if (previewToken) {
+      if ((profileData as any).preview_token !== previewToken) {
+        setAccessDenied(true); setLoading(false); return;
+      }
+      setPreviewMode(true);
     }
 
     // Fetch place category
@@ -704,6 +718,19 @@ const BusinessDashboard = () => {
   return (
     <div className="min-h-screen flex bg-slate-50 overflow-x-hidden">
 
+      {/* ── Preview mode banner ── */}
+      {previewMode && (
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white px-4 py-2.5 flex items-center justify-between gap-3">
+          <p className="text-xs font-semibold leading-snug">To jest podgląd Twojego panelu w Trasie. Edycja wymagana logowania.</p>
+          <button
+            onClick={() => navigate("/set-password-biznes")}
+            className="shrink-0 bg-white text-orange-600 font-bold text-xs px-3 py-1.5 rounded-full whitespace-nowrap active:scale-95 transition-transform"
+          >
+            Przejmij konto
+          </button>
+        </div>
+      )}
+
       {/* ── Sidebar (desktop only) ── */}
       <aside className={`hidden md:flex shrink-0 flex-col fixed h-full bg-white border-r border-slate-100 py-5 z-20 transition-all duration-200 ${sidebarOpen ? 'w-56 px-3' : 'w-14 px-2'}`}>
         {/* Logo + collapse toggle */}
@@ -755,7 +782,7 @@ const BusinessDashboard = () => {
       </aside>
 
       {/* ── Main ── */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${sidebarOpen ? 'md:ml-56' : 'md:ml-14'}`}>
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${sidebarOpen ? 'md:ml-56' : 'md:ml-14'} ${previewMode ? 'pt-10' : ''}`}>
 
         {/* ── Top bar ── */}
         <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 md:px-6 h-14 flex items-center gap-3 shrink-0">
@@ -766,6 +793,18 @@ const BusinessDashboard = () => {
             <span className={`hidden md:inline text-[10px] font-bold px-2 py-0.5 rounded-full ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
+            {isAdminUser && (profile as any).preview_token && (
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/biznes/${placeId}?t=${(profile as any).preview_token}`;
+                  navigator.clipboard.writeText(url);
+                  toast.success("Link skopiowany!");
+                }}
+                className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-blue-600 px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100 transition-colors"
+              >
+                Kopiuj link dla lokalu
+              </button>
+            )}
             <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600 shrink-0">
               {profile.business_name?.slice(0, 2).toUpperCase() || 'BK'}
             </div>
@@ -1826,7 +1865,7 @@ const BusinessDashboard = () => {
       )}
 
       {/* Sticky save bar */}
-      {isDirty && (
+      {isDirty && !previewMode && (
         <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-safe-6 pb-6 pt-3 bg-gradient-to-t from-background via-background to-transparent">
           <button onClick={handleSave} disabled={saving || uploading !== null} className="w-full max-w-2xl mx-auto flex py-3.5 rounded-2xl bg-primary hover:bg-primary text-white font-semibold text-sm transition-colors disabled:opacity-50 items-center justify-center gap-2">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
