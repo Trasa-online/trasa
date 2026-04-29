@@ -6,7 +6,7 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Send, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical } from "lucide-react";
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -145,12 +145,12 @@ function StarRow({ count = 5, size = "sm" }: { count?: number; size?: "xs" | "sm
 
 function AppLikePreviewModal({
   onClose, onConvert, isDraft, convertingDraft,
-  businessName, mainCategory, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, posts,
+  businessName, mainCategory, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, posts, eventTitle,
 }: {
   onClose: () => void; onConvert: () => void; isDraft: boolean; convertingDraft: boolean;
   businessName: string; mainCategory: string; tags: string[]; description: string;
   street: string; city: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[];
-  posts: BusinessPost[];
+  posts: BusinessPost[]; eventTitle: string;
 }) {
   const [view, setView] = useState<'card' | 'detail'>('card');
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -181,7 +181,7 @@ function AppLikePreviewModal({
           50% { background-position: 100% 50%; }
         }
         .animated-gradient-btn {
-          background: linear-gradient(90deg, #F4A259, #F9662B, #F4A259);
+          background: linear-gradient(90deg, #3b82f6, #6366f1, #3b82f6);
           background-size: 200% 100%;
           animation: gradientPulse 2s ease-in-out infinite;
         }
@@ -213,6 +213,11 @@ function AppLikePreviewModal({
                 </div>
                 <h3 className="text-xl font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
                 {description && <p className="text-white/70 text-sm line-clamp-2 leading-snug">{description}</p>}
+                {eventTitle && (
+                  <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2.5 py-0.5 text-white font-semibold text-xs">
+                    🎉 {eventTitle}
+                  </div>
+                )}
                 {tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pt-0.5 pr-14">
                     {tags.slice(0, 4).map(t => (
@@ -1892,10 +1897,7 @@ const BusinessDashboard = () => {
                           Zdjęcia
                         </button>
                         <input ref={postPhotoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePostPhotoUpload} />
-                        <button onClick={handleAddPost} disabled={submittingPost || (!postDescription.trim() && postPhotos.length === 0)} className="ml-auto flex items-center gap-1.5 text-xs bg-primary text-white px-3 py-1.5 rounded-full font-semibold active:opacity-70 disabled:opacity-40">
-                          {submittingPost ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                          Opublikuj
-                        </button>
+                        <p className="ml-auto text-[11px] text-muted-foreground">Widoczny w podglądzie wizytówki</p>
                       </div>
                     </div>
                     {posts.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">Brak postów - dodaj pierwszy!</p>}
@@ -2304,7 +2306,17 @@ const BusinessDashboard = () => {
           coverImageUrl={coverImageUrl}
           coverVideoUrl={coverVideoUrl}
           galleryUrls={galleryUrls}
-          posts={posts}
+          eventTitle={eventTitle}
+          posts={[
+            ...(postDescription.trim() || postPhotos.length > 0 ? [{
+              id: 'draft-preview',
+              place_id: '',
+              description: postDescription.trim() || null,
+              photo_urls: postPhotos,
+              created_at: new Date().toISOString(),
+            }] : []),
+            ...posts,
+          ]}
         />
       )}
 
