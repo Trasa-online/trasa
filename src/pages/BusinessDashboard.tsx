@@ -205,7 +205,7 @@ function AppLikePreviewModal({
                 {tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pt-0.5 pr-14">
                     {tags.slice(0, 4).map(t => (
-                      <span key={t} className="px-2.5 py-0.5 bg-white/15 rounded-full text-xs text-white/80">{t}</span>
+                      <span key={t} className="px-2.5 py-0.5 bg-white/15 rounded-full text-xs text-white/80 font-medium">{t}</span>
                     ))}
                   </div>
                 )}
@@ -1531,44 +1531,50 @@ const BusinessDashboard = () => {
               </div>
 
               {/* Wizytówka preview - wygląd jak karta w swiperze */}
-              <div className="lg:hidden">
+              <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Podgląd wizytówki</p>
-                <div className="w-52 h-80 rounded-3xl overflow-hidden shadow-lg relative bg-slate-800">
+                {/* Karta — proporcje jak w aplikacji */}
+                <div className="relative rounded-3xl overflow-hidden shadow-lg bg-slate-900" style={{ aspectRatio: '9/16', maxWidth: 240 }}>
                   {/* Tło */}
-                  {coverImageUrl
-                    ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
-                    : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
+                  {coverVideoUrl
+                    ? <AutoVideo src={coverVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
+                    : coverImageUrl
+                      ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
+                      : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
                   }
                   {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
-                  {/* Treść */}
-                  <div className="absolute bottom-0 left-0 right-0 px-4 pb-5 space-y-1.5">
-                    {/* Logo + kategoria */}
-                    <div className="flex items-center gap-2">
-                      {logoUrl
-                        ? <img src={logoUrl} className="w-7 h-7 rounded-full object-cover border border-white/30" />
-                        : <div className="w-7 h-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-                      }
-                      <span className="text-white/60 text-[11px]">
-                        {mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : 'Kategoria'} · @trasa
-                      </span>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
+                  {/* Kategoria — góra lewo */}
+                  {mainCategory && (
+                    <div className="absolute top-3 left-3 bg-orange-500 text-white px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
+                      {MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label}
                     </div>
-                    {/* Nazwa */}
-                    <h3 className="text-xl font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
-                    {/* Event pill */}
-                    {eventTitle && (
-                      <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2 py-0.5 text-white font-semibold text-[10px]">
-                        🎉 {eventTitle.length > 20 ? `${eventTitle.slice(0, 20)}…` : eventTitle}
-                      </div>
-                    )}
-                    {/* Tagi */}
+                  )}
+                  {/* Info overlay */}
+                  <div className="absolute left-0 right-0 px-3 space-y-1" style={{ bottom: '3.5rem' }}>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span className="text-white/70 text-[10px]">4.6</span>
+                      {street && <><span className="text-white/40 text-[10px]">·</span><span className="text-white/70 text-[10px] truncate max-w-[120px]">{street}</span></>}
+                    </div>
+                    <h3 className="text-base font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+                    {description && <p className="text-white/70 text-[10px] line-clamp-2 leading-snug">{description}</p>}
                     {tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-1 pt-0.5 pr-10">
                         {tags.slice(0, 3).map(t => (
-                          <span key={t} className="px-2 py-0.5 bg-white/15 rounded-full text-[10px] font-semibold text-white/80">#{t}</span>
+                          <span key={t} className="px-2 py-0.5 bg-white/15 rounded-full text-[9px] font-medium text-white/80">{t}</span>
                         ))}
                       </div>
                     )}
+                  </div>
+                  {/* ChevronUp */}
+                  <div className="absolute right-3 h-8 w-8 bg-white rounded-full flex items-center justify-center shadow-md" style={{ bottom: '3.5rem' }}>
+                    <ChevronUp className="h-4 w-4 text-slate-700" />
+                  </div>
+                  {/* Przyciski akcji */}
+                  <div className="absolute bottom-2 left-2 right-2 flex gap-2">
+                    <div className="flex-1 py-2 rounded-full bg-white text-slate-900 font-bold text-[10px] text-center">Odrzuć</div>
+                    <div className="flex-1 py-2 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-[10px] text-center">Dodaj</div>
                   </div>
                 </div>
               </div>
