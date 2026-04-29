@@ -629,9 +629,10 @@ const BusinessDashboard = () => {
 
     // loadAnalytics is triggered by useEffect when profile state updates
 
-    // Fetch posts
+    // Fetch posts — use real place_id from profile if available
+    const postsPlaceId = profileData.place_id ?? placeId;
     const { data: postsData } = await (supabase as any)
-      .from("business_posts").select("*").eq("place_id", placeId).order("created_at", { ascending: false });
+      .from("business_posts").select("*").eq("place_id", postsPlaceId).order("created_at", { ascending: false });
     if (postsData) setPosts(postsData as BusinessPost[]);
     } finally {
       setLoading(false);
@@ -864,11 +865,12 @@ const BusinessDashboard = () => {
   };
 
   const handleAddPost = async () => {
-    if (!placeId || (!postDescription.trim() && postPhotos.length === 0)) return;
+    const effectivePlaceId = profile?.place_id ?? placeId;
+    if (!effectivePlaceId || (!postDescription.trim() && postPhotos.length === 0)) return;
     setSubmittingPost(true);
     const { data, error } = await (supabase as any)
       .from("business_posts")
-      .insert({ place_id: placeId, description: postDescription.trim() || null, photo_urls: postPhotos })
+      .insert({ place_id: effectivePlaceId, description: postDescription.trim() || null, photo_urls: postPhotos })
       .select()
       .single();
     if (error) { toast.error("Nie udało się dodać posta"); }
@@ -1832,6 +1834,12 @@ const BusinessDashboard = () => {
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Obecne wydarzenie</p>
                     <p className="text-xs text-muted-foreground -mt-2">Np. happy hour, promocja 1+1, koncert. Widoczne na wizytówce w aplikacji.</p>
+                    {isDraft && !profile?.place_id && (
+                      <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                        <Megaphone className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-800 leading-relaxed">Możesz tu wpisać dane, ale wydarzenie pojawi się w aplikacji po zatwierdzeniu wizytówki.</p>
+                      </div>
+                    )}
                     <div className="space-y-1">
                       <Label htmlFor="event_title">Tytuł</Label>
                       <Input id="event_title" value={eventTitle} maxLength={80} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder="np. Drinki 1+1 do 20:00" />
@@ -1851,7 +1859,13 @@ const BusinessDashboard = () => {
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Posty</p>
                     <p className="text-xs text-muted-foreground -mt-2">Aktualizacje, nowości, zdjęcia - widoczne dla odwiedzających w Twojej wizytówce.</p>
-                    <div className="space-y-3 border border-border/60 rounded-2xl p-3">
+                    {isDraft && !profile?.place_id && (
+                      <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                        <Megaphone className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-800 leading-relaxed">Posty będą dostępne po zatwierdzeniu wizytówki. Wypełnij dane lokalu i prześlij do weryfikacji.</p>
+                      </div>
+                    )}
+                    <div className={`space-y-3 border border-border/60 rounded-2xl p-3 ${isDraft && !profile?.place_id ? 'opacity-40 pointer-events-none select-none' : ''}`}>
                       <textarea rows={3} value={postDescription} maxLength={600} onChange={e => setPostDescription(e.target.value)} placeholder="Co nowego w Twoim lokalu?" className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
                       <p className="text-[11px] text-muted-foreground text-right -mt-2">{postDescription.length}/600</p>
                       {postPhotos.length > 0 && (
