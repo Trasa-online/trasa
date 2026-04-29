@@ -879,7 +879,7 @@ const BusinessDashboard = () => {
     setSaving(true);
 
     // Trigger review if profile looks complete and not already requested
-    const isComplete = businessName.trim() && street.trim() && city.trim() && phone.trim();
+    const isComplete = businessName.trim() && phone.trim();
     const nowIso = new Date().toISOString();
     const reviewAt = isComplete && !reviewRequestedAt ? nowIso : reviewRequestedAt;
 
@@ -1643,16 +1643,16 @@ const BusinessDashboard = () => {
                   )}
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="street">Ulica i numer <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="street" className="flex items-center gap-1.5">Ulica i numer <span className="text-[11px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
                   <Input id="street" value={street} maxLength={100} onChange={e => { setStreet(e.target.value); setIsDirty(true); }} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="city">Miasto <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="city" className="flex items-center gap-1.5">Miasto <span className="text-[11px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
                     <Input id="city" value={city} maxLength={80} onChange={e => { setCity(e.target.value); setIsDirty(true); }} />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="postal_code">Kod pocztowy <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="postal_code" className="flex items-center gap-1.5">Kod pocztowy <span className="text-[11px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
                     <Input id="postal_code" value={postalCode} maxLength={10} onChange={e => { setPostalCode(e.target.value); setIsDirty(true); }} />
                   </div>
                 </div>
