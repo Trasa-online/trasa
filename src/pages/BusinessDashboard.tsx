@@ -933,8 +933,8 @@ const BusinessDashboard = () => {
     if (!profile || !isDraft) return;
     const payload = {
       business_name: overrides?.businessName ?? businessName,
-      description: overrides?.description ?? description || null,
-      street: overrides?.street ?? street || null,
+      description: (overrides?.description ?? description) || null,
+      street: (overrides?.street ?? street) || null,
       city: (overrides?.city ?? city) || null,
       phone: (overrides?.phone ?? phone) || null,
       email: (overrides?.email ?? email) || null,
