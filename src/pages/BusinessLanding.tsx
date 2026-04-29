@@ -146,19 +146,17 @@ type Phase = "B" | "C" | "E";
 
 const PhoneMockup = forwardRef<HTMLDivElement, { onComplete?: () => void }>(({ onComplete }, ref) => {
   const [phase, setPhase] = useState<Phase>("B");
+  const [phaseKey, setPhaseKey] = useState(0);
 
   const nextPhase = useCallback(() => {
-    setPhase(p => {
-      if (p === "B") return "C";
-      if (p === "C") return "E";
-      return "B";
-    });
+    setPhase(p => (p === "B" ? "C" : p === "C" ? "E" : "B"));
+    setPhaseKey(k => k + 1);
   }, []);
 
   const phaseEl: Record<Phase, React.ReactNode> = {
-    B: <PhaseB key="B" onNext={nextPhase} />,
-    C: <PhaseC key="C" onNext={nextPhase} />,
-    E: <PhaseE key="E" onNext={nextPhase} />,
+    B: <PhaseB key={`B-${phaseKey}`} onNext={nextPhase} />,
+    C: <PhaseC key={`C-${phaseKey}`} onNext={nextPhase} />,
+    E: <PhaseE key={`E-${phaseKey}`} onNext={nextPhase} />,
   };
 
   const phoneStyle = { width: "clamp(270px, 42vw, 310px)", aspectRatio: "9/19.5" };
