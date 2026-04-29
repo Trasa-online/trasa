@@ -145,10 +145,10 @@ function StarRow({ count = 5, size = "sm" }: { count?: number; size?: "xs" | "sm
 
 function AppLikePreviewModal({
   onClose, onConvert, isDraft, convertingDraft,
-  businessName, mainCategory, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, posts, eventTitle,
+  businessName, mainCategory, subcategories, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, posts, eventTitle,
 }: {
   onClose: () => void; onConvert: () => void; isDraft: boolean; convertingDraft: boolean;
-  businessName: string; mainCategory: string; tags: string[]; description: string;
+  businessName: string; mainCategory: string; subcategories: string[]; tags: string[]; description: string;
   street: string; city: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[];
   posts: BusinessPost[]; eventTitle: string;
 }) {
@@ -203,7 +203,20 @@ function AppLikePreviewModal({
                   {catLabel}
                 </div>
               )}
-              {/* Expand to detail button */}
+              {/* Logo */}
+              {logoUrl && (
+                <div className="absolute top-4 right-4 h-10 w-10 rounded-full overflow-hidden border border-white/30 shadow-md bg-white/10">
+                  <img src={logoUrl} className="w-full h-full object-cover" />
+                </div>
+              )}
+              {/* Subcategories — vertical text on right edge */}
+              {subcategories.length > 0 && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-end gap-0.5" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
+                  {subcategories.slice(0, 3).map(s => (
+                    <span key={s} className="text-white/50 font-normal leading-none" style={{ fontSize: 9 }}>{s}</span>
+                  ))}
+                </div>
+              )}
               {/* Info overlay */}
               <div className="absolute left-0 right-0 px-4 space-y-1.5" style={{ bottom: '5rem' }}>
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -405,9 +418,9 @@ function AppLikePreviewModal({
   );
 }
 
-function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessName, mainCategory, tags, eventTitle, street, description, onPreviewClick, previewReady }: {
+function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessName, mainCategory, subcategories, tags, eventTitle, street, description, onPreviewClick, previewReady }: {
   logoUrl: string; coverImageUrl: string; coverVideoUrl: string; businessName: string; mainCategory: string;
-  tags: string[]; eventTitle: string; street?: string; description?: string;
+  subcategories: string[]; tags: string[]; eventTitle: string; street?: string; description?: string;
   onPreviewClick?: () => void; previewReady?: boolean;
 }) {
   const catLabel = mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : null;
@@ -425,6 +438,20 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
         {catLabel && (
           <div className="absolute top-3 left-3 bg-orange-500 text-white px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
             {catLabel}
+          </div>
+        )}
+        {/* Logo */}
+        {logoUrl && (
+          <div className="absolute top-3 right-3 h-8 w-8 rounded-full overflow-hidden border border-white/30 shadow-md bg-white/10">
+            <img src={logoUrl} className="w-full h-full object-cover" />
+          </div>
+        )}
+        {/* Subcategories — vertical text on right edge */}
+        {subcategories.length > 0 && (
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col items-end gap-0.5" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
+            {subcategories.slice(0, 3).map(s => (
+              <span key={s} className="text-white/50 font-normal leading-none" style={{ fontSize: 7 }}>{s}</span>
+            ))}
           </div>
         )}
         <div className="absolute left-0 right-0 px-3 space-y-1" style={{ bottom: '3.5rem' }}>
@@ -1247,7 +1274,7 @@ const BusinessDashboard = () => {
         {/* Nav items */}
         {([
           { id: 'overview',   label: 'Przegląd',      icon: LayoutDashboard },
-          { id: 'gallery',    label: 'Galeria zdjęć',  icon: Images },
+          { id: 'gallery',    label: 'Wygląd',          icon: Images },
           { id: 'profile',    label: 'Dane lokalu',    icon: Store },
           { id: 'posts',      label: 'Aktualności',    icon: Megaphone },
           { id: 'analytics',  label: 'Analityka',      icon: TrendingUp },
@@ -1328,7 +1355,7 @@ const BusinessDashboard = () => {
         <div className="md:hidden sticky top-14 z-10 bg-white border-b border-slate-100 flex overflow-x-auto shrink-0 px-3 gap-1 py-2">
           {([
             { id: 'overview', label: 'Przegląd' },
-            { id: 'gallery', label: 'Galeria' },
+            { id: 'gallery', label: 'Wygląd' },
             { id: 'profile', label: 'Dane' },
             { id: 'posts', label: 'Aktualności' },
             { id: 'analytics', label: 'Analityka' },
@@ -1474,7 +1501,7 @@ const BusinessDashboard = () => {
           {activeSection === 'gallery' && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-lg font-black">Galeria zdjęć</h2>
+                <h2 className="text-lg font-black">Wygląd</h2>
                 <p className="text-sm text-slate-400">Okładka i galeria dodatkowa widoczne na Twojej wizytówce.</p>
               </div>
 
@@ -1608,7 +1635,7 @@ const BusinessDashboard = () => {
               <div className="hidden lg:block w-72 shrink-0">
                 <BusinessCardPreview
                   logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
-                  businessName={businessName} mainCategory={mainCategory} tags={tags} eventTitle={eventTitle}
+                  businessName={businessName} mainCategory={mainCategory} subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
                   street={street} description={description}
                   onPreviewClick={() => setShowAppPreview(true)} previewReady={previewReady}
                 />
@@ -1836,7 +1863,7 @@ const BusinessDashboard = () => {
               <div className="hidden lg:block w-72 shrink-0">
                 <BusinessCardPreview
                   logoUrl={logoUrl} coverImageUrl={coverImageUrl} coverVideoUrl={coverVideoUrl}
-                  businessName={businessName} mainCategory={mainCategory} tags={tags} eventTitle={eventTitle}
+                  businessName={businessName} mainCategory={mainCategory} subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
                   street={street} description={description}
                   onPreviewClick={() => setShowAppPreview(true)} previewReady={previewReady}
                 />
@@ -1927,6 +1954,7 @@ const BusinessDashboard = () => {
                     coverVideoUrl={coverVideoUrl}
                     businessName={businessName}
                     mainCategory={mainCategory}
+                    subcategories={bizSubcategories}
                     tags={tags}
                     eventTitle={eventTitle}
                     street={street}
@@ -2298,6 +2326,7 @@ const BusinessDashboard = () => {
           convertingDraft={convertingDraft}
           businessName={businessName}
           mainCategory={mainCategory}
+          subcategories={bizSubcategories}
           tags={tags}
           description={description}
           street={street}
