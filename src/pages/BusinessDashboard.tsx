@@ -1853,8 +1853,8 @@ const BusinessDashboard = () => {
                     <p className="text-xs text-muted-foreground -mt-2">Np. happy hour, promocja 1+1, koncert. Widoczne na wizytówce w aplikacji.</p>
                     <div className="space-y-1">
                       <Label htmlFor="event_title">Tytuł</Label>
-                      <Input id="event_title" value={eventTitle} maxLength={80} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder="np. Drinki 1+1 do 20:00" />
-                      <p className="text-[11px] text-muted-foreground text-right">{eventTitle.length}/80</p>
+                      <Input id="event_title" value={eventTitle} maxLength={40} onChange={e => { setEventTitle(e.target.value); setIsDirty(true); }} placeholder="np. Drinki 1+1 do 20:00" />
+                      <p className="text-[11px] text-muted-foreground text-right">{eventTitle.length}/40</p>
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor="event_description">Opis</Label>
