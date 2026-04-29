@@ -45,7 +45,7 @@ const HomeTour = ({ onDone }: HomeTourProps) => {
 
   return (
     <>
-      {/* Dark overlay — covers BottomNav (z-50) */}
+      {/* Dark overlay - covers BottomNav (z-50) */}
       <div
         className="fixed inset-0 z-[55] bg-black/55"
         onClick={onDone}

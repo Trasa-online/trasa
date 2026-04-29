@@ -151,7 +151,7 @@ function PhaseE({ onNext, onComplete }: { onNext: () => void; onComplete?: () =>
       <motion.div className="absolute bottom-0 left-0 right-0 px-4 pb-6 flex flex-col items-center gap-2"
         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
         <p className="text-white font-black text-[14px] text-center leading-tight">Dołącz do pierwszych użytkowników</p>
-        <p className="text-white/55 text-[10px] text-center">Trasa — speed dating z miastem 🧡</p>
+        <p className="text-white/55 text-[10px] text-center">Trasa - speed dating z miastem 🧡</p>
         <button onClick={() => onComplete ? onComplete() : onNext()}
           className="mt-2 text-white/45 text-[8px] tracking-widest uppercase font-semibold">
           Dalej →
@@ -213,7 +213,7 @@ const PhoneMockup = forwardRef<HTMLDivElement, PhoneMockupProps>(
           style={{ boxShadow: "0 32px 80px -12px rgba(0,0,0,0.4)" }}
         />
 
-        {/* Physical buttons + notch — fade in after intro */}
+        {/* Physical buttons + notch - fade in after intro */}
         <motion.div
           animate={{ opacity: showBezel ? 1 : 0 }}
           transition={{ duration: 0.5 }}
@@ -383,7 +383,7 @@ function PostcardBack({ w, h, isVisible }: { w: number; h: number; isVisible: bo
     <div className="w-full h-full rounded-2xl overflow-hidden shadow-md flex flex-col"
       style={{ background: "#FEFEFE", padding: `${pad}px` }}>
 
-      {/* Top: address — full-width single row */}
+      {/* Top: address - full-width single row */}
       <div className="mb-3 flex justify-between items-baseline w-full">
         <span style={{ fontFamily: "monospace", fontSize: w * 0.038, color: "#aaa", letterSpacing: "0.05em", textTransform: "uppercase" }}>
           Nat i Bart
@@ -447,7 +447,7 @@ function PostcardReveal({ large = false, targetH }: { large?: boolean; targetH?:
   const h = Math.round(baseH * scale);
   const [flipped, setFlipped] = useState(false);
 
-  // Front shows for 3s, back for 8s — asymmetric timing
+  // Front shows for 3s, back for 8s - asymmetric timing
   useEffect(() => {
     const delay = flipped ? 8000 : 3000;
     const id = setTimeout(() => setFlipped(f => !f), delay);
@@ -550,14 +550,14 @@ export default function WaitlistPage() {
 
       {/* ── MOBILE ─────────────────────────────────────────────────────────────── */}
       <div className="lg:hidden">
-        {/* Fullscreen founders video — at root level (outside any transform) for iOS Safari */}
+        {/* Fullscreen founders video - at root level (outside any transform) for iOS Safari */}
         {scene === "intro" && (
           <FullscreenIntroVideo phoneBodyRef={phoneBodyRef} onDone={goDemo} onShrinkStart={() => setShrinking(true)} />
         )}
 
         <div className="flex flex-col" style={{ height: "100dvh" }}>
 
-          {/* Intro overlay — fixed z-50 (above video z-40): grayed app store badges */}
+          {/* Intro overlay - fixed z-50 (above video z-40): grayed app store badges */}
           <AnimatePresence>
             {scene === "intro" && (
               <motion.div
@@ -573,7 +573,7 @@ export default function WaitlistPage() {
             )}
           </AnimatePresence>
 
-          {/* Content — flex column: orb → phone (flex-1) */}
+          {/* Content - flex column: orb → phone (flex-1) */}
           <div className="flex-1 min-h-0 flex flex-col items-center px-2"
             style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 10px)" }}>
 
@@ -588,7 +588,7 @@ export default function WaitlistPage() {
               }}
             />
 
-            {/* Phone / postcard — flex-1 min-h-0: fills available space */}
+            {/* Phone / postcard - flex-1 min-h-0: fills available space */}
             <div className="relative flex-1 min-h-0 flex items-center justify-center w-full"
               style={{ zIndex: scene === "intro" ? (shrinking ? 50 : 1) : 70 }}>
               <AnimatePresence mode="wait">
@@ -615,7 +615,7 @@ export default function WaitlistPage() {
             </div>
           </div>
 
-          {/* Sticky bottom CTA — hidden during intro, fades in after */}
+          {/* Sticky bottom CTA - hidden during intro, fades in after */}
           <div
             className="shrink-0 px-4 pt-4 space-y-3"
             style={{

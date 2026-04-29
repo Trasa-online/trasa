@@ -136,7 +136,7 @@ const Terms = () => {
             Aplikacja korzysta z narzędzi analitycznych wyłącznie po udzieleniu przez Ciebie wyraźnej zgody.
           </p>
           <p className="text-muted-foreground mt-2">
-            <strong>PostHog</strong> — analiza ruchu i zachowań użytkowników: odwiedzane podstrony, czas trwania sesji, typ urządzenia, interakcje z interfejsem.
+            <strong>PostHog</strong> - analiza ruchu i zachowań użytkowników: odwiedzane podstrony, czas trwania sesji, typ urządzenia, interakcje z interfejsem.
           </p>
           <p className="text-muted-foreground mt-2">
             Dane mogą być przekazywane poza Europejski Obszar Gospodarczy (np. do USA) na podstawie standardowych klauzul umownych oraz odpowiednich mechanizmów zgodnych z RODO.
@@ -150,10 +150,10 @@ const Terms = () => {
           <h2 className="font-bold text-base mb-2">6. Przetwarzanie przez podmioty trzecie</h2>
           <p className="text-muted-foreground">Aplikacja korzysta z następujących usług zewnętrznych:</p>
           <ul className="text-muted-foreground list-disc list-inside mt-1 space-y-1">
-            <li>Supabase — baza danych i uwierzytelnianie</li>
-            <li>Google Gemini — przetwarzanie zapytań AI</li>
-            <li>Google Maps / Google Places API — mapy i wyszukiwanie miejsc</li>
-            <li>PostHog — analiza ruchu i zachowań użytkowników</li>
+            <li>Supabase - baza danych i uwierzytelnianie</li>
+            <li>Google Gemini - przetwarzanie zapytań AI</li>
+            <li>Google Maps / Google Places API - mapy i wyszukiwanie miejsc</li>
+            <li>PostHog - analiza ruchu i zachowań użytkowników</li>
           </ul>
           <p className="text-muted-foreground mt-2">
             Dane są przekazywane wyłącznie w zakresie niezbędnym do działania Aplikacji.

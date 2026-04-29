@@ -42,7 +42,7 @@ const Auth = () => {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) return;
-      // Always check for business profile first — business users must not land on /home
+      // Always check for business profile first - business users must not land on /home
       const { data: bp } = await (supabase as any)
         .from("business_profiles")
         .select("place_id, id")
@@ -80,7 +80,7 @@ const Auth = () => {
     if (!bizPlace.trim()) { toast.error("Podaj nazwę lokalu"); return; }
     setLoading(true);
     try {
-      // Just submit the inquiry — no auth account yet.
+      // Just submit the inquiry - no auth account yet.
       // Admin will invite the owner via Supabase after reviewing the claim.
       const { error: claimError } = await (supabase as any).from("business_claims").insert({
         contact_email: email,
@@ -456,7 +456,7 @@ const Auth = () => {
             </div>
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
-              {/* Honeypot — hidden from humans, bots fill it */}
+              {/* Honeypot - hidden from humans, bots fill it */}
               <input
                 type="text"
                 name="website"
@@ -527,7 +527,7 @@ const Auth = () => {
             </form>
           )}
 
-          {/* Business link — subtle, at the bottom */}
+          {/* Business link - subtle, at the bottom */}
           <p className="text-xs text-muted-foreground text-center mt-6">
             Jesteś właścicielem lokalu?{" "}
             <button

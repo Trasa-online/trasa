@@ -78,27 +78,27 @@ function getSnapPx(snap: SnapState, containerH?: number): number {
 type MockPin = Omit<PlanPin, "day_number">;
 
 const MOCK_PINS_DAY1: MockPin[] = [
-  { place_name: "Wzgórze Wawelskie", address: "Wawel 5, 31-001 Kraków", description: "Symboliczne serce Krakowa — zamek, katedra i panorama Wisły.", suggested_time: "10:00", duration_minutes: 90, category: "monument", latitude: 50.0542, longitude: 19.9354, walking_time_from_prev: null, distance_from_prev: null, photoUrl: "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?w=200&q=70", pros: ["Idź wcześnie rano — brak tłumów", "Wstęp na dziedziniec gratis"], cons: ["Muzea drogie w sezonie"], creator: { platform: "youtube", name: "Zwiedzamy Polskę", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Wzgórze Wawelskie", address: "Wawel 5, 31-001 Kraków", description: "Symboliczne serce Krakowa - zamek, katedra i panorama Wisły.", suggested_time: "10:00", duration_minutes: 90, category: "monument", latitude: 50.0542, longitude: 19.9354, walking_time_from_prev: null, distance_from_prev: null, photoUrl: "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?w=200&q=70", pros: ["Idź wcześnie rano - brak tłumów", "Wstęp na dziedziniec gratis"], cons: ["Muzea drogie w sezonie"], creator: { platform: "youtube", name: "Zwiedzamy Polskę", thumbnailUrl: "", postUrl: "#" } },
   { place_name: "Kazimierz", address: "ul. Szeroka, 31-053 Kraków", description: "Klimatyczna żydowska dzielnica pełna kawiarni i galerii.", suggested_time: "11:50", duration_minutes: 60, category: "walk", latitude: 50.0493, longitude: 19.9451, walking_time_from_prev: "20 min", distance_from_prev: "1.5 km", photoUrl: "https://images.unsplash.com/photo-1559521783-1d1599583485?w=200&q=70", pros: ["Klimatyczne uliczki", "Dużo street food"], cons: ["Ruchliwie w weekendy"], creator: { platform: "instagram", name: "krakow.travel", thumbnailUrl: "", postUrl: "#" } },
-  { place_name: "Mleczarnia", address: "ul. Meiselsa 20, 31-058 Kraków", description: "Kultowa knajpka na Kazimierzu — śledzie, bigos i wnętrze jak z PRL.", suggested_time: "13:00", duration_minutes: 75, category: "restaurant", latitude: 50.0500, longitude: 19.9462, walking_time_from_prev: "8 min", distance_from_prev: "600 m", photoUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200&q=70", pros: ["Autentyczna atmosfera PRL", "Przystępne ceny"], cons: ["Może być kolejka"], creator: { platform: "tiktok", name: "jedzempolske", thumbnailUrl: "", postUrl: "#" } },
-  { place_name: "Rynek Główny", address: "Rynek Główny, 31-042 Kraków", description: "Największy rynek Europy Środkowej — Sukiennice, Kościół Mariacki, hejnał.", suggested_time: "14:30", duration_minutes: 60, category: "monument", latitude: 50.0617, longitude: 19.9373, walking_time_from_prev: "20 min", distance_from_prev: "1.5 km", photoUrl: "https://images.unsplash.com/photo-1569880153113-76e33fc52d5f?w=200&q=70", pros: ["Obowiązkowy punkt w Krakowie", "Hejnał o każdej pełnej godzinie"], cons: ["Bardzo turystycznie — drogie restauracje dookoła"], creator: { platform: "youtube", name: "Poland Travel Guide", thumbnailUrl: "", postUrl: "#" } },
-  { place_name: "Cafe Camelot", address: "ul. Tomasza 17, 31-027 Kraków", description: "Legendarna krakowska kawiarnia — lody z bitą śmietaną i spokojna atmosfera.", suggested_time: "15:45", duration_minutes: 45, category: "cafe", latitude: 50.0639, longitude: 19.9357, walking_time_from_prev: "8 min", distance_from_prev: "600 m", photoUrl: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=200&q=70", pros: ["Najlepsza kawa w Starym Mieście", "Klimatyczne wnętrza"], cons: ["Małe, łatwo brak miejsca"], creator: { platform: "instagram", name: "cafecrawl.pl", thumbnailUrl: "", postUrl: "#" } },
-  { place_name: "Restauracja Miód Malina", address: "ul. Grodzka 40, 31-044 Kraków", description: "Polska kuchnia w sercu Starego Miasta — żurek, pierogi, bigos.", suggested_time: "19:00", duration_minutes: 90, category: "restaurant", latitude: 50.0579, longitude: 19.9386, walking_time_from_prev: "12 min", distance_from_prev: "900 m", photoUrl: "https://images.unsplash.com/photo-1466637574441-749b8f19452f?w=200&q=70", pros: ["Klasyczna polska kuchnia", "Dobra lokalizacja"], cons: ["Rezerwacja wskazana"], creator: { platform: "youtube", name: "Foodie w Polsce", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Mleczarnia", address: "ul. Meiselsa 20, 31-058 Kraków", description: "Kultowa knajpka na Kazimierzu - śledzie, bigos i wnętrze jak z PRL.", suggested_time: "13:00", duration_minutes: 75, category: "restaurant", latitude: 50.0500, longitude: 19.9462, walking_time_from_prev: "8 min", distance_from_prev: "600 m", photoUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200&q=70", pros: ["Autentyczna atmosfera PRL", "Przystępne ceny"], cons: ["Może być kolejka"], creator: { platform: "tiktok", name: "jedzempolske", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Rynek Główny", address: "Rynek Główny, 31-042 Kraków", description: "Największy rynek Europy Środkowej - Sukiennice, Kościół Mariacki, hejnał.", suggested_time: "14:30", duration_minutes: 60, category: "monument", latitude: 50.0617, longitude: 19.9373, walking_time_from_prev: "20 min", distance_from_prev: "1.5 km", photoUrl: "https://images.unsplash.com/photo-1569880153113-76e33fc52d5f?w=200&q=70", pros: ["Obowiązkowy punkt w Krakowie", "Hejnał o każdej pełnej godzinie"], cons: ["Bardzo turystycznie - drogie restauracje dookoła"], creator: { platform: "youtube", name: "Poland Travel Guide", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Cafe Camelot", address: "ul. Tomasza 17, 31-027 Kraków", description: "Legendarna krakowska kawiarnia - lody z bitą śmietaną i spokojna atmosfera.", suggested_time: "15:45", duration_minutes: 45, category: "cafe", latitude: 50.0639, longitude: 19.9357, walking_time_from_prev: "8 min", distance_from_prev: "600 m", photoUrl: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=200&q=70", pros: ["Najlepsza kawa w Starym Mieście", "Klimatyczne wnętrza"], cons: ["Małe, łatwo brak miejsca"], creator: { platform: "instagram", name: "cafecrawl.pl", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Restauracja Miód Malina", address: "ul. Grodzka 40, 31-044 Kraków", description: "Polska kuchnia w sercu Starego Miasta - żurek, pierogi, bigos.", suggested_time: "19:00", duration_minutes: 90, category: "restaurant", latitude: 50.0579, longitude: 19.9386, walking_time_from_prev: "12 min", distance_from_prev: "900 m", photoUrl: "https://images.unsplash.com/photo-1466637574441-749b8f19452f?w=200&q=70", pros: ["Klasyczna polska kuchnia", "Dobra lokalizacja"], cons: ["Rezerwacja wskazana"], creator: { platform: "youtube", name: "Foodie w Polsce", thumbnailUrl: "", postUrl: "#" } },
 ];
 
 const MOCK_PINS_DAY2: MockPin[] = [
-  { place_name: "Fabryka Schindlera", address: "ul. Lipowa 4, 30-702 Kraków", description: "Muzeum historii Krakowa podczas II WŚ — zarezerwuj bilet wcześniej.", suggested_time: "10:00", duration_minutes: 120, category: "museum", latitude: 50.0447, longitude: 19.9440, walking_time_from_prev: null, distance_from_prev: null, photoUrl: "https://images.unsplash.com/photo-1569338389880-f154ef1d5e14?w=200&q=70", pros: ["Poruszające muzeum", "Oryginalne wnętrza fabryki"], cons: ["Kup bilet online — wyprzedane z tygodniowym wyprzedzeniem"], creator: { platform: "youtube", name: "Historia Polska", thumbnailUrl: "", postUrl: "#" } },
-  { place_name: "Plac Bohaterów Getta", address: "Plac Bohaterów Getta, 30-543 Kraków", description: "Puste krzesła upamiętniające krakowskie getto — chwila refleksji.", suggested_time: "12:30", duration_minutes: 30, category: "monument", latitude: 50.0468, longitude: 19.9467, walking_time_from_prev: "8 min", distance_from_prev: "600 m", photoUrl: "https://images.unsplash.com/photo-1580974928064-f0aeef70895a?w=200&q=70", pros: ["Wzruszające miejsce pamięci", "Wstęp wolny"], cons: ["Emocjonalnie obciążające — zaplanuj czas na refleksję"] },
+  { place_name: "Fabryka Schindlera", address: "ul. Lipowa 4, 30-702 Kraków", description: "Muzeum historii Krakowa podczas II WŚ - zarezerwuj bilet wcześniej.", suggested_time: "10:00", duration_minutes: 120, category: "museum", latitude: 50.0447, longitude: 19.9440, walking_time_from_prev: null, distance_from_prev: null, photoUrl: "https://images.unsplash.com/photo-1569338389880-f154ef1d5e14?w=200&q=70", pros: ["Poruszające muzeum", "Oryginalne wnętrza fabryki"], cons: ["Kup bilet online - wyprzedane z tygodniowym wyprzedzeniem"], creator: { platform: "youtube", name: "Historia Polska", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Plac Bohaterów Getta", address: "Plac Bohaterów Getta, 30-543 Kraków", description: "Puste krzesła upamiętniające krakowskie getto - chwila refleksji.", suggested_time: "12:30", duration_minutes: 30, category: "monument", latitude: 50.0468, longitude: 19.9467, walking_time_from_prev: "8 min", distance_from_prev: "600 m", photoUrl: "https://images.unsplash.com/photo-1580974928064-f0aeef70895a?w=200&q=70", pros: ["Wzruszające miejsce pamięci", "Wstęp wolny"], cons: ["Emocjonalnie obciążające - zaplanuj czas na refleksję"] },
   { place_name: "Lunch w Podgórzu", address: "ul. Zabłocie, 30-701 Kraków", description: "Modna dzielnica z galeriami i świetnymi restauracjami na lunch.", suggested_time: "13:15", duration_minutes: 75, category: "restaurant", latitude: 50.0455, longitude: 19.9491, walking_time_from_prev: "5 min", distance_from_prev: "400 m", photoUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=200&q=70", pros: ["Nieturystyczna dzielnica", "Świeże koncepty gastronomiczne"], cons: ["Mniej opcji niż w centrum"], creator: { platform: "instagram", name: "podgorze.eats", thumbnailUrl: "", postUrl: "#" } },
-  { place_name: "Muzeum Narodowe w Krakowie", address: "al. 3 Maja 1, 30-062 Kraków", description: "Najważniejsze muzeum sztuki polskiej — od średniowiecza po współczesność.", suggested_time: "15:00", duration_minutes: 120, category: "museum", latitude: 50.0591, longitude: 19.9248, walking_time_from_prev: "30 min", distance_from_prev: "2.2 km", photoUrl: "https://images.unsplash.com/photo-1565060169194-19fabf63012c?w=200&q=70", pros: ["Bogata kolekcja sztuki", "Wtorek — wstęp bezpłatny"], cons: ["Duże — zaplanuj selektywne zwiedzanie"], creator: { platform: "youtube", name: "Art w Polsce", thumbnailUrl: "", postUrl: "#" } },
-  { place_name: "Kolacja przy Plantach", address: "ul. Krupnicza 20, 31-123 Kraków", description: "Wieczór w modnej części miasta pełnej restauracji i barów.", suggested_time: "19:30", duration_minutes: 90, category: "restaurant", latitude: 50.0636, longitude: 19.9307, walking_time_from_prev: "15 min", distance_from_prev: "1.1 km", photoUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&q=70", pros: ["Duży wybór restauracji", "Spacer po Plantach gratis"], cons: ["Popularny obszar — możliwe kolejki"] },
+  { place_name: "Muzeum Narodowe w Krakowie", address: "al. 3 Maja 1, 30-062 Kraków", description: "Najważniejsze muzeum sztuki polskiej - od średniowiecza po współczesność.", suggested_time: "15:00", duration_minutes: 120, category: "museum", latitude: 50.0591, longitude: 19.9248, walking_time_from_prev: "30 min", distance_from_prev: "2.2 km", photoUrl: "https://images.unsplash.com/photo-1565060169194-19fabf63012c?w=200&q=70", pros: ["Bogata kolekcja sztuki", "Wtorek - wstęp bezpłatny"], cons: ["Duże - zaplanuj selektywne zwiedzanie"], creator: { platform: "youtube", name: "Art w Polsce", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Kolacja przy Plantach", address: "ul. Krupnicza 20, 31-123 Kraków", description: "Wieczór w modnej części miasta pełnej restauracji i barów.", suggested_time: "19:30", duration_minutes: 90, category: "restaurant", latitude: 50.0636, longitude: 19.9307, walking_time_from_prev: "15 min", distance_from_prev: "1.1 km", photoUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&q=70", pros: ["Duży wybór restauracji", "Spacer po Plantach gratis"], cons: ["Popularny obszar - możliwe kolejki"] },
 ];
 
 const MOCK_PINS_DAY3: MockPin[] = [
-  { place_name: "Nowa Huta", address: "al. Róż 1, 31-621 Kraków", description: "Zaplanowane miasto z epoki stalinizmu — architektura jak z ZSRR.", suggested_time: "10:00", duration_minutes: 120, category: "walk", latitude: 50.0681, longitude: 20.0487, walking_time_from_prev: null, distance_from_prev: null, photoUrl: "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=200&q=70", pros: ["Unikalne socrealistyczne klimaty", "Prawie brak turystów"], cons: ["Daleko od centrum — jedź tramwajem"], creator: { platform: "tiktok", name: "urbex.polska", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Nowa Huta", address: "al. Róż 1, 31-621 Kraków", description: "Zaplanowane miasto z epoki stalinizmu - architektura jak z ZSRR.", suggested_time: "10:00", duration_minutes: 120, category: "walk", latitude: 50.0681, longitude: 20.0487, walking_time_from_prev: null, distance_from_prev: null, photoUrl: "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=200&q=70", pros: ["Unikalne socrealistyczne klimaty", "Prawie brak turystów"], cons: ["Daleko od centrum - jedź tramwajem"], creator: { platform: "tiktok", name: "urbex.polska", thumbnailUrl: "", postUrl: "#" } },
   { place_name: "Lunch w Nowej Hucie", address: "os. Centrum A, 31-901 Kraków", description: "Nieturystyczna restauracja w sercu socjalistycznej dzielnicy.", suggested_time: "12:30", duration_minutes: 75, category: "restaurant", latitude: 50.0683, longitude: 20.0471, walking_time_from_prev: "5 min", distance_from_prev: "400 m", photoUrl: "https://images.unsplash.com/photo-1559304822-9eb2f8b9d7b5?w=200&q=70", pros: ["Autentyczna, nieturystyczna kuchnia", "Bardzo przystępne ceny"], cons: ["Ograniczony wybór opcji wegetariańskich"] },
-  { place_name: "Bulwary Wiślane", address: "Bulwar Czerwieński, Kraków", description: "Spacer wzdłuż Wisły pod Wawelem — złota godzina i tratwy z barami.", suggested_time: "16:00", duration_minutes: 75, category: "walk", latitude: 50.0510, longitude: 19.9320, walking_time_from_prev: "30 min (tramwaj)", distance_from_prev: "8 km", photoUrl: "https://images.unsplash.com/photo-1568555890773-b4a26c44b77c?w=200&q=70", pros: ["Najpiękniejszy widok na Wawel", "Tratwy z barami latem"], cons: ["Tłoczno w ciepłe weekendy"], creator: { platform: "instagram", name: "krakow.sunsets", thumbnailUrl: "", postUrl: "#" } },
-  { place_name: "Kolacja — pożegnanie z Krakowem", address: "ul. Poselska 24, 31-002 Kraków", description: "Ostatnia kolacja z widokiem na Wawel — wspomnienia do zabrania ze sobą.", suggested_time: "19:30", duration_minutes: 90, category: "restaurant", latitude: 50.0563, longitude: 19.9388, walking_time_from_prev: "12 min", distance_from_prev: "900 m", photoUrl: "https://images.unsplash.com/photo-1424847651672-bf20a4b0982b?w=200&q=70", pros: ["Romantyczna atmosfera", "Widok na Wawel z tarasu"], cons: ["Wymagana rezerwacja z wyprzedzeniem"], creator: { platform: "youtube", name: "Kraków Vlog", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Bulwary Wiślane", address: "Bulwar Czerwieński, Kraków", description: "Spacer wzdłuż Wisły pod Wawelem - złota godzina i tratwy z barami.", suggested_time: "16:00", duration_minutes: 75, category: "walk", latitude: 50.0510, longitude: 19.9320, walking_time_from_prev: "30 min (tramwaj)", distance_from_prev: "8 km", photoUrl: "https://images.unsplash.com/photo-1568555890773-b4a26c44b77c?w=200&q=70", pros: ["Najpiękniejszy widok na Wawel", "Tratwy z barami latem"], cons: ["Tłoczno w ciepłe weekendy"], creator: { platform: "instagram", name: "krakow.sunsets", thumbnailUrl: "", postUrl: "#" } },
+  { place_name: "Kolacja - pożegnanie z Krakowem", address: "ul. Poselska 24, 31-002 Kraków", description: "Ostatnia kolacja z widokiem na Wawel - wspomnienia do zabrania ze sobą.", suggested_time: "19:30", duration_minutes: 90, category: "restaurant", latitude: 50.0563, longitude: 19.9388, walking_time_from_prev: "12 min", distance_from_prev: "900 m", photoUrl: "https://images.unsplash.com/photo-1424847651672-bf20a4b0982b?w=200&q=70", pros: ["Romantyczna atmosfera", "Widok na Wawel z tarasu"], cons: ["Wymagana rezerwacja z wyprzedzeniem"], creator: { platform: "youtube", name: "Kraków Vlog", thumbnailUrl: "", postUrl: "#" } },
 ];
 
 const ALL_MOCK_DAYS = [MOCK_PINS_DAY1, MOCK_PINS_DAY2, MOCK_PINS_DAY3];
@@ -246,7 +246,7 @@ function LargeCarouselCard({
       onPointerUp={handlePointerUp}
       className="flex-shrink-0 w-[80vw] h-full rounded-2xl overflow-hidden bg-card border border-border/40 snap-center flex flex-col cursor-pointer active:scale-[0.98] transition-transform select-none"
     >
-      {/* Hero image — 62% of card height */}
+      {/* Hero image - 62% of card height */}
       <div className="relative flex-[62] min-h-0">
         {fetchedPhoto && !imgFailed ? (
           <img src={fetchedPhoto} alt={pin.place_name} className="w-full h-full object-cover" onError={() => setImgFailed(true)} />
@@ -265,7 +265,7 @@ function LargeCarouselCard({
             <span className="text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5">{dayLabel}</span>
           )}
         </div>
-        {/* Reorder arrows — same row as number, right edge */}
+        {/* Reorder arrows - same row as number, right edge */}
         {(onMoveUp || onMoveDown) && (
           <div className="absolute top-3 right-3 flex items-center gap-1">
             <button
@@ -286,7 +286,7 @@ function LargeCarouselCard({
             </button>
           </div>
         )}
-        {/* Creator avatars — below reorder row */}
+        {/* Creator avatars - below reorder row */}
         {(pin.creators?.length ?? 0) > 0 && (
           <div className="absolute top-12 right-3 flex -space-x-1.5">
             {pin.creators!.slice(0, 3).map((c, i) => (
@@ -305,7 +305,7 @@ function LargeCarouselCard({
         </div>
       </div>
 
-      {/* Info — 38% */}
+      {/* Info - 38% */}
       <div className="flex-[38] min-h-0 px-3.5 py-3 flex items-stretch gap-2">
         {/* Left: text content */}
         <div className="flex-1 min-w-0 flex flex-col gap-1.5">
@@ -573,7 +573,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
   useEffect(() => {
     if (initialPlan) {
       enrichPlanWithPhotos(initialPlan, supabase).then(enriched => setPlan(enriched));
-      setMessages([{ role: "assistant", content: `Oto Twój plan w **${preferences.city}** 🗺️\n\nMogę go dostosować do Twoich potrzeb — powiedz co zmienić!` }]);
+      setMessages([{ role: "assistant", content: `Oto Twój plan w **${preferences.city}** 🗺️\n\nMogę go dostosować do Twoich potrzeb - powiedz co zmienić!` }]);
       setInitializing(false);
       return;
     }
@@ -619,7 +619,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
             enrichPlanWithPhotos(data.plan, supabase).then(enriched => setPlan(enriched));
             setMessages([...userMsgEntry, { role: "assistant", content: cleanMessage || fallbackIntro }]);
           } else {
-            // Day 2+: only greeting returned, no plan yet — show greeting + skeleton
+            // Day 2+: only greeting returned, no plan yet - show greeting + skeleton
             setMessages([...userMsgEntry, { role: "assistant", content: cleanMessage || fallbackIntro }]);
             setPlan(buildMockPlan(nDays)); // placeholder until user confirms
           }
@@ -716,7 +716,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
         }
         setPreparingPlan(false);
       } else if (plan && !data.plan) {
-        // AI gave text but no updated plan — check if it promised a change and force the plan
+        // AI gave text but no updated plan - check if it promised a change and force the plan
         const editKeywords = ["zamien", "zamień", "dodaj", "usuń", "usun", "zmien", "zmień", "aktualizuj", "usunął", "dodałem", "zamieniłem", "oto zaktualizowany", "plan po zmianach", "nowa wersja"];
         const msgLower = (parsedMsg ?? "").toLowerCase();
         const seemsLikeEdit = editKeywords.some(k => msgLower.includes(k));
@@ -742,7 +742,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
         }
         setLoading(false);
       } else {
-        // Text only — snap to peek so chat is visible
+        // Text only - snap to peek so chat is visible
         setSnap("peek");
         setLoading(false);
       }
@@ -816,7 +816,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
   };
 
   if (initializing) {
-    // Total loop: 3.6s — lines draw in sequentially, dots pop in, brief hold, then resets
+    // Total loop: 3.6s - lines draw in sequentially, dots pop in, brief hold, then resets
     const LOOP = 3.6;
     const lines = [
       { x1: 30, y1: 90, x2: 75,  y2: 40, len: 70, start: 0    },
@@ -903,7 +903,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
       {/* ── Chat area + Bottom sheet ─────────────────────────────────────── */}
       <div ref={chatContainerRef} className="flex-1 relative min-h-0">
 
-        {/* Chat messages hidden — plan-only mode */}
+        {/* Chat messages hidden - plan-only mode */}
 
         {/* ── Map overlay ─────────────────────────────────────────────────── */}
         {showMap && plan && (() => {
@@ -1364,7 +1364,7 @@ window.addEventListener('message',function(e){
                       );
                     })() : (
                       <div className="px-5 pb-6 pt-2 space-y-2">
-                        {/* Move to day — only for multi-day trips */}
+                        {/* Move to day - only for multi-day trips */}
                         {plan.days.length > 1 && (
                           <div className="flex gap-2 flex-wrap">
                             {plan.days
@@ -1423,7 +1423,7 @@ window.addEventListener('message',function(e){
               ) : (
                 /* ── Carousel view ── */
                 <>
-                  {/* Day tabs — shown only for multi-day plans */}
+                  {/* Day tabs - shown only for multi-day plans */}
                   {plan.days.length > 1 && (
                     <div className="flex gap-1.5 px-4 pt-2 pb-1 flex-shrink-0 overflow-x-auto scrollbar-none">
                       {plan.days.map(d => (
@@ -1479,7 +1479,7 @@ window.addEventListener('message',function(e){
                           })}
                         </div>
                       )}
-                      {/* Large card carousel — fills available height */}
+                      {/* Large card carousel - fills available height */}
                       <div className="flex-1 min-h-0 overflow-hidden py-2">
                         <div ref={carouselRef} className="h-full flex gap-3 overflow-x-auto px-[10vw] snap-x snap-mandatory scrollbar-none">
                           {plan.days.flatMap((day, dayIdx) => {
@@ -1512,7 +1512,7 @@ window.addEventListener('message',function(e){
                             }
                             return cards;
                           })}
-                          {/* Add pin button — same height as cards */}
+                          {/* Add pin button - same height as cards */}
                           <button
                             onClick={() => setAddPinDay(plan.days[plan.days.length - 1].day_number)}
                             className="flex-shrink-0 w-[80vw] h-full rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-2 text-muted-foreground snap-center"

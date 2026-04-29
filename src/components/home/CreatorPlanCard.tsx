@@ -70,13 +70,13 @@ export default function CreatorPlanCard({ plan, onClick }: CreatorPlanCardProps)
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
 
-        {/* City badge — top right */}
+        {/* City badge - top right */}
         <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1">
           <MapPin className="h-3 w-3 text-white/80" />
           <span className="text-white text-xs font-medium">{plan.city}</span>
         </div>
 
-        {/* Creator badge — bottom left */}
+        {/* Creator badge - bottom left */}
         <div className="absolute bottom-3 left-3 flex items-center gap-2.5">
           {plan.creator_avatar_url ? (
             <img
@@ -135,7 +135,7 @@ export default function CreatorPlanCard({ plan, onClick }: CreatorPlanCardProps)
           </div>
         )}
 
-        {/* Place photo strip — or emoji fallback */}
+        {/* Place photo strip - or emoji fallback */}
         {photoPlaces.length > 0 ? (
           <div className="flex gap-1.5 h-14">
             {photoPlaces.map(p => (

@@ -49,7 +49,7 @@ const RoutePreviewModal = ({
     ? end && end.getTime() !== start.getTime()
       ? `Twoja trasa ${format(start, "dd")}-${format(end, "dd.MM.yyyy")}`
       : `Twoja trasa ${format(start, "dd.MM.yyyy")}`
-    : `Twoja trasa — ${city}`;
+    : `Twoja trasa - ${city}`;
 
   const timelineDays = days.map(d => ({
     day_number: d.day_number,

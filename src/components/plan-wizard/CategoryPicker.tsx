@@ -41,7 +41,7 @@ const CategoryPicker = ({ onSelect, onShowAll, visitedCategories = [], likedCoun
         <p className="text-sm text-muted-foreground">
           {isReturn
             ? `${likedCount} miejsc wybranych · wybierz kolejną kategorię`
-            : "Wybierz kategorię — pokażemy 20 losowych miejsc."}
+            : "Wybierz kategorię - pokażemy 20 losowych miejsc."}
         </p>
       </div>
 

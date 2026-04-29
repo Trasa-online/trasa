@@ -171,7 +171,7 @@ export default function CreatePolecajkaSheet({ open, onClose, onPublished, city,
                       </div>
                     </button>
 
-                    {/* Description input — only when selected */}
+                    {/* Description input - only when selected */}
                     {isOn && (
                       <div className="px-3 pb-3">
                         <input

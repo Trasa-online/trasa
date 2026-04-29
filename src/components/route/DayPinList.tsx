@@ -132,7 +132,7 @@ const DayPinList = ({
 
           return (
             <div key={index}>
-              {/* Walking connector — shown before each pin except the first */}
+              {/* Walking connector - shown before each pin except the first */}
               {index > 0 && walkInfo && (
                 <div className="flex items-center gap-1.5 pl-[52px] py-1 text-[11px] text-muted-foreground/60">
                   <Footprints className="h-3 w-3 shrink-0" />
@@ -241,7 +241,7 @@ const DayPinList = ({
                   </button>
                 )}
 
-                {/* Move to day — only for multi-day trips */}
+                {/* Move to day - only for multi-day trips */}
                 {onMoveToDay && totalDays > 1 && (
                   <div className="flex-shrink-0 flex flex-col gap-0.5">
                     {Array.from({ length: totalDays }, (_, i) => i + 1)

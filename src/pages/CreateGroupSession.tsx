@@ -250,7 +250,7 @@ const CreateGroupSession = () => {
       <div className="flex-1 overflow-y-auto flex flex-col px-4 py-6 gap-6">
         {!createdCode ? (
           <>
-            {/* Join by code — TOP */}
+            {/* Join by code - TOP */}
             <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
               <p className="text-sm font-semibold">Dołącz do sesji</p>
               <p className="text-xs text-muted-foreground">Masz kod od znajomego? Wpisz go poniżej.</p>
@@ -355,7 +355,7 @@ const CreateGroupSession = () => {
               {loading ? "Tworzę sesję…" : "Stwórz sesję grupową"}
             </button>
 
-            {/* Active sessions — BOTTOM */}
+            {/* Active sessions - BOTTOM */}
             {(activeSessions.length > 0 || historicalSessions.length > 0) && (
               <div className="space-y-2 pt-2">
                 <div className="flex items-center gap-3 mb-1">
@@ -427,13 +427,13 @@ const CreateGroupSession = () => {
               </p>
             </div>
 
-            {/* Friend invite — PRIMARY */}
+            {/* Friend invite - PRIMARY */}
             <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <Bell className="h-4 w-4 text-orange-600 shrink-0" />
                 <p className="text-sm font-semibold">Wyślij powiadomienie</p>
               </div>
-              {/* Hidden fake fields — trick iOS into not showing Face ID */}
+              {/* Hidden fake fields - trick iOS into not showing Face ID */}
               <input type="text" aria-hidden="true" className="hidden" autoComplete="username" tabIndex={-1} readOnly />
               <input type="password" aria-hidden="true" className="hidden" autoComplete="current-password" tabIndex={-1} readOnly />
               <div className="flex items-center gap-2 bg-background border border-border/60 rounded-2xl px-3 h-10">
@@ -491,7 +491,7 @@ const CreateGroupSession = () => {
               )}
             </div>
 
-            {/* Share code — SECONDARY */}
+            {/* Share code - SECONDARY */}
             <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Lub udostępnij kod</p>
               <p className="text-3xl font-black tracking-widest text-center py-1">{createdCode}</p>

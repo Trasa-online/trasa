@@ -20,7 +20,7 @@ export function getConsent(): ConsentStatus {
   return null;
 }
 
-/** For unauthenticated visitors — stored in sessionStorage (resets each session). */
+/** For unauthenticated visitors - stored in sessionStorage (resets each session). */
 export function getSessionConsent(): ConsentStatus {
   const val = sessionStorage.getItem(SESSION_CONSENT_KEY);
   if (val === "granted" || val === "denied") return val;
@@ -64,7 +64,7 @@ export async function grantConsent() {
 
 export function denyConsent() {
   localStorage.setItem(CONSENT_KEY, "denied");
-  // analytics_storage remains 'denied' — no gtag update needed
+  // analytics_storage remains 'denied' - no gtag update needed
   void saveConsentToProfile("denied");
 }
 
@@ -103,6 +103,6 @@ export async function syncConsentFromProfile(): Promise<boolean> {
     return false;
   }
 
-  // No consent in DB — show banner
+  // No consent in DB - show banner
   return true;
 }

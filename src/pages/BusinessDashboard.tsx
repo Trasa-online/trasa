@@ -313,7 +313,7 @@ const BusinessDashboard = () => {
       setShowVerifiedBanner(true);
     }
 
-    // Use places.id for PostHog queries — events are tracked with places.id, not business_profiles.id
+    // Use places.id for PostHog queries - events are tracked with places.id, not business_profiles.id
     const analyticsPlaceId = profileData.place_id ?? placeId;
 
     // Fetch recent events from PostHog
@@ -578,7 +578,7 @@ const BusinessDashboard = () => {
     const { error } = await (supabase as any).from("business_posts").delete().eq("id", id);
     if (error) {
       toast.error("Nie udało się usunąć posta");
-      // Rollback — reload posts
+      // Rollback - reload posts
       const { data } = await (supabase as any)
         .from("business_posts").select("*").eq("place_id", placeId).order("created_at", { ascending: false });
       if (data) setPosts(data as BusinessPost[]);
@@ -653,7 +653,7 @@ const BusinessDashboard = () => {
     setSupportSubmitting(true);
     const { error } = await (supabase as any).from("bug_reports").insert({
       user_id: user?.id ?? null,
-      description: `[Panel biznesowy — ${profile?.business_name ?? ""}]\n\n${supportMessage.trim()}`,
+      description: `[Panel biznesowy - ${profile?.business_name ?? ""}]\n\n${supportMessage.trim()}`,
       status: "new",
     });
     setSupportSubmitting(false);
@@ -805,7 +805,7 @@ const BusinessDashboard = () => {
                   <div className="flex-1">
                     <p className="font-black text-base leading-tight">Witaj w Panelu Biznesowym trasy! 🎁</p>
                     <p className="text-sm text-blue-100 mt-1.5 leading-relaxed">
-                      Twoje konto jest aktywne i masz dostęp do pełnego pakietu <strong className="text-white">Premium</strong> — gratis przez pierwsze 3 miesiące. Wypełnij wizytówkę i poczekaj na weryfikację.
+                      Twoje konto jest aktywne i masz dostęp do pełnego pakietu <strong className="text-white">Premium</strong> - gratis przez pierwsze 3 miesiące. Wypełnij wizytówkę i poczekaj na weryfikację.
                     </p>
                   </div>
                   <button onClick={() => { setShowWelcomeBanner(false); localStorage.setItem(`welcome_seen_${profile!.id}`, "1"); }} className="mt-0.5 text-blue-200 active:opacity-60 flex-shrink-0">
@@ -870,7 +870,7 @@ const BusinessDashboard = () => {
                       <div className={`h-8 w-8 rounded-xl ${bg} flex items-center justify-center mb-3`}>
                         <Icon className={`h-4 w-4 ${color}`} />
                       </div>
-                      <p className="text-2xl font-black text-foreground leading-none mb-1">{analyticsLoading ? '—' : value}</p>
+                      <p className="text-2xl font-black text-foreground leading-none mb-1">{analyticsLoading ? '-' : value}</p>
                       <p className="text-xs text-slate-400 leading-snug">{label}</p>
                       <p className="text-[10px] text-slate-300 mt-0.5">ostatnie {analyticsRange === '7d' ? '7 dni' : analyticsRange === '30d' ? '30 dni' : '3 miesiące'}</p>
                     </div>
@@ -880,7 +880,7 @@ const BusinessDashboard = () => {
                 <div className="relative rounded-2xl border border-dashed border-border/60 p-4 overflow-hidden">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 opacity-30 pointer-events-none select-none">
                     {['Wyświetlenia', 'Na trasach', 'Kliknięcia', 'Aktywność'].map(l => (
-                      <div key={l} className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-2xl font-black">—</p><p className="text-xs text-slate-400">{l}</p></div>
+                      <div key={l} className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-2xl font-black">-</p><p className="text-xs text-slate-400">{l}</p></div>
                     ))}
                   </div>
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
@@ -1143,7 +1143,7 @@ const BusinessDashboard = () => {
 
               <div className="flex flex-col lg:flex-row gap-5 items-start">
               <div className="flex-1 min-w-0 space-y-5">
-              {/* ── Logo — avatar style ── */}
+              {/* ── Logo - avatar style ── */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
                 <p className="text-sm font-bold text-foreground mb-4">Logo lokalu</p>
                 <div className="flex items-center gap-5">
@@ -1174,7 +1174,7 @@ const BusinessDashboard = () => {
                 </div>
               </div>
 
-              {/* Wizytówka preview — wygląd jak karta w swiperze */}
+              {/* Wizytówka preview - wygląd jak karta w swiperze */}
               <div className="lg:hidden">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Podgląd wizytówki</p>
                 <div className="w-52 h-80 rounded-3xl overflow-hidden shadow-lg relative bg-slate-800">
@@ -1221,7 +1221,7 @@ const BusinessDashboard = () => {
                 <div className="space-y-1">
                   <Label htmlFor="business_name">Nazwa lokalu</Label>
                   <Input id="business_name" value={businessName} readOnly disabled className="bg-muted/50 text-muted-foreground cursor-not-allowed" />
-                  <p className="text-[11px] text-muted-foreground">Nazwa ustawiana przy rejestracji — skontaktuj się z nami, by ją zmienić.</p>
+                  <p className="text-[11px] text-muted-foreground">Nazwa ustawiana przy rejestracji - skontaktuj się z nami, by ją zmienić.</p>
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="street">Ulica i numer <span className="text-red-500">*</span></Label>
@@ -1288,7 +1288,7 @@ const BusinessDashboard = () => {
                     </div>
                     {/* Własna podkategoria */}
                     <div className="mt-4 p-3 rounded-xl bg-muted/50 border border-border/40 space-y-2">
-                      <p className="text-[11px] text-muted-foreground leading-snug">Nie widzisz swojej? Zaproponuj własną — sprawdzimy i dodamy.</p>
+                      <p className="text-[11px] text-muted-foreground leading-snug">Nie widzisz swojej? Zaproponuj własną - sprawdzimy i dodamy.</p>
                       <div className="flex gap-2 items-center">
                         <input
                           value={customSubcategory}
@@ -1313,8 +1313,8 @@ const BusinessDashboard = () => {
                           'text-amber-600'
                         }`}>
                           {customSubcategoryStatus === 'approved' ? '✓ Zatwierdzona' :
-                           customSubcategoryStatus === 'rejected' ? '✗ Odrzucona — zmień propozycję' :
-                           '⏳ Propozycja wysłana — oczekuje na akceptację'}
+                           customSubcategoryStatus === 'rejected' ? '✗ Odrzucona - zmień propozycję' :
+                           '⏳ Propozycja wysłana - oczekuje na akceptację'}
                         </p>
                       )}
                     </div>
@@ -1461,7 +1461,7 @@ const BusinessDashboard = () => {
                   {/* Posts */}
                   <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Posty</p>
-                    <p className="text-xs text-muted-foreground -mt-2">Aktualizacje, nowości, zdjęcia — widoczne dla odwiedzających w Twojej wizytówce.</p>
+                    <p className="text-xs text-muted-foreground -mt-2">Aktualizacje, nowości, zdjęcia - widoczne dla odwiedzających w Twojej wizytówce.</p>
                     <div className="space-y-3 border border-border/60 rounded-2xl p-3">
                       <textarea rows={3} value={postDescription} maxLength={600} onChange={e => setPostDescription(e.target.value)} placeholder="Co nowego w Twoim lokalu?" className="w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
                       <p className="text-[11px] text-muted-foreground text-right -mt-2">{postDescription.length}/600</p>
@@ -1487,7 +1487,7 @@ const BusinessDashboard = () => {
                         </button>
                       </div>
                     </div>
-                    {posts.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">Brak postów — dodaj pierwszy!</p>}
+                    {posts.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">Brak postów - dodaj pierwszy!</p>}
                     <div className="space-y-3">
                       {posts.map(post => (
                         <div key={post.id} className="border border-border/50 rounded-2xl p-3 space-y-2">
@@ -1506,7 +1506,7 @@ const BusinessDashboard = () => {
                     </div>
                   </div>
                 </div>
-                {/* Preview panel — right (desktop) / bottom (mobile/tablet) */}
+                {/* Preview panel - right (desktop) / bottom (mobile/tablet) */}
                 <div className="w-full lg:w-72 shrink-0">
                   <BusinessCardPreview
                     logoUrl={logoUrl}
@@ -1531,7 +1531,7 @@ const BusinessDashboard = () => {
                   <h2 className="text-lg font-black">Analityka</h2>
                   <p className="text-sm text-slate-400">
                     {analyticsRange === 'custom' && customDateRange?.from
-                      ? `${format(customDateRange.from, 'd MMM', { locale: pl })}${customDateRange.to && customDateRange.to !== customDateRange.from ? ` — ${format(customDateRange.to, 'd MMM yyyy', { locale: pl })}` : ''}`
+                      ? `${format(customDateRange.from, 'd MMM', { locale: pl })}${customDateRange.to && customDateRange.to !== customDateRange.from ? ` - ${format(customDateRange.to, 'd MMM yyyy', { locale: pl })}` : ''}`
                       : 'Statystyki aktywności Twojego lokalu.'}
                   </p>
                 </div>
@@ -1623,7 +1623,7 @@ const BusinessDashboard = () => {
                         <div className={`h-9 w-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
                           <Icon className={`h-4 w-4 ${color}`} />
                         </div>
-                        <p className="text-2xl font-black text-foreground leading-none mb-1">{analyticsLoading ? '—' : value}</p>
+                        <p className="text-2xl font-black text-foreground leading-none mb-1">{analyticsLoading ? '-' : value}</p>
                         <p className="text-xs font-semibold text-foreground mb-0.5">{label}</p>
                         <p className="text-[10px] text-slate-400 leading-snug">{desc}</p>
                       </div>
@@ -1788,9 +1788,9 @@ const BusinessDashboard = () => {
                           const labels: Record<string, { txt: string; dot: string }> = {
                             view: { txt: 'Wyświetlenie profilu', dot: 'bg-blue-400' },
                             add_to_route: { txt: 'Dodanie do planu dnia', dot: 'bg-emerald-400' },
-                            click_phone: { txt: 'Kliknięcie — telefon', dot: 'bg-violet-400' },
-                            click_website: { txt: 'Kliknięcie — strona WWW', dot: 'bg-violet-400' },
-                            click_booking: { txt: 'Kliknięcie — rezerwacja', dot: 'bg-amber-400' },
+                            click_phone: { txt: 'Kliknięcie - telefon', dot: 'bg-violet-400' },
+                            click_website: { txt: 'Kliknięcie - strona WWW', dot: 'bg-violet-400' },
+                            click_booking: { txt: 'Kliknięcie - rezerwacja', dot: 'bg-amber-400' },
                           };
                           const info = labels[ev.event_type] ?? { txt: ev.event_type, dot: 'bg-slate-300' };
                           return (
@@ -1812,7 +1812,7 @@ const BusinessDashboard = () => {
         </div>
       </div>
 
-      {/* Mobile FAB — card preview */}
+      {/* Mobile FAB - card preview */}
       {(activeSection === 'gallery' || activeSection === 'profile' || activeSection === 'posts') && (
         <button
           className="fixed md:hidden flex flex-col items-center justify-center h-14 w-14 rounded-full bg-white border border-slate-200 shadow-xl z-40 active:scale-95 transition-transform"
@@ -1896,7 +1896,7 @@ const BusinessDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-base">Zgłoś problem</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Opisz co nie działa — odezwiemy się wkrótce.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Opisz co nie działa - odezwiemy się wkrótce.</p>
               </div>
               <button onClick={() => setShowSupportModal(false)} className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
                 <X className="h-4 w-4" />

@@ -192,7 +192,7 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
             ) : (
               <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-2xl px-3 py-2.5">
                 <Clock className="h-4 w-4 flex-shrink-0" />
-                <span>Brak potwierdzonych godzin otwarcia — sprawdź w Google</span>
+                <span>Brak potwierdzonych godzin otwarcia - sprawdź w Google</span>
               </div>
             )}
 

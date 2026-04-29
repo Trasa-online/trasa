@@ -79,7 +79,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (isBusiness && user) {
-        // Business flow — find their profile and go to dashboard
+        // Business flow - find their profile and go to dashboard
         const { data: bp } = await (supabase as any)
           .from("business_profiles")
           .select("place_id, id")
@@ -100,7 +100,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
         return;
       }
 
-      // Regular user flow — check for demo liked places
+      // Regular user flow - check for demo liked places
       const demoRaw = localStorage.getItem("trasa_demo_liked");
       if (demoRaw) {
         try {

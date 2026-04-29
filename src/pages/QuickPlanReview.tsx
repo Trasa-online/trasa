@@ -172,7 +172,7 @@ const QuickPlanReview = () => {
         {/* Place list */}
         <div className="px-4 py-4 space-y-1">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Wspólne miejsca — przeciągnij, żeby zmienić kolejność
+            Wspólne miejsca - przeciągnij, żeby zmienić kolejność
           </p>
           {pins.map((pin, i) => (
             <div

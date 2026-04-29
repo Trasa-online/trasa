@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import { X, Star, MapPin, Loader2, Heart, ChevronDown } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -87,7 +88,6 @@ const PlaceSwiperDetail = ({
   const [photos, setPhotos] = useState<string[]>([]);
   const [businessPosts, setBusinessPosts] = useState<BusinessPost[]>([]);
   const swipeStartX = useRef<number | null>(null);
-  const swipeStartY = useRef<number | null>(null);
 
   useEffect(() => {
     if (!open || !place) {
@@ -189,35 +189,20 @@ const PlaceSwiperDetail = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-[90vh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden"
+        className="h-[90dvh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden"
       >
         {!place ? null : (
           <>
-            {/* ── HANDLE BAR — zawsze widoczny, swipe w dół zamyka ── */}
-            <div
-              className="shrink-0 relative flex items-center justify-center h-11 bg-white border-b border-gray-100"
-              onTouchStart={(e) => { swipeStartY.current = e.touches[0].clientY; }}
-              onTouchEnd={(e) => {
-                if (swipeStartY.current === null) return;
-                const dy = e.changedTouches[0].clientY - swipeStartY.current;
-                swipeStartY.current = null;
-                if (dy > 80) onOpenChange(false);
-              }}
-            >
-              <div className="w-10 h-[5px] rounded-full bg-gray-300" />
-              <button
-                onClick={() => onOpenChange(false)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center active:bg-gray-200 transition-colors"
-                aria-label="Zamknij"
-              >
-                <X className="h-4 w-4 text-gray-600" />
-              </button>
-            </div>
-
             {/* ── HERO PHOTO ── */}
-            <div
+            <motion.div
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.35 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 60 || info.velocity.y > 300) onOpenChange(false);
+              }}
               className="relative shrink-0 bg-muted"
-              style={{ height: "44%", touchAction: "pan-y" }}
+              style={{ height: "56%", touchAction: "pan-y" }}
               onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
               onTouchEnd={(e) => {
                 if (swipeStartX.current === null) return;
@@ -229,7 +214,11 @@ const PlaceSwiperDetail = ({
                 }
               }}
             >
-              {/* Photo or loading placeholder */}
+              {/* Handle pill overlaid on top of photo area */}
+              <div className="absolute top-0 left-0 right-0 h-7 flex items-center justify-center z-30 pointer-events-none">
+                <div className="w-10 h-[5px] rounded-full bg-white/50" />
+              </div>
+
               {hasPhoto ? (
                 <>
                   <img
@@ -243,10 +232,10 @@ const PlaceSwiperDetail = ({
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-black/30" />
 
-                  {/* Close button overlaid on photo */}
+                  {/* Close button - top LEFT */}
                   <button
                     onClick={() => onOpenChange(false)}
-                    className="absolute top-3 right-3 z-30 h-9 w-9 rounded-full bg-black/40 flex items-center justify-center active:bg-black/60 transition-colors"
+                    className="absolute top-8 left-3 z-30 h-9 w-9 rounded-full bg-black/40 flex items-center justify-center active:bg-black/60 transition-colors"
                     aria-label="Zamknij"
                   >
                     <X className="h-4 w-4 text-white" />
@@ -269,7 +258,7 @@ const PlaceSwiperDetail = ({
                     </div>
                   )}
 
-                  {/* Place name + rating overlay — bottom of photo */}
+                  {/* Place name + rating overlay - bottom of photo */}
                   <div className="absolute bottom-0 left-0 right-0 px-5 pb-4 z-20">
                     <h2 className="text-2xl font-black text-white leading-tight drop-shadow-sm">
                       {place.place_name}
@@ -298,6 +287,13 @@ const PlaceSwiperDetail = ({
                 </>
               ) : (
                 <div className="absolute inset-0 bg-muted flex flex-col items-center justify-center gap-3">
+                  <button
+                    onClick={() => onOpenChange(false)}
+                    className="absolute top-3 right-3 z-10 h-9 w-9 rounded-full bg-background/80 flex items-center justify-center active:bg-background transition-colors"
+                    aria-label="Zamknij"
+                  >
+                    <X className="h-4 w-4 text-foreground" />
+                  </button>
                   {loading ? (
                     <>
                       <Loader2 className="h-7 w-7 text-muted-foreground/40 animate-spin" />
@@ -308,7 +304,7 @@ const PlaceSwiperDetail = ({
                   )}
                 </div>
               )}
-            </div>
+            </motion.div>
 
             {/* ── SCROLLABLE CONTENT ── */}
             <div className="flex-1 overflow-y-auto">

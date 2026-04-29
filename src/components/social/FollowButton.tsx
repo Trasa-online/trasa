@@ -14,7 +14,7 @@ export default function FollowButton({ targetUserId, initialIsFollowing, classNa
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // useQuery subscribes to the cache — component re-renders on setQueryData
+  // useQuery subscribes to the cache - component re-renders on setQueryData
   const { data: followingIds } = useQuery<string[]>({
     queryKey: ["following-ids", user?.id],
     queryFn: async () => {
@@ -45,7 +45,7 @@ export default function FollowButton({ targetUserId, initialIsFollowing, classNa
       }
     },
     onMutate: async (follow) => {
-      // Cancel any in-flight refetch — otherwise it would overwrite our optimistic update
+      // Cancel any in-flight refetch - otherwise it would overwrite our optimistic update
       await queryClient.cancelQueries({ queryKey: ["following-ids", user?.id] });
       const previous = queryClient.getQueryData<string[]>(["following-ids", user?.id]);
       queryClient.setQueryData<string[]>(["following-ids", user?.id], (old = []) =>

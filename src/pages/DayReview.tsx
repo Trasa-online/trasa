@@ -195,7 +195,7 @@ const DayReview = () => {
     setIsLoading(false);
   }, [routeId, session?.access_token]);
 
-  // Trigger initial AI message when route loads — AI speaks first, no user bubble
+  // Trigger initial AI message when route loads - AI speaks first, no user bubble
   useEffect(() => {
     if (route && !initialSent && !routeLoading) {
       setInitialSent(true);
@@ -342,7 +342,7 @@ const DayReview = () => {
         {nextDayPins.length > 0 && (
           <div className="mx-4 mb-3 rounded-2xl bg-card border border-border/50 overflow-hidden">
             <div className="px-4 py-2.5 border-b border-border/40 flex items-center justify-between">
-              <p className="text-xs font-semibold">Plan — Dzień {(route?.day_number || 1) + 1}</p>
+              <p className="text-xs font-semibold">Plan - Dzień {(route?.day_number || 1) + 1}</p>
               <button
                 onClick={() => nextDayRouteRef && navigate(`/edit-plan?route=${nextDayRouteRef.id}`)}
                 className="text-[11px] text-primary font-medium"
@@ -415,7 +415,7 @@ const DayReview = () => {
         )}
       </div>
 
-      {/* Sticky input — only when chat is active and not done */}
+      {/* Sticky input - only when chat is active and not done */}
       {!isDone && (
         <div className="flex-shrink-0 border-t border-border/40 bg-background px-3 pt-3 pb-safe-4 z-10">
           <div className="flex items-end gap-2 max-w-lg mx-auto">

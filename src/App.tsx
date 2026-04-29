@@ -112,7 +112,7 @@ function SplashController() {
   return <SplashScreen done={done} />;
 }
 
-// Blocks unauthenticated access to app routes — redirects to landing page
+// Blocks unauthenticated access to app routes - redirects to landing page
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>;
@@ -150,7 +150,7 @@ function BusinessGuard() {
   return null;
 }
 import CookieBanner from "./components/CookieBanner";
-// Eagerly loaded — public-facing pages that need fast FCP
+// Eagerly loaded - public-facing pages that need fast FCP
 import WaitlistPage from "./pages/WaitlistPage";
 import LandingPage from "./pages/LandingPage";
 const DemoSession = lazy(() => import("./pages/DemoSession"));
@@ -158,7 +158,7 @@ import ForBusinessPage from "./pages/ForBusinessPage";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
-// Lazy loaded — only fetched when the user navigates to that route
+// Lazy loaded - only fetched when the user navigates to that route
 const AppLayout        = lazy(() => import("./components/layout/AppLayout"));
 const Home             = lazy(() => import("./pages/Home"));
 const CreateRoute      = lazy(() => import("./pages/CreateRoute"));
@@ -227,7 +227,7 @@ const App = () => (
           <Route path="/join/:code" element={<JoinPage />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
           <Route path="/quick-plan-review" element={<RequireAuth><QuickPlanReview /></RequireAuth>} />
-          <Route path="/biznes/demo" element={<Navigate to="/demo?city=Warszawa&skip=category" replace />} />
+          <Route path="/biznes/demo" element={<Navigate to="/demo?biznes=1" replace />} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
           <Route path="/dla-firm" element={<ForBusinessPage />} />
           <Route path="/dla-firm/start" element={<BusinessOnePager />} />

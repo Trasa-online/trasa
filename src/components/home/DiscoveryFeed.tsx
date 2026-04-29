@@ -86,14 +86,14 @@ function PhotoGrid({ items }: { items: DiscoveryItem[] }) {
 
   return (
     <div className="flex gap-1 h-40 overflow-hidden">
-      {/* Big photo — left 2/3 */}
+      {/* Big photo - left 2/3 */}
       <div className="relative flex-[2] min-w-0 overflow-hidden rounded-l-xl">
         <PlacePhoto item={main} placeholderIdx={0} className="w-full h-full" />
         <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 bg-gradient-to-t from-black/60 to-transparent">
           <p className="text-white text-[10px] font-semibold leading-tight line-clamp-1">{main.place_name}</p>
         </div>
       </div>
-      {/* Side photos — right 1/3 stacked */}
+      {/* Side photos - right 1/3 stacked */}
       {rest.length > 0 && (
         <div className="flex-1 min-w-0 flex flex-col gap-1">
           {rest.slice(0, 2).map((item, idx) => (
@@ -240,14 +240,14 @@ export default function DiscoveryFeed() {
 
       const ids = cols.map((c: any) => c.id);
 
-      // 2. Fetch items — without lat/lng to avoid errors if migration not yet applied
+      // 2. Fetch items - without lat/lng to avoid errors if migration not yet applied
       const { data: items } = await (supabase as any)
         .from("discovery_items")
         .select("id, collection_id, order_index, place_name, short_desc, photo_url")
         .in("collection_id", ids)
         .order("order_index", { ascending: true });
 
-      // 3. Try to fetch lat/lng separately (optional — ignored if columns don't exist)
+      // 3. Try to fetch lat/lng separately (optional - ignored if columns don't exist)
       const coordMap = new Map<string, { latitude: number; longitude: number }>();
       try {
         const { data: coords, error: coordErr } = await (supabase as any)
@@ -261,7 +261,7 @@ export default function DiscoveryFeed() {
           }
         }
       } catch {
-        // lat/lng columns not yet available — map will be hidden
+        // lat/lng columns not yet available - map will be hidden
       }
 
       return cols.map((col: any): DiscoveryCollection => ({
@@ -295,7 +295,7 @@ export default function DiscoveryFeed() {
         <div className="shrink-0 w-2" />
       </div>
 
-      {/* Detail sheet — hide SheetContent's built-in X since we rely on the drag handle / overlay to close */}
+      {/* Detail sheet - hide SheetContent's built-in X since we rely on the drag handle / overlay to close */}
       <Sheet open={!!activeCol} onOpenChange={(open) => { if (!open) setActiveCol(null); }}>
         <SheetContent
           side="bottom"

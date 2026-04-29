@@ -108,7 +108,7 @@ const RouteSummaryDialog = ({
           .from("route_folders")
           .insert({
             user_id: user.id,
-            name: `${plan.city} — ${preferences.numDays} dni`,
+            name: `${plan.city} - ${preferences.numDays} dni`,
             is_trip: true,
             num_days: preferences.numDays,
           })
@@ -126,7 +126,7 @@ const RouteSummaryDialog = ({
 
         const routePayload = {
           title: days.length > 1
-            ? `${plan.city} — Dzień ${day.day_number}`
+            ? `${plan.city} - Dzień ${day.day_number}`
             : `${plan.city}`,
           city: plan.city,
           status: "draft",
@@ -228,7 +228,7 @@ const RouteSummaryDialog = ({
       })) ?? [];
       supabase.from("route_examples" as any).insert({
         city: plan.city,
-        title: `${plan.city} — ${personalityType}`,
+        title: `${plan.city} - ${personalityType}`,
         personality_type: personalityType,
         pins: examplePins,
         is_approved: false,
@@ -414,7 +414,7 @@ const RouteSummaryDialog = ({
                   onClick={() => navigate("/auth?tab=register")}
                   className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
                 >
-                  Zakładam konto — to darmowe →
+                  Zakładam konto - to darmowe →
                 </button>
                 <button
                   onClick={() => setShowGuestAuth(false)}

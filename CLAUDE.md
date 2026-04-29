@@ -158,6 +158,16 @@ Klient → supabase.functions.invoke("google-places-proxy", ...) → Google Plac
 - Sekcja bottom CTA (email capture, badges, link do `/dla-firm`)
 - Desktop layout (`hidden lg:flex` — osobna sekcja, niezależna od mobile)
 
+### DemoSession TopBar - zasady (src/pages/DemoSession.tsx)
+
+**Wszystkie kroki musza miec identyczna wysokosc headera** (padding `pt-safe-4 pb-3`, jeden wiersz tekstu, brak subtitles).
+
+- Swipe header: `text-sm` dla nazwy miasta, brak subtitle/numeracji rundy, brak awatarow, brak ikony wyszukiwania, brak ikony dodania uczestnika
+- Badge "dla firm ->" (niebieski, `rounded-full`) renderuje sie TYLKO gdy `isBiznesDemo === true`
+- `isBiznesDemo = searchParams.get("biznes") === "1"` - ustawiany z URL param
+- Route `/biznes/demo` przekierowuje do `/demo?biznes=1` (w App.tsx)
+- Biznes demo: drum scroll z TYLKO Warszawa (odblokowana), reszta miast zablokowana
+
 ---
 
 ## Znane problemy do naprawy
@@ -196,7 +206,8 @@ Poniższe elementy wyglądają na pozostałości po poprzednich pivotach:
 - **Język UI:** Polski (komunikaty, etykiety, placeholdery)
 - **Język kodu:** Angielski (zmienne, funkcje, komentarze)
 - **Styl komponentów:** Tailwind CSS, bez CSS Modules ani styled-components
-- **Ikony:** Lucide React (`lucide-react`) — bez innych bibliotek ikon
+- **Ikony:** Lucide React (`lucide-react`) - bez innych bibliotek ikon
+- **⛔ ZAKAZ długich myślników (—, em dash):** Nigdy nie używaj znaku `—` w żadnym tekście UI (banery, hinty, placeholdery, etykiety, komunikaty). Zamiast tego używaj zwykłego myślnika `-`, dwukropka `:`, przecinka lub przeformułuj zdanie.
 - **Toast:** Sonner (`import { toast } from "sonner"`)
 - **Formularze:** React Hook Form + Zod gdy złożone; prosty `useState` gdy 1-2 pola
 - **Data fetching:** Supabase client direct lub `useQuery` z TanStack Query

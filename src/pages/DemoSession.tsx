@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { MAIN_CATEGORIES } from "@/lib/categories";
-import { ArrowLeft, Lock, Sparkles, Users, User, Copy, Check, Loader2, Search, UserPlus } from "lucide-react";
+import { ArrowLeft, Lock, Copy, Check, Loader2, X, Globe, Home, Plus, BookOpen, Star, Camera } from "lucide-react";
 import { SwipeCard } from "@/components/plan-wizard/PlaceSwiper";
 import type { MockPlace, PlaceCategory } from "@/components/plan-wizard/PlaceSwiper";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -17,7 +17,7 @@ function generateJoinCode(): string {
   return code;
 }
 
-// Deterministic shuffle — same city+category → same order for every user
+// Deterministic shuffle - same city+category → same order for every user
 function seededShuffle<T>(arr: T[], seed: string): T[] {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
@@ -26,6 +26,41 @@ function seededShuffle<T>(arr: T[], seed: string): T[] {
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
     [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+// Interleaves places so no single category dominates — batches of 2-3 per category
+function interleavedShuffle(places: any[], seed: string): any[] {
+  const groups: Record<string, any[]> = {};
+  for (const p of places) {
+    const cat = p.category ?? "other";
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(p);
+  }
+  for (const cat of Object.keys(groups)) {
+    groups[cat] = seededShuffle(groups[cat], seed + cat);
+  }
+
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
+  const rand = () => { h ^= h << 13; h ^= h >> 17; h ^= h << 5; return (h >>> 0) / 4294967296; };
+
+  const result: any[] = [];
+  let queues = Object.values(groups).map(g => [...g]);
+  let qi = 0;
+
+  while (queues.length > 0) {
+    const q = queues[qi % queues.length];
+    const batchSize = Math.min(Math.floor(rand() * 2) + 2, q.length); // 2 or 3
+    result.push(...q.splice(0, batchSize));
+    if (q.length === 0) {
+      queues.splice(qi % queues.length, 1);
+      if (queues.length === 0) break;
+      qi = qi % queues.length;
+    } else {
+      qi = (qi + 1) % queues.length;
+    }
   }
   return result;
 }
@@ -73,10 +108,10 @@ const CATEGORY_DB_VALUES: Record<string, string[]> = {
 };
 
 const DEMO_CITIES_DATA = [
-  { name: 'Kraków',     locked: false },
-  { name: 'Łódź',      locked: false },
   { name: 'Warszawa',   locked: false },
-  { name: 'Trójmiasto', locked: false },
+  { name: 'Kraków',     locked: true  },
+  { name: 'Łódź',      locked: true  },
+  { name: 'Trójmiasto', locked: true  },
   { name: 'Wrocław',    locked: true  },
   { name: 'Poznań',     locked: true  },
   { name: 'Katowice',   locked: true  },
@@ -97,6 +132,12 @@ const DEMO_CATEGORIES = [
 ];
 
 type Step = "city" | "location" | "mode" | "category" | "swipe" | "results" | "invite";
+
+const DEMO_CAT_EMOJI: Record<string, string> = {
+  cafe: "☕", restaurant: "🍽️", bar: "🍺", museum: "🏛️", monument: "🏛️",
+  gallery: "🎨", park: "🌿", viewpoint: "🌅", experience: "🎪", shopping: "🛍️",
+  market: "🛒", club: "🎶",
+};
 
 // ─── Convert DemoPlace → MockPlace ────────────────────────────────────────────
 
@@ -132,21 +173,31 @@ function saveDemoLikedToStorage(liked: DemoPlace[], city: string, category: stri
   }));
 }
 
-function DemoSwiper({ places, city, category, onComplete }: {
+const PLAN_TIERS = [
+  { label: "Plan Podstawowy", badge: "bg-slate-600" },
+  { label: "Plan Profesjonalny", badge: "bg-foreground" },
+  { label: "Plan Premium", badge: "bg-blue-600" },
+] as const;
+
+function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
   places: DemoPlace[];
   city: string;
   category: string;
   onComplete: (liked: DemoPlace[]) => void;
+  isBiznesDemo?: boolean;
 }) {
   const navigate = useNavigate();
   const [queue, setQueue] = useState<DemoPlace[]>(places);
   const [liked, setLiked] = useState<DemoPlace[]>([]);
+  const [selectedForRoute, setSelectedForRoute] = useState<Set<string>>(new Set());
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"explore" | "matches">("explore");
-  const [showUpsell, setShowUpsell] = useState(false);
+  const [showRoute, setShowRoute] = useState(false);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [showJournal, setShowJournal] = useState(false);
+  const [showDemoReview, setShowDemoReview] = useState(false);
 
-  // Auto-switch to matches when all cards are swiped
   useEffect(() => {
     if (queue.length === 0 && activeTab === "explore") setActiveTab("matches");
   }, [queue.length]);
@@ -156,17 +207,43 @@ function DemoSwiper({ places, city, category, onComplete }: {
   const swiped = places.length - queue.length;
 
   const handleLike = () => {
-    setLiked(prev => [...prev, queue[0]]);
+    const place = queue[0];
+    setLiked(prev => [...prev, place]);
+    setSelectedForRoute(prev => new Set([...prev, place.id]));
     setQueue(prev => prev.slice(1));
   };
 
-  const handleSkip = () => {
-    setQueue(prev => prev.slice(1));
+  const handleSkip = () => setQueue(prev => prev.slice(1));
+
+  const toggleSelection = (id: string) => {
+    setSelectedForRoute(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const routePlaces = liked.filter(p => selectedForRoute.has(p.id));
+
+  const handleCreateRoute = () => {
+    const need = 3 - routePlaces.length;
+    if (need > 0) {
+      toast(`Zaznacz jeszcze ${need} ${need === 1 ? "miejsce" : "miejsca"}`, {
+        description: "Minimum 3 miejsca potrzebne do stworzenia trasy.",
+        duration: 3500,
+      });
+      return;
+    }
+    setRouteLoading(true);
+    setTimeout(() => {
+      setRouteLoading(false);
+      setShowRoute(true);
+    }, 2200);
   };
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Tabs — full-width like GroupSession */}
+      {/* Tabs */}
       <div className="flex border-b border-border/20 shrink-0">
         <button
           onClick={() => setActiveTab("explore")}
@@ -190,10 +267,26 @@ function DemoSwiper({ places, city, category, onComplete }: {
       {/* ── TAB: Eksploruj ── */}
       {activeTab === "explore" && (
         <>
-          <div className="px-5 py-2 text-xs text-muted-foreground shrink-0">
-            Miejsce {swiped}/{places.length}
-          </div>
-
+          {/* Plan tier progress bar - biznes demo, first 3 cards */}
+          {isBiznesDemo && swiped < 3 ? (
+            <div className="px-4 pt-2 pb-1 shrink-0">
+              <div className="flex items-center gap-2">
+                {PLAN_TIERS.map((tier, i) => (
+                  <div key={i} className={cn(
+                    "h-1 rounded-full flex-1 transition-all duration-300",
+                    i < swiped ? "bg-border/30" : i === swiped ? "bg-primary" : "bg-border/20"
+                  )} />
+                ))}
+                <span className="text-[10px] font-semibold text-muted-foreground whitespace-nowrap ml-1">
+                  {PLAN_TIERS[swiped].label}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="px-5 py-2 text-xs text-muted-foreground shrink-0">
+              Miejsce {swiped}/{places.length}
+            </div>
+          )}
           {queue.length > 0 ? (
             <div className="relative mx-4 mb-4" style={{ flex: "1 1 0", minHeight: 0, maxHeight: "min(680px, 78dvh)" }}>
               {cardSlice.slice().reverse().map((place, reversedIdx) => {
@@ -212,6 +305,22 @@ function DemoSwiper({ places, city, category, onComplete }: {
                   />
                 );
               })}
+              {/* Plan badge on top card - biznes demo only, first 3 cards */}
+              {isBiznesDemo && swiped < 3 && (
+                <div className="absolute top-4 left-4 z-20 pointer-events-none flex flex-col gap-1.5">
+                  <span className={cn(
+                    "text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-lg",
+                    PLAN_TIERS[swiped].badge
+                  )}>
+                    {PLAN_TIERS[swiped].label}
+                  </span>
+                  {swiped < 2 && cardSlice.length > 1 && (
+                    <span className="text-white/70 text-[10px] font-medium px-1 drop-shadow-md">
+                      Przesuń by zobaczyć kolejny plan
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center px-6 gap-4 text-center">
@@ -236,15 +345,25 @@ function DemoSwiper({ places, city, category, onComplete }: {
             <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center py-12">
               <p className="text-4xl">❤️</p>
               <p className="font-semibold">Brak polubionych miejsc</p>
-              <p className="text-sm text-muted-foreground">Swipe'uj miejsca i wróć tutaj</p>
+              <p className="text-sm text-muted-foreground">Eksploruj miejsca i wróć tutaj</p>
               <button onClick={() => setActiveTab("explore")} className="text-sm font-semibold text-orange-600">
                 Wróć do eksplorowania →
               </button>
             </div>
           ) : (
             <>
+              <p className="text-xs text-muted-foreground px-1">Zaznacz miejsca do trasy:</p>
               {liked.map((place, i) => (
-                <div key={place.id} className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/40">
+                <div
+                  key={place.id}
+                  onClick={() => toggleSelection(place.id)}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-2xl border cursor-pointer transition-all active:scale-[0.98]",
+                    selectedForRoute.has(place.id)
+                      ? "bg-card border-orange-400/50 shadow-sm"
+                      : "bg-card border-border/30 opacity-55"
+                  )}
+                >
                   <span className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-white shrink-0">
                     {i + 1}
                   </span>
@@ -253,13 +372,28 @@ function DemoSwiper({ places, city, category, onComplete }: {
                     <p className="text-sm font-semibold truncate">{place.name}</p>
                     <p className="text-xs text-muted-foreground truncate">{place.address}</p>
                   </div>
+                  <div className={cn(
+                    "shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                    selectedForRoute.has(place.id) ? "border-orange-500 bg-orange-500" : "border-border/40"
+                  )}>
+                    {selectedForRoute.has(place.id) && <Check className="h-3 w-3 text-white" />}
+                  </div>
                 </div>
               ))}
               <button
-                onClick={() => setShowUpsell(true)}
-                className="w-full py-4 rounded-full bg-foreground text-background font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform mt-1"
+                onClick={handleCreateRoute}
+                className={cn(
+                  "w-full py-4 rounded-full font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform mt-1",
+                  routePlaces.length >= 3
+                    ? "bg-foreground text-background"
+                    : "bg-muted text-muted-foreground"
+                )}
               >
-                Stwórz trasę →
+                {routePlaces.length >= 3
+                  ? `Stwórz trasę (${routePlaces.length}) →`
+                  : routePlaces.length > 0
+                    ? `Zaznacz jeszcze ${3 - routePlaces.length} ${3 - routePlaces.length === 1 ? "miejsce" : "miejsca"}`
+                    : "Zaznacz miejsca do trasy"}
               </button>
             </>
           )}
@@ -275,43 +409,425 @@ function DemoSwiper({ places, city, category, onComplete }: {
         onSkip={() => { handleSkip(); setDetailOpen(false); }}
       />
 
-      {/* Upsell modal */}
-      {showUpsell && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-card rounded-t-3xl px-6 pt-8 pb-10 flex flex-col items-center gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Sparkles className="h-7 w-7 text-orange-600" />
-            </div>
-            <div className="text-center space-y-1.5">
-              <p className="text-2xl font-black">Dołącz do Trasy!</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Załóż konto i stwórz prawdziwą trasę z Twoich ulubionych miejsc. Zajmuje 30 sekund.
+      {/* Route loading - identical to PlanChatExperience initializing state */}
+      {routeLoading && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-background animate-in fade-in duration-200">
+          <style>{`
+            @keyframes demoLineLoop0 {
+              0%          { stroke-dashoffset: 70; opacity: 0; }
+              4%          { opacity: 1; }
+              25%         { stroke-dashoffset: 0; }
+              83%         { stroke-dashoffset: 0; opacity: 1; }
+              97%, 100%   { stroke-dashoffset: 70; opacity: 0; }
+            }
+            @keyframes demoLineLoop22 {
+              0%, 22%     { stroke-dashoffset: 60; opacity: 0; }
+              26%         { opacity: 1; }
+              47%         { stroke-dashoffset: 0; }
+              83%         { stroke-dashoffset: 0; opacity: 1; }
+              97%, 100%   { stroke-dashoffset: 60; opacity: 0; }
+            }
+            @keyframes demoLineLoop44 {
+              0%, 44%     { stroke-dashoffset: 60; opacity: 0; }
+              48%         { opacity: 1; }
+              69%         { stroke-dashoffset: 0; }
+              83%         { stroke-dashoffset: 0; opacity: 1; }
+              97%, 100%   { stroke-dashoffset: 60; opacity: 0; }
+            }
+            @keyframes demoDotLoop {
+              0%          { opacity: 0; transform: scale(0); transform-box: fill-box; transform-origin: center; }
+              8%          { opacity: 1; transform: scale(1.25); transform-box: fill-box; transform-origin: center; }
+              18%, 83%    { opacity: 1; transform: scale(1);   transform-box: fill-box; transform-origin: center; }
+              97%, 100%   { opacity: 0; transform: scale(0);   transform-box: fill-box; transform-origin: center; }
+            }
+          `}</style>
+          <svg width="200" height="120" viewBox="0 0 200 120" fill="none" className="overflow-visible">
+            {[
+              { x1: 30, y1: 90, x2: 75,  y2: 40, len: 70, key: "0"  },
+              { x1: 75, y1: 40, x2: 120, y2: 70, len: 60, key: "22" },
+              { x1: 120,y1: 70, x2: 160, y2: 30, len: 60, key: "44" },
+            ].map(l => (
+              <line key={l.key} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+                stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+                className="text-border"
+                style={{ strokeDasharray: l.len, strokeDashoffset: l.len, animation: `demoLineLoop${l.key} 3.6s ease-in-out infinite` }}
+              />
+            ))}
+            {[
+              { cx: 30,  cy: 90, delay: 0      },
+              { cx: 75,  cy: 40, delay: 0.792  },
+              { cx: 120, cy: 70, delay: 1.584  },
+              { cx: 160, cy: 30, delay: 2.376  },
+            ].map((d, i) => (
+              <g key={i}>
+                <circle cx={d.cx} cy={d.cy} r="10" fill="currentColor" className="text-muted/30"
+                  style={{ opacity: 0, animation: `demoDotLoop 3.6s ease-in-out ${d.delay}s infinite` }} />
+                <circle cx={d.cx} cy={d.cy} r="5" fill="currentColor" className="text-foreground"
+                  style={{ opacity: 0, animation: `demoDotLoop 3.6s ease-in-out ${d.delay}s infinite` }} />
+              </g>
+            ))}
+          </svg>
+          <div className="text-center space-y-2">
+            <p className="text-base font-semibold text-foreground">Tworzę Twoją trasę</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">Ty się zrelaksuj, trasowiczu!</p>
+          </div>
+        </div>
+      )}
+
+      {/* Plan view - carousel identical to PlanChatExperience */}
+      {showRoute && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-background animate-in slide-in-from-bottom duration-300">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
+            <div>
+              <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest mb-0.5">Twoja trasa</p>
+              <p className="font-black text-lg leading-tight">{city}</p>
+              <p className="text-xs text-muted-foreground">
+                Dzień 1 · {routePlaces.length} {routePlaces.length === 1 ? "miejsce" : routePlaces.length < 5 ? "miejsca" : "miejsc"}
               </p>
             </div>
-            <ul className="w-full space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2"><span className="text-orange-600 font-bold">✓</span> Zapisz trasę i nawiguj po niej</li>
-              <li className="flex items-center gap-2"><span className="text-orange-600 font-bold">✓</span> Paruj miejsca razem z grupą znajomych</li>
-              <li className="flex items-center gap-2"><span className="text-orange-600 font-bold">✓</span> Nieograniczone kategorie i rundy</li>
-              <li className="flex items-center gap-2"><span className="text-orange-600 font-bold">✓</span> Historia wszystkich wspólnych planów</li>
-            </ul>
-            <button
-              onClick={() => {
-                saveDemoLikedToStorage(liked, city, category);
-                navigate("/auth");
-              }}
-              className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
-            >
-              Załóż konto — to nic nie kosztuje →
+            <button onClick={() => setShowRoute(false)} className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+              <X className="h-4 w-4" />
             </button>
-            <button
-              onClick={() => setShowUpsell(false)}
-              className="text-sm text-muted-foreground"
+          </div>
+
+          {/* Carousel */}
+          <div className="flex-1 flex items-center overflow-hidden">
+            <div
+              className="flex gap-4 overflow-x-auto snap-x snap-mandatory no-scrollbar w-full"
+              style={{ paddingLeft: "10vw", paddingRight: "10vw", height: "min(520px, 68dvh)" }}
             >
-              Wróć do demo
+              {routePlaces.map((place, i) => (
+                <div
+                  key={place.id}
+                  className="flex-shrink-0 w-[80vw] h-full rounded-2xl overflow-hidden bg-card border border-border/40 snap-center flex flex-col"
+                >
+                  {/* Hero 62% */}
+                  <div className="relative flex-[62] min-h-0">
+                    {place.photo ? (
+                      <img src={place.photo} alt={place.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-br from-stone-100 to-stone-200">
+                        {DEMO_CAT_EMOJI[place.category ?? ""] ?? "📍"}
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/50" />
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                      <div className="h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center text-xs font-bold backdrop-blur-sm">
+                        {i + 1}
+                      </div>
+                      <span className="text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5">Dzień 1</span>
+                    </div>
+                  </div>
+                  {/* Info 38% */}
+                  <div className="flex-[38] min-h-0 px-3.5 py-3 flex flex-col gap-1.5">
+                    <span className="text-[11px] font-medium text-muted-foreground/70 bg-muted px-2 py-0.5 rounded-full self-start">
+                      {DEMO_CAT_EMOJI[place.category ?? ""] ?? "📍"} {place.category ?? "Atrakcja"}
+                    </span>
+                    <p className="text-sm font-bold leading-tight line-clamp-2 text-foreground">{place.name}</p>
+                    {place.description && (
+                      <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 flex-1">{place.description}</p>
+                    )}
+                    {i > 0 && (
+                      <p className="text-[11px] text-muted-foreground/60 mt-auto">🚶 ok. 10 min</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="shrink-0 px-5 pb-8 pt-3 space-y-2 border-t border-border/10">
+            <button
+              onClick={() => { setShowRoute(false); setShowJournal(true); }}
+              className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
+            >
+              Zapisz trasę →
+            </button>
+            <button onClick={() => setShowRoute(false)} className="w-full text-center text-sm text-muted-foreground py-1">
+              Wróć do dopasowań
             </button>
           </div>
         </div>
       )}
+
+      {/* Journal preview - full app UI with Dziennik tab active */}
+      {showJournal && (
+        <div className="fixed inset-0 z-[60] flex flex-col bg-background animate-in slide-in-from-bottom duration-300">
+          {/* TopBar */}
+          <div className="flex items-center justify-between px-5 h-14 border-b border-border/40 shrink-0">
+            <button onClick={() => { setShowJournal(false); setShowRoute(true); }} className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+              <span className="font-black text-sm text-foreground">trasa</span>
+            </button>
+            <button onClick={() => navigate("/dla-firm/start")}
+              className="text-xs font-semibold px-3 py-1.5 rounded-full text-blue-600 bg-blue-600/10 active:scale-95 transition-transform">
+              dla firm →
+            </button>
+          </div>
+
+          {/* Journal content */}
+          <div className="flex-1 overflow-y-auto px-4 pt-2 pb-2">
+            <h1 className="text-xl font-black tracking-tight pt-2 pb-3">Dziennik podróży</h1>
+
+            {/* Main journal entry - 1:1 match with JournalTab */}
+            <div
+              className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left cursor-pointer active:scale-[0.98] transition-transform"
+              onClick={() => setShowDemoReview(true)}
+            >
+              <div className="relative w-full aspect-[16/9] overflow-hidden bg-gradient-to-br from-orange-50 to-amber-100">
+                {routePlaces[0]?.photo && (
+                  <img
+                    src={routePlaces[0].photo}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+                  <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">
+                    {city}<span className="font-normal text-white/80"> · Dzień 1</span>
+                  </p>
+                  <p className="text-white/70 text-xs mt-0.5">
+                    {new Date().toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" })}
+                  </p>
+                  <div className="flex items-center gap-0.5 mt-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => <span key={i} className="text-[10px]">⭐</span>)}
+                  </div>
+                </div>
+                <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm rounded-full p-1.5">
+                  <Globe className="h-3 w-3 text-white/80" />
+                </div>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-sm text-foreground/80 italic leading-snug mb-1.5">
+                  "Wyjątkowy dzień pełen odkryć - to miasto ma niepowtarzalny charakter"
+                </p>
+                <p className="text-xs text-muted-foreground line-clamp-2 leading-snug">
+                  Odwiedziliśmy {routePlaces.map(p => p.name).join(", ")}. Każde z tych miejsc zostawiło swój ślad.
+                </p>
+              </div>
+            </div>
+
+            {/* Faded placeholder suggesting more entries */}
+            <div className="mt-3 rounded-2xl bg-card border border-border/50 overflow-hidden opacity-30 pointer-events-none">
+              <div className="w-full aspect-[16/9] bg-muted" />
+              <div className="px-4 py-3 space-y-2">
+                <div className="h-3 bg-muted rounded w-2/3" />
+                <div className="h-2 bg-muted rounded w-full" />
+                <div className="h-2 bg-muted rounded w-4/5" />
+              </div>
+            </div>
+          </div>
+
+          {/* CTA above bottom nav */}
+          <div className="shrink-0 px-4 py-3 border-t border-border/20 bg-background">
+            <button
+              onClick={() => navigate("/dla-firm/start")}
+              className="w-full py-3.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-lg shadow-blue-200"
+            >
+              Przejdź do formularza zgłoszeniowego →
+            </button>
+          </div>
+
+          {/* Fake BottomNav - Dziennik active */}
+          <nav className="shrink-0 bg-background border-t border-border/40 pb-safe">
+            <div className="grid grid-cols-3 h-12 max-w-lg mx-auto">
+              <button className="flex flex-col items-center justify-center gap-1 text-muted-foreground/40">
+                <Home className="h-5 w-5 stroke-2" />
+                <span className="text-[10px] font-medium">Główna</span>
+              </button>
+              <button className="flex items-center justify-center opacity-40 cursor-not-allowed">
+                <span className="h-10 w-10 rounded-full bg-primary/60 flex items-center justify-center">
+                  <Plus className="h-5 w-5 text-white stroke-[2.5px]" />
+                </span>
+              </button>
+              <button className="flex flex-col items-center justify-center gap-1 text-orange-600">
+                <BookOpen className="h-5 w-5 stroke-[2.5px]" />
+                <span className="text-[10px] font-medium">Dziennik</span>
+              </button>
+            </div>
+          </nav>
+        </div>
+      )}
+
+      {/* ── Demo Review Summary ─────────────────────────────────────────────── */}
+      {showDemoReview && (() => {
+        const heroPhoto = routePlaces[0]?.photo || "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&q=80";
+        const galleryPhotos = [
+          "https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=500&q=80",
+          "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500&q=80",
+          "https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?w=500&q=80",
+        ];
+        const demoPins = routePlaces.length > 0 ? routePlaces.map((p, i) => ({
+          id: p.id,
+          name: p.name,
+          emoji: DEMO_CAT_EMOJI[p.category as string] ?? "📍",
+          photo: p.photo,
+          rating: [5, 4, 5, 4, 5][i % 5],
+          isHighlight: i === 2 % routePlaces.length,
+        })) : [
+          { id: "d1", name: "Karmnik Restauracja & Cocktail Bar", emoji: "🍽️", photo: null, rating: 5, isHighlight: false },
+          { id: "d2", name: "U Fukiera - Stare Miasto", emoji: "🍽️", photo: null, rating: 4, isHighlight: false },
+          { id: "d3", name: "Bazylika Katedralna", emoji: "🏰", photo: null, rating: 5, isHighlight: true },
+          { id: "d4", name: "Fotoplastikon Warszawski", emoji: "🏛️", photo: null, rating: 4, isHighlight: false },
+          { id: "d5", name: "White Bear Coffee Marszałkowska", emoji: "☕", photo: null, rating: 5, isHighlight: false },
+        ];
+        const dateLabel = new Date().toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" });
+        return (
+          <div className="fixed inset-0 z-[70] flex flex-col bg-background animate-in slide-in-from-right duration-300">
+            <div className="flex-1 overflow-y-auto pb-28">
+
+              {/* Hero */}
+              <div className="relative w-full bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500" style={{ aspectRatio: "4/5" }}>
+                <img
+                  src={heroPhoto}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/75" />
+                <button
+                  onClick={() => setShowDemoReview(false)}
+                  className="absolute top-4 left-4 h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center"
+                >
+                  <ArrowLeft className="h-5 w-5 text-white" />
+                </button>
+                <div className="absolute bottom-0 left-0 right-0 px-5 pb-6">
+                  <p className="text-white/70 text-sm mb-1">{dateLabel}</p>
+                  <h1 className="text-white text-3xl font-black leading-tight drop-shadow-sm">{city}</h1>
+                  <p className="text-white/70 text-base font-medium mt-0.5">Dzień 1</p>
+                </div>
+              </div>
+
+              {/* Overall rating */}
+              <div className="px-5 pt-5 pb-5 border-b border-border/30">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Ocena trasy</p>
+                <div className="flex gap-2">
+                  {[1,2,3,4,5].map(n => (
+                    <span key={n} className="text-2xl">⭐</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* AI highlight */}
+              <div className="px-5 pt-6 pb-5 border-b border-border/30">
+                <p className="text-[22px] font-bold leading-snug text-foreground">
+                  „Wyjątkowy dzień pełen odkryć - to miasto ma niepowtarzalny charakter"
+                </p>
+              </div>
+
+              {/* AI summary */}
+              <div className="px-5 pt-5 pb-5 border-b border-border/30">
+                <p className="text-sm text-foreground/70 leading-relaxed">
+                  Odwiedziliśmy {demoPins.map(p => p.name).join(", ")}. Każde z tych miejsc zostawiło swój ślad i sprawiło, że ten dzień stał się niezapomniany.
+                </p>
+              </div>
+
+              {/* Photos */}
+              <div className="pt-5 pb-5 border-b border-border/30">
+                <div className="flex items-center justify-between px-5 mb-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Zdjęcia</p>
+                </div>
+                <div className="flex gap-2.5 overflow-x-auto px-5 scrollbar-none pb-1">
+                  {galleryPhotos.map((url, idx) => (
+                    <div key={url} className="relative flex-shrink-0 w-32 h-32 rounded-2xl overflow-hidden shadow-sm">
+                      <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                      {idx === 0 && (
+                        <div className="absolute bottom-1.5 left-1.5 bg-primary/90 rounded-full px-1.5 py-0.5 text-[9px] font-bold text-white">Okładka</div>
+                      )}
+                      {idx !== 0 && (
+                        <div className="absolute bottom-1.5 left-1.5 bg-black/60 backdrop-blur-sm rounded-full p-1">
+                          <Star className="h-3 w-3 text-white" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <div className="flex-shrink-0 w-32 h-32 rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-1.5 text-muted-foreground/40">
+                    <Camera className="h-6 w-6" />
+                    <span className="text-xs">Dodaj</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Visibility */}
+              <div className="px-5 pt-4 pb-4 border-b border-border/30 flex items-center gap-3">
+                <Globe className="h-4 w-4 text-orange-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">Publiczne</p>
+                  <p className="text-xs text-muted-foreground">Widoczne na feedzie znajomych</p>
+                </div>
+                <div className="flex-shrink-0 relative w-11 h-6 rounded-full bg-primary pointer-events-none">
+                  <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm translate-x-5" />
+                </div>
+              </div>
+
+              {/* Places with ratings */}
+              <div className="px-5 pt-5 pb-5 border-b border-border/30">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Oceń miejsca</p>
+                <div className="space-y-4">
+                  {demoPins.map((pin) => (
+                    <div key={pin.id} className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <div className="h-11 w-11 rounded-xl overflow-hidden bg-muted shrink-0 flex items-center justify-center text-lg">
+                          {pin.photo
+                            ? <img src={pin.photo} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                            : pin.emoji
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold leading-tight truncate">{pin.name}</p>
+                          <div className="flex items-center gap-0.5 mt-1">
+                            {[1,2,3,4,5].map(n => (
+                              <span key={n} className={`text-lg leading-none ${n <= pin.rating ? "opacity-100" : "opacity-20"}`}>⭐</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className={`w-full py-1.5 rounded-xl text-xs font-semibold border text-center ${pin.isHighlight ? "bg-amber-400/20 border-amber-400 text-amber-700" : "border-border/40 text-muted-foreground/40"}`}>
+                        {pin.isHighlight ? "⭐ Miejsce dnia!" : "Wyróżnij jako miejsce dnia"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Narrative */}
+              <div className="px-5 pt-5 pb-5 border-b border-border/30">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Twoje wspomnienia</p>
+                <p className="text-[15px] text-foreground/70 leading-relaxed">
+                  Niesamowite doświadczenie! {city} zaskoczyło nas swoją różnorodnością - od historycznych zakątków po nowoczesne kawiarnie. Każde miejsce miało swój klimat i charakter. Zdecydowanie wrócimy z całą grupą.
+                </p>
+              </div>
+
+              {/* Polecajka CTA (static) */}
+              <div className="px-5 pt-5 pb-6">
+                <div className="rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100 p-4">
+                  <p className="text-base font-black leading-tight">Podziel się tą trasą 🗺️</p>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    Twoje miejsca trafią na discovery feed innych. Ktoś zaplanuje trasę dzięki Tobie!
+                  </p>
+                  <div className="mt-3 w-full py-3 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm text-center opacity-60">
+                    Stwórz polecajkę →
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Fixed bottom CTA */}
+            <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30 pb-5">
+              <button
+                onClick={() => navigate("/dla-firm/start")}
+                className="w-full py-4 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-blue-200"
+              >
+                Przejdź do formularza zgłoszeniowego →
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -321,7 +837,7 @@ function DemoSwiper({ places, city, category, onComplete }: {
 export default function DemoSession() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [step, setStep] = useState<Step>("city");
+  const [step, setStep] = useState<Step>("location");
   const [city, setCity] = useState("");
   const [mode, setMode] = useState<"solo" | "group">("solo");
   const [category, setCategory] = useState<CategoryKey | null>(null);
@@ -333,6 +849,7 @@ export default function DemoSession() {
   const [otherDeviceDone, setOtherDeviceDone] = useState(false);
   const [joinInput, setJoinInput] = useState("");
   const [joinLoading, setJoinLoading] = useState(false);
+  const isBiznesDemo = searchParams.get("biznes") === "1";
   const [selectedCity, setSelectedCity] = useState(DEMO_CITIES[0]);
   const [businessMode, setBusinessMode] = useState(false);
   const [realPlaces, setRealPlaces] = useState<DemoPlace[] | null>(null);
@@ -362,6 +879,13 @@ export default function DemoSession() {
 
   const handleMultiStart = async () => {
     if (selectedSubcats.size === 0) return;
+    if (selectedSubcats.size === 1) {
+      toast("Wybierz min. 2 kategorie dla lepszego efektu", {
+        description: "Zobaczysz bardziej różnorodne miejsca i lepiej poznasz mozliwości aplikacji!",
+        duration: 4000,
+      });
+      return;
+    }
     const subcats = [...selectedSubcats];
     const dbValues = [...new Set(subcats.flatMap(c => CATEGORY_DB_VALUES[c] ?? [c]))];
     setCategory(subcats[0] as CategoryKey);
@@ -379,7 +903,9 @@ export default function DemoSession() {
       const hasPhotos = (data ?? []).some((p: any) => p.photo_url);
       if (data && data.length > 0 && hasPhotos) {
         const seed = city + subcats.join(",");
-        const shuffled = seededShuffle(data as any[], seed);
+        const shuffled = subcats.length > 1
+          ? interleavedShuffle(data as any[], seed)
+          : seededShuffle(data as any[], seed);
         setRealPlaces(shuffled.map((p: any) => ({
           id: p.id, name: p.place_name,
           photo: !p.photo_url ? "" : (p.photo_url.startsWith("http") || p.photo_url.startsWith("/api/")) ? p.photo_url : (getPhotoUrl(p.photo_url) ?? ""),
@@ -402,7 +928,16 @@ export default function DemoSession() {
     }
   };
 
-  // Handle ?city=X&skip=category — business demo pre-selects city and skips to category
+  // Handle ?biznes=1 - business demo starts at city picker with only Warszawa
+  useEffect(() => {
+    if (searchParams.get("biznes") === "1") {
+      setSelectedCity("Warszawa");
+      setDrumIndex(0);
+      setStep("location");
+    }
+  }, []);
+
+  // Handle ?city=X&skip=category - legacy param
   useEffect(() => {
     const startCity = searchParams.get("city");
     const skip = searchParams.get("skip");
@@ -413,7 +948,7 @@ export default function DemoSession() {
     }
   }, []);
 
-  // Handle ?join=CODE — second user joins existing session
+  // Handle ?join=CODE - second user joins existing session
   useEffect(() => {
     const joinCode = searchParams.get("join");
     if (!joinCode) return;
@@ -426,7 +961,7 @@ export default function DemoSession() {
           setMode("group");
           setStep("swipe");
         } else {
-          toast.error("Nie znaleziono sesji — sprawdź kod i spróbuj ponownie");
+          toast.error("Nie znaleziono sesji - sprawdź kod i spróbuj ponownie");
         }
       });
   }, []);
@@ -449,10 +984,10 @@ export default function DemoSession() {
         setMode("group");
         setStep("swipe");
       } else {
-        toast.error("Nie znaleziono sesji — sprawdź kod i spróbuj ponownie");
+        toast.error("Nie znaleziono sesji - sprawdź kod i spróbuj ponownie");
       }
     } catch {
-      toast.error("Błąd połączenia — spróbuj ponownie");
+      toast.error("Błąd połączenia - spróbuj ponownie");
     } finally {
       setJoinLoading(false);
     }
@@ -460,7 +995,7 @@ export default function DemoSession() {
 
   const handleCitySelect = (c: string) => { setCity(c); setStep("mode"); };
 
-  // Shared place loader — used by both host (handleCategorySelect) and joiner (useEffect)
+  // Shared place loader - used by both host (handleCategorySelect) and joiner (useEffect)
   const loadPlaces = async (targetCity: string, cat: string) => {
     setPlacesLoading(true);
     try {
@@ -532,7 +1067,7 @@ export default function DemoSession() {
         setStep("invite");
       } catch (e: any) {
         console.error("[demo] session create error:", e);
-        toast.error("Nie udało się utworzyć sesji — spróbuj ponownie");
+        toast.error("Nie udało się utworzyć sesji - spróbuj ponownie");
       } finally {
         setGroupLoading(false);
       }
@@ -599,20 +1134,27 @@ export default function DemoSession() {
 
   return (
     <div className="flex flex-col h-dvh bg-background max-w-lg mx-auto">
-      {/* Header — hidden on landing */}
+      {/* Pre-launch context strip */}
+      {isBiznesDemo && (
+        <div className="shrink-0 bg-blue-600 text-white text-[11px] font-semibold text-center py-1.5 px-4">
+          Demo pre-launch · Tak wyglądają lokale dla użytkownika · Premiera czerwiec 2026
+        </div>
+      )}
+      {/* Header - hidden on landing */}
       {step !== "city" && step !== "swipe" && (
         <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-          <button
-            onClick={() => {
-              if (step === "location") setStep("city");
-              else if (step === "category") setStep("location");
-              else if (step === "invite") setStep("category");
-              else if (step === "results") setStep("swipe");
-            }}
-            className="h-9 w-9 flex items-center justify-center -ml-1"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+          {step !== "location" && (
+            <button
+              onClick={() => {
+                if (step === "category") setStep("location");
+                else if (step === "invite") setStep("category");
+                else if (step === "results") setStep("swipe");
+              }}
+              className="h-9 w-9 flex items-center justify-center -ml-1"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          )}
           <div className="flex-1">
             <p className="font-bold text-sm leading-tight">
               {step === "location" ? "Wybierz miasto"
@@ -622,10 +1164,18 @@ export default function DemoSession() {
             </p>
             {step === "results" && <p className="text-xs text-muted-foreground">{city}</p>}
           </div>
+          {isBiznesDemo && (
+            <button
+              onClick={() => navigate("/dla-firm/start")}
+              className="text-xs font-semibold px-3 py-1.5 rounded-full text-blue-600 bg-blue-600/10 active:scale-95 transition-transform shrink-0"
+            >
+              dla firm →
+            </button>
+          )}
         </div>
       )}
 
-      {/* GroupSession-style header — swipe step only */}
+      {/* Swipe header - same height/structure as regular header */}
       {step === "swipe" && (
         <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
           <button
@@ -634,37 +1184,20 @@ export default function DemoSession() {
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="font-bold text-base leading-tight">{city}</p>
-              {swipeCategoryLabel && (
-                <span className="text-sm font-semibold text-orange-600">
-                  {swipeCategoryLabel}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {mode === "group" ? "3 osoby" : "1 osoba"}
-              {sessionCode ? ` · #${sessionCode}` : " · #DEMO"}
-              {" · runda 1"}
-            </p>
+          <div className="flex-1 min-w-0 flex items-center gap-2">
+            <p className="font-bold text-sm leading-tight">{city}</p>
+            {swipeCategoryLabel && (
+              <span className="text-sm font-semibold text-orange-600 truncate">{swipeCategoryLabel}</span>
+            )}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Demo member avatars */}
-            <div className="flex -space-x-2">
-              {(mode === "group" ? ["T", "M", "J"] : ["T"]).map((initial, i) => (
-                <div key={i} className="h-7 w-7 rounded-full bg-primary/20 border-2 border-background flex items-center justify-center text-xs font-bold text-orange-700">
-                  {initial}
-                </div>
-              ))}
-            </div>
-            <button className="h-7 w-7 rounded-full bg-muted flex items-center justify-center" title="Szukaj miejsca">
-              <Search className="h-3.5 w-3.5 text-muted-foreground" />
+          {isBiznesDemo && (
+            <button
+              onClick={() => navigate("/dla-firm/start")}
+              className="text-xs font-semibold px-3 py-1.5 rounded-full text-blue-600 bg-blue-600/10 active:scale-95 transition-transform shrink-0"
+            >
+              dla firm →
             </button>
-            <button className="h-7 w-7 rounded-full bg-muted flex items-center justify-center" title="Zaproś do sesji">
-              <UserPlus className="h-3.5 w-3.5 text-muted-foreground" />
-            </button>
-          </div>
+          )}
         </div>
       )}
 
@@ -690,7 +1223,7 @@ export default function DemoSession() {
                 <div className="flex-1 z-10">
                   <h1 className="text-3xl font-black leading-tight">Bądź tam,<br/>gdzie szukają<br/>klienci.</h1>
                   <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-[200px]">
-                    Twój lokal w trasach tworzonych przez turystów i lokalsów — bez reklam, z prawdziwym zasięgiem.
+                    Twój lokal w trasach tworzonych przez turystów i lokalsów - bez reklam, z prawdziwym zasięgiem.
                   </p>
                 </div>
                 <div className="relative shrink-0" style={{ width: "148px", height: "210px", marginRight: "-48px" }}>
@@ -815,6 +1348,9 @@ export default function DemoSession() {
       {/* ── STEP: location ── */}
       {step === "location" && (() => {
         const ITEM_H = 64;
+        const LOCATION_CITIES = isBiznesDemo
+          ? [{ name: "Warszawa", locked: false }]
+          : DEMO_CITIES_DATA;
         const COUNTRIES = [
           { flag: "🇵🇱", name: "Polska",     available: true  },
           { flag: "🇮🇹", name: "Włochy",     available: false },
@@ -871,8 +1407,8 @@ export default function DemoSession() {
                   const el = drumRef.current;
                   if (!el) return;
                   const idx = Math.round(el.scrollTop / ITEM_H);
-                  setDrumIndex(Math.min(Math.max(idx, 0), DEMO_CITIES.length - 1));
-                  setSelectedCity(DEMO_CITIES[Math.min(Math.max(idx, 0), DEMO_CITIES.length - 1)]);
+                  setDrumIndex(Math.min(Math.max(idx, 0), LOCATION_CITIES.length - 1));
+                  setSelectedCity(LOCATION_CITIES[Math.min(Math.max(idx, 0), LOCATION_CITIES.length - 1)].name);
                 }}
                 className="w-full overflow-y-scroll no-scrollbar"
                 style={{
@@ -883,7 +1419,7 @@ export default function DemoSession() {
               >
                 {/* Top padding to center first item */}
                 <div style={{ height: `${ITEM_H * 2}px` }} />
-                {DEMO_CITIES_DATA.map((city, i) => {
+                {LOCATION_CITIES.map((city, i) => {
                   const dist = Math.abs(i - drumIndex);
                   const isLocked = city.locked;
                   return (
@@ -925,7 +1461,7 @@ export default function DemoSession() {
             {/* CTA */}
             <div className="px-5 pt-3 pb-8 shrink-0">
               {(() => {
-                const cityData = DEMO_CITIES_DATA[drumIndex];
+                const cityData = LOCATION_CITIES[drumIndex];
                 const locked = cityData?.locked;
                 return (
                   <button
@@ -938,7 +1474,7 @@ export default function DemoSession() {
                         : "bg-primary text-white shadow-lg shadow-primary/25"
                     )}
                   >
-                    {locked ? `${selectedCity} — wkrótce 🔒` : `Dalej — ${selectedCity}`}
+                    {locked ? `${selectedCity} - wkrótce 🔒` : `Dalej - ${selectedCity}`}
                   </button>
                 );
               })()}
@@ -954,7 +1490,7 @@ export default function DemoSession() {
             <div>
               <p className="text-xl font-black mb-1">Co Cię interesuje?</p>
               <p className="text-sm text-muted-foreground">
-                Wybierz kategorie — zobaczysz miejsca ze wszystkich wybranych.
+                Wybierz kategorie - zobaczysz miejsca ze wszystkich wybranych.
               </p>
             </div>
             {MAIN_CATEGORIES.map(cat => {
@@ -967,9 +1503,9 @@ export default function DemoSession() {
                     className={cn(
                       "w-full flex items-center gap-3 px-4 py-3 rounded-2xl border text-left transition-all active:scale-[0.98]",
                       allSel
-                        ? "bg-orange-600/10 border-orange-600/40"
+                        ? "bg-transparent border-orange-600"
                         : someSel
-                          ? "bg-muted/40 border-border/60"
+                          ? "bg-transparent border-orange-500/50"
                           : "bg-card border-border/40"
                     )}
                   >
@@ -990,7 +1526,7 @@ export default function DemoSession() {
                           className={cn(
                             "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all active:scale-95",
                             sel
-                              ? "bg-orange-600 text-white border-orange-600"
+                              ? "bg-transparent text-orange-600 border-orange-600"
                               : "bg-card text-muted-foreground border-border/60"
                           )}
                         >
@@ -1018,12 +1554,6 @@ export default function DemoSession() {
               {placesLoading && <Loader2 className="h-4 w-4 animate-spin" />}
               {selectedSubcats.size > 0 ? `Eksploruj (${selectedSubcats.size})` : "Wybierz kategorie"}
             </button>
-            <div className="rounded-2xl bg-muted/50 px-4 py-3 flex items-center gap-3">
-              <Lock className="h-4 w-4 text-muted-foreground/60 shrink-0" />
-              <p className="text-xs text-muted-foreground">
-                Pełna wersja: nieograniczone kategorie, rundy z grupą znajomych i zapisywanie tras.
-              </p>
-            </div>
           </div>
         </div>
       )}
@@ -1034,7 +1564,7 @@ export default function DemoSession() {
           <div className="flex-1 overflow-y-auto px-5 pt-6 pb-4 space-y-5">
             <div>
               <p className="text-2xl font-black mb-1.5">Zaproś znajomego</p>
-              <p className="text-sm text-muted-foreground">Wyślij kod lub link — gdy dołączy, zaczniecie swipe'ować te same miejsca i zobaczycie co Was łączy.</p>
+              <p className="text-sm text-muted-foreground">Wyślij kod lub link - gdy dołączy, zaczniecie swipe'ować te same miejsca i zobaczycie co Was łączy.</p>
             </div>
 
             <div className="rounded-2xl bg-muted/60 px-5 py-5 flex items-center justify-between gap-3">
@@ -1059,7 +1589,7 @@ export default function DemoSession() {
             </button>
 
             <div className="rounded-2xl bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
-              Znajomy otwiera link i od razu trafia do tej samej sesji — zero rejestracji.
+              Znajomy otwiera link i od razu trafia do tej samej sesji - zero rejestracji.
             </div>
           </div>
           <div className="shrink-0 px-5 pb-8 pt-3">
@@ -1077,7 +1607,7 @@ export default function DemoSession() {
       {/* ── STEP: swipe ── */}
       {step === "swipe" && (
         places.length > 0
-          ? <DemoSwiper places={places} city={city} category={category!} onComplete={handleSwipeComplete} />
+          ? <DemoSwiper places={places} city={city} category={category!} onComplete={handleSwipeComplete} isBiznesDemo={isBiznesDemo} />
           : <div className="flex-1 flex flex-col items-center justify-center px-6 gap-4 text-center">
               <p className="text-4xl">😕</p>
               <p className="font-bold text-lg">Brak miejsc dla tej kategorii</p>
@@ -1106,7 +1636,7 @@ export default function DemoSession() {
               </div>
             )}
 
-            {/* Group: both done — show matches */}
+            {/* Group: both done - show matches */}
             {mode === "group" && otherDeviceDone && (
               <div className="text-center">
                 <p className="text-2xl font-black">
@@ -1115,7 +1645,7 @@ export default function DemoSession() {
                 <p className="text-sm text-muted-foreground mt-1">
                   {groupMatches.length > 0
                     ? `${groupMatches.length} ${groupMatches.length === 1 ? "miejsce" : groupMatches.length < 5 ? "miejsca" : "miejsc"} polubiliście oboje`
-                    : "Tym razem się nie pokryło — spróbujcie innej kategorii"}
+                    : "Tym razem się nie pokryło - spróbujcie innej kategorii"}
                 </p>
               </div>
             )}
@@ -1175,7 +1705,7 @@ export default function DemoSession() {
               }}
               className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"
             >
-              Załóż konto — zajmuje 30 sekund →
+              Załóż konto - zajmuje 30 sekund →
             </button>
             <button
               onClick={() => { setStep("category"); setCategory(null); setLikedPlaces([]); setGroupReactions({}); setOtherDeviceDone(false); setSelectedSubcats(new Set()); }}
@@ -1186,6 +1716,16 @@ export default function DemoSession() {
           </div>
         </div>
       )}
+
+      {/* Demo info banner - shown on every step */}
+      <div className="shrink-0 px-4 pb-3 pt-1">
+        <div className="rounded-2xl bg-muted/50 px-4 py-3 flex items-start gap-3">
+          <Lock className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Demo pokazuje działanie aplikacji. Pełne działanie aplikacji zawiera znacznie większą bazę miast oraz miejsc.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

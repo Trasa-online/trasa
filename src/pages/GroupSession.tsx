@@ -217,7 +217,7 @@ const GroupSession = () => {
   const sessionCategories: string[] = (session as any)?.categories ?? [];
   const currentCategoryIndex: number = (session as any)?.current_category_index ?? 0;
   const serverCategory: string | null = sessionCategories[currentCategoryIndex] ?? null;
-  // localActiveCategory takes precedence — prevents server refetch from resetting UI
+  // localActiveCategory takes precedence - prevents server refetch from resetting UI
   const currentCategory: string | null = localActiveCategory ?? serverCategory;
   const myMemberData = members.find((m: any) => m.user_id === user?.id);
   const myDoneCategories: string[] = myMemberData?.categories_done ?? [];
@@ -234,7 +234,7 @@ const GroupSession = () => {
     Park: "🌿", Market: "🛒", Landmark: "🏰", Rozrywka: "🎪",
   };
 
-  // Deterministic seeded shuffle — same session+category = same order for all users
+  // Deterministic seeded shuffle - same session+category = same order for all users
   function seededShuffle<T>(arr: T[], seed: string): T[] {
     let h = 0;
     for (let i = 0; i < seed.length; i++) h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
@@ -247,7 +247,7 @@ const GroupSession = () => {
     return result;
   }
 
-  // Counts per category for current city — used to gray out empty categories
+  // Counts per category for current city - used to gray out empty categories
   const { data: categoryCounts = {} } = useQuery({
     queryKey: ["category-counts", session?.city],
     queryFn: async () => {
@@ -400,11 +400,11 @@ const GroupSession = () => {
       .update({ categories_done: updated })
       .eq("session_id", session.id)
       .eq("user_id", user!.id);
-    setLocalActiveCategory(null); // clear local override — let server state take over
+    setLocalActiveCategory(null); // clear local override - let server state take over
     queryClient.invalidateQueries({ queryKey: ["group-session-members", session.id] });
   };
 
-  // Creator skips waiting — marks ALL members as done for current category
+  // Creator skips waiting - marks ALL members as done for current category
   const handleSkipWaiting = async () => {
     if (!session || !currentCategory) return;
     await Promise.all(
@@ -426,7 +426,7 @@ const GroupSession = () => {
   const handleStartCategory = async () => {
     if (!session || !isCreator || !pendingCategory) return;
     setSavingCategory(true);
-    // Set local override immediately — UI transitions now, before DB confirms
+    // Set local override immediately - UI transitions now, before DB confirms
     setLocalActiveCategory(pendingCategory);
     setPendingCategory(null);
     setSavingCategory(false);
@@ -736,7 +736,7 @@ const GroupSession = () => {
         </div>
       </div>
 
-      {/* Search bar — expands under header when lupka active */}
+      {/* Search bar - expands under header when lupka active */}
       {searchOpen && (
         <div className="px-4 py-2 border-b border-border/20 shrink-0">
           <div className="flex items-center gap-2 bg-muted rounded-2xl px-3 h-9">
@@ -802,7 +802,7 @@ const GroupSession = () => {
         <div className={cn("flex-1 flex flex-col overflow-hidden", tab !== "swipe" && "hidden")}>
         {(() => {
 
-          // ── Block solo swiping — need at least 2 members ────────────────
+          // ── Block solo swiping - need at least 2 members ────────────────
           if (members.length < 2) {
             return (
               <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-5">
@@ -971,7 +971,7 @@ const GroupSession = () => {
 
             // Member waiting for admin to pick category
             if (sessionCategories.length === 0) {
-              // Lobby — show place proposal section before swiping starts
+              // Lobby - show place proposal section before swiping starts
               return (
                 <div className="flex-1 flex flex-col px-4 pt-5 pb-6 gap-5 overflow-y-auto">
                   <LobbyProposals lobbyQuery={lobbyQuery} setLobbyQuery={setLobbyQuery} lobbyResults={lobbyResults} lobbySearching={lobbySearching} lobbyProposals={lobbyProposals} members={members} handleLobbyPropose={handleLobbyPropose} onSuggestNew={() => setLobbySuggestOpen(true)} />
@@ -1065,7 +1065,7 @@ const GroupSession = () => {
                   </button>
                 )}
 
-                {/* Match count — prominent */}
+                {/* Match count - prominent */}
                 {matches.length > 0 && (
                   <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 px-6 py-4 flex flex-col items-center gap-1">
                     <p className="text-3xl font-black text-emerald-700">{matches.length}</p>
@@ -1412,7 +1412,7 @@ const GroupSession = () => {
                 autoComplete="off"
                 className="w-full px-4 py-3 rounded-2xl border border-border/60 bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
-              <p className="text-xs text-muted-foreground mt-1.5">Wklej link z Google Maps — pomoże nam szybciej dodać miejsce</p>
+              <p className="text-xs text-muted-foreground mt-1.5">Wklej link z Google Maps - pomoże nam szybciej dodać miejsce</p>
             </div>
             <button
               onClick={handleSuggestPlace}
@@ -1448,7 +1448,7 @@ const GroupSession = () => {
                 autoComplete="off"
                 className="w-full px-4 py-3 rounded-2xl border border-border/60 bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
-              <p className="text-xs text-muted-foreground mt-1.5">Wklej link z Google Maps — pomoże nam szybciej dodać miejsce</p>
+              <p className="text-xs text-muted-foreground mt-1.5">Wklej link z Google Maps - pomoże nam szybciej dodać miejsce</p>
             </div>
             <button
               onClick={handleLobbySuggestNew}

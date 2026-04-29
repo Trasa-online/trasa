@@ -148,7 +148,7 @@ function DashboardMockup() {
 
   return (
     <div className="relative mt-16 text-left">
-      {/* Floating annotation — always right side */}
+      {/* Floating annotation - always right side */}
       {Object.entries(ANNOTATIONS).map(([key, ann]) => tab === key && (
         <div
           key={key + animKey}
@@ -199,7 +199,7 @@ function DashboardMockup() {
 
         {/* App shell */}
         <div className="flex bg-white" style={{ height: 460 }}>
-          {/* Sidebar — desktop only */}
+          {/* Sidebar - desktop only */}
           <div className="hidden sm:flex w-48 shrink-0 border-r border-slate-100 bg-white flex-col py-5 px-3 gap-1">
             <div className="flex items-center gap-2 px-2 mb-5">
               <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
@@ -231,7 +231,7 @@ function DashboardMockup() {
               </div>
             </div>
 
-            {/* Mobile tab strip — shown instead of sidebar on small screens */}
+            {/* Mobile tab strip - shown instead of sidebar on small screens */}
             <div className="sm:hidden flex border-b border-slate-100 shrink-0">
               {MOCK_TABS.map(item => (
                 <button
@@ -244,7 +244,7 @@ function DashboardMockup() {
               ))}
             </div>
 
-            {/* Content — animated on tab change */}
+            {/* Content - animated on tab change */}
             <div
               key={animKey}
               className="flex-1 px-6 py-5 overflow-hidden"
@@ -340,7 +340,7 @@ function DashboardMockup() {
                       </div>
                     </div>
 
-                    {/* ── DESKTOP layout (sm+): 3 columns — Logo+Gallery | Cover | Preview ── */}
+                    {/* ── DESKTOP layout (sm+): 3 columns - Logo+Gallery | Cover | Preview ── */}
                     <div className="hidden sm:flex gap-3">
                       {/* Col 1: Logo + Gallery */}
                       <div className="flex-1 space-y-2">
@@ -541,11 +541,11 @@ export default function ForBusinessPage() {
             >
               Zaloguj się
             </a>
-            {/* Blue "Dołącz" — mobile only */}
+            {/* Blue "Dołącz" - mobile only */}
             <a href="/auth?business=true" className="sm:hidden px-4 h-9 rounded-full text-white text-sm font-bold active:scale-95 transition-all whitespace-nowrap bg-blue-600 hover:bg-blue-500 flex items-center">
               Dołącz
             </a>
-            {/* Hamburger — mobile only */}
+            {/* Hamburger - mobile only */}
             <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
               {menuOpen ? <X className="h-4 w-4 text-white" /> : <Menu className="h-4 w-4 text-white" />}
             </button>

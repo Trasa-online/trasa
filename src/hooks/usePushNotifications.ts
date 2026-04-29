@@ -58,7 +58,7 @@ export function usePushNotifications() {
 
     try {
       // Use the already-registered PWA service worker (sw.js compiled from src/sw.ts)
-      // Do NOT register sw-push.js separately — subscriptions must be tied to the active SW
+      // Do NOT register sw-push.js separately - subscriptions must be tied to the active SW
       const registration = await navigator.serviceWorker.ready;
 
       // Request permission

@@ -161,7 +161,7 @@ const RouteEditor = ({ routeId, initialPins, dayLabel, dateLabel, canReview, onS
           </div>
         ))}
         {sorted.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-3">Brak miejsc — dodaj pierwsze!</p>
+          <p className="text-xs text-muted-foreground text-center py-3">Brak miejsc - dodaj pierwsze!</p>
         )}
       </div>
 

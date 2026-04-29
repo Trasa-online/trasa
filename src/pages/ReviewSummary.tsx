@@ -62,7 +62,7 @@ const ReviewSummary = () => {
     queryKey: ["review-summary-participants", route?.group_session_id],
     queryFn: async () => {
       if (!route?.group_session_id) return [];
-      // Use group_session_members — always populated when users join
+      // Use group_session_members - always populated when users join
       const { data: members } = await (supabase as any)
         .from("group_session_members")
         .select("user_id")
@@ -385,7 +385,7 @@ const ReviewSummary = () => {
       {/* ── Scrollable content ────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto pb-32">
 
-        {/* Celebration banner — only when arriving from "Zakończ trasę" */}
+        {/* Celebration banner - only when arriving from "Zakończ trasę" */}
         {isNewCompletion && (
           <div className="px-5 pt-6 pb-5 text-center border-b border-border/30">
             <div className="text-5xl mb-2">🎉</div>
@@ -410,7 +410,7 @@ const ReviewSummary = () => {
           </div>
         </div>
 
-        {/* AI highlight — big pull quote */}
+        {/* AI highlight - big pull quote */}
         {route?.ai_highlight && (
           <div className="px-5 pt-6 pb-5 border-b border-border/30">
             <p className="text-[22px] font-bold leading-snug text-foreground">
@@ -425,7 +425,7 @@ const ReviewSummary = () => {
             <p className="text-sm text-foreground/70 leading-relaxed">{route.ai_summary}</p>
           ) : (
             <p className="text-sm text-muted-foreground/50 italic leading-relaxed">
-              Brak podsumowania AI — dodaj zdjęcia i opis, żeby zachować wspomnienia z tego dnia.
+              Brak podsumowania AI - dodaj zdjęcia i opis, żeby zachować wspomnienia z tego dnia.
             </p>
           )}
         </div>

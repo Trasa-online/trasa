@@ -64,7 +64,7 @@ const BusinessHours = ({ business }: BusinessHoursProps) => {
                   ? "Zamknięte" 
                   : hours && !('closed' in hours) 
                     ? `${hours.open} - ${hours.close}`
-                    : "—"
+                    : "-"
                 }
               </span>
             </div>

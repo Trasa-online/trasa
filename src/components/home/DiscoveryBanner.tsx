@@ -35,7 +35,7 @@ export default function DiscoveryBanner() {
             </div>
             <DialogTitle className="text-lg">Już niedługo!</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
-              Pracujemy nad funkcją odkrywania miejsc polecanych przez twórców. Będzie dostępna w jednej z najbliższych aktualizacji — stay tuned! 🚀
+              Pracujemy nad funkcją odkrywania miejsc polecanych przez twórców. Będzie dostępna w jednej z najbliższych aktualizacji - stay tuned! 🚀
             </DialogDescription>
           </DialogHeader>
         </DialogContent>

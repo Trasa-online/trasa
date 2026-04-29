@@ -327,7 +327,7 @@ const Home = () => {
       {isGuest && (
         <div className="flex items-center justify-between gap-3 mb-5 px-4 py-3.5 rounded-2xl bg-orange-50 border border-orange-100">
           <p className="text-xs text-orange-800 font-semibold leading-snug">
-            🧳 Dołącz za darmo — zapisuj trasy i zbieraj wspomnienia z podróży!
+            🧳 Dołącz za darmo - zapisuj trasy i zbieraj wspomnienia z podróży!
           </p>
           <button
             onClick={() => navigate("/auth")}
@@ -452,7 +452,7 @@ const Home = () => {
               <p className="text-6xl">🗺️</p>
               <h2 className="text-xl font-black">Zacznij planować</h2>
               <p className="text-sm text-muted-foreground max-w-[220px] mx-auto leading-relaxed">
-                Kliknij <strong>+</strong> żeby wybrać miasto i zaplanować trasę — solo lub ze znajomymi.
+                Kliknij <strong>+</strong> żeby wybrać miasto i zaplanować trasę - solo lub ze znajomymi.
               </p>
             </div>
           ) : (

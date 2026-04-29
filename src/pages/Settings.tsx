@@ -283,7 +283,7 @@ function BugReportSection({ userId }: { userId: string }) {
       <textarea
         value={description}
         onChange={e => setDescription(e.target.value)}
-        placeholder="Opisz co się stało — na jakim ekranie, co kliknąłeś/-aś, co pojawiło się zamiast oczekiwanego efektu…"
+        placeholder="Opisz co się stało - na jakim ekranie, co kliknąłeś/-aś, co pojawiło się zamiast oczekiwanego efektu…"
         rows={4}
         className="w-full bg-background rounded-2xl px-3 py-2.5 text-sm resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/60 leading-relaxed"
       />

@@ -92,7 +92,7 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
               <>
                 <p className="text-base font-semibold text-foreground">
                   {format(startDate, "d MMM", { locale: pl })}
-                  {" — "}
+                  {" - "}
                   {format(endDate, "d MMM yyyy", { locale: pl })}
                 </p>
                 <p className="text-sm text-muted-foreground mt-0.5">

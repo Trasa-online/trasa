@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Subscribe first — fires INITIAL_SESSION almost immediately from localStorage
+    // Subscribe first - fires INITIAL_SESSION almost immediately from localStorage
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);

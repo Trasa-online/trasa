@@ -335,10 +335,10 @@ const Admin = () => {
   const handleApproveClaim = async (claim: BusinessClaim) => {
     setApprovingId(claim.id);
     try {
-      // 1. Invite user — creates auth account + returns magic link + userId
+      // 1. Invite user - creates auth account + returns magic link + userId
       const { link, userId: newUserId } = await invokeInviteUser(claim.contact_email, claim.contact_email.split("@")[0], undefined, true);
 
-      // 2. Create/update business profile linked to the new user (core — must succeed)
+      // 2. Create/update business profile linked to the new user (core - must succeed)
       const bizName = claim.place_name_text ?? claim.business_name ?? claim.places?.place_name ?? "Mój lokal";
       if (claim.place_id) {
         const { error: bpErr } = await (supabase as any).from("business_profiles").upsert({
@@ -357,7 +357,7 @@ const Admin = () => {
         if (bpErr) throw new Error(`business_profiles insert: ${bpErr.message}`);
       }
 
-      // 2b. Link claim_id for activation tracking (optional — requires migration)
+      // 2b. Link claim_id for activation tracking (optional - requires migration)
       await (supabase as any).from("business_profiles")
         .update({ claim_id: claim.id })
         .eq("owner_user_id", newUserId);
@@ -368,7 +368,7 @@ const Admin = () => {
       // 4. Store link to display in UI for copying
       setBizInviteLinks(prev => ({ ...prev, [claim.id]: link }));
       loadClaims();
-      toast.success(`Zatwierdzono — skopiuj link i wyślij do ${claim.contact_email}`);
+      toast.success(`Zatwierdzono - skopiuj link i wyślij do ${claim.contact_email}`);
     } catch (err: any) {
       toast.error(err.message ?? "Błąd zatwierdzania");
     } finally {
@@ -381,7 +381,7 @@ const Admin = () => {
     try {
       const { link } = await invokeInviteUser(claim.contact_email, claim.contact_email.split("@")[0], undefined, true);
       setBizInviteLinks(prev => ({ ...prev, [claim.id]: link }));
-      toast.success("Link wygenerowany — skopiuj i wyślij");
+      toast.success("Link wygenerowany - skopiuj i wyślij");
     } catch (err: any) {
       toast.error(err.message ?? "Błąd generowania linku", { duration: 10000 });
     } finally {
@@ -411,7 +411,7 @@ const Admin = () => {
       const { link } = await invokeInviteUser(entry.email, entry.email.split("@")[0], entry.id);
       setGeneratedLinks(prev => ({ ...prev, [entry.id]: link }));
       setWaitlist(prev => prev.map(e => e.id === entry.id ? { ...e, notified_at: new Date().toISOString() } : e));
-      toast.success(`Link dla ${entry.email} gotowy — skopiuj i wyślij!`);
+      toast.success(`Link dla ${entry.email} gotowy - skopiuj i wyślij!`);
     } catch (err: any) {
       toast.error(err.message ?? "Nie udało się wygenerować linku");
     } finally {
@@ -621,7 +621,7 @@ const Admin = () => {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate">
-                    {claim.business_name ?? claim.places?.place_name ?? claim.place_id ?? "—"}
+                    {claim.business_name ?? claim.places?.place_name ?? claim.place_id ?? "-"}
                   </p>
                   {(claim.place_name_text || claim.places?.city) && (
                     <p className="text-xs text-muted-foreground">{claim.place_name_text ?? claim.places?.city}</p>
@@ -838,7 +838,7 @@ const Admin = () => {
                   : (
                     <div className="space-y-3 p-4">
                       {bizReports.map(r => {
-                        const nameMatch = r.description?.match(/^\[Panel biznesowy — ([^\]]+)\]/);
+                        const nameMatch = r.description?.match(/^\[Panel biznesowy - ([^\]]+)\]/);
                         const bizName = nameMatch?.[1] ?? "Nieznany lokal";
                         const body = r.description?.replace(/^\[Panel biznesowy[^\]]*\]\n\n/, "") ?? "";
                         return (

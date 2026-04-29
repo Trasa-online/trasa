@@ -35,7 +35,7 @@ export interface MockPlace {
   galleryPhotos?: string[]; // extra photos shown in carousel (swipe card + detail)
   businessSubcategories?: string[]; // subcategories from business_profiles (for custom filtering)
   coverVideoUrl?: string; // business cover video (premium)
-  businessHasOwnPhoto?: boolean; // true when business uploaded cover image/video or gallery — skip Google photos
+  businessHasOwnPhoto?: boolean; // true when business uploaded cover image/video or gallery - skip Google photos
 }
 
 export type PlaceCategory =
@@ -174,7 +174,7 @@ const GuestUpsellModal = ({ onSignUp, onDismiss }: { onSignUp: () => void; onDis
           onClick={onSignUp}
           className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
         >
-          Zakładam konto — to darmowe
+          Zakładam konto - to darmowe
           <ArrowRight className="h-4 w-4" />
         </button>
         <button
@@ -379,7 +379,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         )}
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
-        {/* Photo dots — only for multi-photo, not video */}
+        {/* Photo dots - only for multi-photo, not video */}
         {isTop && !place.coverVideoUrl && photoUrls.length > 1 && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
             {photoUrls.map((_, i) => (
@@ -393,7 +393,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
       {/* Content */}
       <div className="absolute bottom-0 left-0 right-0 px-5 pt-5 pb-[76px] space-y-2">
-        {/* Category (hidden for business cards — replaced by logo row) */}
+        {/* Category (hidden for business cards - replaced by logo row) */}
         {place.businessLogoUrl === undefined && (
           <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full", getCategoryColor(place.category))}>
             {CATEGORY_LABELS[place.category]}
@@ -479,7 +479,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         </div>
       </div>
 
-      {/* Action buttons inside card — only on top card */}
+      {/* Action buttons inside card - only on top card */}
       {isTop && (
         <div
           className="absolute bottom-0 left-0 right-0 px-4 pb-4 flex gap-3"
@@ -556,7 +556,7 @@ const EmptyState = ({
         <div className="text-5xl">🗺️</div>
         <div>
           <p className="font-bold text-lg">Przejrzałeś wszystkie miejsca</p>
-          <p className="text-muted-foreground text-sm mt-1">Nie wybrałeś żadnego miejsca — może zacznijmy od nowa?</p>
+          <p className="text-muted-foreground text-sm mt-1">Nie wybrałeś żadnego miejsca - może zacznijmy od nowa?</p>
         </div>
         <button
           onClick={() => window.location.reload()}
@@ -1124,7 +1124,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
               <p className="text-muted-foreground text-sm mt-1">
                 {likedPlaces.length > 0
                   ? `Wybrałeś ${likedPlaces.length} miejsc. Wybierz kolejną kategorię lub zakończ.`
-                  : "Nie wybrałeś żadnego miejsca — spróbuj innej kategorii."}
+                  : "Nie wybrałeś żadnego miejsca - spróbuj innej kategorii."}
               </p>
             </div>
             <div className="w-full space-y-3">

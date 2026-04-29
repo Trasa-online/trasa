@@ -3,7 +3,7 @@ import { Trash2, MapPin, Clock } from "lucide-react";
 import { format, differenceInDays, isValid, parseISO } from "date-fns";
 import { pl } from "date-fns/locale";
 
-// Safe date parse — always returns a valid Date or null
+// Safe date parse - always returns a valid Date or null
 function safeDate(val: string | null | undefined): Date | null {
   if (!val) return null;
   // Try ISO string first (e.g. "2026-04-20"), then fallback

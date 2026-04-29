@@ -173,7 +173,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
           return;
         }
         const extracted = data.places[0] as { place_name: string };
-        // Fill input with extracted name and show suggestions — user picks the right one
+        // Fill input with extracted name and show suggestions - user picks the right one
         setQuery(extracted.place_name);
         setMode("text");
         setStatus("idle");

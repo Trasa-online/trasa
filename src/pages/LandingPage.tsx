@@ -402,7 +402,7 @@ const LandingPage = () => {
             >
               Zaloguj się
             </button>
-            {/* Orange pill — mobile only, directly left of hamburger */}
+            {/* Orange pill - mobile only, directly left of hamburger */}
             <button
               onClick={() => navigate("/home")}
               className="sm:hidden px-4 h-9 rounded-full text-white text-sm font-bold active:scale-95 transition-all whitespace-nowrap"
@@ -410,7 +410,7 @@ const LandingPage = () => {
             >
               Przejdź do aplikacji
             </button>
-            {/* Hamburger — mobile only */}
+            {/* Hamburger - mobile only */}
             <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
               {menuOpen ? <X className="h-4 w-4 text-white" /> : <Menu className="h-4 w-4 text-white" />}
             </button>

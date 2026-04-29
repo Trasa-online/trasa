@@ -486,7 +486,7 @@ const OrbOverlay = ({ onClose, isSpeaking = false, activeRoutes = [], userIntere
         </div>
       </div>
 
-      {/* Input bar — pinned to bottom */}
+      {/* Input bar - pinned to bottom */}
       <div className="flex-shrink-0 px-4 pb-safe pt-3 border-t border-border/20">
         <div className="flex gap-2 items-center max-w-sm mx-auto">
           <button

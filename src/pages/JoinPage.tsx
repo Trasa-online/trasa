@@ -120,7 +120,7 @@ export default function JoinPage() {
         </button>
 
         <p className="text-xs text-muted-foreground">
-          Twoje konto wymaga zatwierdzenia przez admina — zwykle trwa to do 24h.
+          Twoje konto wymaga zatwierdzenia przez admina - zwykle trwa to do 24h.
         </p>
       </div>
     </div>

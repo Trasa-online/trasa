@@ -14,7 +14,7 @@ export default function UserSearch() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
 
-  // Load all profiles up front — filter client-side (no API call on type = no Face ID)
+  // Load all profiles up front - filter client-side (no API call on type = no Face ID)
   const { data: allProfiles = [], isLoading } = useQuery({
     queryKey: ["all-profiles", user?.id],
     queryFn: async () => {
@@ -42,7 +42,7 @@ export default function UserSearch() {
     refetchOnMount: "always",
   });
 
-  // Client-side filter — no network call
+  // Client-side filter - no network call
   const trimmed = query.trim().replace(/^@/, "").toLowerCase();
   const visible = trimmed
     ? allProfiles.filter(p =>

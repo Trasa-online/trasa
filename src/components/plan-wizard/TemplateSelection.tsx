@@ -211,7 +211,7 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
     return (
       <div className="flex flex-col flex-1 items-center justify-center px-6 gap-4 text-center">
         <p className="text-muted-foreground text-sm">
-          Brak gotowych plannerów dla {city} — pracujemy nad tym!
+          Brak gotowych plannerów dla {city} - pracujemy nad tym!
         </p>
         <Button
           variant="outline"

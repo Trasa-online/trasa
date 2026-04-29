@@ -114,7 +114,7 @@ function RouteCard({
                 {CATEGORY_EMOJI[pin.category] ?? "📍"}
                 <span className={cn(isPlaceholder(pin.place_name) && "italic opacity-70")}>
                   {isPlaceholder(pin.place_name)
-                    ? pin.place_name.replace("[PLACEHOLDER] ", "").split(" — ")[0]
+                    ? pin.place_name.replace("[PLACEHOLDER] ", "").split(" - ")[0]
                     : pin.place_name}
                 </span>
               </span>

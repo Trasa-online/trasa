@@ -189,7 +189,7 @@ const CreateRoute = () => {
           )}
         </div>
 
-        {/* Day tabs — shown when editing an existing multi-day trip */}
+        {/* Day tabs - shown when editing an existing multi-day trip */}
         {folderId && preferences.numDays > 1 && dayNumber && (
           <div className="flex gap-1.5 px-4 pb-2 overflow-x-auto scrollbar-none">
             {Array.from({ length: preferences.numDays }, (_, i) => i + 1).map(d => (
