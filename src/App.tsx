@@ -250,7 +250,7 @@ const App = () => (
           <Route path="/edit-plan" element={<RequireAuth><EditPlan /></RequireAuth>} />
           <Route path="/review-summary" element={<RequireAuth><ReviewSummary /></RequireAuth>} />
           <Route path="/plan" element={<RequireAuth><PlanWizard /></RequireAuth>} />
-          <Route path="/demo" element={<Navigate to="/" replace />} />
+          <Route path="/demo" element={<DemoSession />} />
           <Route path="/sesja/nowa" element={<RequireAuth><CreateGroupSession /></RequireAuth>} />
           <Route path="/sesja/:joinCode" element={<RequireAuth><GroupSession /></RequireAuth>} />
           <Route path="/search" element={<RequireAuth><UserSearch /></RequireAuth>} />

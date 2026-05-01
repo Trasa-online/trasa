@@ -357,7 +357,7 @@ export default function BusinessLanding() {
             Zakladam konto
           </button>
           <button
-            onClick={() => navigate("/biznes/start")}
+            onClick={() => navigate("/demo?biznes=1")}
             className="w-full rounded-2xl border border-blue-400 text-[#0E0E0E] font-semibold py-3.5 text-sm hover:bg-blue-50 transition-colors"
           >
             Zobacz jak to dziala →
@@ -393,7 +393,7 @@ export default function BusinessLanding() {
               Zakladam konto
             </button>
             <button
-              onClick={() => navigate("/biznes/start")}
+              onClick={() => navigate("/demo?biznes=1")}
               className="flex-1 rounded-2xl border border-blue-400 text-[#0E0E0E] font-semibold py-4 text-sm hover:bg-blue-50 transition-colors"
             >
               Zobacz jak to dziala →
