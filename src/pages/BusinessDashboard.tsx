@@ -226,17 +226,17 @@ function AppLikePreviewModal({
               )}
               {/* Info overlay */}
               <div className="absolute left-0 right-0 px-4 space-y-1.5" style={{ bottom: '5rem' }}>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                  <span className="text-white/70 text-xs">4.6</span>
-                  {street && <><span className="text-white/40 text-xs">·</span><span className="text-white/70 text-xs truncate max-w-[160px]">{street}</span></>}
-                </div>
                 {logoUrl && (
                   <div className="h-10 w-10 rounded-full overflow-hidden border border-white/30 shadow-md bg-white/10">
                     <img src={logoUrl} className="w-full h-full object-cover" />
                   </div>
                 )}
                 <h3 className="text-xl font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                  <span className="text-white/70 text-xs">4.6</span>
+                  {street && <><span className="text-white/40 text-xs">·</span><span className="text-white/70 text-xs truncate max-w-[160px]">{street}</span></>}
+                </div>
                 {description && <p className="text-white/70 text-sm line-clamp-2 leading-snug">{description}</p>}
                 {eventTitle && (
                   <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2.5 py-0.5 text-white font-semibold text-xs">
@@ -465,17 +465,17 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
           </div>
         )}
         <div className="absolute left-0 right-0 px-3 space-y-1" style={{ bottom: '3.5rem' }}>
-          <div className="flex items-center gap-1 flex-wrap">
-            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-            <span className="text-white/70 text-[10px]">4.6</span>
-            {street && <><span className="text-white/40 text-[10px]">·</span><span className="text-white/70 text-[10px] truncate max-w-[120px]">{street}</span></>}
-          </div>
           {logoUrl && (
             <div className="h-8 w-8 rounded-full overflow-hidden border border-white/30 shadow-md bg-white/10">
               <img src={logoUrl} className="w-full h-full object-cover" />
             </div>
           )}
           <h3 className="text-base font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
+          <div className="flex items-center gap-1 flex-wrap">
+            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+            <span className="text-white/70 text-[10px]">4.6</span>
+            {street && <><span className="text-white/40 text-[10px]">·</span><span className="text-white/70 text-[10px] truncate max-w-[120px]">{street}</span></>}
+          </div>
           {description && <p className="text-white/70 text-[10px] line-clamp-2 leading-snug">{description}</p>}
           {eventTitle && (
             <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2 py-0.5 text-white font-semibold text-[9px]">
