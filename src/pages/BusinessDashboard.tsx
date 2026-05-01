@@ -430,12 +430,16 @@ function AppLikePreviewModal({
   );
 }
 
-function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessName, mainCategory, subcategories, tags, eventTitle, street, description, onPreviewClick, previewReady }: {
+function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessName, mainCategory, subcategories, tags, eventTitle, street, description, onPreviewClick, previewReady, colorBadge, colorCardBg, colorButton }: {
   logoUrl: string; coverImageUrl: string; coverVideoUrl: string; businessName: string; mainCategory: string;
   subcategories: string[]; tags: string[]; eventTitle: string; street?: string; description?: string;
   onPreviewClick?: () => void; previewReady?: boolean;
+  colorBadge?: string; colorCardBg?: string; colorButton?: string;
 }) {
   const catLabel = mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : null;
+  const badge   = colorBadge  ?? "#f97316";
+  const overlay = colorCardBg ?? "#000000";
+  const btn     = colorButton ?? "#f97316";
   return (
     <div className="sticky top-20">
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Podgląd wizytówki</p>
@@ -446,16 +450,10 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
             ? <img src={coverImageUrl} className="absolute inset-0 w-full h-full object-cover" />
             : <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-700" />
         }
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
+        <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${overlay}ee, ${overlay}40, transparent)` }} />
         {catLabel && (
-          <div className="absolute top-3 left-3 bg-orange-500 text-white px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
+          <div className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm" style={{ background: badge, color: getContrastColor(badge) }}>
             {catLabel}
-          </div>
-        )}
-        {/* Logo */}
-        {logoUrl && (
-          <div className="absolute top-3 right-3 h-8 w-8 rounded-full overflow-hidden border border-white/30 shadow-md bg-white/10">
-            <img src={logoUrl} className="w-full h-full object-cover" />
           </div>
         )}
         {/* Subcategories — vertical text on right edge */}
@@ -472,6 +470,11 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
             <span className="text-white/70 text-[10px]">4.6</span>
             {street && <><span className="text-white/40 text-[10px]">·</span><span className="text-white/70 text-[10px] truncate max-w-[120px]">{street}</span></>}
           </div>
+          {logoUrl && (
+            <div className="h-8 w-8 rounded-full overflow-hidden border border-white/30 shadow-md bg-white/10">
+              <img src={logoUrl} className="w-full h-full object-cover" />
+            </div>
+          )}
           <h3 className="text-base font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
           {description && <p className="text-white/70 text-[10px] line-clamp-2 leading-snug">{description}</p>}
           {eventTitle && (
@@ -492,7 +495,7 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
         </div>
         <div className="absolute bottom-2 left-2 right-2 flex gap-2">
           <div className="flex-1 py-2 rounded-full bg-white text-slate-900 font-bold text-[10px] text-center">Odrzuć</div>
-          <div className="flex-1 py-2 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-[10px] text-center">Dodaj</div>
+          <div className="flex-1 py-2 rounded-full font-bold text-[10px] text-center" style={{ background: btn, color: getContrastColor(btn) }}>Dodaj</div>
         </div>
       </div>
       {onPreviewClick && (
@@ -1748,6 +1751,7 @@ const BusinessDashboard = () => {
                   businessName={businessName} mainCategory={mainCategory} subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
                   street={street} description={description}
                   onPreviewClick={() => setShowAppPreview(true)} previewReady={previewReady}
+                  colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton}
                 />
               </div>
               </div> {/* end flex flex-col lg:flex-row */}
@@ -1976,6 +1980,7 @@ const BusinessDashboard = () => {
                   businessName={businessName} mainCategory={mainCategory} subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
                   street={street} description={description}
                   onPreviewClick={() => setShowAppPreview(true)} previewReady={previewReady}
+                  colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton}
                 />
               </div>
               </div> {/* end flex flex-col lg:flex-row */}
@@ -2071,6 +2076,7 @@ const BusinessDashboard = () => {
                     description={description}
                     onPreviewClick={() => setShowAppPreview(true)}
                     previewReady={previewReady}
+                    colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton}
                   />
                 </div>
               </div>
