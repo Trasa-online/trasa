@@ -107,6 +107,7 @@ function SplashController() {
 
   const skipSplash =
     location.pathname.startsWith("/biznes") ||
+    location.pathname.startsWith("/dla-firm") ||
     location.pathname === "/auth" ||
     location.pathname.startsWith("/set-password");
 
