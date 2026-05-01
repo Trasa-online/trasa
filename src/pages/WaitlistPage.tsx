@@ -505,11 +505,11 @@ function EmailCapture({ inputRef }: { inputRef?: React.RefObject<HTMLInputElemen
     </div>
   );
   return (
-    <form onSubmit={submit} className="flex gap-2 w-full">
+    <form onSubmit={submit} className="flex flex-col gap-2 w-full">
       <input ref={inputRef} type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="twoj@email.pl"
-        className="flex-1 min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-[#0E0E0E] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-orange-300" />
+        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-[#0E0E0E] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-orange-300" />
       <button type="submit" disabled={status === "loading"}
-        className="rounded-2xl bg-orange-700 hover:bg-orange-800 text-white font-bold px-5 py-3.5 text-sm whitespace-nowrap shadow-md shadow-orange-200 active:scale-[0.98] transition-all shrink-0">
+        className="w-full rounded-2xl bg-orange-700 hover:bg-orange-800 text-white font-bold px-5 py-3.5 text-sm whitespace-nowrap shadow-md shadow-orange-200 active:scale-[0.98] transition-all">
         {status === "loading" ? "..." : "Zapisz się"}
       </button>
     </form>
@@ -572,9 +572,9 @@ export default function WaitlistPage() {
                 style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }}
               >
-                <div className="flex gap-2 w-full px-4 mb-6" style={{ filter: "grayscale(1)", opacity: 0.45 }}>
-                  <div className="flex-1"><AppStoreBadge store="ios" /></div>
-                  <div className="flex-1"><AppStoreBadge store="android" /></div>
+                <div className="flex flex-col gap-2 w-full px-4 mb-6" style={{ filter: "grayscale(1)", opacity: 0.45 }}>
+                  <AppStoreBadge store="ios" />
+                  <AppStoreBadge store="android" />
                 </div>
               </motion.div>
             )}
@@ -635,9 +635,9 @@ export default function WaitlistPage() {
             }}
           >
             <EmailCapture inputRef={inputRef} />
-            <div className="flex gap-2">
-              <div className="flex-1"><AppStoreBadge store="ios" /></div>
-              <div className="flex-1"><AppStoreBadge store="android" /></div>
+            <div className="flex flex-col gap-2 w-full">
+              <AppStoreBadge store="ios" />
+              <AppStoreBadge store="android" />
             </div>
             <p className="text-center text-xs text-slate-400">dostępne w czerwcu</p>
           </div>
