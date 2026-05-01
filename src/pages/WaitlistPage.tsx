@@ -518,12 +518,19 @@ function EmailCapture({ inputRef }: { inputRef?: React.RefObject<HTMLInputElemen
 
 function AppStoreBadge({ store }: { store: "ios" | "android" }) {
   return (
-    <img
-      src={store === "ios" ? "/Pobierz-z-App-Store.png" : "/google-play-badge.png"}
-      alt={store === "ios" ? "Pobierz z App Store" : "Pobierz z Google Play"}
-      className="h-[52px] w-auto select-none"
-      draggable={false}
-    />
+    <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 select-none h-[52px]">
+      <img
+        src={store === "ios" ? "/Pobierz-z-App-Store.png" : "/google-play-badge.png"}
+        alt=""
+        className="h-7 w-auto shrink-0"
+        draggable={false}
+      />
+      <div className="flex-1 min-w-0">
+        <p className="text-[9px] text-slate-400 uppercase tracking-wider leading-none">{store === "ios" ? "Pobierz w" : "Dostepne w"}</p>
+        <p className="text-[12px] font-semibold text-slate-600 leading-tight whitespace-nowrap">{store === "ios" ? "App Store" : "Google Play"}</p>
+      </div>
+      <span className="text-[9px] text-slate-400 font-medium bg-slate-100 rounded-full px-1.5 py-0.5 shrink-0">Wkrotce</span>
+    </div>
   );
 }
 
