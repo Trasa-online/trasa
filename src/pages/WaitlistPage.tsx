@@ -3,7 +3,7 @@ import {
   motion, AnimatePresence, useMotionValue, useTransform, animate,
   type MotionValue, type PanInfo,
 } from "framer-motion";
-import { Check, Star, Clock, Globe, VolumeX, Volume2 } from "lucide-react";
+import { Star, Clock, Globe, VolumeX, Volume2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -500,8 +500,7 @@ function EmailCapture({ inputRef }: { inputRef?: React.RefObject<HTMLInputElemen
     setStatus("done");
   };
   if (status === "done") return (
-    <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-orange-50 border border-orange-200">
-      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shrink-0"><Check className="h-4 w-4 text-white" /></div>
+    <div className="px-5 py-4 rounded-2xl bg-orange-50 border border-orange-200">
       <p className="text-sm font-semibold text-[#0E0E0E]">Powiadomimy Cię o premierze.</p>
     </div>
   );
