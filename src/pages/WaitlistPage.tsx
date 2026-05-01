@@ -639,7 +639,6 @@ export default function WaitlistPage() {
               <AppStoreBadge store="ios" />
               <AppStoreBadge store="android" />
             </div>
-            <p className="text-center text-xs text-slate-400">dostępne w czerwcu</p>
           </div>
         </div>
       </div>
