@@ -286,12 +286,15 @@ function PostcardReveal({ large = false, targetH }: { large?: boolean; targetH?:
 function AppStoreBadge({ store }: { store: "ios" | "android" }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 select-none h-[52px]">
-      <img
-        src={store === "ios" ? "/Pobierz-z-App-Store.png" : "/google-play-badge.png"}
-        alt=""
-        className="h-7 w-auto shrink-0"
-        draggable={false}
-      />
+      {store === "ios" ? (
+        <svg className="h-6 w-6 shrink-0 text-slate-500" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+        </svg>
+      ) : (
+        <svg className="h-6 w-6 shrink-0 text-slate-500" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3.18 23.76c.37.2.8.22 1.19.06l11.3-6.5-2.49-2.49-10 8.93zm-1.13-20.7A1.5 1.5 0 0 0 2 4v16a1.5 1.5 0 0 0 .05.94l.09.1 8.96-8.96v-.21L2.14 2.96l-.09.1zm17.3 7.84-2.41-1.39-2.72 2.72 2.72 2.72 2.44-1.41a1.5 1.5 0 0 0 0-2.64zM4.37.18 15.67 6.68l-2.49 2.49L3.18.24A1.5 1.5 0 0 1 4.37.18z" />
+        </svg>
+      )}
       <div className="flex-1 min-w-0">
         <p className="text-[9px] text-slate-400 uppercase tracking-wider leading-none">{store === "ios" ? "Pobierz w" : "Dostepne w"}</p>
         <p className="text-[12px] font-semibold text-slate-600 leading-tight whitespace-nowrap">{store === "ios" ? "App Store" : "Google Play"}</p>
