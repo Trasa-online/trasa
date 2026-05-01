@@ -145,6 +145,15 @@ function StarRow({ count = 5, size = "sm" }: { count?: number; size?: "xs" | "sm
   );
 }
 
+function getContrastColor(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const toLinear = (c: number) => { const s = c / 255; return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
+  const L = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+  return L > 0.179 ? '#000000' : '#ffffff';
+}
+
 function AppLikePreviewModal({
   onClose, onConvert, isDraft, convertingDraft,
   businessName, mainCategory, subcategories, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, posts, eventTitle,
@@ -203,14 +212,8 @@ function AppLikePreviewModal({
               <CoverMedia className="absolute inset-0 w-full h-full object-cover" />
               <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${colorCardBg}ee, ${colorCardBg}40, transparent)` }} />
               {catLabel && (
-                <div className="absolute top-4 left-4 text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm" style={{ background: colorBadge }}>
+                <div className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold shadow-sm" style={{ background: colorBadge, color: getContrastColor(colorBadge) }}>
                   {catLabel}
-                </div>
-              )}
-              {/* Logo */}
-              {logoUrl && (
-                <div className="absolute top-4 right-4 h-10 w-10 rounded-full overflow-hidden border border-white/30 shadow-md bg-white/10">
-                  <img src={logoUrl} className="w-full h-full object-cover" />
                 </div>
               )}
               {/* Subcategories — vertical text on right edge */}
@@ -228,6 +231,11 @@ function AppLikePreviewModal({
                   <span className="text-white/70 text-xs">4.6</span>
                   {street && <><span className="text-white/40 text-xs">·</span><span className="text-white/70 text-xs truncate max-w-[160px]">{street}</span></>}
                 </div>
+                {logoUrl && (
+                  <div className="h-10 w-10 rounded-full overflow-hidden border border-white/30 shadow-md bg-white/10">
+                    <img src={logoUrl} className="w-full h-full object-cover" />
+                  </div>
+                )}
                 <h3 className="text-xl font-black text-white leading-tight">{businessName || 'Nazwa lokalu'}</h3>
                 {description && <p className="text-white/70 text-sm line-clamp-2 leading-snug">{description}</p>}
                 {eventTitle && (
@@ -256,7 +264,7 @@ function AppLikePreviewModal({
                 <button onClick={onClose} className="flex-1 py-3.5 rounded-full bg-white text-slate-900 font-bold text-sm active:scale-95 transition-transform">
                   Odrzuć
                 </button>
-                <button className="flex-1 py-3.5 rounded-full text-white font-bold text-sm active:scale-95 transition-transform shadow-lg" style={{ background: colorButton }}>
+                <button className="flex-1 py-3.5 rounded-full font-bold text-sm active:scale-95 transition-transform shadow-lg" style={{ background: colorButton, color: getContrastColor(colorButton) }}>
                   Dodaj
                 </button>
               </div>
@@ -396,8 +404,8 @@ function AppLikePreviewModal({
                 <button onClick={() => setView('card')} className="flex-1 py-3 rounded-full border border-slate-200 text-slate-700 font-semibold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform">
                   <ChevronDown className="h-4 w-4" /> Pomin
                 </button>
-                <button className="flex-1 py-3 rounded-full text-white font-bold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform" style={{ background: colorButton }}>
-                  <Heart className="h-4 w-4 fill-white" /> Chce tu byc
+                <button className="flex-1 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform" style={{ background: colorButton, color: getContrastColor(colorButton) }}>
+                  <Heart className="h-4 w-4" style={{ fill: getContrastColor(colorButton) }} /> Chcę tu być
                 </button>
               </div>
             </>
@@ -749,14 +757,14 @@ const BusinessDashboard = () => {
     const driverObj = driver({
       showProgress: true,
       nextBtnText: 'Dalej →',
-      prevBtnText: '← Wróc',
+      prevBtnText: '← Wróć',
       doneBtnText: 'Gotowe!',
       steps: [
-        { element: '#tour-overview', popover: { title: 'Przeglad', description: 'Przeglad: tu widzisz ruch na wizytowce i skroty do szybkich akcji.', side: 'right' } },
-        { element: '#tour-gallery',  popover: { title: 'Wyglad',   description: 'Wyglad: dodaj okladke, galerie i dostosuj kolory wizytowki.',         side: 'right' } },
-        { element: '#tour-profile',  popover: { title: 'Dane lokalu', description: 'Dane lokalu: uzupelnij kontakt, opis i tagi.',                      side: 'right' } },
-        { element: '#tour-posts',    popover: { title: 'Aktualnosci', description: 'Aktualnosci: publikuj posty i wydarzenia widoczne dla uzytkownikow.', side: 'right' } },
-        { element: '#tour-preview-btn', popover: { title: 'Podglad', description: 'Tu otwierasz podglad Twojej wizytowki dokladnie tak jak widza ja uzytkownicy.', side: 'bottom' } },
+        { element: '#tour-overview', popover: { title: 'Przegląd',    description: 'Przegląd: tu widzisz ruch na wizytówce i skróty do szybkich akcji.', side: 'right' } },
+        { element: '#tour-gallery',  popover: { title: 'Wygląd',      description: 'Wygląd: dodaj okładkę, galerię i dostosuj kolory wizytówki.',         side: 'right' } },
+        { element: '#tour-profile',  popover: { title: 'Dane lokalu', description: 'Dane lokalu: uzupełnij kontakt, opis i tagi.',                        side: 'right' } },
+        { element: '#tour-posts',    popover: { title: 'Aktualności', description: 'Aktualności: publikuj posty i wydarzenia widoczne dla użytkowników.',  side: 'right' } },
+        { element: '#tour-preview-btn', popover: { title: 'Podgląd', description: 'Tu otwierasz podgląd Twojej wizytówki dokładnie tak jak widzą ją użytkownicy.', side: 'bottom' } },
       ],
       onDestroyed: () => {
         if (profile?.id) localStorage.setItem(`tour_seen_${profile.id}`, '1');
@@ -1369,17 +1377,23 @@ const BusinessDashboard = () => {
           </div>
           <div className="flex items-center gap-2 ml-auto">
             {isDraft && (
-              <button
-                id="tour-preview-btn"
-                onClick={() => previewReady && setShowAppPreview(true)}
-                disabled={!previewReady}
-                title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie okładkowe" : undefined}
-                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full active:scale-95 transition-transform whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
-                style={previewReady ? { background: 'linear-gradient(90deg, #F4A259, #F9662B)', color: 'white' } : { background: '#e2e8f0', color: '#94a3b8' }}
-              >
-                <Play className="h-3 w-3" />
-                Przetestuj w aplikacji
-              </button>
+              <div className="relative group">
+                <button
+                  id="tour-preview-btn"
+                  onClick={() => previewReady && setShowAppPreview(true)}
+                  disabled={!previewReady}
+                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full active:scale-95 transition-transform whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+                  style={previewReady ? { background: 'linear-gradient(90deg, #F4A259, #F9662B)', color: 'white' } : { background: '#e2e8f0', color: '#94a3b8' }}
+                >
+                  <Play className="h-3 w-3" />
+                  Przetestuj w aplikacji
+                </button>
+                {!previewReady && (
+                  <div className="absolute top-full mt-2 right-0 w-60 bg-slate-800 text-white text-xs rounded-xl px-3 py-2 leading-snug opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                    Uzupełnij nazwę lokalu i dodaj zdjęcie okładkowe, aby przetestować wizytówkę
+                  </div>
+                )}
+              </div>
             )}
             {isAdminUser && (profile as any).preview_token && (
               <button
@@ -1720,8 +1734,8 @@ const BusinessDashboard = () => {
                 </div>
                 {/* Live preview strip */}
                 <div className="flex items-center gap-3 pt-1">
-                  <span className="px-3 py-1 rounded-full text-xs font-bold text-white shrink-0" style={{ background: colorBadge }}>Jedzenie &amp; Napoje</span>
-                  <button className="flex-1 py-2 rounded-full text-white text-xs font-bold" style={{ background: colorButton }}>Dodaj</button>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0" style={{ background: colorBadge, color: getContrastColor(colorBadge) }}>Jedzenie &amp; Napoje</span>
+                  <button className="flex-1 py-2 rounded-full text-xs font-bold" style={{ background: colorButton, color: getContrastColor(colorButton) }}>Dodaj</button>
                 </div>
               </div>
 
