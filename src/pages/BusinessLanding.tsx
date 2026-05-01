@@ -354,7 +354,7 @@ export default function BusinessLanding() {
             className="w-full rounded-2xl text-white font-bold py-4 text-base active:scale-[0.98] transition-all"
             style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)", boxShadow: "0 8px 24px -6px rgba(59,130,246,0.4)" }}
           >
-            Zakladam konto
+            Zakładam konto
           </button>
           <button
             onClick={() => navigate("/demo?biznes=1")}
@@ -390,7 +390,7 @@ export default function BusinessLanding() {
               className="flex-1 rounded-2xl text-white font-bold py-4 text-sm active:scale-[0.98] transition-all"
               style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)", boxShadow: "0 8px 24px -6px rgba(59,130,246,0.4)" }}
             >
-              Zakladam konto
+              Zakładam konto
             </button>
             <button
               onClick={() => navigate("/demo?biznes=1")}
