@@ -109,7 +109,8 @@ function SplashController() {
     location.pathname.startsWith("/biznes") ||
     location.pathname.startsWith("/dla-firm") ||
     location.pathname === "/auth" ||
-    location.pathname.startsWith("/set-password");
+    location.pathname.startsWith("/set-password") ||
+    location.pathname === "/demo";
 
   const [visible, setVisible] = useState(!skipSplash);
   const [done, setDone] = useState(false);
@@ -162,7 +163,8 @@ function BusinessGuard() {
       location.pathname === "/auth" ||
       location.pathname.startsWith("/set-password") ||
       location.pathname === "/settings" ||
-      location.pathname === "/moj-profil"
+      location.pathname === "/moj-profil" ||
+      location.pathname === "/demo"
     ) return;
 
     (async () => {
