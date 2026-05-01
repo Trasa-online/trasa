@@ -1224,7 +1224,7 @@ const BusinessDashboard = () => {
         return (
           <div className="fixed top-0 left-0 right-0 z-[60] bg-orange-50 border-b border-orange-100 px-4 py-2 flex items-center justify-between gap-3">
             <p className="text-xs font-medium text-orange-700 leading-snug">
-              {ready ? "Twój profil wygląda swietnie! Gotowy na launch." : "Uzupełnij nazwę lokalu i dodaj zdjęcia, żeby opublikować wizytówkę"}
+              {ready ? "Twój profil wygląda swietnie! Gotowy na launch." : "Uzupełnij nazwę lokalu i dodaj zdjęcia, aby zobaczyć podgląd wizytówki"}
             </p>
             {ready && (
               <button
