@@ -6,7 +6,9 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle } from "lucide-react";
+import 'driver.js/dist/driver.css';
+import { driver } from 'driver.js';
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -146,11 +148,13 @@ function StarRow({ count = 5, size = "sm" }: { count?: number; size?: "xs" | "sm
 function AppLikePreviewModal({
   onClose, onConvert, isDraft, convertingDraft,
   businessName, mainCategory, subcategories, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, posts, eventTitle,
+  colorBadge, colorCardBg, colorButton,
 }: {
   onClose: () => void; onConvert: () => void; isDraft: boolean; convertingDraft: boolean;
   businessName: string; mainCategory: string; subcategories: string[]; tags: string[]; description: string;
   street: string; city: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[];
   posts: BusinessPost[]; eventTitle: string;
+  colorBadge: string; colorCardBg: string; colorButton: string;
 }) {
   const [view, setView] = useState<'card' | 'detail'>('card');
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -197,9 +201,9 @@ function AppLikePreviewModal({
             /* Swipe card fills the whole phone */
             <div className="flex-1 relative overflow-hidden min-h-0">
               <CoverMedia className="absolute inset-0 w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
+              <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${colorCardBg}ee, ${colorCardBg}40, transparent)` }} />
               {catLabel && (
-                <div className="absolute top-4 left-4 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+                <div className="absolute top-4 left-4 text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm" style={{ background: colorBadge }}>
                   {catLabel}
                 </div>
               )}
@@ -252,7 +256,7 @@ function AppLikePreviewModal({
                 <button onClick={onClose} className="flex-1 py-3.5 rounded-full bg-white text-slate-900 font-bold text-sm active:scale-95 transition-transform">
                   Odrzuć
                 </button>
-                <button className="flex-1 py-3.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-95 transition-transform shadow-lg">
+                <button className="flex-1 py-3.5 rounded-full text-white font-bold text-sm active:scale-95 transition-transform shadow-lg" style={{ background: colorButton }}>
                   Dodaj
                 </button>
               </div>
@@ -392,7 +396,7 @@ function AppLikePreviewModal({
                 <button onClick={() => setView('card')} className="flex-1 py-3 rounded-full border border-slate-200 text-slate-700 font-semibold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform">
                   <ChevronDown className="h-4 w-4" /> Pomin
                 </button>
-                <button className="flex-1 py-3 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform">
+                <button className="flex-1 py-3 rounded-full text-white font-bold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform" style={{ background: colorButton }}>
                   <Heart className="h-4 w-4 fill-white" /> Chce tu byc
                 </button>
               </div>
@@ -549,6 +553,10 @@ const BusinessDashboard = () => {
   const [tagsExpanded, setTagsExpanded] = useState(false);
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [customSubcategoryStatus, setCustomSubcategoryStatus] = useState<string | null>(null);
+  // Card color personalization
+  const [colorBadge, setColorBadge]   = useState<string>("#f97316"); // orange-500 default
+  const [colorCardBg, setColorCardBg] = useState<string>("#000000"); // black default (card overlay)
+  const [colorButton, setColorButton] = useState<string>("#f97316"); // orange default
   const [plan, setPlan] = useState<BizPlan>('premium');
   const [previewTab, setPreviewTab] = useState<'basic' | 'premium'>('premium');
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
@@ -690,6 +698,9 @@ const BusinessDashboard = () => {
     setCoverImageUrl(profileData.cover_image_url ?? "");
     setCoverVideoUrl((profileData as any).cover_video_url ?? "");
     setGalleryUrls(profileData.gallery_urls ?? []);
+    setColorBadge((profileData as any).color_badge ?? "#f97316");
+    setColorCardBg((profileData as any).color_card_bg ?? "#000000");
+    setColorButton((profileData as any).color_button ?? "#f97316");
     setEventTitle(profileData.event_title ?? "");
     setEventDescription(profileData.event_description ?? "");
     setEventStartsAt(profileData.event_starts_at ?? "");
@@ -731,6 +742,39 @@ const BusinessDashboard = () => {
       setLoading(false);
     }
   };
+
+  // ── Driver.js onboarding tour ──
+  const startTour = useCallback(() => {
+    if (!profile) return;
+    const driverObj = driver({
+      showProgress: true,
+      nextBtnText: 'Dalej →',
+      prevBtnText: '← Wróc',
+      doneBtnText: 'Gotowe!',
+      steps: [
+        { element: '#tour-overview', popover: { title: 'Przeglad', description: 'Przeglad: tu widzisz ruch na wizytowce i skroty do szybkich akcji.', side: 'right' } },
+        { element: '#tour-gallery',  popover: { title: 'Wyglad',   description: 'Wyglad: dodaj okladke, galerie i dostosuj kolory wizytowki.',         side: 'right' } },
+        { element: '#tour-profile',  popover: { title: 'Dane lokalu', description: 'Dane lokalu: uzupelnij kontakt, opis i tagi.',                      side: 'right' } },
+        { element: '#tour-posts',    popover: { title: 'Aktualnosci', description: 'Aktualnosci: publikuj posty i wydarzenia widoczne dla uzytkownikow.', side: 'right' } },
+        { element: '#tour-preview-btn', popover: { title: 'Podglad', description: 'Tu otwierasz podglad Twojej wizytowki dokladnie tak jak widza ja uzytkownicy.', side: 'bottom' } },
+      ],
+      onDestroyed: () => {
+        if (profile?.id) localStorage.setItem(`tour_seen_${profile.id}`, '1');
+      },
+    });
+    driverObj.drive();
+  }, [profile]);
+
+  // Auto-start tour on first visit after profile loads
+  useEffect(() => {
+    if (!profile) return;
+    const seen = localStorage.getItem(`tour_seen_${profile.id}`);
+    if (!seen) {
+      // Small delay so the DOM is fully rendered
+      const t = setTimeout(() => startTour(), 600);
+      return () => clearTimeout(t);
+    }
+  }, [profile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const PRESET_DAYS: Record<Exclude<AnalyticsRange, 'custom'>, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
@@ -1041,6 +1085,9 @@ const BusinessDashboard = () => {
         cover_image_url: coverImageUrl || null,
         cover_video_url: coverVideoUrl || null,
         gallery_urls: galleryUrls,
+        color_badge: colorBadge,
+        color_card_bg: colorCardBg,
+        color_button: colorButton,
         event_title: eventTitle || null,
         event_description: eventDescription || null,
         event_starts_at: eventStartsAt || null,
@@ -1281,6 +1328,7 @@ const BusinessDashboard = () => {
         ] as const).map(item => (
           <button
             key={item.id}
+            id={`tour-${item.id}`}
             onClick={async () => { if (isDirty) await autoSaveDraft(); setActiveSection(item.id); }}
             title={!sidebarOpen ? item.label : undefined}
             className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-0.5 ${sidebarOpen ? 'text-left' : 'justify-center'} ${activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
@@ -1301,6 +1349,10 @@ const BusinessDashboard = () => {
               {sidebarOpen && 'Wyloguj się'}
             </button>
           )}
+          <button onClick={startTour} title="Powtórz tour" className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
+            <HelpCircle className="h-3.5 w-3.5 shrink-0" />
+            {sidebarOpen && 'Powtórz tour'}
+          </button>
         </div>
       </aside>
 
@@ -1318,6 +1370,7 @@ const BusinessDashboard = () => {
           <div className="flex items-center gap-2 ml-auto">
             {isDraft && (
               <button
+                id="tour-preview-btn"
                 onClick={() => previewReady && setShowAppPreview(true)}
                 disabled={!previewReady}
                 title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie okładkowe" : undefined}
@@ -1629,6 +1682,49 @@ const BusinessDashboard = () => {
                 </div>
                 <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
               </div>
+
+              {/* ── Personalizacja kolorow ── */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                <div>
+                  <p className="text-sm font-bold text-foreground">Personalizacja wizytowki</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Kolory widoczne na wizytowce w aplikacji</p>
+                </div>
+                <div className="space-y-3">
+                  {/* Badge kategorii */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Kolor badge kategorii</p>
+                      <p className="text-xs text-muted-foreground">Chip z nazwa kategorii na gorze wizytowki</p>
+                    </div>
+                    <input type="color" value={colorBadge} onChange={e => { setColorBadge(e.target.value); setIsDirty(true); }}
+                      className="h-9 w-14 rounded-lg cursor-pointer border border-slate-200 p-0.5" />
+                  </div>
+                  {/* Tlo sekcji szczegolów */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Kolor overlay karty</p>
+                      <p className="text-xs text-muted-foreground">Gradient tla nad zdjeciem z nazwa i opisem</p>
+                    </div>
+                    <input type="color" value={colorCardBg} onChange={e => { setColorCardBg(e.target.value); setIsDirty(true); }}
+                      className="h-9 w-14 rounded-lg cursor-pointer border border-slate-200 p-0.5" />
+                  </div>
+                  {/* Kolor guzika */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Kolor guzika &quot;Dodaj&quot;</p>
+                      <p className="text-xs text-muted-foreground">Glowny guzik akcji na wizytowce</p>
+                    </div>
+                    <input type="color" value={colorButton} onChange={e => { setColorButton(e.target.value); setIsDirty(true); }}
+                      className="h-9 w-14 rounded-lg cursor-pointer border border-slate-200 p-0.5" />
+                  </div>
+                </div>
+                {/* Live preview strip */}
+                <div className="flex items-center gap-3 pt-1">
+                  <span className="px-3 py-1 rounded-full text-xs font-bold text-white shrink-0" style={{ background: colorBadge }}>Jedzenie &amp; Napoje</span>
+                  <button className="flex-1 py-2 rounded-full text-white text-xs font-bold" style={{ background: colorButton }}>Dodaj</button>
+                </div>
+              </div>
+
               </div> {/* end flex-1 min-w-0 */}
 
               {/* Desktop sticky card preview */}
@@ -2336,6 +2432,9 @@ const BusinessDashboard = () => {
           coverVideoUrl={coverVideoUrl}
           galleryUrls={galleryUrls}
           eventTitle={eventTitle}
+          colorBadge={colorBadge}
+          colorCardBg={colorCardBg}
+          colorButton={colorButton}
           posts={[
             ...(postDescription.trim() || postPhotos.length > 0 ? [{
               id: 'draft-preview',
