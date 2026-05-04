@@ -362,9 +362,9 @@ export default function BusinessLanding() {
           >
             Zobacz jak to dziala →
           </button>
-          <div className="flex gap-2 pt-1">
-            <div className="flex-1"><AppStoreBadge store="ios" /></div>
-            <div className="flex-1"><AppStoreBadge store="android" /></div>
+          <div className="flex flex-col gap-2 pt-1">
+            <AppStoreBadge store="ios" />
+            <AppStoreBadge store="android" />
           </div>
         </div>
       </div>

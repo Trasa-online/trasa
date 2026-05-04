@@ -758,16 +758,17 @@ const BusinessDashboard = () => {
   // ── Driver.js onboarding tour ──
   const startTour = useCallback(() => {
     if (!profile) return;
+    const isMobile = window.innerWidth < 768;
     const driverObj = driver({
       showProgress: true,
       nextBtnText: 'Dalej →',
       prevBtnText: '← Wróć',
       doneBtnText: 'Gotowe!',
       steps: [
-        { element: '#tour-overview', popover: { title: 'Przegląd',    description: 'Przegląd: tu widzisz ruch na wizytówce i skróty do szybkich akcji.', side: 'right' } },
-        { element: '#tour-gallery',  popover: { title: 'Wygląd',      description: 'Wygląd: dodaj okładkę, galerię i dostosuj kolory wizytówki.',         side: 'right' } },
-        { element: '#tour-profile',  popover: { title: 'Dane lokalu', description: 'Dane lokalu: uzupełnij kontakt, opis i tagi.',                        side: 'right' } },
-        { element: '#tour-posts',    popover: { title: 'Aktualności', description: 'Aktualności: publikuj posty i wydarzenia widoczne dla użytkowników.',  side: 'right' } },
+        { element: isMobile ? '#tour-mobile-overview' : '#tour-overview', popover: { title: 'Przegląd',    description: 'Przegląd: tu widzisz ruch na wizytówce i skróty do szybkich akcji.', side: isMobile ? 'bottom' : 'right' } },
+        { element: isMobile ? '#tour-mobile-gallery'  : '#tour-gallery',  popover: { title: 'Wygląd',      description: 'Wygląd: dodaj okładkę, galerię i dostosuj kolory wizytówki.',         side: isMobile ? 'bottom' : 'right' } },
+        { element: isMobile ? '#tour-mobile-profile'  : '#tour-profile',  popover: { title: 'Dane lokalu', description: 'Dane lokalu: uzupełnij kontakt, opis i tagi.',                        side: isMobile ? 'bottom' : 'right' } },
+        { element: isMobile ? '#tour-mobile-posts'    : '#tour-posts',    popover: { title: 'Aktualności', description: 'Aktualności: publikuj posty i wydarzenia widoczne dla użytkowników.',  side: isMobile ? 'bottom' : 'right' } },
         { element: '#tour-preview-btn', popover: { title: 'Podgląd', description: 'Tu otwierasz podgląd Twojej wizytówki dokładnie tak jak widzą ją użytkownicy.', side: 'bottom' } },
       ],
       onDestroyed: () => {
@@ -1369,7 +1370,7 @@ const BusinessDashboard = () => {
       </aside>
 
       {/* ── Main ── */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${sidebarOpen ? 'md:ml-56' : 'md:ml-14'} ${(previewMode || isDraft) ? 'pt-10' : ''}`}>
+      <div className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-200 ${sidebarOpen ? 'md:ml-56' : 'md:ml-14'} ${(previewMode || isDraft) ? 'pt-10' : ''}`}>
 
         {/* ── Top bar ── */}
         <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 md:px-6 h-14 flex items-center gap-3 shrink-0">
@@ -1433,6 +1434,7 @@ const BusinessDashboard = () => {
           ] as const).map(item => (
             <button
               key={item.id}
+              id={`tour-mobile-${item.id}`}
               onClick={async () => { if (isDirty) await autoSaveDraft(); setActiveSection(item.id); }}
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}
             >
@@ -1799,7 +1801,7 @@ const BusinessDashboard = () => {
 
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                 <div className="space-y-1">
-                  <Label htmlFor="business_name">Nazwa lokalu</Label>
+                  <Label htmlFor="business_name" className="text-xs">Nazwa lokalu</Label>
                   {isDraft ? (
                     <Input
                       id="business_name"
@@ -1815,29 +1817,29 @@ const BusinessDashboard = () => {
                   )}
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="street" className="flex items-center gap-1.5">Ulica i numer <span className="text-[11px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                  <Label htmlFor="street" className="text-xs flex items-center gap-1.5 flex-wrap">Ulica i numer <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
                   <Input id="street" value={street} maxLength={100} onChange={e => { setStreet(e.target.value); setIsDirty(true); }} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="city" className="flex items-center gap-1.5">Miasto <span className="text-[11px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                    <Label htmlFor="city" className="text-xs flex items-center gap-1.5 flex-wrap">Miasto <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
                     <Input id="city" value={city} maxLength={80} onChange={e => { setCity(e.target.value); setIsDirty(true); }} />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="postal_code" className="flex items-center gap-1.5">Kod pocztowy <span className="text-[11px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                    <Label htmlFor="postal_code" className="text-xs flex items-center gap-1.5 flex-wrap">Kod pocztowy <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
                     <Input id="postal_code" value={postalCode} maxLength={10} onChange={e => { setPostalCode(e.target.value); setIsDirty(true); }} />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="phone" className="flex items-center gap-1.5">Telefon <span className="text-[11px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                  <Label htmlFor="phone" className="text-xs flex items-center gap-1.5 flex-wrap">Telefon <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
                   <Input id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="email" className="flex items-center gap-1.5">Email <span className="text-[11px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                  <Label htmlFor="email" className="text-xs flex items-center gap-1.5 flex-wrap">Email <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
                   <Input id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="website">Strona WWW</Label>
+                  <Label htmlFor="website" className="text-xs">Strona WWW</Label>
                   <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
                 </div>
                 {/* Kategoria główna */}
@@ -2013,8 +2015,8 @@ const BusinessDashboard = () => {
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1"><Label htmlFor="event_starts_at">Od</Label><Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" /></div>
-                      <div className="space-y-1"><Label htmlFor="event_ends_at">Do</Label><Input id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" /></div>
+                      <div className="space-y-1 min-w-0"><Label htmlFor="event_starts_at">Od</Label><Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
+                      <div className="space-y-1 min-w-0"><Label htmlFor="event_ends_at">Do</Label><Input id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
                     </div>
                   </div>
                   {/* Posts */}
@@ -2175,12 +2177,9 @@ const BusinessDashboard = () => {
                 <>
                   {/* Draft: mock data banner */}
                   {isDraft && (
-                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl px-5 py-4 flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-                      <div>
-                        <p className="text-sm font-bold text-orange-900">Tak mogą wyglądać Twoje statystyki z Trasy</p>
-                        <p className="text-xs text-orange-600 mt-0.5">Poniżej przykładowe dane — po uruchomieniu profilu zobaczysz tu prawdziwe liczby.</p>
-                      </div>
+                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl px-5 py-4">
+                      <p className="text-sm font-bold text-orange-900">Tak mogą wyglądać Twoje statystyki z Trasy</p>
+                      <p className="text-xs text-orange-600 mt-0.5">Poniżej przykładowe dane - po uruchomieniu profilu zobaczysz tu prawdziwe liczby.</p>
                     </div>
                   )}
                   {/* Stat cards */}
