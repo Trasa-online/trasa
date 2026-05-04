@@ -779,7 +779,11 @@ const BusinessDashboard = () => {
         { element: isMobile ? '#tour-mobile-gallery'  : '#tour-gallery',  popover: { title: 'Wygląd',      description: 'Wygląd: dodaj okładkę, galerię i dostosuj kolory wizytówki.',         side: isMobile ? 'bottom' : 'right' } },
         { element: isMobile ? '#tour-mobile-profile'  : '#tour-profile',  popover: { title: 'Dane lokalu', description: 'Dane lokalu: uzupełnij kontakt, opis i tagi.',                        side: isMobile ? 'bottom' : 'right' } },
         { element: isMobile ? '#tour-mobile-posts'    : '#tour-posts',    popover: { title: 'Aktualności', description: 'Aktualności: publikuj posty i wydarzenia widoczne dla użytkowników.',  side: isMobile ? 'bottom' : 'right' } },
-        { element: '#tour-preview-btn', popover: { title: 'Podgląd', description: 'Tu otwierasz podgląd Twojej wizytówki dokładnie tak jak widzą ją użytkownicy.', side: 'bottom' } },
+        {
+          element: isMobile ? '#tour-mobile-preview-btn' : '#tour-preview-btn',
+          popover: { title: 'Podgląd', description: 'Tu otwierasz podgląd Twojej wizytówki dokładnie tak jak widzą ją użytkownicy.', side: isMobile ? 'top' : 'bottom' },
+          onHighlightStarted: () => { if (isMobile) setActiveSection('gallery'); },
+        },
       ],
       onDestroyed: () => {
         if (profile?.id) localStorage.setItem(`tour_seen_${profile.id}`, '1');
@@ -1302,9 +1306,9 @@ const BusinessDashboard = () => {
       {isDraft && (() => {
         const ready = previewReady;
         return (
-          <div className="fixed top-0 left-0 right-0 z-[60] bg-orange-50 border-b border-orange-100 px-4 py-2 flex items-center justify-between gap-3">
+          <div className="fixed top-0 left-0 right-0 z-[60] bg-orange-50 border-b border-orange-100 px-4 py-1.5 flex items-center justify-between gap-3">
             <p className="text-xs font-medium text-orange-700 leading-snug">
-              {ready ? "Twój profil wygląda swietnie! Gotowy na launch." : "Uzupełnij nazwę lokalu i dodaj zdjęcia, aby zobaczyć podgląd wizytówki"}
+              {ready ? "Profil wygląda świetnie - gotowy na launch!" : "Uzupełnij nazwę i dodaj zdjęcie, aby zobaczyć podgląd"}
             </p>
             {ready && (
               <button
@@ -1390,7 +1394,7 @@ const BusinessDashboard = () => {
       </aside>
 
       {/* ── Main ── */}
-      <div className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-200 ${sidebarOpen ? 'md:ml-56' : 'md:ml-14'} ${(previewMode || isDraft) ? 'pt-10' : ''}`}>
+      <div className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-200 ${sidebarOpen ? 'md:ml-56' : 'md:ml-14'} ${(previewMode || isDraft) ? 'pt-12 sm:pt-9' : ''}`}>
 
         {/* ── Top bar ── */}
         <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 md:px-6 h-14 flex items-center gap-3 shrink-0">
@@ -1402,25 +1406,19 @@ const BusinessDashboard = () => {
           </div>
           <div className="flex items-center gap-2 ml-auto">
             {isDraft && (
-              <div className="relative group">
-                {/* Wrapper catches clicks even when button is disabled (so we can show the hint) */}
-                <div
-                  onClick={() => { if (!previewReady) { setShowPreviewHint(true); setTimeout(() => setShowPreviewHint(false), 4000); } }}
-                  className={previewReady ? '' : 'cursor-pointer'}
+              <div className="hidden md:block relative group">
+                <button
+                  id="tour-preview-btn"
+                  onClick={() => previewReady && setShowAppPreview(true)}
+                  disabled={!previewReady}
+                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full active:scale-95 transition-transform whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+                  style={previewReady ? { background: 'linear-gradient(90deg, #F4A259, #F9662B)', color: 'white' } : { background: '#e2e8f0', color: '#94a3b8' }}
                 >
-                  <button
-                    id="tour-preview-btn"
-                    onClick={() => previewReady && setShowAppPreview(true)}
-                    disabled={!previewReady}
-                    className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full active:scale-95 transition-transform whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 pointer-events-none sm:pointer-events-auto"
-                    style={previewReady ? { background: 'linear-gradient(90deg, #F4A259, #F9662B)', color: 'white' } : { background: '#e2e8f0', color: '#94a3b8' }}
-                  >
-                    <Play className="h-3 w-3" />
-                    Przetestuj w aplikacji
-                  </button>
-                </div>
+                  <Play className="h-3 w-3" />
+                  Przetestuj w aplikacji
+                </button>
                 {!previewReady && (
-                  <div className={`absolute top-full mt-2 right-0 w-64 bg-slate-800 text-white text-xs rounded-xl px-3 py-2 leading-snug transition-opacity z-50 shadow-lg pointer-events-none ${showPreviewHint ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                  <div className="absolute top-full mt-2 right-0 w-64 bg-slate-800 text-white text-xs rounded-xl px-3 py-2 leading-snug transition-opacity z-50 shadow-lg pointer-events-none opacity-0 group-hover:opacity-100">
                     {previewMissingMsg}
                   </div>
                 )}
@@ -1438,9 +1436,6 @@ const BusinessDashboard = () => {
                 Kopiuj link dla lokalu
               </button>
             )}
-            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600 shrink-0">
-              {profile.business_name?.slice(0, 2).toUpperCase() || 'BK'}
-            </div>
             {!isDraft && (
               <button onClick={handleLogout} className="md:hidden flex items-center gap-1 text-xs text-muted-foreground px-2 py-1.5 rounded-full bg-slate-100">
                 <LogOut className="h-3.5 w-3.5" />
@@ -2419,6 +2414,7 @@ const BusinessDashboard = () => {
       {/* Mobile FAB - app preview */}
       {(activeSection === 'gallery' || activeSection === 'profile' || activeSection === 'posts') && (
         <div
+          id="tour-mobile-preview-btn"
           className="fixed lg:hidden z-40"
           style={{ bottom: (isDirty && !isDraft) ? '5.5rem' : '1.5rem', right: '1rem' }}
         >
