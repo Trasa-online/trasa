@@ -778,16 +778,16 @@ const BusinessDashboard = () => {
     driverObj.drive();
   }, [profile]);
 
-  // Auto-start tour on first visit after profile loads
+  // Auto-start tour on first visit — only after loading finishes AND user is on overview
   useEffect(() => {
-    if (!profile) return;
+    if (!profile || loading || activeSection !== 'overview') return;
     const seen = localStorage.getItem(`tour_seen_${profile.id}`);
     if (!seen) {
       // Small delay so the DOM is fully rendered
       const t = setTimeout(() => startTour(), 600);
       return () => clearTimeout(t);
     }
-  }, [profile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [profile?.id, loading, activeSection]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const PRESET_DAYS: Record<Exclude<AnalyticsRange, 'custom'>, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
