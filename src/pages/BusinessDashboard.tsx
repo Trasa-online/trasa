@@ -200,6 +200,15 @@ function AppLikePreviewModal({
         }
       `}</style>
       <div className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3" onClick={onClose}>
+        {/* Close button — fixed top-right above the phone */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          aria-label="Zamknij podgląd"
+          className="fixed top-4 right-4 h-10 w-10 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md flex items-center justify-center text-white shadow-lg active:scale-90 transition-all z-[100]"
+          style={{ top: "max(env(safe-area-inset-top, 0px), 16px)" }}
+        >
+          <X className="h-5 w-5" />
+        </button>
         {/* Phone container */}
         <div
           className="relative w-full bg-background flex flex-col overflow-hidden shadow-2xl"
@@ -585,6 +594,7 @@ const BusinessDashboard = () => {
   const [photoPreview, setPhotoPreview] = useState<{ url: string; label: string } | null>(null);
   const [isDraft, setIsDraft] = useState(false);
   const [showAppPreview, setShowAppPreview] = useState(false);
+  const [showPreviewHint, setShowPreviewHint] = useState(false);
   const [convertingDraft, setConvertingDraft] = useState(false);
   const [supportMessage, setSupportMessage] = useState("");
   const [supportSubmitting, setSupportSubmitting] = useState(false);
@@ -1275,6 +1285,16 @@ const BusinessDashboard = () => {
 
   const previewReady = businessName.trim().length > 0 && !!(coverImageUrl || coverVideoUrl || galleryUrls.length > 0);
 
+  const previewMissingFields = (() => {
+    const missing: string[] = [];
+    if (!businessName.trim()) missing.push("nazwę lokalu");
+    if (!coverImageUrl && !coverVideoUrl && galleryUrls.length === 0) missing.push("zdjęcie okładkowe");
+    return missing;
+  })();
+  const previewMissingMsg = previewMissingFields.length > 0
+    ? `Aby zobaczyć podgląd, uzupełnij: ${previewMissingFields.join(" oraz ")}.`
+    : "";
+
   return (
     <div className="min-h-screen flex bg-slate-50 overflow-x-hidden">
 
@@ -1383,19 +1403,25 @@ const BusinessDashboard = () => {
           <div className="flex items-center gap-2 ml-auto">
             {isDraft && (
               <div className="relative group">
-                <button
-                  id="tour-preview-btn"
-                  onClick={() => previewReady && setShowAppPreview(true)}
-                  disabled={!previewReady}
-                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full active:scale-95 transition-transform whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
-                  style={previewReady ? { background: 'linear-gradient(90deg, #F4A259, #F9662B)', color: 'white' } : { background: '#e2e8f0', color: '#94a3b8' }}
+                {/* Wrapper catches clicks even when button is disabled (so we can show the hint) */}
+                <div
+                  onClick={() => { if (!previewReady) { setShowPreviewHint(true); setTimeout(() => setShowPreviewHint(false), 4000); } }}
+                  className={previewReady ? '' : 'cursor-pointer'}
                 >
-                  <Play className="h-3 w-3" />
-                  Przetestuj w aplikacji
-                </button>
+                  <button
+                    id="tour-preview-btn"
+                    onClick={() => previewReady && setShowAppPreview(true)}
+                    disabled={!previewReady}
+                    className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full active:scale-95 transition-transform whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 pointer-events-none sm:pointer-events-auto"
+                    style={previewReady ? { background: 'linear-gradient(90deg, #F4A259, #F9662B)', color: 'white' } : { background: '#e2e8f0', color: '#94a3b8' }}
+                  >
+                    <Play className="h-3 w-3" />
+                    Przetestuj w aplikacji
+                  </button>
+                </div>
                 {!previewReady && (
-                  <div className="absolute top-full mt-2 right-0 w-60 bg-slate-800 text-white text-xs rounded-xl px-3 py-2 leading-snug opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                    Uzupełnij nazwę lokalu i dodaj zdjęcie okładkowe, aby przetestować wizytówkę
+                  <div className={`absolute top-full mt-2 right-0 w-64 bg-slate-800 text-white text-xs rounded-xl px-3 py-2 leading-snug transition-opacity z-50 shadow-lg pointer-events-none ${showPreviewHint ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                    {previewMissingMsg}
                   </div>
                 )}
               </div>
@@ -2392,21 +2418,36 @@ const BusinessDashboard = () => {
 
       {/* Mobile FAB - app preview */}
       {(activeSection === 'gallery' || activeSection === 'profile' || activeSection === 'posts') && (
-        <button
-          className="fixed lg:hidden flex items-center gap-2 px-4 rounded-full shadow-xl z-40 active:scale-95 transition-transform h-12 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
-          style={{
-            bottom: (isDirty && !isDraft) ? '5.5rem' : '1.5rem', right: '1rem',
-            background: previewReady ? '#0e0e0e' : '#cbd5e1',
-            color: previewReady ? '#fefefe' : '#64748b',
-          }}
-          onClick={() => previewReady && setShowAppPreview(true)}
-          disabled={!previewReady}
-          title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie okładkowe" : undefined}
-          aria-label="Podgląd w aplikacji"
+        <div
+          className="fixed lg:hidden z-40"
+          style={{ bottom: (isDirty && !isDraft) ? '5.5rem' : '1.5rem', right: '1rem' }}
         >
-          <Play className="h-4 w-4 fill-current" />
-          <span className="text-sm font-bold">Podgląd</span>
-        </button>
+          {!previewReady && showPreviewHint && (
+            <div className="absolute bottom-full mb-2 right-0 w-64 bg-slate-800 text-white text-xs rounded-xl px-3 py-2 leading-snug shadow-lg pointer-events-none">
+              {previewMissingMsg}
+            </div>
+          )}
+          <button
+            className="flex items-center gap-2 px-4 rounded-full shadow-xl active:scale-95 transition-transform h-12 disabled:active:scale-100"
+            style={{
+              background: previewReady ? '#0e0e0e' : '#cbd5e1',
+              color: previewReady ? '#fefefe' : '#64748b',
+              opacity: previewReady ? 1 : 0.6,
+            }}
+            onClick={() => {
+              if (previewReady) {
+                setShowAppPreview(true);
+              } else {
+                setShowPreviewHint(true);
+                setTimeout(() => setShowPreviewHint(false), 4000);
+              }
+            }}
+            aria-label="Podgląd w aplikacji"
+          >
+            <Play className="h-4 w-4 fill-current" />
+            <span className="text-sm font-bold">Podgląd</span>
+          </button>
+        </div>
       )}
 
       {/* Sticky save bar */}
