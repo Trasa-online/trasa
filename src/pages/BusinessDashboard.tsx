@@ -608,7 +608,8 @@ const BusinessDashboard = () => {
     if (!placeId) return;
     if (authLoading) return; // wait for Supabase session to resolve before deciding what to show
     if (!user && !previewToken) {
-      setLoading(false); // show password screen for unauthenticated visitors
+      // Redirect unauthenticated visitors to business login (preserves return path)
+      navigate(`/auth?business=true&return=${encodeURIComponent(`/biznes/${placeId}`)}`, { replace: true });
       return;
     }
     loadData();

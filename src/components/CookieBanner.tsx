@@ -35,7 +35,10 @@ const CookieBanner = () => {
   };
 
   return (
-    <div className="fixed bottom-4 left-0 right-0 z-[60] flex justify-center px-4">
+    <div
+      className="fixed left-0 right-0 z-[60] flex justify-center px-4"
+      style={{ bottom: "max(env(safe-area-inset-bottom, 0px), 0px)", paddingBottom: 16 }}
+    >
       <div className="bg-[#1a1a1a] rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3 max-w-md w-full">
         <span className="text-xl shrink-0">🍪</span>
         <p className="text-xs text-white/70 leading-snug flex-1">
