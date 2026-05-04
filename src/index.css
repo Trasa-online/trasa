@@ -155,3 +155,21 @@ All colors MUST be HSL.
     scrollbar-width: none;
   }
 }
+
+/* Driver.js — orange brand buttons */
+.driver-popover-next-btn,
+.driver-popover-done-btn {
+  background: linear-gradient(90deg, #F4A259, #F9662B) !important;
+  color: #fff !important;
+  border: none !important;
+  text-shadow: none !important;
+  box-shadow: 0 2px 8px -2px rgba(249, 102, 43, 0.4) !important;
+}
+.driver-popover-next-btn:hover,
+.driver-popover-done-btn:hover {
+  filter: brightness(0.95);
+}
+.driver-popover-prev-btn {
+  color: #475569 !important;
+  background: #f8fafc !important;
+}

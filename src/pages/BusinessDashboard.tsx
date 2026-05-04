@@ -1092,7 +1092,7 @@ const BusinessDashboard = () => {
         main_category: mainCategory || null,
         subcategories: bizSubcategories.length > 0 ? bizSubcategories : null,
         custom_subcategory: customSubcategory.trim() || null,
-        custom_subcategory_status: customSubcategory.trim() ? 'pending' : null,
+        custom_subcategory_status: customSubcategoryStatus,
         description: description || null,
         logo_url: logoUrl || null,
         cover_image_url: coverImageUrl || null,
@@ -1855,7 +1855,7 @@ const BusinessDashboard = () => {
                           <span className="text-xl shrink-0">{cat.emoji}</span>
                           <div className="min-w-0">
                             <p className="text-xs font-semibold leading-tight">{cat.label}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{cat.hint}</p>
+                            <p className="hidden md:block text-[10px] text-muted-foreground mt-0.5 truncate">{cat.hint}</p>
                           </div>
                         </button>
                       );
@@ -1899,7 +1899,7 @@ const BusinessDashboard = () => {
                           Zaproponuj
                         </button>
                       </div>
-                      {customSubcategoryStatus && (
+                      {customSubcategory.trim() && customSubcategoryStatus && (
                         <p className={`text-[11px] font-medium ${
                           customSubcategoryStatus === 'approved' ? 'text-green-600' :
                           customSubcategoryStatus === 'rejected' ? 'text-red-500' :
@@ -2014,9 +2014,9 @@ const BusinessDashboard = () => {
                         <p className="text-[11px] text-muted-foreground">{eventDescription.length}/300</p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1 min-w-0"><Label htmlFor="event_starts_at">Od</Label><Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
-                      <div className="space-y-1 min-w-0"><Label htmlFor="event_ends_at">Do</Label><Input id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1 min-w-0"><Label htmlFor="event_starts_at" className="text-xs">Od</Label><Input id="event_starts_at" value={eventStartsAt} onChange={e => { setEventStartsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
+                      <div className="space-y-1 min-w-0"><Label htmlFor="event_ends_at" className="text-xs">Do</Label><Input id="event_ends_at" value={eventEndsAt} onChange={e => { setEventEndsAt(e.target.value); setIsDirty(true); }} type="date" className="w-full" /></div>
                     </div>
                   </div>
                   {/* Posts */}
