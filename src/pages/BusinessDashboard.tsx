@@ -769,6 +769,7 @@ const BusinessDashboard = () => {
   const startTour = useCallback(() => {
     if (!profile) return;
     const isMobile = window.innerWidth < 768;
+    const useMobilePreviewBtn = window.innerWidth < 1024; // FAB shown < lg breakpoint
     const driverObj = driver({
       showProgress: true,
       nextBtnText: 'Dalej →',
@@ -780,9 +781,9 @@ const BusinessDashboard = () => {
         { element: isMobile ? '#tour-mobile-profile'  : '#tour-profile',  popover: { title: 'Dane lokalu', description: 'Dane lokalu: uzupełnij kontakt, opis i tagi.',                        side: isMobile ? 'bottom' : 'right' } },
         { element: isMobile ? '#tour-mobile-posts'    : '#tour-posts',    popover: { title: 'Aktualności', description: 'Aktualności: publikuj posty i wydarzenia widoczne dla użytkowników.',  side: isMobile ? 'bottom' : 'right' } },
         {
-          element: isMobile ? '#tour-mobile-preview-btn' : '#tour-preview-btn',
-          popover: { title: 'Podgląd', description: 'Tu otwierasz podgląd Twojej wizytówki dokładnie tak jak widzą ją użytkownicy.', side: isMobile ? 'top' : 'bottom' },
-          onHighlightStarted: () => { if (isMobile) setActiveSection('gallery'); },
+          element: useMobilePreviewBtn ? '#tour-mobile-preview-btn' : '#tour-preview-btn',
+          popover: { title: 'Podgląd', description: 'Tu otwierasz podgląd Twojej wizytówki dokładnie tak jak widzą ją użytkownicy.', side: useMobilePreviewBtn ? 'top' : 'bottom' },
+          onHighlightStarted: () => { if (useMobilePreviewBtn) setActiveSection('gallery'); },
         },
       ],
       onDestroyed: () => {
@@ -1406,7 +1407,7 @@ const BusinessDashboard = () => {
           </div>
           <div className="flex items-center gap-2 ml-auto">
             {isDraft && (
-              <div className="hidden md:block relative group">
+              <div className="hidden lg:block relative group">
                 <button
                   id="tour-preview-btn"
                   onClick={() => previewReady && setShowAppPreview(true)}
