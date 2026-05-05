@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, UserCircle2 } from "lucide-react";
+import { Bell, UserCircle2, Settings } from "lucide-react";
 import NotificationsDrawer from "./NotificationsDrawer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -47,6 +47,21 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
     return () => { supabase.removeChannel(channel); };
   }, [user?.id]);
 
+  const { data: isAdmin = false } = useQuery({
+    queryKey: ["is-admin-topbar", user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!user,
+  });
+
   const { data: profile } = useQuery({
     queryKey: ["profile-topbar", user?.id],
     queryFn: async () => {
@@ -86,19 +101,30 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
           </Avatar>
         </button>
 
-        {/* Right: Bell */}
-        <button
-          onClick={() => setNotifOpen(true)}
-          className="relative h-9 w-9 flex items-center justify-center text-muted-foreground"
-          aria-label="Powiadomienia"
-        >
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 h-3.5 min-w-3.5 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center px-1 leading-none">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
+        {/* Right: Admin gear (admins only) + Bell */}
+        <div className="flex items-center gap-1">
+          {isAdmin && (
+            <button
+              onClick={() => navigate("/admin")}
+              className="h-9 w-9 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Panel admina"
+            >
+              <Settings className="h-5 w-5" />
+            </button>
           )}
-        </button>
+          <button
+            onClick={() => setNotifOpen(true)}
+            className="relative h-9 w-9 flex items-center justify-center text-muted-foreground"
+            aria-label="Powiadomienia"
+          >
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 h-3.5 min-w-3.5 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center px-1 leading-none">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
 
       </header>
 

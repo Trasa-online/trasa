@@ -555,6 +555,7 @@ export default function WaitlistPage() {
   return (
     <div style={{ background: "#FAFAFA" }}>
 
+
       {/* ── MOBILE ─────────────────────────────────────────────────────────────── */}
       <div className="lg:hidden">
         {/* Fullscreen founders video - at root level (outside any transform) for iOS Safari */}

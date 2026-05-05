@@ -276,7 +276,7 @@ export default function DiscoveryFeed() {
 
   if (isLoading) {
     return (
-      <div className="flex gap-3 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
+      <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
         <CollectionSkeleton />
         <CollectionSkeleton />
       </div>
@@ -288,7 +288,7 @@ export default function DiscoveryFeed() {
   return (
     <>
       {/* Horizontal carousel */}
-      <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory -mx-4 px-4 pb-1">
+      <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
         {collections.map((col) => (
           <CollectionCard key={col.id} col={col} onOpen={() => setActiveCol(col)} />
         ))}

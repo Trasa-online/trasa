@@ -133,7 +133,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
     <div className="flex flex-col h-full">
 
       {/* Country selector */}
-      <div className="flex justify-center pt-5 pb-1 relative">
+      <div className="flex justify-center pt-5 pb-1 relative shrink-0">
         <button
           onClick={() => setCountryMenuOpen(o => !o)}
           className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border/50 shadow-sm text-sm font-semibold transition-colors active:bg-muted"
@@ -176,8 +176,8 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
         )}
       </div>
 
-      {/* Drum picker */}
-      <div className="flex flex-col items-center justify-center py-6">
+      {/* Drum picker — fills remaining space, vertically centered */}
+      <div className="flex-1 flex items-center justify-center min-h-0">
         <div className="relative w-full" style={{ height: CONTAINER_HEIGHT }}>
           <div
             className="absolute left-0 right-0 pointer-events-none z-10"
@@ -213,7 +213,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
       </div>
 
       {/* "Not your city?" banner */}
-      <div className="mx-5 mb-4 px-4 py-3 rounded-2xl bg-background border border-border space-y-2 shadow-sm">
+      <div className="mx-5 mb-3 px-4 py-3 rounded-2xl bg-background border border-border space-y-2 shadow-sm shrink-0">
         <p className="text-xs font-semibold text-foreground">Nie widzisz swojego miasta?</p>
         <div className="flex gap-2">
           <Input type="text" placeholder="Wpisz nazwę miasta" value={notifyCity} onChange={e => setNotifyCity(e.target.value)} className="h-8 text-xs flex-1" onKeyDown={e => e.key === "Enter" && handleNotify()} />
@@ -225,7 +225,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
       </div>
 
       {/* CTA */}
-      <div className="px-5 pb-[max(24px,env(safe-area-inset-bottom))]">
+      <div className="px-5 pb-[max(24px,env(safe-area-inset-bottom))] shrink-0">
         <Button
           onClick={() => !isComingSoon && onConfirm(selectedCity.name)}
           disabled={isComingSoon}

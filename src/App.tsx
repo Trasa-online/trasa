@@ -7,14 +7,37 @@ import { trackPageView } from "@/lib/analytics";
 import { useAuth, AuthProvider } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
-const MAINTENANCE_MODE = false; // LOCAL ONLY — nie commitować!
+const MAINTENANCE_MODE = true; // LOCAL ONLY — nie commitować!
 
-function MaintenanceScreen() {
+function MaintenanceScreen({ onUnlock }: { onUnlock: () => void }) {
+  const [pwd, setPwd] = useState("");
+  const [err, setErr] = useState(false);
+  const submit = () => {
+    if (pwd === "Truda2026!") { sessionStorage.setItem("tester_unlocked", "1"); onUnlock(); }
+    else { setErr(true); }
+  };
   return (
-    <div style={{ minHeight: "100dvh", background: "#FEFEFE", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+    <div style={{ minHeight: "100dvh", background: "#FEFEFE", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", padding: 24 }}>
       <div style={{ width: 64, height: 64, borderRadius: "50%", background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
       <h1 style={{ fontSize: "2rem", fontWeight: 900, color: "#0E0E0E", letterSpacing: "-0.02em", margin: 0 }}>trasa</h1>
       <p style={{ fontSize: "1rem", color: "#979797", textAlign: "center", maxWidth: "28ch", lineHeight: 1.5, margin: 0 }}>Pracujemy nad czymś fajnym. Wróć wkrótce.</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 280, marginTop: 8 }}>
+        <input
+          type="password"
+          value={pwd}
+          onChange={e => { setPwd(e.target.value); setErr(false); }}
+          onKeyDown={e => e.key === "Enter" && submit()}
+          placeholder="Hasło dostępu"
+          style={{ width: "100%", padding: "12px 14px", borderRadius: 14, border: "1px solid #e2e8f0", background: "#fff", fontSize: 14, outline: "none", textAlign: "center" }}
+        />
+        {err && <p style={{ fontSize: 12, color: "#ef4444", textAlign: "center", margin: 0 }}>Nieprawidłowe hasło</p>}
+        <button
+          onClick={submit}
+          style={{ width: "100%", padding: "12px 14px", borderRadius: 14, border: "none", background: "linear-gradient(90deg,#F4A259,#F9662B)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+        >
+          Wejdź
+        </button>
+      </div>
     </div>
   );
 }
@@ -22,22 +45,27 @@ function MaintenanceScreen() {
 function MaintenanceGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const location = useLocation();
+  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem("tester_unlocked") === "1");
   if (!MAINTENANCE_MODE) return <>{children}</>;
   if (loading) return null;
+  if (unlocked) return <>{children}</>;
   const isPublicRoute =
     location.pathname === "/auth" ||
+    location.pathname === "/waitlist" ||
+    location.pathname === "/landing" ||
     location.pathname.startsWith("/set-password") ||
     location.pathname.startsWith("/join/") ||
     location.pathname.startsWith("/biznes/") ||
     location.pathname.startsWith("/dla-firm/");
-  if (!user && !isPublicRoute) return <MaintenanceScreen />;
+  if (!user && !isPublicRoute) return <MaintenanceScreen onUnlock={() => setUnlocked(true)} />;
   return <>{children}</>;
 }
 
 function RootPage() {
   const { user, loading } = useAuth();
-  if (!loading && user) return <Navigate to="/home" replace />;
-  return <WaitlistPage />;
+  if (loading) return null;
+  if (user) return <Navigate to="/home" replace />;
+  return <Navigate to="/auth" replace />;
 }
 
 function RouteTracker() {
@@ -234,6 +262,8 @@ const App = () => (
         <Suspense fallback={<div className="h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>}>
         <Routes>
           <Route path="/auth" element={<Auth />} />
+          <Route path="/waitlist" element={<WaitlistPage />} />
+          <Route path="/landing" element={<LandingPage />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/" element={<RootPage />} />
           <Route path="/home" element={<RequireAuth><AppLayout><Home /></AppLayout></RequireAuth>} />

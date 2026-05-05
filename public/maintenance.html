@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>trasa - wkrótce</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -14,6 +14,7 @@
       align-items: center;
       justify-content: center;
       gap: 20px;
+      padding: 24px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
     .orb {
@@ -28,18 +29,78 @@
       color: #0E0E0E;
       letter-spacing: -0.02em;
     }
-    p {
+    p.sub {
       font-size: 1rem;
       color: #979797;
       text-align: center;
       max-width: 28ch;
       line-height: 1.5;
     }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 280px;
+      margin-top: 8px;
+    }
+    input[type="password"] {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      font-size: 14px;
+      outline: none;
+      text-align: center;
+      font-family: inherit;
+    }
+    input[type="password"]:focus {
+      border-color: #F4A259;
+      box-shadow: 0 0 0 3px rgba(244, 162, 89, 0.2);
+    }
+    button {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(90deg, #F4A259, #F9662B);
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    button:active { transform: scale(0.98); }
+    .err {
+      font-size: 12px;
+      color: #ef4444;
+      text-align: center;
+      display: none;
+    }
+    .err.show { display: block; }
   </style>
 </head>
 <body>
   <div class="orb"></div>
   <h1>trasa</h1>
-  <p>Pracujemy nad czymś fajnym. Wróć wkrótce.</p>
+  <p class="sub">Pracujemy nad czymś fajnym. Wróć wkrótce.</p>
+  <form id="gate">
+    <input type="password" id="pwd" placeholder="Hasło dostępu" autocomplete="off" />
+    <p class="err" id="err">Nieprawidłowe hasło</p>
+    <button type="submit">Wejdź</button>
+  </form>
+  <script>
+    document.getElementById('gate').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var v = document.getElementById('pwd').value;
+      if (v === 'Truda2026!') {
+        try { sessionStorage.setItem('tester_unlocked', '1'); } catch (_) {}
+        window.location.replace('/index.html');
+      } else {
+        document.getElementById('err').classList.add('show');
+      }
+    });
+  </script>
 </body>
 </html>

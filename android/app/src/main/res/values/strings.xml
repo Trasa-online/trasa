@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Trasa</string>
+    <string name="title_activity_main">Trasa</string>
+    <string name="package_name">travel.trasa.app</string>
+    <string name="custom_url_scheme">travel.trasa.app</string>
+</resources>
