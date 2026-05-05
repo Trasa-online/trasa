@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import { X, Star, MapPin, Loader2, Heart, ChevronDown } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -89,12 +89,11 @@ const PlaceSwiperDetail = ({
   const [businessPosts, setBusinessPosts] = useState<BusinessPost[]>([]);
   const swipeStartX = useRef<number | null>(null);
 
-  // Collapsing header — scroll-driven hero shrink
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const { scrollY } = useScroll({ container: scrollRef });
-  const heroHeight = useTransform(scrollY, [0, 220], ["56%", "12%"]);
-  const heroNameOpacity = useTransform(scrollY, [0, 80, 140], [1, 0.4, 0]);
-  const collapsedBarOpacity = useTransform(scrollY, [120, 180], [0, 1]);
+  // Collapsing header — scroll-driven hero shrink (manual scroll listener for reliability in WKWebView)
+  const [scrollOffset, setScrollOffset] = useState(0);
+  const heroPct = Math.max(12, 56 - (scrollOffset / 220) * 44);
+  const heroNameOpacity = Math.max(0, 1 - scrollOffset / 140);
+  const collapsedBarOpacity = Math.min(1, Math.max(0, (scrollOffset - 120) / 60));
 
   useEffect(() => {
     if (!open || !place) {
@@ -208,8 +207,8 @@ const PlaceSwiperDetail = ({
               onDragEnd={(_, info) => {
                 if (info.offset.y > 60 || info.velocity.y > 300) onOpenChange(false);
               }}
-              className="relative shrink-0 bg-muted overflow-hidden"
-              style={{ height: heroHeight, touchAction: "pan-y" }}
+              className="relative shrink-0 bg-muted overflow-hidden transition-[height] duration-100"
+              style={{ height: `${heroPct}%`, touchAction: "pan-y" }}
               onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
               onTouchEnd={(e) => {
                 if (swipeStartX.current === null) return;
@@ -266,7 +265,7 @@ const PlaceSwiperDetail = ({
                   )}
 
                   {/* Place name + rating overlay - bottom of photo (fades out as user scrolls) */}
-                  <motion.div className="absolute bottom-0 left-0 right-0 px-5 pb-4 z-20" style={{ opacity: heroNameOpacity }}>
+                  <div className="absolute bottom-0 left-0 right-0 px-5 pb-4 z-20" style={{ opacity: heroNameOpacity }}>
                     <h2 className="text-2xl font-black text-white leading-tight drop-shadow-sm">
                       {place.place_name}
                     </h2>
@@ -279,17 +278,17 @@ const PlaceSwiperDetail = ({
                         )}
                       </div>
                     )}
-                  </motion.div>
+                  </div>
 
                   {/* Compact title bar - fades IN when hero is collapsed */}
-                  <motion.div
+                  <div
                     className="absolute inset-x-0 bottom-0 top-0 z-25 flex items-center justify-center px-12 pointer-events-none"
                     style={{ opacity: collapsedBarOpacity }}
                   >
                     <h2 className="text-base font-bold text-white truncate max-w-full drop-shadow-md">
                       {place.place_name}
                     </h2>
-                  </motion.div>
+                  </div>
 
                   {/* Google Maps link */}
                   <a
@@ -324,7 +323,11 @@ const PlaceSwiperDetail = ({
             </motion.div>
 
             {/* ── SCROLLABLE CONTENT ── */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto">
+            <div
+              className="flex-1 overflow-y-auto"
+              onScroll={(e) => setScrollOffset(e.currentTarget.scrollTop)}
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
               <div className="px-5 pt-4 pb-8 space-y-5">
 
                 {/* Address + meta */}
