@@ -225,7 +225,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
       </div>
 
       {/* CTA */}
-      <div className="px-5 pb-[max(24px,env(safe-area-inset-bottom))] shrink-0">
+      <div className="px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom,0px))] shrink-0">
         <Button
           onClick={() => !isComingSoon && onConfirm(selectedCity.name)}
           disabled={isComingSoon}

@@ -45,6 +45,9 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
     onConfirm(startDate, numDays);
   };
 
+  // Single-day selection (only from, no to) — render as a centered circle
+  const singleDayMode = !!(range?.from && !range?.to);
+
   return (
     <div className="flex flex-col h-full">
       <div className="px-2 pt-2">
@@ -58,6 +61,12 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
           fromDate={today}
           locale={pl}
           className="w-full"
+          modifiers={{
+            singleDay: singleDayMode && range?.from ? [range.from] : [],
+          }}
+          modifiersClassNames={{
+            singleDay: "!rounded-full !w-10 !mx-auto",
+          }}
           classNames={{
             months: "flex flex-col w-full",
             month: "w-full",
@@ -85,7 +94,7 @@ const FullCalendarPicker = ({ onConfirm }: FullCalendarPickerProps) => {
       </div>
 
       {/* Summary */}
-      <div className="px-5 pt-3 pb-[max(24px,env(safe-area-inset-bottom))]">
+      <div className="px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom,0px))]">
         {startDate ? (
           <div className="mb-3 text-center">
             {endDate && numDays > 1 ? (
