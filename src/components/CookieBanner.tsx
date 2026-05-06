@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { getConsent, grantConsent, denyConsent, syncConsentFromProfile, getSessionConsent, grantSessionConsent, denySessionConsent } from "@/lib/consent";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { X } from "lucide-react";
 
 const CookieBanner = () => {
   const { user, loading } = useAuth();
@@ -34,31 +35,42 @@ const CookieBanner = () => {
     setVisible(false);
   };
 
+  const handleDismiss = () => {
+    if (user) denyConsent(); else denySessionConsent();
+    setVisible(false);
+  };
+
   return (
     <div
       className="fixed left-0 right-0 z-[60] flex justify-center px-4"
       style={{ bottom: "max(env(safe-area-inset-bottom, 0px), 0px)", paddingBottom: 16 }}
     >
-      <div className="bg-[#1a1a1a] rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3 max-w-md w-full">
-        <span className="text-xl shrink-0">🍪</span>
-        <p className="text-xs text-white/70 leading-snug flex-1">
-          Używamy cookies do analizy ruchu.{" "}
-          <Link to="/terms" className="text-white/50 underline hover:text-white/80 transition-colors">
-            Polityka prywatności
+      <div className="relative bg-[#0E0E0E] rounded-2xl shadow-2xl px-5 pt-5 pb-5 flex flex-col gap-4 max-w-md w-full">
+        <button
+          onClick={handleDismiss}
+          aria-label="Zamknij"
+          className="absolute top-3 right-3 h-8 w-8 flex items-center justify-center text-white/60 hover:text-white transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+        <p className="text-sm text-white/85 leading-relaxed pr-8">
+          Ta witryna korzysta z plików cookie, znaczników pikselowych i pamięci lokalnej w celu poprawy wydajności, personalizacji i prowadzenia działań marketingowych. Używamy własnych plików cookie oraz niektórych plików cookie innych firm. Domyślnie włączone są tylko niezbędne pliki cookie.{" "}
+          <Link to="/terms" className="text-white underline hover:text-white/80 transition-colors">
+            Ustawienia plików cookie
           </Link>
         </p>
-        <div className="flex gap-1.5 shrink-0">
-          <button
-            onClick={handleDeny}
-            className="px-3 py-1.5 rounded-xl border border-white/20 text-white/60 text-xs font-medium hover:border-white/40 hover:text-white/80 transition-colors"
-          >
-            Niezbędne
-          </button>
+        <div className="flex flex-col gap-2.5">
           <button
             onClick={handleGrant}
-            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white text-xs font-bold shadow-md transition-opacity hover:opacity-90"
+            className="w-full rounded-2xl bg-white text-[#0E0E0E] text-base font-semibold px-4 py-4 hover:bg-white/90 transition-colors"
           >
-            OK
+            Zezwalaj na korzystanie ze wszystkich plików cookie
+          </button>
+          <button
+            onClick={handleDeny}
+            className="w-full rounded-2xl bg-white text-[#0E0E0E] text-base font-semibold px-4 py-4 hover:bg-white/90 transition-colors"
+          >
+            Nie zezwalaj na korzystanie z plików cookie
           </button>
         </div>
       </div>
