@@ -316,23 +316,23 @@ export default function BusinessLanding() {
   return (
     <div style={{ background: "#FAFAFA", minHeight: "100dvh" }}>
 
+      {/* ── Shared TopBar nav (mobile + desktop) ── */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-100 px-5 lg:px-10 h-14 lg:h-16 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+          <span className="font-black text-base lg:text-lg text-[#0E0E0E] tracking-tight">trasa</span>
+        </div>
+        <button
+          onClick={() => navigate("/biznes/start")}
+          className="rounded-full text-white font-bold px-5 py-2 lg:px-6 lg:py-2.5 text-sm active:scale-95 transition-transform"
+          style={{ background: "#0E0E0E" }}
+        >
+          Sprawdź
+        </button>
+      </header>
+
       {/* ── MOBILE ── */}
       <div className="lg:hidden">
-        {/* TopBar nav */}
-        <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-100 px-5 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-            <span className="font-black text-base text-[#0E0E0E] tracking-tight">trasa</span>
-          </div>
-          <button
-            onClick={() => navigate("/biznes/start")}
-            className="rounded-full text-white font-bold px-5 py-2 text-sm active:scale-95 transition-transform"
-            style={{ background: "#0E0E0E" }}
-          >
-            Sprawdź
-          </button>
-        </header>
-
         <div className="flex flex-col items-center px-5 pt-6 pb-10 gap-6">
           {/* Phone → Postcard at top */}
           <AnimatePresence mode="wait">
@@ -352,8 +352,8 @@ export default function BusinessLanding() {
 
           {/* Short hero copy + blue CTA */}
           <div className="text-center max-w-xs">
-            <h2 className="text-xl font-black text-[#0E0E0E] mb-1">Tutaj jakieś fajne copy</h2>
-            <p className="text-sm text-[#979797]">Które zachęci do kliknięcia</p>
+            <h2 className="text-xl font-black text-[#0E0E0E] mb-1">Bądź pierwszy.</h2>
+            <p className="text-sm text-[#979797]">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
           </div>
           <button
             onClick={() => navigate("/biznes/start")}
@@ -386,10 +386,21 @@ export default function BusinessLanding() {
       </div>
 
       {/* ── DESKTOP ── */}
-      <div className="hidden lg:flex min-h-screen items-center justify-center gap-20 px-8 py-16 max-w-5xl mx-auto">
+      <div className="hidden lg:flex min-h-[calc(100vh-4rem)] items-center justify-center gap-20 px-8 py-16 max-w-5xl mx-auto">
         {/* Left */}
-        <div className="flex flex-col items-start text-left max-w-sm w-full">
-          <div className="w-14 h-14 rounded-full mb-6 shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+        <div className="flex flex-col items-start text-left max-w-md w-full">
+          {/* Hero copy + blue CTA */}
+          <h2 className="text-3xl font-black text-[#0E0E0E] mb-2">Bądź pierwszy.</h2>
+          <p className="text-base text-[#979797] mb-5">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
+          <button
+            onClick={() => navigate("/biznes/start")}
+            className="rounded-2xl text-white font-bold px-8 py-4 text-base active:scale-[0.98] transition-all mb-10"
+            style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)", boxShadow: "0 8px 24px -6px rgba(59,130,246,0.4)" }}
+          >
+            Sprawdź
+          </button>
+
+          {/* Existing premiera + h1 + body */}
           <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-slate-200 bg-white mb-5">
             <span className="text-lg">🚀</span>
             <span className="text-sm font-semibold text-[#0E0E0E]">Premiera: czerwiec 2026</span>
