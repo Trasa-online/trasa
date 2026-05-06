@@ -223,13 +223,11 @@ const Home             = lazy(() => import("./pages/Home"));
 const CreateRoute      = lazy(() => import("./pages/CreateRoute"));
 const Settings         = lazy(() => import("./pages/Settings"));
 const DayReview        = lazy(() => import("./pages/DayReview"));
-const MyRoutes         = lazy(() => import("./pages/MyRoutes"));
 const SetPassword      = lazy(() => import("./pages/SetPassword"));
 const Admin            = lazy(() => import("./pages/Admin"));
 const TravelerProfile  = lazy(() => import("./pages/TravelerProfile"));
 const MyTrips          = lazy(() => import("./pages/MyTrips"));
 const Journal          = lazy(() => import("./pages/Journal"));
-const SwipeHistory     = lazy(() => import("./pages/SwipeHistory"));
 const EditPlan         = lazy(() => import("./pages/EditPlan"));
 const ReviewSummary    = lazy(() => import("./pages/ReviewSummary"));
 const PlanWizard       = lazy(() => import("./pages/PlanWizard"));
@@ -268,16 +266,13 @@ const App = () => (
           <Route path="/" element={<RootPage />} />
           <Route path="/home" element={<RequireAuth><AppLayout><Home /></AppLayout></RequireAuth>} />
           <Route path="/create" element={<RequireAuth><CreateRoute /></RequireAuth>} />
-          <Route path="/my-routes" element={<RequireAuth><AppLayout><MyRoutes /></AppLayout></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
           <Route path="/day-review" element={<RequireAuth><DayReview /></RequireAuth>} />
-          <Route path="/onboarding" element={<Navigate to="/" replace />} />
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/set-password-biznes" element={<SetPassword forceBusiness />} />
           <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
           <Route path="/moje-trasy" element={<RequireAuth><AppLayout><MyTrips /></AppLayout></RequireAuth>} />
           <Route path="/dziennik" element={<RequireAuth><AppLayout><Journal /></AppLayout></RequireAuth>} />
-          <Route path="/historia" element={<RequireAuth><AppLayout><SwipeHistory /></AppLayout></RequireAuth>} />
           <Route path="/moj-profil" element={<RequireAuth><AppLayout><TravelerProfile /></AppLayout></RequireAuth>} />
           <Route path="/edit-plan" element={<RequireAuth><EditPlan /></RequireAuth>} />
           <Route path="/review-summary" element={<RequireAuth><ReviewSummary /></RequireAuth>} />
@@ -291,12 +286,10 @@ const App = () => (
           <Route path="/join/:code" element={<JoinPage />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
           <Route path="/quick-plan-review" element={<RequireAuth><QuickPlanReview /></RequireAuth>} />
-          <Route path="/biznes/demo" element={<Navigate to="/" replace />} />
           <Route path="/biznes/start" element={<BusinessStart />} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
           <Route path="/dla-firm" element={<ForBusinessPage />} />
           <Route path="/dla-firm/landing" element={<BusinessLanding />} />
-          <Route path="/dla-firm/start" element={<Navigate to="/" replace />} />
 <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>

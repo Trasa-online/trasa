@@ -112,7 +112,7 @@ const PlanWizard = () => {
                       navigate("/auth?return=plan");
                       return;
                     }
-                    navigate("/historia", { state: { fromCity: city } });
+                    navigate("/home");
                   }}
                   className="text-sm text-muted-foreground font-medium px-2 py-1"
                 >

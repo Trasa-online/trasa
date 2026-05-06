@@ -1310,7 +1310,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         <div className="px-4 pb-3 shrink-0 flex gap-2">
           {exploreMode && (
             <button
-              onClick={() => navigate("/historia", { state: { fromCity: city } })}
+              onClick={() => navigate("/home")}
               className="flex-1 py-3 rounded-full border border-border/60 bg-card text-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
             >
               Zakończ

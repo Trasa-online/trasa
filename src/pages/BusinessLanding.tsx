@@ -325,7 +325,7 @@ export default function BusinessLanding() {
             <span className="font-black text-base text-[#0E0E0E] tracking-tight">trasa</span>
           </div>
           <button
-            onClick={() => document.getElementById("cta-section")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            onClick={() => navigate("/biznes/start")}
             className="rounded-full text-white font-bold px-5 py-2 text-sm active:scale-95 transition-transform"
             style={{ background: "#0E0E0E" }}
           >
@@ -356,7 +356,7 @@ export default function BusinessLanding() {
             <p className="text-sm text-[#979797]">Które zachęci do kliknięcia</p>
           </div>
           <button
-            onClick={() => document.getElementById("cta-section")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            onClick={() => navigate("/biznes/start")}
             className="w-full max-w-xs rounded-2xl text-white font-bold py-4 text-base active:scale-[0.98] transition-all"
             style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)", boxShadow: "0 8px 24px -6px rgba(59,130,246,0.4)" }}
           >
@@ -377,25 +377,10 @@ export default function BusinessLanding() {
             </p>
           </div>
 
-          {/* Existing CTA section (scroll target) */}
-          <div id="cta-section" className="flex flex-col gap-3 w-full max-w-xs scroll-mt-20">
-            <button
-              onClick={() => navigate("/auth?business=true&tab=register")}
-              className="w-full rounded-2xl text-white font-bold py-4 text-base active:scale-[0.98] transition-all"
-              style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)", boxShadow: "0 8px 24px -6px rgba(59,130,246,0.4)" }}
-            >
-              Zakładam konto
-            </button>
-            <button
-              onClick={() => navigate("/demo?biznes=1")}
-              className="w-full rounded-2xl border border-blue-400 text-[#0E0E0E] font-semibold py-3.5 text-sm hover:bg-blue-50 transition-colors"
-            >
-              Zobacz jak to dziala →
-            </button>
-            <div className="flex flex-col gap-2 pt-1">
-              <AppStoreBadge store="ios" />
-              <AppStoreBadge store="android" />
-            </div>
+          {/* App store badges */}
+          <div id="cta-section" className="flex flex-col gap-2 w-full max-w-xs scroll-mt-20">
+            <AppStoreBadge store="ios" />
+            <AppStoreBadge store="android" />
           </div>
         </div>
       </div>
@@ -415,21 +400,6 @@ export default function BusinessLanding() {
           <p className="text-[#979797] text-base leading-relaxed mb-8 max-w-xs">
             Budujemy aplikację do planowania city breaków. Szukamy pierwszych 100 lokali w Warszawie - wchodzisz bezpłatnie i zostajesz na mapie zanim użytkownicy tu trafią!
           </p>
-          <div className="flex gap-3 w-full mb-4">
-            <button
-              onClick={() => navigate("/auth?business=true&tab=register")}
-              className="flex-1 rounded-2xl text-white font-bold py-4 text-sm active:scale-[0.98] transition-all"
-              style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)", boxShadow: "0 8px 24px -6px rgba(59,130,246,0.4)" }}
-            >
-              Zakładam konto
-            </button>
-            <button
-              onClick={() => navigate("/biznes/start")}
-              className="flex-1 rounded-2xl border border-blue-400 text-[#0E0E0E] font-semibold py-4 text-sm hover:bg-blue-50 transition-colors"
-            >
-              Zobacz jak to dziala →
-            </button>
-          </div>
           <div className="flex gap-3 w-full">
             <div className="flex-1"><AppStoreBadge store="ios" /></div>
             <div className="flex-1"><AppStoreBadge store="android" /></div>

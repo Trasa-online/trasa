@@ -94,7 +94,7 @@ const RouteSummaryDialog = ({
     if (existingRouteId) {
       toast.success("Trasa jest już zapisana!");
       onOpenChange(false);
-      navigate("/my-routes");
+      navigate("/moje-trasy");
       return;
     }
     setSaving(true);

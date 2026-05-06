@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, Heart, Zap, Check, Castle, GlassWater, Palette, TreePine, Pizza, Star, MapPin, Menu, X, Sparkles, User } from "lucide-react";
@@ -354,7 +354,6 @@ const LandingPage = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [trialOpen, setTrialOpen] = useState(false);
   if (loading) return null;
-  if (user) return <Navigate to="/home" replace />;
 
   const STEPS = [
     { num: "01", title: "Wybierz miasto i datę", desc: "Kraków, Gdańsk, Warszawa - wybierz gdzie i kiedy. Reszta sama się ułoży.", anim: <CityAnim /> },
