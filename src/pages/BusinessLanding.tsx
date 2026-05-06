@@ -317,18 +317,20 @@ export default function BusinessLanding() {
     <div style={{ background: "#FAFAFA", minHeight: "100dvh" }}>
 
       {/* ── Shared TopBar nav (mobile + desktop) ── */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-100 px-5 lg:px-10 h-14 lg:h-16 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-          <span className="font-black text-base lg:text-lg text-[#0E0E0E] tracking-tight">trasa</span>
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-100 h-14 lg:h-16">
+        <div className="h-full flex items-center justify-between px-5 lg:px-8 max-w-5xl mx-auto">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            <span className="font-black text-base lg:text-lg text-[#0E0E0E] tracking-tight">trasa</span>
+          </div>
+          <button
+            onClick={() => navigate("/biznes/start")}
+            className="rounded-full text-white font-bold px-5 py-2 lg:px-6 lg:py-2.5 text-sm active:scale-95 transition-transform"
+            style={{ background: "#0E0E0E" }}
+          >
+            Sprawdź
+          </button>
         </div>
-        <button
-          onClick={() => navigate("/biznes/start")}
-          className="rounded-full text-white font-bold px-5 py-2 lg:px-6 lg:py-2.5 text-sm active:scale-95 transition-transform"
-          style={{ background: "#0E0E0E" }}
-        >
-          Sprawdź
-        </button>
       </header>
 
       {/* ── MOBILE ── */}
@@ -402,7 +404,7 @@ export default function BusinessLanding() {
           </p>
 
           {/* Hero copy + blue CTA */}
-          <h2 className="text-3xl font-black text-[#0E0E0E] mb-2">Bądź pierwszy</h2>
+          <h2 className="text-xl font-bold text-slate-500 mb-2">Bądź pierwszy</h2>
           <p className="text-base text-[#979797] mb-5">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
           <button
             onClick={() => navigate("/biznes/start")}
