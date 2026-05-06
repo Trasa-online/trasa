@@ -388,7 +388,7 @@ export default function BusinessLanding() {
       </div>
 
       {/* ── DESKTOP ── */}
-      <div className="hidden lg:flex min-h-[calc(100vh-4rem)] items-center justify-center gap-20 px-8 py-16 max-w-5xl mx-auto">
+      <div className="hidden lg:flex min-h-[calc(100vh-4rem)] items-center justify-between gap-20 px-8 py-16 max-w-5xl mx-auto">
         {/* Left */}
         <div className="flex flex-col items-start text-left max-w-md w-full">
           {/* Premiera + h1 + body */}
