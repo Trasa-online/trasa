@@ -389,8 +389,20 @@ export default function BusinessLanding() {
       <div className="hidden lg:flex min-h-[calc(100vh-4rem)] items-center justify-center gap-20 px-8 py-16 max-w-5xl mx-auto">
         {/* Left */}
         <div className="flex flex-col items-start text-left max-w-md w-full">
+          {/* Premiera + h1 + body */}
+          <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-slate-200 bg-white mb-5">
+            <span className="text-lg">🚀</span>
+            <span className="text-sm font-semibold text-[#0E0E0E]">Premiera: czerwiec 2026</span>
+          </div>
+          <h1 className="text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-5">
+            Dołącz do Trasy<br />jako jeden<br />z pierwszych
+          </h1>
+          <p className="text-[#979797] text-base leading-relaxed mb-10 max-w-xs">
+            Budujemy aplikację do planowania city breaków. Szukamy pierwszych 100 lokali w Warszawie - wchodzisz bezpłatnie i zostajesz na mapie zanim użytkownicy tu trafią!
+          </p>
+
           {/* Hero copy + blue CTA */}
-          <h2 className="text-3xl font-black text-[#0E0E0E] mb-2">Bądź pierwszy.</h2>
+          <h2 className="text-3xl font-black text-[#0E0E0E] mb-2">Bądź pierwszy</h2>
           <p className="text-base text-[#979797] mb-5">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
           <button
             onClick={() => navigate("/biznes/start")}
@@ -400,17 +412,6 @@ export default function BusinessLanding() {
             Sprawdź
           </button>
 
-          {/* Existing premiera + h1 + body */}
-          <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-slate-200 bg-white mb-5">
-            <span className="text-lg">🚀</span>
-            <span className="text-sm font-semibold text-[#0E0E0E]">Premiera: czerwiec 2026</span>
-          </div>
-          <h1 className="text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-5">
-            Dołącz do Trasy<br />jako jeden<br />z pierwszych
-          </h1>
-          <p className="text-[#979797] text-base leading-relaxed mb-8 max-w-xs">
-            Budujemy aplikację do planowania city breaków. Szukamy pierwszych 100 lokali w Warszawie - wchodzisz bezpłatnie i zostajesz na mapie zanim użytkownicy tu trafią!
-          </p>
           <div className="flex gap-3 w-full">
             <div className="flex-1"><AppStoreBadge store="ios" /></div>
             <div className="flex-1"><AppStoreBadge store="android" /></div>
