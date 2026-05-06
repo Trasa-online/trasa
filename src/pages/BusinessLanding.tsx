@@ -354,7 +354,7 @@ export default function BusinessLanding() {
 
           {/* Short hero copy + blue CTA */}
           <div className="text-center max-w-xs">
-            <h2 className="text-xl font-black text-[#0E0E0E] mb-1">Bądź pierwszy.</h2>
+            <h2 className="text-xl font-black text-[#0E0E0E] mb-1">Bądź pierwszy</h2>
             <p className="text-sm text-[#979797]">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
           </div>
           <button
