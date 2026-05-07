@@ -239,6 +239,7 @@ const AdminRoutes      = lazy(() => import("./pages/AdminRoutes"));
 const SharedRoute      = lazy(() => import("./pages/SharedRoute"));
 const JoinPage         = lazy(() => import("./pages/JoinPage"));
 const PublicProfile    = lazy(() => import("./pages/PublicProfile"));
+const ClaimPlace       = lazy(() => import("./pages/ClaimPlace"));
 const BusinessDashboard = lazy(() => import("./pages/BusinessDashboard"));
 const BusinessOnePager  = lazy(() => import("./pages/BusinessOnePager"));
 const BusinessStart     = lazy(() => import("./pages/BusinessStart"));
@@ -284,6 +285,7 @@ const App = () => (
           <Route path="/admin/routes" element={<RequireAuth><AdminRoutes /></RequireAuth>} />
           <Route path="/route/:id" element={<SharedRoute />} />
           <Route path="/join/:code" element={<JoinPage />} />
+          <Route path="/lokal/:placeId" element={<ClaimPlace />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
           <Route path="/quick-plan-review" element={<RequireAuth><QuickPlanReview /></RequireAuth>} />
           <Route path="/biznes/start" element={<BusinessStart />} />
