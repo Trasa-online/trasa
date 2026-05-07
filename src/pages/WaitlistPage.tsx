@@ -555,6 +555,29 @@ export default function WaitlistPage() {
   return (
     <div style={{ background: "#FAFAFA" }}>
 
+      {/* ── Shared TopBar nav ── */}
+      <header
+        className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-100 h-14 lg:h-16"
+        style={{
+          opacity: scene === "intro" ? 0 : 1,
+          pointerEvents: scene === "intro" ? "none" : "auto",
+          transition: "opacity 0.5s ease 0.2s",
+        }}
+      >
+        <div className="h-full flex items-center justify-between px-5 lg:px-8 max-w-5xl mx-auto">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            <span className="font-black text-base lg:text-lg text-[#0E0E0E] tracking-tight">trasa</span>
+          </div>
+          <button
+            onClick={() => navigate("/dla-firm/landing")}
+            className="rounded-full text-white font-bold px-5 py-2 lg:px-6 lg:py-2.5 text-sm active:scale-95 transition-transform"
+            style={{ background: "#0E0E0E" }}
+          >
+            Dla firm →
+          </button>
+        </div>
+      </header>
 
       {/* ── MOBILE ─────────────────────────────────────────────────────────────── */}
       <div className="lg:hidden">
@@ -563,7 +586,7 @@ export default function WaitlistPage() {
           <FullscreenIntroVideo phoneBodyRef={phoneBodyRef} onDone={goDemo} onShrinkStart={() => setShrinking(true)} />
         )}
 
-        <div className="flex flex-col" style={{ height: "100dvh" }}>
+        <div className="flex flex-col" style={{ height: "calc(100dvh - 3.5rem)" }}>
 
           {/* Intro overlay - fixed z-50 (above video z-40): grayed app store badges */}
           <AnimatePresence>
@@ -581,20 +604,9 @@ export default function WaitlistPage() {
             )}
           </AnimatePresence>
 
-          {/* Content - flex column: orb → phone (flex-1) */}
+          {/* Content - flex column: phone (flex-1) */}
           <div className="flex-1 min-h-0 flex flex-col items-center px-2"
             style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 10px)" }}>
-
-            {/* Orb */}
-            <div
-              className="w-14 h-14 rounded-full shrink-0"
-              style={{
-                background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
-                position: "relative",
-                zIndex: scene === "intro" ? 50 : 49,
-                marginBottom: "12px",
-              }}
-            />
 
             {/* Phone / postcard - flex-1 min-h-0: fills available space */}
             <div className="relative flex-1 min-h-0 flex items-center justify-center w-full"
@@ -645,10 +657,9 @@ export default function WaitlistPage() {
       </div>
 
       {/* ── DESKTOP ─────────────────────────────────────────────────────────────── */}
-      <div className="hidden lg:flex min-h-screen items-center justify-center gap-20 px-8 py-16 max-w-5xl mx-auto">
+      <div className="hidden lg:flex min-h-[calc(100vh-4rem)] items-center justify-center gap-20 px-8 py-16 max-w-5xl mx-auto">
         {/* Left */}
         <div className="flex flex-col items-start text-left max-w-sm w-full">
-          <div className="w-14 h-14 rounded-full mb-6" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
           <h1 className="text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-4">
             speed dating<br />
             z miastem
