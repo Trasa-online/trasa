@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect, useCallback, forwardRef, type RefObject } from "react";
+import { useState, useRef, useEffect, useCallback, forwardRef } from "react";
 import {
   motion, AnimatePresence, useMotionValue, useTransform, animate,
   type MotionValue, type PanInfo,
 } from "framer-motion";
-import { Star, Clock, Globe, VolumeX, Volume2 } from "lucide-react";
+import { Star, Clock, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -235,109 +235,6 @@ const PhoneMockup = forwardRef<HTMLDivElement, PhoneMockupProps>(
 });
 PhoneMockup.displayName = "PhoneMockup";
 
-// ─── FullscreenIntroVideo ─────────────────────────────────────────────────────
-// Video lives at root level (no CSS transform parent) to avoid the iOS Safari
-// "video inside scale() = black screen" WebKit compositing bug.
-// When done it spring-shrinks to the phone screen rect, then fades out.
-
-function FullscreenIntroVideo({
-  phoneBodyRef,
-  onDone,
-  onShrinkStart,
-}: {
-  phoneBodyRef: RefObject<HTMLDivElement>;
-  onDone: () => void;
-  onShrinkStart?: () => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const doneRef = useRef(false);
-  const [audioMuted, setAudioMuted] = useState(true);
-
-  useEffect(() => { if (videoRef.current) videoRef.current.muted = audioMuted; }, [audioMuted]);
-
-  const triggerShrink = useCallback(() => {
-    if (doneRef.current) return;
-    doneRef.current = true;
-    // Tell parent to raise phone to z-50 and show bezel; two rAF frames for React to flush
-    onShrinkStart?.();
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const phoneEl = phoneBodyRef.current;
-      const containerEl = containerRef.current;
-      if (!phoneEl || !containerEl) { onDone(); return; }
-      // Raise video above phone (z-50) so it visually enters the frame
-      containerEl.style.zIndex = "60";
-      const r = phoneEl.getBoundingClientRect();
-      // Target = inner screen rect (9px inset, 34px border-radius)
-      const target = { top: r.top + 9, left: r.left + 9, width: r.width - 18, height: r.height - 18 };
-      animate(containerEl, {
-        top: target.top,
-        left: target.left,
-        width: target.width,
-        height: target.height,
-        borderRadius: "34px",
-      }, { type: "spring", stiffness: 120, damping: 20 })
-        .then(() => animate(containerEl, { opacity: 0 }, { duration: 0.25 }))
-        .then(() => onDone());
-    }));
-  }, [phoneBodyRef, onDone, onShrinkStart]);
-
-  useEffect(() => {
-    const t = setTimeout(triggerShrink, 9000);
-    return () => clearTimeout(t);
-  }, [triggerShrink]);
-
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    el.setAttribute("muted", "");
-    el.muted = true;
-    el.play().catch(() => {});
-    const onTouch = () => { if (el.paused) { el.setAttribute("muted", ""); el.muted = true; el.play().catch(() => {}); } };
-    document.addEventListener("touchstart", onTouch, { once: true, passive: true });
-    return () => document.removeEventListener("touchstart", onTouch);
-  }, []);
-
-  return (
-    <div
-      ref={containerRef}
-      onClick={() => {
-        const el = videoRef.current;
-        if (el && el.paused) { el.muted = true; el.play().catch(() => {}); return; }
-        triggerShrink();
-      }}
-      style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "#000", zIndex: 40, overflow: "hidden", WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
-    >
-      <video
-        ref={(el) => {
-          videoRef.current = el;
-          if (!el) return;
-          el.setAttribute("muted", "");
-          el.muted = true;
-          el.play().catch(() => {});
-        }}
-        src="/founders_intro.mp4"
-        autoPlay playsInline muted preload="auto"
-        onEnded={triggerShrink}
-        onCanPlay={(e) => {
-          const el = e.currentTarget;
-          el.setAttribute("muted", "");
-          el.muted = true;
-          el.play().catch(() => {});
-        }}
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
-      />
-      <button
-        onPointerUp={(e) => { e.stopPropagation(); setAudioMuted(m => !m); }}
-        className="absolute top-3 right-3 z-30 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform"
-      >
-        {audioMuted ? <VolumeX className="h-3.5 w-3.5 text-white/80" /> : <Volume2 className="h-3.5 w-3.5 text-white" />}
-      </button>
-    </div>
-  );
-}
-
 // ─── Postcard ─────────────────────────────────────────────────────────────────
 
 function PostcardFront({ w, h }: { w: number; h: number }) {
@@ -539,31 +436,21 @@ function AppStoreBadge({ store }: { store: "ios" | "android" }) {
 
 // ─── WaitlistPage ─────────────────────────────────────────────────────────────
 
-type Scene = "intro" | "demo" | "postcard";
+type Scene = "demo" | "postcard";
 
 export default function WaitlistPage() {
   const navigate = useNavigate();
-  // "intro" = phone at expanded (fullscreen) scale; "demo" = phone compact; "postcard" = postcard
-  const [scene, setScene] = useState<Scene>("intro");
-  const [shrinking, setShrinking] = useState(false);
+  // "demo" = phone compact; "postcard" = postcard
+  const [scene, setScene] = useState<Scene>("demo");
   const inputRef = useRef<HTMLInputElement>(null);
-  const phoneBodyRef = useRef<HTMLDivElement>(null);
 
-  const goDemo = useCallback(() => setScene("demo"), []);
   const goPostcard = useCallback(() => setScene("postcard"), []);
 
   return (
     <div style={{ background: "#FAFAFA" }}>
 
       {/* ── Shared TopBar nav ── */}
-      <header
-        className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-100 h-14 lg:h-16"
-        style={{
-          opacity: scene === "intro" ? 0 : 1,
-          pointerEvents: scene === "intro" ? "none" : "auto",
-          transition: "opacity 0.5s ease 0.2s",
-        }}
-      >
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-100 h-14 lg:h-16">
         <div className="h-full flex items-center justify-between px-5 lg:px-8 max-w-5xl mx-auto">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
@@ -581,45 +468,21 @@ export default function WaitlistPage() {
 
       {/* ── MOBILE ─────────────────────────────────────────────────────────────── */}
       <div className="lg:hidden">
-        {/* Fullscreen founders video - at root level (outside any transform) for iOS Safari */}
-        {scene === "intro" && (
-          <FullscreenIntroVideo phoneBodyRef={phoneBodyRef} onDone={goDemo} onShrinkStart={() => setShrinking(true)} />
-        )}
-
         <div className="flex flex-col" style={{ height: "calc(100dvh - 3.5rem)" }}>
 
-          {/* Intro overlay - fixed z-50 (above video z-40): grayed app store badges */}
-          <AnimatePresence>
-            {scene === "intro" && (
-              <motion.div
-                className="fixed inset-0 z-50 pointer-events-none flex flex-col items-end justify-end"
-                style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }}
-              >
-                <div className="flex flex-col gap-2 w-full px-4 mb-6" style={{ filter: "grayscale(1)", opacity: 0.45 }}>
-                  <AppStoreBadge store="ios" />
-                  <AppStoreBadge store="android" />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* Content - flex column: phone (flex-1) */}
-          <div className="flex-1 min-h-0 flex flex-col items-center px-2"
-            style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 10px)" }}>
+          <div className="flex-1 min-h-0 flex flex-col items-center px-2 pt-3">
 
             {/* Phone / postcard - flex-1 min-h-0: fills available space */}
-            <div className="relative flex-1 min-h-0 flex items-center justify-center w-full"
-              style={{ zIndex: scene === "intro" ? (shrinking ? 50 : 1) : 70 }}>
+            <div className="relative flex-1 min-h-0 flex items-center justify-center w-full">
               <AnimatePresence mode="wait">
                 {scene !== "postcard" ? (
                   <motion.div key="phone" initial={false} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.3 }}>
                     <PhoneMockup
-                      ref={phoneBodyRef}
-                      key={scene === "intro" ? "phone-intro" : "phone-demo"}
+                      key="phone-demo"
                       compact
                       initialPhase="B"
-                      showBezel={scene !== "intro" || shrinking}
+                      showBezel
                       onComplete={goPostcard}
                     />
                   </motion.div>
@@ -635,17 +498,10 @@ export default function WaitlistPage() {
             </div>
           </div>
 
-          {/* Sticky bottom CTA - hidden during intro, fades in after */}
+          {/* Sticky bottom CTA */}
           <div
-            className="shrink-0 px-4 pt-4 space-y-3"
-            style={{
-              position: "relative",
-              zIndex: 80,
-              opacity: scene === "intro" ? 0 : 1,
-              pointerEvents: scene === "intro" ? "none" : "auto",
-              transition: "opacity 0.5s ease 0.2s",
-              paddingBottom: "max(env(safe-area-inset-bottom, 0px), 24px)",
-            }}
+            className="shrink-0 px-4 pt-4 space-y-3 relative z-10"
+            style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 24px)" }}
           >
             <EmailCapture inputRef={inputRef} />
             <div className="flex flex-col gap-2 w-full">
