@@ -776,10 +776,26 @@ const BusinessDashboard = () => {
       prevBtnText: '← Wróć',
       doneBtnText: 'Gotowe!',
       steps: [
-        { element: isMobile ? '#tour-mobile-overview' : '#tour-overview', popover: { title: 'Przegląd',    description: 'Przegląd: tu widzisz ruch na wizytówce i skróty do szybkich akcji.', side: isMobile ? 'bottom' : 'right' } },
-        { element: isMobile ? '#tour-mobile-gallery'  : '#tour-gallery',  popover: { title: 'Wygląd',      description: 'Wygląd: dodaj okładkę, galerię i dostosuj kolory wizytówki.',         side: isMobile ? 'bottom' : 'right' } },
-        { element: isMobile ? '#tour-mobile-profile'  : '#tour-profile',  popover: { title: 'Dane lokalu', description: 'Dane lokalu: uzupełnij kontakt, opis i tagi.',                        side: isMobile ? 'bottom' : 'right' } },
-        { element: isMobile ? '#tour-mobile-posts'    : '#tour-posts',    popover: { title: 'Aktualności', description: 'Aktualności: publikuj posty i wydarzenia widoczne dla użytkowników.',  side: isMobile ? 'bottom' : 'right' } },
+        {
+          element: isMobile ? '#tour-mobile-overview' : '#tour-overview',
+          popover: { title: 'Przegląd', description: 'Przegląd: tu widzisz ruch na wizytówce i skróty do szybkich akcji.', side: isMobile ? 'bottom' : 'right' },
+          onHighlightStarted: () => setActiveSection('overview'),
+        },
+        {
+          element: isMobile ? '#tour-mobile-gallery' : '#tour-gallery',
+          popover: { title: 'Wygląd', description: 'Wygląd: dodaj okładkę, galerię i dostosuj kolory wizytówki.', side: isMobile ? 'bottom' : 'right' },
+          onHighlightStarted: () => setActiveSection('gallery'),
+        },
+        {
+          element: isMobile ? '#tour-mobile-profile' : '#tour-profile',
+          popover: { title: 'Dane lokalu', description: 'Dane lokalu: uzupełnij kontakt, opis i tagi.', side: isMobile ? 'bottom' : 'right' },
+          onHighlightStarted: () => setActiveSection('profile'),
+        },
+        {
+          element: isMobile ? '#tour-mobile-posts' : '#tour-posts',
+          popover: { title: 'Aktualności', description: 'Aktualności: publikuj posty i wydarzenia widoczne dla użytkowników.', side: isMobile ? 'bottom' : 'right' },
+          onHighlightStarted: () => setActiveSection('posts'),
+        },
         {
           element: useMobilePreviewBtn ? '#tour-mobile-preview-btn' : '#tour-preview-btn',
           popover: { title: 'Podgląd', description: 'Tu otwierasz podgląd Twojej wizytówki dokładnie tak jak widzą ją użytkownicy.', side: useMobilePreviewBtn ? 'top' : 'bottom' },
