@@ -1,5 +1,4 @@
 import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 // ─── Email Capture ────────────────────────────────────────────────────────────
@@ -57,7 +56,6 @@ function AppStoreBadge({ store }: { store: "ios" | "android" }) {
 // ─── WaitlistPage ─────────────────────────────────────────────────────────────
 
 export default function WaitlistPage() {
-  const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -65,18 +63,11 @@ export default function WaitlistPage() {
 
       {/* ── Shared TopBar nav ── */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-100 h-14 lg:h-16">
-        <div className="h-full flex items-center justify-between px-5 lg:px-8 max-w-5xl mx-auto">
+        <div className="h-full flex items-center px-5 lg:px-8 max-w-5xl mx-auto">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
             <span className="font-black text-base lg:text-lg text-[#0E0E0E] tracking-tight">trasa</span>
           </div>
-          <button
-            onClick={() => navigate("/dla-firm/landing")}
-            className="rounded-full text-white font-bold px-5 py-2 lg:px-6 lg:py-2.5 text-sm active:scale-95 transition-transform"
-            style={{ background: "#0E0E0E" }}
-          >
-            Dla firm →
-          </button>
         </div>
       </header>
 
