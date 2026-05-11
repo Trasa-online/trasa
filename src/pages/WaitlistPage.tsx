@@ -5,10 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 function EmailCapture({ inputRef }: { inputRef?: React.RefObject<HTMLInputElement> }) {
   const [email, setEmail] = useState("");
+  const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || status !== "idle") return;
+    if (!email.trim() || !consent || status !== "idle") return;
     setStatus("loading");
     const trimmed = email.trim().toLowerCase();
     await (supabase as any).from("waitlist").insert({ email: trimmed });
@@ -21,11 +22,26 @@ function EmailCapture({ inputRef }: { inputRef?: React.RefObject<HTMLInputElemen
     </div>
   );
   return (
-    <form onSubmit={submit} className="flex flex-col gap-2 w-full">
+    <form onSubmit={submit} className="flex flex-col gap-3 w-full">
       <input ref={inputRef} type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="twoj@email.pl"
         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-[#0E0E0E] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-orange-300" />
-      <button type="submit" disabled={status === "loading"}
-        className="w-full rounded-2xl bg-orange-700 hover:bg-orange-800 text-white font-bold px-5 py-3.5 text-sm whitespace-nowrap shadow-md shadow-orange-200 active:scale-[0.98] transition-all">
+
+      <label className="flex items-start gap-2.5 text-left cursor-pointer select-none px-1">
+        <input
+          type="checkbox"
+          required
+          checked={consent}
+          onChange={e => setConsent(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-slate-300 text-orange-600 focus:ring-orange-300 cursor-pointer shrink-0"
+        />
+        <span className="text-[11px] text-slate-500 leading-snug">
+          Wyrażam zgodę na przetwarzanie mojego adresu e-mail w celu otrzymywania informacji o premierze aplikacji. Zapoznałem się z{" "}
+          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-orange-600 underline hover:text-orange-700">polityką prywatności</a>.
+        </span>
+      </label>
+
+      <button type="submit" disabled={status === "loading" || !consent || !email.trim()}
+        className="w-full rounded-2xl bg-orange-700 hover:bg-orange-800 text-white font-bold px-5 py-3.5 text-sm whitespace-nowrap shadow-md shadow-orange-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed">
         {status === "loading" ? "..." : "Zapisz się"}
       </button>
     </form>
