@@ -587,7 +587,7 @@ const BusinessDashboard = () => {
   const [uploading, setUploading] = useState<string | null>(null); // which slot is uploading
   const [isDirty, setIsDirty] = useState(false);
 
-  const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'posts' | 'analytics'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'posts' | 'analytics'>('gallery');
   const [recentEvents, setRecentEvents] = useState<Array<{event_type: string, created_at: string}>>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -777,12 +777,7 @@ const BusinessDashboard = () => {
         {
           element: '#tour-business-name',
           popover: { title: 'Zacznij od nazwy', description: 'Kliknij tutaj i wpisz nazwę swojego lokalu. Możesz ją zmienić w każdej chwili — z poziomu dowolnej zakładki.', side: 'bottom' },
-          onHighlightStarted: () => setActiveSection('overview'),
-        },
-        {
-          element: isMobile ? '#tour-mobile-overview' : '#tour-overview',
-          popover: { title: 'Przegląd', description: 'Tu zobaczysz ruch na wizytówce i skróty do najważniejszych akcji.', side: isMobile ? 'bottom' : 'right' },
-          onHighlightStarted: () => setActiveSection('overview'),
+          onHighlightStarted: () => setActiveSection('gallery'),
         },
         {
           element: isMobile ? '#tour-mobile-gallery' : '#tour-gallery',
@@ -809,7 +804,7 @@ const BusinessDashboard = () => {
 
   // Auto-start tour on first visit — only after loading finishes AND user is on overview
   useEffect(() => {
-    if (!profile || loading || activeSection !== 'overview') return;
+    if (!profile || loading || activeSection !== 'gallery') return;
     const seen = localStorage.getItem(`tour_seen_v2_${profile.id}`);
     if (!seen) {
       // Small delay so the DOM is fully rendered
@@ -1372,7 +1367,7 @@ const BusinessDashboard = () => {
         </div>
         {/* Nav items */}
         {([
-          { id: 'overview',   label: 'Przegląd',      icon: LayoutDashboard, disabled: false },
+          { id: 'overview',   label: 'Przegląd',      icon: LayoutDashboard, disabled: true },
           { id: 'gallery',    label: 'Wygląd',          icon: Images,         disabled: false },
           { id: 'profile',    label: 'Dane lokalu',    icon: Store,          disabled: false },
           { id: 'posts',      label: 'Aktualności',    icon: Megaphone,      disabled: false },
@@ -1429,7 +1424,7 @@ const BusinessDashboard = () => {
               onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }}
               placeholder="Nazwa lokalu"
               maxLength={80}
-              className="flex-1 min-w-0 text-sm font-bold bg-transparent border-0 outline-none focus:bg-slate-50 focus:ring-2 focus:ring-orange-200 rounded-lg px-2 py-1 -mx-2 placeholder:font-medium placeholder:text-slate-400 transition-colors"
+              className="min-w-0 w-full max-w-[260px] text-sm font-bold bg-transparent border-0 outline-none focus:bg-slate-50 focus:ring-2 focus:ring-orange-200 rounded-lg px-2 py-1 -mx-2 placeholder:font-medium placeholder:text-slate-400 transition-colors"
             />
             <span className={`hidden md:inline text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
           </div>
@@ -1458,7 +1453,7 @@ const BusinessDashboard = () => {
         {/* ── Mobile horizontal tabs ── */}
         <div className="md:hidden sticky top-14 z-10 bg-white border-b border-slate-100 flex overflow-x-auto shrink-0 px-3 gap-1 py-2">
           {([
-            { id: 'overview', label: 'Przegląd', disabled: false },
+            { id: 'overview', label: 'Przegląd', disabled: true },
             { id: 'gallery', label: 'Wygląd', disabled: false },
             { id: 'profile', label: 'Dane', disabled: false },
             { id: 'posts', label: 'Aktualności', disabled: false },
@@ -1833,22 +1828,6 @@ const BusinessDashboard = () => {
               </div>
 
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-                <div className="space-y-1">
-                  <Label htmlFor="business_name" className="text-xs">Nazwa lokalu</Label>
-                  {isDraft ? (
-                    <Input
-                      id="business_name"
-                      value={businessName}
-                      onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }}
-                      placeholder="np. Kawiarnia Pod Lipą"
-                    />
-                  ) : (
-                    <>
-                      <Input id="business_name" value={businessName} readOnly disabled className="bg-muted/50 text-muted-foreground cursor-not-allowed" />
-                      <p className="text-[11px] text-muted-foreground">Nazwa ustawiana przy rejestracji - skontaktuj się z nami, by ją zmienić.</p>
-                    </>
-                  )}
-                </div>
                 <div className="space-y-1">
                   <Label htmlFor="street" className="text-xs flex items-center gap-1.5 flex-wrap">Ulica i numer <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
                   <Input id="street" value={street} maxLength={100} onChange={e => { setStreet(e.target.value); setIsDirty(true); }} />
