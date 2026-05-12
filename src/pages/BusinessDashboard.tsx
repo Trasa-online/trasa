@@ -594,7 +594,6 @@ const BusinessDashboard = () => {
   const [photoPreview, setPhotoPreview] = useState<{ url: string; label: string } | null>(null);
   const [isDraft, setIsDraft] = useState(false);
   const [showAppPreview, setShowAppPreview] = useState(false);
-  const [showPreviewHint, setShowPreviewHint] = useState(false);
   const [convertingDraft, setConvertingDraft] = useState(false);
   const [supportMessage, setSupportMessage] = useState("");
   const [supportSubmitting, setSupportSubmitting] = useState(false);
@@ -769,7 +768,6 @@ const BusinessDashboard = () => {
   const startTour = useCallback(() => {
     if (!profile) return;
     const isMobile = window.innerWidth < 768;
-    const useMobilePreviewBtn = window.innerWidth < 1024; // FAB shown < lg breakpoint
     const driverObj = driver({
       showProgress: true,
       nextBtnText: 'Dalej →',
@@ -795,11 +793,6 @@ const BusinessDashboard = () => {
           element: isMobile ? '#tour-mobile-posts' : '#tour-posts',
           popover: { title: 'Aktualności', description: 'Aktualności: publikuj posty i wydarzenia widoczne dla użytkowników.', side: isMobile ? 'bottom' : 'right' },
           onHighlightStarted: () => setActiveSection('posts'),
-        },
-        {
-          element: useMobilePreviewBtn ? '#tour-mobile-preview-btn' : '#tour-preview-btn',
-          popover: { title: 'Podgląd', description: 'Tu otwierasz podgląd Twojej wizytówki dokładnie tak jak widzą ją użytkownicy.', side: useMobilePreviewBtn ? 'top' : 'bottom' },
-          onHighlightStarted: () => { if (useMobilePreviewBtn) setActiveSection('gallery'); },
         },
       ],
       onDestroyed: () => {
@@ -1374,21 +1367,27 @@ const BusinessDashboard = () => {
         </div>
         {/* Nav items */}
         {([
-          { id: 'overview',   label: 'Przegląd',      icon: LayoutDashboard },
-          { id: 'gallery',    label: 'Wygląd',          icon: Images },
-          { id: 'profile',    label: 'Dane lokalu',    icon: Store },
-          { id: 'posts',      label: 'Aktualności',    icon: Megaphone },
-          { id: 'analytics',  label: 'Analityka',      icon: TrendingUp },
+          { id: 'overview',   label: 'Przegląd',      icon: LayoutDashboard, disabled: false },
+          { id: 'gallery',    label: 'Wygląd',          icon: Images,         disabled: false },
+          { id: 'profile',    label: 'Dane lokalu',    icon: Store,          disabled: false },
+          { id: 'posts',      label: 'Aktualności',    icon: Megaphone,      disabled: false },
+          { id: 'analytics',  label: 'Analityka',      icon: TrendingUp,     disabled: true },
         ] as const).map(item => (
           <button
             key={item.id}
             id={`tour-${item.id}`}
-            onClick={async () => { if (isDirty) await autoSaveDraft(); setActiveSection(item.id); }}
-            title={!sidebarOpen ? item.label : undefined}
-            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-0.5 ${sidebarOpen ? 'text-left' : 'justify-center'} ${activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+            onClick={async () => { if (item.disabled) return; if (isDirty) await autoSaveDraft(); setActiveSection(item.id); }}
+            disabled={item.disabled}
+            title={item.disabled ? 'Niedostępne — wkrótce' : (!sidebarOpen ? item.label : undefined)}
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-0.5 ${sidebarOpen ? 'text-left' : 'justify-center'} ${item.disabled ? 'text-slate-300 cursor-not-allowed' : activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
           >
             <item.icon className="h-4 w-4 shrink-0" />
-            {sidebarOpen && item.label}
+            {sidebarOpen && (
+              <span className="flex items-center gap-1.5">
+                {item.label}
+                {item.disabled && <span className="text-[9px] font-bold text-slate-300 bg-slate-100 rounded-full px-1.5 py-0.5">wkrótce</span>}
+              </span>
+            )}
           </button>
         ))}
         {/* Logout + support at bottom */}
@@ -1417,30 +1416,19 @@ const BusinessDashboard = () => {
         <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 md:px-6 h-14 flex items-center gap-3 shrink-0">
           {/* Mobile: orb logo */}
           <div className="md:hidden h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-          <div className="flex-1 md:flex-none flex items-center gap-2">
-            <p className="text-sm font-bold truncate">{profile.business_name}</p>
-            <span className={`hidden md:inline text-[10px] font-bold px-2 py-0.5 rounded-full ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <input
+              type="text"
+              value={businessName}
+              onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }}
+              placeholder="Nazwa lokalu"
+              maxLength={80}
+              className="flex-1 min-w-0 text-sm font-bold bg-transparent border-0 outline-none focus:bg-slate-50 focus:ring-2 focus:ring-orange-200 rounded-lg px-2 py-1 -mx-2 placeholder:font-medium placeholder:text-slate-400 transition-colors"
+            />
+            <span className={`hidden md:inline text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan]}</span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            {isDraft && (
-              <div className="hidden lg:block relative group">
-                <button
-                  id="tour-preview-btn"
-                  onClick={() => previewReady && setShowAppPreview(true)}
-                  disabled={!previewReady}
-                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full active:scale-95 transition-transform whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
-                  style={previewReady ? { background: 'linear-gradient(90deg, #F4A259, #F9662B)', color: 'white' } : { background: '#e2e8f0', color: '#94a3b8' }}
-                >
-                  <Play className="h-3 w-3" />
-                  Przetestuj w aplikacji
-                </button>
-                {!previewReady && (
-                  <div className="absolute top-full mt-2 right-0 w-64 bg-slate-800 text-white text-xs rounded-xl px-3 py-2 leading-snug transition-opacity z-50 shadow-lg pointer-events-none opacity-0 group-hover:opacity-100">
-                    {previewMissingMsg}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* "Przetestuj w aplikacji" — temporarily disabled on frontend */}
             {isAdminUser && (profile as any).preview_token && (
               <button
                 onClick={() => {
@@ -1464,19 +1452,20 @@ const BusinessDashboard = () => {
         {/* ── Mobile horizontal tabs ── */}
         <div className="md:hidden sticky top-14 z-10 bg-white border-b border-slate-100 flex overflow-x-auto shrink-0 px-3 gap-1 py-2">
           {([
-            { id: 'overview', label: 'Przegląd' },
-            { id: 'gallery', label: 'Wygląd' },
-            { id: 'profile', label: 'Dane' },
-            { id: 'posts', label: 'Aktualności' },
-            { id: 'analytics', label: 'Analityka' },
+            { id: 'overview', label: 'Przegląd', disabled: false },
+            { id: 'gallery', label: 'Wygląd', disabled: false },
+            { id: 'profile', label: 'Dane', disabled: false },
+            { id: 'posts', label: 'Aktualności', disabled: false },
+            { id: 'analytics', label: 'Analityka', disabled: true },
           ] as const).map(item => (
             <button
               key={item.id}
               id={`tour-mobile-${item.id}`}
-              onClick={async () => { if (isDirty) await autoSaveDraft(); setActiveSection(item.id); }}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}
+              onClick={async () => { if (item.disabled) return; if (isDirty) await autoSaveDraft(); setActiveSection(item.id); }}
+              disabled={item.disabled}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${item.disabled ? 'text-slate-300 cursor-not-allowed' : activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500'}`}
             >
-              {item.label}
+              {item.label}{item.disabled && ' · wkrótce'}
             </button>
           ))}
         </div>
@@ -2428,40 +2417,7 @@ const BusinessDashboard = () => {
         </div>
       </div>
 
-      {/* Mobile FAB - app preview */}
-      {(activeSection === 'gallery' || activeSection === 'profile' || activeSection === 'posts') && (
-        <div
-          id="tour-mobile-preview-btn"
-          className="fixed lg:hidden z-40"
-          style={{ bottom: (isDirty && !isDraft) ? '5.5rem' : '1.5rem', right: '1rem' }}
-        >
-          {!previewReady && showPreviewHint && (
-            <div className="absolute bottom-full mb-2 right-0 w-64 bg-slate-800 text-white text-xs rounded-xl px-3 py-2 leading-snug shadow-lg pointer-events-none">
-              {previewMissingMsg}
-            </div>
-          )}
-          <button
-            className="flex items-center gap-2 px-4 rounded-full shadow-xl active:scale-95 transition-transform h-12 disabled:active:scale-100"
-            style={{
-              background: previewReady ? '#0e0e0e' : '#cbd5e1',
-              color: previewReady ? '#fefefe' : '#64748b',
-              opacity: previewReady ? 1 : 0.6,
-            }}
-            onClick={() => {
-              if (previewReady) {
-                setShowAppPreview(true);
-              } else {
-                setShowPreviewHint(true);
-                setTimeout(() => setShowPreviewHint(false), 4000);
-              }
-            }}
-            aria-label="Podgląd w aplikacji"
-          >
-            <Play className="h-4 w-4 fill-current" />
-            <span className="text-sm font-bold">Podgląd</span>
-          </button>
-        </div>
-      )}
+      {/* Mobile FAB — temporarily disabled on frontend */}
 
       {/* Sticky save bar */}
       {isDirty && !previewMode && !isDraft && (
