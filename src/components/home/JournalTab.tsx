@@ -20,12 +20,11 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["journal-entries", userId],
     queryFn: async () => {
-      // Own completed routes
-      const { data: ownRoutes } = await supabase
+      // Own routes (all statuses — show drafts and in-progress too)
+      const { data: ownRoutes } = await (supabase as any)
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, is_shared, overall_rating, new_for_users")
+        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, is_shared, overall_rating, new_for_users, chat_status")
         .eq("user_id", userId)
-        .eq("chat_status", "completed")
         .order("updated_at", { ascending: false });
 
       // Group routes created by others that user is a member of
@@ -39,10 +38,9 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         const sessionIds = memberRows.map((m: any) => m.session_id);
         const { data } = await (supabase as any)
           .from("routes")
-          .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, new_for_users")
+          .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, new_for_users, chat_status")
           .in("group_session_id", sessionIds)
           .neq("user_id", userId)
-          .eq("chat_status", "completed")
           .order("updated_at", { ascending: false });
         groupRoutes = data || [];
       }

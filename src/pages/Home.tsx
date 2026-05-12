@@ -329,21 +329,6 @@ const Home = () => {
         </div>
       )}
 
-      {/* ── Join session button ── */}
-      <button
-        onClick={() => { setJoinCodeInput(""); setShowJoinSheet(true); }}
-        className="w-full flex items-center gap-3 mb-5 px-4 py-3.5 rounded-2xl bg-card border border-border/50 active:scale-[0.98] transition-transform text-left"
-      >
-        <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
-          <Link2 className="h-5 w-5 text-orange-600" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold">Dołącz do sesji</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Wpisz kod od znajomych</p>
-        </div>
-        <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-      </button>
-
       {/* ── Personal section ── */}
       {hasPersonalContent && (
         <div className="space-y-3 mb-8">
