@@ -1425,7 +1425,7 @@ const BusinessDashboard = () => {
                 onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }}
                 placeholder="Nazwa lokalu"
                 maxLength={80}
-                className="w-full text-sm font-bold text-[#0E0E0E] bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 focus:bg-white focus:border-orange-300 focus:ring-2 focus:ring-orange-200/60 outline-none rounded-lg px-3 py-1.5 pr-8 placeholder:font-semibold placeholder:text-slate-400 transition-colors"
+                className="w-full text-sm font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 focus:bg-white focus:border-orange-300 focus:ring-2 focus:ring-orange-200/60 outline-none rounded-lg px-3 py-1.5 pr-8 placeholder:font-medium placeholder:text-slate-400 transition-colors"
               />
               <svg className="absolute right-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none group-focus-within:text-orange-500 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 20h9" />
