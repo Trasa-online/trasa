@@ -101,9 +101,9 @@ export default function WaitlistPage() {
         </div>
         <p className="text-slate-400 text-xs mb-8">Powiadomimy Cię o premierze na iOS i Androidzie.</p>
 
-        <div className="flex flex-col gap-2 w-full">
-          <AppStoreBadge store="ios" />
-          <AppStoreBadge store="android" />
+        <div className="flex flex-row gap-2 w-full">
+          <div className="flex-1 min-w-0"><AppStoreBadge store="ios" /></div>
+          <div className="flex-1 min-w-0"><AppStoreBadge store="android" /></div>
         </div>
         <p className="text-xs text-slate-400 mt-3">dostępne w czerwcu</p>
       </div>
