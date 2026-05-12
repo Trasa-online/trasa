@@ -1367,12 +1367,12 @@ const BusinessDashboard = () => {
         </div>
         {/* Nav items */}
         {([
-          { id: 'overview',   label: 'Przegląd',      icon: LayoutDashboard, disabled: true },
-          { id: 'gallery',    label: 'Wygląd',          icon: Images,         disabled: false },
-          { id: 'profile',    label: 'Dane lokalu',    icon: Store,          disabled: false },
-          { id: 'posts',      label: 'Aktualności',    icon: Megaphone,      disabled: false },
-          { id: 'analytics',  label: 'Analityka',      icon: TrendingUp,     disabled: true },
-        ] as const).map(item => (
+          { id: 'overview',   label: 'Przegląd',      icon: LayoutDashboard, disabled: true,  hidden: true },
+          { id: 'gallery',    label: 'Wygląd',          icon: Images,         disabled: false, hidden: false },
+          { id: 'profile',    label: 'Dane lokalu',    icon: Store,          disabled: false, hidden: false },
+          { id: 'posts',      label: 'Aktualności',    icon: Megaphone,      disabled: false, hidden: false },
+          { id: 'analytics',  label: 'Analityka',      icon: TrendingUp,     disabled: true,  hidden: false },
+        ] as const).filter(item => !item.hidden).map(item => (
           <button
             key={item.id}
             id={`tour-${item.id}`}
@@ -1459,12 +1459,12 @@ const BusinessDashboard = () => {
         {/* ── Mobile horizontal tabs ── */}
         <div className="md:hidden sticky top-14 z-10 bg-white border-b border-slate-100 flex overflow-x-auto shrink-0 px-3 gap-1 py-2">
           {([
-            { id: 'overview', label: 'Przegląd', disabled: true },
-            { id: 'gallery', label: 'Wygląd', disabled: false },
-            { id: 'profile', label: 'Dane', disabled: false },
-            { id: 'posts', label: 'Aktualności', disabled: false },
-            { id: 'analytics', label: 'Analityka', disabled: true },
-          ] as const).map(item => (
+            { id: 'overview', label: 'Przegląd', disabled: true,  hidden: true },
+            { id: 'gallery', label: 'Wygląd', disabled: false, hidden: false },
+            { id: 'profile', label: 'Dane', disabled: false, hidden: false },
+            { id: 'posts', label: 'Aktualności', disabled: false, hidden: false },
+            { id: 'analytics', label: 'Analityka', disabled: true,  hidden: false },
+          ] as const).filter(item => !item.hidden).map(item => (
             <button
               key={item.id}
               id={`tour-mobile-${item.id}`}
