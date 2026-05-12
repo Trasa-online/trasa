@@ -143,18 +143,21 @@ const TravelerProfile = () => {
   const { data: stats } = useQuery({
     queryKey: ["profile-stats", user?.id],
     queryFn: async () => {
-      const { data: routes } = await supabase
+      // Only count solo (non-group-session) completed routes
+      const { data: routes } = await (supabase as any)
         .from("routes")
-        .select("city, start_date, chat_status")
-        .eq("user_id", user!.id);
+        .select("city, start_date, chat_status, group_session_id")
+        .eq("user_id", user!.id)
+        .eq("chat_status", "completed")
+        .is("group_session_id", null);
 
       const all = routes ?? [];
-      const completed = all.filter(r => r.chat_status === "completed").length;
-      const cities = new Set(all.map(r => r.city).filter(Boolean)).size;
-      const days = all.filter(r => r.start_date).length;
-      return { trips: all.length, completed, cities, days };
+      const cities = new Set(all.map((r: any) => r.city).filter(Boolean)).size;
+      const days = all.filter((r: any) => r.start_date).length;
+      return { trips: all.length, completed: all.length, cities, days };
     },
     enabled: !!user,
+    staleTime: 0,
   });
 
   const { data: referralCodes = [] } = useQuery({

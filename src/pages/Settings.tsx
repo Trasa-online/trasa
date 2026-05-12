@@ -423,7 +423,7 @@ const Settings = () => {
         <h1 className="text-lg font-bold">{t("title")}</h1>
       </div>
 
-      <div className="p-4 space-y-6 max-w-lg mx-auto">
+      <div className="p-4 space-y-3 max-w-lg mx-auto">
 
         {/* Avatar */}
         <div className="flex flex-col items-center gap-3 py-4">

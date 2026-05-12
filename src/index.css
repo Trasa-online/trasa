@@ -173,3 +173,16 @@ All colors MUST be HSL.
   color: #475569 !important;
   background: #f8fafc !important;
 }
+
+/* Native-app feel: disable text selection + iOS tap highlight globally.
+   Inputs/textareas/contenteditable opt back in. */
+html, body {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+input, textarea, [contenteditable="true"], [contenteditable=""] {
+  -webkit-user-select: text;
+  user-select: text;
+}
