@@ -775,28 +775,33 @@ const BusinessDashboard = () => {
       doneBtnText: 'Gotowe!',
       steps: [
         {
+          element: '#tour-business-name',
+          popover: { title: 'Zacznij od nazwy', description: 'Kliknij tutaj i wpisz nazwę swojego lokalu. Możesz ją zmienić w każdej chwili — z poziomu dowolnej zakładki.', side: 'bottom' },
+          onHighlightStarted: () => setActiveSection('overview'),
+        },
+        {
           element: isMobile ? '#tour-mobile-overview' : '#tour-overview',
-          popover: { title: 'Przegląd', description: 'Przegląd: tu widzisz ruch na wizytówce i skróty do szybkich akcji.', side: isMobile ? 'bottom' : 'right' },
+          popover: { title: 'Przegląd', description: 'Tu zobaczysz ruch na wizytówce i skróty do najważniejszych akcji.', side: isMobile ? 'bottom' : 'right' },
           onHighlightStarted: () => setActiveSection('overview'),
         },
         {
           element: isMobile ? '#tour-mobile-gallery' : '#tour-gallery',
-          popover: { title: 'Wygląd', description: 'Wygląd: dodaj okładkę, galerię i dostosuj kolory wizytówki.', side: isMobile ? 'bottom' : 'right' },
+          popover: { title: 'Wygląd', description: 'Dodaj okładkę, galerię i dostosuj kolory wizytówki — tak będą Cię widzieć goście w aplikacji.', side: isMobile ? 'bottom' : 'right' },
           onHighlightStarted: () => setActiveSection('gallery'),
         },
         {
           element: isMobile ? '#tour-mobile-profile' : '#tour-profile',
-          popover: { title: 'Dane lokalu', description: 'Dane lokalu: uzupełnij kontakt, opis i tagi.', side: isMobile ? 'bottom' : 'right' },
+          popover: { title: 'Dane lokalu', description: 'Uzupełnij adres, kontakt, opis i kategorię. To informacje, które goście zobaczą po kliknięciu w Twój lokal.', side: isMobile ? 'bottom' : 'right' },
           onHighlightStarted: () => setActiveSection('profile'),
         },
         {
           element: isMobile ? '#tour-mobile-posts' : '#tour-posts',
-          popover: { title: 'Aktualności', description: 'Aktualności: publikuj posty i wydarzenia widoczne dla użytkowników.', side: isMobile ? 'bottom' : 'right' },
+          popover: { title: 'Aktualności', description: 'Publikuj posty, wydarzenia i promocje. Widoczne dla wszystkich osób oglądających Twoją wizytówkę.', side: isMobile ? 'bottom' : 'right' },
           onHighlightStarted: () => setActiveSection('posts'),
         },
       ],
       onDestroyed: () => {
-        if (profile?.id) localStorage.setItem(`tour_seen_${profile.id}`, '1');
+        if (profile?.id) localStorage.setItem(`tour_seen_v2_${profile.id}`, '1');
       },
     });
     driverObj.drive();
@@ -805,7 +810,7 @@ const BusinessDashboard = () => {
   // Auto-start tour on first visit — only after loading finishes AND user is on overview
   useEffect(() => {
     if (!profile || loading || activeSection !== 'overview') return;
-    const seen = localStorage.getItem(`tour_seen_${profile.id}`);
+    const seen = localStorage.getItem(`tour_seen_v2_${profile.id}`);
     if (!seen) {
       // Small delay so the DOM is fully rendered
       const t = setTimeout(() => startTour(), 600);
@@ -1418,6 +1423,7 @@ const BusinessDashboard = () => {
           <div className="md:hidden h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
           <div className="flex-1 flex items-center gap-2 min-w-0">
             <input
+              id="tour-business-name"
               type="text"
               value={businessName}
               onChange={e => { setBusinessName(e.target.value); setIsDirty(true); }}
