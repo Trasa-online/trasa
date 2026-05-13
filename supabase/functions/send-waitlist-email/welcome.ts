@@ -7,7 +7,7 @@ export const welcomeHtml = `<!DOCTYPE html>
 </head>
 <body style="margin:0;padding:0;background:#FEFEFE;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0E0E0E;">
   <div style="max-width:480px;margin:0 auto;padding:48px 32px;text-align:center;">
-    <img src="https://trasa.travel/icon-512.png" alt="Trasa" width="72" height="72" style="display:block;margin:0 auto 24px;width:72px;height:72px;" />
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 24px;" align="center"><tr><td bgcolor="#F9662B" style="width:72px;height:72px;border-radius:50%;background:#F9662B;background-image:radial-gradient(circle at 35% 35%,#fb923c,#ea580c 60%,#c2410c);text-align:center;vertical-align:middle;"><img src="https://trasa.travel/icon-512.png" alt="Trasa" width="72" height="72" style="display:block;width:72px;height:72px;border:0;outline:none;border-radius:50%;" /></td></tr></table>
     <h1 style="font-size:32px;font-weight:900;letter-spacing:-0.02em;margin:0 0 16px;color:#0E0E0E;">Cześć!</h1>
     <p style="font-size:16px;line-height:1.6;color:#525252;margin:0 0 12px;">
       Dzięki, że dołączasz do <strong style="color:#0E0E0E;">Trasy</strong>.

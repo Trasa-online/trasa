@@ -32,7 +32,7 @@ function EmailCapture({ inputRef }: { inputRef?: React.RefObject<HTMLInputElemen
           required
           checked={consent}
           onChange={e => setConsent(e.target.checked)}
-          className="mt-0.5 h-4 w-4 rounded border-slate-300 text-orange-600 focus:ring-orange-300 cursor-pointer shrink-0"
+          className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-orange-600 focus:ring-orange-300 cursor-pointer shrink-0"
         />
         <span className="text-[11px] text-slate-500 leading-snug">
           {`Wyrażam zgodę na przetwarzanie mojego adresu e-mail w celu otrzymywania informacji o premierze aplikacji. Zapoznałem się z `}
