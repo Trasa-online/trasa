@@ -576,8 +576,36 @@ const Admin = () => {
             );
           };
 
+          // Stats widget metrics
+          const now = Date.now();
+          const dayMs = 24 * 60 * 60 * 1000;
+          const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+          const todayCount = waitlist.filter(w => new Date(w.created_at) >= todayStart).length;
+          const last7d = waitlist.filter(w => now - new Date(w.created_at).getTime() <= 7 * dayMs).length;
+          const last24h = waitlist.filter(w => now - new Date(w.created_at).getTime() <= dayMs).length;
+
           return (
             <>
+              {/* Stats widget */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-5">
+                <div className="rounded-2xl bg-card border border-border/40 p-3">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">Łącznie</p>
+                  <p className="text-2xl font-black text-foreground leading-none">{waitlist.length}</p>
+                </div>
+                <div className="rounded-2xl bg-card border border-border/40 p-3">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">Dziś</p>
+                  <p className="text-2xl font-black text-orange-600 leading-none">{todayCount}</p>
+                </div>
+                <div className="rounded-2xl bg-card border border-border/40 p-3">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">24h</p>
+                  <p className="text-2xl font-black text-foreground leading-none">{last24h}</p>
+                </div>
+                <div className="rounded-2xl bg-card border border-border/40 p-3">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">7 dni</p>
+                  <p className="text-2xl font-black text-foreground leading-none">{last7d}</p>
+                </div>
+              </div>
+
               {/* Sub-tabs */}
               <div className="flex gap-1 pb-4 border-b border-border/30 -mx-4 px-4 mb-4">
                 {([
