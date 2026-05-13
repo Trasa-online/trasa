@@ -5,14 +5,35 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const EMAIL_RE = /^[^\s@<>"'\\]+@[^\s@<>"'\\]+\.[^\s@<>"'\\]+$/;
+
+const ipHits = new Map<string, number[]>();
+function rateLimited(ip: string, max = 10, windowMs = 60_000): boolean {
+  const now = Date.now();
+  const arr = (ipHits.get(ip) ?? []).filter((t) => now - t < windowMs);
+  if (arr.length >= max) { ipHits.set(ip, arr); return true; }
+  arr.push(now); ipHits.set(ip, arr);
+  return false;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { email } = await req.json();
-    if (!email) throw new Error("email required");
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+    if (rateLimited(ip)) {
+      return new Response(JSON.stringify({ error: "rate_limited" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { email: rawEmail } = await req.json();
+    if (!rawEmail || typeof rawEmail !== "string") throw new Error("email required");
+    const email = rawEmail.trim().slice(0, 254);
+    if (!EMAIL_RE.test(email)) throw new Error("invalid email format");
 
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not set");

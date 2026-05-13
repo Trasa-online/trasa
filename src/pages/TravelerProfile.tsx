@@ -117,9 +117,12 @@ const TravelerProfile = () => {
 
   const handleAvatarUpload = async (file: File) => {
     if (!user) return;
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${user.id}/avatar.${fileExt}`;
-    const { error } = await supabase.storage.from("avatars").upload(fileName, file, { upsert: true });
+    const allowed = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" } as const;
+    const ext = allowed[file.type as keyof typeof allowed];
+    if (!ext) { toast.error("Tylko JPG, PNG lub WebP"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Maks 5 MB"); return; }
+    const fileName = `${user.id}/avatar.${ext}`;
+    const { error } = await supabase.storage.from("avatars").upload(fileName, file, { upsert: true, contentType: file.type });
     if (error) { toast.error("Błąd podczas przesyłania zdjęcia"); return; }
     const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
     await supabase.from("profiles").update({ avatar_url: publicUrl } as any).eq("id", user.id);

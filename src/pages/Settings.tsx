@@ -285,6 +285,7 @@ function BugReportSection({ userId }: { userId: string }) {
         onChange={e => setDescription(e.target.value)}
         placeholder="Opisz co się stało - na jakim ekranie, co kliknąłeś/-aś, co pojawiło się zamiast oczekiwanego efektu…"
         rows={4}
+        maxLength={2000}
         className="w-full bg-background rounded-2xl px-3 py-2.5 text-sm resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/60 leading-relaxed"
       />
       {screenshotUrl ? (
@@ -393,11 +394,14 @@ const Settings = () => {
 
   const handleAvatarUpload = async (file: File) => {
     if (!user) return;
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${user.id}/avatar.${fileExt}`;
+    const allowed = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" } as const;
+    const ext = allowed[file.type as keyof typeof allowed];
+    if (!ext) { toast.error("Tylko JPG, PNG lub WebP"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Maks 5 MB"); return; }
+    const fileName = `${user.id}/avatar.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from("avatars")
-      .upload(fileName, file, { upsert: true });
+      .upload(fileName, file, { upsert: true, contentType: file.type });
     if (uploadError) { toast.error(t("toast_avatar_error")); return; }
     const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
     setAvatarUrl(publicUrl);

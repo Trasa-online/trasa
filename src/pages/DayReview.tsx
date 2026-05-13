@@ -442,6 +442,7 @@ const DayReview = () => {
                 onKeyDown={handleKeyDown}
                 placeholder="Napisz odpowiedź..."
                 rows={1}
+                maxLength={2000}
                 disabled={isLoading}
                 className="w-full resize-none rounded-xl border border-border bg-muted px-4 py-2.5 text-base placeholder:text-muted-foreground/60 focus:outline-none focus:border-foreground/30 disabled:opacity-50"
                 style={{ maxHeight: "120px" }}

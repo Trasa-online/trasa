@@ -249,6 +249,7 @@ const DraggablePinList = ({
           value={noteText}
           onChange={(e) => setNoteText(e.target.value)}
           placeholder="Opisz to miejsce lub trasę..."
+          maxLength={2000}
           className="min-h-[60px] text-sm resize-none"
           autoFocus
         />

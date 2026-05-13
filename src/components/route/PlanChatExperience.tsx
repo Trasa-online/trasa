@@ -968,7 +968,7 @@ Object.keys(byDay).sort((a,b)=>a-b).forEach(d=>{
   const chip=document.createElement('button');
   chip.className='chip';
   chip.style.color=col;
-  chip.innerHTML='<div class="chipdot" style="background:'+col+'"></div>Dzień '+d;
+  const dot=document.createElement('div'); dot.className='chipdot'; dot.style.background=col; chip.appendChild(dot); chip.appendChild(document.createTextNode('Dzień '+d));
   chip.dataset.day=d;
   chip.onclick=()=>{
     if(activeDay===d){

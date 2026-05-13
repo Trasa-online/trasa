@@ -230,6 +230,7 @@ const ClaimPlace = () => {
                 value={contactEmail}
                 onChange={e => setContactEmail(e.target.value)}
                 placeholder="kontakt@twojlokal.pl"
+                maxLength={254}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-300 transition-colors"
               />
             </div>
@@ -241,6 +242,7 @@ const ClaimPlace = () => {
                 value={contactPhone}
                 onChange={e => setContactPhone(e.target.value)}
                 placeholder="+48 ..."
+                maxLength={20}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-300 transition-colors"
               />
             </div>

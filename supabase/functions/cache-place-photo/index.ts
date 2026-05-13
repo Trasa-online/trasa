@@ -52,6 +52,7 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
   const sb = createClient(supabaseUrl, serviceRoleKey);
 
   try {
@@ -132,10 +133,11 @@ Deno.serve(async (req) => {
     }
 
     // 3. Re-use google-places-proxy (ma 7-dniowy cache w DB)
+    const incomingAuth = req.headers.get("Authorization") ?? `Bearer ${anonKey}`;
     const proxyRes = await fetch(`${supabaseUrl}/functions/v1/google-places-proxy`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${serviceRoleKey}`,
+        "Authorization": incomingAuth,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
