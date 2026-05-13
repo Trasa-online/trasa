@@ -35,7 +35,7 @@ function EmailCapture({ inputRef }: { inputRef?: React.RefObject<HTMLInputElemen
           className="mt-0.5 h-4 w-4 rounded border-slate-300 text-orange-600 focus:ring-orange-300 cursor-pointer shrink-0"
         />
         <span className="text-[11px] text-slate-500 leading-snug">
-          Wyrażam zgodę na przetwarzanie mojego adresu e-mail w celu otrzymywania informacji o premierze aplikacji. Zapoznałem się z{" "}
+          {`Wyrażam zgodę na przetwarzanie mojego adresu e-mail w celu otrzymywania informacji o premierze aplikacji. Zapoznałem się z `}
           <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-orange-600 underline hover:text-orange-700">polityką prywatności</a>.
         </span>
       </label>
@@ -89,22 +89,22 @@ export default function WaitlistPage() {
       {/* ── Hero — single layout for all viewports ── */}
       <div className="flex flex-col items-center justify-center px-5 lg:px-8 pt-16 lg:pt-24 pb-12 max-w-md mx-auto text-center" style={{ minHeight: "calc(100dvh - 3.5rem)" }}>
         <h1 className="text-4xl lg:text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-4">
-          wasz plan<br />na miasto
+          Wasz plan<br />na{" "}miasto
         </h1>
         <p className="text-slate-500 text-base leading-relaxed mb-8 max-w-xs">
-          Budujemy aplikację do planowania city breaków i wspólnych wyjazdów z przyjaciółmi. Coś, czego sami szukaliśmy.
+          {`Budujemy aplikację do planowania city breaków i wspólnych wyjazdów z przyjaciółmi. Coś, czego sami szukaliśmy.`}
         </p>
 
         <div className="w-full mb-3">
           <EmailCapture inputRef={inputRef} />
         </div>
-        <p className="text-slate-400 text-xs mb-8">Powiadomimy Cię o premierze na iOS i Androidzie.</p>
+        <p className="text-slate-400 text-xs mb-8">{`Powiadomimy Cię o premierze na iOS i Androidzie.`}</p>
 
         <div className="flex flex-row gap-2 w-full">
           <div className="flex-1 min-w-0"><AppStoreBadge store="ios" /></div>
           <div className="flex-1 min-w-0"><AppStoreBadge store="android" /></div>
         </div>
-        <p className="text-xs text-slate-400 mt-3">dostępne w czerwcu</p>
+        <p className="text-xs text-slate-400 mt-3">{`dostępne w czerwcu`}</p>
       </div>
     </div>
   );

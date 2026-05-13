@@ -220,6 +220,10 @@ Poniższe elementy wyglądają na pozostałości po poprzednich pivotach:
 - **Styl komponentów:** Tailwind CSS, bez CSS Modules ani styled-components
 - **Ikony:** Lucide React (`lucide-react`) - bez innych bibliotek ikon
 - **⛔ ZAKAZ długich myślników (—, em dash):** Nigdy nie używaj znaku `—` w żadnym tekście UI (banery, hinty, placeholdery, etykiety, komunikaty). Zamiast tego używaj zwykłego myślnika `-`, dwukropka `:`, przecinka lub przeformułuj zdanie.
+- **🇵🇱 Polskie sieroty (typography rule, OBOWIĄZKOWE):** Pojedyncze litery `a, i, o, u, w, z` (oraz krótkie `do, na, po, za, ze, od` jeśli to możliwe) NIGDY nie mogą kończyć linii. Po nich zawsze musi być **twarda spacja** (non-breaking space, ` ` / NBSP / U+00A0), żeby przeniosły się do następnej linii razem z kolejnym słowem.
+  - **Dotyczy:** wszystkie teksty UI w aplikacji i na stronach marketingowych (nagłówki, opisy, etykiety, placeholdery, treści maili, modale, toasty).
+  - **W JSX:** używaj template literal z escape, np. `` {`treść z przyjaciółmi i grupą`} ``, albo inline `{" "}` w miejscach z elementami HTML w środku.
+  - **Jak rozpoznać:** czytaj zdanie i znajduj pojedyncze litery przed spacją - tam wstaw NBSP. Przykład: `"z miastem"` → `"z miastem"`, `"i wam"` → `"i wam"`.
 - **Toast:** Sonner (`import { toast } from "sonner"`)
 - **Formularze:** React Hook Form + Zod gdy złożone; prosty `useState` gdy 1-2 pola
 - **Data fetching:** Supabase client direct lub `useQuery` z TanStack Query
