@@ -18,7 +18,7 @@ function EmailCapture({ inputRef }: { inputRef?: React.RefObject<HTMLInputElemen
   };
   if (status === "done") return (
     <div className="px-5 py-4 rounded-2xl bg-orange-50 border border-orange-200">
-      <p className="text-sm font-semibold text-[#0E0E0E]">Powiadomimy Cię o premierze.</p>
+      <p className="text-sm font-semibold text-[#0E0E0E]">Dzięki za zapis! Poinformujemy Cię kiedy aplikacja będzie dostępna.</p>
     </div>
   );
   return (
@@ -89,10 +89,10 @@ export default function WaitlistPage() {
       {/* ── Hero — single layout for all viewports ── */}
       <div className="flex flex-col items-center justify-center px-5 lg:px-8 pt-16 lg:pt-24 pb-12 max-w-md mx-auto text-center" style={{ minHeight: "calc(100dvh - 3.5rem)" }}>
         <h1 className="text-4xl lg:text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-4">
-          speed dating<br />z miastem
+          wasz plan<br />na miasto
         </h1>
         <p className="text-slate-500 text-base leading-relaxed mb-8 max-w-xs">
-          Planujcie wyjazdy grupowo. Wybierajcie miejsca, twórzcie trasy i dzielcie się wspomnieniami.
+          Budujemy aplikację do planowania city breaków i wspólnych wyjazdów z przyjaciółmi. Coś, czego sami szukaliśmy.
         </p>
 
         <div className="w-full mb-3">
