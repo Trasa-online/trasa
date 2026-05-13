@@ -25,10 +25,12 @@ const COUNTRIES: Country[] = [
   {
     code: "PL", flag: "🇵🇱", name: "Polska",
     cities: [
-      { name: "Kraków" },
-      { name: "Łódź" },
+      // Etap 1 (Warszawa) - cache zdjęć działa tylko dla Warszawy.
+      // Pozostałe miasta zablokowane do czasu rozszerzenia cache.
+      { name: "Kraków",     comingSoon: true },
+      { name: "Łódź",       comingSoon: true },
       { name: "Poznań",     comingSoon: true },
-      { name: "Trójmiasto" },
+      { name: "Trójmiasto", comingSoon: true },
       { name: "Warszawa" },
       { name: "Wrocław",    comingSoon: true },
     ],
@@ -200,10 +202,18 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
                 <div
                   key={city.name}
                   onClick={() => { setSelectedIndex(i); scrollRef.current?.scrollTo({ top: i * ITEM_HEIGHT, behavior: "smooth" }); }}
-                  className={cn("flex items-center justify-center cursor-pointer transition-all duration-150 select-none", getTextClass(distance, city.comingSoon))}
+                  className={cn("flex items-center justify-center gap-3 cursor-pointer transition-all duration-150 select-none", getTextClass(distance, city.comingSoon))}
                   style={{ height: ITEM_HEIGHT, scrollSnapAlign: "center" }}
                 >
-                  {city.name}
+                  <span>{city.name}</span>
+                  {city.comingSoon && distance <= 1 && (
+                    <span className={cn(
+                      "transition-all duration-150",
+                      distance === 0 ? "text-2xl text-foreground/25" : "text-base text-foreground/15"
+                    )}>
+                      🔒
+                    </span>
+                  )}
                 </div>
               );
             })}
@@ -237,7 +247,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
               : "bg-primary hover:bg-primary/90 text-white shadow-primary/20"
           )}
         >
-          {isComingSoon ? "Wkrótce dostępne" : "Dalej"}
+          {isComingSoon ? "Wkrótce dostępne 🔒" : "Dalej"}
         </Button>
       </div>
     </div>

@@ -7,7 +7,7 @@ import posthog from "posthog-js";
 import { format } from "date-fns";
 import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import { supabase } from "@/integrations/supabase/client";
-import { getPhotoUrl } from "@/lib/placePhotos";
+import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
 import { getSubcategoryIds, getMainCategoryFor } from "@/lib/categories";
 
@@ -229,6 +229,11 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
   useEffect(() => {
     if (offset !== 0 || skipGoogleFetch || hasFetchedRef.current) return;
     hasFetchedRef.current = true;
+
+    // Jeśli place.photo_url jest już scache'owany w Storage → odpal cache-place-photo
+    // tylko by upewnić się że jest spójny (idempotentne), nie wywołujemy Google
+    const alreadyCached = isCachedPhotoUrl(place.photo_url);
+
     supabase.functions
       .invoke("google-places-proxy", {
         body: {
@@ -246,11 +251,27 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         const photo = data?.result?.photos?.[0];
         const resolvedPlaceId: string | undefined = data?.result?.place_id ?? undefined;
         const url = photo?.photo_url ?? (photo?.photo_reference ? getPhotoUrl(photo.photo_reference, 800, resolvedPlaceId) : null);
-        if (!url) console.warn("[PlaceSwiper] no photo returned for:", place.place_name, data);
-        if (url) {
+        if (!url && !alreadyCached) console.warn("[PlaceSwiper] no photo returned for:", place.place_name, data);
+        // Nie nadpisuj jeśli mamy już cache'owany URL — z bazy jest stabilniejszy
+        if (url && !alreadyCached) {
           setPhotoUrls([url]);
           setImgFailed(false);
           onPhotoFetched?.(place.id, url);
+        }
+        // Background: trigger cache-place-photo żeby kolejne wyświetlenia szły z Storage (zero kosztów Google)
+        if (!alreadyCached) {
+          ensurePhotoCached(
+            {
+              table: "places",
+              id: place.id,
+              place_name: place.place_name,
+              city,
+              latitude: place.latitude,
+              longitude: place.longitude,
+              place_id: resolvedPlaceId,
+            },
+            place.photo_url ?? null,
+          ).catch(() => {});
         }
         if (!place.rating && data?.result?.rating) setGoogleRating(data.result.rating);
         if (!place.address && data?.result?.formatted_address) setGoogleAddress(data.result.formatted_address);

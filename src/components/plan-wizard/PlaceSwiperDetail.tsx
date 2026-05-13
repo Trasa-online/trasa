@@ -4,7 +4,7 @@ import { X, Star, MapPin, Loader2, Heart, ChevronDown } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { getPhotoUrl } from "@/lib/placePhotos";
+import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import type { MockPlace } from "./PlaceSwiper";
 import BusinessActionButtons from "@/components/business/BusinessActionButtons";
 import { formatDistanceToNow } from "date-fns";
@@ -152,7 +152,8 @@ const PlaceSwiperDetail = ({
         return;
       }
 
-      // 1. Google Places details
+      // 1. Google Places details (głównie do metadanych + recenzji; photo z DB jeśli scache'owane)
+      const alreadyCached = isCachedPhotoUrl(place.photo_url);
       const placesPromise = supabase.functions
         .invoke("google-places-proxy", {
           body: {
@@ -165,11 +166,27 @@ const PlaceSwiperDetail = ({
         .then(({ data }) => {
           if (data?.result) {
             setDetail(data.result);
-            const urls = (data.result.photos ?? [])
-              .slice(0, 3)
-              .map((p: any) => p.photo_url ?? getPhotoUrl(p.photo_reference, 800))
-              .filter((u: any): u is string => typeof u === "string" && (u.startsWith("http") || u.startsWith("/api/")));
-            if (urls.length > 0) setPhotos(urls);
+            // Nie nadpisuj jeśli mamy już cache'owany URL — Storage jest stabilny
+            if (!alreadyCached) {
+              const urls = (data.result.photos ?? [])
+                .slice(0, 3)
+                .map((p: any) => p.photo_url ?? getPhotoUrl(p.photo_reference, 800))
+                .filter((u: any): u is string => typeof u === "string" && (u.startsWith("http") || u.startsWith("/api/")));
+              if (urls.length > 0) setPhotos(urls);
+              // Background: trigger cache-place-photo żeby kolejne otwarcia szły z Storage
+              ensurePhotoCached(
+                {
+                  table: "places",
+                  id: place.id,
+                  place_name: place.place_name,
+                  city: city ?? place.city,
+                  latitude: place.latitude,
+                  longitude: place.longitude,
+                  place_id: data.result.place_id,
+                },
+                place.photo_url ?? null,
+              ).catch(() => {});
+            }
           }
         })
         .catch(() => {});

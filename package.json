@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "backfill:photos": "npx tsx scripts/backfill-photo-cache.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",

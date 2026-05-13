@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Star, MapPin, ExternalLink, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getPhotoUrl } from "@/lib/placePhotos";
+import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached, getCachedPhotoVariant } from "@/lib/placePhotos";
 import BusinessActionButtons from "@/components/business/BusinessActionButtons";
 import posthog from "posthog-js";
 
@@ -17,6 +17,7 @@ interface Pin {
   longitude?: number | null;
   suggested_time?: string | null;
   place_id?: string | null;
+  photo_url?: string | null;
 }
 
 interface PlaceDetailSheetProps {
@@ -80,16 +81,39 @@ const PlaceDetailSheet = ({ pin, open, onOpenChange }: PlaceDetailSheetProps) =>
     if (!pin.latitude || !pin.longitude) return;
     setLoading(true);
     setDetails(null);
-    setCachedPhotoUrl(null);
+
+    // Happy path: pin.photo_url już scache'owane → użyj 800px wariantu od razu
+    const alreadyCached = isCachedPhotoUrl(pin.photo_url);
+    if (alreadyCached) {
+      setCachedPhotoUrl(getCachedPhotoVariant(pin.photo_url, "large"));
+    } else {
+      setCachedPhotoUrl(null);
+    }
+
     supabase.functions.invoke("google-places-proxy", {
       body: { placeName: pin.place_name, latitude: pin.latitude, longitude: pin.longitude },
     }).then(async ({ data, error }) => {
       if (!error && data?.result) {
         setDetails(data.result);
-        const ref = data.result.photos?.[0]?.photo_reference;
-        if (ref) {
-          const url = getPhotoUrl(ref, 600);
-          if (url) setCachedPhotoUrl(url);
+        // Nie nadpisuj jeśli mamy już cache'owany URL
+        if (!alreadyCached) {
+          const ref = data.result.photos?.[0]?.photo_reference;
+          if (ref) {
+            const url = getPhotoUrl(ref, 600);
+            if (url) setCachedPhotoUrl(url);
+          }
+          // Background: trigger cache na przyszłość (pin.id z DB)
+          ensurePhotoCached(
+            {
+              table: "pins",
+              id: pin.id,
+              place_name: pin.place_name,
+              latitude: pin.latitude,
+              longitude: pin.longitude,
+              place_id: pin.place_id ?? data.result.place_id,
+            },
+            pin.photo_url ?? null,
+          ).catch(() => {});
         }
       }
       setLoading(false);

@@ -152,7 +152,7 @@ const RouteSummaryDialog = ({
         if (!firstRouteId) firstRouteId = route.id;
 
         if ((day.pins?.length ?? 0) > 0) {
-          const { error: pinsError } = await supabase.from("pins").insert(
+          const { data: insertedPins, error: pinsError } = await supabase.from("pins").insert(
             (day.pins ?? []).map((pin, idx) => ({
               route_id: route.id,
               place_name: pin.place_name,
@@ -165,9 +165,30 @@ const RouteSummaryDialog = ({
               category: pin.category,
               original_creator_id: user.id,
               place_id: pin.place_id ?? null,
+              photo_url: (pin as any).photoUrl ?? null,
             }))
-          );
+          ).select("id, place_name, latitude, longitude, place_id, photo_url");
           if (pinsError) throw pinsError;
+
+          // Fire-and-forget: trigger cache-place-photo dla nowo zapisanych pinów
+          // (kolejne wyświetlenia na Home pójdą z Supabase Storage, zero kosztów Google)
+          if (insertedPins && insertedPins.length > 0) {
+            void Promise.allSettled(
+              insertedPins.map((p) =>
+                supabase.functions.invoke("cache-place-photo", {
+                  body: {
+                    place_name: p.place_name,
+                    city: plan.city,
+                    latitude: p.latitude,
+                    longitude: p.longitude,
+                    place_id: p.place_id,
+                    target_table: "pins",
+                    target_id: p.id,
+                  },
+                }),
+              ),
+            );
+          }
         }
 
         await supabase.from("chat_sessions").insert([{
@@ -200,8 +221,12 @@ const RouteSummaryDialog = ({
                   category: pin.category,
                   original_creator_id: user.id,
                   place_id: pin.place_id ?? null,
+                  photo_url: (pin as any).photoUrl ?? null,
                 }))
               );
+              // Cache-place-photo zostanie odpalone z pierwszej iteracji
+              // (insertedPins powyżej) - tutaj pomijamy, bo Storage będzie już zapełnione
+              // gdy ten kod się wykonuje (kluczem jest place_id lub hash, identyczne pliki)
             }
           }
         }

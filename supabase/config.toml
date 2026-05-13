@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.push-scheduler]
 verify_jwt = false
+
+[functions.cache-place-photo]
+verify_jwt = true
+
+[functions.monitor-user-threshold]
+verify_jwt = false

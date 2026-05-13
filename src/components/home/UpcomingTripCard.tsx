@@ -10,8 +10,7 @@ function safeDate(val: string | null | undefined): Date | null {
   const d = typeof val === "string" && val.includes("T") ? new Date(val) : parseISO(val);
   return isValid(d) ? d : null;
 }
-import { supabase } from "@/integrations/supabase/client";
-import { getPhotoUrl } from "@/lib/placePhotos";
+import { ensurePhotoCached, getCachedPhotoVariant, isCachedPhotoUrl } from "@/lib/placePhotos";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌿",
@@ -23,26 +22,38 @@ const CATEGORY_EMOJI: Record<string, string> = {
 // ─── Lazy pin photo thumbnail ──────────────────────────────────────────────
 
 function PinThumb({ pin, onClick }: { pin: any; onClick: () => void }) {
-  const [photo, setPhoto] = useState<string | null>(null);
+  // Happy path: pin.photo_url już ustawione w DB → zero kosztów Google
+  // Fallback: brak photo_url → wywołujemy cache-place-photo (pobiera z Google raz, zapisuje do Storage)
+  const initialPhoto = isCachedPhotoUrl(pin.photo_url)
+    ? getCachedPhotoVariant(pin.photo_url, "small")
+    : null;
+  const [photo, setPhoto] = useState<string | null>(initialPhoto);
 
   useEffect(() => {
-    const hasCoords = pin.latitude && pin.longitude && pin.latitude !== 0 && pin.longitude !== 0;
-    supabase.functions
-      .invoke("google-places-proxy", {
-        body: {
-          placeName: pin.place_name,
-          ...(hasCoords ? { latitude: pin.latitude, longitude: pin.longitude } : {}),
-        },
-      })
-      .then(({ data }) => {
-        const ref = data?.result?.photos?.[0]?.photo_reference;
-        if (ref) {
-          const url = getPhotoUrl(ref, 400);
-          if (url) setPhoto(url);
-        }
+    if (isCachedPhotoUrl(pin.photo_url)) {
+      setPhoto(getCachedPhotoVariant(pin.photo_url, "small"));
+      return;
+    }
+    let cancelled = false;
+    ensurePhotoCached(
+      {
+        table: "pins",
+        id: pin.id,
+        place_name: pin.place_name,
+        latitude: pin.latitude,
+        longitude: pin.longitude,
+        place_id: pin.place_id,
+      },
+      pin.photo_url ?? null,
+    )
+      .then((url) => {
+        if (!cancelled && url) setPhoto(getCachedPhotoVariant(url, "small"));
       })
       .catch(() => {});
-  }, [pin.place_name]);
+    return () => {
+      cancelled = true;
+    };
+  }, [pin.id, pin.photo_url]);
 
   return (
     <button onClick={onClick} className="shrink-0 flex flex-col gap-1.5 items-start active:scale-95 transition-transform">
