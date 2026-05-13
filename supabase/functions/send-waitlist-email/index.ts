@@ -1,9 +1,9 @@
+import { welcomeHtml } from "./welcome.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-const html = await Deno.readTextFile(new URL("./welcome.html", import.meta.url));
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
         from: "Trasa <hello@trasa.travel>",
         to: [email],
         subject: "Cześć! Dzięki, że dołączasz do Trasy 🧡",
-        html,
+        html: welcomeHtml,
       }),
     });
 

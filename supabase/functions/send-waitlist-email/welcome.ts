@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+export const welcomeHtml = `<!DOCTYPE html>
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
@@ -36,4 +36,4 @@
     </div>
   </div>
 </body>
-</html>
+</html>`;
