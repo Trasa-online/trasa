@@ -209,9 +209,9 @@ function BusinessGuard() {
   return null;
 }
 import CookieBanner from "./components/CookieBanner";
-// Eagerly loaded - public-facing pages that need fast FCP
-import WaitlistPage from "./pages/WaitlistPage";
-import LandingPage from "./pages/LandingPage";
+// Lazy-loaded public pages - one chunk each, fetched on demand
+const WaitlistPage = lazy(() => import("./pages/WaitlistPage"));
+const LandingPage = lazy(() => import("./pages/LandingPage"));
 const DemoSession = lazy(() => import("./pages/DemoSession"));
 import ForBusinessPage from "./pages/ForBusinessPage";
 import Auth from "./pages/Auth";

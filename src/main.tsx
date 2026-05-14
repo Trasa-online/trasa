@@ -1,10 +1,7 @@
-import { StrictMode } from "react";
+import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import * as Sentry from "@sentry/react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
-import posthog from "posthog-js";
-import { PostHogProvider } from "@posthog/react";
 import App from "./App.tsx";
 import "./index.css";
 import "./i18n";
@@ -15,41 +12,58 @@ if (getConsent() === "granted" && typeof (window as any)._clarityInit === "funct
   (window as any)._clarityInit();
 }
 
-// ─── PostHog analytics ────────────────────────────────────────────────────────
-posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN, {
-  api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-  defaults: "2026-01-30",
-  autocapture: true,
-  capture_pageview: true,
-  capture_pageleave: true,
-});
-
-// ─── Sentry error tracking ────────────────────────────────────────────────────
+// ─── Sentry error tracking (lazy-loaded to keep main bundle slim) ─────────────
 if (import.meta.env.PROD) {
-  Sentry.init({
-    dsn: "https://043934f5cfe39c7f2ea9fd2da11be1ad@o4511209012264960.ingest.de.sentry.io/4511209017704528",
-    environment: import.meta.env.MODE, // "development" | "production"
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration({
-        maskAllText: false,
-        blockAllMedia: false,
-      }),
-    ],
-    // 10% próbkowanie transakcji w produkcji
-    tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
-    // 10% sesji nagrywanych jako replay przy błędzie
-    replaysSessionSampleRate: 0,
-    replaysOnErrorSampleRate: 0.1,
+  import("@sentry/react").then((Sentry) => {
+    Sentry.init({
+      dsn: "https://043934f5cfe39c7f2ea9fd2da11be1ad@o4511209012264960.ingest.de.sentry.io/4511209017704528",
+      environment: import.meta.env.MODE,
+      integrations: [
+        Sentry.browserTracingIntegration(),
+        Sentry.replayIntegration({ maskAllText: false, blockAllMedia: false }),
+      ],
+      tracesSampleRate: 0.1,
+      replaysSessionSampleRate: 0,
+      replaysOnErrorSampleRate: 0.1,
+    });
   });
+}
+
+// ─── PostHog analytics (lazy-loaded; provider attaches after init) ────────────
+function PostHogBoot({ children }: { children: React.ReactNode }) {
+  const [state, setState] = useState<{ Provider: any; client: any } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      import("posthog-js"),
+      import("@posthog/react"),
+    ]).then(([phMod, phReact]) => {
+      if (cancelled) return;
+      const posthog = phMod.default;
+      posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN, {
+        api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+        defaults: "2026-01-30",
+        autocapture: true,
+        capture_pageview: true,
+        capture_pageleave: true,
+      });
+      setState({ Provider: phReact.PostHogProvider, client: posthog });
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!state) return <>{children}</>;
+  const { Provider, client } = state;
+  return <Provider client={client}>{children}</Provider>;
 }
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <PostHogProvider client={posthog}>
+    <PostHogBoot>
       <App />
       <Analytics />
       <SpeedInsights />
-    </PostHogProvider>
+    </PostHogBoot>
   </StrictMode>
 );
