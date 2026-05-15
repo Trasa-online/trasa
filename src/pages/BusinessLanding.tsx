@@ -12,7 +12,7 @@ function VideoMockup({ onComplete }: { onComplete?: () => void }) {
         <div className="absolute inset-0 rounded-[34px] pointer-events-none" style={{ boxShadow: "0 32px 80px -12px rgba(0,0,0,0.4)" }} />
         <video
           ref={el => { if (!el) return; el.muted = true; el.play().catch(() => {}); }}
-          src="/placeholders/Animacja_landing_dla_firm_mini.mp4"
+          src="/Animacja_landing_dla_firm_mini.mp4"
           autoPlay playsInline muted preload="auto"
           onEnded={onComplete}
           className="absolute inset-0 w-full h-full object-cover"
