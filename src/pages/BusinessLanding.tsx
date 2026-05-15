@@ -76,7 +76,7 @@ export default function BusinessLanding() {
           {/* Short hero copy + blue CTA */}
           <div className="text-center max-w-xs">
             <h2 className="text-xl font-black text-[#0E0E0E] mb-1">Bądź pierwszy</h2>
-            <p className="text-sm text-[#979797]">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
+            <p className="text-sm text-[#979797]">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
           </div>
           <button
             onClick={() => navigate("/biznes/start")}
@@ -90,13 +90,13 @@ export default function BusinessLanding() {
           <div className="text-center mt-4">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-white mb-4">
               <span className="text-base">🚀</span>
-              <span className="text-sm font-semibold text-[#0E0E0E]">Premiera: czerwiec 2026</span>
+              <span className="text-sm font-semibold text-[#0E0E0E]">Premiera: czerwiec 2026</span>
             </div>
             <h1 className="text-4xl font-black text-[#0E0E0E] leading-[1.05] mb-4">
-              Dołącz do Trasy<br />jako jeden<br />z pierwszych
+              Dołącz do Trasy<br />jako jeden<br />z pierwszych
             </h1>
             <p className="text-[#979797] text-base leading-relaxed max-w-xs mx-auto">
-              Budujemy aplikację do planowania city breaków. Szukamy pierwszych 100 lokali w Warszawie - wchodzisz bezpłatnie i zostajesz na mapie zanim użytkownicy tu trafią!
+              Budujemy aplikację do planowania city breaków. Szukamy pierwszych 100 lokali w Warszawie - wchodzisz bezpłatnie i zostajesz na mapie zanim użytkownicy tu trafią!
             </p>
           </div>
 
@@ -115,18 +115,18 @@ export default function BusinessLanding() {
           {/* Premiera + h1 + body */}
           <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-slate-200 bg-white mb-5">
             <span className="text-lg">🚀</span>
-            <span className="text-sm font-semibold text-[#0E0E0E]">Premiera: czerwiec 2026</span>
+            <span className="text-sm font-semibold text-[#0E0E0E]">Premiera: czerwiec 2026</span>
           </div>
           <h1 className="text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-5">
-            Dołącz do Trasy<br />jako jeden<br />z pierwszych
+            Dołącz do Trasy<br />jako jeden<br />z pierwszych
           </h1>
           <p className="text-[#979797] text-base leading-relaxed mb-10 max-w-xs">
-            Budujemy aplikację do planowania city breaków. Szukamy pierwszych 100 lokali w Warszawie - wchodzisz bezpłatnie i zostajesz na mapie zanim użytkownicy tu trafią!
+            Budujemy aplikację do planowania city breaków. Szukamy pierwszych 100 lokali w Warszawie - wchodzisz bezpłatnie i zostajesz na mapie zanim użytkownicy tu trafią!
           </p>
 
           {/* Hero copy + blue CTA */}
           <h2 className="text-xl font-bold text-slate-500 mb-2">Bądź pierwszy</h2>
-          <p className="text-base text-[#979797] mb-5">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
+          <p className="text-base text-[#979797] mb-5">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
           <button
             onClick={() => navigate("/biznes/start")}
             className="rounded-2xl text-white font-bold px-8 py-4 text-base active:scale-[0.98] transition-all mb-10"
