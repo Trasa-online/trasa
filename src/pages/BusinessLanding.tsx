@@ -3,17 +3,21 @@ import posthog from "posthog-js";
 
 // ─── VideoMockup ──────────────────────────────────────────────────────────────
 
-function VideoMockup() {
-  const style = { width: "clamp(270px, 42vw, 310px)", aspectRatio: "9/19.5" };
+function VideoMockup({ compact = false }: { compact?: boolean }) {
+  const width = compact
+    ? "clamp(210px, 22vw, 250px)"
+    : "clamp(270px, 42vw, 310px)";
   return (
     <div className="flex flex-col items-center">
-      <div className="relative mx-auto select-none rounded-[34px] overflow-hidden bg-black" style={style}>
-        <div className="absolute inset-0 rounded-[34px] pointer-events-none" style={{ boxShadow: "0 32px 80px -12px rgba(0,0,0,0.4)" }} />
+      <div
+        className="relative mx-auto select-none"
+        style={{ width, filter: "drop-shadow(0 32px 60px rgba(0,0,0,0.25))" }}
+      >
         <video
           ref={el => { if (!el) return; el.muted = true; el.play().catch(() => {}); }}
           src="/Animacja_landing_dla_firm_mini.mp4"
           autoPlay playsInline muted loop preload="auto"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="w-full h-auto block"
           style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
         />
       </div>
@@ -144,7 +148,7 @@ export default function BusinessLanding() {
 
         {/* Right: looping video */}
         <div className="shrink-0">
-          <VideoMockup />
+          <VideoMockup compact />
         </div>
       </div>
 
