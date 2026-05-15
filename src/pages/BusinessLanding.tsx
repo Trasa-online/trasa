@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import posthog from "posthog-js";
 
 // ─── VideoMockup ──────────────────────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ export default function BusinessLanding() {
             <span className="font-black text-base lg:text-lg text-[#0E0E0E] tracking-tight">trasa</span>
           </div>
           <button
-            onClick={() => navigate("/biznes/start")}
+            onClick={() => { posthog.capture("business_landing_cta_clicked", { location: "topbar" }); navigate("/biznes/start"); }}
             className="rounded-full text-white font-bold px-5 py-2 lg:px-6 lg:py-2.5 text-sm active:scale-95 transition-transform"
             style={{ background: "#0E0E0E" }}
           >
@@ -79,7 +80,7 @@ export default function BusinessLanding() {
             <p className="text-sm text-[#979797]">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
           </div>
           <button
-            onClick={() => navigate("/biznes/start")}
+            onClick={() => { posthog.capture("business_landing_cta_clicked", { location: "mobile_hero" }); navigate("/biznes/start"); }}
             className="w-full max-w-xs rounded-2xl text-white font-bold py-4 text-base active:scale-[0.98] transition-all"
             style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)", boxShadow: "0 8px 24px -6px rgba(59,130,246,0.4)" }}
           >
@@ -128,7 +129,7 @@ export default function BusinessLanding() {
           <h2 className="text-xl font-bold text-slate-500 mb-2">Bądź pierwszy</h2>
           <p className="text-base text-[#979797] mb-5">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
           <button
-            onClick={() => navigate("/biznes/start")}
+            onClick={() => { posthog.capture("business_landing_cta_clicked", { location: "desktop_hero" }); navigate("/biznes/start"); }}
             className="rounded-2xl text-white font-bold px-8 py-4 text-base active:scale-[0.98] transition-all mb-10"
             style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)", boxShadow: "0 8px 24px -6px rgba(59,130,246,0.4)" }}
           >

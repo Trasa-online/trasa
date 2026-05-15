@@ -3,6 +3,7 @@ import { getConsent, grantConsent, denyConsent, syncConsentFromProfile } from "@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { X } from "lucide-react";
+import posthog from "posthog-js";
 
 const CookieBanner = () => {
   const { user, loading } = useAuth();
@@ -25,16 +26,19 @@ const CookieBanner = () => {
 
   const handleGrant = () => {
     grantConsent();
+    posthog.capture("cookie_consent_granted");
     setVisible(false);
   };
 
   const handleDeny = () => {
     denyConsent();
+    posthog.capture("cookie_consent_denied", { source: "button" });
     setVisible(false);
   };
 
   const handleDismiss = () => {
     denyConsent();
+    posthog.capture("cookie_consent_denied", { source: "dismiss" });
     setVisible(false);
   };
 

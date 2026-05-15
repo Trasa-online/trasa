@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import posthog from "posthog-js";
 
 // ─── Email Capture ────────────────────────────────────────────────────────────
 
@@ -14,6 +15,7 @@ function EmailCapture({ inputRef }: { inputRef?: React.RefObject<HTMLInputElemen
     const trimmed = email.trim().toLowerCase();
     await (supabase as any).from("waitlist").insert({ email: trimmed });
     supabase.functions.invoke("send-waitlist-email", { body: { email: trimmed } });
+    posthog.capture("landing_waitlist_signup", { source: "waitlist_page" });
     setStatus("done");
   };
   if (status === "done") return (

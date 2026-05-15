@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, Heart, Zap, Check, Castle, GlassWater, Palette, TreePine, Pizza, Star, MapPin, Menu, X, Sparkles, User } from "lucide-react";
 import TrialModal from "@/components/trial/TrialModal";
+import posthog from "posthog-js";
 
 // ─── Scroll reveal hook ───────────────────────────────────────────────────────
 
@@ -211,6 +212,7 @@ function EmailCapture({ large = false }: { large?: boolean }) {
     if (!email.trim() || status !== "idle") return;
     setStatus("loading");
     await (supabase as any).from("waitlist").insert({ email: email.trim().toLowerCase() });
+    posthog.capture("landing_waitlist_signup", { source: "landing_page" });
     setStatus("done");
   };
   if (status === "done") return (

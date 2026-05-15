@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format, addDays } from "date-fns";
 import { pl } from "date-fns/locale";
+import posthog from "posthog-js";
 import type { PlanPin } from "./DayPinList";
 const buildStaticMapUrl = (pins: { latitude: number; longitude: number }[]) => {
   if (pins.length === 0) return null;
@@ -259,6 +260,14 @@ const RouteSummaryDialog = ({
         is_approved: false,
         is_rejected: false,
       }).then(() => {});
+
+      posthog.capture("route_created", {
+        source: "plan_wizard",
+        city: plan.city,
+        days_count: days.length,
+        pins_count: days.reduce((sum, d) => sum + (d.pins?.length ?? 0), 0),
+        is_group: !!groupSession,
+      });
 
       toast.success("Trasa zapisana! 🎉", { description: plan.city });
       onOpenChange(false);

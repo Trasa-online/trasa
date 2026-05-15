@@ -9,6 +9,7 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import posthog from "posthog-js";
 
 function generateJoinCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -850,6 +851,11 @@ export default function DemoSession() {
   const [joinInput, setJoinInput] = useState("");
   const [joinLoading, setJoinLoading] = useState(false);
   const isBiznesDemo = searchParams.get("biznes") === "1";
+
+  useEffect(() => {
+    posthog.capture("demo_started", { variant: searchParams.get("biznes") === "1" ? "business" : "consumer" });
+  }, []);
+
   const [selectedCity, setSelectedCity] = useState(DEMO_CITIES[0]);
   const [businessMode, setBusinessMode] = useState(false);
   const [realPlaces, setRealPlaces] = useState<DemoPlace[] | null>(null);
@@ -968,8 +974,8 @@ export default function DemoSession() {
 
   const places: DemoPlace[] = realPlaces ?? [];
 
-  const handleStartSolo = () => { setMode("solo"); setStep("location"); };
-  const handleStartGroup = () => { setMode("group"); setStep("location"); };
+  const handleStartSolo = () => { posthog.capture("demo_mode_selected", { mode: "solo" }); setMode("solo"); setStep("location"); };
+  const handleStartGroup = () => { posthog.capture("demo_mode_selected", { mode: "group" }); setMode("group"); setStep("location"); };
 
   const handleJoinByCode = async () => {
     const code = joinInput.trim().toUpperCase();
@@ -993,7 +999,7 @@ export default function DemoSession() {
     }
   };
 
-  const handleCitySelect = (c: string) => { setCity(c); setStep("mode"); };
+  const handleCitySelect = (c: string) => { posthog.capture("demo_city_selected", { city: c, mode }); setCity(c); setStep("mode"); };
 
   // Shared place loader - used by both host (handleCategorySelect) and joiner (useEffect)
   const loadPlaces = async (targetCity: string, cat: string) => {
@@ -1053,6 +1059,7 @@ export default function DemoSession() {
   }, [step, city, category]);
 
   const handleCategorySelect = async (cat: CategoryKey) => {
+    posthog.capture("demo_category_selected", { city, category: cat, mode });
     setCategory(cat);
     setRealPlaces(null);
     await loadPlaces(city, cat);
@@ -1105,6 +1112,7 @@ export default function DemoSession() {
         console.error("[demo] failed to save reactions:", e);
       }
     }
+    posthog.capture("demo_results_viewed", { city, category, mode, liked_count: liked.length });
     setStep("results");
   };
 
@@ -1701,6 +1709,7 @@ export default function DemoSession() {
               onClick={() => {
                 const places = mode === "solo" ? likedPlaces : groupMatches;
                 saveDemoLikedToStorage(places, city, category ?? "");
+                posthog.capture("demo_signup_clicked", { city, category, mode, liked_count: places.length });
                 navigate("/auth");
               }}
               className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/20"

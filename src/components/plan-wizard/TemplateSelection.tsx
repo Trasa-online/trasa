@@ -7,6 +7,7 @@ import { Loader2, ArrowRight, Map } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import posthog from "posthog-js";
 
 interface TemplatePin {
   place_name: string;
@@ -170,6 +171,14 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
 
       const { error: pinsError } = await supabase.from("pins").insert(pinsToInsert);
       if (pinsError) throw pinsError;
+
+      posthog.capture("route_created", {
+        source: "template",
+        template_id: selected.id,
+        template_title: selected.title,
+        city,
+        pins_count: pinsToInsert.length,
+      });
 
       (supabase as any)
         .from("route_templates")

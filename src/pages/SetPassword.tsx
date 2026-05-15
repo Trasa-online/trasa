@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Building2, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import posthog from "posthog-js";
 
 const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
   const navigate = useNavigate();
@@ -77,6 +78,11 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       if (error) throw error;
 
       const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        posthog.identify(user.id, { email: user.email });
+        posthog.capture("user_signed_up", { account_type: isBusiness ? "business" : "consumer" });
+      }
 
       if (isBusiness && user) {
         // Business flow - find their profile and go to dashboard
