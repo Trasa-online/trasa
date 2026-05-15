@@ -11,7 +11,7 @@ function VideoMockup({ compact = false }: { compact?: boolean }) {
     <div className="flex flex-col items-center">
       <div
         className="relative mx-auto select-none"
-        style={{ width, filter: "drop-shadow(0 32px 60px rgba(0,0,0,0.25))" }}
+        style={{ width }}
       >
         <video
           ref={el => { if (!el) return; el.muted = true; el.play().catch(() => {}); }}
