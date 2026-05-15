@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
 // ─── VideoMockup ──────────────────────────────────────────────────────────────
 
-function VideoMockup({ onComplete }: { onComplete?: () => void }) {
+function VideoMockup() {
   const style = { width: "clamp(270px, 42vw, 310px)", aspectRatio: "9/19.5" };
   return (
     <div className="flex flex-col items-center">
@@ -13,109 +11,10 @@ function VideoMockup({ onComplete }: { onComplete?: () => void }) {
         <video
           ref={el => { if (!el) return; el.muted = true; el.play().catch(() => {}); }}
           src="/Animacja_landing_dla_firm_mini.mp4"
-          autoPlay playsInline muted preload="auto"
-          onEnded={onComplete}
+          autoPlay playsInline muted loop preload="auto"
           className="absolute inset-0 w-full h-full object-cover"
           style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
         />
-      </div>
-    </div>
-  );
-}
-
-// ─── Postcard (1:1 z WaitlistPage) ───────────────────────────────────────────
-
-function PostcardFront({ w, h }: { w: number; h: number }) {
-  const pad = Math.round(w * 0.05);
-  const bottomPad = Math.round(w * 0.18);
-  return (
-    <div className="w-full h-full rounded-2xl overflow-hidden bg-white shadow-md flex flex-col"
-      style={{ padding: `${pad}px ${pad}px ${bottomPad}px` }}>
-      <div className="relative flex-1 overflow-hidden rounded-sm bg-slate-200">
-        <img src="/IMG_9609.jpg" alt="Nat i Bart" className="absolute inset-0 w-full h-full object-cover object-top" />
-      </div>
-      <div className="flex items-end justify-between" style={{ paddingTop: pad * 0.7 }}>
-        <p className="font-black text-[#0E0E0E]" style={{ fontSize: w * 0.105 }}>2026</p>
-        <div className="text-right">
-          <p className="font-bold text-[#0E0E0E]" style={{ fontSize: w * 0.062 }}>Nat i Bart</p>
-          <p style={{ fontSize: w * 0.052, color: "#979797" }}>trasa.travel</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const BACK_MESSAGE = [
-  "Hej!",
-  "",
-  "Ile frajdy będziemy",
-  "mieć razem,",
-  "odkrywając nowe miasta.",
-  "Nie możemy się doczekać!",
-  "",
-  "do zobaczenia,",
-];
-
-function PostcardBack({ w, h, isVisible }: { w: number; h: number; isVisible: boolean }) {
-  const pad = Math.round(w * 0.09);
-  return (
-    <div className="w-full h-full rounded-2xl overflow-hidden shadow-md flex flex-col"
-      style={{ background: "#FEFEFE", padding: `${pad}px` }}>
-      <div className="mb-3 flex justify-between items-baseline w-full">
-        <span style={{ fontFamily: "monospace", fontSize: w * 0.038, color: "#aaa", letterSpacing: "0.05em", textTransform: "uppercase" }}>Nat i Bart</span>
-        <span style={{ fontFamily: "monospace", fontSize: w * 0.038, color: "#aaa", letterSpacing: "0.05em", textTransform: "uppercase" }}>Gdańsk · 2026</span>
-      </div>
-      <div className="mb-3" style={{ height: 1, background: "#e8e0d5" }} />
-      <div className="flex-1 flex flex-col justify-start">
-        {BACK_MESSAGE.map((line, i) => (
-          <motion.p key={i}
-            style={{ fontFamily: "'Caveat', 'Bradley Hand', cursive", fontSize: w * 0.082, color: "#2d1505", lineHeight: 1.5, minHeight: line ? undefined : `${w * 0.082 * 0.75}px` }}
-            initial={{ opacity: 0 }}
-            animate={isVisible ? { opacity: 1 } : { opacity: 0 }}
-            transition={{ delay: 0.3 + i * 0.07, duration: 0.3 }}>
-            {line || ""}
-          </motion.p>
-        ))}
-      </div>
-      <motion.div className="mt-auto"
-        initial={{ opacity: 0 }}
-        animate={isVisible ? { opacity: 1 } : { opacity: 0 }}
-        transition={{ delay: 1.1, duration: 0.4 }}>
-        <div className="mb-2" style={{ height: 1, background: "#e8e0d5" }} />
-        <p style={{ fontFamily: "'Caveat', cursive", fontSize: w * 0.088, color: "#2d1505", fontWeight: 600, textAlign: "center" }}>Nat i Bart 🧡</p>
-      </motion.div>
-    </div>
-  );
-}
-
-function PostcardReveal({ large = false, targetH }: { large?: boolean; targetH?: number }) {
-  const baseW = large ? 300 : 238;
-  const baseH = large ? 530 : 423;
-  const scale = targetH ? targetH / baseH : 1;
-  const w = Math.round(baseW * scale);
-  const h = Math.round(baseH * scale);
-  const [flipped, setFlipped] = useState(false);
-
-  useEffect(() => {
-    const delay = flipped ? 8000 : 3000;
-    const id = setTimeout(() => setFlipped(f => !f), delay);
-    return () => clearTimeout(id);
-  }, [flipped]);
-
-  return (
-    <div>
-      <div style={{ width: w, height: h, perspective: "900px" }}>
-        <motion.div
-          animate={{ rotateY: flipped ? 180 : 0 }}
-          transition={{ duration: 0.85, type: "spring", stiffness: 82, damping: 17 }}
-          style={{ transformStyle: "preserve-3d", WebkitTransformStyle: "preserve-3d", width: w, height: h, position: "relative" }}>
-          <div style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", position: "absolute", inset: 0 }}>
-            <PostcardFront w={w} h={h} />
-          </div>
-          <div style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)", WebkitTransform: "rotateY(180deg)", position: "absolute", inset: 0 }}>
-            <PostcardBack w={w} h={h} isVisible={flipped} />
-          </div>
-        </motion.div>
       </div>
     </div>
   );
@@ -146,12 +45,8 @@ function AppStoreBadge({ store }: { store: "ios" | "android" }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-type Scene = "demo" | "postcard";
-
 export default function BusinessLanding() {
   const navigate = useNavigate();
-  const [scene, setScene] = useState<Scene>("demo");
-  const goPostcard = useCallback(() => setScene("postcard"), []);
 
   return (
     <div style={{ background: "#FAFAFA", minHeight: "100dvh" }}>
@@ -176,21 +71,7 @@ export default function BusinessLanding() {
       {/* ── MOBILE ── */}
       <div className="lg:hidden">
         <div className="flex flex-col items-center px-5 pt-6 pb-10 gap-6">
-          {/* Video → Postcard at top */}
-          <AnimatePresence mode="wait">
-            {scene === "demo" ? (
-              <motion.div key="video-mobile" exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.35 }}>
-                <VideoMockup onComplete={goPostcard} />
-              </motion.div>
-            ) : (
-              <motion.div key="postcard-mobile"
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ type: "spring", stiffness: 220, damping: 26 }}>
-                <PostcardReveal targetH={Math.min(Math.round(window.innerWidth * 0.50 * (19.5 / 9) * 0.88), 380)} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <VideoMockup />
 
           {/* Short hero copy + blue CTA */}
           <div className="text-center max-w-xs">
@@ -260,19 +141,9 @@ export default function BusinessLanding() {
           </div>
         </div>
 
-        {/* Right: video → postcard */}
+        {/* Right: looping video */}
         <div className="shrink-0">
-          <AnimatePresence mode="wait">
-            {scene === "demo" ? (
-              <motion.div key="video-desk" exit={{ opacity: 0, scale: 0.88 }} transition={{ duration: 0.4 }}>
-                <VideoMockup onComplete={goPostcard} />
-              </motion.div>
-            ) : (
-              <motion.div key="postcard-desk" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
-                <PostcardReveal large />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <VideoMockup />
         </div>
       </div>
 
