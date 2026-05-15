@@ -18,7 +18,7 @@ function VideoMockup({ compact = false }: { compact?: boolean }) {
           src="/Animacja_landing_dla_firm_mini.mp4"
           autoPlay playsInline muted loop preload="auto"
           className="w-full h-auto block"
-          style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)" }}
+          style={{ WebkitTransform: "translateZ(0)", transform: "translateZ(0)", mixBlendMode: "multiply" }}
         />
       </div>
     </div>
