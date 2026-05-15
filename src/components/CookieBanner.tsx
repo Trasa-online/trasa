@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getConsent, grantConsent, denyConsent, syncConsentFromProfile, getSessionConsent, grantSessionConsent, denySessionConsent } from "@/lib/consent";
+import { getConsent, grantConsent, denyConsent, syncConsentFromProfile } from "@/lib/consent";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { X } from "lucide-react";
@@ -10,33 +10,31 @@ const CookieBanner = () => {
 
   useEffect(() => {
     if (loading) return;
+    if (getConsent() !== null) return;
 
     if (user) {
-      // Logged-in: show only if never consented (localStorage + DB)
-      if (getConsent() !== null) return;
       syncConsentFromProfile().then((shouldShow) => {
         if (shouldShow) setVisible(true);
       });
     } else {
-      // Not logged in: show every new browser session (sessionStorage)
-      if (getSessionConsent() === null) setVisible(true);
+      setVisible(true);
     }
   }, [user, loading]);
 
   if (!visible) return null;
 
   const handleGrant = () => {
-    if (user) grantConsent(); else grantSessionConsent();
+    grantConsent();
     setVisible(false);
   };
 
   const handleDeny = () => {
-    if (user) denyConsent(); else denySessionConsent();
+    denyConsent();
     setVisible(false);
   };
 
   const handleDismiss = () => {
-    if (user) denyConsent(); else denySessionConsent();
+    denyConsent();
     setVisible(false);
   };
 
