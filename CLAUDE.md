@@ -182,6 +182,76 @@ Klient → supabase.functions.invoke("google-places-proxy", ...) → Google Plac
 
 ---
 
+## Dual-platform conventions (iOS native vs Web/PWA)
+
+Trasa działa równolegle jako natywna aplikacja iOS (Capacitor 8, WebView) i web/PWA (Vercel). Jeden codebase, dwa cele wdrożenia. Niektóre zachowania powinny się różnić - poniżej obowiązujący wzorzec.
+
+### Detection — zawsze przez `src/lib/platform.ts`
+
+```ts
+import { isNative, isWeb, platform, capabilities } from "@/lib/platform";
+```
+
+- `isNative` — `true` dla iOS/Android Capacitor WebView
+- `isWeb` — `true` dla zwykłej przeglądarki (web + PWA)
+- `platform` — `"ios" | "android" | "web"` (raw)
+- `capabilities.*` — jawne flagi: `webShare`, `nativeShare`, `haptics`, `pushNotifications`, `serviceWorker`, `installablePWA`, `vercelAnalytics`
+
+**NIE używaj `Capacitor.isNativePlatform()` bezpośrednio w kodzie.** Jedyne miejsce z tym importem to `platform.ts`. Wszędzie indziej importuj nazwane flagi.
+
+### Inline branching — preferowany wzorzec
+
+Małe różnice UI/UX trzymamy `{isNative ? A : B}` w komponencie, **w jednym pliku**. Bez konwencji `.native.tsx` / `.web.tsx`.
+
+```tsx
+{isNative ? "Wróć" : "← Wróć do strony głównej"}
+```
+
+### Native APIs przez capability hooki w `src/hooks/`
+
+Każde wywołanie natywnego API ma swój hook który decyduje co użyć:
+
+- [src/hooks/useShare.ts](src/hooks/useShare.ts) — Capacitor Share na native, `navigator.share` lub clipboard na web
+- [src/hooks/useHaptics.ts](src/hooks/useHaptics.ts) — Capacitor Haptics na native, no-op na web
+
+Wywołanie z komponentu nie wie nic o platformie:
+
+```tsx
+const share = useShare();
+const result = await share({ title, url });
+// result.method: "native" | "webshare" | "clipboard"
+```
+
+Kolejne native features (push, camera, biometric) dodajemy w tym samym wzorcu: nowy hook w `src/hooks/use*.ts` z fallbackiem.
+
+### Native-only / Web-only kod
+
+```ts
+if (isNative) { /* ten kod wykonuje się tylko w iOS/Android */ }
+if (isWeb) { /* ten kod wykonuje się tylko w przeglądarce */ }
+```
+
+Vite tree-shaking nie eliminuje tych branchy statycznie (`isNative` to runtime stała), ale runtime guard wystarcza i jest jasny dla developera.
+
+### Workflow przed git push
+
+1. `npm run check:both` — buduje dist + robi `cap sync ios`. Musi przejść bez błędów.
+2. Sprawdź w przeglądarce na `localhost:8080` (jeśli ruszałaś UI)
+3. Cmd+R w Xcode w simulatorze (jeśli ruszałaś UI)
+
+Jeśli zmiana dotyczy obu platform, przetestuj na obu **zanim** wypchniesz.
+
+### Anti-patterns (NIE rób)
+
+- ❌ Osobne pliki `.native.tsx` / `.web.tsx` (zdecydowaliśmy: inline branching)
+- ❌ User-agent sniffing (`navigator.userAgent.match(...)`)
+- ❌ Sprawdzanie `window.cordova` lub innych proxy hacków
+- ❌ Hardcoded `if (window.location.hostname === ...)` w logice biznesowej
+- ❌ Osobne build flagi per platforma (`--mode ios`) — mamy jeden build, jeden `dist/`
+- ❌ Duplikowanie komponentów żeby zrobić "wersję na iOS" — zawsze inline if-em
+
+---
+
 ## Znane problemy do naprawy
 
 - [ ] `photo_url` w tabeli `places` jest null dla większości wpisów → potrzebne ręczne uzupełnienie lub skrypt migracyjny

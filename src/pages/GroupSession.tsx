@@ -12,6 +12,8 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { SHARE_BASE_URL } from "@/lib/shareUrl";
+import { useShare } from "@/hooks/useShare";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -71,6 +73,7 @@ const GroupSession = () => {
   const [waitingResults, setWaitingResults] = useState<{ id: string; username: string | null; first_name: string | null; avatar_url: string | null }[]>([]);
   const [waitingInvitedIds, setWaitingInvitedIds] = useState<Set<string>>(new Set());
   const [waitingInviting, setWaitingInviting] = useState<string | null>(null);
+  const share = useShare();
 
   // ── Place search in swiper ───────────────────────────────────────────────────
   const [searchOpen, setSearchOpen] = useState(false);
@@ -285,7 +288,7 @@ const GroupSession = () => {
         .order("id", { ascending: true })
         .limit(40);
       if (error) { console.error("Places query error:", error); return []; }
-      if (!data?.length) { console.warn("No places found for", dbCategoryValue, "in", session.city); return []; }
+      if (!data?.length) { console.warn("No places found for", dbCategoryValues, "in", session.city); return []; }
       // Seed = sessionId + category → same result for every user in this session
       const shuffled = seededShuffle(data, session.id + currentCategory);
       return shuffled.slice(0, 10).map((p: any) => p.id as string);
@@ -792,7 +795,7 @@ const GroupSession = () => {
           <div className="absolute top-2 left-4 right-4 z-50 bg-foreground text-background rounded-2xl px-4 py-3 flex items-center gap-3 shadow-xl animate-in slide-in-from-top-4 fade-in duration-300">
             <span className="text-2xl shrink-0">🎉</span>
             <div className="min-w-0">
-              <p className="text-sm font-bold leading-tight">Nowy match!</p>
+              <p className="text-sm font-bold leading-tight">Nowe dopasowanie!</p>
               <p className="text-xs opacity-70 truncate">{bannerData.otherName} też polubiła <strong>{bannerData.placeName}</strong></p>
             </div>
           </div>
@@ -872,6 +875,22 @@ const GroupSession = () => {
                   {waitingSearch.trim().length >= 2 && waitingResults.length === 0 && (
                     <p className="text-xs text-muted-foreground text-center py-1">Nie znaleziono użytkownika</p>
                   )}
+
+                  <button
+                    onClick={async () => {
+                      const result = await share({
+                        title: "Dołącz do mojej sesji w Trasa",
+                        text: `Dołącz używając kodu: ${joinCode}`,
+                        url: `${SHARE_BASE_URL}/#/sesja/${joinCode}`,
+                      });
+                      if (!result.ok) return;
+                      toast.success(result.method === "clipboard" ? "Link skopiowany" : "Udostępniono");
+                    }}
+                    className="w-full py-2.5 rounded-full bg-white border border-orange-600 text-orange-600 text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Udostępnij link
+                  </button>
                 </div>
 
                 {/* Share code */}
@@ -886,15 +905,22 @@ const GroupSession = () => {
                       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       {copied ? "Skopiowano!" : "Kopiuj kod"}
                     </button>
-                    {typeof navigator.share === "function" && (
-                      <button
-                        onClick={() => navigator.share({ title: "Dołącz do mojej sesji w TRASA", text: `Dołącz używając kodu: ${joinCode}`, url: `${window.location.origin}/sesja/${joinCode}` })}
-                        className="flex-1 py-2.5 rounded-full border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
-                      >
-                        <Share2 className="h-4 w-4" />
-                        Udostępnij
-                      </button>
-                    )}
+                    <button
+                      onClick={async () => {
+                        const result = await share({
+                          title: "Dołącz do mojej sesji w Trasa",
+                          text: `Dołącz używając kodu: ${joinCode}`,
+                          url: `${SHARE_BASE_URL}/#/sesja/${joinCode}`,
+                        });
+                        if (result.ok && result.method === "clipboard") {
+                          toast.success("Link skopiowany");
+                        }
+                      }}
+                      className="flex-1 py-2.5 rounded-full border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                    >
+                      <Share2 className="h-4 w-4" />
+                      Udostępnij
+                    </button>
                   </div>
                 </div>
               </div>

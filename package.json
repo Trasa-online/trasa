@@ -9,7 +9,9 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "backfill:photos": "npx tsx scripts/backfill-photo-cache.ts"
+    "backfill:photos": "npx tsx scripts/backfill-photo-cache.ts",
+    "check:both": "npm run build && npx cap sync ios",
+    "check:native": "npm run build && npx cap sync ios && npx cap sync android"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",
@@ -18,6 +20,7 @@
     "@capacitor/core": "^8.3.1",
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.3.1",
+    "@capacitor/share": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@hookform/resolvers": "^3.10.0",

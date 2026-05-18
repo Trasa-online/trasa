@@ -2,6 +2,7 @@ import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { isWeb } from "@/lib/platform";
 import App from "./App.tsx";
 import "./index.css";
 import "./i18n";
@@ -62,8 +63,8 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <PostHogBoot>
       <App />
-      <Analytics />
-      <SpeedInsights />
+      {isWeb && <Analytics />}
+      {isWeb && <SpeedInsights />}
     </PostHogBoot>
   </StrictMode>
 );

@@ -2,21 +2,21 @@
   "intro": {
     "step0": {
       "title": "Cześć!",
-      "subtitle": "Jestem Trasa — Twój osobisty przewodnik po polskich miastach.",
-      "speech": "Cześć! Jestem Trasa — Twój osobisty przewodnik po polskich miastach."
+      "subtitle": "Jestem Trasa, Twój osobisty przewodnik po polskich miastach.",
+      "speech": "Cześć! Jestem Trasa, Twój osobisty przewodnik po polskich miastach."
     },
     "step1": {
       "title": "Odkryj to, co Cię kręci",
-      "subtitle": "Przeglądaj miejsca jak na social mediach. Swipe w prawo — AI zbierze z tego Twoją trasę.",
+      "subtitle": "Przeglądaj miejsca jak w social mediach. Lajkuj te, które Cię kręcą, a AI zbierze z tego Twoją trasę.",
       "speech": "Przeglądaj miejsca i lajkuj to, co Cię kręci. AI ułoży z tego idealną trasę."
     },
     "step2": {
       "title": "Trasa planuje i zapamiętuje",
-      "subtitle": "AI buduje plan w kilka sekund. Po każdym dniu rozmawiamy — z czasem rekomendacje trafiają coraz celniej.",
+      "subtitle": "AI buduje plan w kilka sekund. Po każdym dniu rozmawiamy, a z czasem rekomendacje trafiają coraz celniej.",
       "speech": "AI układa plan, a po każdej podróży uczy się Twoich gustów. Z czasem rekomendacje trafiają coraz celniej."
     }
   },
-  "prefs_speech": "Zanim zaczniemy — opowiedz mi trochę o sobie, a dopasujemy plan podróży specjalnie dla Ciebie!",
+  "prefs_speech": "Zanim zaczniemy, opowiedz mi trochę o sobie, a dopasujemy plan podróży specjalnie dla Ciebie!",
   "orb_label": "Powtórz",
   "lets_go": "Zacznijmy!",
   "prefs": {

@@ -9,9 +9,10 @@ interface CategoryPickerProps {
   onShowAll: () => void;
   visitedCategories?: string[];
   likedCount?: number;
+  onUnmarkCategory?: (categoryId: string) => void;
 }
 
-const CategoryPicker = ({ onSelect, onShowAll, visitedCategories = [], likedCount = 0 }: CategoryPickerProps) => {
+const CategoryPicker = ({ onSelect, onShowAll, visitedCategories = [], likedCount = 0, onUnmarkCategory }: CategoryPickerProps) => {
   const [selectedMain, setSelectedMain] = useState<string | null>(null);
   const [categories, setCategories] = useState<MainCategory[]>(MAIN_CATEGORIES);
   const isReturn = visitedCategories.length > 0;
@@ -70,7 +71,20 @@ const CategoryPicker = ({ onSelect, onShowAll, visitedCategories = [], likedCoun
                   <p className="text-xs text-muted-foreground mt-0.5">{cat.hint}</p>
                 </div>
                 {visited && !isActive && (
-                  <span className="text-[10px] text-primary font-bold shrink-0">✓</span>
+                  <span
+                    role="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const visitedIds = visitedCategories.filter(v =>
+                        cat.subcategories.some(s => s.id === v) || v === cat.id
+                      );
+                      visitedIds.forEach(id => onUnmarkCategory?.(id));
+                    }}
+                    className="text-[10px] text-primary font-bold shrink-0 px-2 py-1 rounded-full bg-primary/10 active:scale-90 transition-transform cursor-pointer"
+                    aria-label="Odznacz kategorię"
+                  >
+                    ✓ Odznacz
+                  </span>
                 )}
                 <span className={`text-muted-foreground transition-transform shrink-0 ${isActive ? "rotate-180" : ""}`}>
                   ▾
@@ -109,7 +123,7 @@ const CategoryPicker = ({ onSelect, onShowAll, visitedCategories = [], likedCoun
           onClick={onShowAll}
           className="w-full text-sm text-muted-foreground py-2 active:opacity-60 transition-opacity"
         >
-          {isReturn ? "Wygeneruj trasę z wybranych miejsc →" : "Pokaż wszystko bez filtrowania"}
+          {isReturn ? "Zobacz wszystkie miejsca →" : "Pokaż wszystko bez filtrowania"}
         </button>
       </div>
     </div>

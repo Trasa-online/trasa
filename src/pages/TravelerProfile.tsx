@@ -8,6 +8,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { SHARE_BASE_URL } from "@/lib/shareUrl";
+import { useShare } from "@/hooks/useShare";
 
 // ── InviteSlot ────────────────────────────────────────────────────────────────
 
@@ -18,13 +20,20 @@ function InviteSlot({ code, slot, usedByName, usedByEmail }: {
   usedByEmail: string | null;
 }) {
   const [copied, setCopied] = useState(false);
-  const url = `${window.location.origin}/join/${code}`;
+  const url = `${SHARE_BASE_URL}/#/join/${code}`;
   const isUsed = !!(usedByName || usedByEmail);
+  const share = useShare();
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    const result = await share({ title: "Zaproszenie do Trasy", url });
+    if (!result.ok) return;
+    if (result.method === "clipboard") {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success("Link skopiowany");
+    } else {
+      toast.success("Udostępniono");
+    }
   };
 
   return (

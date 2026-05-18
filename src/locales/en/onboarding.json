@@ -2,21 +2,21 @@
   "intro": {
     "step0": {
       "title": "Hello!",
-      "subtitle": "I'm Trasa — your personal guide for exploring Polish cities.",
-      "speech": "Hello! I'm Trasa — your personal guide for exploring Polish cities."
+      "subtitle": "I'm Trasa, your personal guide for exploring Polish cities.",
+      "speech": "Hello! I'm Trasa, your personal guide for exploring Polish cities."
     },
     "step1": {
       "title": "Discover what excites you",
-      "subtitle": "Browse places like social media. Swipe right — AI turns your picks into a perfect route.",
+      "subtitle": "Browse places like social media. Like what catches your eye, and AI turns your picks into a perfect route.",
       "speech": "Browse places and like what catches your eye. AI will build your route from it."
     },
     "step2": {
       "title": "Trasa plans and remembers",
-      "subtitle": "AI builds your plan in seconds. After every day we debrief — recommendations get sharper every trip.",
+      "subtitle": "AI builds your plan in seconds. After every day we debrief, and recommendations get sharper every trip.",
       "speech": "AI builds your plan, and after each trip it learns your taste. Recommendations get sharper every time."
     }
   },
-  "prefs_speech": "Before we start — tell me a bit about yourself and we'll tailor a travel plan just for you!",
+  "prefs_speech": "Before we start, tell me a bit about yourself and we'll tailor a travel plan just for you!",
   "orb_label": "Repeat",
   "lets_go": "Let's go!",
   "prefs": {

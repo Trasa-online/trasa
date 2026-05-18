@@ -285,7 +285,7 @@ export default function LikesDrawer({ open, onClose, userId }: LikesDrawerProps)
                 <>
                   <ThumbsDown className="h-10 w-10 text-muted-foreground/30" />
                   <p className="text-sm font-medium text-foreground/70">Brak odrzuconych miejsc</p>
-                  <p className="text-xs text-muted-foreground">Miejsca, które pominiesz podczas swipowania, pojawią się tutaj.</p>
+                  <p className="text-xs text-muted-foreground">Miejsca, które pominiesz przeglądając, pojawią się tutaj.</p>
                 </>
               )}
             </div>

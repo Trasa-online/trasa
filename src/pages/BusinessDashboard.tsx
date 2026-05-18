@@ -15,6 +15,8 @@ import { pl } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { SHARE_BASE_URL } from "@/lib/shareUrl";
+import { useShare } from "@/hooks/useShare";
 
 interface BusinessPost {
   id: string;
@@ -530,6 +532,7 @@ const BusinessDashboard = () => {
 
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
+  const share = useShare();
   const [previewMode, setPreviewMode] = useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -1438,10 +1441,11 @@ const BusinessDashboard = () => {
             {/* "Przetestuj w aplikacji" — temporarily disabled on frontend */}
             {isAdminUser && (profile as any).preview_token && (
               <button
-                onClick={() => {
-                  const url = `${window.location.origin}/biznes/${placeId}?t=${(profile as any).preview_token}`;
-                  navigator.clipboard.writeText(url);
-                  toast.success("Link skopiowany!");
+                onClick={async () => {
+                  const url = `${SHARE_BASE_URL}/#/biznes/${placeId}?t=${(profile as any).preview_token}`;
+                  const result = await share({ title: "Podgląd lokalu", url });
+                  if (!result.ok) return;
+                  toast.success(result.method === "clipboard" ? "Link skopiowany!" : "Udostępniono");
                 }}
                 className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-blue-600 px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100 transition-colors"
               >

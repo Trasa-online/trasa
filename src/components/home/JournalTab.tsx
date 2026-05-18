@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Globe, Lock, Trash2, Loader2 } from "lucide-react";
+import { Globe, Lock, Trash2, Loader2, Sparkles, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
 interface JournalTabProps {
@@ -83,17 +83,37 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       <div className="flex-1 flex flex-col items-center justify-center gap-5 px-8 py-24 text-center">
         <div className="w-20 h-20 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
         <div className="space-y-2">
-          <p className="text-xl font-bold tracking-tight">Wkrótce tutaj</p>
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-[240px] mx-auto">
-            Po zakończeniu rozmowy podsumowującej dzień, wpis pojawi się tutaj.
+          <p className="text-xl font-bold tracking-tight">Twoja pierwsza trasa jest na wyciągnięcie palca</p>
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
+            Wybierz datę, opcjonalnie zaproś znajomego, a resztę zrobicie razem przeglądając miejsca.
           </p>
         </div>
+        <button
+          onClick={() => navigate("/sesja/nowa", { state: { from: "journal" } })}
+          className="px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform"
+        >
+          <Sparkles className="h-4 w-4" />
+          Zaplanuj swoją pierwszą trasę
+        </button>
       </div>
     );
   }
 
   return (
     <div className="space-y-3 pb-2">
+      <button
+        onClick={() => navigate("/sesja/nowa", { state: { from: "journal" } })}
+        className="w-full flex items-center gap-3 p-3.5 rounded-3xl bg-card border border-border/50 active:scale-[0.98] transition-transform"
+      >
+        <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+          <Sparkles className="h-5 w-5 text-orange-600" />
+        </div>
+        <div className="flex-1 text-left min-w-0">
+          <p className="text-sm font-bold leading-tight">Zaplanuj kolejną trasę</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Wybierz datę i miasto · Możesz zaprosić znajomych</p>
+        </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+      </button>
       {entries.map((entry) => {
         const validPhotos = (entry.review_photos ?? []).filter((url: any) => !!url && typeof url === "string" && url.trim() !== "");
         const thumb = validPhotos[0] ?? getRandomPinPlaceholder(entry.id);

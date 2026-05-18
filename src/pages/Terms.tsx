@@ -221,7 +221,7 @@ const Terms = () => {
         </section>
 
         <p className="text-xs text-muted-foreground pt-4 border-t border-border/40">
-          Ostatnia aktualizacja: kwiecień 2026
+          Ostatnia aktualizacja: maj 2026
         </p>
       </div>
     </div>

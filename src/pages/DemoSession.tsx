@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
+import { SHARE_BASE_URL } from "@/lib/shareUrl";
+import { useShare } from "@/hooks/useShare";
 
 function generateJoinCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -920,7 +922,7 @@ export default function DemoSession() {
           category: p.category ?? undefined,
         })));
       } else {
-        const resp = await fetch(`/api/demo-places?city=${encodeURIComponent(city)}&category=${subcats[0]}`);
+        const resp = await fetch(`${SHARE_BASE_URL}/api/demo-places?city=${encodeURIComponent(city)}&category=${subcats[0]}`);
         if (resp.ok) {
           const gp: DemoPlace[] = await resp.json();
           setRealPlaces(gp.length > 0 ? seededShuffle(gp, city + subcats.join(",")) : null);
@@ -1037,7 +1039,7 @@ export default function DemoSession() {
         })));
       } else {
         // No photos in DB → fetch from Google Places (cached 24h at CDN)
-        const resp = await fetch(`/api/demo-places?city=${encodeURIComponent(targetCity)}&category=${cat}`);
+        const resp = await fetch(`${SHARE_BASE_URL}/api/demo-places?city=${encodeURIComponent(targetCity)}&category=${cat}`);
         if (resp.ok) {
           const googlePlaces: DemoPlace[] = await resp.json();
           // Apply same seed shuffle to Google results too
@@ -1122,9 +1124,15 @@ export default function DemoSession() {
     setTimeout(() => setCodeCopied(false), 2000);
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/demo?join=${sessionCode}`);
-    toast.success("Link skopiowany!");
+  const share = useShare();
+  const handleCopyLink = async () => {
+    const result = await share({
+      title: "Sprawdź Trasę",
+      text: `Dołącz do demo: ${sessionCode}`,
+      url: `${SHARE_BASE_URL}/#/demo?join=${sessionCode}`,
+    });
+    if (!result.ok) return;
+    toast.success(result.method === "clipboard" ? "Link skopiowany!" : "Udostępniono");
   };
 
   const catLabel = DEMO_CATEGORIES.find(c => c.id === category);

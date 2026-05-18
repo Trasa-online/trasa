@@ -47,9 +47,11 @@ function localApiPlugin(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: "./",
   server: {
-    host: "::",
+    host: "0.0.0.0",
     port: 8080,
+    allowedHosts: ["localhost", "127.0.0.1", "192.168.0.25", ".local"],
   },
   plugins: [
     react(),
@@ -65,8 +67,8 @@ export default defineConfig(({ mode }) => ({
         name: "trasa",
         short_name: "trasa",
         description: "Planuj trasy podróży z AI",
-        theme_color: "#09090b",
-        background_color: "#09090b",
+        theme_color: "#FEFEFE",
+        background_color: "#FEFEFE",
         display: "standalone",
         orientation: "portrait",
         start_url: "/",

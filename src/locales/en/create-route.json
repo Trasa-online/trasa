@@ -8,6 +8,6 @@
   "city_placeholder": "Enter city...",
   "must_visit_label": "I'd like to visit",
   "must_visit_placeholder": "Search for a place...",
-  "must_visit_hint": "E.g. a specific restaurant, museum or landmark — AI will include them in the plan.",
+  "must_visit_hint": "E.g. a specific restaurant, museum or landmark. AI will include them in the plan.",
   "next": "Next"
 }

@@ -342,12 +342,22 @@ const Home = () => {
               key={route.id}
               route={route}
               onDelete={async () => {
-                queryClient.setQueryData(["solo-routes-home", user?.id], (old: any[]) =>
+                const queryKey = ["solo-routes-home", user?.id];
+                const previous = queryClient.getQueryData(queryKey);
+                queryClient.setQueryData(queryKey, (old: any[]) =>
                   (old ?? []).filter((r: any) => r.id !== route.id)
                 );
-                await (supabase as any).from("pins").delete().eq("route_id", route.id);
-                await (supabase as any).from("routes").delete().eq("id", route.id);
-                toast.success(`Usunięto trasę „${route.city}"`);
+                try {
+                  const { error: pinsError } = await (supabase as any).from("pins").delete().eq("route_id", route.id);
+                  if (pinsError) throw pinsError;
+                  const { error: routeError } = await (supabase as any).from("routes").delete().eq("id", route.id);
+                  if (routeError) throw routeError;
+                  toast.success(`Usunięto trasę „${route.city}"`);
+                } catch (err: any) {
+                  queryClient.setQueryData(queryKey, previous);
+                  toast.error("Nie udało się usunąć trasy. Spróbuj ponownie.");
+                  console.error("[Home] delete route failed:", err);
+                }
               }}
             />
           ))}
@@ -579,29 +589,38 @@ const Home = () => {
                       {sessionRoute && (
                         <button
                           onClick={async () => {
-                            await (supabase as any).from("routes").update({ chat_status: "completed" }).eq("id", sessionRoute.id);
-                            if (previewSession?.id) {
-                              const { data: members } = await (supabase as any)
-                                .from("group_session_members")
-                                .select("user_id")
-                                .eq("session_id", previewSession.id)
-                                .neq("user_id", user?.id);
-                              const memberIds: string[] = (members ?? []).map((m: any) => m.user_id);
-                              if (memberIds.length) {
-                                await (supabase as any).from("routes")
-                                  .update({ new_for_users: memberIds })
-                                  .eq("id", sessionRoute.id);
-                                for (const memberId of memberIds) {
-                                  supabase.functions.invoke("send-push", {
-                                    body: {
-                                      user_id: memberId,
-                                      title: "Trasa zakończona! 🗺️",
-                                      body: `Oceń miejsca z ${sessionRoute.city || "trasy"} i dodaj wspomnienia`,
-                                      url: `/review-summary?route=${sessionRoute.id}`,
-                                    },
-                                  });
+                            try {
+                              const { error: statusError } = await (supabase as any).from("routes").update({ chat_status: "completed" }).eq("id", sessionRoute.id);
+                              if (statusError) console.error("[Home] chat_status update failed:", statusError);
+                              if (previewSession?.id) {
+                                const { data: members } = await (supabase as any)
+                                  .from("group_session_members")
+                                  .select("user_id")
+                                  .eq("session_id", previewSession.id)
+                                  .neq("user_id", user?.id);
+                                const memberIds: string[] = (members ?? []).map((m: any) => m.user_id);
+                                if (memberIds.length) {
+                                  await (supabase as any).from("routes")
+                                    .update({ new_for_users: memberIds })
+                                    .eq("id", sessionRoute.id);
+                                  // Send pushes in parallel; one failure shouldn't block the rest
+                                  await Promise.allSettled(
+                                    memberIds.map((memberId) =>
+                                      supabase.functions.invoke("send-push", {
+                                        body: {
+                                          user_id: memberId,
+                                          title: "Trasa zakończona! 🗺️",
+                                          body: `Oceń miejsca z ${sessionRoute.city || "trasy"} i dodaj wspomnienia`,
+                                          url: `/review-summary?route=${sessionRoute.id}`,
+                                        },
+                                      })
+                                    )
+                                  );
                                 }
                               }
+                            } catch (err) {
+                              console.error("[Home] finalize route flow error:", err);
+                              // Don't block navigation - user can still review the route
                             }
                             setPreviewSessionId(null);
                             navigate(`/review-summary?route=${sessionRoute.id}&new=1`);

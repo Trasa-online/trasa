@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${serviceRoleKey}`,
+              Authorization: req.headers.get("Authorization") ?? `Bearer ${serviceRoleKey}`,
             },
             body: JSON.stringify({ user_id: userId, title, body, url }),
           }

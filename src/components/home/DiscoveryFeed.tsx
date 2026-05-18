@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X } from "lucide-react";
+import { MapPin, X, Globe, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
+import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 
 type DiscoveryItem = {
   id: string;
@@ -23,6 +25,32 @@ type DiscoveryCollection = {
   author_avatar: string | null;
   items: DiscoveryItem[];
 };
+
+type PolecaneRoute = {
+  kind: "route";
+  id: string;
+  title: string;
+  city: string | null;
+  photo: string | null;
+  ai_highlight: string | null;
+  author_name: string;
+  author_avatar: string | null;
+};
+
+type PolecaneCreatorPlan = {
+  kind: "creator";
+  id: string;
+  title: string;
+  city: string;
+  description: string | null;
+  photo: string | null;
+  creator_handle: string;
+  creator_avatar_url: string | null;
+  num_days: number | null;
+  tags: string[] | null;
+};
+
+type PolecaneEntry = PolecaneRoute | PolecaneCreatorPlan;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -79,72 +107,6 @@ function PlacePhoto({
   );
 }
 
-function PhotoGrid({ items }: { items: DiscoveryItem[] }) {
-  const displayItems = items.slice(0, 3);
-  if (displayItems.length === 0) return null;
-  const [main, ...rest] = displayItems;
-
-  return (
-    <div className="flex gap-1 h-40 overflow-hidden">
-      {/* Big photo - left 2/3 */}
-      <div className="relative flex-[2] min-w-0 overflow-hidden rounded-l-xl">
-        <PlacePhoto item={main} placeholderIdx={0} className="w-full h-full" />
-        <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 bg-gradient-to-t from-black/60 to-transparent">
-          <p className="text-white text-[10px] font-semibold leading-tight line-clamp-1">{main.place_name}</p>
-        </div>
-      </div>
-      {/* Side photos - right 1/3 stacked */}
-      {rest.length > 0 && (
-        <div className="flex-1 min-w-0 flex flex-col gap-1">
-          {rest.slice(0, 2).map((item, idx) => (
-            <div key={item.id} className={`relative flex-1 overflow-hidden ${idx === 0 ? "rounded-tr-xl" : "rounded-br-xl"}`}>
-              <PlacePhoto item={item} placeholderIdx={idx + 1} className="w-full h-full" />
-              <div className="absolute bottom-0 left-0 right-0 px-1.5 py-1 bg-gradient-to-t from-black/60 to-transparent">
-                <p className="text-white text-[9px] font-semibold leading-tight line-clamp-1">{item.place_name}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Collection card (horizontal carousel item) ─────────────────────────────────
-
-function CollectionCard({ col, onOpen }: { col: DiscoveryCollection; onOpen: () => void }) {
-  return (
-    <button
-      onClick={onOpen}
-      className="shrink-0 w-[82vw] max-w-[320px] rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.97] transition-transform snap-start"
-    >
-      <PhotoGrid items={col.items} />
-      <div className="px-3.5 pt-2.5 pb-3 space-y-1.5">
-        <div className="flex items-start justify-between gap-2">
-          <p className="font-black text-sm leading-snug flex-1 line-clamp-2">{col.title}</p>
-          {col.city && (
-            <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0 mt-0.5">
-              <MapPin className="h-3 w-3" />
-              {col.city}
-            </div>
-          )}
-        </div>
-        <div className="flex gap-2 overflow-hidden">
-          {col.items.slice(0, 3).map((item, idx) => (
-            <span key={item.id} className="text-[10px] text-muted-foreground shrink-0">
-              <span className="font-bold text-orange-500">{idx + 1}.</span> {item.place_name}
-            </span>
-          ))}
-          {col.items.length > 3 && (
-            <span className="text-[10px] text-muted-foreground shrink-0">+{col.items.length - 3} więcej</span>
-          )}
-        </div>
-        <AuthorChip name={col.author_name} avatar={col.author_avatar} />
-      </div>
-    </button>
-  );
-}
-
 // ── Detail sheet ───────────────────────────────────────────────────────────────
 
 function CollectionDetail({ col }: { col: DiscoveryCollection }) {
@@ -153,7 +115,6 @@ function CollectionDetail({ col }: { col: DiscoveryCollection }) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
       <div className="flex items-start gap-3 px-4 pt-4 pb-3 border-b border-border/20 shrink-0">
         <div className="flex-1 min-w-0">
           <p className="font-bold text-base leading-tight line-clamp-2">{col.title}</p>
@@ -172,14 +133,12 @@ function CollectionDetail({ col }: { col: DiscoveryCollection }) {
         </SheetClose>
       </div>
 
-      {/* Map */}
       {hasPins && (
         <div className="h-52 shrink-0">
           <iframe key={col.id} srcDoc={leafletHtml} className="w-full h-full border-0" />
         </div>
       )}
 
-      {/* Scrollable place list */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {col.description && (
           <p className="text-sm text-muted-foreground leading-relaxed">{col.description}</p>
@@ -206,16 +165,197 @@ function CollectionDetail({ col }: { col: DiscoveryCollection }) {
   );
 }
 
+function CreatorPlanDetail({ plan }: { plan: PolecaneCreatorPlan }) {
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex items-start gap-3 px-4 pt-4 pb-3 border-b border-border/20 shrink-0">
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-base leading-tight line-clamp-2">{plan.title}</p>
+          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+            <Sparkles className="h-3 w-3 text-orange-500" />
+            <span>@{plan.creator_handle}</span>
+            <span className="text-muted-foreground/40">·</span>
+            <span>{plan.city}</span>
+            {plan.num_days && (
+              <>
+                <span className="text-muted-foreground/40">·</span>
+                <span>{plan.num_days} {plan.num_days === 1 ? "dzień" : "dni"}</span>
+              </>
+            )}
+          </div>
+        </div>
+        <SheetClose className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-90 transition-transform shrink-0 mt-0.5">
+          <X className="h-4 w-4" />
+        </SheetClose>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {plan.photo && (
+          <div className="w-full aspect-[16/10] overflow-hidden bg-muted">
+            <img src={plan.photo} alt={plan.title} className="w-full h-full object-cover" loading="lazy" />
+          </div>
+        )}
+        <div className="px-4 py-3 space-y-3">
+          {plan.description && (
+            <p className="text-sm text-foreground/80 leading-relaxed">{plan.description}</p>
+          )}
+          {plan.tags && plan.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {plan.tags.map((tag) => (
+                <span key={tag} className="text-[11px] px-2.5 py-1 rounded-full bg-primary/10 text-orange-700 font-medium">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Skeleton ───────────────────────────────────────────────────────────────────
 
-function CollectionSkeleton() {
+function MotywySkeleton() {
   return (
-    <div className="shrink-0 w-[82vw] max-w-[320px] rounded-2xl bg-card border border-border/50 overflow-hidden animate-pulse snap-start">
-      <div className="h-40 bg-muted" />
-      <div className="px-3.5 pt-2.5 pb-3 space-y-2">
-        <div className="h-4 bg-muted rounded w-3/4" />
-        <div className="h-3 bg-muted rounded w-1/2" />
-        <div className="h-3 bg-muted rounded w-1/3" />
+    <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1 px-1">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="shrink-0 w-[88px] flex flex-col items-center gap-1.5 animate-pulse">
+          <div className="h-[88px] w-[88px] rounded-full bg-muted" />
+          <div className="h-2.5 w-16 bg-muted rounded" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PolecaneSkeleton() {
+  return (
+    <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+      {Array.from({ length: 2 }).map((_, i) => (
+        <div key={i} className="shrink-0 w-[68vw] max-w-[280px] rounded-2xl bg-card border border-border/50 overflow-hidden animate-pulse">
+          <div className="aspect-[16/10] bg-muted" />
+          <div className="px-3 py-2.5 space-y-2">
+            <div className="h-4 bg-muted rounded w-3/4" />
+            <div className="h-3 bg-muted rounded w-1/2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Rows ───────────────────────────────────────────────────────────────────────
+
+function MotywyRow({
+  collections,
+  onOpen,
+}: {
+  collections: DiscoveryCollection[];
+  onOpen: (col: DiscoveryCollection) => void;
+}) {
+  return (
+    <div>
+      <p className="text-sm font-bold mb-2 px-1">Popularne motywy Warszawy</p>
+      <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory px-1 pb-1">
+        {collections.map((col, idx) => {
+          const photoItem = col.items.find((i) => i.photo_url) ?? col.items[0];
+          const gradient = PLACEHOLDER_GRADIENTS[idx % PLACEHOLDER_GRADIENTS.length];
+          return (
+            <button
+              key={col.id}
+              onClick={() => onOpen(col)}
+              className="shrink-0 w-[88px] flex flex-col items-center gap-1.5 snap-start active:scale-95 transition-transform"
+            >
+              <div className="h-[88px] w-[88px] rounded-full overflow-hidden ring-1 ring-border/40">
+                {photoItem?.photo_url ? (
+                  <img src={photoItem.photo_url} alt={col.title} className="w-full h-full object-cover" loading="lazy" />
+                ) : (
+                  <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+                    <span className="text-2xl opacity-60">📍</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-[11px] font-semibold text-center leading-tight line-clamp-2 w-[88px]">
+                {col.title}
+              </p>
+            </button>
+          );
+        })}
+        <div className="shrink-0 w-2" />
+      </div>
+    </div>
+  );
+}
+
+function PolecaneRow({
+  entries,
+  onCreatorOpen,
+}: {
+  entries: PolecaneEntry[];
+  onCreatorOpen: (plan: PolecaneCreatorPlan) => void;
+}) {
+  const navigate = useNavigate();
+
+  return (
+    <div>
+      <p className="text-sm font-bold mb-2 px-1">Polecane</p>
+      <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
+        {entries.map((entry) => {
+          const photo = entry.photo ?? getRandomPinPlaceholder(entry.id);
+          const onClick = () => {
+            if (entry.kind === "route") {
+              navigate(`/route/${entry.id}`);
+            } else {
+              onCreatorOpen(entry);
+            }
+          };
+          return (
+            <button
+              key={`${entry.kind}-${entry.id}`}
+              onClick={onClick}
+              className="shrink-0 w-[68vw] max-w-[280px] rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.97] transition-transform snap-start"
+            >
+              <div className="aspect-[16/10] w-full overflow-hidden bg-muted">
+                <img
+                  src={photo}
+                  alt={entry.title}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = getRandomPinPlaceholder(entry.id + "_fb");
+                  }}
+                />
+              </div>
+              <div className="px-3 py-2.5 space-y-1.5">
+                <p className="font-bold text-sm leading-snug line-clamp-2">{entry.title}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground min-w-0">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{entry.city ?? "-"}</span>
+                  </div>
+                  {entry.kind === "route" ? (
+                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
+                      <Globe className="h-3 w-3" />
+                      Trasa
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-[10px] text-orange-600 font-semibold shrink-0">
+                      <Sparkles className="h-3 w-3" />
+                      Twórca
+                    </span>
+                  )}
+                </div>
+                {entry.kind === "route" ? (
+                  <AuthorChip name={entry.author_name} avatar={entry.author_avatar} />
+                ) : (
+                  <AuthorChip name={`@${entry.creator_handle}`} avatar={entry.creator_avatar_url} />
+                )}
+              </div>
+            </button>
+          );
+        })}
+        <div className="shrink-0 w-2" />
       </div>
     </div>
   );
@@ -225,43 +365,41 @@ function CollectionSkeleton() {
 
 export default function DiscoveryFeed() {
   const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
+  const [activeCreator, setActiveCreator] = useState<PolecaneCreatorPlan | null>(null);
 
-  const { data: collections = [], isLoading } = useQuery({
-    queryKey: ["discovery-collections"],
+  const { data: motywy = [], isLoading: motywyLoading } = useQuery({
+    queryKey: ["discovery-motywy-warszawa"],
     queryFn: async () => {
-      // 1. Fetch collections
-      const { data: cols, error: colsErr } = await (supabase as any)
+      const { data: cols, error } = await (supabase as any)
         .from("discovery_collections")
         .select("id, title, city, description, author_name, author_avatar")
         .eq("is_public", true)
+        .eq("city", "Warszawa")
         .order("created_at", { ascending: false })
-        .limit(10);
-      if (colsErr || !cols?.length) return [];
+        .limit(12);
+      if (error || !cols?.length) return [] as DiscoveryCollection[];
 
       const ids = cols.map((c: any) => c.id);
-
-      // 2. Fetch items - without lat/lng to avoid errors if migration not yet applied
       const { data: items } = await (supabase as any)
         .from("discovery_items")
         .select("id, collection_id, order_index, place_name, short_desc, photo_url")
         .in("collection_id", ids)
         .order("order_index", { ascending: true });
 
-      // 3. Try to fetch lat/lng separately (optional - ignored if columns don't exist)
       const coordMap = new Map<string, { latitude: number; longitude: number }>();
       try {
-        const { data: coords, error: coordErr } = await (supabase as any)
+        const { data: coords } = await (supabase as any)
           .from("discovery_items")
           .select("id, latitude, longitude")
           .in("collection_id", ids)
           .not("latitude", "is", null);
-        if (!coordErr && coords) {
+        if (coords) {
           for (const c of coords) {
             if (c.latitude && c.longitude) coordMap.set(c.id, { latitude: c.latitude, longitude: c.longitude });
           }
         }
       } catch {
-        // lat/lng columns not yet available - map will be hidden
+        // optional columns
       }
 
       return cols.map((col: any): DiscoveryCollection => ({
@@ -274,28 +412,188 @@ export default function DiscoveryFeed() {
     staleTime: 5 * 60 * 1000,
   });
 
-  if (isLoading) {
-    return (
-      <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
-        <CollectionSkeleton />
-        <CollectionSkeleton />
-      </div>
-    );
-  }
+  const { data: polecane = [], isLoading: polecaneLoading } = useQuery({
+    queryKey: ["discovery-polecane"],
+    queryFn: async () => {
+      const [routesRes, creatorRes] = await Promise.all([
+        (supabase as any)
+          .from("routes")
+          .select("id, title, city, review_photos, ai_highlight, user_id, views")
+          .eq("is_shared", true)
+          .not("title", "is", null)
+          .order("views", { ascending: false, nullsFirst: false })
+          .limit(8),
+        (supabase as any)
+          .from("creator_plans")
+          .select("id, title, city, description, thumbnail_url, creator_handle, creator_avatar_url, num_days, tags")
+          .eq("is_active", true)
+          .order("created_at", { ascending: false })
+          .limit(8),
+      ]);
 
-  if (collections.length === 0) return null;
+      const routes = (routesRes.data ?? []) as any[];
+      const creatorPlans = (creatorRes.data ?? []) as any[];
+
+      // Fetch profiles for routes
+      const userIds = [...new Set(routes.map((r) => r.user_id).filter(Boolean))];
+      let profileMap = new Map<string, { username: string | null; first_name: string | null; avatar_url: string | null }>();
+      if (userIds.length > 0) {
+        const { data: profiles } = await (supabase as any)
+          .from("profiles")
+          .select("id, username, first_name, avatar_url")
+          .in("id", userIds);
+        if (profiles) {
+          for (const p of profiles) {
+            profileMap.set(p.id, { username: p.username, first_name: p.first_name, avatar_url: p.avatar_url });
+          }
+        }
+      }
+
+      const routeEntries: PolecaneRoute[] = routes.map((r) => {
+        const profile = profileMap.get(r.user_id);
+        const photo = (r.review_photos ?? []).find((url: any) => typeof url === "string" && url.trim() !== "") ?? null;
+        const authorName = profile?.first_name || profile?.username || "Użytkownik";
+        return {
+          kind: "route",
+          id: r.id,
+          title: r.title,
+          city: r.city,
+          photo,
+          ai_highlight: r.ai_highlight,
+          author_name: authorName,
+          author_avatar: profile?.avatar_url ?? null,
+        };
+      });
+
+      const creatorEntries: PolecaneCreatorPlan[] = creatorPlans.map((p) => ({
+        kind: "creator",
+        id: p.id,
+        title: p.title,
+        city: p.city,
+        description: p.description,
+        photo: p.thumbnail_url,
+        creator_handle: p.creator_handle,
+        creator_avatar_url: p.creator_avatar_url,
+        num_days: p.num_days,
+        tags: p.tags,
+      }));
+
+      // Interleave: route, creator, route, creator, ...
+      const merged: PolecaneEntry[] = [];
+      const maxLen = Math.max(routeEntries.length, creatorEntries.length);
+      for (let i = 0; i < maxLen && merged.length < 12; i++) {
+        if (i < routeEntries.length) merged.push(routeEntries[i]);
+        if (i < creatorEntries.length && merged.length < 12) merged.push(creatorEntries[i]);
+      }
+      return merged;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const bothEmpty = !motywyLoading && !polecaneLoading && motywy.length === 0 && polecane.length === 0;
+
+  const { data: fallbackCollections = [] } = useQuery({
+    queryKey: ["discovery-fallback"],
+    queryFn: async () => {
+      const { data: cols, error } = await (supabase as any)
+        .from("discovery_collections")
+        .select("id, title, city, description, author_name, author_avatar")
+        .eq("is_public", true)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error || !cols?.length) return [] as DiscoveryCollection[];
+
+      const ids = cols.map((c: any) => c.id);
+      const { data: items } = await (supabase as any)
+        .from("discovery_items")
+        .select("id, collection_id, order_index, place_name, short_desc, photo_url")
+        .in("collection_id", ids)
+        .order("order_index", { ascending: true });
+
+      const coordMap = new Map<string, { latitude: number; longitude: number }>();
+      try {
+        const { data: coords } = await (supabase as any)
+          .from("discovery_items")
+          .select("id, latitude, longitude")
+          .in("collection_id", ids)
+          .not("latitude", "is", null);
+        if (coords) {
+          for (const c of coords) {
+            if (c.latitude && c.longitude) coordMap.set(c.id, { latitude: c.latitude, longitude: c.longitude });
+          }
+        }
+      } catch {
+        // optional
+      }
+
+      return cols.map((col: any): DiscoveryCollection => ({
+        ...col,
+        items: (items ?? [])
+          .filter((i: any) => i.collection_id === col.id)
+          .map((i: any) => ({ ...i, ...coordMap.get(i.id) })),
+      }));
+    },
+    enabled: bothEmpty,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const isLoading = motywyLoading || polecaneLoading;
 
   return (
     <>
-      {/* Horizontal carousel */}
-      <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
-        {collections.map((col) => (
-          <CollectionCard key={col.id} col={col} onOpen={() => setActiveCol(col)} />
-        ))}
-        <div className="shrink-0 w-2" />
-      </div>
+      {isLoading ? (
+        <div className="space-y-5">
+          <div>
+            <div className="h-4 w-44 bg-muted rounded mb-2 mx-1 animate-pulse" />
+            <MotywySkeleton />
+          </div>
+          <div>
+            <div className="h-4 w-24 bg-muted rounded mb-2 mx-1 animate-pulse" />
+            <PolecaneSkeleton />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {motywy.length > 0 && <MotywyRow collections={motywy} onOpen={setActiveCol} />}
+          {polecane.length > 0 && <PolecaneRow entries={polecane} onCreatorOpen={setActiveCreator} />}
+          {bothEmpty && fallbackCollections.length > 0 && (
+            <div>
+              <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
+                {fallbackCollections.map((col) => {
+                  const photoItem = col.items.find((i) => i.photo_url) ?? col.items[0];
+                  return (
+                    <button
+                      key={col.id}
+                      onClick={() => setActiveCol(col)}
+                      className="shrink-0 w-[82vw] max-w-[320px] rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.97] transition-transform snap-start"
+                    >
+                      <div className="aspect-[16/10] overflow-hidden bg-muted">
+                        {photoItem?.photo_url ? (
+                          <img src={photoItem.photo_url} alt={col.title} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-amber-200 to-orange-300" />
+                        )}
+                      </div>
+                      <div className="px-3.5 py-2.5 space-y-1">
+                        <p className="font-bold text-sm leading-snug line-clamp-2">{col.title}</p>
+                        {col.city && (
+                          <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                            <MapPin className="h-3 w-3" />
+                            {col.city}
+                          </div>
+                        )}
+                        <AuthorChip name={col.author_name} avatar={col.author_avatar} />
+                      </div>
+                    </button>
+                  );
+                })}
+                <div className="shrink-0 w-2" />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Detail sheet - hide SheetContent's built-in X since we rely on the drag handle / overlay to close */}
       <Sheet open={!!activeCol} onOpenChange={(open) => { if (!open) setActiveCol(null); }}>
         <SheetContent
           side="bottom"
@@ -303,6 +601,16 @@ export default function DiscoveryFeed() {
           style={{ maxHeight: "92vh", height: "92vh" }}
         >
           {activeCol && <CollectionDetail col={activeCol} />}
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={!!activeCreator} onOpenChange={(open) => { if (!open) setActiveCreator(null); }}>
+        <SheetContent
+          side="bottom"
+          className="rounded-t-2xl p-0 [&>button:last-child]:hidden"
+          style={{ maxHeight: "92vh", height: "92vh" }}
+        >
+          {activeCreator && <CreatorPlanDetail plan={activeCreator} />}
         </SheetContent>
       </Sheet>
     </>

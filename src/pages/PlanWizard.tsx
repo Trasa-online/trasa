@@ -44,15 +44,22 @@ const PlanWizard = () => {
 
   const handleSelectCategory = (category: string) => {
     setCurrentCategory(category);
-    setVisitedCategories(prev => prev.includes(category) ? prev : [...prev, category]);
     posthog.capture("plan_category_selected", { category, city, liked_so_far: allLikedNames.length });
     setStep(4);
   };
 
   // Called by PlaceSwiper when the 20-place batch is exhausted
   const handleBatchComplete = (newLikedNames: string[]) => {
+    const addedSomething = newLikedNames.length > allLikedNames.length;
     setAllLikedNames(newLikedNames);
+    if (addedSomething && currentCategory) {
+      setVisitedCategories(prev => prev.includes(currentCategory) ? prev : [...prev, currentCategory]);
+    }
     setStep(3);
+  };
+
+  const handleUnmarkCategory = (categoryId: string) => {
+    setVisitedCategories(prev => prev.filter(c => c !== categoryId));
   };
 
   // "Show all" = skip category filter, go straight to full swiper
@@ -161,6 +168,7 @@ const PlanWizard = () => {
             onShowAll={handleShowAll}
             visitedCategories={visitedCategories}
             likedCount={allLikedNames.length}
+            onUnmarkCategory={handleUnmarkCategory}
           />
         )}
         {step === 4 && date && (

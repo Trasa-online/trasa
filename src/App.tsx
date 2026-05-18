@@ -2,12 +2,12 @@ import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { trackPageView } from "@/lib/analytics";
 import { useAuth, AuthProvider } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
-const MAINTENANCE_MODE = true; // LOCAL ONLY — nie commitować!
+const MAINTENANCE_MODE = false;
 
 function MaintenanceScreen({ onUnlock }: { onUnlock: () => void }) {
   const [pwd, setPwd] = useState("");
@@ -28,12 +28,12 @@ function MaintenanceScreen({ onUnlock }: { onUnlock: () => void }) {
           onChange={e => { setPwd(e.target.value); setErr(false); }}
           onKeyDown={e => e.key === "Enter" && submit()}
           placeholder="Hasło dostępu"
-          style={{ width: "100%", padding: "12px 14px", borderRadius: 14, border: "1px solid #e2e8f0", background: "#fff", fontSize: 14, outline: "none", textAlign: "center" }}
+          style={{ width: "100%", padding: "12px 14px", borderRadius: 14, border: "1px solid #e2e8f0", background: "#fff", fontSize: 16, outline: "none", textAlign: "center" }}
         />
         {err && <p style={{ fontSize: 12, color: "#ef4444", textAlign: "center", margin: 0 }}>Nieprawidłowe hasło</p>}
         <button
           onClick={submit}
-          style={{ width: "100%", padding: "12px 14px", borderRadius: 14, border: "none", background: "linear-gradient(90deg,#F4A259,#F9662B)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+          style={{ width: "100%", padding: "12px 14px", borderRadius: 14, border: "none", background: "linear-gradient(90deg,#F4A259,#F9662B)", color: "#fff", fontWeight: 700, fontSize: 16, cursor: "pointer" }}
         >
           Wejdź
         </button>
@@ -77,8 +77,12 @@ function RouteTracker() {
 }
 
 // ── Splash screen shown on app boot ─────────────────────────────────────────
+// On native (iOS/Android), the Capacitor SplashScreen plugin renders the splash
+// OUTSIDE the WebView — we only need to call SplashScreen.hide() when ready.
+// This React component is the web/PWA fallback (no native splash there).
 
 function SplashScreen({ done }: { done: boolean }) {
+  if (isNative) return null;
   const [progress, setProgress] = useState(5);
   const [hidden, setHidden] = useState(false);
 
@@ -165,6 +169,19 @@ function SplashController() {
     })();
   }, [loading, user, visible]);
 
+  // Hide native Capacitor splash once we're ready (boot logic done) or on a skipSplash route.
+  // On web this is a no-op (lazy import never resolves to a meaningful action — see useShare pattern).
+  const readyToHideNative = isNative && !loading && (skipSplash || done);
+  useEffect(() => {
+    if (!readyToHideNative) return;
+    let cancelled = false;
+    import("@capacitor/splash-screen").then(({ SplashScreen: NativeSplash }) => {
+      if (cancelled) return;
+      NativeSplash.hide({ fadeOutDuration: 300 }).catch(() => {});
+    });
+    return () => { cancelled = true; };
+  }, [readyToHideNative]);
+
   if (!visible) return null;
   return <SplashScreen done={done} />;
 }
@@ -209,6 +226,8 @@ function BusinessGuard() {
   return null;
 }
 import CookieBanner from "./components/CookieBanner";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { isNative } from "@/lib/platform";
 // Lazy-loaded public pages - one chunk each, fetched on demand
 const WaitlistPage = lazy(() => import("./pages/WaitlistPage"));
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -251,7 +270,8 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Sonner />
-      <BrowserRouter>
+      <HashRouter>
+        <ErrorBoundary>
         <AuthProvider>
         <RouteTracker />
         <SplashController />
@@ -297,7 +317,8 @@ const App = () => (
         </Suspense>
         </MaintenanceGate>
         </AuthProvider>
-      </BrowserRouter>
+        </ErrorBoundary>
+      </HashRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );

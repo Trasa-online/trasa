@@ -1,7 +1,6 @@
 # GLOSSARY — twoja ściąga pojęć
 
-> Słownik dla product designerki pracującej z kodem + AI + terminalem.
-> Po polsku, bez bullshitu, z konkretnymi przykładami z naszego projektu.
+> Słownik dla product designerki pracującej z kodem + AI + terminalem
 
 ---
 

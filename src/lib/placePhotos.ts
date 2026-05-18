@@ -1,4 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
+import { isNative } from "@/lib/platform";
+
+// On native (Capacitor), relative URLs resolve to capacitor://localhost which
+// doesn't have our Vercel Edge Functions. Use absolute production URL.
+const API_BASE = isNative ? "https://trasa.travel" : "";
 
 // =====================================================================
 // Legacy proxy URL (fallback dla miejsc bez scache'owanego zdjęcia)
@@ -16,7 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 export function getPhotoUrl(photoReference: string, maxWidth = 800, placeId?: string): string | null {
   if (!photoReference) return null;
   const ref = encodeURIComponent(photoReference);
-  const base = `/api/place-photo?ref=${ref}&w=${maxWidth}`;
+  const base = `${API_BASE}/api/place-photo?ref=${ref}&w=${maxWidth}`;
   if (photoReference.startsWith("AU_") && placeId) {
     return `${base}&place_id=${encodeURIComponent(placeId)}`;
   }

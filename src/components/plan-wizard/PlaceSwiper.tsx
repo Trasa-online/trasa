@@ -9,6 +9,7 @@ import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
+import { useHaptics } from "@/hooks/useHaptics";
 import { getSubcategoryIds, getMainCategoryFor } from "@/lib/categories";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -741,6 +742,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
 const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace }: PlaceSwiperProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const haptics = useHaptics();
 
   const [allPlaces, setAllPlaces] = useState<MockPlace[]>([]);
   const [queue, setQueue] = useState<MockPlace[]>([]);
@@ -763,16 +765,23 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
 
   useEffect(() => {
     setLoading(true);
-    const fetchPlaces = async () => {
+    // Safety net: if the fetch hangs for any reason, drop the loader after 12s
+    const safetyTimeout = setTimeout(() => {
+      console.warn("[PlaceSwiper] fetch safety timeout fired, forcing loading=false", { city, categoryFilter });
+      setLoading(false);
+    }, 12000);
 
+    const fetchPlaces = async () => {
+      try {
 
       // ── Group round mode: load exactly the round's place IDs in order ──
       if (roundPlaceIds?.length) {
-        const { data } = await (supabase as any)
+        const { data, error } = await (supabase as any)
           .from("places")
           .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, gallery_urls, phone, website)")
           .in("id", roundPlaceIds);
 
+        if (error) console.error("[PlaceSwiper] round fetch error:", error);
         if (!data?.length) { setLoading(false); return; }
 
         // Preserve server-defined order
@@ -789,12 +798,14 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       }
 
       // ── Normal mode ──────────────────────────────────────────────────────
-      const { data } = await (supabase as any)
+      const { data, error: placesError } = await (supabase as any)
         .from("places")
         .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, gallery_urls, phone, website)")
         .ilike("city", city)
         .eq("is_active", true);
 
+      if (placesError) console.error("[PlaceSwiper] places fetch error:", placesError);
+      console.log("[PlaceSwiper] fetched places:", { count: data?.length ?? 0, city, categoryFilter });
       if (!data?.length) { setLoading(false); return; }
 
       // Fetch already-rated place IDs for this user+city
@@ -830,6 +841,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       const hasReturnState = initialLikedPlaceNames.length > 0 || initialSkippedPlaceNames.length > 0;
       const remaining = enriched.filter((p) => {
         if (likedSet.has(p.place_name.toLowerCase()) || skippedSet.has(p.place_name.toLowerCase())) return false;
+        // For category-filtered batch mode (user explicitly picked a category) — show all matching
+        // places regardless of past ratings. Otherwise, hide already-rated on the first batch.
+        if (categoryFilter) return true;
         if (!hasReturnState && ratedPlaceIds.has(p.id)) return false;
         return true;
       });
@@ -851,14 +865,19 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           )
           .sort(() => Math.random() - 0.5)
           .slice(0, 20);
+        console.log("[PlaceSwiper] batch pool:", { categoryFilter, isStandard, subIds, poolSize: pool.length, remainingTotal: remaining.length });
         setQueue(pool);
       } else {
         setQueue([...remaining].sort(() => Math.random() - 0.5));
       }
       setLoading(false);
+      } catch (err) {
+        console.error("[PlaceSwiper] fetchPlaces threw:", err);
+        setLoading(false);
+      }
     };
-    fetchPlaces();
-  }, [city, user, roundPlaceIds]);
+    fetchPlaces().finally(() => clearTimeout(safetyTimeout));
+  }, [city, user, roundPlaceIds, categoryFilter]);
 
   // Reorder queue when a category group has been liked too many times consecutively
   const rebalanceQueue = (newRecentGroups: (Set<string> | null)[]) => {
@@ -958,6 +977,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const handleLike = (overridePhotoUrl?: string, placeOverride?: MockPlace) => {
     const top = placeOverride ?? displayQueue[0];
     if (!top) return;
+    haptics.medium();
     setHistory(prev => [...prev, { place: top, reaction: "liked" }]);
     setLikedPlaces(prev => [...prev, top]);
     setAllPlaces(prev => prev.filter(p => p.id !== top.id));
@@ -974,6 +994,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const handleSkip = () => {
     const top = displayQueue[0];
     if (!top) return;
+    haptics.light();
     setHistory(prev => [...prev, { place: top, reaction: "skipped" }]);
     setSkippedPlaces(prev => [...prev, top]);
     setAllPlaces(prev => prev.filter(p => p.id !== top.id));
