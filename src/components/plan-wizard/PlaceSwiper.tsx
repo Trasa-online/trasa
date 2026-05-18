@@ -1157,16 +1157,22 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   if (queue.length === 0) {
     // Batch mode: category exhausted → go back to category picker
     if (onBatchComplete) {
+      // Distinguish: empty from start (no places in category) vs exhausted after swiping
+      const nothingToShow = history.length === 0 && likedPlaces.length === 0;
       return (
         <>
           <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
-            <div className="text-5xl">✅</div>
+            <div className="text-5xl">{nothingToShow ? "🤔" : "✅"}</div>
             <div>
-              <p className="font-bold text-lg">Kategoria wyczerpana!</p>
+              <p className="font-bold text-lg">
+                {nothingToShow ? "Brak miejsc w tej kategorii" : "Kategoria wyczerpana!"}
+              </p>
               <p className="text-muted-foreground text-sm mt-1">
-                {likedPlaces.length > 0
+                {nothingToShow
+                  ? `Nie mamy jeszcze miejsc z tej kategorii w ${city}. Spróbuj innej kategorii.`
+                  : likedPlaces.length > 0
                   ? `Wybrałeś ${likedPlaces.length} miejsc. Wybierz kolejną kategorię lub zakończ.`
-                  : "Nie wybrałeś żadnego miejsca - spróbuj innej kategorii."}
+                  : "Nie wybrałeś żadnego miejsca z tej kategorii. Spróbuj innej."}
               </p>
             </div>
             <div className="w-full space-y-3">

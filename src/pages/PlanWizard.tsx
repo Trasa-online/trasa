@@ -75,7 +75,7 @@ const PlanWizard = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background max-w-lg mx-auto">
+    <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
         <button
