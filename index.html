@@ -72,6 +72,18 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // HashRouter compatibility: aplikacja używa HashRouter (kompatybilność z Capacitor iOS).
+      // Jeśli ktoś wpisze trasa.travel/waitlist (bez #), przepisujemy na trasa.travel/#/waitlist
+      // żeby HashRouter zobaczył właściwą ścieżkę zamiast lądować na "/".
+      (function () {
+        var p = window.location.pathname;
+        if (p !== "/" && p !== "/index.html" && !window.location.hash) {
+          var newUrl = window.location.origin + "/#" + p + window.location.search;
+          window.location.replace(newUrl);
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
