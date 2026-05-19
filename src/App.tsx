@@ -186,11 +186,16 @@ function SplashController() {
   return <SplashScreen done={done} />;
 }
 
-// Blocks unauthenticated access to app routes - redirects to landing page
-function RequireAuth({ children }: { children: React.ReactNode }) {
+// Blocks unauthenticated access to app routes - redirects to /auth with optional hint
+function RequireAuth({ children, hint }: { children: React.ReactNode; hint?: "journal" | "settings" }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <div className="h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>;
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) {
+    const params = new URLSearchParams({ return: location.pathname });
+    if (hint) params.set("hint", hint);
+    return <Navigate to={`/auth?${params.toString()}`} replace />;
+  }
   return <>{children}</>;
 }
 
@@ -285,29 +290,29 @@ const App = () => (
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/" element={<RootPage />} />
-          <Route path="/home" element={<RequireAuth><AppLayout><Home /></AppLayout></RequireAuth>} />
-          <Route path="/create" element={<RequireAuth><CreateRoute /></RequireAuth>} />
+          <Route path="/home" element={<AppLayout><Home /></AppLayout>} />
+          <Route path="/create" element={<CreateRoute />} />
           <Route path="/settings" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
-          <Route path="/day-review" element={<RequireAuth><DayReview /></RequireAuth>} />
+          <Route path="/day-review" element={<DayReview />} />
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/set-password-biznes" element={<SetPassword forceBusiness />} />
           <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
-          <Route path="/moje-trasy" element={<RequireAuth><AppLayout><MyTrips /></AppLayout></RequireAuth>} />
-          <Route path="/dziennik" element={<RequireAuth><AppLayout><Journal /></AppLayout></RequireAuth>} />
-          <Route path="/moj-profil" element={<RequireAuth><AppLayout><TravelerProfile /></AppLayout></RequireAuth>} />
-          <Route path="/edit-plan" element={<RequireAuth><EditPlan /></RequireAuth>} />
-          <Route path="/review-summary" element={<RequireAuth><ReviewSummary /></RequireAuth>} />
-          <Route path="/plan" element={<RequireAuth><PlanWizard /></RequireAuth>} />
+          <Route path="/moje-trasy" element={<AppLayout><MyTrips /></AppLayout>} />
+          <Route path="/dziennik" element={<RequireAuth hint="journal"><AppLayout><Journal /></AppLayout></RequireAuth>} />
+          <Route path="/moj-profil" element={<AppLayout><TravelerProfile /></AppLayout>} />
+          <Route path="/edit-plan" element={<EditPlan />} />
+          <Route path="/review-summary" element={<ReviewSummary />} />
+          <Route path="/plan" element={<PlanWizard />} />
           <Route path="/demo" element={<DemoSession />} />
-          <Route path="/sesja/nowa" element={<RequireAuth><CreateGroupSession /></RequireAuth>} />
-          <Route path="/sesja/:joinCode" element={<RequireAuth><GroupSession /></RequireAuth>} />
-          <Route path="/search" element={<RequireAuth><UserSearch /></RequireAuth>} />
+          <Route path="/sesja/nowa" element={<CreateGroupSession />} />
+          <Route path="/sesja/:joinCode" element={<GroupSession />} />
+          <Route path="/search" element={<UserSearch />} />
           <Route path="/admin/routes" element={<RequireAuth><AdminRoutes /></RequireAuth>} />
           <Route path="/route/:id" element={<SharedRoute />} />
           <Route path="/join/:code" element={<JoinPage />} />
           <Route path="/lokal/:placeId" element={<ClaimPlace />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
-          <Route path="/quick-plan-review" element={<RequireAuth><QuickPlanReview /></RequireAuth>} />
+          <Route path="/quick-plan-review" element={<QuickPlanReview />} />
           <Route path="/biznes/start" element={<BusinessStart />} />
           <Route path="/biznes/:placeId" element={<BusinessDashboard />} />
           <Route path="/dla-firm" element={<ForBusinessPage />} />

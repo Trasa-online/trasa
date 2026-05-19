@@ -1,5 +1,7 @@
-import { ReactNode, useRef, useState } from "react";
+import { ReactNode, useRef, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { X } from "lucide-react";
 import TopBar from "./TopBar";
 import BottomNav from "./BottomNav";
 import OrbOverlay from "./OrbOverlay";
@@ -10,6 +12,40 @@ import { useTranslation } from "react-i18next";
 interface AppLayoutProps {
   children: ReactNode;
 }
+
+const GUEST_BANNER_DISMISS_KEY = "trasa_guest_banner_dismissed";
+
+const GuestBanner = () => {
+  const navigate = useNavigate();
+  const [dismissed, setDismissed] = useState(() => {
+    try { return sessionStorage.getItem(GUEST_BANNER_DISMISS_KEY) === "1"; } catch { return false; }
+  });
+  if (dismissed) return null;
+  return (
+    <div className="bg-orange-50 border-b border-orange-200 px-4 py-2.5 flex items-center gap-3">
+      <p className="flex-1 text-xs text-foreground leading-snug">
+        {`Grasz jako gość. `}
+        <button
+          onClick={() => navigate("/auth?tab=register")}
+          className="font-semibold text-orange-700 underline underline-offset-2 active:opacity-70"
+        >
+          Załóż konto
+        </button>
+        {` żeby zachować trasy i mieć dziennik.`}
+      </p>
+      <button
+        onClick={() => {
+          try { sessionStorage.setItem(GUEST_BANNER_DISMISS_KEY, "1"); } catch { /* sessionStorage unavailable */ }
+          setDismissed(true);
+        }}
+        className="shrink-0 h-7 w-7 -mr-1 flex items-center justify-center text-orange-700/60 active:text-orange-700"
+        aria-label="Ukryj baner gościa"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+};
 
 const ELEVEN_VOICE_ID = "eXpIbVcVbLo8ZJQDlDnl";
 
@@ -66,6 +102,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <TopBar onOrbClick={handleOrbClick} />
+      {!user && <GuestBanner />}
       <main className="flex-1 flex flex-col max-w-lg mx-auto w-full">
         {children}
       </main>
