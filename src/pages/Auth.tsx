@@ -220,7 +220,9 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/#/home`,
+          // PKCE flow: Supabase adds `?code=` to query before the hash.
+          // RootPage detects the signed-in user and redirects to /home (or business dashboard).
+          redirectTo: `${window.location.origin}/`,
         },
       });
       if (error) throw error;
@@ -269,7 +271,7 @@ const Auth = () => {
             username: username.trim(),
             referral_code: referralCode,
           },
-          emailRedirectTo: `${window.location.origin}/#/home`,
+          emailRedirectTo: `${window.location.origin}/`,
         },
       });
       if (error) {
