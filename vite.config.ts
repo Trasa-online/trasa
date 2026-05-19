@@ -95,6 +95,7 @@ export default defineConfig(({ mode }) => ({
       },
       injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        globIgnores: ["**/ios/**", "**/android/**", "**/node_modules/**"],
       },
     }),
   ].filter(Boolean),
