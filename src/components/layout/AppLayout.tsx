@@ -1,11 +1,11 @@
-import { ReactNode, useRef, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { ReactNode, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import TopBar from "./TopBar";
 import BottomNav from "./BottomNav";
 import OrbOverlay from "./OrbOverlay";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 
@@ -16,7 +16,7 @@ interface AppLayoutProps {
 const GUEST_BANNER_DISMISS_KEY = "trasa_guest_banner_dismissed";
 
 const GuestBanner = () => {
-  const navigate = useNavigate();
+  const { open } = useAuthDrawer();
   const [dismissed, setDismissed] = useState(() => {
     try { return sessionStorage.getItem(GUEST_BANNER_DISMISS_KEY) === "1"; } catch { return false; }
   });
@@ -26,7 +26,7 @@ const GuestBanner = () => {
       <p className="flex-1 text-xs text-foreground leading-snug">
         {`Grasz jako gość. `}
         <button
-          onClick={() => navigate("/auth?tab=register")}
+          onClick={() => open({ mode: "register" })}
           className="font-semibold text-orange-700 underline underline-offset-2 active:opacity-70"
         >
           Załóż konto
@@ -46,8 +46,6 @@ const GuestBanner = () => {
     </div>
   );
 };
-
-const ELEVEN_VOICE_ID = "eXpIbVcVbLo8ZJQDlDnl";
 
 const AppLayout = ({ children }: AppLayoutProps) => {
   const { user } = useAuth();

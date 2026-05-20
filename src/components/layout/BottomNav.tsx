@@ -1,52 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
-import { BookOpen, Home, Plus, X, MapPin, Users, ArrowRight, Link2 } from "lucide-react";
+import { BookOpen, Compass, Home, Plus, X, MapPin, Users, Link2, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-
-const GuestModal = ({ onClose }: { onClose: () => void }) => {
-  const navigate = useNavigate();
-  return (
-    <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-8 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="text-center space-y-1.5">
-          <p className="text-3xl">📒</p>
-          <h2 className="text-xl font-black">Twój dziennik czeka</h2>
-          <p className="text-sm text-muted-foreground">Zapisuj wspomnienia, zdjęcia i oceny miejsc z każdej podróży.</p>
-        </div>
-        <div className="flex flex-col gap-2.5">
-          <button
-            onClick={() => navigate("/auth")}
-            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
-          >
-            Zaloguj się
-            <ArrowRight className="h-4 w-4" />
-          </button>
-          <button
-            onClick={onClose}
-            className="w-full py-3 rounded-full border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
-          >
-            Wróć
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 
 const MAINTENANCE_BYPASS = new Set(["nat.maz98@gmail.com", "tomalab97@gmail.com"]);
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { open: openAuthDrawer } = useAuthDrawer();
   const [showMenu, setShowMenu] = useState(false);
-  const [showGuestModal, setShowGuestModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const isGuest = !user;
@@ -58,6 +23,12 @@ const BottomNav = () => {
     setShowJoinModal(false);
     setJoinCode("");
     navigate(`/sesja/${code}`);
+  };
+
+  const handleGroupPlan = () => {
+    setShowMenu(false);
+    if (isGuest) { openAuthDrawer({ mode: "register", hint: "join_session" }); return; }
+    navigate("/sesja/nowa");
   };
 
   return (
@@ -78,10 +49,7 @@ const BottomNav = () => {
             Dołącz do sesji
           </button>
           <button
-            onClick={() => {
-              setShowMenu(false);
-              navigate("/sesja/nowa");
-            }}
+            onClick={handleGroupPlan}
             className="flex items-center gap-2.5 px-5 py-3 rounded-full bg-foreground text-background font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
           >
             <Users className="h-4 w-4" />
@@ -141,7 +109,7 @@ const BottomNav = () => {
       )}
 
       <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/40 z-50 pb-safe">
-        <div className="grid grid-cols-3 h-12 max-w-lg mx-auto">
+        <div className="grid grid-cols-5 h-12 max-w-lg mx-auto">
 
           {/* Główna */}
           <NavLink
@@ -154,6 +122,21 @@ const BottomNav = () => {
               <>
                 <Home className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
                 <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Główna</span>
+              </>
+            )}
+          </NavLink>
+
+          {/* Eksploruj */}
+          <NavLink
+            to="/eksploruj"
+            end={false}
+            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+            activeClassName="text-orange-600"
+          >
+            {({ isActive }) => (
+              <>
+                <Compass className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
+                <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Eksploruj</span>
               </>
             )}
           </NavLink>
@@ -181,35 +164,37 @@ const BottomNav = () => {
           )}
 
           {/* Dziennik */}
-          {isGuest ? (
-            <button
-              onClick={() => setShowGuestModal(true)}
-              className="flex flex-col items-center justify-center gap-1 text-muted-foreground/40 transition-colors"
-            >
-              <BookOpen className="h-5 w-5 stroke-2" />
-              <span className="text-[10px] font-medium">Dziennik</span>
-            </button>
-          ) : (
-            <NavLink
-              to="/dziennik"
-              end={false}
-              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeClassName="text-orange-600"
-            >
-              {({ isActive }) => (
-                <>
-                  <BookOpen className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
-                  <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Dziennik</span>
-                </>
-              )}
-            </NavLink>
-          )}
+          <NavLink
+            to="/dziennik"
+            end={false}
+            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+            activeClassName="text-orange-600"
+          >
+            {({ isActive }) => (
+              <>
+                <BookOpen className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
+                <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Dziennik</span>
+              </>
+            )}
+          </NavLink>
+
+          {/* Profil */}
+          <NavLink
+            to="/moj-profil"
+            end={false}
+            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+            activeClassName="text-orange-600"
+          >
+            {({ isActive }) => (
+              <>
+                <User className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
+                <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Profil</span>
+              </>
+            )}
+          </NavLink>
 
         </div>
       </nav>
-
-      {/* Guest modal */}
-      {showGuestModal && <GuestModal onClose={() => setShowGuestModal(false)} />}
     </>
   );
 };

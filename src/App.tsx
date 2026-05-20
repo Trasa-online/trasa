@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { trackPageView } from "@/lib/analytics";
 import { useAuth, AuthProvider } from "@/hooks/useAuth";
+import { AuthDrawerProvider } from "@/hooks/useAuthDrawer";
+import AuthDrawer from "@/components/auth/AuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 
 const MAINTENANCE_MODE = false;
@@ -62,10 +64,9 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
 }
 
 function RootPage() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
   if (loading) return null;
-  if (user) return <Navigate to="/home" replace />;
-  return <Navigate to="/auth" replace />;
+  return <Navigate to="/home" replace />;
 }
 
 function RouteTracker() {
@@ -244,6 +245,8 @@ import NotFound from "./pages/NotFound";
 // Lazy loaded - only fetched when the user navigates to that route
 const AppLayout        = lazy(() => import("./components/layout/AppLayout"));
 const Home             = lazy(() => import("./pages/Home"));
+const HomeSwipe        = lazy(() => import("./pages/HomeSwipe"));
+const Explore          = lazy(() => import("./pages/Explore"));
 const CreateRoute      = lazy(() => import("./pages/CreateRoute"));
 const Settings         = lazy(() => import("./pages/Settings"));
 const DayReview        = lazy(() => import("./pages/DayReview"));
@@ -271,6 +274,15 @@ const BusinessLanding   = lazy(() => import("./pages/BusinessLanding"));
 
 const queryClient = new QueryClient();
 
+function AuthDrawerProviderWrapper({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  return (
+    <AuthDrawerProvider user={user} loading={loading}>
+      {children}
+    </AuthDrawerProvider>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -278,10 +290,12 @@ const App = () => (
       <HashRouter>
         <ErrorBoundary>
         <AuthProvider>
+        <AuthDrawerProviderWrapper>
         <RouteTracker />
         <SplashController />
         <BusinessGuard />
         <CookieBanner />
+        <AuthDrawer />
         <MaintenanceGate>
         <Suspense fallback={<div className="h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>}>
         <Routes>
@@ -290,7 +304,9 @@ const App = () => (
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/" element={<RootPage />} />
-          <Route path="/home" element={<AppLayout><Home /></AppLayout>} />
+          <Route path="/home" element={<AppLayout><HomeSwipe /></AppLayout>} />
+          <Route path="/home-legacy" element={<AppLayout><Home /></AppLayout>} />
+          <Route path="/eksploruj" element={<AppLayout><Explore /></AppLayout>} />
           <Route path="/create" element={<CreateRoute />} />
           <Route path="/settings" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
           <Route path="/day-review" element={<DayReview />} />
@@ -298,7 +314,7 @@ const App = () => (
           <Route path="/set-password-biznes" element={<SetPassword forceBusiness />} />
           <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
           <Route path="/moje-trasy" element={<AppLayout><MyTrips /></AppLayout>} />
-          <Route path="/dziennik" element={<RequireAuth hint="journal"><AppLayout><Journal /></AppLayout></RequireAuth>} />
+          <Route path="/dziennik" element={<AppLayout><Journal /></AppLayout>} />
           <Route path="/moj-profil" element={<AppLayout><TravelerProfile /></AppLayout>} />
           <Route path="/edit-plan" element={<EditPlan />} />
           <Route path="/review-summary" element={<ReviewSummary />} />
@@ -321,6 +337,7 @@ const App = () => (
         </Routes>
         </Suspense>
         </MaintenanceGate>
+        </AuthDrawerProviderWrapper>
         </AuthProvider>
         </ErrorBoundary>
       </HashRouter>
