@@ -160,7 +160,6 @@ const BottomNav = () => {
             </div>
             <input
               type="text"
-              autoFocus
               value={joinCode}
               onChange={e => setJoinCode(e.target.value.toUpperCase())}
               onKeyDown={e => { if (e.key === "Enter") handleJoinSubmit(); }}

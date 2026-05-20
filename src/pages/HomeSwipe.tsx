@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { MapPin, ChevronDown, Check, Lock } from "lucide-react";
+import { MapPin, ChevronDown, Check, Lock, X } from "lucide-react";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 import { MAIN_CATEGORIES, getSubcategoryLabel } from "@/lib/categories";
 import { cn } from "@/lib/utils";
@@ -96,9 +96,17 @@ const HomeSwipe = () => {
 
       {/* Filter drawer (city + categories multi-select) */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl p-0" style={{ maxHeight: "85vh" }}>
+        <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden" style={{ maxHeight: "85vh" }}>
+          {/* Close button - top right (shadcn default X jest ukryty wyzej, robimy wlasny zeby pasowal do stylu) */}
+          <button
+            onClick={() => setDrawerOpen(false)}
+            className="absolute top-3 right-3 z-10 h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70 transition-colors"
+            aria-label="Zamknij"
+          >
+            <X className="h-4 w-4 text-foreground" />
+          </button>
           <div className="overflow-y-auto px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]">
-            <div className="flex items-center justify-between gap-3 mb-5">
+            <div className="flex items-center justify-between gap-3 mb-5 pr-12">
               <div>
                 <p className="text-lg font-black">Co przeglądasz</p>
                 <p className="text-xs text-muted-foreground mt-0.5">Wybierz miasto i&nbsp;kategorie miejsc.</p>

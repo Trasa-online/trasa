@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Copy, Check, ArrowRight, Users, Trash2, LogOut, Search, UserPlus, CalendarDays, Bell, Share2, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { usePostHog } from "@posthog/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -30,6 +31,7 @@ const CreateGroupSession = () => {
   const location = useLocation();
   const fromJournal = (location.state as { from?: string } | null)?.from === "journal";
   const { user } = useAuth();
+  const { open: openAuthDrawer } = useAuthDrawer();
   const posthog = usePostHog();
   const queryClient = useQueryClient();
   const [sessionName, setSessionName] = useState("");
@@ -148,7 +150,9 @@ const CreateGroupSession = () => {
 
   const handleCreate = async () => {
     if (loading) return; // Prevent double-submit even if button disabled state hasn't flushed
-    if (!user) { navigate("/auth"); return; }
+    // Tworzenie sesji wymaga konta (created_by NOT NULL w group_sessions, RLS na members).
+    // Goscia kierujemy do AuthDrawera (w aplikacji), nie do pelnoekranowej strony /auth.
+    if (!user) { openAuthDrawer({ mode: "register", hint: "join_session" }); return; }
     if (!selectedCity) { toast.error("Wybierz miasto"); return; }
     setLoading(true);
     try {
@@ -189,7 +193,7 @@ const CreateGroupSession = () => {
   };
 
   const handleJoinByCode = async () => {
-    if (!user) { navigate("/auth"); return; }
+    if (!user) { openAuthDrawer({ mode: "register", hint: "join_session" }); return; }
     const code = joinCode.trim().toUpperCase();
     if (code.length < 4) { toast.error("Wpisz kod sesji"); return; }
     setJoining(true);
