@@ -1319,8 +1319,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         />
       )}
 
-      {/* Progress */}
-      <div className="flex items-center justify-between px-5 pt-1 pb-3 shrink-0">
+      {/* Progress. Hidden in exploreMode (HomeSwipe) - miasto juz jest w chip filter,
+          a wybranych count nie ma sensu bez bottom CTA. */}
+      <div className={cn("flex items-center justify-between px-5 pt-1 pb-3 shrink-0", exploreMode && "hidden")}>
         <span className="text-xs text-muted-foreground">
           {roundPlaceIds?.length
             ? `Miejsce ${roundPlaceIds.length - queue.length}/${roundPlaceIds.length}`
@@ -1400,20 +1401,14 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       </div>
 
 
-      {/* Proceed CTA */}
-      {!groupSessionId && (likedPlaces.length + superLikedPlaces.length > 0) && !showAddPlace && (
+      {/* Proceed CTA. Ukryty calkowicie w exploreMode (HomeSwipe = wolna eksploracja).
+          Polubione miejsca laduja w exploreLikes localStorage; uzytkownik moze stworzyc
+          trase rece przez + -> Zaplanuj solo (dialog "Wykorzystac polubione z dzis?"). */}
+      {!exploreMode && !groupSessionId && (likedPlaces.length + superLikedPlaces.length > 0) && !showAddPlace && (
         <div className="px-4 pb-3 shrink-0 flex gap-2">
-          {exploreMode && (
-            <button
-              onClick={() => navigate("/home")}
-              className="flex-1 py-3 rounded-full border border-border/60 bg-card text-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-            >
-              Zakończ
-            </button>
-          )}
           <button
             onClick={handleProceed}
-            className="flex-[2] py-3 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+            className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
           >
             Zaplanuj trasę · {likedPlaces.length + superLikedPlaces.length} {(likedPlaces.length + superLikedPlaces.length) === 1 ? "miejsce" : "miejsc"}
             <ArrowRight className="h-4 w-4" />

@@ -1,11 +1,10 @@
 import { ReactNode, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
 import TopBar from "./TopBar";
 import BottomNav from "./BottomNav";
 import OrbOverlay from "./OrbOverlay";
+import GuestWelcomeSheet from "@/components/auth/GuestWelcomeSheet";
 import { useAuth } from "@/hooks/useAuth";
-import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 
@@ -13,39 +12,6 @@ interface AppLayoutProps {
   children: ReactNode;
   hideTopBar?: boolean;
 }
-
-const GUEST_BANNER_DISMISS_KEY = "trasa_guest_banner_dismissed";
-
-const GuestBanner = () => {
-  const { open } = useAuthDrawer();
-  const [dismissed, setDismissed] = useState(() => {
-    try { return sessionStorage.getItem(GUEST_BANNER_DISMISS_KEY) === "1"; } catch { return false; }
-  });
-  if (dismissed) return null;
-  return (
-    <div className="bg-orange-50 border-b border-orange-200 px-4 py-2 flex items-center gap-2.5">
-      <p className="flex-1 text-xs text-foreground leading-snug">
-        Grasz jako gość. Załóż konto, żeby zapisywać trasy{` `}i&nbsp;mieć dziennik.
-      </p>
-      <button
-        onClick={() => open({ mode: "register" })}
-        className="shrink-0 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-bold active:scale-95 transition-transform shadow-sm shadow-orange-500/20"
-      >
-        Załóż konto
-      </button>
-      <button
-        onClick={() => {
-          try { sessionStorage.setItem(GUEST_BANNER_DISMISS_KEY, "1"); } catch { /* sessionStorage unavailable */ }
-          setDismissed(true);
-        }}
-        className="shrink-0 h-6 w-6 -mr-1 flex items-center justify-center text-orange-700/50 active:text-orange-700"
-        aria-label="Ukryj baner gościa"
-      >
-        <X className="h-3.5 w-3.5" />
-      </button>
-    </div>
-  );
-};
 
 const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
   const { user } = useAuth();
@@ -100,11 +66,11 @@ const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {!hideTopBar && <TopBar onOrbClick={handleOrbClick} />}
-      {!user && <GuestBanner />}
       <main className="flex-1 flex flex-col max-w-lg mx-auto w-full">
         {children}
       </main>
       <BottomNav />
+      <GuestWelcomeSheet />
       {showOrbOverlay && (
         <OrbOverlay
           isSpeaking={isSpeaking}
