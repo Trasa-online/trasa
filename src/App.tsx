@@ -187,12 +187,14 @@ function SplashController() {
   return <SplashScreen done={done} />;
 }
 
-// Blocks unauthenticated access to app routes - redirects to /auth with optional hint
+// Blocks unauthenticated access to app routes - redirects to /auth with optional hint.
+// Anonymous Auth users counted jako gosc - musza miec realne konto (email/OAuth)
+// zeby przejsc przez ten gate (np. /settings, /admin, /admin/routes).
 function RequireAuth({ children, hint }: { children: React.ReactNode; hint?: "journal" | "settings" }) {
   const { user, loading } = useAuth();
   const location = useLocation();
   if (loading) return <div className="h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>;
-  if (!user) {
+  if (!user || user.is_anonymous) {
     const params = new URLSearchParams({ return: location.pathname });
     if (hint) params.set("hint", hint);
     return <Navigate to={`/auth?${params.toString()}`} replace />;

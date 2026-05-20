@@ -9,6 +9,7 @@ import PlaceSwiperDetail from "./PlaceSwiperDetail";
 import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { useHaptics } from "@/hooks/useHaptics";
 import { getSubcategoryIds, getMainCategoryFor } from "@/lib/categories";
 import { addLike as saveExploreLike } from "@/lib/exploreLikes";
@@ -759,7 +760,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const categoryFilterKey = categoryFilters.join(",");
   const hasCategoryFilter = categoryFilters.length > 0;
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAnonymous } = useAuth();
+  const { open: openAuthDrawer } = useAuthDrawer();
   const haptics = useHaptics();
 
   const [allPlaces, setAllPlaces] = useState<MockPlace[]>([]);
@@ -1070,6 +1072,22 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   };
 
   const handleProceed = () => {
+    // Zapisywanie trasy wymaga prawdziwego konta - anon user dostaje AuthDrawer.
+    // Po linkIdentity / updateUser anon zachowuje user_id, wiec polubione miejsca
+    // sa propagowane dalej (CreateRoute czyta state z navigate).
+    if (!user || isAnonymous) {
+      const allLiked = [...likedPlaces, ...superLikedPlaces];
+      // Zachowaj wybor zeby po upgrade konta wrocic do /create z preloadem
+      try {
+        localStorage.setItem("trasa_guest_plan", JSON.stringify({
+          city,
+          date: date.toISOString(),
+          likedPlaceNames: allLiked.map((p) => p.place_name),
+        }));
+      } catch { /* unavailable */ }
+      openAuthDrawer({ mode: "register", hint: "save_route" });
+      return;
+    }
     const allLiked = [...likedPlaces, ...superLikedPlaces];
     navigate("/create", {
       state: {

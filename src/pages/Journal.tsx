@@ -9,8 +9,11 @@ import { pl } from "date-fns/locale";
 import JournalTab from "@/components/home/JournalTab";
 
 const Journal = () => {
-  const { user } = useAuth();
+  const { user, isAnonymous } = useAuth();
   const { open } = useAuthDrawer();
+  // Anon = traktuj jak gosc (zero zapisanych danych w UI). Dziennik wymaga
+  // konta z mailem zeby trasy/pocztówki byly persystowane miedzy urzadzeniami.
+  const isGuestView = !user || isAnonymous;
   const navigate = useNavigate();
 
   // Active group sessions (for logged-in user only)
@@ -65,7 +68,7 @@ const Journal = () => {
   });
 
   // Guest: pelnoekranowy wycentrowany empty state, bez tytulu strony (TopBar tez ukryty na route /dziennik)
-  if (!user) {
+  if (isGuestView) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] text-center">
         <div className="h-20 w-20 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center">

@@ -76,7 +76,10 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
     enabled: !!user,
   });
 
-  if (!user) return (
+  // Anon Auth user nie ma profilu (trigger pomija anon) i nie ma sensownych
+  // notyfikacji - traktuj go jak goscia w UI.
+  const isGuestUi = !user || user.is_anonymous;
+  if (isGuestUi) return (
     <header className="sticky top-0 z-50 bg-background border-b border-border/40 px-4 pt-safe-4 pb-2 flex items-center">
       <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
         <UserCircle2 className="h-5 w-5 text-muted-foreground" />

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -15,6 +16,7 @@ type Mode = "login" | "register";
 
 const AuthDrawer = () => {
   const { isOpen, mode: initialMode, hint, close } = useAuthDrawer();
+  const { isAnonymous } = useAuth();
   const { t } = useTranslation("auth");
   const posthog = usePostHog();
 
@@ -41,16 +43,29 @@ const AuthDrawer = () => {
   const handleOAuth = async (provider: "apple" | "google") => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo: `${window.location.origin}/` },
-      });
-      if (error) throw error;
+      // Anon user (Anonymous Auth): linkIdentity zachowuje dane (sesje grupowe,
+      // polubione miejsca) - dodaje OAuth identity do istniejacego user_id.
+      // Bez tego signInWithOAuth zalogowalby na nowy user i anon data znikla by.
+      if (isAnonymous) {
+        const { error } = await supabase.auth.linkIdentity({
+          provider,
+          options: { redirectTo: `${window.location.origin}/` },
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: { redirectTo: `${window.location.origin}/` },
+        });
+        if (error) throw error;
+      }
     } catch (err: any) {
       posthog.captureException(err);
       const msg = err?.message?.toLowerCase() || "";
       if (msg.includes("provider is not enabled") || msg.includes("unsupported")) {
         toast.error(`Logowanie przez ${provider === "apple" ? "Apple" : "Google"} nie jest jeszcze skonfigurowane.`);
+      } else if (msg.includes("identity already linked")) {
+        toast.error("To konto OAuth jest juz powiazane z innym uzytkownikiem. Zaloguj sie bezposrednio.");
       } else {
         toast.error(err.message || "Błąd logowania");
       }
@@ -100,31 +115,73 @@ const AuthDrawer = () => {
     setLoading(true);
     try {
       const referralCode = localStorage.getItem("pending_referral_code") || null;
-      const { error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password,
-        options: {
-          data: {
-            first_name: firstName.trim(),
-            username: username.trim(),
-            referral_code: referralCode,
-          },
-          emailRedirectTo: `${window.location.origin}/`,
-        },
-      });
-      if (error) {
-        const msg = error.message?.toLowerCase() || "";
-        if (msg.includes("already registered") || msg.includes("user already")) {
-          toast.error(t("errors.email_duplicate"));
-        } else if (msg.includes("password")) {
-          toast.error("Hasło jest za słabe. Użyj co najmniej 6 znaków.");
-        } else {
-          throw error;
+      const userData = {
+        first_name: firstName.trim(),
+        username: username.trim(),
+        referral_code: referralCode,
+      };
+
+      if (isAnonymous) {
+        // Upgrade anon -> real user. Zachowuje user_id, czyli wszystkie
+        // sesje grupowe, polubione miejsca z anon zostaja przypisane do nowego konta.
+        // updateUser ustawia email + password na istniejacym anon user; Supabase
+        // wysyla email z linkiem potwierdzajacym, po klikniecie email staje sie
+        // zweryfikowany i is_anonymous flipuje na false.
+        const { error } = await supabase.auth.updateUser({
+          email: email.trim().toLowerCase(),
+          password,
+          data: userData,
+        });
+        if (error) {
+          const msg = error.message?.toLowerCase() || "";
+          if (msg.includes("already") || msg.includes("registered")) {
+            toast.error(t("errors.email_duplicate"));
+          } else {
+            throw error;
+          }
+          return;
         }
-        return;
+        // Profile row dla anon usera nie zostal utworzony przy anon signIn
+        // (trigger handle_new_user pomija anon, patrz migracja 20260429_fix_anon_user_trigger).
+        // Teraz gdy user dostal email/username - tworzymy profil recznie.
+        try {
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          if (currentUser) {
+            await (supabase as any).from("profiles").upsert({
+              id: currentUser.id,
+              username: userData.username,
+              first_name: userData.first_name,
+            }, { onConflict: "id" });
+          }
+        } catch (e) {
+          console.warn("[AuthDrawer] profile upsert after upgrade failed:", e);
+        }
+        localStorage.removeItem("pending_referral_code");
+        posthog.capture("user_upgraded_from_anon", { source: referralCode ? "referral" : "drawer" });
+      } else {
+        // Standard signUp (no anon session to upgrade)
+        const { error } = await supabase.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password,
+          options: {
+            data: userData,
+            emailRedirectTo: `${window.location.origin}/`,
+          },
+        });
+        if (error) {
+          const msg = error.message?.toLowerCase() || "";
+          if (msg.includes("already registered") || msg.includes("user already")) {
+            toast.error(t("errors.email_duplicate"));
+          } else if (msg.includes("password")) {
+            toast.error("Hasło jest za słabe. Użyj co najmniej 6 znaków.");
+          } else {
+            throw error;
+          }
+          return;
+        }
+        localStorage.removeItem("pending_referral_code");
+        posthog.capture("user_signed_up", { source: referralCode ? "referral" : "drawer" });
       }
-      localStorage.removeItem("pending_referral_code");
-      posthog.capture("user_signed_up", { source: referralCode ? "referral" : "drawer" });
       setSignupDone(true);
     } catch (err: any) {
       posthog.captureException(err);

@@ -251,8 +251,9 @@ const TravelerProfile = () => {
 
   if (loading) return null;
 
-  // Guest: wycentrowany empty state w jednym stylu z Journal
-  if (!user) {
+  // Guest lub anon: wycentrowany empty state. Anon traktujemy jak gosc bo
+  // profil bez maila/username nie ma sensownej zawartosci do pokazania.
+  if (!user || user.is_anonymous) {
     return <GuestProfile />;
   }
 

@@ -11,16 +11,20 @@ const GuestWelcomeSheet = () => {
   const { open: openAuthDrawer } = useAuthDrawer();
   const [open, setOpen] = useState(false);
 
+  // "Gosc" w UI = brak usera ALBO anon (Supabase Anonymous Auth - dostali
+  // realne user_id, ale nie maja maila/profilu, traktujemy jako gosc).
+  const isGuestUi = !user || user.is_anonymous;
+
   useEffect(() => {
     if (loading) return;
-    if (user) return;
+    if (!isGuestUi) return;
     let dismissed = false;
     try { dismissed = localStorage.getItem(DISMISS_KEY) === "1"; } catch { /* unavailable */ }
     if (dismissed) return;
     // 5s delay - daje czas zniknac CookieBannerowi (zasłaniał drawer na entry).
     const t = setTimeout(() => setOpen(true), 5000);
     return () => clearTimeout(t);
-  }, [user, loading]);
+  }, [isGuestUi, loading]);
 
   const persistDismiss = () => {
     try { localStorage.setItem(DISMISS_KEY, "1"); } catch { /* unavailable */ }
@@ -37,8 +41,8 @@ const GuestWelcomeSheet = () => {
     openAuthDrawer({ mode: "register" });
   };
 
-  // Don't show for logged-in users
-  if (user) return null;
+  // Don't show for non-anon logged-in users
+  if (!isGuestUi) return null;
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
