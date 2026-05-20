@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 interface AppLayoutProps {
   children: ReactNode;
+  hideTopBar?: boolean;
 }
 
 const GUEST_BANNER_DISMISS_KEY = "trasa_guest_banner_dismissed";
@@ -46,7 +47,7 @@ const GuestBanner = () => {
   );
 };
 
-const AppLayout = ({ children }: AppLayoutProps) => {
+const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
   const { user } = useAuth();
   const { t } = useTranslation("home");
   const { data: profile } = useQuery({
@@ -98,7 +99,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <TopBar onOrbClick={handleOrbClick} />
+      {!hideTopBar && <TopBar onOrbClick={handleOrbClick} />}
       {!user && <GuestBanner />}
       <main className="flex-1 flex flex-col max-w-lg mx-auto w-full">
         {children}

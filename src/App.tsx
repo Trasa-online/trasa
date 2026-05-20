@@ -304,7 +304,7 @@ const App = () => (
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/" element={<RootPage />} />
-          <Route path="/home" element={<AppLayout><HomeSwipe /></AppLayout>} />
+          <Route path="/home" element={<AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
           <Route path="/home-legacy" element={<AppLayout><Home /></AppLayout>} />
           <Route path="/eksploruj" element={<AppLayout><Explore /></AppLayout>} />
           <Route path="/create" element={<CreateRoute />} />
