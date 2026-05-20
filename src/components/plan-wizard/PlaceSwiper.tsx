@@ -681,8 +681,8 @@ interface PlaceSwiperProps {
   date: Date;
   numDays?: number;
   startingLocation?: string;
-  /** Single category to show (batch of 20). When set, onBatchComplete fires when queue is exhausted. */
-  categoryFilter?: string;
+  /** Category to show (batch of 20). Accepts single id or multiple ids (multi-select). When set, onBatchComplete fires when queue is exhausted. */
+  categoryFilter?: string | string[];
   initialLikedPlaceNames?: string[];
   initialSkippedPlaceNames?: string[];
   searchQuery?: string;
@@ -740,6 +740,12 @@ function enrichWithBusinessProfile(p: any): MockPlace {
 }
 
 const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace }: PlaceSwiperProps) => {
+  // Normalize categoryFilter to a stable array (single id, multiple ids, or none).
+  const categoryFilters: string[] = Array.isArray(categoryFilter)
+    ? categoryFilter.filter(Boolean)
+    : (categoryFilter ? [categoryFilter] : []);
+  const categoryFilterKey = categoryFilters.join(",");
+  const hasCategoryFilter = categoryFilters.length > 0;
   const navigate = useNavigate();
   const { user } = useAuth();
   const haptics = useHaptics();
@@ -843,7 +849,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         if (likedSet.has(p.place_name.toLowerCase()) || skippedSet.has(p.place_name.toLowerCase())) return false;
         // For category-filtered batch mode (user explicitly picked a category) — show all matching
         // places regardless of past ratings. Otherwise, hide already-rated on the first batch.
-        if (categoryFilter) return true;
+        if (hasCategoryFilter) return true;
         if (!hasReturnState && ratedPlaceIds.has(p.id)) return false;
         return true;
       });
@@ -852,20 +858,32 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       if (liked.length) setLikedPlaces(liked);
       if (skipped.length) setSkippedPlaces(skipped);
 
-      // Batch mode: single category, max 20 places
-      if (categoryFilter) {
-        const subIds = getSubcategoryIds(categoryFilter);
-        const isStandard = subIds.length > 0 || MAIN_CATEGORIES.some(c =>
-          c.id === categoryFilter || c.subcategories.some(s => s.id === categoryFilter)
-        );
+      // Batch mode: one or many categories OR'd together, max 20 places
+      if (hasCategoryFilter) {
+        const standardSubIds = new Set<string>();
+        const customSubIds = new Set<string>();
+        for (const f of categoryFilters) {
+          const subIds = getSubcategoryIds(f);
+          const isStandard = subIds.length > 0 || MAIN_CATEGORIES.some(c =>
+            c.id === f || c.subcategories.some(s => s.id === f)
+          );
+          if (isStandard) {
+            if (subIds.length > 0) subIds.forEach(id => standardSubIds.add(id));
+            else standardSubIds.add(f);
+          } else {
+            customSubIds.add(f);
+          }
+        }
         const pool = remaining
-          .filter(p => isStandard
-            ? (subIds.length > 0 ? subIds.includes(p.category) : p.category === categoryFilter)
-            : (p as any).businessSubcategories?.includes(categoryFilter)
-          )
+          .filter(p => {
+            if (standardSubIds.has(p.category)) return true;
+            const bizSubs = (p as any).businessSubcategories as string[] | undefined;
+            if (bizSubs && bizSubs.some(s => customSubIds.has(s))) return true;
+            return false;
+          })
           .sort(() => Math.random() - 0.5)
           .slice(0, 20);
-        console.log("[PlaceSwiper] batch pool:", { categoryFilter, isStandard, subIds, poolSize: pool.length, remainingTotal: remaining.length });
+        console.log("[PlaceSwiper] batch pool:", { categoryFilters, standardSubIds: [...standardSubIds], customSubIds: [...customSubIds], poolSize: pool.length, remainingTotal: remaining.length });
         setQueue(pool);
       } else {
         setQueue([...remaining].sort(() => Math.random() - 0.5));
@@ -877,7 +895,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       }
     };
     fetchPlaces().finally(() => clearTimeout(safetyTimeout));
-  }, [city, user, roundPlaceIds, categoryFilter]);
+  }, [city, user, roundPlaceIds, categoryFilterKey]);
 
   // Reorder queue when a category group has been liked too many times consecutively
   const rebalanceQueue = (newRecentGroups: (Set<string> | null)[]) => {

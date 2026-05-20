@@ -21,7 +21,7 @@ const AVAILABLE_CITIES: AvailableCity[] = [
 
 interface StoredFilters {
   city: string;
-  category: string; // "" = all
+  categories: string[]; // empty = all
 }
 
 function readFilters(): StoredFilters {
@@ -29,10 +29,14 @@ function readFilters(): StoredFilters {
     const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (typeof parsed?.city === "string" && typeof parsed?.category === "string") return parsed;
+      if (typeof parsed?.city === "string") {
+        // Back-compat: old format used single `category: string`
+        if (Array.isArray(parsed.categories)) return { city: parsed.city, categories: parsed.categories.filter((c: any) => typeof c === "string") };
+        if (typeof parsed.category === "string") return { city: parsed.city, categories: parsed.category ? [parsed.category] : [] };
+      }
     }
   } catch { /* unavailable */ }
-  return { city: "Warszawa", category: "" };
+  return { city: "Warszawa", categories: [] };
 }
 
 function writeFilters(f: StoredFilters) {
@@ -47,9 +51,18 @@ const HomeSwipe = () => {
 
   const todayDate = useMemo(() => new Date(), []);
 
-  const categoryLabel = filters.category
-    ? getSubcategoryLabel(filters.category) ?? "Wszystko"
-    : "Wszystko";
+  const categoryLabel = useMemo(() => {
+    if (filters.categories.length === 0) return "Wszystko";
+    if (filters.categories.length === 1) return getSubcategoryLabel(filters.categories[0]) ?? "Wybrane";
+    return `${filters.categories.length} kategorie`;
+  }, [filters.categories]);
+
+  const toggleCategory = (id: string) => {
+    setFilters((f) => {
+      const has = f.categories.includes(id);
+      return { ...f, categories: has ? f.categories.filter(c => c !== id) : [...f.categories, id] };
+    });
+  };
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -72,22 +85,32 @@ const HomeSwipe = () => {
       {/* Swiper */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <PlaceSwiper
-          key={`${filters.city}-${filters.category}`}
+          key={`${filters.city}-${filters.categories.join(",")}`}
           city={filters.city}
           date={todayDate}
           numDays={1}
-          categoryFilter={filters.category || undefined}
+          categoryFilter={filters.categories}
           exploreMode
         />
       </div>
 
-      {/* Filter drawer (city + category) */}
+      {/* Filter drawer (city + categories multi-select) */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl p-0" style={{ maxHeight: "85vh" }}>
           <div className="overflow-y-auto px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]">
-            <div className="mb-5">
-              <p className="text-lg font-black">Co przeglądasz</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Wybierz miasto i kategorię miejsc.</p>
+            <div className="flex items-center justify-between gap-3 mb-5">
+              <div>
+                <p className="text-lg font-black">Co przeglądasz</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Wybierz miasto i&nbsp;kategorie miejsc.</p>
+              </div>
+              {filters.categories.length > 0 && (
+                <button
+                  onClick={() => setFilters((f) => ({ ...f, categories: [] }))}
+                  className="text-xs text-muted-foreground underline underline-offset-2 active:opacity-60 shrink-0"
+                >
+                  Wyczyść
+                </button>
+              )}
             </div>
 
             {/* Miasto */}
@@ -126,14 +149,17 @@ const HomeSwipe = () => {
               })}
             </div>
 
-            {/* Kategoria */}
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">Kategoria</p>
+            {/* Kategorie - multi-select */}
+            <div className="flex items-baseline justify-between mb-2">
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Kategorie</p>
+              <p className="text-[10px] text-muted-foreground">możesz zaznaczyć kilka</p>
+            </div>
             <div className="flex flex-wrap gap-2 mb-4">
               <button
-                onClick={() => setFilters((f) => ({ ...f, category: "" }))}
+                onClick={() => setFilters((f) => ({ ...f, categories: [] }))}
                 className={cn(
                   "px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96]",
-                  filters.category === ""
+                  filters.categories.length === 0
                     ? "bg-foreground text-background"
                     : "bg-muted text-foreground"
                 )}
@@ -142,20 +168,21 @@ const HomeSwipe = () => {
               </button>
               {MAIN_CATEGORIES.flatMap((cat) =>
                 cat.subcategories.map((sub) => {
-                  const active = filters.category === sub.id;
+                  const active = filters.categories.includes(sub.id);
                   return (
                     <button
                       key={sub.id}
-                      onClick={() => setFilters((f) => ({ ...f, category: sub.id }))}
+                      onClick={() => toggleCategory(sub.id)}
                       className={cn(
-                        "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96]",
+                        "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96] border",
                         active
-                          ? "bg-foreground text-background"
-                          : "bg-muted text-foreground"
+                          ? "bg-foreground text-background border-foreground"
+                          : "bg-muted text-foreground border-transparent"
                       )}
                     >
                       <span>{sub.emoji}</span>
                       <span>{sub.label}</span>
+                      {active && <Check className="h-3.5 w-3.5 ml-0.5" />}
                     </button>
                   );
                 })
