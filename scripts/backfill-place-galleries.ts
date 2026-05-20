@@ -4,16 +4,18 @@
  * Wypełnia kolumnę places.gallery_urls dla miejsc bez galerii (do 3 zdjęć na miejsce).
  *
  * Dla każdego miejsca:
- *   1. Wyszukuje miejsce w Google Places New API v1 (Text Search) → bierze do 3 photo names
- *   2. Pobiera binarki z Google Places Photo Media endpoint
+ *   1. Wyszukuje miejsce w Google Places (Old) Text Search → bierze do 3 photo_references
+ *   2. Pobiera binarki z Google Places Photo endpoint (302 → CDN)
  *   3. Wrzuca każde do bucket `place-photos-cache` pod ścieżką `gallery/{place_id}/{idx}.jpg`
  *   4. UPDATE places SET gallery_urls = ARRAY[url1, url2, url3]
  *
  * Idempotentne: pomija miejsca, które już mają wypełnioną galerię (>= 3 zdjęcia).
  *
- * Uruchomienie:
- *   SUPABASE_SERVICE_ROLE_KEY=eyJ... GOOGLE_MAPS_API_KEY=AIza... \
- *     npx tsx scripts/backfill-place-galleries.ts
+ * Uruchomienie (najprościej):
+ *   npm run backfill:galleries -- --city=Warszawa --dry-run --limit=5
+ *   npm run backfill:galleries -- --city=Warszawa
+ *
+ * Skrypt automatycznie wczytuje .env.local i .env (bez zewnętrznej zależności).
  *
  * Flagi:
  *   --dry-run        tylko log, bez pobierania ani zapisu
@@ -21,14 +23,44 @@
  *   --limit=10       max N miejsc (default: bez limitu)
  *   --per-place=3    ile zdjęć na miejsce (default: 3)
  *
- * Wymagane env:
+ * Wymagane env (w .env.local lub przed wywołaniem):
  *   SUPABASE_SERVICE_ROLE_KEY  z Supabase Dashboard → Settings → API → service_role
- *   GOOGLE_MAPS_API_KEY        klucz Google Maps Platform z włączonymi Places API
+ *   GOOGLE_MAPS_API_KEY        klucz z włączoną legacy "Places API" (Text Search + Photo)
+ *
+ * Uwaga API: używamy Old Places API (places.textsearch + place.photo) bo
+ * tak ma skonfigurowany klucz aplikacji. Jeśli widzisz REQUEST_DENIED →
+ * w Google Cloud Console → APIs & Services → Library → włącz "Places API".
  *
  * ⚠️  Service role omija RLS i ma pełen dostęp. Tylko lokalnie. Nigdy nie commituj.
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
+
+// ─── Auto-load .env.local (bez zaleznosci od dotenv) ─────────────────────────
+// Czyta linijka po linijce, ignoruje komentarze, ustawia process.env tylko
+// gdy zmienna nie zostala juz podana wprost.
+function loadDotenv(filename: string) {
+  const path = resolve(process.cwd(), filename);
+  if (!existsSync(path)) return;
+  const raw = readFileSync(path, "utf8");
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq < 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    if (process.env[key]) continue;
+    let val = trimmed.slice(eq + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    process.env[key] = val;
+  }
+}
+loadDotenv(".env.local");
+loadDotenv(".env");
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -64,51 +96,72 @@ const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// ─── Google Places ───────────────────────────────────────────────────────────
+// ─── Google Places (Old API - taka sama co populate-place-photos.ts) ─────────
 
 interface GooglePhoto {
-  name: string; // "places/ChIJ.../photos/AeS..."
-  widthPx: number;
-  heightPx: number;
+  photo_reference: string;
+  width: number;
+  height: number;
 }
 
 interface GooglePlaceResult {
-  id: string;
-  displayName?: { text: string };
+  place_id: string;
+  name: string;
   photos?: GooglePhoto[];
 }
 
-/** Text Search w New Places API v1. Zwraca top 1 wynik z polami id + photos. */
+/** Text Search w Old Places API. Zwraca top 1 wynik (place_id + 1 foto). */
 async function searchPlace(placeName: string, city: string): Promise<GooglePlaceResult | null> {
-  const url = "https://places.googleapis.com/v1/places:searchText";
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": GOOGLE_API_KEY,
-      "X-Goog-FieldMask": "places.id,places.displayName,places.photos",
-    },
-    body: JSON.stringify({
-      textQuery: `${placeName} ${city}`,
-      languageCode: "pl",
-      pageSize: 1,
-    }),
-  });
+  const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
+  url.searchParams.set("query", `${placeName} ${city}`);
+  url.searchParams.set("language", "pl");
+  url.searchParams.set("key", GOOGLE_API_KEY);
+
+  const res = await fetch(url.toString());
   if (!res.ok) {
     const txt = await res.text().catch(() => "");
     console.warn(`  ⚠️  Google search HTTP ${res.status}: ${txt.slice(0, 200)}`);
     return null;
   }
-  const data = (await res.json()) as { places?: GooglePlaceResult[] };
-  return data.places?.[0] ?? null;
+  const data = (await res.json()) as { status: string; results?: GooglePlaceResult[]; error_message?: string };
+  if (data.status === "REQUEST_DENIED") {
+    console.error(`  ❌ Google REQUEST_DENIED: ${data.error_message ?? "brak details"}`);
+    throw new Error("Google API REQUEST_DENIED - sprawdz uprawnienia klucza w Cloud Console");
+  }
+  if (data.status === "ZERO_RESULTS" || !data.results?.length) return null;
+  return data.results[0];
 }
 
-/** Pobiera binarkę zdjęcia z Google Places Photo Media endpoint. */
-async function downloadPhoto(photoName: string): Promise<{ buffer: ArrayBuffer; contentType: string } | null> {
-  const url = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${PHOTO_MAX_WIDTH}&maxHeightPx=${PHOTO_MAX_HEIGHT}&key=${GOOGLE_API_KEY}`;
-  const res = await fetch(url, { redirect: "follow" });
+/** Place Details Old API - zwraca do ~10 photo_references dla danego place_id. */
+async function fetchPlaceDetails(placeId: string): Promise<GooglePhoto[] | null> {
+  const url = new URL("https://maps.googleapis.com/maps/api/place/details/json");
+  url.searchParams.set("place_id", placeId);
+  url.searchParams.set("fields", "photos");
+  url.searchParams.set("language", "pl");
+  url.searchParams.set("key", GOOGLE_API_KEY);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) return null;
+  const data = (await res.json()) as { status: string; result?: { photos?: GooglePhoto[] }; error_message?: string };
+  if (data.status === "REQUEST_DENIED") {
+    console.error(`  ❌ Google REQUEST_DENIED (details): ${data.error_message ?? ""}`);
+    return null;
+  }
+  return data.result?.photos ?? null;
+}
+
+/** Pobiera binarkę zdjęcia z Old API photo endpoint. Endpoint robi 302 redirect
+ *  do Google CDN; fetch z redirect:"follow" przejdzie do końcowej binarki. */
+async function downloadPhoto(photoReference: string): Promise<{ buffer: ArrayBuffer; contentType: string } | null> {
+  const url = new URL("https://maps.googleapis.com/maps/api/place/photo");
+  url.searchParams.set("maxwidth", String(PHOTO_MAX_WIDTH));
+  url.searchParams.set("maxheight", String(PHOTO_MAX_HEIGHT));
+  url.searchParams.set("photoreference", photoReference);
+  url.searchParams.set("key", GOOGLE_API_KEY);
+
+  const res = await fetch(url.toString(), { redirect: "follow" });
   if (!res.ok) {
-    console.warn(`  ⚠️  Photo download HTTP ${res.status} dla ${photoName.slice(0, 50)}`);
+    console.warn(`  ⚠️  Photo HTTP ${res.status}`);
     return null;
   }
   const buffer = await res.arrayBuffer();
@@ -179,13 +232,22 @@ async function main() {
 
     try {
       const gp = await searchPlace(p.place_name, p.city);
-      if (!gp?.photos?.length) {
+      if (!gp) {
         console.log("⏭️  brak w Google");
         skipped++;
         await sleep(DELAY_MS);
         continue;
       }
-      const photos = gp.photos.slice(0, PER_PLACE);
+      // Place Details daje pełną listę zdjęć (do ~10). Text Search zwraca często tylko 1.
+      const detailedPhotos = await fetchPlaceDetails(gp.place_id);
+      const allPhotos = detailedPhotos?.length ? detailedPhotos : (gp.photos ?? []);
+      if (allPhotos.length === 0) {
+        console.log("⏭️  brak zdjęć");
+        skipped++;
+        await sleep(DELAY_MS);
+        continue;
+      }
+      const photos = allPhotos.slice(0, PER_PLACE);
 
       if (DRY_RUN) {
         console.log(`✅ ${photos.length} foto (dry)`);
@@ -196,7 +258,7 @@ async function main() {
 
       const urls: string[] = [];
       for (let idx = 0; idx < photos.length; idx++) {
-        const photo = await downloadPhoto(photos[idx].name);
+        const photo = await downloadPhoto(photos[idx].photo_reference);
         if (!photo) continue;
         const url = await uploadToStorage(p.id, idx, photo.buffer, photo.contentType);
         if (url) urls.push(url);

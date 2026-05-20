@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "backfill:photos": "npx tsx scripts/backfill-photo-cache.ts",
+    "backfill:galleries": "npx tsx scripts/backfill-place-galleries.ts",
     "check:both": "npm run build && npx cap sync ios",
     "check:native": "npm run build && npx cap sync ios && npx cap sync android"
   },
