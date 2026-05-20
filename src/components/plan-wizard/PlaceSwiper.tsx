@@ -11,6 +11,7 @@ import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePho
 import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { getSubcategoryIds, getMainCategoryFor } from "@/lib/categories";
+import { addLike as saveExploreLike } from "@/lib/exploreLikes";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1002,6 +1003,20 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     setQueue(prev => prev.filter(p => p.id !== top.id));
     saveReaction(top, "liked", overridePhotoUrl);
     trackAndRebalance(top);
+    // Persist to localStorage history when in explore mode (HomeSwipe) - used by
+    // Eksploruj "Polubione" tab and "Zaplanuj solo" reuse prompt.
+    if (exploreMode && !groupSessionId && !roundPlaceIds?.length) {
+      saveExploreLike(city, {
+        place_name: top.place_name,
+        category: top.category,
+        latitude: top.latitude,
+        longitude: top.longitude,
+        photo_url: overridePhotoUrl ?? top.photo_url ?? null,
+        address: top.address ?? null,
+        rating: top.rating ?? null,
+        description: top.description ?? null,
+      });
+    }
     // Track add_to_route for real (non-mock) places
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (UUID_RE.test(top.id)) {

@@ -1,11 +1,23 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
-import { BookOpen, Compass, Home, Plus, X, MapPin, Users, Link2, User } from "lucide-react";
+import { BookOpen, Compass, Home, Plus, X, MapPin, Users, Link2, User, Heart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
+import { getTodayLikes, type ExploreLike } from "@/lib/exploreLikes";
 
-const MAINTENANCE_BYPASS = new Set(["nat.maz98@gmail.com", "tomalab97@gmail.com"]);
+const HOME_FILTERS_KEY = "trasa_home_filters";
+
+function getActiveHomeCity(): string {
+  try {
+    const raw = localStorage.getItem(HOME_FILTERS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed?.city === "string" && parsed.city) return parsed.city;
+    }
+  } catch { /* unavailable */ }
+  return "Warszawa";
+}
 
 const BottomNav = () => {
   const navigate = useNavigate();
@@ -14,8 +26,8 @@ const BottomNav = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
+  const [reusePrompt, setReusePrompt] = useState<{ city: string; likes: ExploreLike[] } | null>(null);
   const isGuest = !user;
-  const maintenanceMode = !MAINTENANCE_BYPASS.has(user?.email ?? "");
 
   const handleJoinSubmit = () => {
     const code = joinCode.trim();
@@ -29,6 +41,36 @@ const BottomNav = () => {
     setShowMenu(false);
     if (isGuest) { openAuthDrawer({ mode: "register", hint: "join_session" }); return; }
     navigate("/sesja/nowa");
+  };
+
+  const handleSoloPlan = () => {
+    setShowMenu(false);
+    const city = getActiveHomeCity();
+    const todayLikes = getTodayLikes(city);
+    if (todayLikes.length > 0) {
+      setReusePrompt({ city, likes: todayLikes });
+      return;
+    }
+    navigate("/plan");
+  };
+
+  const handleReuseAccept = () => {
+    if (!reusePrompt) return;
+    const { city, likes } = reusePrompt;
+    setReusePrompt(null);
+    navigate("/plan", {
+      state: {
+        step: 3, // straight to CategoryPicker with likes preloaded
+        city,
+        date: new Date().toISOString(),
+        likedPlaceNames: likes.map(l => l.place_name),
+      },
+    });
+  };
+
+  const handleReuseDecline = () => {
+    setReusePrompt(null);
+    navigate("/plan");
   };
 
   return (
@@ -56,12 +98,53 @@ const BottomNav = () => {
             Zaplanuj grupowo
           </button>
           <button
-            onClick={() => { setShowMenu(false); navigate("/plan"); }}
+            onClick={handleSoloPlan}
             className="flex items-center gap-2.5 px-5 py-3 rounded-full bg-primary text-white font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
           >
             <MapPin className="h-4 w-4" />
             Zaplanuj solo
           </button>
+        </div>
+      )}
+
+      {/* Reuse likes prompt */}
+      {reusePrompt && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setReusePrompt(null)}
+        >
+          <div
+            className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="h-11 w-11 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                <Heart className="h-5 w-5 text-orange-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-base font-black leading-snug">
+                  Wykorzystać polubione z&nbsp;dziś?
+                </p>
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                  Masz <strong>{reusePrompt.likes.length}</strong> {reusePrompt.likes.length === 1 ? "polubione miejsce" : reusePrompt.likes.length < 5 ? "polubione miejsca" : "polubionych miejsc"} z {reusePrompt.city}. Mogę je dodać do nowej trasy.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleReuseAccept}
+                className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+              >
+                Tak, wykorzystaj polubione →
+              </button>
+              <button
+                onClick={handleReuseDecline}
+                className="w-full py-3 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
+              >
+                Nie, zacznij na nowo
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -142,26 +225,18 @@ const BottomNav = () => {
           </NavLink>
 
           {/* Center FAB */}
-          {maintenanceMode ? (
-            <button disabled className="flex items-center justify-center cursor-not-allowed" aria-label="Dodaj trasę">
-              <span className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                <Plus className="h-5 w-5 text-muted-foreground/40 stroke-[2.5px]" />
-              </span>
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="flex items-center justify-center"
-              aria-label="Dodaj trasę"
-            >
-              <span className="h-10 w-10 rounded-full bg-primary flex items-center justify-center active:scale-95 transition-transform">
-                {showMenu
-                  ? <X className="h-5 w-5 text-white stroke-[2.5px]" />
-                  : <Plus className="h-5 w-5 text-white stroke-[2.5px]" />
-                }
-              </span>
-            </button>
-          )}
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="flex items-center justify-center"
+            aria-label="Dodaj trasę"
+          >
+            <span className="h-10 w-10 rounded-full bg-primary flex items-center justify-center active:scale-95 transition-transform">
+              {showMenu
+                ? <X className="h-5 w-5 text-white stroke-[2.5px]" />
+                : <Plus className="h-5 w-5 text-white stroke-[2.5px]" />
+              }
+            </span>
+          </button>
 
           {/* Dziennik */}
           <NavLink
