@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { X, Star, MapPin, Loader2, Heart, ChevronDown, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
+import { X, Star, MapPin, Loader2, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -617,22 +617,20 @@ const PlaceSwiperDetail = ({
                 </div>
               </div>
 
-              {/* ── LIKE / SKIP ── */}
+              {/* ── LIKE / SKIP ── (ujednolicone z guzikami na SwipeCard) */}
               {(onLike || onSkip) && (
-                <div className="shrink-0 px-5 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-border/10 bg-background">
+                <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-border/10 bg-background">
                   <div className="flex gap-3">
                     <button
                       onClick={handleSkip}
-                      className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full border-2 border-border bg-card text-muted-foreground font-semibold text-sm active:scale-[0.97] transition-transform"
+                      className="flex-1 py-3 rounded-full bg-white text-foreground font-bold text-sm shadow-xl border border-border/40 active:scale-[0.97] transition-transform"
                     >
-                      <ChevronDown className="h-4 w-4" />
                       Odrzuć
                     </button>
                     <button
                       onClick={handleLike}
-                      className="flex-[2] flex items-center justify-center gap-2 py-3.5 rounded-full bg-gradient-to-r from-orange-600 to-amber-500 text-white font-bold text-sm shadow-lg shadow-primary/30 active:scale-[0.97] transition-transform"
+                      className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm shadow-xl shadow-primary/30 active:scale-[0.97] transition-transform"
                     >
-                      <Heart className="h-4 w-4 fill-white" />
                       Dodaj
                     </button>
                   </div>
