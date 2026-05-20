@@ -236,6 +236,9 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
     // Jeśli place.photo_url jest już scache'owany w Storage → odpal cache-place-photo
     // tylko by upewnić się że jest spójny (idempotentne), nie wywołujemy Google
     const alreadyCached = isCachedPhotoUrl(place.photo_url);
+    // Gdy mamy galerie (places.gallery_urls z backfillu), nie nadpisujemy photoUrls
+    // pojedynczym URL-em z Google - to dropowaloby gallery. Galeria ma cover + extras.
+    const hasGallery = (place.galleryPhotos ?? []).length > 0;
 
     supabase.functions
       .invoke("google-places-proxy", {
@@ -255,8 +258,8 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         const resolvedPlaceId: string | undefined = data?.result?.place_id ?? undefined;
         const url = photo?.photo_url ?? (photo?.photo_reference ? getPhotoUrl(photo.photo_reference, 800, resolvedPlaceId) : null);
         if (!url && !alreadyCached) console.warn("[PlaceSwiper] no photo returned for:", place.place_name, data);
-        // Nie nadpisuj jeśli mamy już cache'owany URL — z bazy jest stabilniejszy
-        if (url && !alreadyCached) {
+        // Nie nadpisuj jeśli mamy już cache'owany URL ani galerie (oba bardziej wiarygodne)
+        if (url && !alreadyCached && !hasGallery) {
           setPhotoUrls([url]);
           setImgFailed(false);
           onPhotoFetched?.(place.id, url);

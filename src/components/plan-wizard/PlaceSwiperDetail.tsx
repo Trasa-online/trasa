@@ -341,6 +341,10 @@ const PlaceSwiperDetail = ({
       }
 
       const alreadyCached = isCachedPhotoUrl(place.photo_url);
+      // Gdy gallery_urls jest wypelniona (z scripts/backfill-place-galleries.ts),
+      // nie nakladamy juz Google photos na hero - byloby to dublowanie tych samych
+      // obrazow. Dalej fetchujemy Google bo metadata (rating, recenzje) sa uzyteczne.
+      const hasGallery = (place.galleryPhotos ?? []).length > 0;
       const placesPromise = supabase.functions
         .invoke("google-places-proxy", {
           body: {
@@ -353,7 +357,7 @@ const PlaceSwiperDetail = ({
         .then(({ data }) => {
           if (data?.result) {
             setDetail(data.result);
-            if (!alreadyCached) {
+            if (!alreadyCached && !hasGallery) {
               const urls = (data.result.photos ?? [])
                 .slice(0, 3)
                 .map((p: any) => p.photo_url ?? getPhotoUrl(p.photo_reference, 800))

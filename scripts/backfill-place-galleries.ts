@@ -173,7 +173,10 @@ async function downloadPhoto(photoReference: string): Promise<{ buffer: ArrayBuf
 
 async function uploadToStorage(placeId: string, idx: number, buffer: ArrayBuffer, contentType: string): Promise<string | null> {
   const ext = contentType.includes("png") ? "png" : "jpg";
-  const path = `gallery/${placeId}/${idx}.${ext}`;
+  // v2 prefix - script teraz pomija photo[0] (cover juz lezy w places.photo_url),
+  // gallery zaczyna sie od photo[1]. Nowa sciezka odroznia od starych plikow z v1
+  // (gdzie 0.jpg byl dubletem photo_url). Kolejne backfille nadpisuja v2.
+  const path = `gallery/${placeId}/v2_${idx}.${ext}`;
   const { error } = await sb.storage.from(BUCKET).upload(path, buffer, {
     contentType,
     upsert: true,
@@ -217,8 +220,13 @@ async function main() {
     return;
   }
 
-  const needsFill = (places as Place[]).filter((p) => (p.gallery_urls?.length ?? 0) < PER_PLACE);
-  console.log(`📋 ${places.length} miejsc; ${needsFill.length} wymaga uzupełnienia\n`);
+  // Skip places ktore juz maja gallery z v2 prefiksem (czyli wygenerowane po
+  // tej zmianie - nie zawierajace cover dupe'a). Stare v1 (gallery/{id}/0.jpg)
+  // beda reprocessed - dodaje to nowe v2 pliki obok starych.
+  const isV2Gallery = (urls: string[] | null): boolean =>
+    Array.isArray(urls) && urls.length >= PER_PLACE && urls.every((u) => /\/gallery\/[^/]+\/v2_/.test(u));
+  const needsFill = (places as Place[]).filter((p) => !isV2Gallery(p.gallery_urls));
+  console.log(`📋 ${places.length} miejsc; ${needsFill.length} wymaga uzupełnienia (v2 prefix)\n`);
   if (DRY_RUN) console.log("🧪 DRY RUN — nic nie pobierane ani zapisywane\n");
 
   let ok = 0;
@@ -247,7 +255,16 @@ async function main() {
         await sleep(DELAY_MS);
         continue;
       }
-      const photos = allPhotos.slice(0, PER_PLACE);
+      // SKIP photo[0] - jest to "cover" ktory juz lezy w places.photo_url
+      // (cache'owany przez cache-place-photo edge function lub jako proxy URL).
+      // Gallery = "ekstra" zdjecia, NIE zawiera cover. Inaczej karuzela pokazuje dublet.
+      const photos = allPhotos.slice(1, PER_PLACE + 1);
+      if (photos.length === 0) {
+        console.log("⏭️  tylko cover w Google, brak ekstr");
+        skipped++;
+        await sleep(DELAY_MS);
+        continue;
+      }
 
       if (DRY_RUN) {
         console.log(`✅ ${photos.length} foto (dry)`);
