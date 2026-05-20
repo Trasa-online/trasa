@@ -1048,9 +1048,11 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     }
   }, [queue.length, loading]);
 
-  // Show bingo banner when threshold reached
+  // Show bingo banner when threshold reached.
+  // Skipped in exploreMode (HomeSwipe = wolna eksploracja, bez popupów "masz trasę!").
   useEffect(() => {
     if (groupSessionId) return; // not in group mode
+    if (exploreMode) return;
     const uniqueCategories = new Set(likedPlaces.map((p) => p.category)).size;
     if (bannerDismissCount >= 2) return; // never show again after two dismissals
     if (bannerDismissCount === 0 && uniqueCategories >= BINGO_MIN_CATEGORIES) {
@@ -1058,7 +1060,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     } else if (bannerDismissCount === 1 && uniqueCategories >= BINGO_REPEAT_CATEGORIES) {
       setShowBanner(true);
     }
-  }, [likedPlaces, bannerDismissCount, groupSessionId]);
+  }, [likedPlaces, bannerDismissCount, groupSessionId, exploreMode]);
 
   const handleBannerDismiss = () => {
     setShowBanner(false);
