@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Copy, Check, Camera } from "lucide-react";
+import { Settings, Copy, Check, Camera, UserCircle2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -118,6 +119,32 @@ function CompletionRing({ percent, children }: { percent: number; children: Reac
 
 // ── TravelerProfile ───────────────────────────────────────────────────────────
 
+// ── Guest empty state (same visual rytm jak Journal dla goscia) ──────────────
+
+function GuestProfile() {
+  const { open } = useAuthDrawer();
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] text-center">
+      <div className="h-20 w-20 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center">
+        <UserCircle2 className="h-10 w-10 text-orange-600" />
+      </div>
+      <div className="space-y-2 max-w-[320px]">
+        <p className="text-2xl font-black tracking-tight leading-tight">Twój profil podróżnika</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Załóż konto, żeby zbudować swój profil, zapraszać znajomych i&nbsp;śledzić podróże w&nbsp;jednym miejscu.
+        </p>
+      </div>
+      <button
+        onClick={() => open({ mode: "register" })}
+        className="px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-primary/25"
+      >
+        Załóż konto
+        <ArrowRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 const TravelerProfile = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -222,7 +249,12 @@ const TravelerProfile = () => {
     enabled: !!user,
   });
 
-  if (loading || !user) return null;
+  if (loading) return null;
+
+  // Guest: wycentrowany empty state w jednym stylu z Journal
+  if (!user) {
+    return <GuestProfile />;
+  }
 
   const displayName = profile?.username || profile?.first_name || "";
 

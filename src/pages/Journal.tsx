@@ -64,31 +64,35 @@ const Journal = () => {
     return true;
   });
 
+  // Guest: pelnoekranowy wycentrowany empty state, bez tytulu strony (TopBar tez ukryty na route /dziennik)
+  if (!user) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] text-center">
+        <div className="h-20 w-20 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center">
+          <BookOpen className="h-9 w-9 text-orange-600" />
+        </div>
+        <div className="space-y-2 max-w-[320px]">
+          <p className="text-2xl font-black tracking-tight leading-tight">Twój dziennik podróży</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Załóż konto, żeby zapisywać trasy, dodawać zdjęcia i&nbsp;oceniać miejsca z&nbsp;każdej podróży.
+          </p>
+        </div>
+        <button
+          onClick={() => open({ mode: "register", hint: "journal" })}
+          className="px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-primary/25"
+        >
+          Załóż konto
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
       <h1 className="text-xl font-black tracking-tight pt-2 pb-3">Dziennik podróży</h1>
 
-      {!user ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-5 px-8 py-16 text-center">
-          <div className="h-16 w-16 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center">
-            <BookOpen className="h-7 w-7 text-orange-600" />
-          </div>
-          <div className="space-y-2">
-            <p className="text-xl font-bold tracking-tight">Tu pojawią się Twoje trasy{` `}i wspomnienia</p>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
-              Załóż konto, żeby zapisywać trasy, dodawać zdjęcia i ocenia&nbsp;miejsca.
-            </p>
-          </div>
-          <button
-            onClick={() => open({ mode: "register", hint: "journal" })}
-            className="px-6 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-primary/20"
-          >
-            Załóż konto
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
-      ) : (
-        <>
+      <>
           {/* Active group sessions */}
           {activeSessions.length > 0 && (
             <div className="space-y-2.5 mb-6">
@@ -143,7 +147,6 @@ const Journal = () => {
 
           <JournalTab userId={user.id} />
         </>
-      )}
     </div>
   );
 };

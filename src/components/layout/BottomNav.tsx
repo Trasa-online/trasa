@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { BookOpen, Compass, Home, Plus, X, MapPin, Users, Link2, User, Heart } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { getTodayLikes, type ExploreLike } from "@/lib/exploreLikes";
 
 const HOME_FILTERS_KEY = "trasa_home_filters";
@@ -21,13 +19,10 @@ function getActiveHomeCity(): string {
 
 const BottomNav = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { open: openAuthDrawer } = useAuthDrawer();
   const [showMenu, setShowMenu] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [reusePrompt, setReusePrompt] = useState<{ city: string; likes: ExploreLike[] } | null>(null);
-  const isGuest = !user;
 
   const handleJoinSubmit = () => {
     const code = joinCode.trim();
@@ -39,7 +34,8 @@ const BottomNav = () => {
 
   const handleGroupPlan = () => {
     setShowMenu(false);
-    if (isGuest) { openAuthDrawer({ mode: "register", hint: "join_session" }); return; }
+    // Group sessions dzialaja dla goscia (sesja jest identyfikowana po join_code,
+    // nie po user identity - mozna zaprosic przez kod, nie po username).
     navigate("/sesja/nowa");
   };
 

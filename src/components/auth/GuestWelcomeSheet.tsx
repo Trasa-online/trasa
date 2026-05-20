@@ -17,9 +17,8 @@ const GuestWelcomeSheet = () => {
     let dismissed = false;
     try { dismissed = localStorage.getItem(DISMISS_KEY) === "1"; } catch { /* unavailable */ }
     if (dismissed) return;
-    // Small delay so it doesn't pop instantly during route transition - gives
-    // the page a chance to paint first.
-    const t = setTimeout(() => setOpen(true), 350);
+    // 5s delay - daje czas zniknac CookieBannerowi (zasłaniał drawer na entry).
+    const t = setTimeout(() => setOpen(true), 5000);
     return () => clearTimeout(t);
   }, [user, loading]);
 

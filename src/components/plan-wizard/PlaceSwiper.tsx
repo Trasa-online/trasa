@@ -1092,19 +1092,11 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     }
   }, [queue.length, loading]);
 
-  // Show bingo banner when threshold reached.
-  // Skipped in exploreMode (HomeSwipe = wolna eksploracja, bez popupów "masz trasę!").
-  useEffect(() => {
-    if (groupSessionId) return; // not in group mode
-    if (exploreMode) return;
-    const uniqueCategories = new Set(likedPlaces.map((p) => p.category)).size;
-    if (bannerDismissCount >= 2) return; // never show again after two dismissals
-    if (bannerDismissCount === 0 && uniqueCategories >= BINGO_MIN_CATEGORIES) {
-      setShowBanner(true);
-    } else if (bannerDismissCount === 1 && uniqueCategories >= BINGO_REPEAT_CATEGORIES) {
-      setShowBanner(true);
-    }
-  }, [likedPlaces, bannerDismissCount, groupSessionId, exploreMode]);
+  // Bingo modal DISABLED globally - userka wycofala go z solo parowania (i wczesniej
+  // z exploreMode). Hook zostawiony jako stub na wypadek powrotu - po prostu nic nie
+  // robi. Zmienne setShowBanner / bannerDismissCount nadal istnieja zeby nie ruszac
+  // pozostalej logiki, ale showBanner pozostaje false.
+  void BINGO_MIN_CATEGORIES; void BINGO_REPEAT_CATEGORIES; void setShowBanner; void bannerDismissCount;
 
   const handleBannerDismiss = () => {
     setShowBanner(false);

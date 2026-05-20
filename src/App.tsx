@@ -314,8 +314,8 @@ const App = () => (
           <Route path="/set-password-biznes" element={<SetPassword forceBusiness />} />
           <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
           <Route path="/moje-trasy" element={<AppLayout><MyTrips /></AppLayout>} />
-          <Route path="/dziennik" element={<AppLayout><Journal /></AppLayout>} />
-          <Route path="/moj-profil" element={<AppLayout><TravelerProfile /></AppLayout>} />
+          <Route path="/dziennik" element={<AppLayout hideTopBar><Journal /></AppLayout>} />
+          <Route path="/moj-profil" element={<AppLayout hideTopBar><TravelerProfile /></AppLayout>} />
           <Route path="/edit-plan" element={<EditPlan />} />
           <Route path="/review-summary" element={<ReviewSummary />} />
           <Route path="/plan" element={<PlanWizard />} />
