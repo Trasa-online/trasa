@@ -127,7 +127,7 @@ Klient → supabase.functions.invoke("google-places-proxy", ...) → Google Plac
 
 Dwa konteksty, dwie proporcje — niezmienne:
 
-- **Okładka swipe (SwipeCard / cover) = `9:16` (pionowa).** Karta swipe'owalna na HomeSwipe/PlanWizard - pełnoekranowy portret jak Tinder/Reels. Tailwind: `aspect-[9/16]` na kontenerze karty, `object-cover` na `<img>`.
+- **Okładka swipe (SwipeCard / cover) = portret, kierunek `9:16`.** Karta swipe'owalna na HomeSwipe/PlanWizard wypełnia dostępną wysokość ekranu (flex 1, maxHeight 78dvh), więc realna proporcja zmienia się z urządzeniem. NIE wymuszaj `aspect-[9/16]` na kontenerze — testowaliśmy, na mobile Safari to robi kartę za małą (banner + filter chip + bottom nav zjadają dużo, kontener z fixed aspect kurczy się do nieczytelnego rozmiaru). Sam **obraz** używa `object-cover` żeby kadrować do portretu niezależnie od formatu źródłowego.
 - **Wewnątrz wizytówki (PlaceSwiperDetail hero + Aktualności + galeria) = `16:9` (pozioma).** Bottom-sheet otwierany po kliknięciu karty, sekcja Aktualności z postami biznesu. Tailwind: `aspect-[16/9]`, `object-cover`.
 
 **Auto-crop:** Jeżeli lokal wrzuci ze swojego profilu zdjęcie w innej proporcji, **NIE** wyświetlaj pełnego obrazka. Kontener z fixed aspect + `object-cover` na `<img>` automatycznie kadruje/centruje. Nie używaj `object-contain` na cover ani galerii — to psuje układ (czarne paski). `object-contain` dopuszczalny tylko w fullscreen photo viewer.
