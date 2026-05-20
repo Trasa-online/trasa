@@ -713,11 +713,22 @@ function getGroupForCategory(cat: string): Set<string> | null {
 
 const DIVERSITY_THRESHOLD = 2; // after 2 consecutive likes from same group, deprioritize
 
-// Maps raw DB row (with nested business_profiles) to MockPlace fields
+// Maps raw DB row (with nested business_profiles) to MockPlace fields.
+// Merges three photo sources into galleryPhotos:
+//   1. business_profiles.gallery_urls  (zdjęcia od właściciela lokalu)
+//   2. places.gallery_urls             (kurowane / scache'owane z Google przez scripts/backfill-place-galleries.ts)
+// Cover photo (place.photo_url) jest osobno - nie powtarzamy go w galerii.
 function enrichWithBusinessProfile(p: any): MockPlace {
+  const placeGallery: string[] = Array.isArray(p.gallery_urls) ? p.gallery_urls.filter(Boolean) : [];
+
   const bp = Array.isArray(p.business_profiles) ? p.business_profiles[0] : p.business_profiles;
-  if (!bp) return p as MockPlace;
+  if (!bp) {
+    return { ...p, galleryPhotos: placeGallery } as MockPlace;
+  }
   const plan: 'zero' | 'basic' | 'premium' = bp.plan ?? 'zero';
+  const bizGallery: string[] = Array.isArray(bp.gallery_urls) ? bp.gallery_urls.filter(Boolean) : [];
+  // Biznes wpisuje swoje zdjęcia jako pierwsze, potem kurowana galeria z places, dedupe po URL.
+  const mergedGallery = Array.from(new Set([...bizGallery, ...placeGallery]));
   return {
     ...p,
     businessPlan: plan,
@@ -728,14 +739,14 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     businessEventTitle: plan !== 'zero' ? (bp.event_title ?? undefined) : undefined,
     businessPhone: bp.phone ?? null,
     businessWebsite: bp.website ?? null,
-    // gallery shown for all plans with uploaded photos
-    galleryPhotos: bp.gallery_urls ?? [],
+    galleryPhotos: mergedGallery,
     businessSubcategories: bp.subcategories ?? [],
     coverVideoUrl: (plan === 'basic' || plan === 'premium') && bp.cover_video_url ? bp.cover_video_url : undefined,
-    // skip Google photos when business has uploaded their own media
+    // Pomijaj Google Photos tylko gdy biznes ma WŁASNE zdjęcia (cover/video/własna galeria).
+    // places.gallery_urls (kurowane z Google) NIE liczy się jako "własne zdjęcia biznesu".
     businessHasOwnPhoto: !!(
       ((plan === 'basic' || plan === 'premium') && (bp.cover_image_url || bp.cover_video_url)) ||
-      (bp.gallery_urls && bp.gallery_urls.length > 0)
+      (bizGallery.length > 0)
     ),
   } as MockPlace;
 }
