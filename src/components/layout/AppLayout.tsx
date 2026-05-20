@@ -22,26 +22,25 @@ const GuestBanner = () => {
   });
   if (dismissed) return null;
   return (
-    <div className="bg-orange-50 border-b border-orange-200 px-4 py-2.5 flex items-center gap-3">
+    <div className="bg-orange-50 border-b border-orange-200 px-4 py-2 flex items-center gap-2.5">
       <p className="flex-1 text-xs text-foreground leading-snug">
-        {`Grasz jako gość. `}
-        <button
-          onClick={() => open({ mode: "register" })}
-          className="font-semibold text-orange-700 underline underline-offset-2 active:opacity-70"
-        >
-          Załóż konto
-        </button>
-        {` żeby zachować trasy i mieć dziennik.`}
+        Grasz jako gość. Załóż konto, żeby zapisywać trasy{` `}i&nbsp;mieć dziennik.
       </p>
+      <button
+        onClick={() => open({ mode: "register" })}
+        className="shrink-0 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-bold active:scale-95 transition-transform shadow-sm shadow-orange-500/20"
+      >
+        Załóż konto
+      </button>
       <button
         onClick={() => {
           try { sessionStorage.setItem(GUEST_BANNER_DISMISS_KEY, "1"); } catch { /* sessionStorage unavailable */ }
           setDismissed(true);
         }}
-        className="shrink-0 h-7 w-7 -mr-1 flex items-center justify-center text-orange-700/60 active:text-orange-700"
+        className="shrink-0 h-6 w-6 -mr-1 flex items-center justify-center text-orange-700/50 active:text-orange-700"
         aria-label="Ukryj baner gościa"
       >
-        <X className="h-4 w-4" />
+        <X className="h-3.5 w-3.5" />
       </button>
     </div>
   );
