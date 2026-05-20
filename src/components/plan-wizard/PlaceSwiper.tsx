@@ -1320,8 +1320,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         </span>
       </div>
 
-      {/* Card stack / Add custom place panel */}
-      <div className="relative mx-4 mb-4" style={{ flex: "1 1 0", minHeight: 0, maxHeight: "min(680px, 78dvh)" }}>
+      {/* Card stack / Add custom place panel. Cover photo aspect ratio = 9:16 (portrait).
+          Container locks the aspect; SwipeCard fills inset-0; <img> uses object-cover to crop. */}
+      <div className="relative mx-4 mb-4 mx-auto w-full aspect-[9/16]" style={{ maxHeight: "min(680px, 78dvh)", maxWidth: "calc((100dvh - 240px) * 9 / 16)" }}>
         {showAddPlace ? (
           <AddCustomPlacePanel
             city={city}

@@ -123,6 +123,19 @@ Klient → supabase.functions.invoke("google-places-proxy", ...) → Google Plac
 5. `skipGoogleFetch` prop w PlaceSwiperDetail/SwipeCard: używaj `false` dla fullscreen drawer (żeby były recenzje i zdjęcia Google), `true` tylko gdy zależy Ci na szybkości i masz własne zdjęcia
 6. **Biznes z własnymi zdjęciami → blokuj Google Photos (KRYTYCZNE):** Gdy lokal ma choć jedno własne zdjęcie (cover image, cover video, lub galeria `gallery_urls`), NIE pobieraj zdjęć z Google Places. Pole `businessHasOwnPhoto: boolean` w `MockPlace` (ustawiane w `enrichWithBusinessProfile`) jest źródłem prawdy — `PlaceSwiperDetail` respektuje je automatycznie. Nie nadpisuj tego zachowania bez wyraźnego powodu.
 
+### Proporcje zdjęć wizytówek (KRYTYCZNE)
+
+Dwa konteksty, dwie proporcje — niezmienne:
+
+- **Okładka swipe (SwipeCard / cover) = `9:16` (pionowa).** Karta swipe'owalna na HomeSwipe/PlanWizard - pełnoekranowy portret jak Tinder/Reels. Tailwind: `aspect-[9/16]` na kontenerze karty, `object-cover` na `<img>`.
+- **Wewnątrz wizytówki (PlaceSwiperDetail hero + Aktualności + galeria) = `16:9` (pozioma).** Bottom-sheet otwierany po kliknięciu karty, sekcja Aktualności z postami biznesu. Tailwind: `aspect-[16/9]`, `object-cover`.
+
+**Auto-crop:** Jeżeli lokal wrzuci ze swojego profilu zdjęcie w innej proporcji, **NIE** wyświetlaj pełnego obrazka. Kontener z fixed aspect + `object-cover` na `<img>` automatycznie kadruje/centruje. Nie używaj `object-contain` na cover ani galerii — to psuje układ (czarne paski). `object-contain` dopuszczalny tylko w fullscreen photo viewer.
+
+**Implementacja referencyjna:**
+- [src/components/plan-wizard/PlaceSwiper.tsx](src/components/plan-wizard/PlaceSwiper.tsx) - kontener karty z `aspect-[9/16]` + `maxHeight: min(680px, 78dvh)`
+- [src/components/plan-wizard/PlaceSwiperDetail.tsx](src/components/plan-wizard/PlaceSwiperDetail.tsx) - hero `aspect-[16/9]`, Aktualności `aspect-[16/9]`, fullscreen viewer z `object-contain`
+
 ### Supabase
 
 - Klient: `src/integrations/supabase/client.ts`
