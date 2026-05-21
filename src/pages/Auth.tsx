@@ -206,6 +206,20 @@ const Auth = () => {
         .update({ is_draft: false })
         .eq("id", draftProfileId);
       if (promoteError) throw promoteError;
+      // Fetch business name + place_id for the welcome email CTA
+      const { data: bizProfile } = await (supabase as any)
+        .from("business_profiles")
+        .select("business_name, place_id")
+        .eq("id", draftProfileId)
+        .single();
+      // Fire and forget — welcome email shouldn't block redirect
+      supabase.functions.invoke("send-business-welcome", {
+        body: {
+          email: email.trim().toLowerCase(),
+          business_name: bizProfile?.business_name ?? null,
+          place_id: bizProfile?.place_id ?? draftProfileId,
+        },
+      }).catch((err) => console.error("[send-business-welcome]", err));
       // Clear draft key from localStorage — profile is now a real account
       localStorage.removeItem("draft_profile_id");
       setDraftUpgradeDone(true);
