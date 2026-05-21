@@ -763,12 +763,12 @@ const BusinessDashboard = () => {
       steps: [
         {
           element: '#tour-business-name',
-          popover: { title: 'Zacznij od nazwy', description: 'Kliknij tutaj i wpisz nazwę swojego lokalu. Możesz ją zmienić w każdej chwili — z poziomu dowolnej zakładki.', side: 'bottom' },
+          popover: { title: 'Zacznij od nazwy', description: 'Kliknij tutaj i wpisz nazwę swojego lokalu. Możesz ją zmienić w każdej chwili, z poziomu dowolnej zakładki.', side: 'bottom' },
           onHighlightStarted: () => setActiveSection('gallery'),
         },
         {
           element: isMobile ? '#tour-mobile-gallery' : '#tour-gallery',
-          popover: { title: 'Wygląd', description: 'Dodaj okładkę, galerię i dostosuj kolory wizytówki — tak będą Cię widzieć goście w aplikacji.', side: isMobile ? 'bottom' : 'right' },
+          popover: { title: 'Wygląd', description: 'Dodaj okładkę, galerię i dostosuj kolory wizytówki - tak będą Cię widzieć goście w aplikacji.', side: isMobile ? 'bottom' : 'right' },
           onHighlightStarted: () => setActiveSection('gallery'),
         },
         {
@@ -790,15 +790,16 @@ const BusinessDashboard = () => {
   }, [profile]);
 
   // Auto-start tour on first visit — only after loading finishes AND user is on overview
+  // Skip in draft (demo) mode — tour is for owners learning their real panel, not exploring the demo
   useEffect(() => {
-    if (!profile || loading || activeSection !== 'gallery') return;
+    if (!profile || loading || activeSection !== 'gallery' || isDraft) return;
     const seen = localStorage.getItem(`tour_seen_v2_${profile.id}`);
     if (!seen) {
       // Small delay so the DOM is fully rendered
       const t = setTimeout(() => startTour(), 600);
       return () => clearTimeout(t);
     }
-  }, [profile?.id, loading, activeSection]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [profile?.id, loading, activeSection, isDraft]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const PRESET_DAYS: Record<Exclude<AnalyticsRange, 'custom'>, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
@@ -1365,7 +1366,7 @@ const BusinessDashboard = () => {
             id={`tour-${item.id}`}
             onClick={async () => { if (item.disabled) return; if (isDirty) await autoSaveDraft(); setActiveSection(item.id); }}
             disabled={item.disabled}
-            title={item.disabled ? 'Niedostępne — wkrótce' : (!sidebarOpen ? item.label : undefined)}
+            title={item.disabled ? 'Niedostępne - wkrótce' : (!sidebarOpen ? item.label : undefined)}
             className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-0.5 ${sidebarOpen ? 'text-left' : 'justify-center'} ${item.disabled ? 'text-slate-300 cursor-not-allowed' : activeSection === item.id ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
           >
             <item.icon className="h-4 w-4 shrink-0" />
