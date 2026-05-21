@@ -7,30 +7,49 @@ const corsHeaders = {
 
 const EMAIL_RE = /^[^\s@<>"'\\]+@[^\s@<>"'\\]+\.[^\s@<>"'\\]+$/;
 
+// Always return 200 with a result envelope so supabase.functions.invoke surfaces
+// our error codes in `data` rather than swallowing them as a generic non-2xx error.
+function ok(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+    const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!SUPABASE_URL || !ANON_KEY || !SERVICE_ROLE_KEY) {
+      console.error("[upgrade-business-account] missing env", {
+        hasUrl: !!SUPABASE_URL,
+        hasAnon: !!ANON_KEY,
+        hasService: !!SERVICE_ROLE_KEY,
+      });
+      return ok({ ok: false, code: "env_missing", message: "Brak konfiguracji serwera. Daj znać Trasa team." });
+    }
+
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "missing authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return ok({ ok: false, code: "no_auth", message: "Sesja wygasła. Odśwież stronę i spróbuj ponownie." });
     }
 
     const { email: rawEmail, password } = await req.json();
-    if (!rawEmail || typeof rawEmail !== "string") throw new Error("email required");
-    if (!password || typeof password !== "string") throw new Error("password required");
+    if (!rawEmail || typeof rawEmail !== "string" || !password || typeof password !== "string") {
+      return ok({ ok: false, code: "bad_input", message: "Brakuje emaila lub hasła." });
+    }
     const email = rawEmail.trim().toLowerCase().slice(0, 254);
-    if (!EMAIL_RE.test(email)) throw new Error("invalid email format");
-    if (password.length < 6) throw new Error("password too short");
-
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    if (!EMAIL_RE.test(email)) {
+      return ok({ ok: false, code: "bad_email", message: "Email ma nieprawidłowy format." });
+    }
+    if (password.length < 6) {
+      return ok({ ok: false, code: "bad_password", message: "Hasło musi mieć co najmniej 6 znaków." });
+    }
 
     // Verify caller identity using JWT from Authorization header
     const supabaseUser = createClient(SUPABASE_URL, ANON_KEY, {
@@ -39,10 +58,8 @@ Deno.serve(async (req) => {
     });
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "invalid session" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("[upgrade-business-account] invalid session", userError);
+      return ok({ ok: false, code: "invalid_session", message: "Sesja nieprawidłowa. Odśwież stronę." });
     }
 
     // Use admin API to update email + password AND mark email as confirmed.
@@ -60,23 +77,26 @@ Deno.serve(async (req) => {
 
     if (updateError) {
       const msg = updateError.message?.toLowerCase() ?? "";
-      if (msg.includes("already") || msg.includes("duplicate")) {
-        return new Response(JSON.stringify({ error: "email_in_use" }), {
-          status: 409,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      console.error("[upgrade-business-account] admin update failed", {
+        message: updateError.message,
+        status: (updateError as any).status,
+        code: (updateError as any).code,
+        user_id: user.id,
+        email,
+      });
+      if (msg.includes("already") || msg.includes("duplicate") || msg.includes("registered")) {
+        return ok({ ok: false, code: "email_in_use", message: "Ten email jest już użyty na innym koncie." });
       }
-      throw updateError;
+      return ok({
+        ok: false,
+        code: "update_failed",
+        message: updateError.message ?? "Nie udało się utworzyć konta.",
+      });
     }
 
-    return new Response(JSON.stringify({ ok: true, user_id: user.id }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return ok({ ok: true, user_id: user.id });
   } catch (err: any) {
-    console.error("[upgrade-business-account]", err);
-    return new Response(JSON.stringify({ error: err.message ?? "unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("[upgrade-business-account] unexpected error", err);
+    return ok({ ok: false, code: "server_error", message: err.message ?? "Nieoczekiwany błąd serwera." });
   }
 });

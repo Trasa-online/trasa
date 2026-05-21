@@ -208,17 +208,23 @@ const Auth = () => {
       // Use server-side admin API to upgrade the anonymous account.
       // This skips Supabase's default "Confirm change of email" mail and
       // marks the email as confirmed so the user never lands on /set-password.
+      // Function always returns 200 + envelope { ok, code, message } — read body directly.
       const { data: upgradeData, error: upgradeError } = await supabase.functions.invoke(
         "upgrade-business-account",
         { body: { email: email.trim().toLowerCase(), password } },
       );
-      if (upgradeError) throw upgradeError;
-      if (upgradeData?.error === "email_in_use") {
-        toast.error("Ten email jest już użyty na innym koncie. Zaloguj się albo użyj innego adresu.");
+      if (upgradeError) {
+        console.error("[handleDraftUpgrade] function invoke failed", upgradeError);
+        toast.error("Nie udało się połączyć z serwerem. Sprawdź internet i spróbuj ponownie.");
         setLoading(false);
         return;
       }
-      if (upgradeData?.error) throw new Error(upgradeData.error);
+      if (!upgradeData?.ok) {
+        console.error("[handleDraftUpgrade] upgrade rejected", upgradeData);
+        toast.error(upgradeData?.message ?? "Nie udało się utworzyć konta.");
+        setLoading(false);
+        return;
+      }
       // Refresh the client session so the JWT includes the new email + claims
       await supabase.auth.refreshSession();
       // Promote the draft profile to a real one so the dashboard loads in live mode
