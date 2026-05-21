@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { X, Star, MapPin, Loader2, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -88,11 +89,27 @@ const FullscreenPhotos = ({
 
   if (photos.length === 0) return null;
 
-  return (
+  // Stop ANY click/touch z FullscreenPhotos przed propagacja na underlying
+  // Sheet/<a> w title row (np. Maps pill). Wczesniej iOS po kliknięciu next
+  // wyswietlal komunikat "Open in Maps app" - zapewne ghost click po 300ms
+  // delay trafial w underlying anchor.
+  const stop = (e: React.SyntheticEvent) => { e.stopPropagation(); };
+
+  // Portal do <body> izolujemy renderowanie od DOM Sheet/sheet portal Radix-a.
+  // Dzieki temu z-index niczego nie zaslania, plus event capturing zaczyna sie
+  // od naszego rootu, bez podpinania sie pod hierarchie sheet contentu.
+  return createPortal(
     <div
       className="fixed inset-0 z-[200] bg-black flex items-center justify-center select-none"
-      onTouchStart={(e) => { startX.current = e.touches[0].clientX; }}
+      onClick={stop}
+      onPointerDown={stop}
+      onMouseDown={stop}
+      onTouchStart={(e) => {
+        e.stopPropagation();
+        startX.current = e.touches[0].clientX;
+      }}
       onTouchEnd={(e) => {
+        e.stopPropagation();
         if (startX.current === null) return;
         const dx = e.changedTouches[0].clientX - startX.current;
         startX.current = null;
@@ -103,7 +120,8 @@ const FullscreenPhotos = ({
       }}
     >
       <button
-        onClick={onClose}
+        type="button"
+        onClick={(e) => { stop(e); onClose(); }}
         className="absolute top-4 right-4 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:bg-white/25 transition-colors"
         style={{ top: "max(1rem, env(safe-area-inset-top))" }}
         aria-label="Zamknij"
@@ -114,7 +132,8 @@ const FullscreenPhotos = ({
       {photos.length > 1 && (
         <>
           <button
-            onClick={() => setIdx((n) => Math.max(0, n - 1))}
+            type="button"
+            onClick={(e) => { stop(e); setIdx((n) => Math.max(0, n - 1)); }}
             disabled={idx === 0}
             className="absolute left-3 z-10 h-12 w-12 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:bg-white/25 disabled:opacity-30 transition-colors"
             aria-label="Poprzednie zdjęcie"
@@ -122,7 +141,8 @@ const FullscreenPhotos = ({
             <ChevronLeft className="h-6 w-6 text-white" />
           </button>
           <button
-            onClick={() => setIdx((n) => Math.min(photos.length - 1, n + 1))}
+            type="button"
+            onClick={(e) => { stop(e); setIdx((n) => Math.min(photos.length - 1, n + 1)); }}
             disabled={idx === photos.length - 1}
             className="absolute right-3 z-10 h-12 w-12 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:bg-white/25 disabled:opacity-30 transition-colors"
             aria-label="Następne zdjęcie"
@@ -135,7 +155,8 @@ const FullscreenPhotos = ({
       <img
         src={photos[idx]}
         alt=""
-        className="max-w-full max-h-full object-contain"
+        draggable={false}
+        className="max-w-full max-h-full object-contain pointer-events-none"
       />
 
       {photos.length > 1 && (
@@ -143,13 +164,15 @@ const FullscreenPhotos = ({
           {photos.map((_, i) => (
             <button
               key={i}
-              onClick={() => setIdx(i)}
+              type="button"
+              onClick={(e) => { stop(e); setIdx(i); }}
               className={cn("h-1.5 rounded-full transition-all", i === idx ? "w-5 bg-white" : "w-1.5 bg-white/40")}
             />
           ))}
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };
 
