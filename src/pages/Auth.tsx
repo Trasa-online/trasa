@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { usePostHog } from "@posthog/react";
+import { isHardcodedAdmin } from "@/lib/admins";
 
 type Mode = "login" | "register";
 type BizMode = "login" | "register";
@@ -57,15 +58,19 @@ const Auth = () => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) return;
       if (session.user.is_anonymous) return; // anonymous user should not be auto-redirected
-      // Always check for business profile first - business users must not land on /home
-      const { data: bp } = await (supabase as any)
-        .from("business_profiles")
-        .select("place_id, id")
-        .eq("owner_user_id", session.user.id)
-        .maybeSingle();
-      if (bp?.id) {
-        navigate(`/biznes/${bp.place_id ?? bp.id}`);
-        return;
+      // Always check for business profile first - business users must not land on /home.
+      // Wyjatki: hardcoded admins (Nat, Tomek) + draft profile (niedokonczony upgrade).
+      const skipBusinessRedirect = isHardcodedAdmin(session.user.email);
+      if (!skipBusinessRedirect) {
+        const { data: bp } = await (supabase as any)
+          .from("business_profiles")
+          .select("place_id, id, is_draft")
+          .eq("owner_user_id", session.user.id)
+          .maybeSingle();
+        if (bp?.id && !bp.is_draft) {
+          navigate(`/biznes/${bp.place_id ?? bp.id}`);
+          return;
+        }
       }
       const demoRaw = localStorage.getItem("trasa_demo_liked");
       if (demoRaw) {
@@ -142,13 +147,18 @@ const Auth = () => {
       posthog.identify(data.user!.id, { email: data.user!.email });
       posthog.capture("user_signed_in", { business_mode: businessMode });
 
-      // Check for business profile (covers both businessMode and regular login for biz accounts)
-      const { data: bp } = await (supabase as any)
-        .from("business_profiles")
-        .select("place_id, id")
-        .eq("owner_user_id", data.user!.id)
-        .maybeSingle();
-      if (bp?.id) {
+      // Check for business profile (covers both businessMode and regular login for biz accounts).
+      // Hardcoded admins (Nat, Tomek) loguja sie konsumencko mimo posiadania biz profilu -
+      // chyba ze swiadomie weszli z businessMode (zakladka "Panel Biznesowy").
+      const skipBusinessRedirect = !businessMode && isHardcodedAdmin(data.user!.email);
+      const { data: bp } = skipBusinessRedirect
+        ? { data: null as { id?: string; place_id?: string | null; is_draft?: boolean } | null }
+        : await (supabase as any)
+            .from("business_profiles")
+            .select("place_id, id, is_draft")
+            .eq("owner_user_id", data.user!.id)
+            .maybeSingle();
+      if (bp?.id && !bp.is_draft) {
         navigate(`/biznes/${bp.place_id ?? bp.id}`);
         return;
       }

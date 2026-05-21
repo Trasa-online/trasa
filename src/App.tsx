@@ -156,12 +156,19 @@ function SplashController() {
 
     (async () => {
       try {
+        // Hardcoded admins (Nat, Tomek) zawsze moga uzywac apki konsumencko -
+        // nawet jesli maja business_profile rekord (np. po testach draft upgrade).
+        if (isHardcodedAdmin(user.email)) return;
+
         const { data: adminRow } = await supabase
           .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
         if (adminRow) return;
 
         const { data: bp } = await (supabase as any)
-          .from("business_profiles").select("place_id, id").eq("owner_user_id", user.id).maybeSingle();
+          .from("business_profiles").select("place_id, id, is_draft").eq("owner_user_id", user.id).maybeSingle();
+        // Draft profile (z /biznes/start, jeszcze nie upgraded) NIE wymusza redirectu -
+        // user moze przyjsc na strone konsumencka mimo niedokonczonego draftu.
+        if (bp?.is_draft) return;
         if (bp?.id) navigate(`/biznes/${bp.place_id ?? bp.id}`, { replace: true });
       } finally {
         setDone(true);
@@ -221,12 +228,19 @@ function BusinessGuard() {
     ) return;
 
     (async () => {
+      // Hardcoded admins (Nat, Tomek) zawsze moga uzywac apki konsumencko -
+      // nawet jesli maja business_profile rekord (np. po testach draft upgrade).
+      if (isHardcodedAdmin(user.email)) return;
+
       const { data: adminRow } = await supabase
         .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
       if (adminRow) return;
 
       const { data: bp } = await (supabase as any)
-        .from("business_profiles").select("place_id, id").eq("owner_user_id", user.id).maybeSingle();
+        .from("business_profiles").select("place_id, id, is_draft").eq("owner_user_id", user.id).maybeSingle();
+      // Draft profile NIE wymusza redirectu - jezeli user nie dokonczyl flow
+      // upgrade z /biznes/start, to nie blokujemy mu apki konsumenckiej.
+      if (bp?.is_draft) return;
       if (bp?.id) navigate(`/biznes/${bp.place_id ?? bp.id}`, { replace: true });
     })();
   }, [user, location.pathname]);
@@ -236,6 +250,7 @@ function BusinessGuard() {
 import CookieBanner from "./components/CookieBanner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { isNative } from "@/lib/platform";
+import { isHardcodedAdmin } from "@/lib/admins";
 // Lazy-loaded public pages - one chunk each, fetched on demand
 const WaitlistPage = lazy(() => import("./pages/WaitlistPage"));
 const LandingPage = lazy(() => import("./pages/LandingPage"));
