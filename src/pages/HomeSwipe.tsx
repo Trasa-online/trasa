@@ -66,8 +66,8 @@ const HomeSwipe = () => {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Sticky filter chip */}
-      <div className="shrink-0 bg-background px-4 pt-3 pb-2.5">
+      {/* Sticky filter chip - prawa strona */}
+      <div className="shrink-0 bg-background px-4 pt-3 pb-2.5 flex justify-end">
         <button
           onClick={() => setDrawerOpen(true)}
           className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-card border border-border/60 active:scale-[0.97] transition-transform max-w-full"
@@ -97,14 +97,20 @@ const HomeSwipe = () => {
       {/* Filter drawer (city + categories multi-select) */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden" style={{ maxHeight: "85vh" }}>
-          {/* Close button - top right (shadcn default X jest ukryty wyzej, robimy wlasny zeby pasowal do stylu) */}
-          <button
-            onClick={() => setDrawerOpen(false)}
-            className="absolute top-3 right-3 z-10 h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70 transition-colors"
-            aria-label="Zamknij"
-          >
-            <X className="h-4 w-4 text-foreground" />
-          </button>
+          {/* Close button - wrapped w div, zeby shadcn'owy [&>button]:hidden nie ukrywal naszego.
+              Shadcn renderuje wlasny <SheetPrimitive.Close> jako bezposrednie dziecko SheetContent;
+              nasz X w wrapperze omija ten selector. */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(false)}
+              className="absolute top-3 right-3 z-20 h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70 transition-colors shadow-sm"
+              aria-label="Zamknij"
+              style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
+            >
+              <X className="h-4 w-4 text-foreground" />
+            </button>
+          </div>
           <div className="overflow-y-auto px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]">
             <div className="flex items-center justify-between gap-3 mb-5 pr-12">
               <div>
@@ -157,44 +163,56 @@ const HomeSwipe = () => {
               })}
             </div>
 
-            {/* Kategorie - multi-select */}
-            <div className="flex items-baseline justify-between mb-2">
+            {/* Kategorie - multi-select pogrupowany po MAIN_CATEGORIES */}
+            <div className="flex items-baseline justify-between mb-3">
               <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Kategorie</p>
               <p className="text-[10px] text-muted-foreground">możesz zaznaczyć kilka</p>
             </div>
-            <div className="flex flex-wrap gap-2 mb-4">
-              <button
-                onClick={() => setFilters((f) => ({ ...f, categories: [] }))}
-                className={cn(
-                  "px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96]",
-                  filters.categories.length === 0
-                    ? "bg-foreground text-background"
-                    : "bg-muted text-foreground"
-                )}
-              >
-                Wszystko
-              </button>
-              {MAIN_CATEGORIES.flatMap((cat) =>
-                cat.subcategories.map((sub) => {
-                  const active = filters.categories.includes(sub.id);
-                  return (
-                    <button
-                      key={sub.id}
-                      onClick={() => toggleCategory(sub.id)}
-                      className={cn(
-                        "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96] border",
-                        active
-                          ? "bg-foreground text-background border-foreground"
-                          : "bg-muted text-foreground border-transparent"
-                      )}
-                    >
-                      <span>{sub.emoji}</span>
-                      <span>{sub.label}</span>
-                      {active && <Check className="h-3.5 w-3.5 ml-0.5" />}
-                    </button>
-                  );
-                })
+
+            {/* "Wszystko" - reset filter */}
+            <button
+              onClick={() => setFilters((f) => ({ ...f, categories: [] }))}
+              className={cn(
+                "mb-4 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96]",
+                filters.categories.length === 0
+                  ? "bg-foreground text-background"
+                  : "bg-muted text-foreground"
               )}
+            >
+              Wszystko
+            </button>
+
+            {/* Grupowane podkategorie - kazda main category jako naglowek + chipsy podkategorii */}
+            <div className="space-y-4 mb-4">
+              {MAIN_CATEGORIES.map((cat) => (
+                <div key={cat.id}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-base">{cat.emoji}</span>
+                    <p className="text-sm font-bold text-foreground">{cat.label}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {cat.subcategories.map((sub) => {
+                      const active = filters.categories.includes(sub.id);
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => toggleCategory(sub.id)}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96] border",
+                            active
+                              ? "bg-foreground text-background border-foreground"
+                              : "bg-muted text-foreground border-transparent"
+                          )}
+                        >
+                          <span>{sub.emoji}</span>
+                          <span>{sub.label}</span>
+                          {active && <Check className="h-3.5 w-3.5 ml-0.5" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
 
             <button
