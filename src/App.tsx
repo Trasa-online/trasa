@@ -308,7 +308,7 @@ const App = () => (
           <Route path="/" element={<RootPage />} />
           <Route path="/home" element={<AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
           <Route path="/home-legacy" element={<AppLayout><Home /></AppLayout>} />
-          <Route path="/eksploruj" element={<AppLayout><Explore /></AppLayout>} />
+          <Route path="/eksploruj" element={<AppLayout hideTopBar><Explore /></AppLayout>} />
           <Route path="/create" element={<CreateRoute />} />
           <Route path="/settings" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
           <Route path="/day-review" element={<DayReview />} />
