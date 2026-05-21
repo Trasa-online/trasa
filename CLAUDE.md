@@ -6,7 +6,7 @@
 
 ## Czym jest Trasa
 
-Trasa to aplikacja do planowania podróży grupowych. Użytkownicy przeglądają miejsca, dopasowują je wspólnie (nie nazywamy tego "swipe" ani "match" — zakazane słowa), tworzą trasy i prowadzą dziennik podróży. Firmy mogą dodać swój lokal jako wizytówkę i zarządzać wizerunkiem.
+Trasa to aplikacja do planowania podróży - zarówno **grupowo**, jak i **solo**. Użytkownicy przeglądają miejsca, dopasowują je (samodzielnie lub wspólnie z grupą - ale nie nazywamy tego "swipe" ani "match", to zakazane słowa), tworzą trasy i prowadzą dziennik podróży. Tryb grupowy jest jednym z kluczowych use case'ów, ale nie wyklucza solo tripów - cały flow działa też dla pojedynczego użytkownika. Firmy mogą dodać swój lokal jako wizytówkę i zarządzać wizerunkiem.
 
 ### Źródło danych miejsc (KRYTYCZNE)
 
@@ -78,12 +78,12 @@ Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery mał
 
 ### B2C (Użytkownicy)
 
-1. **Wybieranie miejsc** — sesja grupowa, wybór miasta i kategorii
-2. **Dopasowania** — miejsca wybrane przez wszystkich członków grupy
+1. **Wybieranie miejsc** — sesja solo lub grupowa, wybór miasta i kategorii
+2. **Dopasowania** — miejsca wybrane przez użytkownika (solo) lub przez wszystkich członków grupy
    - ⛔ ZAKAZ: słowa "swipe", "match" (jak w Tinder)
    - ✅ Używaj: "przeglądanie", "eksploracja", "dopasowania", "dodanie do trasy"
 3. **Tworzenie trasy** — z wybranych/dopasowanych miejsc
-4. **Podsumowanie podróży** — plan vs rzeczywistość, ocenianie miejsc przez grupę
+4. **Podsumowanie podróży** — plan vs rzeczywistość, ocenianie miejsc (solo lub przez grupę)
 5. **Dziennik** — zapisywanie "pocztówek" z trasy (Baloo font na nagłówkach kart)
 
 ### B2B (Firmy)
