@@ -124,7 +124,9 @@ function CompletionRing({ percent, children }: { percent: number; children: Reac
 function GuestProfile() {
   const { open } = useAuthDrawer();
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] text-center">
+    // Wieksze pb (20vh zamiast 5rem) zeby grupa "ikona+tytul+CTA" landowala
+    // wizualnie srodkowo - z mniejszym pb wpada zbyt nisko (Bottom-weight buttona).
+    <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 pb-[20vh] text-center">
       <div className="h-20 w-20 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center">
         <UserCircle2 className="h-10 w-10 text-orange-600" />
       </div>

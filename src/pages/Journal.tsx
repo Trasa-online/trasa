@@ -69,8 +69,11 @@ const Journal = () => {
 
   // Guest: pelnoekranowy wycentrowany empty state, bez tytulu strony (TopBar tez ukryty na route /dziennik)
   if (isGuestView) {
+    // Większy pb żeby empty state wygladał na realnie wycentrowany (bez tego
+    // pb=5rem grupa landuje ~10-15% ponizej optycznego srodka - icon + tytul
+    // sa lekkie, button na dole ciągnie wizualnie ku dolowi).
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] text-center">
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 pb-[20vh] text-center">
         <div className="h-20 w-20 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center">
           <BookOpen className="h-9 w-9 text-orange-600" />
         </div>
