@@ -200,6 +200,12 @@ const Auth = () => {
         password,
       });
       if (error) throw error;
+      // Promote the draft profile to a real one so the dashboard loads in live mode
+      const { error: promoteError } = await (supabase as any)
+        .from("business_profiles")
+        .update({ is_draft: false })
+        .eq("id", draftProfileId);
+      if (promoteError) throw promoteError;
       // Clear draft key from localStorage — profile is now a real account
       localStorage.removeItem("draft_profile_id");
       setDraftUpgradeDone(true);
@@ -298,59 +304,62 @@ const Auth = () => {
 
   if (isDraftMode) {
     return (
-      <div className="min-h-screen bg-[#FEFEFE] flex flex-col items-center justify-center px-6">
+      <div className="min-h-screen bg-blue-950 flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-sm flex flex-col items-center gap-6">
-          <div className="h-14 w-14 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+          <div className="h-14 w-14 rounded-full" style={{ background: "radial-gradient(circle at 35% 35%, #60a5fa, #2563eb 60%, #1d4ed8)" }} />
           {draftUpgradeDone ? (
             <div className="text-center space-y-2">
               <p className="text-2xl">🎉</p>
-              <h1 className="text-xl font-black text-foreground">Konto założone!</h1>
-              <p className="text-sm text-muted-foreground">Zaraz wrócimy do Twojego profilu...</p>
+              <h1 className="text-xl font-black text-white">Konto założone!</h1>
+              <p className="text-sm text-blue-300/70">{`Zaraz wrócimy do Twojego profilu...`}</p>
             </div>
           ) : (
             <>
               <div className="text-center">
-                <h1 className="text-2xl font-black text-foreground leading-tight">
-                  Twój profil jest prawie gotowy!
+                <span className="inline-block mb-3 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold tracking-wide uppercase">
+                  Panel Biznesowy
+                </span>
+                <h1 className="text-2xl font-black text-white leading-tight">
+                  {`Twój profil jest prawie gotowy!`}
                 </h1>
-                <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                  Podaj email i hasło, żeby na stałe zapisać Twój lokal w Trasie.
+                <p className="text-sm text-blue-300/70 mt-2 leading-relaxed">
+                  {`Podaj email i hasło, żeby na stałe zapisać Twój lokal w Trasie.`}
                 </p>
               </div>
               <form onSubmit={handleDraftUpgrade} className="w-full space-y-3">
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-semibold text-foreground">Email</label>
+                  <label className="block text-sm font-semibold text-blue-200">Email</label>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="twoj@email.pl"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    className="w-full rounded-2xl border border-blue-700/60 bg-blue-900/50 px-4 py-3 text-sm text-white placeholder:text-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-semibold text-foreground">Haslo (min. 6 znaków)</label>
+                  <label className="block text-sm font-semibold text-blue-200">Hasło (min. 6 znaków)</label>
                   <input
                     type="password"
                     required
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    className="w-full rounded-2xl border border-blue-700/60 bg-blue-900/50 px-4 py-3 text-sm text-white placeholder:text-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-[0.98] transition-transform shadow-lg shadow-orange-200 disabled:opacity-60"
+                  className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm active:scale-[0.98] transition-transform shadow-lg shadow-blue-900/40 disabled:opacity-60"
                 >
                   {loading ? "Zakładam konto..." : "Zapisz profil i załóż konto →"}
                 </button>
               </form>
               <button
                 onClick={() => navigate(`/biznes/${draftProfileId}`)}
-                className="text-sm text-muted-foreground active:opacity-60"
+                className="text-sm text-blue-300/70 active:opacity-60"
               >
                 Wróć do edycji
               </button>

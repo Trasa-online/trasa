@@ -227,14 +227,6 @@ function AppLikePreviewModal({
                   {catLabel}
                 </div>
               )}
-              {/* Subcategories — vertical text on right edge */}
-              {subcategories.length > 0 && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-end gap-0.5" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
-                  {subcategories.slice(0, 3).map(s => (
-                    <span key={s} className="text-white/50 font-normal leading-none" style={{ fontSize: 9 }}>{s}</span>
-                  ))}
-                </div>
-              )}
               {/* Info overlay */}
               <div className="absolute left-0 right-0 px-4 space-y-1.5" style={{ bottom: '5rem' }}>
                 {logoUrl && (
@@ -465,14 +457,6 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
         {catLabel && (
           <div className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm" style={{ background: badge, color: getContrastColor(badge) }}>
             {catLabel}
-          </div>
-        )}
-        {/* Subcategories — vertical text on right edge */}
-        {subcategories.length > 0 && (
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col items-end gap-0.5" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
-            {subcategories.slice(0, 3).map(s => (
-              <span key={s} className="text-white/50 font-normal leading-none" style={{ fontSize: 7 }}>{s}</span>
-            ))}
           </div>
         )}
         <div className="absolute left-0 right-0 px-3 space-y-1" style={{ bottom: '3.5rem' }}>
@@ -1852,18 +1836,22 @@ const BusinessDashboard = () => {
                     <Input id="postal_code" value={postalCode} maxLength={10} onChange={e => { setPostalCode(e.target.value); setIsDirty(true); }} />
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="phone" className="text-xs flex items-center gap-1.5 flex-wrap">Telefon <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
-                  <Input id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="email" className="text-xs flex items-center gap-1.5 flex-wrap">Email <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
-                  <Input id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="website" className="text-xs">Strona WWW</Label>
-                  <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
-                </div>
+                {!isDraft && (
+                  <>
+                    <div className="space-y-1">
+                      <Label htmlFor="phone" className="text-xs flex items-center gap-1.5 flex-wrap">Telefon <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                      <Input id="phone" value={phone} maxLength={20} onChange={e => { setPhone(e.target.value); setIsDirty(true); }} type="tel" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="email" className="text-xs flex items-center gap-1.5 flex-wrap">Email <span className="text-[10px] font-normal text-muted-foreground">(opcjonalnie)</span></Label>
+                      <Input id="email" value={email} maxLength={100} onChange={e => { setEmail(e.target.value); setIsDirty(true); }} type="email" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="website" className="text-xs">Strona WWW</Label>
+                      <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
+                    </div>
+                  </>
+                )}
                 {/* Kategoria główna */}
                 <div className="pt-2">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Kategoria główna</p>

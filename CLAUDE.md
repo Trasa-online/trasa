@@ -40,6 +40,22 @@ W Tailwind odpowiedniki klas:
 
 **NIGDY nie używaj czarnego ani ciemnoszarego tła (`#0E0E0E`, `bg-slate-900`, `bg-black`, dark mode)** na stronach widocznych dla użytkowników (landing, waitlist, one-pager, itp.). Zawsze tło = `#FEFEFE` (złamana biel) lub bardzo jasny odcień (np. `bg-slate-50`). Ciemne tła są zarezerwowane wyłącznie dla nakładek wideo/overlay wewnątrz komponentów (np. phone mockup).
 
+### Identyfikacja B2B (panel biznesowy) - niebieski branding
+
+**Cały kontekst dla firm = niebieska identyfikacja, NIE pomarańczowa.** Dotyczy wszystkich ekranów widocznych dla biznesowych użytkowników: panel logowania (`/auth?business=true`), draft upgrade (`/auth?draft=...`), Auth biznesowy, banery powiadomień w `BusinessDashboard`, itp.
+
+**Paleta B2B:**
+- Tło ekranu: `bg-blue-950` (granatowe)
+- Orb (logo): `radial-gradient(circle at 35% 35%, #60a5fa, #2563eb 60%, #1d4ed8)`
+- Badge "Panel Biznesowy": `bg-blue-500/20 border-blue-400/30 text-blue-300`
+- Inputs: `bg-blue-900/50 border-blue-700/60 text-white placeholder:text-blue-400/50 focus:ring-blue-500`
+- Labels: `text-blue-200`
+- Tekst muted: `text-blue-300/70`
+- Primary button: `bg-blue-600 hover:bg-blue-700 text-white`
+- Linki / akcje secondary: `text-blue-400` lub `text-blue-300/70`
+
+**Pomarańczowy (gradient `#F4A259 → #F9662B`) jest zarezerwowany WYŁĄCZNIE dla B2C** (użytkownicy końcowi: solo + grupowo). Nigdy nie mieszaj brandingu - jeśli ekran jest częścią flow zakładania/zarządzania wizytówką firmy, używaj niebieskiej palety. Reference: `Auth.tsx` (sekcje `businessMode` i `isDraftMode`).
+
 ### Claim / tagline
 
 Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery małe, bez kropek na końcu). Używaj go w headerach stron marketingowych. Nie zastępuj innymi sformułowaniami bez wyraźnej prośby.
