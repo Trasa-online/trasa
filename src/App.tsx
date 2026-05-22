@@ -65,7 +65,48 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
 
 function RootPage() {
   const { loading } = useAuth();
-  if (loading) return null;
+  const [exchangingCode, setExchangingCode] = useState(false);
+  const [codeChecked, setCodeChecked] = useState(false);
+
+  // Po kliknieciu linka aktywacyjnego z maila Supabase redirectuje do
+  // https://trasa.travel/?code=XYZ. Musimy jawnie wymienic code na session,
+  // bo detectSessionInUrl: true bywa zawodne w HashRouter context (race
+  // condition: getSession() zwraca starý anon session ZANIM exchange skonczy).
+  useEffect(() => {
+    if (codeChecked) return;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    if (!code) {
+      setCodeChecked(true);
+      return;
+    }
+    setExchangingCode(true);
+    supabase.auth.exchangeCodeForSession(code)
+      .then(({ error }) => {
+        if (error) {
+          console.error("[RootPage] exchangeCodeForSession failed:", error);
+        } else {
+          console.log("[RootPage] session exchanged successfully");
+        }
+        // Wyczysc URL z code zeby uniknac retry po reloadzie
+        window.history.replaceState({}, "", window.location.pathname + window.location.hash);
+      })
+      .catch((err) => {
+        console.error("[RootPage] exchangeCodeForSession threw:", err);
+      })
+      .finally(() => {
+        setExchangingCode(false);
+        setCodeChecked(true);
+      });
+  }, [codeChecked]);
+
+  if (loading || exchangingCode || !codeChecked) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
   return <Navigate to="/home" replace />;
 }
 
