@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
+import { getConsent, CONSENT_RESOLVED_EVENT } from "@/lib/consent";
 
 // Persistent across browser sessions - X = never again.
 const DISMISS_KEY = "trasa_guest_welcome_dismissed_v1";
@@ -21,9 +22,28 @@ const GuestWelcomeSheet = () => {
     let dismissed = false;
     try { dismissed = localStorage.getItem(DISMISS_KEY) === "1"; } catch { /* unavailable */ }
     if (dismissed) return;
-    // 5s delay - daje czas zniknac CookieBannerowi (zasłaniał drawer na entry).
-    const t = setTimeout(() => setOpen(true), 5000);
-    return () => clearTimeout(t);
+
+    // Linear flow: NIE pokazuj guest sheet dopoki user nie rozprawi sie z cookie bannerem
+    // (X / Akceptuję / Tylko niezbędne). Dwa sheety naraz powodowaly buggy taps.
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const schedule = () => { timeoutId = setTimeout(() => setOpen(true), 2000); };
+
+    if (getConsent() !== null) {
+      // Cookie consent juz podjety (returning visit) - schedule normalnie
+      schedule();
+      return () => { if (timeoutId) clearTimeout(timeoutId); };
+    }
+
+    // Cookie banner widoczny - czekaj az user kliknie cokolwiek
+    const handler = () => {
+      window.removeEventListener(CONSENT_RESOLVED_EVENT, handler);
+      schedule();
+    };
+    window.addEventListener(CONSENT_RESOLVED_EVENT, handler);
+    return () => {
+      window.removeEventListener(CONSENT_RESOLVED_EVENT, handler);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [isGuestUi, loading]);
 
   const persistDismiss = () => {
@@ -59,10 +79,10 @@ const GuestWelcomeSheet = () => {
             />
             <div className="flex-1">
               <p className="text-lg font-black tracking-tight leading-snug">
-                Grasz jako gość
+                Cześć! Przeglądasz jako&nbsp;gość
               </p>
               <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                Możesz swobodnie przeglądać miejsca. Załóż konto, żeby zapisywać trasy{` `}i&nbsp;mieć dziennik podróży.
+                Wszystko działa bez konta. Załóż konto, jeśli chcesz zapisać trasę albo prowadzić dziennik podróży. Zajmuje minutę.
               </p>
             </div>
           </div>
@@ -78,7 +98,7 @@ const GuestWelcomeSheet = () => {
               onClick={handleClose}
               className="w-full py-3 rounded-full bg-white text-foreground font-bold text-sm border border-border/40 shadow-sm active:scale-[0.97] transition-transform"
             >
-              Przeglądaj jako gość
+              Może później
             </button>
           </div>
         </div>

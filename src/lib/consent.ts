@@ -4,6 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 
 const CONSENT_KEY = "trasa_cookie_consent_v2";
 
+// Fired after the user grants or denies consent (or dismisses the banner).
+// Other UI (e.g. GuestWelcomeSheet) listens so it can wait for the cookie banner
+// to clear before showing — prevents two overlapping bottom sheets stealing taps.
+export const CONSENT_RESOLVED_EVENT = "trasa:consent_resolved";
+
+function emitConsentResolved() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(CONSENT_RESOLVED_EVENT));
+}
+
 // Internal accounts excluded from Clarity session recording
 const CLARITY_EXCLUDED_EMAILS = new Set([
   "nat.maz98@gmail.com",
@@ -41,12 +51,14 @@ export async function grantConsent() {
   applyClarityConsent("granted", user?.email);
   // Save to DB in the background (fire & forget)
   void saveConsentToProfile("granted");
+  emitConsentResolved();
 }
 
 export function denyConsent() {
   localStorage.setItem(CONSENT_KEY, "denied");
   // analytics_storage remains 'denied' - no gtag update needed
   void saveConsentToProfile("denied");
+  emitConsentResolved();
 }
 
 async function saveConsentToProfile(status: "granted" | "denied") {
