@@ -23,6 +23,7 @@ const Auth = () => {
   const [username, setUsername] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [honeypot, setHoneypot] = useState("");
   const [formOpenedAt] = useState(() => Date.now());
   const [businessMode, setBusinessMode] = useState(searchParams.get("business") === "true");
@@ -123,7 +124,8 @@ const Auth = () => {
 
   const handleForgotPassword = async () => {
     if (!email.trim()) { toast.error("Podaj najpierw swój adres email"); return; }
-    setLoading(true);
+    // Osobny resetLoading zeby button 'Zaloguj' nie pokazywal 'Logowanie...'.
+    setResetLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: "https://trasa.travel/#/set-password",
@@ -133,7 +135,7 @@ const Auth = () => {
     } catch (err: any) {
       toast.error(err.message || "Błąd wysyłania emaila");
     } finally {
-      setLoading(false);
+      setResetLoading(false);
     }
   };
 
@@ -670,10 +672,10 @@ const Auth = () => {
               <button
                 type="button"
                 onClick={handleForgotPassword}
-                disabled={loading}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                disabled={resetLoading || loading}
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground underline-offset-2 hover:underline disabled:opacity-60"
               >
-                Zapomniałeś/aś hasła?
+                {resetLoading ? "Wysyłam link..." : "Zapomniałeś/aś hasła?"}
               </button>
             </form>
           ) : signupDone ? (

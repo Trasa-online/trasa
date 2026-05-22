@@ -27,6 +27,7 @@ const AuthDrawer = () => {
   const [username, setUsername] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [signupDone, setSignupDone] = useState(false);
 
   // Sync mode when drawer reopens with a different intent
@@ -84,7 +85,9 @@ const AuthDrawer = () => {
 
   const handleForgotPassword = async () => {
     if (!email.trim()) { toast.error("Podaj najpierw swój adres email"); return; }
-    setLoading(true);
+    // Osobny resetLoading zeby button 'Zaloguj' nie pokazywal 'Logowanie...'
+    // gdy klikamy 'Zapomnialem hasla'. Wczesniej oba dzialalismy na shared `loading`.
+    setResetLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: `${window.location.origin}/#/set-password`,
@@ -94,7 +97,7 @@ const AuthDrawer = () => {
     } catch (err: any) {
       toast.error(err.message || "Błąd wysyłania emaila");
     } finally {
-      setLoading(false);
+      setResetLoading(false);
     }
   };
 
@@ -326,10 +329,10 @@ const AuthDrawer = () => {
               <button
                 type="button"
                 onClick={handleForgotPassword}
-                disabled={loading}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+                disabled={resetLoading || loading}
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground disabled:opacity-60"
               >
-                Zapomniałeś/aś hasła?
+                {resetLoading ? "Wysyłam link..." : "Zapomniałeś/aś hasła?"}
               </button>
             </form>
           ) : signupDone ? (
