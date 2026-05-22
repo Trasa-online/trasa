@@ -4,6 +4,8 @@ import { MapPin, ChevronDown, Check, Lock, X } from "lucide-react";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 import { MAIN_CATEGORIES, getSubcategoryLabel } from "@/lib/categories";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 
 const FILTERS_STORAGE_KEY = "trasa_home_filters";
 
@@ -44,6 +46,9 @@ function writeFilters(f: StoredFilters) {
 }
 
 const HomeSwipe = () => {
+  const { user, isAnonymous } = useAuth();
+  const { open: openAuthDrawer } = useAuthDrawer();
+  const isGuest = !user || isAnonymous;
   const [filters, setFilters] = useState<StoredFilters>(() => readFilters());
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -66,8 +71,18 @@ const HomeSwipe = () => {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Sticky filter chip - prawa strona */}
-      <div className="shrink-0 bg-background px-4 pt-3 pb-2.5 flex justify-end">
+      {/* Sticky top bar: 'Zaloguj się' (tylko gosc) po lewej + filter chip po prawej */}
+      <div className="shrink-0 bg-background px-4 pt-3 pb-2.5 flex items-center justify-between gap-2">
+        {isGuest ? (
+          <button
+            onClick={() => openAuthDrawer({ mode: "login" })}
+            className="text-xs font-semibold text-orange-600 px-3 py-2 rounded-full hover:bg-orange-50 active:scale-[0.97] transition-all"
+          >
+            Zaloguj się
+          </button>
+        ) : (
+          <div />
+        )}
         <button
           onClick={() => setDrawerOpen(true)}
           className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-card border border-border/60 active:scale-[0.97] transition-transform max-w-full"
