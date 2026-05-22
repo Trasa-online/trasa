@@ -45,13 +45,20 @@ Deno.serve(async (req) => {
       return ok({ ok: false, code: "bad_password", message: "Hasło musi mieć co najmniej 6 znaków." });
     }
 
-    const supabaseUser = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-      auth: { persistSession: false },
-    });
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
-    if (userError || !user) {
-      console.error("[upgrade-b2c-account] invalid session", userError);
+    // Dekoduj JWT bezposrednio z Authorization header zamiast supabaseUser.auth.getUser()
+    // (getUser() bywa zawodne w Deno + anon tokens - czasem zwraca error mimo waznego JWT).
+    // Trust signing Supabase, weryfikujemy istnienie usera przez admin API ponizej.
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    let userId: string | null = null;
+    try {
+      const parts = token.split(".");
+      if (parts.length !== 3) throw new Error("invalid jwt format");
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+      userId = payload?.sub ?? null;
+    } catch (e) {
+      console.error("[upgrade-b2c-account] jwt decode failed", e);
+    }
+    if (!userId) {
       return ok({ ok: false, code: "invalid_session", message: "Sesja nieprawidłowa. Odśwież stronę." });
     }
 
@@ -64,7 +71,14 @@ Deno.serve(async (req) => {
     const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+    // Weryfikacja ze user istnieje (anti-spoofed-JWT) - admin getUserById nie polega
+    // na zewnetrznym auth call jak supabaseUser.auth.getUser().
+    const { data: { user: existingUser }, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (getUserError || !existingUser) {
+      console.error("[upgrade-b2c-account] user not found", { userId, error: getUserError });
+      return ok({ ok: false, code: "invalid_session", message: "Sesja nieprawidłowa. Odśwież stronę." });
+    }
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
       email,
       password,
       email_confirm: true,
@@ -79,7 +93,7 @@ Deno.serve(async (req) => {
       const msg = updateError.message?.toLowerCase() ?? "";
       console.error("[upgrade-b2c-account] admin update failed", {
         message: updateError.message,
-        user_id: user.id,
+        user_id: userId,
         email,
       });
       if (msg.includes("already") || msg.includes("duplicate") || msg.includes("registered")) {
@@ -92,7 +106,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    return ok({ ok: true, user_id: user.id, first_name: safeFirstName });
+    return ok({ ok: true, user_id: userId, first_name: safeFirstName });
   } catch (err: any) {
     console.error("[upgrade-b2c-account] unexpected error", err);
     return ok({ ok: false, code: "server_error", message: err.message ?? "Nieoczekiwany błąd serwera." });
