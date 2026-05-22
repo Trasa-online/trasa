@@ -106,7 +106,7 @@ const AuthDrawer = () => {
     if (!agreed) { toast.error(t("errors.terms_required")); return; }
     if (username.trim().length < 2) { toast.error(t("errors.username_short")); return; }
     if (firstName.trim().length < 1) { toast.error("Podaj swoje imię"); return; }
-    if (password.length < 6) { toast.error("Hasło musi mieć co najmniej 6 znaków"); return; }
+    if (!email.trim()) { toast.error("Podaj adres email"); return; }
     setLoading(true);
     try {
       const referralCode = localStorage.getItem("pending_referral_code") || null;
@@ -116,27 +116,21 @@ const AuthDrawer = () => {
         referral_code: referralCode,
       };
 
-      // Tradycyjny signUp flow z linkiem aktywacyjnym (Supabase wysyla 'Confirm Signup'
-      // template). Dziala dla obu przypadkow: anonimowy user i no-session user.
-      //
-      // UWAGA: NIE wywoluj signOut przed signUp. signOut triggeruje useAuth re-run
-      // ktory ma race condition z signUp (oba dzialaja na sesji rownoczesnie) ->
-      // mail confirm signup nie zostaje wyslany. Anon session moze pozostac aktywna
-      // do momentu klikniecia linka w mailu - supabase-js obsluzy zamianke sesji.
-      const { error } = await supabase.auth.signUp({
+      // FLOW BEZ HASLA: signInWithOtp wysyla magic link (tworzy usera jezeli nie istnieje).
+      // User klika link -> GlobalAuthCallback verifyOtp -> redirect /set-password?invite=1
+      // -> ustawia haslo -> /home. Bez PKCE, bez raceconditions.
+      const { error } = await supabase.auth.signInWithOtp({
         email: email.trim().toLowerCase(),
-        password,
         options: {
           data: userData,
+          shouldCreateUser: true,
           emailRedirectTo: `${window.location.origin}/`,
         },
       });
       if (error) {
         const msg = error.message?.toLowerCase() || "";
-        if (msg.includes("already registered") || msg.includes("user already")) {
-          toast.error(t("errors.email_duplicate"));
-        } else if (msg.includes("password")) {
-          toast.error("Hasło jest za słabe. Użyj co najmniej 6 znaków.");
+        if (msg.includes("rate") || msg.includes("too many")) {
+          toast.error("Za szybko. Spróbuj ponownie za chwilę.");
         } else {
           throw error;
         }
@@ -146,6 +140,7 @@ const AuthDrawer = () => {
       posthog.capture("user_signed_up", {
         source: referralCode ? "referral" : "drawer",
         was_anonymous: isAnonymous,
+        flow: "magic_link",
       });
       setSignupDone(true);
     } catch (err: any) {
@@ -359,20 +354,9 @@ const AuthDrawer = () => {
                   className="bg-card"
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ad-reg-password">{t("fields.password")}</Label>
-                <Input
-                  id="ad-reg-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  placeholder={t("fields.password_placeholder")}
-                  className="bg-card"
-                  autoComplete="new-password"
-                />
-              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed -mt-1">
+                Wyślemy Ci link do aktywacji konta na ten email. Hasło ustawisz po kliknięciu.
+              </p>
               <label className="flex items-start gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"

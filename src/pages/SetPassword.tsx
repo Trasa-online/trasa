@@ -55,18 +55,21 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       // Krotki delay zeby PASSWORD_RECOVERY event zdazyl odpalic (jezeli to recovery).
       await new Promise((r) => setTimeout(r, 400));
 
-      // Recovery sygnaly: explicit URL ?recovery=1 (z GlobalAuthCallback) lub
-      // ?type=recovery, lub PASSWORD_RECOVERY event w ciagu 400ms.
+      // Form needed dla:
+      // - Recovery: ?recovery=1 (z GlobalAuthCallback) lub ?type=recovery lub PASSWORD_RECOVERY event
+      // - Invite/Magic link: ?invite=1 (z GlobalAuthCallback) - user musi ustawic haslo pierwszy raz
       const explicitRecovery = params.get("recovery") === "1" || callbackType === "recovery";
+      const explicitInvite = params.get("invite") === "1";
       console.log("[SetPassword] decision:", {
         isBusiness,
         recoveryDetected,
         explicitRecovery,
+        explicitInvite,
         url: window.location.href,
       });
 
-      if (recoveryDetected || explicitRecovery) {
-        console.log("[SetPassword] recovery flow -> show form");
+      if (recoveryDetected || explicitRecovery || explicitInvite) {
+        console.log("[SetPassword] form needed (recovery or invite)");
         setReady(true);
         return;
       }
@@ -191,7 +194,7 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
           return;
         } catch {}
       }
-      toast.success("Hasło ustawione! Możesz się teraz zalogować.");
+      toast.success("Witamy w Trasie 🧡");
       navigate("/home");
     } catch (error: any) {
       toast.error(error.message || "Nie udało się ustawić hasła.");

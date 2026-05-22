@@ -125,8 +125,15 @@ function GlobalAuthCallback() {
         email_confirmed_at: user?.email_confirmed_at,
       });
 
+      // Recovery flow (reset hasla): show set-password form
       if (type === "recovery") {
         navigate("/set-password?recovery=1");
+        return;
+      }
+
+      // Magic link / invite flow (rejestracja bez hasla): user musi ustawic haslo
+      if (type === "magiclink" || type === "invite" || type === "email") {
+        navigate("/set-password?invite=1");
         return;
       }
 
