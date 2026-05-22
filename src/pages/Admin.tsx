@@ -47,11 +47,22 @@ const Admin = () => {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [tab, setTab] = useState<"waitlist" | "cities" | "businesses" | "bugs">("waitlist");
   const [bizTab, setBizTab] = useState<"action" | "claims" | "all" | "support">("action");
-  const [userTab, setUserTab] = useState<"pending" | "created">("pending");
+  const [userTab, setUserTab] = useState<"pending" | "created" | "all">("pending");
 
   // Waitlist state
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [fetchingList, setFetchingList] = useState(true);
+
+  // All registered users (profiles) - rozszerzenie waitlist o userow ktorzy zalozyli
+  // konto bezposrednio (anon -> real przez AuthDrawer albo /auth?tab=register)
+  const [allUsers, setAllUsers] = useState<Array<{
+    id: string;
+    username: string;
+    first_name: string | null;
+    avatar_url: string | null;
+    created_at: string | null;
+  }>>([]);
+  const [fetchingAllUsers, setFetchingAllUsers] = useState(false);
   const [inviting, setInviting] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [generatedLinks, setGeneratedLinks] = useState<Record<string, string>>({});
@@ -146,6 +157,7 @@ const Admin = () => {
         if (!data) { navigate("/"); return; }
         setIsAdmin(true);
         loadWaitlist();
+        loadAllUsers();
         loadCityRequests();
         loadClaims();
         loadBugReports();
@@ -155,10 +167,10 @@ const Admin = () => {
       });
   }, [user, loading, navigate]);
 
-  // Auto-refresh waitlist
+  // Auto-refresh waitlist + all users
   useEffect(() => {
     if (!isAdmin) return;
-    const interval = setInterval(() => loadWaitlist(), 30000);
+    const interval = setInterval(() => { loadWaitlist(); loadAllUsers(); }, 30000);
     return () => clearInterval(interval);
   }, [isAdmin]);
 
@@ -171,6 +183,23 @@ const Admin = () => {
         const name = (payload.new as any).place_name_text || (payload.new as any).contact_email || "nowy lokal";
         toast.info(`🏪 Nowe zgłoszenie: ${name}`, { duration: 8000 });
         loadClaims();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isAdmin]);
+
+  // Realtime: notify when a new user account is created (profile row inserted).
+  // Trigger handle_new_user tworzy profile row po signUp, OAuth, albo anon -> real upgrade.
+  useEffect(() => {
+    if (!isAdmin) return;
+    const channel = supabase
+      .channel("admin-new-users")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "profiles" }, (payload) => {
+        const profile = payload.new as any;
+        const displayName = profile.first_name || profile.username || "nowy user";
+        toast.info(`🎉 Nowy user: ${displayName}`, { duration: 8000 });
+        loadAllUsers();
+        loadWaitlist(); // has_account flag może się odświeżyć dla istniejącego waitlist entry
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -200,6 +229,18 @@ const Admin = () => {
 
     setWaitlist(entries);
     setFetchingList(false);
+  };
+
+  const loadAllUsers = async () => {
+    setFetchingAllUsers(true);
+    const { data, error } = await (supabase as any)
+      .from("profiles")
+      .select("id, username, first_name, avatar_url, created_at")
+      .order("created_at", { ascending: false, nullsFirst: false })
+      .limit(200);
+    if (error) console.error("[Admin] profiles fetch error:", error);
+    setAllUsers(data ?? []);
+    setFetchingAllUsers(false);
   };
 
   const loadCityRequests = async () => {
@@ -607,25 +648,53 @@ const Admin = () => {
               </div>
 
               {/* Sub-tabs */}
-              <div className="flex gap-1 pb-4 border-b border-border/30 -mx-4 px-4 mb-4">
+              <div className="flex gap-1 pb-4 border-b border-border/30 -mx-4 px-4 mb-4 overflow-x-auto">
                 {([
                   { id: "pending", label: "Oczekujący", badge: pending.length },
-                  { id: "created", label: "Stworzone",  badge: created.length },
+                  { id: "created", label: "Z waitlisty",  badge: created.length },
+                  { id: "all",     label: "Wszystkie konta", badge: allUsers.length },
                 ] as const).map(t => (
                   <button key={t.id} onClick={() => setUserTab(t.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${userTab === t.id ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
+                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${userTab === t.id ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
                     {t.label}
                     {t.badge > 0 && <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${userTab === t.id ? "bg-background/20" : "bg-muted"}`}>{t.badge}</span>}
                   </button>
                 ))}
               </div>
 
-              {fetchingList
-                ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-                : list.length === 0
-                  ? <p className="text-sm text-muted-foreground text-center py-12">{userTab === "pending" ? "Brak oczekujących." : "Brak kont."}</p>
-                  : <div className="space-y-3">{list.map(renderEntry)}</div>
-              }
+              {userTab === "all" ? (
+                fetchingAllUsers
+                  ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                  : allUsers.length === 0
+                    ? <p className="text-sm text-muted-foreground text-center py-12">Brak kont.</p>
+                    : <div className="space-y-2">
+                        {allUsers.map(u => (
+                          <div key={u.id} className="border border-border rounded-xl p-3 bg-card flex items-center gap-3">
+                            {u.avatar_url
+                              ? <img src={u.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
+                              : <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground shrink-0">
+                                  {(u.first_name || u.username || "?").charAt(0).toUpperCase()}
+                                </div>
+                            }
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm truncate">
+                                {u.first_name || "—"}
+                                <span className="text-muted-foreground font-normal ml-1">@{u.username}</span>
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {u.created_at ? format(new Date(u.created_at), "dd.MM.yyyy HH:mm") : "—"}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+              ) : (
+                fetchingList
+                  ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                  : list.length === 0
+                    ? <p className="text-sm text-muted-foreground text-center py-12">{userTab === "pending" ? "Brak oczekujących." : "Brak kont."}</p>
+                    : <div className="space-y-3">{list.map(renderEntry)}</div>
+              )}
             </>
           );
         })()}
