@@ -43,29 +43,21 @@ const AuthDrawer = () => {
   const handleOAuth = async (provider: "apple" | "google") => {
     setLoading(true);
     try {
-      // Anon user (Anonymous Auth): linkIdentity zachowuje dane (sesje grupowe,
-      // polubione miejsca) - dodaje OAuth identity do istniejacego user_id.
-      // Bez tego signInWithOAuth zalogowalby na nowy user i anon data znikla by.
-      if (isAnonymous) {
-        const { error } = await supabase.auth.linkIdentity({
-          provider,
-          options: { redirectTo: `${window.location.origin}/` },
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider,
-          options: { redirectTo: `${window.location.origin}/` },
-        });
-        if (error) throw error;
-      }
+      // Zawsze signInWithOAuth (jak Auth.tsx). Wczesniej dla anonimowych uzywalismy
+      // linkIdentity zeby zachowac anon data (sesje grupowe, polubione miejsca),
+      // ale to silently failuje gdy Google email juz ma konto w Trasie - user wraca
+      // jako gosc bez widocznego bledu. Tradeoff: anon data nie przenosi sie przy
+      // OAuth, ale flow dziala niezawodnie dla wszystkich przypadkow.
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${window.location.origin}/` },
+      });
+      if (error) throw error;
     } catch (err: any) {
       posthog.captureException(err);
       const msg = err?.message?.toLowerCase() || "";
       if (msg.includes("provider is not enabled") || msg.includes("unsupported")) {
         toast.error(`Logowanie przez ${provider === "apple" ? "Apple" : "Google"} nie jest jeszcze skonfigurowane.`);
-      } else if (msg.includes("identity already linked")) {
-        toast.error("To konto OAuth jest juz powiazane z innym uzytkownikiem. Zaloguj sie bezposrednio.");
       } else {
         toast.error(err.message || "Błąd logowania");
       }
