@@ -86,6 +86,72 @@ function dedupedVerifyOtp(tokenHash: string, type: string) {
   return promise;
 }
 
+// GLOBAL auth callback handler - przetwarza ?code= / ?token_hash= NIEZALEZNIE od route.
+// Wczesniej tylko RootPage (route /) i SetPassword (route /set-password) obslugiwaly to,
+// wiec jezeli Supabase Site URL / Redirect URL w Dashboard ladowal usera GDZIE INDZIEJ
+// (np. /moj-profil), auth callback nigdy nie zostal przetworzony - user zostawal goscem.
+function GlobalAuthCallback() {
+  const navigate = useNavigate();
+  const processed = useRef(false);
+
+  useEffect(() => {
+    if (processed.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const tokenHash = params.get("token_hash");
+    const type = params.get("type");
+    if (!code && !tokenHash) return;
+    processed.current = true;
+
+    console.log("[GlobalAuthCallback] processing", {
+      pathname: window.location.pathname,
+      hasCode: !!code,
+      hasTokenHash: !!tokenHash,
+      type,
+    });
+
+    const cleanUrl = () => {
+      window.history.replaceState({}, "", window.location.pathname + (window.location.hash || ""));
+    };
+
+    const navAfterAuth = async () => {
+      cleanUrl();
+      await new Promise((r) => setTimeout(r, 200));
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log("[GlobalAuthCallback] user after auth:", {
+        id: user?.id,
+        email: user?.email,
+        is_anonymous: user?.is_anonymous,
+        email_confirmed_at: user?.email_confirmed_at,
+      });
+
+      if (type === "recovery") {
+        navigate("/set-password?recovery=1");
+        return;
+      }
+
+      if (user) {
+        toast.success("Witamy w Trasie 🧡");
+        navigate("/home");
+      }
+    };
+
+    if (code) {
+      dedupedExchange(code).then(({ error }) => {
+        if (error) console.error(`[GlobalAuthCallback] exchange failed: ${error.message}`);
+        navAfterAuth();
+      });
+    } else if (tokenHash && type) {
+      dedupedVerifyOtp(tokenHash, type).then(({ error }) => {
+        if (error) console.error(`[GlobalAuthCallback] verifyOtp failed: ${error.message}`);
+        navAfterAuth();
+      });
+    }
+  }, [navigate]);
+
+  return null;
+}
+
 function RootPage() {
   const { loading } = useAuth();
   const [exchangingCode, setExchangingCode] = useState(false);
@@ -453,6 +519,7 @@ const App = () => (
         <ErrorBoundary>
         <AuthProvider>
         <AuthDrawerProviderWrapper>
+        <GlobalAuthCallback />
         <RouteTracker />
         <SplashController />
         <BusinessGuard />

@@ -65,21 +65,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let skipAnon = false;
     try { skipAnon = sessionStorage.getItem(SKIP_ANON_SIGNIN_KEY) === "1"; } catch { /* unavailable */ }
     if (skipAnon) return;
-    // KRYTYCZNE: jezeli URL ma ?code= (powrot z linka aktywacyjnego maila / OAuth),
-    // NIE wlanczaj anon-signin. Anon-signin nadpisuje code_verifier w localStorage,
-    // wiec exchangeCodeForSession potem failuje i user zostaje gosciem.
+    // KRYTYCZNE: jezeli URL ma ?code= / ?token_hash= (powrot z linka aktywacyjnego),
+    // NIE wlanczaj anon-signin. Anon-signin nadpisuje session ktora wlasnie sie tworzy
+    // przez auth callback, wiec user zostaje gosciem mimo udanego confirmation.
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      if (params.get("code")) {
-        console.log("[useAuth] auth code in URL, skipping anon signin to preserve PKCE state");
+      if (params.get("code") || params.get("token_hash")) {
+        console.log("[useAuth] auth callback in URL, skipping anon signin");
         return;
       }
     }
     anonSignInAttempted.current = true;
-    supabase.auth.signInAnonymously().catch((err) => {
-      // Najczestsze powody: Anonymous Sign-Ins wylaczone w Dashboard, rate limit IP.
-      // Failujemy grace - aplikacja dziala jako "stary" guest (null user) jak wczesniej.
-      console.warn("[useAuth] anon signin failed:", err?.message ?? err);
+    // Final check przed signInAnonymously - moglo sie zdarzyc ze session zostala
+    // utworzona przez auth callback (race conditions). Nie nadpisuj jej.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        console.log("[useAuth] session exists, skipping anon signin");
+        return;
+      }
+      supabase.auth.signInAnonymously().catch((err) => {
+        // Najczestsze powody: Anonymous Sign-Ins wylaczone w Dashboard, rate limit IP.
+        // Failujemy grace - aplikacja dziala jako "stary" guest (null user) jak wczesniej.
+        console.warn("[useAuth] anon signin failed:", err?.message ?? err);
+      });
     });
   }, [loading, user]);
 
