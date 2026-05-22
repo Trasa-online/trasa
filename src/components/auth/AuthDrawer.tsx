@@ -116,97 +116,39 @@ const AuthDrawer = () => {
         referral_code: referralCode,
       };
 
-      if (isAnonymous) {
-        // Upgrade anon -> real user przez edge function z admin API + email_confirm: true.
-        // To pomija Supabase domyslny mail "Change Email Address" (z linkiem potwierdzajacym)
-        // i od razu zaznacza email jako zweryfikowany. User jest natychmiast w pelni
-        // zalogowany. Zamiast tego wysylamy nasz wlasny welcome mail przez Resend.
-        // Zachowuje user_id, czyli sesje grupowe + polubione z anon zostaja.
-        // Wymus odswiezenie sesji przed edge function call - inaczej anon JWT moze
-        // byc stale/wygasle i server zwroci 'invalid_session'.
-        const { data: { session: freshSession } } = await supabase.auth.getSession();
-        if (!freshSession?.access_token) {
-          toast.error("Sesja wygasła. Odśwież stronę i spróbuj ponownie.");
-          return;
+      // Tradycyjny signUp flow z linkiem aktywacyjnym (Supabase wysyla 'Confirm Signup'
+      // template). Dziala dla obu przypadkow: anonimowy user i no-session user.
+      //
+      // Dla anonimowego: anon session pozostaje aktywna az do klikniecia linka w mailu.
+      // Po potwierdzeniu, nowy user_id zastepuje anon (anon data nie przenosi sie -
+      // user wybral tradycyjny flow zamiast seamless upgrade).
+      //
+      // Wczesniej dla anon uzywalismy admin API z email_confirm: true (auto-login
+      // bez maila confirmation) - user chce klasyczny flow z linkiem aktywacyjnym.
+      const { error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: {
+          data: userData,
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+      if (error) {
+        const msg = error.message?.toLowerCase() || "";
+        if (msg.includes("already registered") || msg.includes("user already")) {
+          toast.error(t("errors.email_duplicate"));
+        } else if (msg.includes("password")) {
+          toast.error("Hasło jest za słabe. Użyj co najmniej 6 znaków.");
+        } else {
+          throw error;
         }
-        const { data: upgradeData, error: upgradeError } = await supabase.functions.invoke(
-          "upgrade-b2c-account",
-          {
-            // Jawnie przekazuj auth header - supabase.functions.invoke czasem gubi
-            // header dla anon sesji w niektorych browserach/wersjach SDK.
-            headers: { Authorization: `Bearer ${freshSession.access_token}` },
-            body: {
-              email: email.trim().toLowerCase(),
-              password,
-              first_name: userData.first_name,
-              username: userData.username,
-              referral_code: userData.referral_code,
-            },
-          },
-        );
-        if (upgradeError) {
-          console.error("[AuthDrawer] upgrade-b2c-account invoke failed", upgradeError);
-          toast.error("Nie udało się połączyć z serwerem. Sprawdź internet i spróbuj ponownie.");
-          return;
-        }
-        if (!upgradeData?.ok) {
-          if (upgradeData?.code === "email_in_use") {
-            toast.error(t("errors.email_duplicate"));
-          } else {
-            toast.error(upgradeData?.message ?? "Nie udało się utworzyć konta.");
-          }
-          return;
-        }
-        // Refresh client session - nowy JWT z is_anonymous=false + claims z user_metadata.
-        await supabase.auth.refreshSession();
-        // Profile row dla anon usera nie zostal utworzony przy anon signIn
-        // (trigger handle_new_user pomija anon, patrz migracja 20260429_fix_anon_user_trigger).
-        try {
-          const { data: { user: currentUser } } = await supabase.auth.getUser();
-          if (currentUser) {
-            await (supabase as any).from("profiles").upsert({
-              id: currentUser.id,
-              username: userData.username,
-              first_name: userData.first_name,
-            }, { onConflict: "id" });
-          }
-        } catch (e) {
-          console.warn("[AuthDrawer] profile upsert after upgrade failed:", e);
-        }
-        // Send branded welcome mail przez Resend (fire-and-forget, nie blokuje UX)
-        supabase.functions.invoke("send-b2c-welcome", {
-          body: { email: email.trim().toLowerCase(), first_name: userData.first_name },
-        }).catch((err) => console.warn("[send-b2c-welcome] failed:", err));
-        localStorage.removeItem("pending_referral_code");
-        posthog.capture("user_upgraded_from_anon", { source: referralCode ? "referral" : "drawer" });
-        // Konto auto-confirmed - od razu zamykamy drawer (nie ma na co czekac, user jest in)
-        toast.success(userData.first_name ? `Cześć, ${userData.first_name}! Witamy w Trasie 🧡` : "Witamy w Trasie 🧡");
-        close();
         return;
-      } else {
-        // Standard signUp (no anon session to upgrade)
-        const { error } = await supabase.auth.signUp({
-          email: email.trim().toLowerCase(),
-          password,
-          options: {
-            data: userData,
-            emailRedirectTo: `${window.location.origin}/`,
-          },
-        });
-        if (error) {
-          const msg = error.message?.toLowerCase() || "";
-          if (msg.includes("already registered") || msg.includes("user already")) {
-            toast.error(t("errors.email_duplicate"));
-          } else if (msg.includes("password")) {
-            toast.error("Hasło jest za słabe. Użyj co najmniej 6 znaków.");
-          } else {
-            throw error;
-          }
-          return;
-        }
-        localStorage.removeItem("pending_referral_code");
-        posthog.capture("user_signed_up", { source: referralCode ? "referral" : "drawer" });
       }
+      localStorage.removeItem("pending_referral_code");
+      posthog.capture("user_signed_up", {
+        source: referralCode ? "referral" : "drawer",
+        was_anonymous: isAnonymous,
+      });
       setSignupDone(true);
     } catch (err: any) {
       posthog.captureException(err);
