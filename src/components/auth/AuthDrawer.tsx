@@ -117,14 +117,13 @@ const AuthDrawer = () => {
       };
 
       // Tradycyjny signUp flow z linkiem aktywacyjnym (Supabase wysyla 'Confirm Signup'
-      // template). Dziala dla obu przypadkow: anonimowy user i no-session user.
-      //
-      // Dla anonimowego: anon session pozostaje aktywna az do klikniecia linka w mailu.
-      // Po potwierdzeniu, nowy user_id zastepuje anon (anon data nie przenosi sie -
-      // user wybral tradycyjny flow zamiast seamless upgrade).
-      //
-      // Wczesniej dla anon uzywalismy admin API z email_confirm: true (auto-login
-      // bez maila confirmation) - user chce klasyczny flow z linkiem aktywacyjnym.
+      // template). Dla anon usera: wyloguj go najpierw, zeby signUp utworzyl czysty
+      // PKCE state (code_verifier w localStorage). Bez signOut, anon session koliduje
+      // z exchangeCodeForSession po klikieciu linka aktywacyjnego.
+      if (isAnonymous) {
+        console.log("[AuthDrawer] signing out anon before signUp for clean PKCE state");
+        await supabase.auth.signOut().catch((e) => console.warn("[AuthDrawer] signOut threw:", e));
+      }
       const { error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,

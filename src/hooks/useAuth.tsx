@@ -65,6 +65,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let skipAnon = false;
     try { skipAnon = sessionStorage.getItem(SKIP_ANON_SIGNIN_KEY) === "1"; } catch { /* unavailable */ }
     if (skipAnon) return;
+    // KRYTYCZNE: jezeli URL ma ?code= (powrot z linka aktywacyjnego maila / OAuth),
+    // NIE wlanczaj anon-signin. Anon-signin nadpisuje code_verifier w localStorage,
+    // wiec exchangeCodeForSession potem failuje i user zostaje gosciem.
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("code")) {
+        console.log("[useAuth] auth code in URL, skipping anon signin to preserve PKCE state");
+        return;
+      }
+    }
     anonSignInAttempted.current = true;
     supabase.auth.signInAnonymously().catch((err) => {
       // Najczestsze powody: Anonymous Sign-Ins wylaczone w Dashboard, rate limit IP.

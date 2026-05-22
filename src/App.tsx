@@ -80,13 +80,22 @@ function RootPage() {
       setCodeChecked(true);
       return;
     }
+    console.log("[RootPage] auth code detected in URL, exchanging for session...");
     setExchangingCode(true);
     supabase.auth.exchangeCodeForSession(code)
-      .then(({ error }) => {
+      .then(({ data, error }) => {
         if (error) {
-          console.error("[RootPage] exchangeCodeForSession failed:", error);
+          console.error("[RootPage] exchangeCodeForSession FAILED:", {
+            message: error.message,
+            status: (error as any).status,
+            code: (error as any).code,
+          });
         } else {
-          console.log("[RootPage] session exchanged successfully");
+          console.log("[RootPage] session exchanged successfully:", {
+            user_id: data?.user?.id,
+            email: data?.user?.email,
+            is_anonymous: data?.user?.is_anonymous,
+          });
         }
         // Wyczysc URL z code zeby uniknac retry po reloadzie
         window.history.replaceState({}, "", window.location.pathname + window.location.hash);
