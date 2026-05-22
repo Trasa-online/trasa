@@ -63,6 +63,29 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Module-level cache: pamieta promise dla danego auth-code zeby uniknac
+// double-execution przy React Strict Mode double-mount w dev (uses tej samej
+// promise dla obu mount'ow zamiast dwoch oddzielnych HTTP calls). Bez tego
+// pierwszy exchange uzywa code, drugi dostaje 400 bo code juz invalidated.
+const authCallbackPromises = new Map<string, Promise<any>>();
+
+function dedupedExchange(code: string) {
+  const cached = authCallbackPromises.get(code);
+  if (cached) return cached;
+  const promise = supabase.auth.exchangeCodeForSession(code);
+  authCallbackPromises.set(code, promise);
+  return promise;
+}
+
+function dedupedVerifyOtp(tokenHash: string, type: string) {
+  const key = `otp:${tokenHash}`;
+  const cached = authCallbackPromises.get(key);
+  if (cached) return cached;
+  const promise = supabase.auth.verifyOtp({ token_hash: tokenHash, type: type as any });
+  authCallbackPromises.set(key, promise);
+  return promise;
+}
+
 function RootPage() {
   const { loading } = useAuth();
   const [exchangingCode, setExchangingCode] = useState(false);
@@ -116,7 +139,7 @@ function RootPage() {
     // PKCE flow
     if (code) {
       console.log("[RootPage] PKCE flow detected, exchanging code...");
-      supabase.auth.exchangeCodeForSession(code)
+      dedupedExchange(code)
         .then(({ data, error }) => {
           if (error) {
             console.error("[RootPage] exchangeCodeForSession FAILED:", {
@@ -142,7 +165,7 @@ function RootPage() {
     // Token hash flow (newer Supabase Auth)
     if (tokenHash && type) {
       console.log("[RootPage] token_hash flow detected, verifying...", { type });
-      supabase.auth.verifyOtp({ token_hash: tokenHash, type: type as any })
+      dedupedVerifyOtp(tokenHash, type)
         .then(({ data, error }) => {
           if (error) {
             console.error("[RootPage] verifyOtp FAILED:", {
