@@ -68,45 +68,121 @@ function RootPage() {
   const [exchangingCode, setExchangingCode] = useState(false);
   const [codeChecked, setCodeChecked] = useState(false);
 
-  // Po kliknieciu linka aktywacyjnego z maila Supabase redirectuje do
-  // https://trasa.travel/?code=XYZ. Musimy jawnie wymienic code na session,
-  // bo detectSessionInUrl: true bywa zawodne w HashRouter context (race
-  // condition: getSession() zwraca starý anon session ZANIM exchange skonczy).
+  // Po kliknieciu linka aktywacyjnego Supabase redirectuje na trasa.travel z
+  // jednym z kilku formatow:
+  // - PKCE flow: ?code=XYZ
+  // - Token hash flow: ?token_hash=XYZ&type=signup (nowsze Supabase)
+  // - Implicit flow (legacy): #access_token=XYZ&refresh_token=...
+  // - Error: ?error=...&error_description=...
   useEffect(() => {
     if (codeChecked) return;
+
+    // VERBOSE DEBUG - bez tego nie zdiagnozujemy bledow PKCE/redirect
+    console.log("[RootPage] mount, URL state:", {
+      href: window.location.href,
+      pathname: window.location.pathname,
+      search: window.location.search,
+      hash: window.location.hash,
+    });
+
     const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-    if (!code) {
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+
+    // Czy mamy blad w URL?
+    const urlError = params.get("error") || hashParams.get("error");
+    const urlErrorDesc = params.get("error_description") || hashParams.get("error_description");
+    if (urlError) {
+      console.error("[RootPage] auth callback ERROR:", urlError, urlErrorDesc);
+      window.history.replaceState({}, "", window.location.pathname + (window.location.hash || ""));
       setCodeChecked(true);
       return;
     }
-    console.log("[RootPage] auth code detected in URL, exchanging for session...");
+
+    const code = params.get("code");
+    const tokenHash = params.get("token_hash");
+    const type = params.get("type");
+    const accessToken = hashParams.get("access_token");
+    const refreshToken = hashParams.get("refresh_token");
+
+    // Brak zadnego auth parametru - normalny load /
+    if (!code && !tokenHash && !accessToken) {
+      console.log("[RootPage] no auth params, normal load");
+      setCodeChecked(true);
+      return;
+    }
+
     setExchangingCode(true);
-    supabase.auth.exchangeCodeForSession(code)
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("[RootPage] exchangeCodeForSession FAILED:", {
-            message: error.message,
-            status: (error as any).status,
-            code: (error as any).code,
-          });
-        } else {
-          console.log("[RootPage] session exchanged successfully:", {
-            user_id: data?.user?.id,
-            email: data?.user?.email,
-            is_anonymous: data?.user?.is_anonymous,
-          });
-        }
-        // Wyczysc URL z code zeby uniknac retry po reloadzie
-        window.history.replaceState({}, "", window.location.pathname + window.location.hash);
-      })
-      .catch((err) => {
-        console.error("[RootPage] exchangeCodeForSession threw:", err);
-      })
-      .finally(() => {
-        setExchangingCode(false);
-        setCodeChecked(true);
-      });
+
+    // PKCE flow
+    if (code) {
+      console.log("[RootPage] PKCE flow detected, exchanging code...");
+      supabase.auth.exchangeCodeForSession(code)
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("[RootPage] exchangeCodeForSession FAILED:", {
+              message: error.message,
+              status: (error as any).status,
+              code: (error as any).code,
+              fullError: error,
+            });
+          } else {
+            console.log("[RootPage] PKCE exchange OK:", {
+              user_id: data?.user?.id,
+              email: data?.user?.email,
+              is_anonymous: data?.user?.is_anonymous,
+            });
+          }
+          window.history.replaceState({}, "", window.location.pathname + (window.location.hash || ""));
+        })
+        .catch((err) => console.error("[RootPage] exchangeCodeForSession threw:", err))
+        .finally(() => { setExchangingCode(false); setCodeChecked(true); });
+      return;
+    }
+
+    // Token hash flow (newer Supabase Auth)
+    if (tokenHash && type) {
+      console.log("[RootPage] token_hash flow detected, verifying...", { type });
+      supabase.auth.verifyOtp({ token_hash: tokenHash, type: type as any })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("[RootPage] verifyOtp FAILED:", {
+              message: error.message,
+              status: (error as any).status,
+              code: (error as any).code,
+            });
+          } else {
+            console.log("[RootPage] verifyOtp OK:", {
+              user_id: data?.user?.id,
+              email: data?.user?.email,
+            });
+          }
+          window.history.replaceState({}, "", window.location.pathname + (window.location.hash || ""));
+        })
+        .catch((err) => console.error("[RootPage] verifyOtp threw:", err))
+        .finally(() => { setExchangingCode(false); setCodeChecked(true); });
+      return;
+    }
+
+    // Implicit flow (legacy hash tokens)
+    if (accessToken && refreshToken) {
+      console.log("[RootPage] implicit flow detected, setting session...");
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("[RootPage] setSession FAILED:", error);
+          } else {
+            console.log("[RootPage] setSession OK:", { user_id: data?.user?.id });
+          }
+          window.history.replaceState({}, "", window.location.pathname);
+        })
+        .catch((err) => console.error("[RootPage] setSession threw:", err))
+        .finally(() => { setExchangingCode(false); setCodeChecked(true); });
+      return;
+    }
+
+    console.warn("[RootPage] unknown auth callback shape");
+    setExchangingCode(false);
+    setCodeChecked(true);
   }, [codeChecked]);
 
   if (loading || exchangingCode || !codeChecked) {
