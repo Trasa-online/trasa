@@ -122,9 +122,19 @@ const AuthDrawer = () => {
         // i od razu zaznacza email jako zweryfikowany. User jest natychmiast w pelni
         // zalogowany. Zamiast tego wysylamy nasz wlasny welcome mail przez Resend.
         // Zachowuje user_id, czyli sesje grupowe + polubione z anon zostaja.
+        // Wymus odswiezenie sesji przed edge function call - inaczej anon JWT moze
+        // byc stale/wygasle i server zwroci 'invalid_session'.
+        const { data: { session: freshSession } } = await supabase.auth.getSession();
+        if (!freshSession?.access_token) {
+          toast.error("Sesja wygasła. Odśwież stronę i spróbuj ponownie.");
+          return;
+        }
         const { data: upgradeData, error: upgradeError } = await supabase.functions.invoke(
           "upgrade-b2c-account",
           {
+            // Jawnie przekazuj auth header - supabase.functions.invoke czasem gubi
+            // header dla anon sesji w niektorych browserach/wersjach SDK.
+            headers: { Authorization: `Bearer ${freshSession.access_token}` },
             body: {
               email: email.trim().toLowerCase(),
               password,
