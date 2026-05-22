@@ -193,7 +193,7 @@ const AuthDrawer = () => {
         <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-2 pb-[max(20px,env(safe-area-inset-bottom))]">
           <div className="space-y-1 mb-5">
             <p className="text-xl font-black leading-tight">
-              Aby skorzystać ze wszystkich funkcji,{" "}załóż konto
+              Zaloguj się lub dołącz do&nbsp;Trasy
             </p>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Zapisuj trasy, prowadź dziennik, planuj grupowo. Albo&nbsp;przeglądaj jako gość.
@@ -235,148 +235,9 @@ const AuthDrawer = () => {
             </button>
           </div>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-xs text-muted-foreground">lub przez email</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-
-          {/* Tabs */}
-          <div className="flex rounded-2xl bg-muted p-1 mb-4">
-            <button
-              onClick={() => setMode("login")}
-              className={`flex-1 py-2 text-sm font-semibold rounded-2xl transition-all ${
-                mode === "login" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-              }`}
-            >
-              {t("tabs.login")}
-            </button>
-            <button
-              onClick={() => setMode("register")}
-              className={`flex-1 py-2 text-sm font-semibold rounded-2xl transition-all ${
-                mode === "register" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-              }`}
-            >
-              {t("tabs.register")}
-            </button>
-          </div>
-
-          {mode === "login" ? (
-            <form onSubmit={handleLogin} className="space-y-3.5">
-              <div className="space-y-1.5">
-                <Label htmlFor="ad-email">{t("fields.email")}</Label>
-                <Input
-                  id="ad-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder={t("fields.email_placeholder")}
-                  className="bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ad-password">{t("fields.password")}</Label>
-                <Input
-                  id="ad-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder={t("fields.password_placeholder")}
-                  className="bg-card"
-                />
-              </div>
-              <Button type="submit" className="w-full rounded-2xl py-5 bg-primary hover:bg-primary/90 text-white font-bold text-base" disabled={loading}>
-                {loading ? t("logging_in") : t("login_btn")}
-              </Button>
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                disabled={resetLoading || loading}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground disabled:opacity-60"
-              >
-                {resetLoading ? "Wysyłam link..." : "Zapomniałeś/aś hasła?"}
-              </button>
-            </form>
-          ) : signupDone ? (
-            <div className="text-center py-4 space-y-2">
-              <p className="text-3xl">✉️</p>
-              <p className="font-semibold">{t("signup_done_title")}</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {t("signup_done_desc")} <strong>{email}</strong>. {t("signup_done_action")}
-              </p>
-              <p className="text-xs text-muted-foreground pt-1">{t("signup_done_spam")}</p>
-              <button
-                onClick={() => { setSignupDone(false); setMode("login"); }}
-                className="text-sm text-muted-foreground underline pt-1"
-              >
-                {t("back_to_login")}
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleRegister} className="space-y-3.5">
-              <div className="space-y-1.5">
-                <Label htmlFor="ad-fn">Imię</Label>
-                <Input
-                  id="ad-fn"
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  placeholder="np. Marta"
-                  className="bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ad-username">{t("fields.username")}</Label>
-                <Input
-                  id="ad-username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  minLength={2}
-                  placeholder={t("fields.username_placeholder")}
-                  className="bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ad-reg-email">{t("fields.email")}</Label>
-                <Input
-                  id="ad-reg-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder={t("fields.email_placeholder")}
-                  className="bg-card"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed -mt-1">
-                Wyślemy Ci link do aktywacji konta na ten email. Hasło ustawisz po kliknięciu.
-              </p>
-              <label className="flex items-start gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={agreed}
-                  onChange={(e) => setAgreed(e.target.checked)}
-                  className="mt-0.5 accent-foreground"
-                />
-                <span className="text-xs text-muted-foreground leading-relaxed">
-                  {t("terms_accept")}{" "}
-                  <Link to="/terms" className="underline text-foreground" target="_blank" onClick={close}>
-                    {t("terms_link")}
-                  </Link>{" "}
-                  {t("terms_app")}
-                </span>
-              </label>
-              <Button type="submit" className="w-full rounded-2xl py-5 bg-primary hover:bg-primary/90 text-white font-bold text-base" disabled={loading}>
-                {loading ? t("registering") : t("register_btn")}
-              </Button>
-            </form>
-          )}
+          <p className="text-xs text-muted-foreground text-center -mt-1 mb-2 leading-relaxed">
+            Konto zakładasz automatycznie przy pierwszym logowaniu. Miałeś&#160;już konto z&#160;hasłem? Użyj Google lub Apple z&#160;tym samym adresem - połączymy je&#160;automatycznie.
+          </p>
 
           {/* Continue as guest */}
           <button

@@ -125,26 +125,39 @@ function GlobalAuthCallback() {
         email_confirmed_at: user?.email_confirmed_at,
       });
 
-      // Recovery flow (reset hasla): show set-password form
+      // Recovery flow (reset hasla B2B): show set-password form
       if (type === "recovery") {
         navigate("/set-password?recovery=1");
         return;
       }
 
-      // Magic link / invite flow (rejestracja bez hasla): user musi ustawic haslo
-      if (type === "magiclink" || type === "invite" || type === "email") {
-        navigate("/set-password?invite=1");
-        return;
-      }
-
       if (user && !user.is_anonymous) {
+        // OAuth signup detection: nowy user = profile.created_at < 60s ago.
+        // Dla nowych userow wysylamy branded welcome mail przez Resend.
+        try {
+          const { data: profile } = await (supabase as any)
+            .from("profiles")
+            .select("created_at, first_name")
+            .eq("id", user.id)
+            .maybeSingle();
+          if (profile?.created_at) {
+            const ageMs = Date.now() - new Date(profile.created_at).getTime();
+            if (ageMs < 60_000 && user.email) {
+              console.log("[GlobalAuthCallback] new OAuth user detected, sending welcome");
+              supabase.functions.invoke("send-b2c-welcome", {
+                body: { email: user.email, first_name: profile.first_name ?? user.user_metadata?.full_name?.split(" ")[0] ?? "" },
+              }).catch((err) => console.warn("[send-b2c-welcome] failed:", err));
+            }
+          }
+        } catch (e) {
+          console.warn("[GlobalAuthCallback] welcome mail check failed:", e);
+        }
         toast.success("Witamy w Trasie 🧡");
         navigate("/home");
         return;
       }
 
       // Auth callback failed (no user lub still anonymous) - navigate /auth
-      // zeby user mogl zalogowac sie recznie zamiast utknac na /set-password.
       console.warn("[GlobalAuthCallback] auth callback completed but no real user, navigating /auth");
       navigate("/auth");
     };
