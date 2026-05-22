@@ -130,10 +130,16 @@ function GlobalAuthCallback() {
         return;
       }
 
-      if (user) {
+      if (user && !user.is_anonymous) {
         toast.success("Witamy w Trasie 🧡");
         navigate("/home");
+        return;
       }
+
+      // Auth callback failed (no user lub still anonymous) - navigate /auth
+      // zeby user mogl zalogowac sie recznie zamiast utknac na /set-password.
+      console.warn("[GlobalAuthCallback] auth callback completed but no real user, navigating /auth");
+      navigate("/auth");
     };
 
     if (code) {

@@ -118,14 +118,17 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
 
     const timeout = setTimeout(() => {
       if (decisionMade) return;
+      // GlobalAuthCallback prawdopodobnie przetwarza w tle - dajemy mu czas.
+      // Po 5s bez decyzji, ladujemy na /home (B2C) lub auth business (B2B) bez
+      // pokazywania bledu - user moze sprobowac zalogowac sie recznie jezeli trzeba.
       setReady((prev) => {
         if (!prev) {
-          toast.error("Weryfikacja linku przekroczyła czas. Spróbuj ponownie.");
-          navigate(isBusiness ? "/auth?business=true" : "/auth");
+          console.warn("[SetPassword] timeout - navigating without password form");
+          navigate(isBusiness ? "/auth?business=true" : "/home");
         }
         return prev;
       });
-    }, 10000);
+    }, 5000);
 
     return () => {
       subscription.unsubscribe();
