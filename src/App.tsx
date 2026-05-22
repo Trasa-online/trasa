@@ -142,12 +142,9 @@ function RootPage() {
       dedupedExchange(code)
         .then(({ data, error }) => {
           if (error) {
-            console.error("[RootPage] exchangeCodeForSession FAILED:", {
-              message: error.message,
-              status: (error as any).status,
-              code: (error as any).code,
-              fullError: error,
-            });
+            console.error(
+              `[RootPage] exchangeCodeForSession FAILED: ${error.message} (status: ${(error as any).status}, code: ${(error as any).code})`
+            );
           } else {
             console.log("[RootPage] PKCE exchange OK:", {
               user_id: data?.user?.id,
@@ -157,31 +154,30 @@ function RootPage() {
           }
           window.history.replaceState({}, "", window.location.pathname + (window.location.hash || ""));
         })
-        .catch((err) => console.error("[RootPage] exchangeCodeForSession threw:", err))
+        .catch((err) => console.error("[RootPage] exchangeCodeForSession threw:", err?.message ?? err))
         .finally(() => { setExchangingCode(false); setCodeChecked(true); });
       return;
     }
 
-    // Token hash flow (newer Supabase Auth)
+    // Token hash flow (newer Supabase Auth) - uzywany przez confirm-signup email
     if (tokenHash && type) {
       console.log("[RootPage] token_hash flow detected, verifying...", { type });
       dedupedVerifyOtp(tokenHash, type)
         .then(({ data, error }) => {
           if (error) {
-            console.error("[RootPage] verifyOtp FAILED:", {
-              message: error.message,
-              status: (error as any).status,
-              code: (error as any).code,
-            });
+            console.error(
+              `[RootPage] verifyOtp FAILED: ${error.message} (status: ${(error as any).status}, code: ${(error as any).code})`
+            );
           } else {
             console.log("[RootPage] verifyOtp OK:", {
               user_id: data?.user?.id,
               email: data?.user?.email,
+              type,
             });
           }
           window.history.replaceState({}, "", window.location.pathname + (window.location.hash || ""));
         })
-        .catch((err) => console.error("[RootPage] verifyOtp threw:", err))
+        .catch((err) => console.error("[RootPage] verifyOtp threw:", err?.message ?? err))
         .finally(() => { setExchangingCode(false); setCodeChecked(true); });
       return;
     }
