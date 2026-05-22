@@ -11,7 +11,7 @@ import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePho
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { useHaptics } from "@/hooks/useHaptics";
-import { getSubcategoryIds, getMainCategoryFor } from "@/lib/categories";
+import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor } from "@/lib/categories";
 import { addLike as saveExploreLike } from "@/lib/exploreLikes";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -891,16 +891,22 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             customSubIds.add(f);
           }
         }
+        // Expand standardSubIds przez aliasy DB - subcategory "club" pasuje do
+        // p.category="club" ORAZ "nightlife" (historyczny mix w bazie).
+        const dbCategorySet = new Set<string>();
+        standardSubIds.forEach(subId => {
+          getDbCategoriesFor(subId).forEach(dbCat => dbCategorySet.add(dbCat));
+        });
         const pool = remaining
           .filter(p => {
-            if (standardSubIds.has(p.category)) return true;
+            if (dbCategorySet.has(p.category)) return true;
             const bizSubs = (p as any).businessSubcategories as string[] | undefined;
             if (bizSubs && bizSubs.some(s => customSubIds.has(s))) return true;
             return false;
           })
           .sort(() => Math.random() - 0.5)
           .slice(0, 20);
-        console.log("[PlaceSwiper] batch pool:", { categoryFilters, standardSubIds: [...standardSubIds], customSubIds: [...customSubIds], poolSize: pool.length, remainingTotal: remaining.length });
+        console.log("[PlaceSwiper] batch pool:", { categoryFilters, standardSubIds: [...standardSubIds], dbCategorySet: [...dbCategorySet], customSubIds: [...customSubIds], poolSize: pool.length, remainingTotal: remaining.length });
         setQueue(pool);
       } else {
         setQueue([...remaining].sort(() => Math.random() - 0.5));

@@ -74,3 +74,16 @@ export const getSubcategoryLabel = (subcategoryId: string): string | undefined =
   }
   return undefined;
 };
+
+// DB ma historycznie kilka wartosci `places.category` dla tego samego konceptu
+// (np. "club" z AddCustomPlacePanel vs "nightlife" z AI generation). Mapowanie
+// 1:N - subcategory ID z UI -> wszystkie wartosci DB ktore znacza to samo.
+// Uzywane w PlaceSwiper filter, zeby user widzial WSZYSTKIE miejsca pasujace
+// do wybranej podkategorii niezaleznie od tego jak zostala wpisana do bazy.
+const SUBCATEGORY_DB_ALIASES: Record<string, string[]> = {
+  club: ["club", "nightlife"],
+};
+
+export const getDbCategoriesFor = (subcategoryId: string): string[] => {
+  return SUBCATEGORY_DB_ALIASES[subcategoryId] ?? [subcategoryId];
+};
