@@ -570,26 +570,38 @@ const EmptyState = ({
   onProceed,
   onPickRoute,
   loadingExamples,
+  hasCategoryFilter,
+  hasSwipedAny,
 }: {
   likedPlaces: MockPlace[];
   matchedRoutes: MatchedRoute[];
   onProceed: () => void;
   onPickRoute: (route: RouteExample) => void;
   loadingExamples: boolean;
+  hasCategoryFilter?: boolean;
+  hasSwipedAny?: boolean;
 }) => {
   if (likedPlaces.length === 0) {
+    // Empty from start (filter restrictive, no places match) vs swiped-through-all
+    const emptyFromStart = hasCategoryFilter && !hasSwipedAny;
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-8 gap-6 text-center">
-        <div className="text-5xl">🗺️</div>
+        <div className="text-5xl">{emptyFromStart ? "🔍" : "🗺️"}</div>
         <div>
-          <p className="font-bold text-lg">Przejrzałeś wszystkie miejsca</p>
-          <p className="text-muted-foreground text-sm mt-1">Nie wybrałeś żadnego miejsca - może zacznijmy od nowa?</p>
+          <p className="font-bold text-lg">
+            {emptyFromStart ? "Brak miejsc w tych kategoriach" : "Przejrzałeś wszystkie miejsca"}
+          </p>
+          <p className="text-muted-foreground text-sm mt-1">
+            {emptyFromStart
+              ? "Spróbuj wybrać inne kategorie albo zmień miasto."
+              : "Nie wybrałeś żadnego miejsca - może zacznijmy od nowa?"}
+          </p>
         </div>
         <button
           onClick={() => window.location.reload()}
           className="border border-border rounded-full px-6 py-3 text-sm text-muted-foreground"
         >
-          Zacznij od nowa
+          {emptyFromStart ? "Zmień filtry" : "Zacznij od nowa"}
         </button>
       </div>
     );
@@ -1306,6 +1318,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         onProceed={handleProceed}
         onPickRoute={handlePickRoute}
         loadingExamples={loadingExamples}
+        hasCategoryFilter={hasCategoryFilter}
+        hasSwipedAny={history.length > 0}
       />
     );
   }

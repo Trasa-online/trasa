@@ -82,6 +82,18 @@ export const getSubcategoryLabel = (subcategoryId: string): string | undefined =
 // do wybranej podkategorii niezaleznie od tego jak zostala wpisana do bazy.
 const SUBCATEGORY_DB_ALIASES: Record<string, string[]> = {
   club: ["club", "nightlife"],
+  // "experience" w UI mapuje sie na rozne typy atrakcji w DB. AddCustomPlacePanel
+  // pisze "experience" dla movie_theater/amusement_park/zoo/aquarium, ale AI-generated
+  // miejsca uzywaja konkretnych typow. Lapiemy szeroko, zeby filtr "Doswiadczenie"
+  // pokazywal cokolwiek pasujacego do tego konceptu.
+  experience: ["experience", "tourist_attraction", "attraction", "amusement", "zoo", "aquarium", "theater", "movie_theater"],
+  // "monument" w UI obejmuje historyczne zabytki - DB tez moze miec "church" (kosciol)
+  // i "tourist_attraction" jako zabytki turystyczne.
+  monument: ["monument", "church", "tourist_attraction"],
+  // "shopping" w UI - DB ma tez "market" jako blisko-zwiazany koncept, ale to osobna
+  // podkategoria. Zostawiamy bez aliasa.
+  // "park" obejmuje tez "walk" (spacer) - czesto te same miejsca opisywane inaczej.
+  park: ["park", "walk"],
 };
 
 export const getDbCategoriesFor = (subcategoryId: string): string[] => {
