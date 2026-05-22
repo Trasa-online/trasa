@@ -21,35 +21,56 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
   const params = new URLSearchParams(window.location.search);
   const isBusiness = forceBusiness || params.get("type") === "business";
 
-  // Sa 3 powody trafienia na ta strone:
-  // (a) Reset hasla - Supabase fire'uje PASSWORD_RECOVERY event po code/token exchange
-  // (b) Signup confirmation - Supabase fire'uje SIGNED_IN event (user juz ma haslo, nie potrzebuje formularza)
+  // Powody trafienia na ta strone:
+  // (a) Reset hasla - URL ma type=recovery LUB Supabase fire'uje PASSWORD_RECOVERY event
+  // (b) Signup confirmation - user juz ma haslo z signUp, NIE potrzebuje formularza
   // (c) Business invite - admin invited user, brak hasla, musi ustawic
+  // (d) User wszedl recznie z linka w settings (chce zmienic haslo)
   //
-  // Logika: B2B zawsze pokazuje formularz. B2C pokazuje TYLKO jezeli PASSWORD_RECOVERY
-  // fire'owany ALBO URL ma explicit type=recovery. W przeciwnym razie skip do /home.
+  // Decyzja: B2B zawsze pokazuje formularz. B2C pokazuje TYLKO jezeli wykryjemy
+  // recovery flow (URL type=recovery lub event PASSWORD_RECOVERY w 300ms od auth).
+  // W przeciwnym razie -> /home (sygnaly z signOu p confirmation/fresh signin).
   const callbackType = params.get("type");
   const tokenHash = params.get("token_hash");
 
   useEffect(() => {
-    let recoveryEventFired = false;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    let recoveryDetected = callbackType === "recovery";
+    let decisionMade = false;
+
+    const subscription = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
-        recoveryEventFired = true;
+        recoveryDetected = true;
+      }
+    }).data.subscription;
+
+    const decideAfterAuth = async () => {
+      if (decisionMade) return;
+      decisionMade = true;
+
+      if (isBusiness) {
         setReady(true);
         return;
       }
-      if (event === "SIGNED_IN") {
-        // Pure SIGNED_IN (bez poprzedzajacego PASSWORD_RECOVERY) na B2C = signup
-        // confirmation lub fresh login. User nie potrzebuje formularza, leci /home.
-        if (!recoveryEventFired && !isBusiness) {
-          toast.success("Witamy w Trasie 🧡");
-          navigate("/home");
-          return;
-        }
+
+      // Krotki delay zeby PASSWORD_RECOVERY event zdazyl odpalic (jezeli to recovery).
+      await new Promise((r) => setTimeout(r, 300));
+
+      if (recoveryDetected) {
         setReady(true);
+        return;
       }
-    });
+
+      // Brak sygnalu recovery -> to signup confirmation lub fresh signin -> /home
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        toast.success("Witamy w Trasie 🧡");
+        navigate("/home");
+        return;
+      }
+
+      // Brak sesji - cos poszlo zle, fall back na auth
+      setReady(true);
+    };
 
     const code = new URLSearchParams(window.location.search).get("code");
 
@@ -59,27 +80,31 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
           console.error("[SetPassword] Code exchange failed:", error);
           toast.error("Weryfikacja nie powiodła się. Spróbuj ponownie.");
           navigate(isBusiness ? "/auth?business=true" : "/auth");
+          return;
         }
-        // Po sukcesie onAuthStateChange ogarnie nawigacje (PASSWORD_RECOVERY vs SIGNED_IN)
+        decideAfterAuth();
       });
     } else if (tokenHash && callbackType) {
-      // token_hash flow (Supabase modern Auth) - uzywany przez nowy confirm-signup template
       supabase.auth.verifyOtp({ token_hash: tokenHash, type: callbackType as any }).then(({ error }) => {
         if (error) {
           console.error("[SetPassword] verifyOtp failed:", error);
           toast.error("Weryfikacja nie powiodła się. Spróbuj ponownie.");
           navigate(isBusiness ? "/auth?business=true" : "/auth");
+          return;
         }
+        decideAfterAuth();
       });
     } else {
-      // Brak code/token_hash - sprawdzamy istniejaca sesje. Jezeli jest, user
-      // moze recznie ustawiac haslo (np. profile settings). Pokaz form.
+      // Brak code/token_hash w URL. User moze byc na /set-password z istniejacej sesji
+      // (np. recznie z settings) ALBO Supabase juz przerobil auth callback i zostawil
+      // czysty URL. W obu przypadkach decydujemy po recovery event / brak.
       supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) setReady(true);
+        if (session) decideAfterAuth();
       });
     }
 
     const timeout = setTimeout(() => {
+      if (decisionMade) return;
       setReady((prev) => {
         if (!prev) {
           toast.error("Weryfikacja linku przekroczyła czas. Spróbuj ponownie.");
