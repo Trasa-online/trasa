@@ -21,6 +21,13 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
   const params = new URLSearchParams(window.location.search);
   const isBusiness = forceBusiness || params.get("type") === "business";
 
+  // SIGNUP confirmation NIE powinien tu trafiac - user juz ma haslo z signUp.
+  // Ale jezeli stara wersja maila / Supabase config przekierowuje tu z type=signup,
+  // omijamy formularz i ladujemy uzytkownika na /home.
+  const callbackType = params.get("type");
+  const tokenHash = params.get("token_hash");
+  const isSignupConfirmation = callbackType === "signup";
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
@@ -30,14 +37,41 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
 
     const code = new URLSearchParams(window.location.search).get("code");
 
+    // Helper: po sukcesie session creation - dla signup confirmation skip form,
+    // jedz prosto na /home (user juz ustawil haslo w signUp).
+    const handlePostExchange = async () => {
+      if (isSignupConfirmation && !isBusiness) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          posthog.identify(user.id, { email: user.email });
+          posthog.capture("user_signed_up", { account_type: "consumer", flow: "email_confirmation" });
+        }
+        toast.success("Konto aktywowane! Witamy w Trasie 🧡");
+        navigate("/home");
+        return;
+      }
+      setReady(true);
+    };
+
     if (code) {
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
         if (error) {
-          console.error("Code exchange failed:", error);
+          console.error("[SetPassword] Code exchange failed:", error);
           toast.error("Weryfikacja nie powiodła się. Spróbuj ponownie.");
           navigate(isBusiness ? "/auth?business=true" : "/auth");
         } else {
-          setReady(true);
+          handlePostExchange();
+        }
+      });
+    } else if (tokenHash && callbackType) {
+      // token_hash flow (Supabase modern Auth) - uzywany przez nowy confirm-signup template
+      supabase.auth.verifyOtp({ token_hash: tokenHash, type: callbackType as any }).then(({ error }) => {
+        if (error) {
+          console.error("[SetPassword] verifyOtp failed:", error);
+          toast.error("Weryfikacja nie powiodła się. Spróbuj ponownie.");
+          navigate(isBusiness ? "/auth?business=true" : "/auth");
+        } else {
+          handlePostExchange();
         }
       });
     } else {
