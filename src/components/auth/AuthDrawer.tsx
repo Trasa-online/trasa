@@ -197,8 +197,8 @@ const AuthDrawer = () => {
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) close(); }}>
       <SheetContent
         side="bottom"
-        className="rounded-t-3xl flex flex-col p-0 bg-background"
-        style={{ maxHeight: "92vh" }}
+        className="rounded-t-3xl flex flex-col p-0 bg-background [&>button]:hidden"
+        style={{ maxHeight: "92dvh" }}
       >
         {/* Header */}
         <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-2 shrink-0">
@@ -222,7 +222,7 @@ const AuthDrawer = () => {
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-5 pt-2 pb-[max(20px,env(safe-area-inset-bottom))]">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-2 pb-[max(20px,env(safe-area-inset-bottom))]">
           <div className="space-y-1 mb-5">
             <p className="text-xl font-black leading-tight">
               Aby skorzystać ze wszystkich funkcji,{" "}załóż konto

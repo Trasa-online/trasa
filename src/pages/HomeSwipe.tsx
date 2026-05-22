@@ -96,11 +96,11 @@ const HomeSwipe = () => {
 
       {/* Filter drawer (city + categories multi-select) */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden" style={{ maxHeight: "85vh" }}>
+        <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col" style={{ maxHeight: "85dvh" }}>
           {/* Close button - wrapped w div, zeby shadcn'owy [&>button]:hidden nie ukrywal naszego.
               Shadcn renderuje wlasny <SheetPrimitive.Close> jako bezposrednie dziecko SheetContent;
               nasz X w wrapperze omija ten selector. */}
-          <div>
+          <div className="shrink-0">
             <button
               type="button"
               onClick={() => setDrawerOpen(false)}
@@ -111,7 +111,7 @@ const HomeSwipe = () => {
               <X className="h-4 w-4 text-foreground" />
             </button>
           </div>
-          <div className="overflow-y-auto px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]">
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]">
             <div className="flex items-center justify-between gap-3 mb-5 pr-12">
               <div>
                 <p className="text-lg font-black">Co przeglądasz</p>
