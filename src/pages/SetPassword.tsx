@@ -55,20 +55,37 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       // Krotki delay zeby PASSWORD_RECOVERY event zdazyl odpalic (jezeli to recovery).
       await new Promise((r) => setTimeout(r, 300));
 
+      // Definitywne sygnaly recovery (form needed): explicit URL type=recovery
       if (recoveryDetected) {
         setReady(true);
         return;
       }
 
-      // Brak sygnalu recovery -> to signup confirmation lub fresh signin -> /home
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        toast.success("Witamy w Trasie 🧡");
-        navigate("/home");
-        return;
+      // Sprawdz user state: JEZELI email_confirmed_at zostal ustawiony PRZED MOMENTEM
+      // (w ciagu 90s), to jest signup confirmation. Dla recovery email_confirmed_at
+      // bylby ustawiony dawno temu (podczas oryginalnego signup).
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log("[SetPassword] user state after auth:", {
+        id: user?.id,
+        email: user?.email,
+        email_confirmed_at: user?.email_confirmed_at,
+        created_at: user?.created_at,
+        recovery_sent_at: (user as any)?.recovery_sent_at,
+      });
+
+      if (user?.email_confirmed_at) {
+        const confirmedMs = new Date(user.email_confirmed_at).getTime();
+        const ageMs = Date.now() - confirmedMs;
+        if (ageMs < 90_000) {
+          // Email confirmed w ciagu ostatnich 90s = signup confirmation, NIE recovery
+          console.log("[SetPassword] recent email confirmation, signup flow -> /home");
+          toast.success("Witamy w Trasie 🧡");
+          navigate("/home");
+          return;
+        }
       }
 
-      // Brak sesji - cos poszlo zle, fall back na auth
+      // Domyslny case: pokaz formularz (recovery, lub user manualnie wszedl)
       setReady(true);
     };
 
