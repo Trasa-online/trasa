@@ -53,40 +53,36 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       }
 
       // Krotki delay zeby PASSWORD_RECOVERY event zdazyl odpalic (jezeli to recovery).
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 400));
 
-      // Definitywne sygnaly recovery (form needed): explicit URL type=recovery
-      if (recoveryDetected) {
+      // Recovery sygnaly: explicit URL ?recovery=1 (z GlobalAuthCallback) lub
+      // ?type=recovery, lub PASSWORD_RECOVERY event w ciagu 400ms.
+      const explicitRecovery = params.get("recovery") === "1" || callbackType === "recovery";
+      console.log("[SetPassword] decision:", {
+        isBusiness,
+        recoveryDetected,
+        explicitRecovery,
+        url: window.location.href,
+      });
+
+      if (recoveryDetected || explicitRecovery) {
+        console.log("[SetPassword] recovery flow -> show form");
         setReady(true);
         return;
       }
 
-      // Sprawdz user state: JEZELI email_confirmed_at zostal ustawiony PRZED MOMENTEM
-      // (w ciagu 90s), to jest signup confirmation. Dla recovery email_confirmed_at
-      // bylby ustawiony dawno temu (podczas oryginalnego signup).
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log("[SetPassword] user state after auth:", {
-        id: user?.id,
-        email: user?.email,
-        email_confirmed_at: user?.email_confirmed_at,
-        created_at: user?.created_at,
-        recovery_sent_at: (user as any)?.recovery_sent_at,
-      });
-
-      if (user?.email_confirmed_at) {
-        const confirmedMs = new Date(user.email_confirmed_at).getTime();
-        const ageMs = Date.now() - confirmedMs;
-        if (ageMs < 90_000) {
-          // Email confirmed w ciagu ostatnich 90s = signup confirmation, NIE recovery
-          console.log("[SetPassword] recent email confirmation, signup flow -> /home");
-          toast.success("Witamy w Trasie 🧡");
-          navigate("/home");
-          return;
-        }
+      // Default dla B2C: BRAK sygnalu recovery = signup confirmation/fresh signin/unexpected nav -> /home
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        console.log("[SetPassword] no recovery signal, navigating /home");
+        toast.success("Witamy w Trasie 🧡");
+        navigate("/home");
+        return;
       }
 
-      // Domyslny case: pokaz formularz (recovery, lub user manualnie wszedl)
-      setReady(true);
+      // Brak sesji - fallback na auth page
+      console.log("[SetPassword] no session, no recovery -> /auth");
+      navigate("/auth");
     };
 
     const code = new URLSearchParams(window.location.search).get("code");
