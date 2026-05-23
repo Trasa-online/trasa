@@ -207,13 +207,24 @@ const Auth = () => {
     if (password.length < 6) { toast.error("Hasło musi mieć co najmniej 6 znaków"); return; }
     setLoading(true);
     try {
+      // Wymus odswiezenie sesji + jawnie pass auth header (supabase.functions.invoke
+      // czasem gubi header dla anon sesji w niektorych browserach).
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      if (!freshSession?.access_token) {
+        toast.error("Sesja wygasła. Odśwież stronę i spróbuj ponownie.");
+        setLoading(false);
+        return;
+      }
       // Use server-side admin API to upgrade the anonymous account.
       // This skips Supabase's default "Confirm change of email" mail and
       // marks the email as confirmed so the user never lands on /set-password.
       // Function always returns 200 + envelope { ok, code, message } — read body directly.
       const { data: upgradeData, error: upgradeError } = await supabase.functions.invoke(
         "upgrade-business-account",
-        { body: { email: email.trim().toLowerCase(), password } },
+        {
+          headers: { Authorization: `Bearer ${freshSession.access_token}` },
+          body: { email: email.trim().toLowerCase(), password },
+        },
       );
       if (upgradeError) {
         console.error("[handleDraftUpgrade] function invoke failed", upgradeError);

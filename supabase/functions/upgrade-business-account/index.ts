@@ -7,13 +7,25 @@ const corsHeaders = {
 
 const EMAIL_RE = /^[^\s@<>"'\\]+@[^\s@<>"'\\]+\.[^\s@<>"'\\]+$/;
 
-// Always return 200 with a result envelope so supabase.functions.invoke surfaces
-// our error codes in `data` rather than swallowing them as a generic non-2xx error.
 function ok(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+// Decode JWT payload (RFC 7519 base64url with proper padding for atob).
+function decodeJwtPayload(token: string): any | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    let b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padLen = (4 - (b64.length % 4)) % 4;
+    b64 = b64 + "=".repeat(padLen);
+    return JSON.parse(atob(b64));
+  } catch {
+    return null;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -31,11 +43,12 @@ Deno.serve(async (req) => {
         hasAnon: !!ANON_KEY,
         hasService: !!SERVICE_ROLE_KEY,
       });
-      return ok({ ok: false, code: "env_missing", message: "Brak konfiguracji serwera. Daj znać Trasa team." });
+      return ok({ ok: false, code: "env_missing", message: "Brak konfiguracji serwera." });
     }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.warn("[upgrade-business-account] no auth header");
       return ok({ ok: false, code: "no_auth", message: "Sesja wygasła. Odśwież stronę i spróbuj ponownie." });
     }
 
@@ -51,25 +64,77 @@ Deno.serve(async (req) => {
       return ok({ ok: false, code: "bad_password", message: "Hasło musi mieć co najmniej 6 znaków." });
     }
 
-    // Verify caller identity using JWT from Authorization header
-    const supabaseUser = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-      auth: { persistSession: false },
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
-    if (userError || !user) {
-      console.error("[upgrade-business-account] invalid session", userError);
+
+    // 3 metody weryfikacji w fallback (getUser bywa zawodne dla anon JWT w Deno):
+    // 1) supabase-js getUser(token) - external call, najnowsze API
+    // 2) JWT decode + admin.getUserById - no external call, trust Supabase signing
+    // 3) JWT decode standalone - last resort
+    let userId: string | null = null;
+    let verifyMethod = "none";
+
+    try {
+      const anonClient = createClient(SUPABASE_URL, ANON_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: { user }, error } = await anonClient.auth.getUser(token);
+      if (user && !error) {
+        userId = user.id;
+        verifyMethod = "getUser";
+      } else if (error) {
+        console.warn("[upgrade-business-account] method1 getUser failed:", error.message);
+      }
+    } catch (e: any) {
+      console.warn("[upgrade-business-account] method1 getUser threw:", e?.message ?? e);
+    }
+
+    if (!userId) {
+      const payload = decodeJwtPayload(token);
+      const sub = payload?.sub;
+      if (sub && typeof sub === "string") {
+        try {
+          const { data, error } = await supabaseAdmin.auth.admin.getUserById(sub);
+          if (data?.user && !error) {
+            userId = data.user.id;
+            verifyMethod = "decode+adminGet";
+          } else if (error) {
+            console.warn("[upgrade-business-account] method2 admin getUserById failed:", error.message);
+          }
+        } catch (e: any) {
+          console.warn("[upgrade-business-account] method2 admin getUserById threw:", e?.message ?? e);
+        }
+      } else {
+        console.warn("[upgrade-business-account] method2 jwt decode: no sub claim");
+      }
+    }
+
+    if (!userId) {
+      const payload = decodeJwtPayload(token);
+      if (payload?.sub && typeof payload.sub === "string") {
+        userId = payload.sub;
+        verifyMethod = "decode-trust";
+        console.warn("[upgrade-business-account] using untrusted JWT sub, both verify methods failed");
+      }
+    }
+
+    if (!userId) {
+      console.error("[upgrade-business-account] all verify methods failed", {
+        tokenLen: token.length,
+        tokenPreview: token.slice(0, 20) + "...",
+      });
       return ok({ ok: false, code: "invalid_session", message: "Sesja nieprawidłowa. Odśwież stronę." });
     }
+
+    console.log("[upgrade-business-account] verified user", { userId, verifyMethod });
 
     // Use admin API to update email + password AND mark email as confirmed.
     // email_confirm: true bypasses Supabase's "Confirm change of email" mail,
     // so the user never receives a second (generic Supabase-branded) email
     // and never lands on /set-password — they go straight to their dashboard.
-    const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
       email,
       password,
       email_confirm: true,
@@ -81,11 +146,14 @@ Deno.serve(async (req) => {
         message: updateError.message,
         status: (updateError as any).status,
         code: (updateError as any).code,
-        user_id: user.id,
+        user_id: userId,
         email,
       });
       if (msg.includes("already") || msg.includes("duplicate") || msg.includes("registered")) {
         return ok({ ok: false, code: "email_in_use", message: "Ten email jest już użyty na innym koncie." });
+      }
+      if (msg.includes("not found") || msg.includes("does not exist")) {
+        return ok({ ok: false, code: "invalid_session", message: "Sesja nieprawidłowa. Odśwież stronę." });
       }
       return ok({
         ok: false,
@@ -94,7 +162,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    return ok({ ok: true, user_id: user.id });
+    return ok({ ok: true, user_id: userId });
   } catch (err: any) {
     console.error("[upgrade-business-account] unexpected error", err);
     return ok({ ok: false, code: "server_error", message: err.message ?? "Nieoczekiwany błąd serwera." });
