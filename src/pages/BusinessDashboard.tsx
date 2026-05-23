@@ -6,7 +6,7 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye } from "lucide-react";
 import 'driver.js/dist/driver.css';
 import { driver } from 'driver.js';
 import { MAIN_CATEGORIES } from "@/lib/categories";
@@ -1437,6 +1437,17 @@ const BusinessDashboard = () => {
                 Kopiuj link dla lokalu
               </button>
             )}
+            {/* Mobile: Podglad - desktop ma sticky sidebar preview, mobile potrzebuje przycisku */}
+            <button
+              onClick={() => previewReady && setShowAppPreview(true)}
+              disabled={!previewReady}
+              title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie, aby zobaczyć podgląd" : "Podgląd wizytówki w aplikacji"}
+              aria-label="Podgląd wizytówki"
+              className="md:hidden flex items-center gap-1 text-xs font-semibold text-orange-600 px-3 py-1.5 rounded-full bg-orange-50 hover:bg-orange-100 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Podgląd
+            </button>
             {!isDraft && (
               <button onClick={handleLogout} className="md:hidden flex items-center gap-1 text-xs text-muted-foreground px-2 py-1.5 rounded-full bg-slate-100">
                 <LogOut className="h-3.5 w-3.5" />
