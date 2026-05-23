@@ -6,7 +6,7 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound } from "lucide-react";
 import 'driver.js/dist/driver.css';
 import { driver } from 'driver.js';
 import { MAIN_CATEGORIES } from "@/lib/categories";
@@ -1222,6 +1222,29 @@ const BusinessDashboard = () => {
     }
   };
 
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const handlePasswordReset = async () => {
+    if (!user?.email) {
+      toast.error("Brak emaila powiązanego z kontem - skontaktuj się z supportem");
+      return;
+    }
+    if (resetPasswordLoading) return;
+    if (!window.confirm(`Wyślemy link do zmiany hasła na ${user.email}. Kontynuować?`)) return;
+    setResetPasswordLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/#/set-password-biznes`,
+      });
+      if (error) throw error;
+      toast.success(`Link do zmiany hasła wysłany na ${user.email}. Sprawdź skrzynkę (i spam).`);
+    } catch (err: any) {
+      console.error("[BusinessDashboard] password reset failed:", err);
+      toast.error(err.message || "Nie udało się wysłać linka");
+    } finally {
+      setResetPasswordLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     // Clear Supabase session from all storage
     const clearStorage = () => {
@@ -1393,10 +1416,24 @@ const BusinessDashboard = () => {
             {sidebarOpen && 'Zgłoś problem'}
           </button>
           {!isDraft && (
-            <button onClick={handleLogout} title="Wyloguj się" className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
-              <LogOut className="h-3.5 w-3.5 shrink-0" />
-              {sidebarOpen && 'Wyloguj się'}
-            </button>
+            <>
+              <button
+                onClick={handlePasswordReset}
+                disabled={resetPasswordLoading}
+                title="Zmień hasło"
+                className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 disabled:opacity-50 ${sidebarOpen ? 'px-2' : 'justify-center'}`}
+              >
+                {resetPasswordLoading
+                  ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                  : <KeyRound className="h-3.5 w-3.5 shrink-0" />
+                }
+                {sidebarOpen && (resetPasswordLoading ? 'Wysyłam...' : 'Zmień hasło')}
+              </button>
+              <button onClick={handleLogout} title="Wyloguj się" className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
+                <LogOut className="h-3.5 w-3.5 shrink-0" />
+                {sidebarOpen && 'Wyloguj się'}
+              </button>
+            </>
           )}
           <button onClick={startTour} title="Powtórz tour" className={`flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors py-2 ${sidebarOpen ? 'px-2' : 'justify-center'}`}>
             <HelpCircle className="h-3.5 w-3.5 shrink-0" />
