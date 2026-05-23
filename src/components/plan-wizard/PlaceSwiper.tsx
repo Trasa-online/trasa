@@ -740,28 +740,31 @@ function enrichWithBusinessProfile(p: any): MockPlace {
   if (!bp) {
     return { ...p, galleryPhotos: placeGallery } as MockPlace;
   }
-  const plan: 'zero' | 'basic' | 'premium' = bp.plan ?? 'zero';
+  // Per decyzja produktowa (CLAUDE.md): wszystkie aktywne biznesy traktujemy jak
+  // premium - logo, eventy, cover image, dane kontaktowe widoczne dla kazdego
+  // powiazanego biz profile. DB column `plan` jest legacy z czasow planow zero/basic/premium
+  // i jest ignorowane na froncie. Wszystkim wyswietlamy pelna premium wizytowke.
+  const plan: 'zero' | 'basic' | 'premium' = 'premium';
   const bizGallery: string[] = Array.isArray(bp.gallery_urls) ? bp.gallery_urls.filter(Boolean) : [];
   // Biznes wpisuje swoje zdjęcia jako pierwsze, potem kurowana galeria z places, dedupe po URL.
   const mergedGallery = Array.from(new Set([...bizGallery, ...placeGallery]));
   return {
     ...p,
     businessPlan: plan,
-    // basic+: override photo with business cover if set
-    photo_url: (plan === 'basic' || plan === 'premium') && bp.cover_image_url ? bp.cover_image_url : p.photo_url,
-    // basic+: show business section (logo, events, CTA)
-    businessLogoUrl: plan !== 'zero' ? (bp.logo_url ?? '') : undefined,
-    businessEventTitle: plan !== 'zero' ? (bp.event_title ?? undefined) : undefined,
+    // Override photo z biz cover gdy biznes ma swoje zdjecie
+    photo_url: bp.cover_image_url || p.photo_url,
+    // Show business section (logo, events, CTA) dla wszystkich biz
+    businessLogoUrl: bp.logo_url ?? '',
+    businessEventTitle: bp.event_title ?? undefined,
     businessPhone: bp.phone ?? null,
     businessWebsite: bp.website ?? null,
     galleryPhotos: mergedGallery,
     businessSubcategories: bp.subcategories ?? [],
-    coverVideoUrl: (plan === 'basic' || plan === 'premium') && bp.cover_video_url ? bp.cover_video_url : undefined,
+    coverVideoUrl: bp.cover_video_url ?? undefined,
     // Pomijaj Google Photos tylko gdy biznes ma WŁASNE zdjęcia (cover/video/własna galeria).
     // places.gallery_urls (kurowane z Google) NIE liczy się jako "własne zdjęcia biznesu".
     businessHasOwnPhoto: !!(
-      ((plan === 'basic' || plan === 'premium') && (bp.cover_image_url || bp.cover_video_url)) ||
-      (bizGallery.length > 0)
+      bp.cover_image_url || bp.cover_video_url || (bizGallery.length > 0)
     ),
   } as MockPlace;
 }
@@ -812,7 +815,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       if (roundPlaceIds?.length) {
         const { data, error } = await (supabase as any)
           .from("places")
-          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, gallery_urls, phone, website)")
+          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, subcategories, description, is_verified)")
           .in("id", roundPlaceIds);
 
         if (error) console.error("[PlaceSwiper] round fetch error:", error);
@@ -834,7 +837,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // ── Normal mode ──────────────────────────────────────────────────────
       const { data, error: placesError } = await (supabase as any)
         .from("places")
-        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, gallery_urls, phone, website)")
+        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, subcategories, description, is_verified)")
         .ilike("city", city)
         .eq("is_active", true);
 
