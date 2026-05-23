@@ -1130,7 +1130,21 @@ const BusinessDashboard = () => {
       })
       .eq("id", profile.id);
     if (error) {
-      toast.error("Nie udało się zapisać zmian");
+      console.error("[BusinessDashboard] handleSave failed:", {
+        message: error.message,
+        code: (error as any).code,
+        details: (error as any).details,
+        hint: (error as any).hint,
+        profile_id: profile.id,
+        user_id: user?.id,
+        owner_user_id: (profile as any).owner_user_id,
+      });
+      const msg = error.message?.toLowerCase() ?? "";
+      if (msg.includes("row-level security") || msg.includes("rls") || msg.includes("policy")) {
+        toast.error("Brak uprawnień do edycji - sprawdź czy jesteś zalogowany na właściwe konto");
+      } else {
+        toast.error(`Błąd zapisu: ${error.message ?? "nieznany"}`);
+      }
     } else {
       if (isComplete && !reviewRequestedAt) {
         setReviewRequestedAt(nowIso);
