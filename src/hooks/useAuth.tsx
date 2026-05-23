@@ -31,11 +31,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const anonSignInAttempted = useRef(false);
 
   useEffect(() => {
+    // Global safety net: ensure profile row exists for every signed-in non-anon user.
+    // group_sessions.created_by, group_session_members.user_id, user_place_reactions.user_id,
+    // routes.original_creator_id i kilka innych tabel maja FK -> public.profiles(id).
+    // Jezeli profile row nie istnieje (np. pre-20260601 handle_new_user trigger failure
+    // dla username collision, OAuth user_id mismatch, anon -> OAuth linkIdentity edge case),
+    // inserty do tych tabel padaja z FK violation. RPC robi idempotent INSERT z resilient
+    // username generation. Wywolanie raz per SIGNED_IN event - akceptowalny koszt.
+    const ensuredForUserId = { current: null as string | null };
+    const ensureProfileIfNeeded = (session: Session | null) => {
+      if (!session?.user || session.user.is_anonymous) return;
+      if (ensuredForUserId.current === session.user.id) return;
+      ensuredForUserId.current = session.user.id;
+      supabase.rpc("ensure_current_user_profile").then(({ error }) => {
+        if (error) console.warn("[useAuth] ensure_current_user_profile failed:", error.message);
+      }).catch((err) => console.warn("[useAuth] ensure_current_user_profile threw:", err));
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+          ensureProfileIfNeeded(session);
+        }
       }
     );
 
@@ -44,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        ensureProfileIfNeeded(session);
       })
       .catch(() => setLoading(false));
 

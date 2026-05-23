@@ -156,14 +156,6 @@ const CreateGroupSession = () => {
     if (!selectedCity) { toast.error("Wybierz miasto"); return; }
     setLoading(true);
     try {
-      // Safety net: ensure profile row exists. group_sessions.created_by ma FK do profiles,
-      // a w przypadkach (OAuth user_id mismatch, pre-20260601 trigger failure) profile
-      // moze nie istniec mimo zalogowanego usera. RPC tworzy go jezeli brak.
-      const { error: profileErr } = await (supabase as any).rpc("ensure_current_user_profile");
-      if (profileErr) {
-        console.warn("[CreateGroupSession] ensure_current_user_profile failed:", profileErr);
-      }
-
       const code = generateJoinCode();
       const { data: session, error } = await (supabase as any)
         .from("group_sessions")
@@ -206,9 +198,6 @@ const CreateGroupSession = () => {
     if (code.length < 4) { toast.error("Wpisz kod sesji"); return; }
     setJoining(true);
     try {
-      // Safety net dla brakujacego profile row (group_session_members.user_id ma FK do profiles)
-      await (supabase as any).rpc("ensure_current_user_profile").catch(() => {});
-
       const { data: session, error } = await (supabase as any)
         .from("group_sessions")
         .select("id, city")
