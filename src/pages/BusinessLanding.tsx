@@ -63,13 +63,21 @@ export default function BusinessLanding() {
             <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
             <span className="font-black text-base lg:text-lg text-[#0E0E0E] tracking-tight">trasa</span>
           </div>
-          <button
-            onClick={() => { posthog.capture("business_landing_cta_clicked", { location: "topbar" }); navigate("/biznes/start"); }}
-            className="rounded-full text-white font-bold px-5 py-2 lg:px-6 lg:py-2.5 text-sm active:scale-95 transition-transform"
-            style={{ background: "#0E0E0E" }}
-          >
-            Sprawdź
-          </button>
+          <div className="flex items-center gap-2 lg:gap-3">
+            <button
+              onClick={() => { posthog.capture("business_landing_login_clicked", { location: "topbar" }); navigate("/auth?business=true"); }}
+              className="text-sm font-semibold text-blue-600 hover:text-blue-700 active:opacity-60 transition-colors px-2 py-1"
+            >
+              Zaloguj się
+            </button>
+            <button
+              onClick={() => { posthog.capture("business_landing_cta_clicked", { location: "topbar" }); navigate("/biznes/start"); }}
+              className="rounded-full text-white font-bold px-5 py-2 lg:px-6 lg:py-2.5 text-sm active:scale-95 transition-transform"
+              style={{ background: "#0E0E0E" }}
+            >
+              Sprawdź
+            </button>
+          </div>
         </div>
       </header>
 
