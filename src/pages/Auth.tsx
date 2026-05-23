@@ -229,10 +229,12 @@ const Auth = () => {
       }
       // Refresh the client session so the JWT includes the new email + claims
       await supabase.auth.refreshSession();
-      // Promote the draft profile to a real one so the dashboard loads in live mode
+      // Promote the draft profile to a real one so the dashboard loads in live mode.
+      // activated_at is the signal "fresh registration" - uzywane przez tour auto-start
+      // (BusinessDashboard.tsx) zeby pokazac onboarding TYLKO swiezo zarejestrowanym firmom.
       const { error: promoteError } = await (supabase as any)
         .from("business_profiles")
-        .update({ is_draft: false })
+        .update({ is_draft: false, activated_at: new Date().toISOString() })
         .eq("id", draftProfileId);
       if (promoteError) throw promoteError;
       // Fetch business name + place_id for the welcome email CTA

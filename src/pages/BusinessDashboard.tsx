@@ -789,17 +789,25 @@ const BusinessDashboard = () => {
     driverObj.drive();
   }, [profile]);
 
-  // Auto-start tour on first visit — only after loading finishes AND user is on overview
-  // Skip in draft (demo) mode — tour is for owners learning their real panel, not exploring the demo
+  // Auto-start tour on first visit — only after loading finishes AND user is on overview.
+  // Skip in draft (demo) mode — tour is for owners learning their real panel, not demo.
+  //
+  // Tour pokazuje sie TYLKO swiezo zarejestrowanym firmom (activated_at < 7 dni). Legacy
+  // profile (activated_at = null) oraz stare konta - brak auto-tour. Manualny "Powtorz
+  // tour" w sidebarze dziala niezaleznie od tych warunkow.
   useEffect(() => {
     if (!profile || loading || activeSection !== 'gallery' || isDraft) return;
+    const activatedAt = (profile as any).activated_at as string | null | undefined;
+    if (!activatedAt) return;
+    const FRESH_ACTIVATION_MS = 7 * 24 * 60 * 60 * 1000;
+    const ageMs = Date.now() - new Date(activatedAt).getTime();
+    if (ageMs >= FRESH_ACTIVATION_MS) return;
     const seen = localStorage.getItem(`tour_seen_v2_${profile.id}`);
     if (!seen) {
-      // Small delay so the DOM is fully rendered
       const t = setTimeout(() => startTour(), 600);
       return () => clearTimeout(t);
     }
-  }, [profile?.id, loading, activeSection, isDraft]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [profile?.id, (profile as any)?.activated_at, loading, activeSection, isDraft]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const PRESET_DAYS: Record<Exclude<AnalyticsRange, 'custom'>, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
@@ -1437,17 +1445,6 @@ const BusinessDashboard = () => {
                 Kopiuj link dla lokalu
               </button>
             )}
-            {/* Mobile: Podglad - desktop ma sticky sidebar preview, mobile potrzebuje przycisku */}
-            <button
-              onClick={() => previewReady && setShowAppPreview(true)}
-              disabled={!previewReady}
-              title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie, aby zobaczyć podgląd" : "Podgląd wizytówki w aplikacji"}
-              aria-label="Podgląd wizytówki"
-              className="md:hidden flex items-center gap-1 text-xs font-semibold text-orange-600 px-3 py-1.5 rounded-full bg-orange-50 hover:bg-orange-100 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Eye className="h-3.5 w-3.5" />
-              Podgląd
-            </button>
             {!isDraft && (
               <button onClick={handleLogout} className="md:hidden flex items-center gap-1 text-xs text-muted-foreground px-2 py-1.5 rounded-full bg-slate-100">
                 <LogOut className="h-3.5 w-3.5" />
@@ -2437,6 +2434,19 @@ const BusinessDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* ── Mobile FAB: Podglad wizytowki (desktop ma sticky sidebar preview) ── */}
+      <button
+        onClick={() => previewReady && setShowAppPreview(true)}
+        disabled={!previewReady}
+        title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie, aby zobaczyć podgląd" : "Podgląd wizytówki w aplikacji"}
+        aria-label="Podgląd wizytówki"
+        className="md:hidden fixed z-[55] flex items-center gap-2 px-5 py-3 rounded-full bg-orange-600 text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+        style={{ bottom: "max(1rem, env(safe-area-inset-bottom))", right: "1rem" }}
+      >
+        <Eye className="h-4 w-4" />
+        Podgląd
+      </button>
 
       {/* ── App-like preview modal (card + detail view) ── */}
       {showAppPreview && (
