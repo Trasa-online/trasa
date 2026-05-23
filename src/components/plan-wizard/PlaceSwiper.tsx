@@ -492,15 +492,14 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
                   <RotateCcw className="h-4 w-4 text-black" />
                 </button>
               )}
-              {place.businessPlan !== 'zero' && (
-                <button
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => { e.stopPropagation(); onTap(); }}
-                  className="h-10 w-10 rounded-full bg-white flex items-center justify-center shadow-md active:scale-90 transition-transform"
-                >
-                  <ChevronUp className="h-5 w-5 text-black" />
-                </button>
-              )}
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); onTap(); }}
+                aria-label="Rozwiń wizytówkę"
+                className="h-10 w-10 rounded-full bg-white flex items-center justify-center shadow-md active:scale-90 transition-transform"
+              >
+                <ChevronUp className="h-5 w-5 text-black" />
+              </button>
             </div>
           )}
         </div>
