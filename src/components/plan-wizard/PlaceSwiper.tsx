@@ -1086,7 +1086,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   };
 
   const handleTap = (place: MockPlace) => {
-    if (place.businessPlan === 'zero') return; // zero-plan: no detail
     setDetailPlace(place);
     setDetailOpen(true);
   };
