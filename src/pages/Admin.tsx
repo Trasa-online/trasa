@@ -457,6 +457,80 @@ const Admin = () => {
     toast.success("Usunięto profil");
   };
 
+  // Mapuje business_profiles.main_category -> places.category. Lokale przed
+  // aktywacja maja main_category typu 'food', 'culture' itp. (UI grupy), a places
+  // wymaga konkretnej wartosci ('restaurant', 'museum', etc.).
+  const mainCategoryToPlaceCategory = (main: string | null, subcategories: string[] | null): string => {
+    // Jezeli sa subcategories, wez pierwsza (juz w DB format)
+    if (subcategories && subcategories.length > 0) return subcategories[0];
+    const map: Record<string, string> = {
+      food: "restaurant",
+      culture: "museum",
+      attractions: "shopping",
+      nature: "park",
+    };
+    return map[main ?? ""] ?? "restaurant";
+  };
+
+  const [activatingPlaceId, setActivatingPlaceId] = useState<string | null>(null);
+  const handleActivatePlace = async (businessId: string) => {
+    setActivatingPlaceId(businessId);
+    try {
+      // Pobierz pelne dane business_profile
+      const { data: bp, error: bpErr } = await (supabase as any)
+        .from("business_profiles")
+        .select("id, business_name, city, main_category, subcategories, street, description, cover_image_url, gallery_urls, place_id")
+        .eq("id", businessId)
+        .single();
+      if (bpErr || !bp) {
+        toast.error("Nie udało się pobrać profilu");
+        return;
+      }
+      if (bp.place_id) {
+        toast.info("Profil już ma powiązany place_id - aktywacja niepotrzebna");
+        return;
+      }
+
+      const placeCategory = mainCategoryToPlaceCategory(bp.main_category, bp.subcategories);
+      const firstPhoto = bp.cover_image_url || (bp.gallery_urls && bp.gallery_urls[0]) || null;
+
+      // Wstaw row do places
+      const { data: place, error: placeErr } = await (supabase as any)
+        .from("places")
+        .insert({
+          place_name: bp.business_name,
+          city: bp.city || "Warszawa",
+          category: placeCategory,
+          address: bp.street || null,
+          description: bp.description || null,
+          photo_url: firstPhoto,
+          is_active: true,
+        })
+        .select("id, place_name, city, category")
+        .single();
+      if (placeErr || !place) {
+        toast.error(`Błąd tworzenia place: ${placeErr?.message ?? "nieznany"}`);
+        return;
+      }
+
+      // Powiaz business_profile z nowym place
+      const { error: linkErr } = await (supabase as any)
+        .from("business_profiles")
+        .update({ place_id: place.id, is_active: true, is_draft: false, activated_at: new Date().toISOString() })
+        .eq("id", bp.id);
+      if (linkErr) {
+        toast.error(`Błąd powiazania: ${linkErr.message}`);
+        return;
+      }
+
+      toast.success(`Aktywowano: ${place.place_name} (${place.category}, ${place.city})`);
+      // Refresh listy
+      setAllBusinesses(prev => prev.map(b => b.id === bp.id ? { ...b, place_id: place.id, is_active: true } : b));
+    } finally {
+      setActivatingPlaceId(null);
+    }
+  };
+
   const handleDeleteReview = async (id: string) => {
     if (!window.confirm("Na pewno usunąć tę wizytówkę? Tej operacji nie można cofnąć.")) return;
     setDeletingReviewId(id);
@@ -724,9 +798,12 @@ const Admin = () => {
 
         {/* ── Businesses Tab ── */}
         {tab === "businesses" && (() => {
+          // Lokale do aktywacji: maja konto, ale brak place_id (niewidoczne w apce)
+          const pendingActivation = allBusinesses.filter(b => !b.place_id && b.business_name);
           const actionCount = pendingSubcats.length
             + pendingReviews.filter(r => !r.is_verified).length
-            + sortedClaims.filter(c => c.status === "pending").length;
+            + sortedClaims.filter(c => c.status === "pending").length
+            + pendingActivation.length;
           const filteredAll = allBusinesses.filter(b =>
             !bizSearch
             || b.business_name.toLowerCase().includes(bizSearch.toLowerCase())
@@ -880,6 +957,41 @@ const Admin = () => {
                     <div className="space-y-3">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Do weryfikacji ({pendingReviews.filter(r => !r.is_verified).length})</p>
                       {pendingReviews.filter(r => !r.is_verified).map(renderReviewCard)}
+                    </div>
+                  )}
+                  {pendingActivation.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Lokale do aktywacji ({pendingActivation.length})</p>
+                      {pendingActivation.map(biz => (
+                        <div key={biz.id} className="flex items-center gap-3 p-3 rounded-2xl border border-orange-200 bg-orange-50">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold truncate">{biz.business_name}</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              {biz.city ?? "?"} · {biz.main_category ?? "brak kategorii"}
+                              {!biz.main_category && <span className="text-orange-700 font-semibold"> · uwaga: defaultem 'restaurant'</span>}
+                            </p>
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              size="sm"
+                              disabled={activatingPlaceId === biz.id}
+                              onClick={() => handleActivatePlace(biz.id)}
+                              className="h-7 px-3 text-xs rounded-xl bg-orange-600 hover:bg-orange-700 text-white border-0"
+                            >
+                              {activatingPlaceId === biz.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Aktywuj"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={deletingBizId === biz.id}
+                              onClick={() => handleDeleteBusiness(biz.id)}
+                              className="h-7 px-3 text-xs rounded-xl text-red-600 border-red-200 hover:bg-red-50"
+                            >
+                              Usuń
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                   {pendingSubcats.length > 0 && (
