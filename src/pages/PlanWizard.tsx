@@ -6,15 +6,16 @@ import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { usePostHog } from "@posthog/react";
 import CityPicker from "@/components/plan-wizard/CityPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
+import StartingLocationPicker from "@/components/plan-wizard/StartingLocationPicker";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { MAIN_CATEGORIES, getSubcategoryLabel } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 
-// Steps: 1=CityPicker, 2=FullCalendarPicker, 4=PlaceSwiper.
-// Step 3 (CategoryPicker) został usunięty - kategorie filtruje się teraz inline
-// w TopBar (chip + drawer multi-select) w trakcie swipe'owania.
-type Step = 1 | 2 | 4;
+// Steps: 1=CityPicker, 2=FullCalendarPicker, 3=StartingLocationPicker, 4=PlaceSwiper.
+// CategoryPicker (poprzednio step 3) zostal usuniety - kategorie filtruje sie teraz
+// inline w TopBar (chip + drawer multi-select) w trakcie swipe'owania.
+type Step = 1 | 2 | 3 | 4;
 
 const PlanWizard = () => {
   const navigate = useNavigate();
@@ -24,11 +25,9 @@ const PlanWizard = () => {
   const posthog = usePostHog();
   const returnState = location.state as { step?: number; city?: string; date?: string; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; exploreMode?: boolean } | null;
 
-  // Mapuj legacy step 3 → 4 (CategoryPicker usunięty)
   const initialStep: Step = (() => {
     const s = returnState?.step;
-    if (s === 1 || s === 2 || s === 4) return s;
-    if (s === 3) return 4;
+    if (s === 1 || s === 2 || s === 3 || s === 4) return s;
     return 1;
   })();
 
@@ -36,6 +35,7 @@ const PlanWizard = () => {
   const [city, setCity] = useState(returnState?.city ?? "");
   const [date, setDate] = useState<Date | null>(returnState?.date ? new Date(returnState.date) : null);
   const [numDays, setNumDays] = useState(1);
+  const [startingLocation, setStartingLocation] = useState<string>("");
 
   // Multi-select kategorii (puste = wszystkie)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -74,7 +74,7 @@ const PlanWizard = () => {
 
   const handleBack = () => {
     if (step === 1) navigate("/");
-    else if (step === 4) setStep(2);    // back to calendar
+    else if (step === 4) setStep(3);    // back to starting location
     else setStep((s) => (s - 1) as Step);
   };
 
@@ -173,14 +173,31 @@ const PlanWizard = () => {
           <FullCalendarPicker onConfirm={(selectedDate, days) => {
             setDate(selectedDate);
             setNumDays(days);
-            setStep(4); // skip CategoryPicker - kategorie filtruje sie w TopBar krok 4
+            posthog.capture("plan_date_selected", { num_days: days });
+            setStep(3);
           }} />
+        )}
+        {step === 3 && (
+          <StartingLocationPicker
+            city={city}
+            onConfirm={(location) => {
+              setStartingLocation(location);
+              posthog.capture("plan_starting_location_selected", { city, has_location: !!location });
+              setStep(4);
+            }}
+            onSkip={() => {
+              setStartingLocation("");
+              posthog.capture("plan_starting_location_skipped", { city });
+              setStep(4);
+            }}
+          />
         )}
         {step === 4 && date && (
           <PlaceSwiper
             city={city}
             date={date}
             numDays={numDays}
+            startingLocation={startingLocation}
             categoryFilter={selectedCategories.length > 0 ? selectedCategories : undefined}
             initialLikedPlaceNames={allLikedNames}
             initialSkippedPlaceNames={allSkippedNames}
