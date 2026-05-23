@@ -39,6 +39,13 @@ export interface MockPlace {
   businessSubcategories?: string[]; // subcategories from business_profiles (for custom filtering)
   coverVideoUrl?: string; // business cover video (premium)
   businessHasOwnPhoto?: boolean; // true when business uploaded cover image/video or gallery - skip Google photos
+  businessEventDescription?: string;
+  businessDescription?: string;
+  businessIsVerified?: boolean;
+  // Customizacja kolorow z dashboardu lokalu (1:1 z BusinessCardPreview)
+  businessColorBadge?: string;     // kolor badge kategorii
+  businessColorCardBg?: string;    // kolor gradient overlay
+  businessColorButton?: string;    // kolor primary CTA "Dodaj"
 }
 
 export type PlaceCategory =
@@ -63,6 +70,18 @@ const CATEGORY_LABELS: Record<PlaceCategory, string> = {
   park:       "Park",
   viewpoint:  "Widok",
 };
+
+// Helper - kontrast czarny/bialy dla custom hex koloru. Skopiowany z BusinessDashboard.tsx
+// (ZAMROZONY plik, nie ma shared lib do importu).
+function getHexContrast(hex: string): string {
+  if (!hex || hex.length < 7) return "#ffffff";
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const toLinear = (c: number) => { const s = c / 255; return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
+  const L = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+  return L > 0.179 ? "#000000" : "#ffffff";
+}
 
 const MAIN_CATEGORY_COLORS: Record<string, string> = {
   food:        "bg-orange-500/80 text-white",
@@ -404,8 +423,12 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             draggable={false}
           />
         )}
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
+        {/* Gradient overlay - biz custom kolor lub default czarny */}
+        {place.businessColorCardBg ? (
+          <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${place.businessColorCardBg}ee, ${place.businessColorCardBg}66 40%, transparent)` }} />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
+        )}
         {/* Photo dots - only for multi-photo, not video */}
         {isTop && !place.coverVideoUrl && photoUrls.length > 1 && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
@@ -420,11 +443,20 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
       {/* Content */}
       <div className="absolute bottom-0 left-0 right-0 px-5 pt-5 pb-[76px] space-y-2">
-        {/* Category (hidden for business cards - replaced by logo row) */}
+        {/* Category badge - biz custom kolor lub default category color */}
         {place.businessLogoUrl === undefined && (
-          <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full", getCategoryColor(place.category))}>
-            {CATEGORY_LABELS[place.category]}
-          </span>
+          place.businessColorBadge ? (
+            <span
+              className="text-xs font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: place.businessColorBadge, color: getHexContrast(place.businessColorBadge) }}
+            >
+              {CATEGORY_LABELS[place.category]}
+            </span>
+          ) : (
+            <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full", getCategoryColor(place.category))}>
+              {CATEGORY_LABELS[place.category]}
+            </span>
+          )
         )}
 
         {/* Business logo row */}
@@ -519,7 +551,14 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onLike(); }}
-            className="flex-1 py-3 rounded-full bg-primary text-white font-bold text-sm shadow-xl shadow-primary/30 active:scale-[0.97] transition-transform"
+            style={place.businessColorButton
+              ? { background: place.businessColorButton, color: getHexContrast(place.businessColorButton) }
+              : undefined
+            }
+            className={cn(
+              "flex-1 py-3 rounded-full font-bold text-sm shadow-xl active:scale-[0.97] transition-transform",
+              place.businessColorButton ? "" : "bg-primary text-white shadow-primary/30"
+            )}
           >
             Dodaj
           </button>
@@ -761,6 +800,12 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     galleryPhotos: mergedGallery,
     businessSubcategories: bp.subcategories ?? [],
     coverVideoUrl: bp.cover_video_url ?? undefined,
+    businessEventDescription: bp.event_description ?? undefined,
+    businessDescription: bp.description ?? undefined,
+    businessIsVerified: !!bp.is_verified,
+    businessColorBadge: bp.color_badge ?? undefined,
+    businessColorCardBg: bp.color_card_bg ?? undefined,
+    businessColorButton: bp.color_button ?? undefined,
     // Pomijaj Google Photos tylko gdy biznes ma WŁASNE zdjęcia (cover/video/własna galeria).
     // places.gallery_urls (kurowane z Google) NIE liczy się jako "własne zdjęcia biznesu".
     businessHasOwnPhoto: !!(
@@ -815,7 +860,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       if (roundPlaceIds?.length) {
         const { data, error } = await (supabase as any)
           .from("places")
-          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, subcategories, description, is_verified)")
+          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, subcategories, description, is_verified, color_badge, color_card_bg, color_button)")
           .in("id", roundPlaceIds);
 
         if (error) console.error("[PlaceSwiper] round fetch error:", error);
@@ -837,7 +882,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // ── Normal mode ──────────────────────────────────────────────────────
       const { data, error: placesError } = await (supabase as any)
         .from("places")
-        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, subcategories, description, is_verified)")
+        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, subcategories, description, is_verified, color_badge, color_card_bg, color_button)")
         .ilike("city", city)
         .eq("is_active", true);
 
