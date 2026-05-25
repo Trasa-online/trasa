@@ -545,6 +545,13 @@ const PlaceSwiperDetail = ({
         <SheetContent
           side="bottom"
           className="h-[96dvh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden bg-background"
+          // FullscreenPhotos jest portal do body (poza Sheet content) - Radix
+          // wykrywa to jako 'click outside' i zamyka Sheet, co resetuje fullscreen=null
+          // w useEffect (open->false). Blokujemy auto-close gdy fullscreen jest open;
+          // user zamyka go przez X albo chevron - wtedy fullscreen=null + Sheet pozostaje.
+          onPointerDownOutside={(e) => { if (fullscreen) e.preventDefault(); }}
+          onInteractOutside={(e) => { if (fullscreen) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (fullscreen) { e.preventDefault(); setFullscreen(null); } }}
         >
           {!place ? null : (
             <>
