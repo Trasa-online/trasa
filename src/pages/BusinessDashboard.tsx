@@ -640,7 +640,10 @@ const BusinessDashboard = () => {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const coverVideoInputRef = useRef<HTMLInputElement>(null);
-  const dragSrcIdx = useRef<number | null>(null);
+  // PointerEvent-based DnD dla galerii - HTML5 drag nie dziala na touch screens.
+  // Drag rozpoczyna sie tylko od explicit handle (GripVertical), nie od calej karty.
+  const [galleryDragIdx, setGalleryDragIdx] = useState<number | null>(null);
+  const [galleryTargetIdx, setGalleryTargetIdx] = useState<number | null>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const postPhotoInputRef = useRef<HTMLInputElement>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1793,36 +1796,66 @@ const BusinessDashboard = () => {
                   </div>
                   <p className="text-xs text-muted-foreground shrink-0">{galleryUrls.length}/{MAX_GALLERY}</p>
                 </div>
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-                  {galleryUrls.map((url, idx) => (
-                    <div
-                      key={idx}
-                      draggable
-                      onDragStart={() => { dragSrcIdx.current = idx; }}
-                      onDragOver={e => e.preventDefault()}
-                      onDrop={e => {
-                        e.preventDefault();
-                        if (dragSrcIdx.current === null || dragSrcIdx.current === idx) return;
-                        const next = [...galleryUrls];
-                        const [moved] = next.splice(dragSrcIdx.current, 1);
-                        next.splice(idx, 0, moved);
-                        dragSrcIdx.current = null;
-                        setGalleryUrls(next);
-                        autoSaveDraft({ galleryUrls: next });
-                        setIsDirty(true);
-                      }}
-                      onDragEnd={() => { dragSrcIdx.current = null; }}
-                      className="relative aspect-square rounded-xl overflow-hidden bg-muted group cursor-grab active:cursor-grabbing active:opacity-60 transition-opacity"
-                      onClick={() => setPhotoPreview({ url, label: `Galeria ${idx + 1}` })}
-                    >
-                      <img src={url} className="w-full h-full object-cover pointer-events-none" />
-                      <button onClick={(e) => { e.stopPropagation(); removeGalleryPhoto(idx); }} className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center active:opacity-70 z-10"><X className="h-3 w-3 text-white" /></button>
-                      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-between px-1.5 pb-1.5">
-                        <ZoomIn className="h-3 w-3 text-white/80" />
-                        <GripVertical className="h-3 w-3 text-white/50" />
+                <div
+                  className="grid grid-cols-3 md:grid-cols-5 gap-2"
+                  onPointerMove={(e) => {
+                    if (galleryDragIdx === null) return;
+                    const el = document.elementFromPoint(e.clientX, e.clientY);
+                    const card = el?.closest<HTMLElement>("[data-gallery-idx]");
+                    if (card) {
+                      const newIdx = parseInt(card.dataset.galleryIdx!, 10);
+                      if (!Number.isNaN(newIdx)) setGalleryTargetIdx(newIdx);
+                    }
+                  }}
+                >
+                  {galleryUrls.map((url, idx) => {
+                    const isDragging = galleryDragIdx === idx;
+                    const isTarget = galleryDragIdx !== null && galleryTargetIdx === idx && galleryTargetIdx !== galleryDragIdx;
+                    return (
+                      <div
+                        key={idx}
+                        data-gallery-idx={idx}
+                        className={`relative aspect-square rounded-xl overflow-hidden bg-muted group transition-all ${isDragging ? "opacity-40 scale-95" : ""} ${isTarget ? "ring-2 ring-orange-500 ring-offset-1" : ""}`}
+                        onClick={() => { if (galleryDragIdx === null) setPhotoPreview({ url, label: `Galeria ${idx + 1}` }); }}
+                      >
+                        <img src={url} className="w-full h-full object-cover pointer-events-none" />
+                        <button onClick={(e) => { e.stopPropagation(); removeGalleryPhoto(idx); }} className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center active:opacity-70 z-10"><X className="h-3 w-3 text-white" /></button>
+                        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-between px-1.5 pb-1.5 pointer-events-none">
+                          <ZoomIn className="h-3 w-3 text-white/80" />
+                        </div>
+                        {/* Drag handle - jedyny element ktorym mozna reorderowac.
+                            touch-action:none zapobiega scroll'owi podczas drag na mobile. */}
+                        <button
+                          type="button"
+                          aria-label="Przenieś zdjęcie"
+                          className="absolute bottom-1 right-1 h-7 w-7 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center cursor-grab active:cursor-grabbing active:bg-black/80 z-10"
+                          style={{ touchAction: "none" }}
+                          onPointerDown={(e) => {
+                            e.stopPropagation();
+                            (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                            setGalleryDragIdx(idx);
+                            setGalleryTargetIdx(idx);
+                          }}
+                          onPointerUp={(e) => {
+                            e.stopPropagation();
+                            if (galleryDragIdx !== null && galleryTargetIdx !== null && galleryDragIdx !== galleryTargetIdx) {
+                              const next = [...galleryUrls];
+                              const [moved] = next.splice(galleryDragIdx, 1);
+                              next.splice(galleryTargetIdx, 0, moved);
+                              setGalleryUrls(next);
+                              autoSaveDraft({ galleryUrls: next });
+                              setIsDirty(true);
+                            }
+                            setGalleryDragIdx(null);
+                            setGalleryTargetIdx(null);
+                          }}
+                          onPointerCancel={() => { setGalleryDragIdx(null); setGalleryTargetIdx(null); }}
+                        >
+                          <GripVertical className="h-3.5 w-3.5 text-white" />
+                        </button>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {galleryUrls.length < MAX_GALLERY && (
                     <button onClick={() => galleryInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
                       {uploading === 'gallery' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-5 w-5 text-muted-foreground" />}
