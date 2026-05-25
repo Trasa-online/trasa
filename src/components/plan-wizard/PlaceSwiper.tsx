@@ -11,7 +11,7 @@ import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePho
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { useHaptics } from "@/hooks/useHaptics";
-import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor } from "@/lib/categories";
+import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGORIES } from "@/lib/categories";
 import { addLike as saveExploreLike } from "@/lib/exploreLikes";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -38,6 +38,7 @@ export interface MockPlace {
   galleryPhotos?: string[]; // extra photos shown in carousel (swipe card + detail)
   businessSubcategories?: string[]; // subcategories from business_profiles (for custom filtering)
   businessTags?: string[]; // custom tags z business_profiles.tags - prio nad vibe_tags w UI
+  businessMainCategory?: string; // main_category id (np. "food") z MAIN_CATEGORIES - dla badge na karcie
   // Godziny otwarcia ustawione przez wlasciciela lokalu (priorytet nad Google weekday_text)
   // Shape: { mon: { open: "09:00", close: "22:00" } | { closed: true }, ... }
   businessOpeningHours?: Record<string, { open: string; close: string } | { closed: true }>;
@@ -77,7 +78,7 @@ const CATEGORY_LABELS: Record<PlaceCategory, string> = {
 
 // Helper - kontrast czarny/bialy dla custom hex koloru. Skopiowany z BusinessDashboard.tsx
 // (ZAMROZONY plik, nie ma shared lib do importu).
-function getHexContrast(hex: string): string {
+export function getHexContrast(hex: string): string {
   if (!hex || hex.length < 7) return "#ffffff";
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -448,23 +449,35 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
 
 
-      {/* Content */}
-      <div className="absolute bottom-0 left-0 right-0 px-5 pt-5 pb-[76px] space-y-2">
-        {/* Category badge - biz custom kolor lub default category color */}
-        {place.businessLogoUrl === undefined && (
-          place.businessColorBadge ? (
+      {/* Category badge - top-left absolute, 1:1 z BusinessCardPreview na dashboardzie.
+          Biz: label kategorii glownej z business_profiles.main_category + colorBadge custom.
+          Non-biz: label podkategorii (places.category) + default Tailwind color z mapy. */}
+      {(() => {
+        const bizMainLabel = place.businessMainCategory
+          ? MAIN_CATEGORIES.find(c => c.id === place.businessMainCategory)?.label
+          : null;
+        const subLabel = CATEGORY_LABELS[place.category];
+        const label = bizMainLabel ?? subLabel;
+        if (!label) return null;
+        if (place.businessColorBadge) {
+          return (
             <span
-              className="text-xs font-semibold px-2.5 py-1 rounded-full"
+              className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold shadow-sm z-10"
               style={{ background: place.businessColorBadge, color: getHexContrast(place.businessColorBadge) }}
             >
-              {CATEGORY_LABELS[place.category]}
+              {label}
             </span>
-          ) : (
-            <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full", getCategoryColor(place.category))}>
-              {CATEGORY_LABELS[place.category]}
-            </span>
-          )
-        )}
+          );
+        }
+        return (
+          <span className={cn("absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold shadow-sm z-10", getCategoryColor(place.category))}>
+            {label}
+          </span>
+        );
+      })()}
+
+      {/* Content */}
+      <div className="absolute bottom-0 left-0 right-0 px-5 pt-5 pb-[76px] space-y-2">
 
         {/* Business logo - 1:1 z BusinessCardPreview (10x10, bez handle, jako osobny element nad nazwa) */}
         {place.businessLogoUrl !== undefined && place.businessLogoUrl && (
@@ -817,6 +830,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     galleryPhotos: mergedGallery,
     businessSubcategories: bp.subcategories ?? [],
     businessTags: Array.isArray(bp.tags) ? bp.tags.filter(Boolean) : [],
+    businessMainCategory: bp.main_category ?? undefined,
     businessOpeningHours: bp.opening_hours && typeof bp.opening_hours === "object" && Object.keys(bp.opening_hours).length > 0
       ? bp.opening_hours
       : undefined,
@@ -881,7 +895,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       if (roundPlaceIds?.length) {
         const { data, error } = await (supabase as any)
           .from("places")
-          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, opening_hours)")
+          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, opening_hours)")
           .in("id", roundPlaceIds);
 
         if (error) console.error("[PlaceSwiper] round fetch error:", error);
@@ -903,7 +917,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // ── Normal mode ──────────────────────────────────────────────────────
       const { data, error: placesError } = await (supabase as any)
         .from("places")
-        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, opening_hours)")
+        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, opening_hours)")
         .ilike("city", city)
         .eq("is_active", true);
 

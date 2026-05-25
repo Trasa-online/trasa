@@ -6,8 +6,9 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
-import type { MockPlace } from "./PlaceSwiper";
+import { getHexContrast, type MockPlace } from "./PlaceSwiper";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
+import { MAIN_CATEGORIES } from "@/lib/categories";
 import { pl } from "date-fns/locale";
 import posthog from "posthog-js";
 
@@ -636,6 +637,35 @@ const PlaceSwiperDetail = ({
                       </span>
                     )}
                   </div>
+
+                  {/* Kategorie - glowna z business_profiles.main_category + podkategorie.
+                      Spojnie z dashboardem: 'Jedzenie & Napoje' jako main + subcategorie ('Restauracja wloska', 'Pizza') jako chips. */}
+                  {(() => {
+                    const mainLabel = place.businessMainCategory
+                      ? MAIN_CATEGORIES.find(c => c.id === place.businessMainCategory)?.label
+                      : null;
+                    const subs = place.businessSubcategories ?? [];
+                    if (!mainLabel && subs.length === 0) return null;
+                    return (
+                      <div className="flex flex-wrap gap-1.5">
+                        {mainLabel && (
+                          <span
+                            className="px-3 py-1 rounded-full text-xs font-semibold"
+                            style={place.businessColorBadge
+                              ? { background: place.businessColorBadge, color: getHexContrast(place.businessColorBadge) }
+                              : { background: "#f4a259", color: "#fff" }}
+                          >
+                            {mainLabel}
+                          </span>
+                        )}
+                        {subs.map((sub) => (
+                          <span key={sub} className="px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border/40">
+                            {sub}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })()}
 
                   {/* Godziny otwarcia - biz (z business_profiles) > Google weekday_text */}
                   <OpeningHoursSection
