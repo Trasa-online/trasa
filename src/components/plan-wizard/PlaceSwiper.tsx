@@ -1175,9 +1175,12 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     setQueue(prev => prev.filter(p => p.id !== top.id));
     saveReaction(top, "liked", overridePhotoUrl);
     trackAndRebalance(top);
-    // Persist to localStorage history when in explore mode (HomeSwipe) - used by
-    // Eksploruj "Polubione" tab and "Zaplanuj solo" reuse prompt.
-    if (exploreMode && !groupSessionId && !roundPlaceIds?.length) {
+    // Persist do localStorage history zawsze (poza group session i round mode) -
+    // uzywane przez Eksploruj 'Polubione' tab i 'Zaplanuj solo' reuse prompt.
+    // Wczesniej zapis byl tylko w exploreMode (HomeSwipe), wiec lajki z planu konkretnej
+    // trasy (PlanWizard step 4) nie ladowaly w Eksploruj. Group/round to wspolne sesje
+    // gdzie polubione miejsca maja inny model (sync miedzy uczestnikami).
+    if (!groupSessionId && !roundPlaceIds?.length) {
       saveExploreLike(city, {
         place_name: top.place_name,
         category: top.category,

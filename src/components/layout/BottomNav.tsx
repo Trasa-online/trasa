@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { BookOpen, Compass, Home, Plus, X, MapPin, Users, Link2, User, Heart } from "lucide-react";
 import { getTodayLikes, type ExploreLike } from "@/lib/exploreLikes";
+import { isNative } from "@/lib/platform";
 
 const HOME_FILTERS_KEY = "trasa_home_filters";
 
@@ -233,20 +234,23 @@ const BottomNav = () => {
             </span>
           </button>
 
-          {/* Dziennik */}
-          <NavLink
-            to="/dziennik"
-            end={false}
-            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-            activeClassName="text-orange-600"
-          >
-            {({ isActive }) => (
-              <>
-                <BookOpen className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
-                <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Dziennik</span>
-              </>
-            )}
-          </NavLink>
+          {/* Dziennik - tylko w native iOS/Android. Web/PWA ukrywa - feature jeszcze
+              nie jest gotowe dla web, ale w native juz ma uzytkownikow. */}
+          {isNative && (
+            <NavLink
+              to="/dziennik"
+              end={false}
+              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+              activeClassName="text-orange-600"
+            >
+              {({ isActive }) => (
+                <>
+                  <BookOpen className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
+                  <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Dziennik</span>
+                </>
+              )}
+            </NavLink>
+          )}
 
           {/* Profil */}
           <NavLink

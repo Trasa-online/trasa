@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapPin, Heart, Trash2, ArrowRight, Compass } from "lucide-react";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
@@ -30,15 +30,29 @@ const LikedTab = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
-  // Force re-render after mutations
-  const [, setNonce] = useState(0);
+  // Force re-render after mutations + przy fokusie na tab (lajki dodawane w PlaceSwiper
+  // przez localStorage - useEffect ponizej odswieza nonce gdy user wraca do tab).
+  const [nonce, setNonce] = useState(0);
   const refresh = () => setNonce((n) => n + 1);
 
-  const groups = useMemo<ExploreLikeGroup[]>(() => {
-    // Sort by date descending (most recent first)
-    return [...getHistory()].sort((a, b) => b.date.localeCompare(a.date));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Refresh przy mount + visibilitychange (gdy user wraca z innego tab w przegladarce
+  // albo z innego ekranu w aplikacji). localStorage nie ma natywnego eventu w tej
+  // samej zakladce, ale focus/visibility lapie powrot.
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") refresh(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", refresh);
+    };
   }, []);
+
+  const groups = useMemo<ExploreLikeGroup[]>(() => {
+    // Sort by date descending (most recent first). Re-eval na zmiane nonce -
+    // forsujemy re-load gdy refresh() zostal wywolany.
+    return [...getHistory()].sort((a, b) => b.date.localeCompare(a.date));
+  }, [nonce]);
 
   const totalLikes = groups.reduce((sum, g) => sum + g.places.length, 0);
 
