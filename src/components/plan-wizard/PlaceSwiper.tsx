@@ -437,11 +437,12 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         ) : (
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
         )}
-        {/* Photo dots - only for multi-photo, not video */}
+        {/* Photo progress bar - przeniesione pod badge kategorii (top-4 zajete przez badge).
+            Instagram-style cienki bar pelnej szerokosci na top-14 (pod badge ktore ma top-4 + ~32px). */}
         {isTop && !place.coverVideoUrl && photoUrls.length > 1 && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+          <div className="absolute top-14 left-4 right-4 flex gap-1 z-10">
             {photoUrls.map((_, i) => (
-              <div key={i} className={cn("h-1 rounded-full transition-all", i === photoIdx ? "w-4 bg-white" : "w-1.5 bg-white/50")} />
+              <div key={i} className={cn("flex-1 h-0.5 rounded-full transition-all", i === photoIdx ? "bg-white" : "bg-white/30")} />
             ))}
           </div>
         )}
@@ -1445,11 +1446,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       </div>
 
       {/* Card stack / Add custom place panel. Cover photo: aspect-[9/16] portret.
-          Width = min(viewport - 2rem paddingu, 78dvh * 9/16) - whichever fits first.
-          Karta ma stabilne 9:16 + paddingi 1rem z kazdej strony viewport. */}
+          Outer flex-1 zabiera dostepne miejsce pomiedzy top progress a bottom CTA -
+          zapobiega ucinaniu CTA na malych ekranach. Inner z aspect-[9/16] + height
+          = min(100% available, viewport-derived) zachowuje proporcje na kazdym device. */}
+      <div className="flex-1 min-h-0 mx-4 mb-4 flex items-center justify-center">
       <div
-        className="relative mx-auto mb-4 aspect-[9/16]"
-        style={{ width: "min(calc(100% - 2rem), calc(78dvh * 9 / 16))" }}
+        className="relative aspect-[9/16] mx-auto"
+        style={{ height: "min(100%, calc((100vw - 2rem) * 16 / 9))" }}
       >
         {showAddPlace ? (
           <AddCustomPlacePanel
@@ -1514,6 +1517,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             })()}
           </>
         )}
+      </div>
       </div>
 
 

@@ -193,12 +193,10 @@ const FullscreenPhotos = ({
 
   if (photos.length === 0) return null;
 
-  // Stop ANY click/touch z FullscreenPhotos przed propagacja na underlying
-  // Sheet/<a> w title row (np. Maps pill). Wczesniej iOS po kliknięciu next
-  // wyswietlal komunikat "Open in Maps app" - zapewne ghost click po 300ms
-  // delay trafial w underlying anchor. preventDefault rowniez blokuje native
-  // browser behavior (anchor navigation).
-  const stop = (e: React.SyntheticEvent) => { e.stopPropagation(); e.preventDefault(); };
+  // Stop propagation z FullscreenPhotos przed propagacja na underlying Sheet.
+  // Maps button jest juz button (nie anchor) i blokuje sie sam przez fullscreen check,
+  // wiec preventDefault nie jest potrzebne (mogloby blokowac click na chevron/X).
+  const stop = (e: React.SyntheticEvent) => { e.stopPropagation(); };
 
   // Portal do <body> izolujemy renderowanie od DOM Sheet/sheet portal Radix-a.
   // Dzieki temu z-index niczego nie zaslania, plus event capturing zaczyna sie

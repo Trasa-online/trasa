@@ -1,4 +1,5 @@
-import { ReactNode, useRef, useState } from "react";
+import { ReactNode, useRef, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import TopBar from "./TopBar";
 import BottomNav from "./BottomNav";
@@ -15,7 +16,36 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { t } = useTranslation("home");
+
+  // Global redirect po loginie - dziala dla wszystkich method logowania
+  // (AuthDrawer password/OAuth/magic link, Auth.tsx page). User wybral miejsca jako
+  // anon -> kliknal 'Zaplanuj trase' -> zalogowal/zarejestrowal sie -> tu lapiemy
+  // transition (anon|null -> real user) i przenosimy do /plan ze step:3.
+  const prevAuthRef = useRef<{ id: string | null; anon: boolean }>({ id: null, anon: true });
+  useEffect(() => {
+    const cur = { id: user?.id ?? null, anon: !!(user as any)?.is_anonymous };
+    const prev = prevAuthRef.current;
+    const justSignedIn = cur.id && !cur.anon && (prev.id !== cur.id || prev.anon);
+    prevAuthRef.current = cur;
+    if (!justSignedIn) return;
+    try {
+      const guestRaw = localStorage.getItem("trasa_guest_plan");
+      if (guestRaw) {
+        const guest = JSON.parse(guestRaw);
+        localStorage.removeItem("trasa_guest_plan");
+        navigate("/plan", { state: { step: 3, city: guest.city, date: guest.date, likedPlaceNames: guest.likedPlaceNames } });
+        return;
+      }
+      const demoRaw = localStorage.getItem("trasa_demo_liked");
+      if (demoRaw) {
+        const demo = JSON.parse(demoRaw);
+        localStorage.removeItem("trasa_demo_liked");
+        navigate("/create", { state: { city: demo.city, likedPlacesData: demo.places } });
+      }
+    } catch { /* parse error - ignoruj */ }
+  }, [user, navigate]);
   const { data: profile } = useQuery({
     queryKey: ["profile-topbar", user?.id],
     queryFn: async () => {

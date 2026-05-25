@@ -75,6 +75,8 @@ const AuthDrawer = () => {
       posthog.identify(data.user!.id, { email: data.user!.email });
       posthog.capture("user_signed_in", { source: "drawer" });
       close();
+      // Redirect po loginie (do /plan z guest_plan jesli istnieje) jest zrobiony
+      // globalnie w AppLayout - useEffect na user state change. Drawer tylko sie zamyka.
     } catch (err: any) {
       posthog.captureException(err);
       toast.error(err.message || t("errors.login"));
