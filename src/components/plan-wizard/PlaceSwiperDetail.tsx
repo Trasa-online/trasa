@@ -183,48 +183,38 @@ const FullscreenPhotos = ({
   startIndex: number;
   onClose: () => void;
 }) => {
-  const [idx, setIdx] = useState(startIndex);
+  const [idx, setIdx] = useState(Math.max(0, Math.min(startIndex, photos.length - 1)));
   const startX = useRef<number | null>(null);
-
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
-  }, []);
 
   if (photos.length === 0) return null;
 
-  // Stop propagation z FullscreenPhotos przed propagacja na underlying Sheet.
-  // Maps button jest juz button (nie anchor) i blokuje sie sam przez fullscreen check,
-  // wiec preventDefault nie jest potrzebne (mogloby blokowac click na chevron/X).
-  const stop = (e: React.SyntheticEvent) => { e.stopPropagation(); };
+  const goPrev = () => setIdx((n) => Math.max(0, n - 1));
+  const goNext = () => setIdx((n) => Math.min(photos.length - 1, n + 1));
 
-  // Portal do <body> izolujemy renderowanie od DOM Sheet/sheet portal Radix-a.
-  // Dzieki temu z-index niczego nie zaslania, plus event capturing zaczyna sie
-  // od naszego rootu, bez podpinania sie pod hierarchie sheet contentu.
+  // Uproszczone - bez stop() na container i bez setting body overflow hidden.
+  // Wczesniejsza wersja z onClick={stop} + onPointerDown={stop} + onMouseDown={stop}
+  // na container miala edge case crash (prawdopodobnie konflikt event handlerami
+  // przy szybkim klikaniu chevron). Tu kazdy button ma sam swoj onClick - bez
+  // dodatkowych warstw event handling na container.
   return createPortal(
     <div
       className="fixed inset-0 z-[200] bg-black flex items-center justify-center select-none"
-      onClick={stop}
-      onPointerDown={stop}
-      onMouseDown={stop}
       onTouchStart={(e) => {
-        e.stopPropagation();
         startX.current = e.touches[0].clientX;
       }}
       onTouchEnd={(e) => {
-        e.stopPropagation();
         if (startX.current === null) return;
         const dx = e.changedTouches[0].clientX - startX.current;
         startX.current = null;
         if (Math.abs(dx) > 50) {
-          if (dx < 0) setIdx((n) => Math.min(photos.length - 1, n + 1));
-          else setIdx((n) => Math.max(0, n - 1));
+          if (dx < 0) goNext();
+          else goPrev();
         }
       }}
     >
       <button
         type="button"
-        onClick={(e) => { stop(e); onClose(); }}
+        onClick={onClose}
         className="absolute top-4 right-4 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:bg-white/25 transition-colors"
         style={{ top: "max(1rem, env(safe-area-inset-top))" }}
         aria-label="Zamknij"
@@ -236,7 +226,7 @@ const FullscreenPhotos = ({
         <>
           <button
             type="button"
-            onClick={(e) => { stop(e); setIdx((n) => Math.max(0, n - 1)); }}
+            onClick={goPrev}
             disabled={idx === 0}
             className="absolute left-3 z-10 h-12 w-12 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:bg-white/25 disabled:opacity-30 transition-colors"
             aria-label="Poprzednie zdjęcie"
@@ -245,7 +235,7 @@ const FullscreenPhotos = ({
           </button>
           <button
             type="button"
-            onClick={(e) => { stop(e); setIdx((n) => Math.min(photos.length - 1, n + 1)); }}
+            onClick={goNext}
             disabled={idx === photos.length - 1}
             className="absolute right-3 z-10 h-12 w-12 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:bg-white/25 disabled:opacity-30 transition-colors"
             aria-label="Następne zdjęcie"
@@ -268,7 +258,7 @@ const FullscreenPhotos = ({
             <button
               key={i}
               type="button"
-              onClick={(e) => { stop(e); setIdx(i); }}
+              onClick={() => setIdx(i)}
               className={cn("h-1.5 rounded-full transition-all", i === idx ? "w-5 bg-white" : "w-1.5 bg-white/40")}
             />
           ))}

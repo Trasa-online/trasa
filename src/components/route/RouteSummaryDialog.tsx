@@ -32,6 +32,9 @@ interface TripPreferences {
   priorities: string[];
   startDate: string | null;
   planningMode: string;
+  startingLocation?: string;
+  startingLocationLat?: number;
+  startingLocationLng?: number;
 }
 
 interface ChatMessage {
@@ -140,6 +143,10 @@ const RouteSummaryDialog = ({
           pace: preferences.pace,
           priorities: preferences.priorities,
           is_shared: false,
+          // Punkt startowy (hotel/nocleg) - identyczny dla wszystkich dni multi-day trasy.
+          starting_location_name: preferences.startingLocation || null,
+          starting_location_lat: preferences.startingLocationLat ?? null,
+          starting_location_lng: preferences.startingLocationLng ?? null,
           ...(groupSession ? { group_session_id: groupSession.sessionId } : {}),
         };
 

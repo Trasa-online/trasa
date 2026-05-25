@@ -43,7 +43,7 @@ const EditPlan = () => {
       if (!routeId) return null;
       const { data } = await supabase
         .from("routes")
-        .select("id, title, city, day_number, pins(*)")
+        .select("id, title, city, day_number, starting_location_name, starting_location_lat, starting_location_lng, pins(*)")
         .eq("id", routeId)
         .single();
       return data;
@@ -208,6 +208,11 @@ const EditPlan = () => {
               longitude: p.longitude,
               pin_order: p.pin_order,
             }))}
+            startingLocation={(route as any)?.starting_location_lat && (route as any)?.starting_location_lng ? {
+              name: (route as any).starting_location_name ?? "Start",
+              latitude: (route as any).starting_location_lat,
+              longitude: (route as any).starting_location_lng,
+            } : undefined}
             className="h-44 rounded-none border-0"
             onPinClick={(pin) => {
               const full = sortedPins.find((p: any) => p.place_name === pin.place_name);

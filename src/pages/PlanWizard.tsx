@@ -35,7 +35,9 @@ const PlanWizard = () => {
   const [city, setCity] = useState(returnState?.city ?? "");
   const [date, setDate] = useState<Date | null>(returnState?.date ? new Date(returnState.date) : null);
   const [numDays, setNumDays] = useState(1);
-  const [startingLocation, setStartingLocation] = useState<string>("");
+  // startingLocation moze byc string (tylko nazwa, legacy) lub obiekt (z lat/lng).
+  // Nowe StartingLocationPicker zwraca obiekt - pin startu pojawia sie na mapie.
+  const [startingLocation, setStartingLocation] = useState<string | { name: string; latitude: number; longitude: number }>("");
 
   // Multi-select kategorii (puste = wszystkie)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);

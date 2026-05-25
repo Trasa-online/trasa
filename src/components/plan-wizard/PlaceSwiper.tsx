@@ -751,7 +751,8 @@ interface PlaceSwiperProps {
   city: string;
   date: Date;
   numDays?: number;
-  startingLocation?: string;
+  // String = legacy (tylko nazwa). Object = nowy format z lat/lng - pin startu na mapie + AI edge function.
+  startingLocation?: string | { name: string; latitude: number; longitude: number };
   /** Category to show (batch of 20). Accepts single id or multiple ids (multi-select). When set, onBatchComplete fires when queue is exhausted. */
   categoryFilter?: string | string[];
   initialLikedPlaceNames?: string[];

@@ -32,9 +32,17 @@ interface Suggestion {
   placeId: string;
 }
 
+export interface StartingLocation {
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
 interface StartingLocationPickerProps {
   city: string;
-  onConfirm: (location: string) => void;
+  // Zwracamy obiekt z lat/lng (nie tylko nazwe) zeby RouteMap mogla pokazac
+  // pin startu i edge function planowania trasy moglo bazowac na wspolrzednych.
+  onConfirm: (location: StartingLocation) => void;
   onSkip: () => void;
 }
 
@@ -280,7 +288,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
         <Button
           size="lg"
           disabled={!selected}
-          onClick={() => selected && onConfirm(selected.name)}
+          onClick={() => selected && onConfirm({ name: selected.name, latitude: selected.lat, longitude: selected.lng })}
           className="w-full rounded-full text-base font-semibold bg-primary hover:bg-primary/90 text-white border-0 shadow-lg shadow-primary/20 disabled:opacity-40"
         >
           Dalej

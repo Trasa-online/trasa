@@ -16,6 +16,9 @@ interface TripPreferences {
   planningMode: "voice" | "text";
   city: string;
   startingLocation?: string;
+  // Wspolrzedne punktu startowego - osobny pin na mapie + AI dostaje pelny kontekst.
+  startingLocationLat?: number;
+  startingLocationLng?: number;
   folderId?: string;
   dayNumber?: number;
 }
@@ -32,7 +35,10 @@ const CreateRoute = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const wizardState = (location.state as {
-    city?: string; date?: string; numDays?: number; startingLocation?: string; fromTemplate?: boolean; routeId?: string;
+    city?: string; date?: string; numDays?: number;
+    // Akceptujemy oba formaty - string legacy (tylko nazwa) i obiekt z wspolrzednymi (z StartingLocationPicker).
+    startingLocation?: string | { name: string; latitude: number; longitude: number };
+    fromTemplate?: boolean; routeId?: string;
     initialPlan?: any; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; superLikedPlaceNames?: string[];
     likedPlacesData?: { place_name: string; category: string; description: string; latitude?: number; longitude?: number }[];
     matchedRoutes?: MatchedRouteStub[]; selectedRouteIndex?: number;
@@ -107,6 +113,11 @@ const CreateRoute = () => {
     const d = parseISO(wizardState.date);
     return isValid(d) ? d : undefined;
   })();
+  // Normalizuje startingLocation: stary format (string) lub nowy (obiekt) -> rozdzielone pola.
+  const startingLocRaw = wizardState?.startingLocation;
+  const startingLocName = typeof startingLocRaw === "string" ? startingLocRaw : startingLocRaw?.name;
+  const startingLocLat = typeof startingLocRaw === "object" && startingLocRaw ? startingLocRaw.latitude : undefined;
+  const startingLocLng = typeof startingLocRaw === "object" && startingLocRaw ? startingLocRaw.longitude : undefined;
   const [preferences] = useState<TripPreferences>({
     numDays: wizardState?.numDays ?? 1,
     pace: "mixed",
@@ -114,7 +125,9 @@ const CreateRoute = () => {
     startDate: wizardDate ? wizardDate.toISOString().slice(0, 10) : null,
     planningMode: "text",
     city: wizardState?.city ?? "",
-    startingLocation: wizardState?.startingLocation,
+    startingLocation: startingLocName,
+    startingLocationLat: startingLocLat,
+    startingLocationLng: startingLocLng,
     folderId,
     dayNumber,
   });

@@ -11,6 +11,8 @@ interface TripPreferences {
   planningMode: string;
   city?: string;
   startingLocation?: string;
+  starting_location_lat?: number;
+  starting_location_lng?: number;
   folderId?: string;
   dayNumber?: number;
 }
@@ -102,8 +104,15 @@ function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, user
   const dayInfo = preferences.dayNumber
     ? `- Planowany dzień: Dzień ${preferences.dayNumber} z ${preferences.numDays}`
     : "";
+  // Punkt startowy moze byc samym tekstem (legacy) lub miec rowniez lat/lng
+  // (StartingLocationPicker zwraca wspolrzedne wybranego miejsca na mapie).
+  // Wspolrzedne sa wazne zeby AI mogla planowac trase blisko hotelu, nie tylko
+  // wedlug tekstowej nazwy ktora moze byc niejednoznaczna.
+  const startCoords = preferences.starting_location_lat && preferences.starting_location_lng
+    ? ` (${preferences.starting_location_lat.toFixed(6)}, ${preferences.starting_location_lng.toFixed(6)})`
+    : "";
   const startInfo = preferences.startingLocation?.trim()
-    ? `- Punkt startowy / nocleg: ${preferences.startingLocation.trim()} — zacznij trasę od tego miejsca${preferences.numDays > 1 ? " i kończ każdy dzień w pobliżu noclegu lub węzła komunikacyjnego" : " i kończ w okolicy"}`
+    ? `- Punkt startowy / nocleg: ${preferences.startingLocation.trim()}${startCoords} — zacznij trasę od tego miejsca${preferences.numDays > 1 ? " i kończ każdy dzień w pobliżu noclegu lub węzła komunikacyjnego" : " i kończ w okolicy"}`
     : preferences.numDays > 1
     ? "- Nocleg: nieznany — kończ każdy dzień w pobliżu centrum lub węzła komunikacyjnego"
     : "";
@@ -408,7 +417,15 @@ serve(async (req) => {
   }
 
   try {
-    const { preferences, messages: userMessages, current_plan, force_plan, liked_places, skipped_places, super_liked_places, ideal_day, current_time, current_date, restrict_to_liked } = await req.json();
+    const { preferences: rawPreferences, messages: userMessages, current_plan, force_plan, liked_places, skipped_places, super_liked_places, ideal_day, current_time, current_date, restrict_to_liked, starting_location_lat, starting_location_lng } = await req.json();
+
+    // Wstrzykuje top-level starting_location_lat/lng do preferences (snake_case w body
+    // dla zgodnosci z JSON API convention - client wysyla na top level).
+    const preferences = rawPreferences ? {
+      ...rawPreferences,
+      starting_location_lat: starting_location_lat ?? rawPreferences.startingLocationLat,
+      starting_location_lng: starting_location_lng ?? rawPreferences.startingLocationLng,
+    } : rawPreferences;
 
     if (!preferences || !userMessages) {
       return new Response(

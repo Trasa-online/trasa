@@ -25,6 +25,9 @@ interface RouteMapProps {
   onClick?: () => void;
   showExpandButton?: boolean;
   onPinClick?: (pin: Pin) => void;
+  // Punkt startowy (hotel/nocleg) wybrany w StartingLocationPicker - osobny marker
+  // 'Start' w kolorze zielonym + jest brany pod uwage przy centrowaniu mapy.
+  startingLocation?: { name: string; latitude: number; longitude: number };
 }
 
 // Draws dashed polylines per day using Google Maps Polyline overlay
@@ -86,18 +89,21 @@ function DayPolylines({ validPins }: { validPins: Pin[] }) {
   return null;
 }
 
-const MapContent = ({ validPins, onPinClick }: { validPins: Pin[]; onPinClick?: (pin: Pin) => void }) => {
+const MapContent = ({ validPins, onPinClick, startingLocation }: { validPins: Pin[]; onPinClick?: (pin: Pin) => void; startingLocation?: { name: string; latitude: number; longitude: number } }) => {
   const map = useMap();
   const [selectedPin, setSelectedPin] = useState<number | null>(null);
+  const [startSelected, setStartSelected] = useState(false);
 
   const isMultiDay = useMemo(() => {
     const days = new Set(validPins.map(p => p.day_number ?? 1));
     return days.size > 1;
   }, [validPins]);
 
-  // Fit bounds when multiple pins
+  // Fit bounds when multiple pins (lub jest startingLocation - rozszerzamy bounds o nia)
   useEffect(() => {
-    if (!map || validPins.length <= 1) return;
+    if (!map) return;
+    const totalPoints = validPins.length + (startingLocation ? 1 : 0);
+    if (totalPoints <= 1) return;
 
     const bounds = new (window as any).google.maps.LatLngBounds();
     validPins.forEach(pin => {
@@ -105,6 +111,9 @@ const MapContent = ({ validPins, onPinClick }: { validPins: Pin[]; onPinClick?: 
         bounds.extend({ lat: pin.latitude, lng: pin.longitude });
       }
     });
+    if (startingLocation) {
+      bounds.extend({ lat: startingLocation.latitude, lng: startingLocation.longitude });
+    }
 
     map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
     const listener = (window as any).google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
@@ -115,7 +124,7 @@ const MapContent = ({ validPins, onPinClick }: { validPins: Pin[]; onPinClick?: 
     return () => {
       (window as any).google.maps.event.removeListener(listener);
     };
-  }, [map, validPins]);
+  }, [map, validPins, startingLocation]);
 
   // Per-day counter for numbering within each day
   const pinNumberByDay = useMemo(() => {
@@ -131,6 +140,44 @@ const MapContent = ({ validPins, onPinClick }: { validPins: Pin[]; onPinClick?: 
   return (
     <>
       <DayPolylines validPins={validPins} />
+
+      {/* Starting location marker - zielony pin "S" jako odroznienie od ponumerowanych pins. */}
+      {startingLocation && (
+        <AdvancedMarker
+          key="starting-location"
+          position={{ lat: startingLocation.latitude, lng: startingLocation.longitude }}
+          onClick={() => setStartSelected(true)}
+        >
+          <div style={{
+            width: '32px',
+            height: '32px',
+            background: '#10b981',
+            border: '2px solid white',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '11px',
+            fontWeight: '900',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+            cursor: 'pointer',
+            letterSpacing: '0.5px',
+          }}>
+            START
+          </div>
+        </AdvancedMarker>
+      )}
+      {startingLocation && startSelected && (
+        <InfoWindow
+          position={{ lat: startingLocation.latitude, lng: startingLocation.longitude }}
+          onCloseClick={() => setStartSelected(false)}
+        >
+          <p style={{ fontWeight: 600, margin: 0 }}>
+            🏁 {startingLocation.name}
+          </p>
+        </InfoWindow>
+      )}
 
       {validPins.map((pin, index) => {
         if (!pin.latitude || !pin.longitude) return null;
@@ -195,6 +242,7 @@ const RouteMap = memo(function RouteMap({
   onClick,
   showExpandButton = false,
   onPinClick,
+  startingLocation,
 }: RouteMapProps) {
   const validPins = useMemo(() =>
     pins.filter(pin => pin.latitude && pin.longitude),
@@ -202,17 +250,23 @@ const RouteMap = memo(function RouteMap({
   );
 
   const center = useMemo(() => {
-    if (validPins.length === 0) return { lat: 52.2297, lng: 21.0122 };
-    const avgLat = validPins.reduce((sum, pin) => sum + (pin.latitude || 0), 0) / validPins.length;
-    const avgLng = validPins.reduce((sum, pin) => sum + (pin.longitude || 0), 0) / validPins.length;
+    // Jesli mamy startingLocation - liczy sie do srodka rowniez (nie tylko pins).
+    const points: { lat: number; lng: number }[] = validPins
+      .filter(p => p.latitude && p.longitude)
+      .map(p => ({ lat: p.latitude!, lng: p.longitude! }));
+    if (startingLocation) points.push({ lat: startingLocation.latitude, lng: startingLocation.longitude });
+    if (points.length === 0) return { lat: 52.2297, lng: 21.0122 };
+    const avgLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
+    const avgLng = points.reduce((sum, p) => sum + p.lng, 0) / points.length;
     return { lat: avgLat, lng: avgLng };
-  }, [validPins]);
+  }, [validPins, startingLocation]);
 
   const zoom = useMemo(() => {
-    if (validPins.length === 0) return 3;
-    if (validPins.length === 1) return 15;
+    const total = validPins.length + (startingLocation ? 1 : 0);
+    if (total === 0) return 3;
+    if (total === 1) return 15;
     return 12;
-  }, [validPins.length]);
+  }, [validPins.length, startingLocation]);
 
   // Day legend (shown only for multi-day)
   const days = useMemo(() => {
@@ -236,7 +290,7 @@ const RouteMap = memo(function RouteMap({
             zoomControl
             mapId="roadmap"
           >
-            <MapContent validPins={validPins} onPinClick={onPinClick} />
+            <MapContent validPins={validPins} onPinClick={onPinClick} startingLocation={startingLocation} />
           </Map>
         </APIProvider>
       </div>
@@ -279,7 +333,14 @@ const RouteMap = memo(function RouteMap({
     .map(p => `${p.latitude},${p.longitude},${p.pin_order},${p.day_number}`)
     .join('|');
 
+  const prevStart = prevProps.startingLocation
+    ? `${prevProps.startingLocation.latitude},${prevProps.startingLocation.longitude},${prevProps.startingLocation.name}`
+    : "";
+  const nextStart = nextProps.startingLocation
+    ? `${nextProps.startingLocation.latitude},${nextProps.startingLocation.longitude},${nextProps.startingLocation.name}`
+    : "";
   return prevKey === nextKey &&
+         prevStart === nextStart &&
          prevProps.className === nextProps.className &&
          prevProps.showExpandButton === nextProps.showExpandButton;
 });
