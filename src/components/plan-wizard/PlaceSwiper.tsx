@@ -755,6 +755,11 @@ interface PlaceSwiperProps {
   startingLocation?: string | { name: string; latitude: number; longitude: number };
   /** Category to show (batch of 20). Accepts single id or multiple ids (multi-select). When set, onBatchComplete fires when queue is exhausted. */
   categoryFilter?: string | string[];
+  // Filtry diety - keys: vegan, vegetarian, gluten_free, lactose_free.
+  // Match po vibe_tags (places) i business_profiles.tags - case insensitive, polskie + angielskie synonimy.
+  dietFilters?: string[];
+  // Sortowanie po dystansie od startingLocation (rosnaco). Bez efektu jesli startingLocation nie ma lat/lng.
+  sortByNearest?: boolean;
   initialLikedPlaceNames?: string[];
   initialSkippedPlaceNames?: string[];
   searchQuery?: string;
@@ -789,6 +794,39 @@ const DIVERSITY_THRESHOLD = 2; // after 2 consecutive likes from same group, dep
 //   1. business_profiles.gallery_urls  (zdjęcia od właściciela lokalu)
 //   2. places.gallery_urls             (kurowane / scache'owane z Google przez scripts/backfill-place-galleries.ts)
 // Cover photo (place.photo_url) jest osobno - nie powtarzamy go w galerii.
+// Haversine - dystans w km miedzy dwoma punktami lat/lng (kopia z StartingLocationPicker).
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+}
+
+// Slowa kluczowe dla filtrow diety - sprawdzane w vibe_tags (places) i business_profiles.tags.
+// Case-insensitive substring match - lapie '"wegańska kuchnia"', '"vegan"', '"weganskie dania"' itp.
+const DIET_KEYWORDS: Record<string, string[]> = {
+  vegan: ["vegan", "wegan", "wegań", "wegańsk", "weganski", "weganskie"],
+  vegetarian: ["vegetarian", "wegetar", "weget", "jarski", "jarskie", "jarska", "wegetarianskie", "wegetariańsk"],
+  gluten_free: ["gluten free", "gluten-free", "bez glutenu", "bezglutenowe", "glutenfree", "gluten_free"],
+  lactose_free: ["lactose free", "lactose-free", "bez laktozy", "bezlaktozowe", "laktozy", "lactose_free"],
+};
+
+function matchesDiet(place: MockPlace, diets: string[]): boolean {
+  if (diets.length === 0) return true;
+  const tags = [
+    ...(place.vibe_tags ?? []),
+    ...((place as any).businessTags ?? []),
+    ...((place as any).businessSubcategories ?? []),
+    place.description ?? "",
+  ].filter(Boolean).map((t) => String(t).toLowerCase());
+  // OR logic miedzy wybranymi dietami - place pasuje jesli ma jakikolwiek z keywords.
+  return diets.some((d) => {
+    const keywords = DIET_KEYWORDS[d] ?? [];
+    return keywords.some((kw) => tags.some((t) => t.includes(kw.toLowerCase())));
+  });
+}
+
 // Biznesy z wizytowka (business_profiles) zawsze pierwsze w kolejce swipera,
 // w obrebie kazdej grupy losowa kolejnosc. Wykrywanie po `businessPlan` ktore
 // enrichWithBusinessProfile ustawia tylko gdy nested bp istnieje.
@@ -851,12 +889,13 @@ function enrichWithBusinessProfile(p: any): MockPlace {
   } as MockPlace;
 }
 
-const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace }: PlaceSwiperProps) => {
   // Normalize categoryFilter to a stable array (single id, multiple ids, or none).
   const categoryFilters: string[] = Array.isArray(categoryFilter)
     ? categoryFilter.filter(Boolean)
     : (categoryFilter ? [categoryFilter] : []);
   const categoryFilterKey = categoryFilters.join(",");
+  const dietFilterKey = (dietFilters ?? []).join(",");
   const hasCategoryFilter = categoryFilters.length > 0;
   const navigate = useNavigate();
   const { user, isAnonymous } = useAuth();
@@ -958,14 +997,31 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       const skipped = enriched.filter((p) => skippedSet.has(p.place_name.toLowerCase()));
 
       const hasReturnState = initialLikedPlaceNames.length > 0 || initialSkippedPlaceNames.length > 0;
+      const activeDiets = dietFilters ?? [];
       const remaining = enriched.filter((p) => {
         if (likedSet.has(p.place_name.toLowerCase()) || skippedSet.has(p.place_name.toLowerCase())) return false;
+        // Filtr diety - applikowany do wszystkich miejsc (zarowno batch jak normal mode)
+        if (!matchesDiet(p, activeDiets)) return false;
         // For category-filtered batch mode (user explicitly picked a category) — show all matching
         // places regardless of past ratings. Otherwise, hide already-rated on the first batch.
         if (hasCategoryFilter) return true;
         if (!hasReturnState && ratedPlaceIds.has(p.id)) return false;
         return true;
       });
+
+      // Sort by distance od startingLocation (jesli sortByNearest + startingLocation ma lat/lng).
+      // Override losowy kolejnosci - user chcial 'od najblizszej do najdalszej' = strict distance.
+      const startCoords = typeof startingLocation === "object" && startingLocation
+        ? { lat: startingLocation.latitude, lng: startingLocation.longitude }
+        : null;
+      const applyNearestSort = (arr: MockPlace[]) => {
+        if (!sortByNearest || !startCoords) return arr;
+        return [...arr].sort((a, b) => {
+          const da = a.latitude && a.longitude ? haversineKm(startCoords, { lat: a.latitude, lng: a.longitude }) : Infinity;
+          const db = b.latitude && b.longitude ? haversineKm(startCoords, { lat: b.latitude, lng: b.longitude }) : Infinity;
+          return da - db;
+        });
+      };
 
       setAllPlaces(enriched);
       if (liked.length) setLikedPlaces(liked);
@@ -999,11 +1055,11 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           if (bizSubs && bizSubs.some(s => customSubIds.has(s))) return true;
           return false;
         });
-        const pool = partitionBusinessFirst(filtered).slice(0, 20);
+        const pool = applyNearestSort(partitionBusinessFirst(filtered)).slice(0, 20);
         console.log("[PlaceSwiper] batch pool:", { categoryFilters, standardSubIds: [...standardSubIds], dbCategorySet: [...dbCategorySet], customSubIds: [...customSubIds], poolSize: pool.length, remainingTotal: remaining.length });
         setQueue(pool);
       } else {
-        setQueue(partitionBusinessFirst(remaining));
+        setQueue(applyNearestSort(partitionBusinessFirst(remaining)));
       }
       setLoading(false);
       } catch (err) {
@@ -1012,7 +1068,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       }
     };
     fetchPlaces().finally(() => clearTimeout(safetyTimeout));
-  }, [city, user, roundPlaceIds, categoryFilterKey]);
+  }, [city, user, roundPlaceIds, categoryFilterKey, dietFilterKey, sortByNearest]);
 
   // Reorder queue when a category group has been liked too many times consecutively
   const rebalanceQueue = (newRecentGroups: (Set<string> | null)[]) => {

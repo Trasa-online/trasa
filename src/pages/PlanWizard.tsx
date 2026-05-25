@@ -42,6 +42,10 @@ const PlanWizard = () => {
   // Multi-select kategorii (puste = wszystkie)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
+  // Sortowanie: "default" lub "nearest" (od startingLocation - tylko gdy ustawione)
+  const [sortMode, setSortMode] = useState<"default" | "nearest">("default");
+  // Filtr diety - multi-select: vegan, vegetarian, gluten_free, lactose_free
+  const [dietFilters, setDietFilters] = useState<string[]>([]);
 
   const allLikedNames: string[] = returnState?.likedPlaceNames ?? [];
   const allSkippedNames: string[] = returnState?.skippedPlaceNames ?? [];
@@ -60,10 +64,11 @@ const PlanWizard = () => {
   }, [searchOpen]);
 
   const categoryLabel = useMemo(() => {
-    if (selectedCategories.length === 0) return "Wszystko";
-    if (selectedCategories.length === 1) return getSubcategoryLabel(selectedCategories[0]) ?? "Wybrane";
-    return `${selectedCategories.length} kategorie`;
-  }, [selectedCategories]);
+    const total = selectedCategories.length + dietFilters.length + (sortMode !== "default" ? 1 : 0);
+    if (total === 0) return "Filtry";
+    if (selectedCategories.length === 1 && total === 1) return getSubcategoryLabel(selectedCategories[0]) ?? "Wybrane";
+    return `${total} ${total === 1 ? "filtr" : total < 5 ? "filtry" : "filtrów"}`;
+  }, [selectedCategories, dietFilters, sortMode]);
 
   const toggleCategory = (id: string) => {
     setSelectedCategories((prev) => {
@@ -73,6 +78,18 @@ const PlanWizard = () => {
       return next;
     });
   };
+
+  const toggleDiet = (id: string) => {
+    setDietFilters((prev) => {
+      const has = prev.includes(id);
+      const next = has ? prev.filter((c) => c !== id) : [...prev, id];
+      posthog.capture("plan_diet_toggled", { diet: id, selected: !has });
+      return next;
+    });
+  };
+
+  // Total active filter count - dla badge na chipie filtru
+  const activeFilterCount = selectedCategories.length + dietFilters.length + (sortMode !== "default" ? 1 : 0);
 
   const handleBack = () => {
     if (step === 1) navigate("/");
@@ -201,6 +218,8 @@ const PlanWizard = () => {
             numDays={numDays}
             startingLocation={startingLocation}
             categoryFilter={selectedCategories.length > 0 ? selectedCategories : undefined}
+            dietFilters={dietFilters.length > 0 ? dietFilters : undefined}
+            sortByNearest={sortMode === "nearest"}
             initialLikedPlaceNames={allLikedNames}
             initialSkippedPlaceNames={allSkippedNames}
             searchQuery={searchQuery}
@@ -230,18 +249,84 @@ const PlanWizard = () => {
           <div className="overflow-y-auto px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]">
             <div className="flex items-center justify-between gap-3 mb-5 pr-12">
               <div>
-                <p className="text-lg font-black">Filtruj kategorie</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Domyślnie pokazujemy wszystkie miejsca. Możesz zaznaczyć kilka.</p>
+                <p className="text-lg font-black">Filtry</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Domyślnie pokazujemy wszystkie miejsca. Możesz zawęzić wybór.</p>
               </div>
-              {selectedCategories.length > 0 && (
+              {activeFilterCount > 0 && (
                 <button
-                  onClick={() => setSelectedCategories([])}
+                  onClick={() => { setSelectedCategories([]); setDietFilters([]); setSortMode("default"); }}
                   className="text-xs text-muted-foreground underline underline-offset-2 active:opacity-60 shrink-0"
                 >
-                  Wyczyść
+                  Wyczyść wszystko
                 </button>
               )}
             </div>
+
+            {/* Sortowanie */}
+            <div className="mb-5">
+              <p className="text-sm font-bold text-foreground mb-2">Sortuj</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSortMode("default")}
+                  className={cn(
+                    "px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96] border",
+                    sortMode === "default"
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-muted text-foreground border-transparent"
+                  )}
+                >
+                  Domyślnie
+                </button>
+                <button
+                  onClick={() => setSortMode("nearest")}
+                  disabled={typeof startingLocation === "string" || !startingLocation}
+                  className={cn(
+                    "px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96] border",
+                    sortMode === "nearest"
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-muted text-foreground border-transparent",
+                    (typeof startingLocation === "string" || !startingLocation) && "opacity-40"
+                  )}
+                  title={(typeof startingLocation === "string" || !startingLocation) ? "Wybierz punkt startowy w kroku 3 aby aktywować" : ""}
+                >
+                  Od najbliższego
+                  {sortMode === "nearest" && <Check className="inline h-3.5 w-3.5 ml-1" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Dieta */}
+            <div className="mb-5">
+              <p className="text-sm font-bold text-foreground mb-2">Dieta</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: "vegan", label: "Wegańskie", emoji: "🌱" },
+                  { id: "vegetarian", label: "Wegetariańskie", emoji: "🥗" },
+                  { id: "gluten_free", label: "Bez glutenu", emoji: "🌾" },
+                  { id: "lactose_free", label: "Bez laktozy", emoji: "🥛" },
+                ].map((diet) => {
+                  const active = dietFilters.includes(diet.id);
+                  return (
+                    <button
+                      key={diet.id}
+                      onClick={() => toggleDiet(diet.id)}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96] border",
+                        active
+                          ? "bg-foreground text-background border-foreground"
+                          : "bg-muted text-foreground border-transparent"
+                      )}
+                    >
+                      <span>{diet.emoji}</span>
+                      <span>{diet.label}</span>
+                      {active && <Check className="h-3.5 w-3.5 ml-0.5" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <p className="text-sm font-bold text-foreground mb-2">Kategorie</p>
 
             {/* "Wszystko" - reset */}
             <button
