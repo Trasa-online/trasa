@@ -772,6 +772,21 @@ const DIVERSITY_THRESHOLD = 2; // after 2 consecutive likes from same group, dep
 //   1. business_profiles.gallery_urls  (zdjęcia od właściciela lokalu)
 //   2. places.gallery_urls             (kurowane / scache'owane z Google przez scripts/backfill-place-galleries.ts)
 // Cover photo (place.photo_url) jest osobno - nie powtarzamy go w galerii.
+// Biznesy z wizytowka (business_profiles) zawsze pierwsze w kolejce swipera,
+// w obrebie kazdej grupy losowa kolejnosc. Wykrywanie po `businessPlan` ktore
+// enrichWithBusinessProfile ustawia tylko gdy nested bp istnieje.
+function partitionBusinessFirst(places: MockPlace[]): MockPlace[] {
+  const biz: MockPlace[] = [];
+  const rest: MockPlace[] = [];
+  for (const p of places) {
+    if ((p as any).businessPlan) biz.push(p);
+    else rest.push(p);
+  }
+  biz.sort(() => Math.random() - 0.5);
+  rest.sort(() => Math.random() - 0.5);
+  return [...biz, ...rest];
+}
+
 function enrichWithBusinessProfile(p: any): MockPlace {
   const placeGallery: string[] = Array.isArray(p.gallery_urls) ? p.gallery_urls.filter(Boolean) : [];
 
@@ -956,19 +971,17 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         standardSubIds.forEach(subId => {
           getDbCategoriesFor(subId).forEach(dbCat => dbCategorySet.add(dbCat));
         });
-        const pool = remaining
-          .filter(p => {
-            if (dbCategorySet.has(p.category)) return true;
-            const bizSubs = (p as any).businessSubcategories as string[] | undefined;
-            if (bizSubs && bizSubs.some(s => customSubIds.has(s))) return true;
-            return false;
-          })
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 20);
+        const filtered = remaining.filter(p => {
+          if (dbCategorySet.has(p.category)) return true;
+          const bizSubs = (p as any).businessSubcategories as string[] | undefined;
+          if (bizSubs && bizSubs.some(s => customSubIds.has(s))) return true;
+          return false;
+        });
+        const pool = partitionBusinessFirst(filtered).slice(0, 20);
         console.log("[PlaceSwiper] batch pool:", { categoryFilters, standardSubIds: [...standardSubIds], dbCategorySet: [...dbCategorySet], customSubIds: [...customSubIds], poolSize: pool.length, remainingTotal: remaining.length });
         setQueue(pool);
       } else {
-        setQueue([...remaining].sort(() => Math.random() - 0.5));
+        setQueue(partitionBusinessFirst(remaining));
       }
       setLoading(false);
       } catch (err) {
