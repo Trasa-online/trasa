@@ -1444,10 +1444,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         </span>
       </div>
 
-      {/* Card stack / Add custom place panel. Cover photo: aspect-[9/16] portret (fixed
-          aspect-ratio na kontenerze). max-h-[78dvh] zapobiega wystajaniu poza viewport
-          na malych ekranach (wtedy width sie skraca proporcjonalnie). */}
-      <div className="relative mx-4 mb-4 aspect-[9/16] max-h-[78dvh] mx-auto w-full" style={{ minHeight: 0 }}>
+      {/* Card stack / Add custom place panel. Cover photo: aspect-[9/16] portret.
+          Width = min(viewport - 2rem paddingu, 78dvh * 9/16) - whichever fits first.
+          Karta ma stabilne 9:16 + paddingi 1rem z kazdej strony viewport. */}
+      <div
+        className="relative mx-auto mb-4 aspect-[9/16]"
+        style={{ width: "min(calc(100% - 2rem), calc(78dvh * 9 / 16))" }}
+      >
         {showAddPlace ? (
           <AddCustomPlacePanel
             city={city}

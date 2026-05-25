@@ -143,7 +143,7 @@ Klient → supabase.functions.invoke("google-places-proxy", ...) → Google Plac
 
 Dwa konteksty, dwie proporcje:
 
-- **Okładka swipe (SwipeCard / cover) = portret `9:16`** — fixed aspect-ratio na kontenerze: `aspect-[9/16] max-h-[78dvh] mx-auto w-full`. `max-h-[78dvh]` zapobiega wystawaniu poza viewport na małych ekranach (wtedy width skraca się proporcjonalnie). Sam obraz: `object-cover` (auto-crop do portretu niezależnie od formatu źródłowego).
+- **Okładka swipe (SwipeCard / cover) = portret `9:16`** — fixed aspect-ratio na kontenerze: `aspect-[9/16] mx-auto` + `style={{ width: "min(calc(100% - 2rem), calc(78dvh * 9 / 16))" }}`. Formula gwarantuje: width = min(viewport - 2rem paddingu, height-derived width z 78dvh). Karta ma stabilne 9:16 + paddingi z każdej strony. NIE używaj `w-full` ani `mx-4` z aspect-ratio - powodują overflow lub klejenie do edges. Sam obraz: `object-cover` (auto-crop do portretu niezależnie od formatu źródłowego).
 - **Wewnątrz wizytówki (PlaceSwiperDetail hero + Aktualności + galeria) = `4:3` (pozioma).** Bottom-sheet otwierany po kliknięciu karty, drawer `h-[96dvh]` (prawie pełny ekran). Tailwind: `aspect-[4/3]`, `object-cover`.
 
 **Auto-crop:** Jeżeli lokal wrzuci ze swojego profilu zdjęcie w innej proporcji, **NIE** wyświetlaj pełnego obrazka. Kontener z fixed aspect + `object-cover` na `<img>` automatycznie kadruje/centruje. Nie używaj `object-contain` na cover ani galerii — to psuje układ (czarne paski). `object-contain` dopuszczalny tylko w fullscreen photo viewer.
