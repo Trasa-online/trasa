@@ -91,8 +91,9 @@ const FullscreenPhotos = ({
   // Stop ANY click/touch z FullscreenPhotos przed propagacja na underlying
   // Sheet/<a> w title row (np. Maps pill). Wczesniej iOS po kliknięciu next
   // wyswietlal komunikat "Open in Maps app" - zapewne ghost click po 300ms
-  // delay trafial w underlying anchor.
-  const stop = (e: React.SyntheticEvent) => { e.stopPropagation(); };
+  // delay trafial w underlying anchor. preventDefault rowniez blokuje native
+  // browser behavior (anchor navigation).
+  const stop = (e: React.SyntheticEvent) => { e.stopPropagation(); e.preventDefault(); };
 
   // Portal do <body> izolujemy renderowanie od DOM Sheet/sheet portal Radix-a.
   // Dzieki temu z-index niczego nie zaslania, plus event capturing zaczyna sie
@@ -485,15 +486,22 @@ const PlaceSwiperDetail = ({
                     <h2 className="flex-1 text-2xl font-black tracking-tight leading-tight">
                       {place.place_name}
                     </h2>
-                    <a
-                      href={mapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    {/* Maps button - <button> not <a> by design. Ghost-click na iOS w fullscreen
+                        photo viewer (chevron-right) trafial w underlying <a href> i otwieral Maps.
+                        Button ma `type=button` bez default action - ghost click jest no-op. */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (fullscreen) return;
+                        window.open(mapsUrl, "_blank", "noopener,noreferrer");
+                      }}
                       className="shrink-0 mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/60 bg-card text-foreground text-xs font-semibold active:scale-95 transition-transform"
                     >
                       <MapPin className="h-3.5 w-3.5" />
                       Maps
-                    </a>
+                    </button>
                   </div>
 
                   {/* Rating + count */}
