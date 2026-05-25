@@ -7,8 +7,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
 import type { MockPlace } from "./PlaceSwiper";
-import BusinessActionButtons from "@/components/business/BusinessActionButtons";
-import { format, parseISO, isValid } from "date-fns";
+import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import posthog from "posthog-js";
 
@@ -538,53 +537,52 @@ const PlaceSwiperDetail = ({
                     </div>
                   )}
 
-                  {/* Vibe tags */}
-                  {(place.vibe_tags ?? []).length > 0 && (
-                    <div className="flex gap-1.5 flex-wrap">
-                      {(place.vibe_tags ?? []).map((tag) => (
-                        <span key={tag} className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  {/* Tagi - biznes (custom z dashboardu) > Google vibe_tags */}
+                  {(() => {
+                    const tagList = place.businessTags?.length ? place.businessTags : (place.vibe_tags ?? []);
+                    if (tagList.length === 0) return null;
+                    return (
+                      <div className="flex gap-1.5 flex-wrap">
+                        {tagList.map((tag) => (
+                          <span key={tag} className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })()}
 
-                  {/* Business owner action buttons (call/website) */}
-                  {place.businessLogoUrl !== undefined && (place.businessPhone || place.businessWebsite) && (
-                    <BusinessActionButtons
-                      phone={place.businessPhone}
-                      website={place.businessWebsite}
-                      placeId={place.id}
-                    />
-                  )}
-
-                  {/* Aktualności */}
+                  {/* Aktualnosci - 1:1 z BusinessCardPreview detail (grid 1-2 kol, daty relative) */}
                   {place.businessLogoUrl !== undefined && businessPosts.length > 0 && (
                     <div className="space-y-3 pt-2">
                       <h3 className="text-lg font-black tracking-tight">Aktualności</h3>
                       <div className="space-y-3">
                         {businessPosts.map((post) => {
                           const date = parseISO(post.created_at);
-                          const dateLabel = isValid(date) ? format(date, "dd/MM/yyyy", { locale: pl }) : "";
-                          const cover = post.photo_urls.find(validUrl) ?? null;
+                          const dateLabel = isValid(date) ? formatDistanceToNow(date, { addSuffix: true, locale: pl }) : "";
+                          const photos = post.photo_urls.filter(validUrl);
+                          const gridPhotos = photos.slice(0, 2);
                           return (
-                            <div key={post.id} className="rounded-3xl border border-border/40 bg-card overflow-hidden">
-                              <div className="px-4 pt-3 pb-3 flex items-center justify-between gap-3">
-                                <p className="flex-1 text-sm font-semibold text-foreground leading-snug">
-                                  {postTitle(post.description)}
-                                </p>
-                                {dateLabel && (
-                                  <span className="shrink-0 text-[11px] text-muted-foreground">{dateLabel}</span>
-                                )}
-                              </div>
-                              {cover && (
-                                <button
-                                  onClick={() => setFullscreen({ photos: post.photo_urls.filter(validUrl), idx: 0 })}
-                                  className="block w-full aspect-[16/9] overflow-hidden bg-muted active:opacity-95 transition-opacity"
-                                  aria-label="Powiększ zdjęcie"
-                                >
-                                  <img src={cover} alt="" className="w-full h-full object-cover" loading="lazy" />
-                                </button>
+                            <div key={post.id} className="rounded-2xl border border-border/40 bg-card p-3 space-y-2">
+                              {post.description && (
+                                <p className="text-sm leading-relaxed text-foreground">{post.description}</p>
+                              )}
+                              {gridPhotos.length > 0 && (
+                                <div className={`grid gap-1.5 ${gridPhotos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                                  {gridPhotos.map((url, idx) => (
+                                    <button
+                                      key={idx}
+                                      onClick={() => setFullscreen({ photos, idx })}
+                                      className="block w-full aspect-square rounded-xl overflow-hidden bg-muted active:opacity-95 transition-opacity"
+                                      aria-label="Powiększ zdjęcie"
+                                    >
+                                      <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                              {dateLabel && (
+                                <p className="text-[11px] text-muted-foreground">{dateLabel}</p>
                               )}
                             </div>
                           );

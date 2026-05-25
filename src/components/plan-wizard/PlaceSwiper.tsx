@@ -37,6 +37,7 @@ export interface MockPlace {
   businessWebsite?: string | null;
   galleryPhotos?: string[]; // extra photos shown in carousel (swipe card + detail)
   businessSubcategories?: string[]; // subcategories from business_profiles (for custom filtering)
+  businessTags?: string[]; // custom tags z business_profiles.tags - prio nad vibe_tags w UI
   coverVideoUrl?: string; // business cover video (premium)
   businessHasOwnPhoto?: boolean; // true when business uploaded cover image/video or gallery - skip Google photos
   businessEventDescription?: string;
@@ -325,7 +326,10 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
   const displayRating = place.rating || googleRating;
   const displayAddress = place.address || googleAddress;
   const displayDescription = place.description || googleDescription;
-  const displayTags = place.vibe_tags?.length ? place.vibe_tags : (googleTags ?? []);
+  // Priorytet: tagi z business_profiles.tags (ustawione przez wlasciciela) > Google vibe_tags > fallback do typow z proxy
+  const displayTags = place.businessTags?.length
+    ? place.businessTags
+    : (place.vibe_tags?.length ? place.vibe_tags : (googleTags ?? []));
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!isTop) return;
@@ -459,15 +463,10 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           )
         )}
 
-        {/* Business logo row */}
-        {place.businessLogoUrl !== undefined && (
-          <div className="flex items-center gap-2">
-            {place.businessLogoUrl ? (
-              <img src={place.businessLogoUrl} className="w-8 h-8 rounded-full object-cover border-2 border-white/30" />
-            ) : (
-              <div className="w-8 h-8 rounded-full flex-shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-            )}
-            <span className="text-white/70 text-xs">{CATEGORY_LABELS[place.category]} · @trasa</span>
+        {/* Business logo - 1:1 z BusinessCardPreview (10x10, bez handle, jako osobny element nad nazwa) */}
+        {place.businessLogoUrl !== undefined && place.businessLogoUrl && (
+          <div className="h-10 w-10 rounded-full overflow-hidden border border-white/30 shadow-md bg-white/10">
+            <img src={place.businessLogoUrl} className="w-full h-full object-cover" />
           </div>
         )}
 
@@ -496,10 +495,10 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         {/* Description */}
         {displayDescription && <p className="text-white/75 text-sm leading-snug">{displayDescription}</p>}
 
-        {/* Business event pill */}
+        {/* Business event pill - 1:1 z BusinessCardPreview na dashboardzie */}
         {place.businessEventTitle && (
-          <div className="inline-flex items-center gap-1.5 bg-amber-500/90 backdrop-blur-sm rounded-full px-3 py-1.5 text-white text-xs font-semibold">
-            🎉 {place.businessEventTitle}
+          <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2.5 py-0.5 text-white font-semibold text-xs">
+            {place.businessEventTitle}
           </div>
         )}
 
@@ -814,6 +813,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     businessWebsite: bp.website ?? null,
     galleryPhotos: mergedGallery,
     businessSubcategories: bp.subcategories ?? [],
+    businessTags: Array.isArray(bp.tags) ? bp.tags.filter(Boolean) : [],
     coverVideoUrl: bp.cover_video_url ?? undefined,
     businessEventDescription: bp.event_description ?? undefined,
     businessDescription: bp.description ?? undefined,
@@ -875,7 +875,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       if (roundPlaceIds?.length) {
         const { data, error } = await (supabase as any)
           .from("places")
-          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, subcategories, description, is_verified, color_badge, color_card_bg, color_button)")
+          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button)")
           .in("id", roundPlaceIds);
 
         if (error) console.error("[PlaceSwiper] round fetch error:", error);
@@ -897,7 +897,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // ── Normal mode ──────────────────────────────────────────────────────
       const { data, error: placesError } = await (supabase as any)
         .from("places")
-        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, subcategories, description, is_verified, color_badge, color_card_bg, color_button)")
+        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button)")
         .ilike("city", city)
         .eq("is_active", true);
 

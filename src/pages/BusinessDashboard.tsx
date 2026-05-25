@@ -243,7 +243,7 @@ function AppLikePreviewModal({
                 {description && <p className="text-white/70 text-sm line-clamp-2 leading-snug">{description}</p>}
                 {eventTitle && (
                   <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2.5 py-0.5 text-white font-semibold text-xs">
-                    🎉 {eventTitle}
+                    {eventTitle}
                   </div>
                 )}
                 {tags.length > 0 && (
@@ -474,7 +474,7 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
           {description && <p className="text-white/70 text-[10px] line-clamp-2 leading-snug">{description}</p>}
           {eventTitle && (
             <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2 py-0.5 text-white font-semibold text-[9px]">
-              🎉 {eventTitle}
+              {eventTitle}
             </div>
           )}
           {tags.length > 0 && (
