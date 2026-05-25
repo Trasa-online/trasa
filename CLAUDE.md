@@ -143,7 +143,7 @@ Klient → supabase.functions.invoke("google-places-proxy", ...) → Google Plac
 
 Dwa konteksty, dwie proporcje:
 
-- **Okładka swipe (SwipeCard / cover) = portret `9:16`** — fixed aspect-ratio na kontenerze: `aspect-[9/16] mx-auto` + `style={{ width: "min(calc(100% - 2rem), calc(78dvh * 9 / 16))" }}`. Formula gwarantuje: width = min(viewport - 2rem paddingu, height-derived width z 78dvh). Karta ma stabilne 9:16 + paddingi z każdej strony. NIE używaj `w-full` ani `mx-4` z aspect-ratio - powodują overflow lub klejenie do edges. Sam obraz: `object-cover` (auto-crop do portretu niezależnie od formatu źródłowego).
+- **Okładka swipe (SwipeCard / cover) = portret `9:16` (nominal)** — kontener: `mx-4` (16px padding każda strona) + `flex: 1 1 0, minHeight: 0, maxHeight: min(680px, 78dvh)`. Karta wypełnia dostępną wysokość (po top progress row + bottom CTA), width = 100% minus mx-4. Realna proporcja zależy od device aspect (np. 358:636 ≈ 9:16 na iPhone 14), ale sam obraz używa `object-cover` żeby kadrować do portretu niezależnie od container ratio i formatu źródłowego. NIE wymuszaj `aspect-[9/16]` na kontenerze - testowaliśmy, na mobile Safari kolidowało z flex layout (CTA "Zaplanuj trasę" ucinany lub karta znikała).
 - **Wewnątrz wizytówki (PlaceSwiperDetail hero + Aktualności + galeria) = `4:3` (pozioma).** Bottom-sheet otwierany po kliknięciu karty, drawer `h-[96dvh]` (prawie pełny ekran). Tailwind: `aspect-[4/3]`, `object-cover`.
 
 **Auto-crop:** Jeżeli lokal wrzuci ze swojego profilu zdjęcie w innej proporcji, **NIE** wyświetlaj pełnego obrazka. Kontener z fixed aspect + `object-cover` na `<img>` automatycznie kadruje/centruje. Nie używaj `object-contain` na cover ani galerii — to psuje układ (czarne paski). `object-contain` dopuszczalny tylko w fullscreen photo viewer.
@@ -152,7 +152,7 @@ Dwa konteksty, dwie proporcje:
 - [src/components/plan-wizard/PlaceSwiper.tsx](src/components/plan-wizard/PlaceSwiper.tsx) - kontener karty z `aspect-[9/16] max-h-[78dvh]`
 - [src/components/plan-wizard/PlaceSwiperDetail.tsx](src/components/plan-wizard/PlaceSwiperDetail.tsx) - SheetContent `h-[96dvh]`, hero `aspect-[4/3]`, Aktualności `aspect-[4/3]`, fullscreen viewer z `object-contain`
 
-**Historia:** Wcześniej karta swipera używała height-based sizing (`flex: 1 1 0, maxHeight: min(680px, 78dvh)`) bo testowano że fixed `aspect-[9/16]` kurczył kartę na mobile Safari. Zmienione 2026-05-25 po ponownym teście — fixed aspect-ratio z `max-h-[78dvh]` działa poprawnie (width skraca się jeśli height przekracza limit, kontener mieści się w viewport). Wewnątrz wizytówki proporcja zmieniona z `16:9` na `4:3` żeby zdjęcia były większe (więcej powierzchni dla biz content), drawer wydłużony 92dvh→96dvh.
+**Historia:** Wewnątrz wizytówki proporcja zmieniona z `16:9` na `4:3` (2026-05-25) żeby zdjęcia były większe (więcej powierzchni dla biz content), drawer wydłużony 92dvh→96dvh. Karta swipera została przy height-based sizing (`flex: 1 1 0, maxHeight: min(680px, 78dvh)`) — próbowaliśmy fixed `aspect-[9/16]` ale na mobile Safari karta znikała albo CTA "Zaplanuj trasę" był ucinany (flex layout konfliktuje z aspect-ratio na container). Object-cover na sam obraz wystarcza do kadrowania portretu — container nominal 9:16, nie strict.
 
 ### Supabase
 

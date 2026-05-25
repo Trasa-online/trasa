@@ -1445,15 +1445,12 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         </span>
       </div>
 
-      {/* Card stack / Add custom place panel. Cover photo: aspect-[9/16] portret.
-          Outer flex-1 zabiera dostepne miejsce pomiedzy top progress a bottom CTA -
-          zapobiega ucinaniu CTA na malych ekranach. Inner z aspect-[9/16] + height
-          = min(100% available, viewport-derived) zachowuje proporcje na kazdym device. */}
-      <div className="flex-1 min-h-0 mx-4 mb-4 flex items-center justify-center">
-      <div
-        className="relative aspect-[9/16] mx-auto"
-        style={{ height: "min(100%, calc((100vw - 2rem) * 16 / 9))" }}
-      >
+      {/* Card stack / Add custom place panel. Cover photo: nominal proporcja 9:16
+          (portret) - osiagana przez object-cover na <img> wewnatrz. Kontener
+          wypelnia dostepna wysokosc (flex 1 + maxHeight 78dvh) i pelna szerokosc
+          minus mx-4 paddingu. Realna proporcja zalezy od device aspect, ale photo
+          jest kadrowane object-cover do portretu. */}
+      <div className="relative mx-4 mb-4" style={{ flex: "1 1 0", minHeight: 0, maxHeight: "min(680px, 78dvh)" }}>
         {showAddPlace ? (
           <AddCustomPlacePanel
             city={city}
@@ -1517,7 +1514,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             })()}
           </>
         )}
-      </div>
       </div>
 
 
