@@ -352,12 +352,37 @@ function PlanSkeleton({ numDays }: { numDays: number }) {
 
 async function enrichPlanWithPhotos(plan: RoutePlan, sb: typeof supabase): Promise<RoutePlan> {
   try {
-    // Fetch Google Places photos for all pins without a photoUrl
     const allPins = plan.days.flatMap((d: any) => d.pins);
-    const needsPhoto = allPins.filter((p: any) => !p.photoUrl && p.latitude && p.longitude);
+    const needsPhoto = allPins.filter((p: any) => !p.photoUrl);
+
+    // ── Krok 1: cover_image_url z business_profiles dla premium lokali.
+    // Match po place_name (ilike z places + nested biz). Jesli lokal ma wlasne cover,
+    // uzywamy go zamiast Google Photos - dashboard zdjecia powinny byc widoczne
+    // wszedzie w aplikacji, nie tylko w swiperze.
+    const bizPhotoMap = new Map<string, string>();
     if (needsPhoto.length > 0) {
+      const placeNames = [...new Set(needsPhoto.map((p: any) => p.place_name).filter(Boolean))];
+      if (placeNames.length > 0) {
+        const { data: bizRows } = await (sb as any)
+          .from("places")
+          .select("place_name, city, business_profiles(cover_image_url)")
+          .ilike("city", plan.city ?? "%")
+          .in("place_name", placeNames);
+        for (const row of (bizRows ?? [])) {
+          const bp = Array.isArray(row.business_profiles) ? row.business_profiles[0] : row.business_profiles;
+          if (bp?.cover_image_url) {
+            bizPhotoMap.set(row.place_name, bp.cover_image_url);
+          }
+        }
+      }
+    }
+
+    // ── Krok 2: Google Photos fallback dla pozostalych pinow bez photo.
+    const stillNeedsPhoto = needsPhoto.filter((p: any) => !bizPhotoMap.has(p.place_name) && p.latitude && p.longitude);
+    const googlePhotoMap = new Map<string, string>();
+    if (stillNeedsPhoto.length > 0) {
       const results = await Promise.allSettled(
-        needsPhoto.map((pin: any) =>
+        stillNeedsPhoto.map((pin: any) =>
           sb.functions.invoke("google-places-proxy", {
             body: { placeName: pin.place_name, latitude: pin.latitude, longitude: pin.longitude },
           }).then(({ data }) => {
@@ -369,25 +394,26 @@ async function enrichPlanWithPhotos(plan: RoutePlan, sb: typeof supabase): Promi
           })
         )
       );
-      const photoMap = new Map<string, string>();
       for (const r of results) {
         if (r.status === "fulfilled" && r.value.photoUrl) {
-          photoMap.set(r.value.place_name, r.value.photoUrl);
+          googlePhotoMap.set(r.value.place_name, r.value.photoUrl);
         }
       }
-      return {
-        ...plan,
-        days: plan.days.map((day: any) => ({
-          ...day,
-          pins: day.pins.map((pin: any) => ({
-            ...pin,
-            photoUrl: pin.photoUrl || photoMap.get(pin.place_name) || undefined,
-          })),
-        })),
-      };
     }
 
-    return plan;
+    if (bizPhotoMap.size === 0 && googlePhotoMap.size === 0) return plan;
+
+    return {
+      ...plan,
+      days: plan.days.map((day: any) => ({
+        ...day,
+        pins: day.pins.map((pin: any) => ({
+          ...pin,
+          // Priorytet: existing photoUrl > biz cover > Google.
+          photoUrl: pin.photoUrl || bizPhotoMap.get(pin.place_name) || googlePhotoMap.get(pin.place_name) || undefined,
+        })),
+      })),
+    };
   } catch { return plan; }
 }
 

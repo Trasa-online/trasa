@@ -205,20 +205,23 @@ const BottomNav = () => {
             )}
           </NavLink>
 
-          {/* Eksploruj */}
-          <NavLink
-            to="/eksploruj"
-            end={false}
-            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-            activeClassName="text-orange-600"
-          >
-            {({ isActive }) => (
-              <>
-                <Compass className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
-                <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Eksploruj</span>
-              </>
-            )}
-          </NavLink>
+          {/* Eksploruj - tylko w native iOS/Android. Web/PWA ukrywa (feature jeszcze
+              nie gotowy dla web, ale w native ma uzytkownikow). */}
+          {isNative && (
+            <NavLink
+              to="/eksploruj"
+              end={false}
+              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+              activeClassName="text-orange-600"
+            >
+              {({ isActive }) => (
+                <>
+                  <Compass className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
+                  <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Eksploruj</span>
+                </>
+              )}
+            </NavLink>
+          )}
 
           {/* Center FAB */}
           <button
