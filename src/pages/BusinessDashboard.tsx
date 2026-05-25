@@ -6,7 +6,7 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock } from "lucide-react";
 import 'driver.js/dist/driver.css';
 import { driver } from 'driver.js';
 import { MAIN_CATEGORIES } from "@/lib/categories";
@@ -159,13 +159,13 @@ function getContrastColor(hex: string): string {
 
 function AppLikePreviewModal({
   onClose, onConvert, isDraft, convertingDraft,
-  businessName, mainCategory, subcategories, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, posts, eventTitle,
+  businessName, mainCategory, subcategories, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, posts, eventTitle, openingHours,
   colorBadge, colorCardBg, colorButton,
 }: {
   onClose: () => void; onConvert: () => void; isDraft: boolean; convertingDraft: boolean;
   businessName: string; mainCategory: string; subcategories: string[]; tags: string[]; description: string;
   street: string; city: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[];
-  posts: BusinessPost[]; eventTitle: string;
+  posts: BusinessPost[]; eventTitle: string; openingHours: OpeningHours;
   colorBadge: string; colorCardBg: string; colorButton: string;
 }) {
   const [view, setView] = useState<'card' | 'detail'>('card');
@@ -345,6 +345,49 @@ function AppLikePreviewModal({
                       <MapPin className="h-4 w-4 shrink-0 text-slate-400" />{street}
                     </p>
                   )}
+                  {/* Godziny otwarcia - z business_profiles.opening_hours, 1:1 z swiperem */}
+                  {Object.keys(openingHours).length > 0 && (() => {
+                    const dayOrder = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+                    const dayLabels: Record<string, string> = {
+                      mon: "Poniedziałek", tue: "Wtorek", wed: "Środa", thu: "Czwartek",
+                      fri: "Piątek", sat: "Sobota", sun: "Niedziela",
+                    };
+                    const idx = new Date().getDay();
+                    const todayKey = dayOrder[idx === 0 ? 6 : idx - 1];
+                    const today = openingHours[todayKey];
+                    const isOpenNow = (() => {
+                      if (!today || "closed" in today) return false;
+                      const now = new Date();
+                      const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+                      return hhmm >= today.open && hhmm <= today.close;
+                    })();
+                    return (
+                      <details className="rounded-2xl border border-slate-100 bg-slate-50 overflow-hidden">
+                        <summary className="flex items-center gap-2 px-3 py-2.5 cursor-pointer list-none">
+                          <Clock className="h-4 w-4 text-slate-400 shrink-0" />
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${isOpenNow ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-500"}`}>
+                            {isOpenNow ? "Otwarte" : "Zamknięte"}
+                          </span>
+                          <span className="text-xs text-muted-foreground truncate">
+                            · {dayLabels[todayKey].toLowerCase()}: {!today ? "-" : "closed" in today ? "Zamknięte" : `${today.open} - ${today.close}`}
+                          </span>
+                        </summary>
+                        <div className="px-3 pb-3 pt-1 space-y-1 border-t border-slate-200">
+                          {dayOrder.map((k) => {
+                            const h = openingHours[k];
+                            const isToday = k === todayKey;
+                            const val = !h ? "-" : "closed" in h ? "Zamknięte" : `${h.open} - ${h.close}`;
+                            return (
+                              <div key={k} className={`flex justify-between py-1 text-xs ${isToday ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+                                <span>{dayLabels[k]}{isToday && " (dziś)"}</span>
+                                <span>{val}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </details>
+                    );
+                  })()}
                   {description && <p className="text-sm text-foreground leading-relaxed">{description}</p>}
                   {tags.length > 0 && (
                     <div className="flex flex-wrap gap-2">
@@ -2496,13 +2539,13 @@ const BusinessDashboard = () => {
         </div>
       )}
 
-      {/* ── Mobile FAB: Podglad wizytowki (desktop ma sticky sidebar preview) ── */}
+      {/* ── Mobile/Tablet FAB: Podglad wizytowki - tylko desktop (lg+) ma sticky sidebar preview ── */}
       <button
         onClick={() => previewReady && setShowAppPreview(true)}
         disabled={!previewReady}
         title={!previewReady ? "Uzupełnij nazwę i dodaj zdjęcie, aby zobaczyć podgląd" : "Podgląd wizytówki w aplikacji"}
         aria-label="Podgląd wizytówki"
-        className="md:hidden fixed z-[55] flex items-center gap-2 px-5 py-3 rounded-full bg-orange-600 text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+        className="lg:hidden fixed z-[55] flex items-center gap-2 px-5 py-3 rounded-full bg-orange-600 text-white font-bold text-sm shadow-lg shadow-orange-600/30 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
         style={{ bottom: "max(1rem, env(safe-area-inset-bottom))", right: "1rem" }}
       >
         <Eye className="h-4 w-4" />
@@ -2528,6 +2571,7 @@ const BusinessDashboard = () => {
           coverVideoUrl={coverVideoUrl}
           galleryUrls={galleryUrls}
           eventTitle={eventTitle}
+          openingHours={openingHours}
           colorBadge={colorBadge}
           colorCardBg={colorCardBg}
           colorButton={colorButton}
