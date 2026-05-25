@@ -17,6 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
+import BusinessHoursEditor, { type OpeningHours } from "@/components/business/BusinessHoursEditor";
 
 interface BusinessPost {
   id: string;
@@ -556,6 +557,7 @@ const BusinessDashboard = () => {
   const [eventDescription, setEventDescription] = useState("");
   const [eventStartsAt, setEventStartsAt] = useState("");
   const [eventEndsAt, setEventEndsAt] = useState("");
+  const [openingHours, setOpeningHours] = useState<OpeningHours>({});
 
   const [tagsExpanded, setTagsExpanded] = useState(false);
   const [customSubcategory, setCustomSubcategory] = useState("");
@@ -709,6 +711,7 @@ const BusinessDashboard = () => {
     setColorBadge((profileData as any).color_badge ?? "#f97316");
     setColorCardBg((profileData as any).color_card_bg ?? "#000000");
     setColorButton((profileData as any).color_button ?? "#f97316");
+    setOpeningHours(((profileData as any).opening_hours ?? {}) as OpeningHours);
     setEventTitle(profileData.event_title ?? "");
     setEventDescription(profileData.event_description ?? "");
     setEventStartsAt(profileData.event_starts_at ?? "");
@@ -1125,6 +1128,7 @@ const BusinessDashboard = () => {
         event_description: eventDescription || null,
         event_starts_at: eventStartsAt || null,
         event_ends_at: eventEndsAt || null,
+        opening_hours: Object.keys(openingHours).length > 0 ? openingHours : null,
         review_requested_at: reviewAt,
         updated_at: nowIso,
       })
@@ -1909,6 +1913,12 @@ const BusinessDashboard = () => {
                     <div className="space-y-1">
                       <Label htmlFor="website" className="text-xs">Strona WWW</Label>
                       <Input id="website" value={website} maxLength={200} onChange={e => { setWebsite(e.target.value); setIsDirty(true); }} type="url" />
+                    </div>
+                    <div className="pt-2 border-t border-border/40">
+                      <BusinessHoursEditor
+                        value={openingHours}
+                        onChange={(next) => { setOpeningHours(next); setIsDirty(true); }}
+                      />
                     </div>
                   </>
                 )}

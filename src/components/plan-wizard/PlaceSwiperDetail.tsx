@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { X, Star, MapPin, Loader2, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
+import { X, Star, MapPin, Loader2, ChevronLeft, ChevronRight, Maximize2, Clock } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,10 @@ interface PlaceDetail {
   types: string[];
   formatted_address: string;
   photos: { photo_reference: string }[];
+  opening_hours?: {
+    open_now?: boolean;
+    weekday_text?: string[];
+  };
   reviews: {
     author_name: string;
     profile_photo_url: string;
@@ -60,6 +64,106 @@ const Stars = ({ rating, size = "md" }: { rating: number; size?: "sm" | "md" }) 
     ))}
   </div>
 );
+
+// ─── Opening hours section ────────────────────────────────────────────────────
+
+const DAY_LABELS_PL: Record<string, string> = {
+  mon: "Poniedziałek", tue: "Wtorek", wed: "Środa", thu: "Czwartek",
+  fri: "Piątek", sat: "Sobota", sun: "Niedziela",
+};
+const DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+
+const todayKey = (): typeof DAY_ORDER[number] => {
+  const idx = new Date().getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  return DAY_ORDER[idx === 0 ? 6 : idx - 1];
+};
+
+type BizHours = Record<string, { open: string; close: string } | { closed: true }>;
+
+const isBizOpenNow = (hours: BizHours): boolean => {
+  const today = hours[todayKey()];
+  if (!today || "closed" in today) return false;
+  const now = new Date();
+  const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  return hhmm >= today.open && hhmm <= today.close;
+};
+
+const OpeningHoursSection = ({
+  bizHours,
+  googleWeekdayText,
+  googleOpenNow,
+}: {
+  bizHours?: BizHours;
+  googleWeekdayText?: string[];
+  googleOpenNow?: boolean;
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const hasBiz = bizHours && Object.keys(bizHours).length > 0;
+  const hasGoogle = !hasBiz && googleWeekdayText && googleWeekdayText.length > 0;
+  if (!hasBiz && !hasGoogle) return null;
+
+  const openNow = hasBiz ? isBizOpenNow(bizHours!) : !!googleOpenNow;
+  const todayK = todayKey();
+
+  let todayLine = "";
+  let allLines: { label: string; value: string; isToday: boolean }[] = [];
+
+  if (hasBiz) {
+    allLines = DAY_ORDER.map((k) => {
+      const h = bizHours![k];
+      const value = !h ? "-" : "closed" in h ? "Zamknięte" : `${h.open} - ${h.close}`;
+      return { label: DAY_LABELS_PL[k], value, isToday: k === todayK };
+    });
+    const today = allLines.find((l) => l.isToday);
+    todayLine = today ? `${today.label.toLowerCase()}: ${today.value}` : "";
+  } else if (hasGoogle) {
+    // Google weekday_text starts with Monday in en, e.g. "Monday: 9:00 AM – 10:00 PM"
+    allLines = googleWeekdayText!.slice(0, 7).map((line, i) => {
+      const k = DAY_ORDER[i] ?? DAY_ORDER[0];
+      const parts = line.split(":");
+      parts.shift();
+      const value = parts.join(":").trim() || line;
+      return { label: DAY_LABELS_PL[k], value, isToday: k === todayK };
+    });
+    const today = allLines.find((l) => l.isToday);
+    todayLine = today ? `${today.label.toLowerCase()}: ${today.value}` : "";
+  }
+
+  return (
+    <div className="rounded-2xl border border-border/40 bg-card overflow-hidden">
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded((v) => !v); }}
+        className="w-full flex items-center justify-between px-4 py-3 gap-3 active:bg-muted/50 transition-colors"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full shrink-0", openNow ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-500")}>
+            {openNow ? "Otwarte" : "Zamknięte"}
+          </span>
+          {todayLine && (
+            <span className="text-xs text-muted-foreground truncate">· {todayLine}</span>
+          )}
+        </div>
+        <ChevronRight className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", expanded && "rotate-90")} />
+      </button>
+      {expanded && (
+        <div className="px-4 pb-3 pt-1 space-y-1 border-t border-border/30">
+          {allLines.map((line, i) => (
+            <div key={i} className={cn("flex justify-between py-1 text-xs", line.isToday && "font-semibold text-foreground")}>
+              <span className={line.isToday ? "text-foreground" : "text-muted-foreground"}>
+                {line.label}{line.isToday && " (dziś)"}
+              </span>
+              <span className={line.value === "Zamknięte" || line.value === "-" ? "text-muted-foreground" : "text-foreground"}>
+                {line.value}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const postTitle = (description: string | null): string => {
   if (!description) return "Nowy wpis";
@@ -532,6 +636,13 @@ const PlaceSwiperDetail = ({
                       </span>
                     )}
                   </div>
+
+                  {/* Godziny otwarcia - biz (z business_profiles) > Google weekday_text */}
+                  <OpeningHoursSection
+                    bizHours={place.businessOpeningHours}
+                    googleWeekdayText={detail?.opening_hours?.weekday_text}
+                    googleOpenNow={detail?.opening_hours?.open_now}
+                  />
 
                   {/* Description */}
                   {place.description && (
