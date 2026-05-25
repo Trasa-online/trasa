@@ -281,7 +281,7 @@ const GroupSession = () => {
       if (!currentCategory || !session?.city || !session?.id) return [];
       const { data, error } = await (supabase as any)
         .from("places")
-        .select("id")
+        .select("id, business_profiles!left(id)")
         .ilike("city", session.city)
         .in("category", dbCategoryValues)
         .eq("is_active", true)
@@ -291,7 +291,15 @@ const GroupSession = () => {
       if (!data?.length) { console.warn("No places found for", dbCategoryValues, "in", session.city); return []; }
       // Seed = sessionId + category → same result for every user in this session
       const shuffled = seededShuffle(data, session.id + currentCategory);
-      return shuffled.slice(0, 10).map((p: any) => p.id as string);
+      // Wizytowki biznesowe zawsze pierwsze, w obrebie grupy zachowujemy seeded order
+      // (stabilna partycja, deterministyczna miedzy uczestnikami sesji).
+      const hasBiz = (p: any) => {
+        const bp = p.business_profiles;
+        return Array.isArray(bp) ? bp.length > 0 : !!bp;
+      };
+      const biz = shuffled.filter(hasBiz);
+      const rest = shuffled.filter((p: any) => !hasBiz(p));
+      return [...biz, ...rest].slice(0, 10).map((p: any) => p.id as string);
     },
     enabled: !!currentCategory && !!session?.id && !!session?.city && !iMyCategoryDone,
     staleTime: Infinity,
