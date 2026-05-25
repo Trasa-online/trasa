@@ -305,7 +305,7 @@ const Hero = ({
 
   return (
     <div
-      className="relative shrink-0 bg-muted overflow-hidden w-full aspect-[16/9] rounded-t-3xl"
+      className="relative shrink-0 bg-muted overflow-hidden w-full aspect-[4/3] rounded-t-3xl"
       onTouchStart={(e) => { swipeStartX.current = e.touches[0].clientX; }}
       onTouchEnd={(e) => {
         if (swipeStartX.current === null) return;
@@ -556,7 +556,7 @@ const PlaceSwiperDetail = ({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="bottom"
-          className="h-[92dvh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden bg-background"
+          className="h-[96dvh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden bg-background"
         >
           {!place ? null : (
             <>
@@ -745,7 +745,7 @@ const PlaceSwiperDetail = ({
                     <div className="space-y-3 animate-pulse">
                       <div className="h-4 bg-muted rounded w-3/4" />
                       <div className="h-4 bg-muted rounded w-1/2" />
-                      <div className="aspect-[16/9] bg-muted rounded-2xl" />
+                      <div className="aspect-[4/3] bg-muted rounded-2xl" />
                     </div>
                   )}
 
