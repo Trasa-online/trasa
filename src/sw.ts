@@ -6,6 +6,16 @@ import { ExpirationPlugin } from "workbox-expiration";
 
 declare const self: ServiceWorkerGlobalScope;
 
+// Po deploy nowy SW od razu przejmuje kontrole - bez tego stary SW nadal
+// serwowal stare chunki, browser pobieral nieistniejacy plik, dostawal HTML
+// (SPA fallback) i wyrzucal "text/html is not a valid JavaScript MIME type".
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 // Precache all build assets (injected by vite-plugin-pwa)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 precacheAndRoute((self as any).__WB_MANIFEST);
