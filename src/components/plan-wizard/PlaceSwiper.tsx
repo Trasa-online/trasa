@@ -1176,32 +1176,28 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     // Zapisywanie trasy wymaga prawdziwego konta - anon user dostaje AuthDrawer.
     // Po linkIdentity / updateUser anon zachowuje user_id, wiec polubione miejsca
     // sa propagowane dalej (CreateRoute czyta state z navigate).
+    const allLiked = [...likedPlaces, ...superLikedPlaces];
+    const routeState = {
+      city,
+      date: date.toISOString(),
+      numDays,
+      startingLocation: startingLocation || undefined,
+      likedPlaceNames: allLiked.map((p) => p.place_name),
+      skippedPlaceNames: skippedPlaces.map((p) => p.place_name),
+      likedPlacesData: allLiked.map((p) => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude })),
+      superLikedPlaceNames: superLikedPlaces.map((p) => p.place_name),
+    };
     if (!user || isAnonymous) {
-      const allLiked = [...likedPlaces, ...superLikedPlaces];
-      // Zachowaj wybor zeby po upgrade konta wrocic do /create z preloadem
+      // Zachowaj pelny route state zeby po upgrade konta wrocic do /create z preloadem -
+      // bez startingLocation/likedPlacesData/numDays CreateRoute padal lub cofal usera
+      // do step wyboru startu zamiast od razu generowac trase.
       try {
-        localStorage.setItem("trasa_guest_plan", JSON.stringify({
-          city,
-          date: date.toISOString(),
-          likedPlaceNames: allLiked.map((p) => p.place_name),
-        }));
+        localStorage.setItem("trasa_guest_plan", JSON.stringify(routeState));
       } catch { /* unavailable */ }
       openAuthDrawer({ mode: "register", hint: "save_route" });
       return;
     }
-    const allLiked = [...likedPlaces, ...superLikedPlaces];
-    navigate("/create", {
-      state: {
-        city,
-        date: date.toISOString(),
-        numDays,
-        startingLocation: startingLocation || undefined,
-        likedPlaceNames: allLiked.map((p) => p.place_name),
-        skippedPlaceNames: skippedPlaces.map((p) => p.place_name),
-        likedPlacesData: allLiked.map((p) => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude })),
-        superLikedPlaceNames: superLikedPlaces.map((p) => p.place_name),
-      },
-    });
+    navigate("/create", { state: routeState });
   };
 
   // Notify parent when round is complete (must be in effect, not render)
@@ -1353,10 +1349,17 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             <GuestUpsellModal
               onSignUp={() => {
                 const allLiked = [...likedPlaces, ...superLikedPlaces];
+                // Pelny route state - bez tego po loginie user ladowal na StartingLocationPicker
+                // (step:3) zamiast od razu na widok generowania trasy.
                 localStorage.setItem("trasa_guest_plan", JSON.stringify({
                   city,
                   date: date.toISOString(),
+                  numDays,
+                  startingLocation: startingLocation || undefined,
                   likedPlaceNames: allLiked.map(p => p.place_name),
+                  skippedPlaceNames: skippedPlaces.map(p => p.place_name),
+                  likedPlacesData: allLiked.map((p) => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude })),
+                  superLikedPlaceNames: superLikedPlaces.map(p => p.place_name),
                 }));
                 navigate("/auth?return=plan");
               }}

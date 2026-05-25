@@ -22,7 +22,8 @@ const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
   // Global redirect po loginie - dziala dla wszystkich method logowania
   // (AuthDrawer password/OAuth/magic link, Auth.tsx page). User wybral miejsca jako
   // anon -> kliknal 'Zaplanuj trase' -> zalogowal/zarejestrowal sie -> tu lapiemy
-  // transition (anon|null -> real user) i przenosimy do /plan ze step:3.
+  // transition (anon|null -> real user) i przenosimy bezposrednio do /create
+  // (loading state generowania trasy), pomijajac StartingLocationPicker.
   const prevAuthRef = useRef<{ id: string | null; anon: boolean }>({ id: null, anon: true });
   useEffect(() => {
     const cur = { id: user?.id ?? null, anon: !!(user as any)?.is_anonymous };
@@ -35,7 +36,9 @@ const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
       if (guestRaw) {
         const guest = JSON.parse(guestRaw);
         localStorage.removeItem("trasa_guest_plan");
-        navigate("/plan", { state: { step: 3, city: guest.city, date: guest.date, likedPlaceNames: guest.likedPlaceNames } });
+        // /create automatycznie generuje trase z dostarczonego state - od razu loading state
+        // generowania, bez powrotu do wyboru startu (step 3) ani swipera (step 4).
+        navigate("/create", { state: guest });
         return;
       }
       const demoRaw = localStorage.getItem("trasa_demo_liked");

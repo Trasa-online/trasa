@@ -87,7 +87,10 @@ const Auth = () => {
         try {
           const guest = JSON.parse(guestRaw);
           localStorage.removeItem("trasa_guest_plan");
-          navigate("/plan", { state: { step: 3, city: guest.city, date: guest.date, likedPlaceNames: guest.likedPlaceNames } });
+          // /create generuje trase z dostarczonego state - od razu loading state, bez
+          // cofania do StartingLocationPicker. Spread guest passes startingLocation,
+          // numDays, likedPlacesData (z lat/lng), skippedPlaceNames, superLiked etc.
+          navigate("/create", { state: guest });
           return;
         } catch {}
       }
@@ -184,7 +187,10 @@ const Auth = () => {
         try {
           const guest = JSON.parse(guestRaw);
           localStorage.removeItem("trasa_guest_plan");
-          navigate("/plan", { state: { step: 3, city: guest.city, date: guest.date, likedPlaceNames: guest.likedPlaceNames } });
+          // /create generuje trase z dostarczonego state - od razu loading state, bez
+          // cofania do StartingLocationPicker. Spread guest passes startingLocation,
+          // numDays, likedPlacesData (z lat/lng), skippedPlaceNames, superLiked etc.
+          navigate("/create", { state: guest });
           return;
         } catch {}
       }
