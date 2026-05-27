@@ -1475,10 +1475,12 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
 
   return (
     // exploreMode (HomeSwipe) renderuje sie WEWNATRZ AppLayout ktore ma fixed BottomNav
-    // (h-12 + pb-safe ~94px). Bez pb tutaj, card z aspect-[9/16] + max-h 78dvh wystaje
-    // pod BottomNavem - karta jest cieta od dolu. pb chroni przed BottomNav-em. W PlanWizard
-    // (route /plan) BottomNav nie ma - pb nie potrzebne tam.
-    <div className={cn("flex flex-col flex-1 min-h-0", exploreMode && "pb-[calc(3rem+env(safe-area-inset-bottom,0px))]")}>
+    // (h-12 + pb-safe ~94px na iPhone 15 Pro). Bez wystarczajacego pb tutaj, card z
+    // aspect-[9/16] wystaje pod BottomNavem - dolna czesc karty (nazwa lokalu + action
+    // buttons 'Odrzuc'/'Dodaj') jest cieta. pb-5rem (80px) + env(bottom 34) = 114px
+    // pokrywa BottomNav 94 + safety buffer 20px. W PlanWizard (route /plan, BEZ BottomNav)
+    // pb nie potrzebne.
+    <div className={cn("flex flex-col flex-1 min-h-0", exploreMode && "pb-[calc(5rem+env(safe-area-inset-bottom,0px))]")}>
 
       {/* Bingo banner */}
       {showBanner && (
@@ -1520,11 +1522,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
 
       {/* Card stack / Add custom place panel. Strict 9:16 portret aspect ratio
           z parent-based max-height (NIE viewport 78dvh). Parent ma pb w exploreMode
-          zeby chronic przed BottomNav, max-h 100% wlicza ten pb - card nigdy nie
-          wystaje pod BottomNavem. Browser shrinkuje width gdy height clampuje sie
-          do max-h, mx-auto centruje. my-auto centruje wertikalnie w spare space. */}
+          (5rem+env(bottom) = 114px) chronace przed BottomNav, max-h 100% wlicza ten pb.
+          mx-auto centruje horyzontalnie. NIE my-auto - karta top-aligned zeby my-auto
+          centrowanie + my-auto spare nie zwiekszyly bottom offsetu (poprzedni fix
+          pchnal kartę o pol-spare niżej i odsłonił ją pod BottomNavem). mb-4 daje
+          minimalny gap miedzy karta a granica protected obszaru. */}
       <div
-        className="relative my-auto mx-auto w-full aspect-[9/16]"
+        className="relative mb-4 mx-auto w-full aspect-[9/16]"
         style={{ maxWidth: "calc(100% - 2rem)", maxHeight: "min(680px, 100%)" }}
       >
         {showAddPlace ? (
