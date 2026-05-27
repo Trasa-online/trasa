@@ -8,6 +8,10 @@ import { useAuth, AuthProvider } from "@/hooks/useAuth";
 import { AuthDrawerProvider } from "@/hooks/useAuthDrawer";
 import AuthDrawer from "@/components/auth/AuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
+import { isNative } from "@/lib/platform";
+import { App as CapApp } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
+import { toast } from "sonner";
 
 const MAINTENANCE_MODE = false;
 
@@ -175,6 +179,52 @@ function GlobalAuthCallback() {
     }
   }, [navigate]);
 
+  return null;
+}
+
+// Native deep link handler dla iOS/Android Capacitor. OAuth Google/Apple na native
+// dziala tak: Browser.open() otwiera Safari z URL Supabase OAuth -> Google ->
+// Supabase callback -> Supabase redirectuje na travel.trasa.app://auth/callback?code=XYZ
+// -> iOS otwiera nasza apke przez custom URL scheme -> appUrlOpen event lapie URL
+// -> tutaj wymieniamy code na session i zamykamy in-app Browser.
+//
+// CELOWO NIE navigate'ujemy i NIE pokazujemy toastu - AppLayout useEffect (i Auth.tsx
+// na /auth page) sa SINGLE SOURCE OF TRUTH dla post-login routing. Tam jest intent-aware
+// logika (guest_plan -> /create, biz profile -> /biznes, inaczej zostaw user na current page).
+// Jezeli tutaj zrobimy navigate, race condition z AppLayout: kazdy widok wymaga loginu z
+// roznego powodu i navigate("/home") tutaj nadpisze poprawne navigate("/create") z AppLayout.
+function NativeDeepLinkHandler() {
+  useEffect(() => {
+    if (!isNative) return;
+    const handlerPromise = CapApp.addListener("appUrlOpen", async ({ url }) => {
+      console.log("[NativeDeepLink] appUrlOpen", { url });
+      if (!url.includes("auth/callback")) return;
+      try { await Browser.close(); } catch { /* browser already closed */ }
+      // Custom scheme URLs (travel.trasa.app://auth/callback?code=XYZ) - parser
+      // potrzebuje fallback bo URLSearchParams nie zawsze parsuje custom scheme.
+      const queryIdx = url.indexOf("?");
+      const fragmentIdx = url.indexOf("#");
+      const query = queryIdx >= 0 ? url.slice(queryIdx + 1, fragmentIdx >= 0 ? fragmentIdx : undefined) : "";
+      const fragment = fragmentIdx >= 0 ? url.slice(fragmentIdx + 1) : "";
+      const params = new URLSearchParams(query);
+      const hashParams = new URLSearchParams(fragment);
+      const code = params.get("code");
+      const access_token = hashParams.get("access_token");
+      const refresh_token = hashParams.get("refresh_token");
+      if (code) {
+        const { error } = await dedupedExchange(code);
+        if (error) console.error("[NativeDeepLink] exchange failed:", error.message);
+      } else if (access_token && refresh_token) {
+        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+        if (error) console.error("[NativeDeepLink] setSession failed:", error.message);
+      } else {
+        console.warn("[NativeDeepLink] auth/callback URL bez code i token:", url);
+      }
+      // AppLayout useEffect zlapie auth state change i zdecyduje gdzie navigate'owac
+      // (intent-aware: guest_plan -> /create, biz -> /biznes, inaczej zostan).
+    });
+    return () => { handlerPromise.then((h) => h.remove()).catch(() => {}); };
+  }, []);
   return null;
 }
 
@@ -546,6 +596,7 @@ const App = () => (
         <AuthProvider>
         <AuthDrawerProviderWrapper>
         <GlobalAuthCallback />
+        <NativeDeepLinkHandler />
         <RouteTracker />
         <SplashController />
         <BusinessGuard />

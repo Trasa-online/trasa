@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { isNative } from "@/lib/platform";
+import { Browser } from "@capacitor/browser";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { toast } from "sonner";
@@ -33,6 +35,21 @@ const AuthDrawer = () => {
   // Sync mode when drawer reopens with a different intent
   useEffect(() => { if (isOpen) setMode(initialMode); }, [isOpen, initialMode]);
 
+  // Intent-based cleanup: gdy user otwiera login NIE w celu zapisu trasy
+  // (np. z Dziennika, Profilu, HomeSwipe topbar), wyczyść 'trasa_guest_plan' i
+  // 'trasa_demo_liked' - inaczej AppLayout/Auth.tsx post-login useEffect zlapie
+  // stary plan z localStorage i nieoczekiwanie navigate'uje na /create.
+  // Tylko hint='save_route' (klikniecie 'Zaplanuj trase' w PlaceSwiper) zachowuje
+  // guest_plan - to jedyny intent ktory ma traktowac login jako 'kontynuuj tworzenie'.
+  useEffect(() => {
+    if (!isOpen) return;
+    if (hint === "save_route") return;
+    try {
+      localStorage.removeItem("trasa_guest_plan");
+      localStorage.removeItem("trasa_demo_liked");
+    } catch { /* unavailable */ }
+  }, [isOpen, hint]);
+
   // Reset transient state when drawer closes
   useEffect(() => {
     if (!isOpen) {
@@ -49,11 +66,17 @@ const AuthDrawer = () => {
       // ale to silently failuje gdy Google email juz ma konto w Trasie - user wraca
       // jako gosc bez widocznego bledu. Tradeoff: anon data nie przenosi sie przy
       // OAuth, ale flow dziala niezawodnie dla wszystkich przypadkow.
-      const { error } = await supabase.auth.signInWithOAuth({
+      const redirectTo = isNative
+        ? "travel.trasa.app://auth/callback"
+        : `${window.location.origin}/`;
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${window.location.origin}/` },
+        options: { redirectTo, skipBrowserRedirect: isNative },
       });
       if (error) throw error;
+      if (isNative && data?.url) {
+        await Browser.open({ url: data.url, presentationStyle: "popover" });
+      }
     } catch (err: any) {
       posthog.captureException(err);
       const msg = err?.message?.toLowerCase() || "";

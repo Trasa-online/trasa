@@ -269,7 +269,7 @@ const FullscreenPhotos = ({
   );
 };
 
-// ─── Hero photo (16:9) ────────────────────────────────────────────────────────
+// ─── Hero photo (4:3) ────────────────────────────────────────────────────────
 
 const Hero = ({
   photos,
@@ -717,7 +717,7 @@ const PlaceSwiperDetail = ({
                                     <button
                                       key={idx}
                                       onClick={() => setFullscreen({ photos, idx })}
-                                      className="block w-full aspect-square rounded-xl overflow-hidden bg-muted active:opacity-95 transition-opacity"
+                                      className="block w-full aspect-[4/3] rounded-xl overflow-hidden bg-muted active:opacity-95 transition-opacity"
                                       aria-label="Powiększ zdjęcie"
                                     >
                                       <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />

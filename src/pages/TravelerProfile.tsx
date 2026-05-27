@@ -136,19 +136,19 @@ function GuestProfile() {
           Załóż konto, żeby zbudować swój profil, zapraszać znajomych i&nbsp;śledzić podróże w&nbsp;jednym miejscu.
         </p>
       </div>
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex flex-col items-center gap-3 w-full max-w-[280px]">
         <button
           onClick={() => open({ mode: "register" })}
-          className="px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-primary/25"
+          className="w-full px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-primary/25"
         >
           Załóż konto
           <ArrowRight className="h-4 w-4" />
         </button>
         <button
           onClick={() => open({ mode: "login" })}
-          className="text-sm font-semibold text-muted-foreground hover:text-foreground active:opacity-60 transition-colors"
+          className="w-full px-8 py-3.5 rounded-full bg-white border-2 border-orange-600 text-orange-600 font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
-          Masz już konto? <span className="text-orange-600 underline">Zaloguj się</span>
+          Zaloguj się
         </button>
       </div>
     </div>

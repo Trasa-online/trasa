@@ -99,7 +99,10 @@ const AppLayout = ({ children, hideTopBar }: AppLayoutProps) => {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {!hideTopBar && <TopBar onOrbClick={handleOrbClick} />}
-      <main className="flex-1 flex flex-col max-w-lg mx-auto w-full">
+      {/* hideTopBar routes (HomeSwipe, Explore, Journal, TravelerProfile) renderuja
+          wlasny content od top main - bez safe-area trafia pod status bar na iPhone
+          z notch. pt-safe (env(safe-area-inset-top, 0px) + 0.75rem) zalatwia globalnie. */}
+      <main className={`flex-1 flex flex-col max-w-lg mx-auto w-full${hideTopBar ? " pt-safe" : ""}`}>
         {children}
       </main>
       <BottomNav />

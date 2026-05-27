@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { usePostHog } from "@posthog/react";
 import { isHardcodedAdmin } from "@/lib/admins";
+import { isNative } from "@/lib/platform";
+import { Browser } from "@capacitor/browser";
+import { useAuth } from "@/hooks/useAuth";
 
 type Mode = "login" | "register";
 type BizMode = "login" | "register";
@@ -16,6 +19,7 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const { t } = useTranslation("auth");
   const posthog = usePostHog();
+  const { user } = useAuth();
   const [mode, setMode] = useState<Mode>(searchParams.get("tab") === "register" ? "register" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,21 +57,27 @@ const Auth = () => {
     if (refFromUrl) localStorage.setItem("pending_referral_code", refFromUrl);
   }, [searchParams]);
 
+  // Post-login redirect. Reaguje na user state change (kluczowe dla native: po
+  // OAuth Google na native, deep link wraca i NativeDeepLinkHandler robi
+  // exchangeCodeForSession -> user state w supabase auth updateuje sie -> useAuth
+  // emit -> ten useEffect re-runs -> navigate na wlasciwy ekran. Bez tego user
+  // po wylogowaniu + ponowny login zostawal na /auth widoku, mimo ze byl zalogowany.
   useEffect(() => {
-    // In draft upgrade mode we stay on this page — the anonymous session should upgrade
     if (isDraftMode) return;
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return;
-      if (session.user.is_anonymous) return; // anonymous user should not be auto-redirected
+    if (!user) return;
+    if ((user as any).is_anonymous) return; // anonymous = traktuj jak guest, nie redirect
+    let cancelled = false;
+    (async () => {
       // Always check for business profile first - business users must not land on /home.
       // Wyjatki: hardcoded admins (Nat, Tomek) + draft profile (niedokonczony upgrade).
-      const skipBusinessRedirect = isHardcodedAdmin(session.user.email);
+      const skipBusinessRedirect = isHardcodedAdmin(user.email);
       if (!skipBusinessRedirect) {
         const { data: bp } = await (supabase as any)
           .from("business_profiles")
           .select("place_id, id, is_draft")
-          .eq("owner_user_id", session.user.id)
+          .eq("owner_user_id", user.id)
           .maybeSingle();
+        if (cancelled) return;
         if (bp?.id && !bp.is_draft) {
           navigate(`/biznes/${bp.place_id ?? bp.id}`);
           return;
@@ -96,8 +106,9 @@ const Auth = () => {
       }
       const returnTo = searchParams.get("return");
       navigate(returnTo || "/home");
-    });
-  }, [navigate, isDraftMode]);
+    })();
+    return () => { cancelled = true; };
+  }, [user, navigate, isDraftMode, searchParams]);
 
   const handleBizRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -285,15 +296,17 @@ const Auth = () => {
   const handleOAuth = async (provider: "apple" | "google") => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const redirectTo = isNative
+        ? "travel.trasa.app://auth/callback"
+        : `${window.location.origin}/`;
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: {
-          // PKCE flow: Supabase adds `?code=` to query before the hash.
-          // RootPage detects the signed-in user and redirects to /home (or business dashboard).
-          redirectTo: `${window.location.origin}/`,
-        },
+        options: { redirectTo, skipBrowserRedirect: isNative },
       });
       if (error) throw error;
+      if (isNative && data?.url) {
+        await Browser.open({ url: data.url, presentationStyle: "popover" });
+      }
       // Supabase redirects the browser - no further code runs here on success.
     } catch (err: any) {
       posthog.captureException(err);
@@ -455,11 +468,7 @@ const Auth = () => {
               Zaloguj się kontem powiązanym z Twoim lokalem.
             </p>
           </>
-        ) : (
-          <p className="text-muted-foreground text-center text-sm max-w-[260px] leading-relaxed mb-6">
-            {t("description")}
-          </p>
-        )}
+        ) : null}
 
         <div className="w-full max-w-sm">
           {businessMode ? (

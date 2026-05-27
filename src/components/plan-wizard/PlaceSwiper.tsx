@@ -966,14 +966,20 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       console.log("[PlaceSwiper] fetched places:", { count: data?.length ?? 0, city, categoryFilter });
       if (!data?.length) { setLoading(false); return; }
 
-      // Fetch already-rated place IDs for this user+city
+      // Fetch already-rated place IDs for this user+city z DZISIAJ. Reset codzienny
+      // = polubienia/odrzuty z wczoraj i wcześniej nie ukrywają miejsc dziś. User
+      // każdy nowy dzień zaczyna z czystą talia. Reactions w DB persyst dla taste profile,
+      // ale UI filter polega tylko na today (gte start of today UTC).
       let ratedPlaceIds = new Set<string>();
       if (user) {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
         const { data: reactions } = await (supabase as any)
           .from("user_place_reactions")
           .select("place_id")
           .eq("user_id", user.id)
-          .ilike("city", city);
+          .ilike("city", city)
+          .gte("created_at", todayStart.toISOString());
         if (reactions?.length) {
           ratedPlaceIds = new Set(reactions.map((r: { place_id: string }) => r.place_id));
         }
@@ -1468,7 +1474,11 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    // exploreMode (HomeSwipe) renderuje sie WEWNATRZ AppLayout ktore ma fixed BottomNav
+    // (h-12 + pb-safe ~94px). Bez pb tutaj, card z aspect-[9/16] + max-h 78dvh wystaje
+    // pod BottomNavem - karta jest cieta od dolu. pb chroni przed BottomNav-em. W PlanWizard
+    // (route /plan) BottomNav nie ma - pb nie potrzebne tam.
+    <div className={cn("flex flex-col flex-1 min-h-0", exploreMode && "pb-[calc(3rem+env(safe-area-inset-bottom,0px))]")}>
 
       {/* Bingo banner */}
       {showBanner && (
@@ -1508,12 +1518,15 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         </span>
       </div>
 
-      {/* Card stack / Add custom place panel. Cover photo: nominal proporcja 9:16
-          (portret) - osiagana przez object-cover na <img> wewnatrz. Kontener
-          wypelnia dostepna wysokosc (flex 1 + maxHeight 78dvh) i pelna szerokosc
-          minus mx-4 paddingu. Realna proporcja zalezy od device aspect, ale photo
-          jest kadrowane object-cover do portretu. */}
-      <div className="relative mx-4 mb-4" style={{ flex: "1 1 0", minHeight: 0, maxHeight: "min(680px, 78dvh)" }}>
+      {/* Card stack / Add custom place panel. Strict 9:16 portret aspect ratio
+          z parent-based max-height (NIE viewport 78dvh). Parent ma pb w exploreMode
+          zeby chronic przed BottomNav, max-h 100% wlicza ten pb - card nigdy nie
+          wystaje pod BottomNavem. Browser shrinkuje width gdy height clampuje sie
+          do max-h, mx-auto centruje. my-auto centruje wertikalnie w spare space. */}
+      <div
+        className="relative my-auto mx-auto w-full aspect-[9/16]"
+        style={{ maxWidth: "calc(100% - 2rem)", maxHeight: "min(680px, 100%)" }}
+      >
         {showAddPlace ? (
           <AddCustomPlacePanel
             city={city}

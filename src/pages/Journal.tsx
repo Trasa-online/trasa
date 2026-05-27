@@ -83,13 +83,21 @@ const Journal = () => {
             Załóż konto, żeby zapisywać trasy, dodawać zdjęcia i&nbsp;oceniać miejsca z&nbsp;każdej podróży.
           </p>
         </div>
-        <button
-          onClick={() => open({ mode: "register", hint: "journal" })}
-          className="px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-primary/25"
-        >
-          Załóż konto
-          <ArrowRight className="h-4 w-4" />
-        </button>
+        <div className="flex flex-col items-center gap-3 w-full max-w-[280px]">
+          <button
+            onClick={() => open({ mode: "register", hint: "journal" })}
+            className="w-full px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-primary/25"
+          >
+            Załóż konto
+            <ArrowRight className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => open({ mode: "login", hint: "journal" })}
+            className="w-full px-8 py-3.5 rounded-full bg-white border-2 border-orange-600 text-orange-600 font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
+          >
+            Zaloguj się
+          </button>
+        </div>
       </div>
     );
   }
