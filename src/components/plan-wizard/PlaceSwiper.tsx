@@ -1474,14 +1474,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   }
 
   return (
-    // exploreMode (HomeSwipe) renderuje sie WEWNATRZ AppLayout ktore ma fixed BottomNav
-    // (h-12 + pb-safe ~94px na iPhone 15 Pro). Bez wystarczajacego pb tutaj, card z
-    // aspect-[9/16] wystaje pod BottomNavem - dolna czesc karty (nazwa lokalu + action
-    // buttons 'Odrzuc'/'Dodaj') jest cieta. pb-7rem (112px) + env(bottom 34) = 146px
-    // pokrywa BottomNav 94px + visible gap 52px (zgodnie z iOS HIG, dla widocznego
-    // breathing room miedzy karta a nawigacja). W PlanWizard (route /plan, BEZ BottomNav)
-    // pb nie potrzebne.
-    <div className={cn("flex flex-col flex-1 min-h-0 overflow-hidden", exploreMode && "pb-[calc(7rem+env(safe-area-inset-bottom,0px))]")}>
+    // exploreMode (HomeSwipe) renderuje sie WEWNATRZ AppLayout ktore ma fixed BottomNav.
+    // PlanWizard (/plan) ma TopBar + progress row + bottom CTA "Zaplanuj trase".
+    // Karta nizej uzywa explicit dvh-based maxHeight (NIE flex-1 + 100% % wrappera),
+    // bo iOS WebView w standalone Capacitor czasem reportuje % od parent nieprawidlowo
+    // gdy parent ma flex-1 min-h-0 - tu uzywamy dvh jako stabilny base i odejmujemy
+    // env(safe-area) + chrome height jawnie.
+    <div className="flex flex-col flex-1 min-h-0">
 
       {/* Bingo banner */}
       {showBanner && (
@@ -1522,17 +1521,23 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       </div>
 
       {/* Card stack / Add custom place panel. Strict 9:16 portret aspect ratio.
-          Wrapper flex-1 min-h-0 alokuje cala wolna przestrzen w kolumnie po odjeciu
-          siostrzanych elementow (progress row, bottom CTA) - flex layout sam liczy
-          remaining space, niezaleznie od wysokosci telefonu. Karta wewnatrz uzywa
-          aspect-[9/16] + maxWidth/maxHeight 100% wrappera, wiec na małych telefonach
-          (np. iPhone SE) wysokosc clampuje sie a szerokosc maleje proporcjonalnie -
-          zamiast wystawania pod CTA/BottomNav. items-center + justify-center centruje
-          karte w dostepnej przestrzeni. */}
+          maxHeight liczone jest jawnie z 100dvh minus chrome (safe areas + headers +
+          nav). NIE uzywamy parent-relative 100% bo iOS Capacitor WebView w standalone
+          mode reportuje % nieprzewidywalnie dla flex-1 ancestors. dvh + env() jest
+          jedynym device-aware, stabilnym base. Wartosci chrome:
+          - exploreMode (HomeSwipe): top safe (env) + sticky header 58 + BottomNav 94
+            + gap visible 64 = 216 + env(top) + env(bottom)
+          - solo (PlanWizard): top safe (env) + TopBar 56 + progress row 32 +
+            bottom CTA 70 (z pb-safe-4) + gap 28 = 186 + env(top) + env(bottom) */}
       <div className="flex-1 min-h-0 flex items-center justify-center px-4 pb-2 w-full">
       <div
         className="relative w-full aspect-[9/16]"
-        style={{ maxWidth: "min(380px, 100%)", maxHeight: "min(680px, 100%)" }}
+        style={{
+          maxWidth: "min(380px, 100%)",
+          maxHeight: exploreMode
+            ? "min(680px, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 216px))"
+            : "min(680px, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 186px))",
+        }}
       >
         {showAddPlace ? (
           <AddCustomPlacePanel
