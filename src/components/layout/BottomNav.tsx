@@ -187,8 +187,12 @@ const BottomNav = () => {
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/40 z-50 pb-safe">
-        <div className="grid grid-cols-5 h-12 max-w-lg mx-auto">
+      {/* left-1/2 -translate-x-1/2 + w-full max-w-lg centruje cala nawigacje na web
+          (na mobile w-full bo viewport < max-w-lg, ten sam efekt co left-0 right-0).
+          Wczesniej left-0 right-0 rozciagal bg na pelna szerokosc na web ale ikonki
+          byly w max-w-lg mx-auto - rozjazd. */}
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-background border-t border-border/40 z-50 pb-safe">
+        <div className="grid grid-cols-5 h-12">
 
           {/* Główna */}
           <NavLink
