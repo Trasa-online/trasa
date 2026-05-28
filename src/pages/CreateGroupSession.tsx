@@ -30,7 +30,7 @@ const CreateGroupSession = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const fromJournal = (location.state as { from?: string } | null)?.from === "journal";
-  const { user } = useAuth();
+  const { user, isAnonymous } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
   const posthog = usePostHog();
   const queryClient = useQueryClient();
@@ -150,12 +150,18 @@ const CreateGroupSession = () => {
 
   const handleCreate = async () => {
     if (loading) return; // Prevent double-submit even if button disabled state hasn't flushed
-    // Tworzenie sesji wymaga konta (created_by NOT NULL w group_sessions, RLS na members).
-    // Goscia kierujemy do AuthDrawera (w aplikacji), nie do pelnoekranowej strony /auth.
-    if (!user) { openAuthDrawer({ mode: "register", hint: "join_session" }); return; }
+    // Tworzenie sesji wymaga prawdziwego konta (created_by FK -> profiles, anon nie ma row).
+    // Goscia / anon kierujemy do AuthDrawera (w aplikacji), nie do pelnoekranowej strony /auth.
+    if (!user || isAnonymous) { openAuthDrawer({ mode: "register", hint: "join_session" }); return; }
     if (!selectedCity) { toast.error("Wybierz miasto"); return; }
     setLoading(true);
     try {
+      // Defensywnie: upewnij sie ze profile row istnieje przed insertem.
+      // handle_new_user trigger powinien to zrobic, ale byly edge case'y
+      // (username collision, OAuth user_id mismatch). RPC jest idempotentne.
+      const { error: profileErr } = await (supabase as any).rpc("ensure_current_user_profile");
+      if (profileErr) throw profileErr;
+
       const code = generateJoinCode();
       const { data: session, error } = await (supabase as any)
         .from("group_sessions")
@@ -193,11 +199,16 @@ const CreateGroupSession = () => {
   };
 
   const handleJoinByCode = async () => {
-    if (!user) { openAuthDrawer({ mode: "register", hint: "join_session" }); return; }
+    // group_session_members.user_id ma FK do profiles - anon user nie ma profile row.
+    if (!user || isAnonymous) { openAuthDrawer({ mode: "register", hint: "join_session" }); return; }
     const code = joinCode.trim().toUpperCase();
     if (code.length < 4) { toast.error("Wpisz kod sesji"); return; }
     setJoining(true);
     try {
+      // Defensywnie: ensure profile row przed insertem do members (FK -> profiles)
+      const { error: profileErr } = await (supabase as any).rpc("ensure_current_user_profile");
+      if (profileErr) throw profileErr;
+
       const { data: session, error } = await (supabase as any)
         .from("group_sessions")
         .select("id, city")

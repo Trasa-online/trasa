@@ -182,6 +182,24 @@ Dwa konteksty, dwie proporcje:
 
 ---
 
+### ⛔ PlaceSwiper — sizing karty 9:16 ZAMROŻONY (src/components/plan-wizard/PlaceSwiper.tsx)
+
+**NIE zmieniaj sizingu, paddingu ani pozycji karty bez wyraźnej prośby użytkownika.** Layout został długo dobierany i działa na wszystkich rozmiarach iPhone'a (SE → 15 Pro Max) zarówno w HomeSwipe (`exploreMode`) jak i solo PlanWizard (`/plan`).
+
+**Co jest zamrożone:**
+- Karta: `aspect-[9/16]` strict + height-first sizing (width liczone z dostępnej wysokości, NIE odwrotnie)
+- Width formula: `min(420px, calc(100vw - 48px), calc((100dvh - env(top) - [env(bottom)] - 200px) * 9 / 16))`
+- Chrome subtraction = 200px dla obu trybów (uwzględnia pt-2 wrapper + 24px gap od BottomNav/CTA)
+- exploreMode: bez env(bottom) (BottomNav pb-safe absorbuje). Solo: z env(bottom) (CTA pb-safe-4 dodaje osobno)
+- Wrapper: `flex-1 min-h-0 flex items-start justify-center w-full pt-2` (items-start, NIE items-center - karta przylega do gory zamiast byc centrowana)
+- Root PlaceSwiper: `flex flex-col flex-1 min-h-0` BEZ explicit pb (chrome subtraction w dvh calc zalatwia bezpieczenstwo)
+- NIE uzywac `maxHeight: 100%` lub `maxHeight: 100dvh - X` na karcie (parent-relative % zawodzi w iOS Capacitor WebView z flex-1 ancestrami)
+
+**Historia rozwiazania:**
+- 2026-05-28: Reset z parent-relative `maxHeight: 100%` (zawodzilo na iOS) na explicit dvh-based calc + height-first sizing zeby 9:16 ratio bylo strict niezaleznie od ekranu.
+
+---
+
 ### ⛔ WaitlistPage — układ i animacja ZAMROŻONE (src/pages/WaitlistPage.tsx)
 
 **NIE zmieniaj układu, z-indeksów ani logiki animacji.** Układ jest zatwierdzony i wymaga długiego debugowania — każda zmiana może go zepsuć.
