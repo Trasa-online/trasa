@@ -1520,28 +1520,23 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         </span>
       </div>
 
-      {/* Card stack / Add custom place panel. STRICT 9:16 - karta wypelnia dostepna
-          wysokosc po odjeciu chrome, szerokosc wynika z height * 9/16 (NIE odwrotnie).
-          Dzieki temu ratio jest zawsze 9:16, a horizontal padding skaluje sie
-          proporcjonalnie do telefonu (wieksze ekrany -> wieksze paddingi po bokach).
-          width = min(maxAbsolute, 100% wrappera, calc fromHeight):
-          - maxAbsolute 420px: cap na tabletach
-          - 100% wrappera: cap gdy ekran bardzo waski
-          - calc fromHeight: prawdziwy bottleneck dla 9:16 na wysokich telefonach
-          Chrome subtraction:
-          - exploreMode (HomeSwipe): env(top) + 58 sticky header + 94 BottomNav +
-            32 visible gap = 184 + env(top+bottom)
-          - solo (PlanWizard /plan): env(top) + 56 TopBar + 32 progress row + 70 CTA
-            (pb-safe-4 ~50 + content 20) + 24 gap = 182 + env(top+bottom)
-          NIE uzywamy parent-relative 100% wysokosci bo iOS Capacitor WebView w
-          standalone reportuje % nieprzewidywalnie dla flex-1 ancestors. */}
-      <div className="flex-1 min-h-0 flex items-center justify-center w-full">
+      {/* Card stack / Add custom place panel. STRICT 9:16 + top-aligned (items-start).
+          Karta przylega do gornej krawedzi dostepnej przestrzeni (po malej pt) zamiast
+          byc centrowana - dzieki temu nie ma duzego pustego paska nad karta. Empty
+          space ladnie chowa sie pod BottomNav / CTA.
+          width = min(maxAbsolute, 100vw - margins, calc fromHeight 9:16):
+          Chrome subtraction (w dvh calc dla wysokosci, z ktorej liczone jest width):
+          - exploreMode: env(top) + 70 (pt-safe+sticky header) + 94 (BottomNav) + 32 gap
+            = 100dvh - env(top) - 196
+          - solo: env(top) + 64 TopBar + env(bottom) + 72 CTA + 32 gap
+            = 100dvh - env(top) - env(bottom) - 168 */}
+      <div className="flex-1 min-h-0 flex items-start justify-center w-full pt-2">
       <div
         className="relative aspect-[9/16]"
         style={{
           width: exploreMode
-            ? "min(420px, calc(100vw - 48px), calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 184px) * 9 / 16))"
-            : "min(420px, calc(100vw - 48px), calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 182px) * 9 / 16))",
+            ? "min(420px, calc(100vw - 48px), calc((100dvh - env(safe-area-inset-top, 0px) - 200px) * 9 / 16))"
+            : "min(420px, calc(100vw - 48px), calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 200px) * 9 / 16))",
         }}
       >
         {showAddPlace ? (
