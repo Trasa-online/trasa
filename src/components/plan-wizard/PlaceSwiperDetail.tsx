@@ -215,9 +215,13 @@ const FullscreenPhotos = ({
           onClose();
         }
       }}
-      onClick={(e) => {
-        // Fallback dla myszy / desktop / Capacitor WebView gdzie touch->click czasem failuje
-        if (e.target === e.currentTarget) onClose();
+      onClick={() => {
+        // Tap/click GDZIEKOLWIEK zamyka galerie. Chevrony / dots / X maja
+        // stopPropagation wiec ich klikniecia NIE zamykaja (tylko nawigacja).
+        // Bez tego na web (Radix Sheet onInteractOutside + preventDefault) X button
+        // czasem nie wykonywal onClose - ten failsafe lapie wszystkie nieprzechwycone
+        // klikniecia.
+        onClose();
       }}
     >
       <button
@@ -226,7 +230,7 @@ const FullscreenPhotos = ({
         onTouchStart={(e) => e.stopPropagation()}
         onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); onClose(); }}
         onClick={(e) => { e.stopPropagation(); onClose(); }}
-        className="absolute right-4 z-[210] h-11 w-11 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center active:bg-black/80 transition-colors shadow-lg"
+        className="absolute right-4 z-[210] h-11 w-11 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center active:bg-black/80 transition-colors shadow-lg cursor-pointer"
         style={{ top: "max(1rem, env(safe-area-inset-top))" }}
         aria-label="Zamknij"
       >
@@ -270,12 +274,13 @@ const FullscreenPhotos = ({
       />
 
       {photos.length > 1 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5" onClick={(e) => e.stopPropagation()}>
           {photos.map((_, i) => (
             <button
               key={i}
               type="button"
-              onClick={() => setIdx(i)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); setIdx(i); }}
               className={cn("h-1.5 rounded-full transition-all", i === idx ? "w-5 bg-white" : "w-1.5 bg-white/40")}
             />
           ))}

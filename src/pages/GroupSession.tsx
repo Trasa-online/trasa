@@ -763,8 +763,8 @@ const GroupSession = () => {
               autoCapitalize="off"
               spellCheck={false}
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            />
               style={{ fontSize: "16px" }}
+            />
             {placeSearchQuery && (
               <button onClick={() => setPlaceSearchQuery("")} className="shrink-0">
                 <X className="h-3.5 w-3.5 text-muted-foreground" />
@@ -1346,6 +1346,7 @@ const GroupSession = () => {
               onChange={(e) => setFriendSearch(e.target.value)}
               placeholder="Szukaj po nazwie lub @nickname…"
               className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-muted text-sm placeholder:text-muted-foreground/60 outline-none"
+              style={{ fontSize: "16px" }}
             />
             {friendSearch && (
               <button onClick={() => setFriendSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -1445,6 +1446,7 @@ const GroupSession = () => {
                 placeholder="https://maps.google.com/..."
                 autoComplete="off"
                 className="w-full px-4 py-3 rounded-2xl border border-border/60 bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                style={{ fontSize: "16px" }}
               />
               <p className="text-xs text-muted-foreground mt-1.5">Wklej link z Google Maps - pomoże nam szybciej dodać miejsce</p>
             </div>
@@ -1481,6 +1483,7 @@ const GroupSession = () => {
                 placeholder="https://maps.google.com/..."
                 autoComplete="off"
                 className="w-full px-4 py-3 rounded-2xl border border-border/60 bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                style={{ fontSize: "16px" }}
               />
               <p className="text-xs text-muted-foreground mt-1.5">Wklej link z Google Maps - pomoże nam szybciej dodać miejsce</p>
             </div>
@@ -1539,6 +1542,7 @@ const LobbyProposals = ({
         onChange={e => setLobbyQuery(e.target.value)}
         placeholder="Wpisz nazwę miejsca…"
         className="w-full h-11 pl-9 pr-10 rounded-2xl border border-border/60 bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+        style={{ fontSize: "16px" }}
       />
       {lobbySearching && (
         <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground/60" />
