@@ -1477,10 +1477,11 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     // exploreMode (HomeSwipe) renderuje sie WEWNATRZ AppLayout ktore ma fixed BottomNav
     // (h-12 + pb-safe ~94px na iPhone 15 Pro). Bez wystarczajacego pb tutaj, card z
     // aspect-[9/16] wystaje pod BottomNavem - dolna czesc karty (nazwa lokalu + action
-    // buttons 'Odrzuc'/'Dodaj') jest cieta. pb-5rem (80px) + env(bottom 34) = 114px
-    // pokrywa BottomNav 94 + safety buffer 20px. W PlanWizard (route /plan, BEZ BottomNav)
+    // buttons 'Odrzuc'/'Dodaj') jest cieta. pb-7rem (112px) + env(bottom 34) = 146px
+    // pokrywa BottomNav 94px + visible gap 52px (zgodnie z iOS HIG, dla widocznego
+    // breathing room miedzy karta a nawigacja). W PlanWizard (route /plan, BEZ BottomNav)
     // pb nie potrzebne.
-    <div className={cn("flex flex-col flex-1 min-h-0 overflow-hidden", exploreMode && "pb-[calc(5rem+env(safe-area-inset-bottom,0px))]")}>
+    <div className={cn("flex flex-col flex-1 min-h-0 overflow-hidden", exploreMode && "pb-[calc(7rem+env(safe-area-inset-bottom,0px))]")}>
 
       {/* Bingo banner */}
       {showBanner && (
@@ -1604,7 +1605,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           Polubione miejsca laduja w exploreLikes localStorage; uzytkownik moze stworzyc
           trase rece przez + -> Zaplanuj solo (dialog "Wykorzystac polubione z dzis?"). */}
       {!exploreMode && !groupSessionId && (likedPlaces.length + superLikedPlaces.length > 0) && !showAddPlace && (
-        <div className="px-4 pb-3 shrink-0 flex gap-2">
+        <div className="px-4 pb-safe-4 pt-2 shrink-0 flex gap-2">
           <button
             onClick={handleProceed}
             className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
