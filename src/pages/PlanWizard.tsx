@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, X, Plus, Filter, Check } from "lucide-react";
+import { ArrowLeft, Search, X, Plus, Filter, Check, Star, MapPin, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { usePostHog } from "@posthog/react";
 import CityPicker from "@/components/plan-wizard/CityPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import StartingLocationPicker from "@/components/plan-wizard/StartingLocationPicker";
-import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
+import PlaceSwiper, { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
+import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { MAIN_CATEGORIES, getSubcategoryLabel } from "@/lib/categories";
 import { cn } from "@/lib/utils";
@@ -56,6 +57,14 @@ const PlanWizard = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const exploreMode = returnState?.exploreMode ?? false;
 
+  // Step 4 tabs: "swipe" (Eksploruj) | "matches" (Dopasowania). Polubione miejsca
+  // sa lifted z PlaceSwipera przez onLikedPlacesChange callback - PlaceSwiper trzyma
+  // wlasny state, tu trzymamy snapshot dla zakładki Dopasowania.
+  const [step4Tab, setStep4Tab] = useState<"swipe" | "matches">("swipe");
+  const [likedSnapshot, setLikedSnapshot] = useState<MockPlace[]>([]);
+  const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
   useEffect(() => {
     if (searchOpen) {
       setSearchQuery("");
@@ -95,6 +104,35 @@ const PlanWizard = () => {
     if (step === 1) navigate("/");
     else if (step === 4) setStep(3);    // back to starting location
     else setStep((s) => (s - 1) as Step);
+  };
+
+  // CTA z Dopasowania - skopiowane z PlaceSwiper.handleProceed zeby flow byl
+  // spojny (anon -> AuthDrawer + zachowaj guest plan w localStorage, non-anon
+  // -> nawigacja do /create z routeState).
+  const handleProceedFromMatches = () => {
+    if (!date) return;
+    const routeState = {
+      city,
+      date: date.toISOString(),
+      numDays,
+      startingLocation: startingLocation || undefined,
+      likedPlaceNames: likedSnapshot.map((p) => p.place_name),
+      skippedPlaceNames: [] as string[],
+      likedPlacesData: likedSnapshot.map((p) => ({
+        place_name: p.place_name,
+        category: p.category as string,
+        description: p.description,
+        latitude: p.latitude,
+        longitude: p.longitude,
+      })),
+      superLikedPlaceNames: [] as string[],
+    };
+    if (!user || isAnonymous) {
+      try { localStorage.setItem("trasa_guest_plan", JSON.stringify(routeState)); } catch { /* unavailable */ }
+      openAuthDrawer({ mode: "register", hint: "save_route" });
+      return;
+    }
+    navigate("/create", { state: routeState });
   };
 
   return (
@@ -212,22 +250,136 @@ const PlanWizard = () => {
           />
         )}
         {step === 4 && date && (
-          <PlaceSwiper
-            city={city}
-            date={date}
-            numDays={numDays}
-            startingLocation={startingLocation}
-            categoryFilter={selectedCategories.length > 0 ? selectedCategories : undefined}
-            dietFilters={dietFilters.length > 0 ? dietFilters : undefined}
-            sortByNearest={sortMode === "nearest"}
-            initialLikedPlaceNames={allLikedNames}
-            initialSkippedPlaceNames={allSkippedNames}
-            searchQuery={searchQuery}
-            showAddPlace={showAddPlace}
-            onAddPlaceClose={() => setShowAddPlace(false)}
-            onSuggestPlace={() => setShowAddPlace(true)}
-            exploreMode={exploreMode}
-          />
+          <>
+            {/* Tabs - tylko w solo (nie w exploreMode = HomeSwipe-like). exploreMode
+                renderuje swiper bezposrednio bez tabow. */}
+            {!exploreMode && (
+              <div className="flex border-b border-border/20 shrink-0">
+                <button
+                  onClick={() => setStep4Tab("swipe")}
+                  className={cn(
+                    "flex-1 py-2.5 text-sm font-semibold transition-colors",
+                    step4Tab === "swipe" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"
+                  )}
+                >
+                  Eksploruj
+                </button>
+                <button
+                  onClick={() => setStep4Tab("matches")}
+                  className={cn(
+                    "flex-1 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5",
+                    step4Tab === "matches" ? "text-orange-600 border-b-2 border-orange-600" : "text-muted-foreground"
+                  )}
+                >
+                  Dopasowania
+                  {likedSnapshot.length > 0 && (
+                    <span className="h-[18px] min-w-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
+                      {likedSnapshot.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Eksploruj (swiper) - zawsze zamontowany zeby state liked/skip nie zostal
+                stracony przy zmianie tabki. Ukryty przez display:none gdy nie aktywny. */}
+            <div className={cn("flex-1 flex flex-col overflow-hidden", step4Tab !== "swipe" && "hidden")}>
+              <PlaceSwiper
+                city={city}
+                date={date}
+                numDays={numDays}
+                startingLocation={startingLocation}
+                categoryFilter={selectedCategories.length > 0 ? selectedCategories : undefined}
+                dietFilters={dietFilters.length > 0 ? dietFilters : undefined}
+                sortByNearest={sortMode === "nearest"}
+                initialLikedPlaceNames={allLikedNames}
+                initialSkippedPlaceNames={allSkippedNames}
+                searchQuery={searchQuery}
+                showAddPlace={showAddPlace}
+                onAddPlaceClose={() => setShowAddPlace(false)}
+                onSuggestPlace={() => setShowAddPlace(true)}
+                exploreMode={exploreMode}
+                onLikedPlacesChange={setLikedSnapshot}
+              />
+            </div>
+
+            {/* Dopasowania - lista polubionych miejsc z CTA na koncu */}
+            {step4Tab === "matches" && !exploreMode && (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4">
+                  {likedSnapshot.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+                      <p className="text-4xl">🤔</p>
+                      <p className="font-bold">Brak polubionych miejsc</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed max-w-[280px]">
+                        Wróć do Eksploruj i wybierz miejsca, które chcesz mieć w&nbsp;trasie.
+                      </p>
+                      <button
+                        onClick={() => setStep4Tab("swipe")}
+                        className="py-3 px-6 rounded-full bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
+                      >
+                        Eksploruj dalej
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground px-1 mb-2">
+                        {likedSnapshot.length} {likedSnapshot.length === 1 ? "polubione miejsce" : likedSnapshot.length < 5 ? "polubione miejsca" : "polubionych miejsc"}
+                      </p>
+                      {likedSnapshot.map((place) => (
+                        <button
+                          key={place.id}
+                          onClick={() => { setDetailPlace(place); setDetailOpen(true); }}
+                          className="w-full flex items-center gap-3 rounded-2xl border border-border/40 bg-card p-3 text-left transition-all active:scale-[0.98]"
+                        >
+                          {place.photo_url ? (
+                            <img src={place.photo_url} alt={place.place_name} className="h-14 w-14 rounded-2xl object-cover shrink-0" />
+                          ) : (
+                            <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center shrink-0">
+                              <MapPin className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm leading-tight truncate">{place.place_name}</p>
+                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                              {place.rating ? (
+                                <span className="flex items-center gap-0.5">
+                                  <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                                  {place.rating}
+                                </span>
+                              ) : null}
+                              {place.address && <span className="truncate">{place.address.split(",")[0]}</span>}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* CTA - zapisz trasę z polubionych */}
+                {likedSnapshot.length > 0 && (
+                  <div className="px-4 pb-safe-4 pt-2 shrink-0 border-t border-border/20 flex gap-2">
+                    <button
+                      onClick={handleProceedFromMatches}
+                      className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+                    >
+                      Zaplanuj trasę · {likedSnapshot.length} {likedSnapshot.length === 1 ? "miejsce" : "miejsc"}
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Detail sheet - podglad polubionego miejsca */}
+                <PlaceSwiperDetail
+                  open={detailOpen}
+                  onOpenChange={setDetailOpen}
+                  place={detailPlace}
+                  city={city}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
 

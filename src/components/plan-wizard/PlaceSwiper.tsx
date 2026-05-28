@@ -776,6 +776,9 @@ interface PlaceSwiperProps {
   onRoundComplete?: () => void;
   /** Called when user taps "suggest adding a place" in the empty search state. */
   onSuggestPlace?: () => void;
+  /** Called whenever the array of liked places changes - used by parent (PlanWizard)
+   *  to render Dopasowania tab with current liked items without lifting all swiper state. */
+  onLikedPlacesChange?: (places: MockPlace[]) => void;
 }
 
 // Category groups for diversity balancing
@@ -889,7 +892,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
   } as MockPlace;
 }
 
-const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace, onLikedPlacesChange }: PlaceSwiperProps) => {
   // Normalize categoryFilter to a stable array (single id, multiple ids, or none).
   const categoryFilters: string[] = Array.isArray(categoryFilter)
     ? categoryFilter.filter(Boolean)
@@ -1273,6 +1276,11 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     }
   }, [queue.length, loading]);
 
+  // Expose liked places to parent (PlanWizard Dopasowania tab) - rerenders na zmianie referencji array
+  useEffect(() => {
+    onLikedPlacesChange?.([...likedPlaces, ...superLikedPlaces]);
+  }, [likedPlaces, superLikedPlaces]);
+
   // Bingo modal DISABLED globally - userka wycofala go z solo parowania (i wczesniej
   // z exploreMode). Hook zostawiony jako stub na wypadek powrotu - po prostu nic nie
   // robi. Zmienne setShowBanner / bannerDismissCount nadal istnieja zeby nie ruszac
@@ -1536,7 +1544,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         style={{
           width: exploreMode
             ? "min(420px, calc(100vw - 48px), calc((100dvh - env(safe-area-inset-top, 0px) - 200px) * 9 / 16))"
-            : "min(420px, calc(100vw - 48px), calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 200px) * 9 / 16))",
+            : "min(420px, calc(100vw - 48px), calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 242px) * 9 / 16))",
         }}
       >
         {showAddPlace ? (

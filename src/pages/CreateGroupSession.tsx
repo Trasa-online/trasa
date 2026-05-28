@@ -80,17 +80,11 @@ const CreateGroupSession = () => {
     s.trip_date && parseISO(s.trip_date) < today
   );
 
-  const { data: cities = [] } = useQuery({
-    queryKey: ["places-cities"],
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("places")
-        .select("city")
-        .eq("is_active", true);
-      const unique = [...new Set((data || []).map((p: any) => p.city as string))].sort();
-      return unique as string[];
-    },
-  });
+  // Hardcoded city list - musi byc spojny z CityPicker (solo) i HomeSwipe.
+  // Wczesniej cities pobieralo sie z places.city co dawalo niespojny wynik (np.
+  // brak Poznania/Wroclawa bo nie ma jeszcze placow). Teraz pelna lista, lockowanie
+  // przez UNLOCKED_CITIES.
+  const cities = useMemo(() => ["Warszawa", "Kraków", "Łódź", "Poznań", "Trójmiasto", "Wrocław"], []);
 
   // Cities currently unlocked for group sessions (lowercase match)
   const UNLOCKED_CITIES = ["warszawa"];

@@ -1,11 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { MapPin, ChevronDown, Check, Lock, X } from "lucide-react";
+import { MapPin, ChevronDown, Check, Lock, X, Bell } from "lucide-react";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
+import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import { MAIN_CATEGORIES, getSubcategoryLabel } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const FILTERS_STORAGE_KEY = "trasa_home_filters";
 
@@ -51,6 +54,42 @@ const HomeSwipe = () => {
   const isGuest = !user || isAnonymous;
   const [filters, setFilters] = useState<StoredFilters>(() => readFilters());
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Powiadomienia tylko dla zalogowanych non-anon (anon nie ma rekordow w notifications)
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["notifications-unread", user?.id],
+    queryFn: async () => {
+      if (!user) return 0;
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("read", false)
+        .neq("type", "group_match");
+      return count ?? 0;
+    },
+    enabled: !!user && !isAnonymous,
+    refetchInterval: 30_000,
+  });
+
+  // Realtime: instant badge update on new notification
+  useEffect(() => {
+    if (!user || isAnonymous) return;
+    const channel = supabase
+      .channel(`homeswipe-notif-badge-${user.id}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${user.id}`,
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ["notifications-unread", user.id] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, isAnonymous]);
 
   useEffect(() => { writeFilters(filters); }, [filters]);
 
@@ -71,7 +110,8 @@ const HomeSwipe = () => {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Sticky top bar: 'Zaloguj się' (tylko gosc) po lewej + filter chip po prawej */}
+      {/* Sticky top bar: 'Zaloguj sie' (gosc) lub Bell (zalogowany non-anon) po lewej +
+          filter chip po prawej */}
       <div className="shrink-0 bg-background px-4 pt-3 pb-2.5 flex items-center justify-between gap-2">
         {isGuest ? (
           <button
@@ -81,7 +121,18 @@ const HomeSwipe = () => {
             Zaloguj się
           </button>
         ) : (
-          <div />
+          <button
+            onClick={() => setNotifOpen(true)}
+            className="relative h-9 w-9 flex items-center justify-center text-muted-foreground active:scale-90 transition-transform"
+            aria-label="Powiadomienia"
+          >
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 h-3.5 min-w-3.5 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center px-1 leading-none">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
         )}
         <button
           onClick={() => setDrawerOpen(true)}
@@ -96,6 +147,15 @@ const HomeSwipe = () => {
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
         </button>
       </div>
+
+      {/* Notifications drawer */}
+      {notifOpen && user && !isAnonymous && (
+        <NotificationsDrawer
+          open={notifOpen}
+          onClose={() => setNotifOpen(false)}
+          userId={user.id}
+        />
+      )}
 
       {/* Swiper */}
       <div className="flex-1 flex flex-col overflow-hidden">

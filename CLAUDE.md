@@ -189,7 +189,7 @@ Dwa konteksty, dwie proporcje:
 **Co jest zamrożone:**
 - Karta: `aspect-[9/16]` strict + height-first sizing (width liczone z dostępnej wysokości, NIE odwrotnie)
 - Width formula: `min(420px, calc(100vw - 48px), calc((100dvh - env(top) - [env(bottom)] - 200px) * 9 / 16))`
-- Chrome subtraction = 200px dla obu trybów (uwzględnia pt-2 wrapper + 24px gap od BottomNav/CTA)
+- Chrome subtraction: exploreMode 200px, solo 242px (solo ma dodatkowy tab bar 42px "Eksploruj | Dopasowania" w PlanWizard step 4)
 - exploreMode: bez env(bottom) (BottomNav pb-safe absorbuje). Solo: z env(bottom) (CTA pb-safe-4 dodaje osobno)
 - Wrapper: `flex-1 min-h-0 flex items-start justify-center w-full pt-2` (items-start, NIE items-center - karta przylega do gory zamiast byc centrowana)
 - Root PlaceSwiper: `flex flex-col flex-1 min-h-0` BEZ explicit pb (chrome subtraction w dvh calc zalatwia bezpieczenstwo)
