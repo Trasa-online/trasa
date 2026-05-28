@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
+import { API_BASE } from "@/lib/platform";
 
 interface TemplatePin {
   place_name: string;
@@ -68,7 +69,7 @@ const getStaticMapUrl = (pins: TemplatePin[]) => {
     `center=${center.latitude},${center.longitude}&zoom=14&size=400x400&scale=2` +
     `&${markers}` +
     `&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`;
-  return `/api/static-map?${params}`;
+  return `${API_BASE}/api/static-map?${params}`;
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────

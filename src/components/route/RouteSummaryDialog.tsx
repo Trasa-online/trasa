@@ -5,17 +5,19 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Loader2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { toast } from "sonner";
 import { format, addDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import posthog from "posthog-js";
+import { API_BASE } from "@/lib/platform";
 import type { PlanPin } from "./DayPinList";
 const buildStaticMapUrl = (pins: { latitude: number; longitude: number }[]) => {
   if (pins.length === 0) return null;
   const markers = pins.slice(0, 10)
     .map((p, i) => `markers=color:0xea580c%7Clabel:${i + 1}%7C${p.latitude},${p.longitude}`)
     .join("&");
-  return `/api/static-map?size=800x352&scale=2&${markers}`;
+  return `${API_BASE}/api/static-map?size=800x352&scale=2&${markers}`;
 };
 
 interface RoutePlan {
@@ -70,7 +72,8 @@ const RouteSummaryDialog = ({
 }: RouteSummaryDialogProps) => {
   const [saving, setSaving] = useState(false);
   const [showGuestAuth, setShowGuestAuth] = useState(false);
-  const { user } = useAuth();
+  const { user, isAnonymous } = useAuth();
+  const { open: openAuthDrawer } = useAuthDrawer();
   const navigate = useNavigate();
 
   const days = plan.days ?? [];
@@ -93,7 +96,9 @@ const RouteSummaryDialog = ({
   const isMultiDay = days.length > 1;
 
   const saveRoute = useCallback(async () => {
-    if (!user) { setShowGuestAuth(true); return; }
+    // Anon user musi zalozyc prawdziwe konto (routes.user_id ownership +
+    // ensure_current_user_profile zalatwia FK).
+    if (!user || isAnonymous) { setShowGuestAuth(true); return; }
     if (saving) return;
     if (existingRouteId) {
       toast.success("Trasa jest już zapisana!");
@@ -452,7 +457,10 @@ const RouteSummaryDialog = ({
               </div>
               <div className="flex flex-col gap-2.5">
                 <button
-                  onClick={() => navigate("/auth?tab=register")}
+                  onClick={() => {
+                    setShowGuestAuth(false);
+                    openAuthDrawer({ mode: "register", hint: "save_route" });
+                  }}
                   className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
                 >
                   Zakładam konto - to darmowe →

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Trash2, MapPin, Clock } from "lucide-react";
 import { format, differenceInDays, isValid, parseISO } from "date-fns";
 import { pl } from "date-fns/locale";
+import { API_BASE } from "@/lib/platform";
 
 // Safe date parse - always returns a valid Date or null
 function safeDate(val: string | null | undefined): Date | null {
@@ -102,7 +103,7 @@ const UpcomingTripCard = ({ trip, onDelete, onPinTap, onEdit }: UpcomingTripCard
   // Build static map URL
   const mapPins = allPins.filter((p: any) => p.latitude && p.longitude).slice(0, 10);
   const heroMapUrl = mapPins.length > 0
-    ? `/api/static-map?size=800x400&scale=2&${mapPins.map((p: any, i: number) =>
+    ? `${API_BASE}/api/static-map?size=800x400&scale=2&${mapPins.map((p: any, i: number) =>
         `markers=color:0xff6b35%7Clabel:${i + 1}%7C${p.latitude},${p.longitude}`
       ).join("&")}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off`
     : null;

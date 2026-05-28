@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { parseISO, isValid, format, addDays } from "date-fns";
+import { API_BASE } from "@/lib/platform";
 
 interface PlanPin {
   place_name: string;
@@ -57,7 +58,7 @@ const QuickPlanReview = () => {
   // Static map URL
   const mapPins = pins.filter(p => p.latitude && p.longitude).slice(0, 10);
   const mapUrl = mapPins.length > 0
-    ? `/api/static-map?size=800x300&scale=2&${
+    ? `${API_BASE}/api/static-map?size=800x300&scale=2&${
         mapPins.map((p, i) => `markers=color:0xea580c%7Clabel:${i + 1}%7C${p.latitude},${p.longitude}`).join("&")
       }&style=feature:poi%7Cvisibility:off`
     : null;

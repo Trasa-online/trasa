@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { type PlanPin } from "./DayPinList";
 import AddPinSheet from "./AddPinSheet";
 import { getPhotoUrl } from "@/lib/placePhotos";
+import { API_BASE } from "@/lib/platform";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1237,7 +1238,7 @@ window.addEventListener('message',function(e){
                       {detailPin.pin.latitude && detailPin.pin.longitude && (
                         <div className="rounded-2xl overflow-hidden h-32 w-full bg-muted">
                           <img
-                            src={`/api/static-map?center=${detailPin.pin.latitude},${detailPin.pin.longitude}&zoom=16&size=600x240&scale=2&markers=color:black%7C${detailPin.pin.latitude},${detailPin.pin.longitude}&style=feature:poi%7Cvisibility:off`}
+                            src={`${API_BASE}/api/static-map?center=${detailPin.pin.latitude},${detailPin.pin.longitude}&zoom=16&size=600x240&scale=2&markers=color:black%7C${detailPin.pin.latitude},${detailPin.pin.longitude}&style=feature:poi%7Cvisibility:off`}
                             alt="Mapa"
                             className="w-full h-full object-cover"
                           />

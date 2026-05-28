@@ -7,6 +7,7 @@ import { pl } from "date-fns/locale";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -52,7 +53,8 @@ interface BannerData {
 const GroupSession = () => {
   const { joinCode } = useParams<{ joinCode: string }>();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, isAnonymous, loading: authLoading } = useAuth();
+  const { open: openAuthDrawer } = useAuthDrawer();
   const queryClient = useQueryClient();
 
   const [tab, setTab] = useState<"swipe" | "matches">("swipe");
@@ -1256,25 +1258,32 @@ const GroupSession = () => {
                 <button
                   onClick={async () => {
                     const selectedMatches = matches.filter(m => !deselectedPlaces.has(m.place_name));
+                    const routeState = {
+                      city: session?.city ?? "",
+                      date: session?.trip_date ?? undefined,
+                      likedPlacesData: selectedMatches.map(m => ({
+                        place_name: m.place_name,
+                        category: m.category,
+                        description: "",
+                      })),
+                      backTo: `/sesja/${session?.join_code}`,
+                      groupSession: { sessionId: session!.id, otherMemberIds: [] },
+                    };
+                    // Anon user musi zalozyc konto przed stworzeniem trasy (routes.user_id
+                    // FK do auth.users + ownership w UI). Zachowaj routeState w localStorage
+                    // zeby po loginie kontynuowac flow.
+                    if (!user || isAnonymous) {
+                      try { localStorage.setItem("trasa_guest_plan", JSON.stringify(routeState)); } catch { /* unavailable */ }
+                      openAuthDrawer({ mode: "register", hint: "save_route" });
+                      return;
+                    }
                     if (session) {
                       await (supabase as any)
                         .from("group_sessions")
                         .update({ status: "completed", match_count: selectedMatches.length })
                         .eq("id", session.id);
                     }
-                    navigate("/create", {
-                      state: {
-                        city: session?.city ?? "",
-                        date: session?.trip_date ?? undefined,
-                        likedPlacesData: selectedMatches.map(m => ({
-                          place_name: m.place_name,
-                          category: m.category,
-                          description: "",
-                        })),
-                        backTo: `/sesja/${session?.join_code}`,
-                        groupSession: { sessionId: session!.id, otherMemberIds: [] },
-                      },
-                    });
+                    navigate("/create", { state: routeState });
                   }}
                   className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
                 >
