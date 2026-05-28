@@ -184,38 +184,49 @@ const FullscreenPhotos = ({
   onClose: () => void;
 }) => {
   const [idx, setIdx] = useState(Math.max(0, Math.min(startIndex, photos.length - 1)));
-  const startX = useRef<number | null>(null);
+  const startPos = useRef<{ x: number; y: number } | null>(null);
 
   if (photos.length === 0) return null;
 
   const goPrev = () => setIdx((n) => Math.max(0, n - 1));
   const goNext = () => setIdx((n) => Math.min(photos.length - 1, n + 1));
 
-  // Uproszczone - bez stop() na container i bez setting body overflow hidden.
-  // Wczesniejsza wersja z onClick={stop} + onPointerDown={stop} + onMouseDown={stop}
-  // na container miala edge case crash (prawdopodobnie konflikt event handlerami
-  // przy szybkim klikaniu chevron). Tu kazdy button ma sam swoj onClick - bez
-  // dodatkowych warstw event handling na container.
+  // Touch handlers na backdrop:
+  // - swipe poziomy (>50px) -> prev/next
+  // - tap bez ruchu (<10px) -> zamknij (backup gdy X button nie reaguje)
+  // X / chevron buttony wolaja stopPropagation zeby ich tap nie odpalil close-on-tap.
   return createPortal(
     <div
       className="fixed inset-0 z-[200] bg-black flex items-center justify-center select-none"
       onTouchStart={(e) => {
-        startX.current = e.touches[0].clientX;
+        startPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       }}
       onTouchEnd={(e) => {
-        if (startX.current === null) return;
-        const dx = e.changedTouches[0].clientX - startX.current;
-        startX.current = null;
-        if (Math.abs(dx) > 50) {
+        if (startPos.current === null) return;
+        const dx = e.changedTouches[0].clientX - startPos.current.x;
+        const dy = e.changedTouches[0].clientY - startPos.current.y;
+        startPos.current = null;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) && photos.length > 1) {
           if (dx < 0) goNext();
           else goPrev();
+          return;
         }
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+          onClose();
+        }
+      }}
+      onClick={(e) => {
+        // Fallback dla myszy / desktop / Capacitor WebView gdzie touch->click czasem failuje
+        if (e.target === e.currentTarget) onClose();
       }}
     >
       <button
         type="button"
-        onClick={onClose}
-        className="absolute top-4 right-4 z-10 h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:bg-white/25 transition-colors"
+        onPointerDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); onClose(); }}
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+        className="absolute right-4 z-[210] h-11 w-11 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center active:bg-black/80 transition-colors shadow-lg"
         style={{ top: "max(1rem, env(safe-area-inset-top))" }}
         aria-label="Zamknij"
       >
@@ -226,18 +237,24 @@ const FullscreenPhotos = ({
         <>
           <button
             type="button"
-            onClick={goPrev}
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); goPrev(); }}
             disabled={idx === 0}
-            className="absolute left-3 z-10 h-12 w-12 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:bg-white/25 disabled:opacity-30 transition-colors"
+            className="absolute left-3 z-[210] h-12 w-12 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center active:bg-black/80 disabled:opacity-30 transition-colors"
             aria-label="Poprzednie zdjęcie"
           >
             <ChevronLeft className="h-6 w-6 text-white" />
           </button>
           <button
             type="button"
-            onClick={goNext}
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); goNext(); }}
             disabled={idx === photos.length - 1}
-            className="absolute right-3 z-10 h-12 w-12 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:bg-white/25 disabled:opacity-30 transition-colors"
+            className="absolute right-3 z-[210] h-12 w-12 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center active:bg-black/80 disabled:opacity-30 transition-colors"
             aria-label="Następne zdjęcie"
           >
             <ChevronRight className="h-6 w-6 text-white" />

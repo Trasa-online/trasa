@@ -1480,7 +1480,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     // buttons 'Odrzuc'/'Dodaj') jest cieta. pb-5rem (80px) + env(bottom 34) = 114px
     // pokrywa BottomNav 94 + safety buffer 20px. W PlanWizard (route /plan, BEZ BottomNav)
     // pb nie potrzebne.
-    <div className={cn("flex flex-col flex-1 min-h-0", exploreMode && "pb-[calc(5rem+env(safe-area-inset-bottom,0px))]")}>
+    <div className={cn("flex flex-col flex-1 min-h-0 overflow-hidden", exploreMode && "pb-[calc(5rem+env(safe-area-inset-bottom,0px))]")}>
 
       {/* Bingo banner */}
       {showBanner && (
@@ -1520,16 +1520,18 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         </span>
       </div>
 
-      {/* Card stack / Add custom place panel. Strict 9:16 portret aspect ratio
-          z parent-based max-height (NIE viewport 78dvh). Parent ma pb w exploreMode
-          (5rem+env(bottom) = 114px) chronace przed BottomNav, max-h 100% wlicza ten pb.
-          mx-auto centruje horyzontalnie. NIE my-auto - karta top-aligned zeby my-auto
-          centrowanie + my-auto spare nie zwiekszyly bottom offsetu (poprzedni fix
-          pchnal kartę o pol-spare niżej i odsłonił ją pod BottomNavem). mb-4 daje
-          minimalny gap miedzy karta a granica protected obszaru. */}
+      {/* Card stack / Add custom place panel. Strict 9:16 portret aspect ratio.
+          Wrapper flex-1 min-h-0 alokuje cala wolna przestrzen w kolumnie po odjeciu
+          siostrzanych elementow (progress row, bottom CTA) - flex layout sam liczy
+          remaining space, niezaleznie od wysokosci telefonu. Karta wewnatrz uzywa
+          aspect-[9/16] + maxWidth/maxHeight 100% wrappera, wiec na małych telefonach
+          (np. iPhone SE) wysokosc clampuje sie a szerokosc maleje proporcjonalnie -
+          zamiast wystawania pod CTA/BottomNav. items-center + justify-center centruje
+          karte w dostepnej przestrzeni. */}
+      <div className="flex-1 min-h-0 flex items-center justify-center px-4 pb-2 w-full">
       <div
-        className="relative mb-4 mx-auto w-full aspect-[9/16]"
-        style={{ maxWidth: "calc(100% - 2rem)", maxHeight: "min(680px, 100%)" }}
+        className="relative w-full aspect-[9/16]"
+        style={{ maxWidth: "min(380px, 100%)", maxHeight: "min(680px, 100%)" }}
       >
         {showAddPlace ? (
           <AddCustomPlacePanel
@@ -1594,6 +1596,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             })()}
           </>
         )}
+      </div>
       </div>
 
 
