@@ -61,6 +61,7 @@ const Admin = () => {
     first_name: string | null;
     avatar_url: string | null;
     created_at: string | null;
+    is_anonymous: boolean;
   }>>([]);
   const [fetchingAllUsers, setFetchingAllUsers] = useState(false);
   const [inviting, setInviting] = useState<string | null>(null);
@@ -233,12 +234,12 @@ const Admin = () => {
 
   const loadAllUsers = async () => {
     setFetchingAllUsers(true);
-    const { data, error } = await (supabase as any)
-      .from("profiles")
-      .select("id, username, first_name, avatar_url, created_at")
-      .order("created_at", { ascending: false, nullsFirst: false })
-      .limit(200);
-    if (error) console.error("[Admin] profiles fetch error:", error);
+    // RPC admin_list_users zwraca profiles JOIN auth.users (z is_anonymous flag),
+    // dzieki czemu mozemy odroznic anon userow (utworzonych przez grupowe parowanie
+    // na native) od prawdziwych zarejestrowanych. RPC ma SECURITY DEFINER + admin
+    // role check, fail-safe gdy ktos bez uprawnien spróbuje wywolac.
+    const { data, error } = await (supabase as any).rpc("admin_list_users");
+    if (error) console.error("[Admin] admin_list_users rpc error:", error);
     setAllUsers(data ?? []);
     setFetchingAllUsers(false);
   };
@@ -754,6 +755,11 @@ const Admin = () => {
                               <p className="font-semibold text-sm truncate">
                                 {u.first_name || "—"}
                                 <span className="text-muted-foreground font-normal ml-1">@{u.username}</span>
+                                {u.is_anonymous && (
+                                  <span className="ml-2 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-semibold align-middle">
+                                    Anonimowy
+                                  </span>
+                                )}
                               </p>
                               <p className="text-xs text-muted-foreground mt-0.5">
                                 {u.created_at ? format(new Date(u.created_at), "dd.MM.yyyy HH:mm") : "—"}

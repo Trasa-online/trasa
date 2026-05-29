@@ -4,6 +4,7 @@ import { ArrowLeft, Copy, Check, ArrowRight, Users, Trash2, LogOut, Search, User
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
+import { isWeb } from "@/lib/platform";
 import { usePostHog } from "@posthog/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -30,7 +31,7 @@ const CreateGroupSession = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const fromJournal = (location.state as { from?: string } | null)?.from === "journal";
-  const { user } = useAuth();
+  const { user, isAnonymous } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
   const posthog = usePostHog();
   const queryClient = useQueryClient();
@@ -144,9 +145,15 @@ const CreateGroupSession = () => {
 
   const handleCreate = async () => {
     if (loading) return; // Prevent double-submit even if button disabled state hasn't flushed
-    // Grupowe parowanie dziala dla anonimowych (jak solo). Logowanie/rejestracja
-    // dopiero przy zapisie trasy. Anon ma user.id z auth.users, FK do profiles
-    // zalatwia rpc('ensure_current_user_profile') ponizej (tworzy row dla anon tez).
+    // Web: grupowe wymaga rejestracji (drives signups + nie zasmieca profiles
+    // anon user_xxx rows widocznymi potem w Admin panel).
+    // Native: anon OK (drives downloads + low-friction onboarding ze share-link
+    // znajomego). Anon ma user.id z auth.users, FK do profiles zalatwia
+    // rpc('ensure_current_user_profile') ponizej (tworzy row dla anon tez).
+    if (isWeb && (!user || isAnonymous)) {
+      openAuthDrawer({ mode: "register", hint: "join_session" });
+      return;
+    }
     if (!user) { openAuthDrawer({ mode: "register", hint: "join_session" }); return; }
     if (!selectedCity) { toast.error("Wybierz miasto"); return; }
     setLoading(true);
@@ -194,7 +201,12 @@ const CreateGroupSession = () => {
   };
 
   const handleJoinByCode = async () => {
-    // Dolaczanie dziala dla anon (ensure_current_user_profile tworzy row jezeli brak).
+    // Web: dolaczanie do sesji wymaga rejestracji (parity z handleCreate).
+    // Native: anon moze dolaczac do sesji ze share-link.
+    if (isWeb && (!user || isAnonymous)) {
+      openAuthDrawer({ mode: "register", hint: "join_session" });
+      return;
+    }
     if (!user) { openAuthDrawer({ mode: "register", hint: "join_session" }); return; }
     const code = joinCode.trim().toUpperCase();
     if (code.length < 4) { toast.error("Wpisz kod sesji"); return; }
