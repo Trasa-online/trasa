@@ -191,6 +191,13 @@ const FullscreenPhotos = ({
   const goPrev = () => setIdx((n) => Math.max(0, n - 1));
   const goNext = () => setIdx((n) => Math.min(photos.length - 1, n + 1));
 
+  // KRYTYCZNE: pointerEvents: "auto" jest WYMAGANE.
+  // Radix Sheet/Dialog (DismissableLayer) ustawia body.style.pointerEvents='none'
+  // gdy SheetContent jest otwarty (zeby zablokowac interakcje z tlem). CSS
+  // pointer-events JEST DZIEDZICZONE, wiec nasze createPortal(div, document.body)
+  // jest dzieckiem body i dziedziczy 'none' = X / chevrony / dots / cala galeria
+  // sa nieklikalne. Explicit 'auto' override'uje dziedziczenie i przywraca eventy.
+  //
   // Touch handlers na backdrop:
   // - swipe poziomy (>50px) -> prev/next
   // - tap bez ruchu (<10px) -> zamknij (backup gdy X button nie reaguje)
@@ -198,6 +205,7 @@ const FullscreenPhotos = ({
   return createPortal(
     <div
       className="fixed inset-0 z-[200] bg-black flex items-center justify-center select-none"
+      style={{ pointerEvents: "auto" }}
       onTouchStart={(e) => {
         startPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       }}
@@ -218,9 +226,6 @@ const FullscreenPhotos = ({
       onClick={() => {
         // Tap/click GDZIEKOLWIEK zamyka galerie. Chevrony / dots / X maja
         // stopPropagation wiec ich klikniecia NIE zamykaja (tylko nawigacja).
-        // Bez tego na web (Radix Sheet onInteractOutside + preventDefault) X button
-        // czasem nie wykonywal onClose - ten failsafe lapie wszystkie nieprzechwycone
-        // klikniecia.
         onClose();
       }}
     >
