@@ -11,6 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
+import { isNative } from "@/lib/platform";
+import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 
 // ── InviteSlot ────────────────────────────────────────────────────────────────
 
@@ -168,12 +170,42 @@ const TravelerProfile = () => {
     if (!ext) { toast.error("Tylko JPG, PNG lub WebP"); return; }
     if (file.size > 5 * 1024 * 1024) { toast.error("Maks 5 MB"); return; }
     const fileName = `${user.id}/avatar.${ext}`;
-    const { error } = await supabase.storage.from("avatars").upload(fileName, file, { upsert: true, contentType: file.type });
-    if (error) { toast.error("Błąd podczas przesyłania zdjęcia"); return; }
+    const { error: uploadError } = await supabase.storage.from("avatars").upload(fileName, file, { upsert: true, contentType: file.type });
+    if (uploadError) { toast.error("Błąd podczas przesyłania zdjęcia"); return; }
     const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
-    await supabase.from("profiles").update({ avatar_url: publicUrl } as any).eq("id", user.id);
+    const bustedUrl = `${publicUrl}?v=${Date.now()}`;
+    const { error: updateError } = await supabase.from("profiles").update({ avatar_url: bustedUrl } as any).eq("id", user.id);
+    if (updateError) { toast.error("Błąd zapisu profilu"); return; }
     queryClient.invalidateQueries({ queryKey: ["profile-full", user.id] });
     toast.success("Zdjęcie zaktualizowane!");
+  };
+
+  const handleNativePhotoPick = async () => {
+    try {
+      const photo = await CapCamera.getPhoto({
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Photos,
+        quality: 90,
+        width: 800,
+        height: 800,
+      });
+      if (!photo.base64String) {
+        toast.error("Nie udało się odczytać zdjęcia");
+        return;
+      }
+      const format = photo.format || "jpeg";
+      const mime = format === "png" ? "image/png" : format === "webp" ? "image/webp" : "image/jpeg";
+      const binary = atob(photo.base64String);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const file = new File([bytes], `avatar.${format}`, { type: mime });
+      await handleAvatarUpload(file);
+    } catch (err: any) {
+      const msg = String(err?.message ?? err);
+      if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("denied")) return;
+      console.error("[TravelerProfile] native photo pick failed:", msg);
+      toast.error("Nie udało się wybrać zdjęcia");
+    }
   };
 
   const { data: profile } = useQuery({
@@ -302,15 +334,26 @@ const TravelerProfile = () => {
               </Avatar>
             </CompletionRing>
             {/* Camera button */}
-            <label className="absolute bottom-0 right-0 h-8 w-8 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md">
-              <Camera className="h-3.5 w-3.5" />
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }}
-              />
-            </label>
+            {isNative ? (
+              <button
+                type="button"
+                onClick={handleNativePhotoPick}
+                className="absolute bottom-0 right-0 h-8 w-8 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md"
+                aria-label="Zmień zdjęcie profilowe"
+              >
+                <Camera className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <label className="absolute bottom-0 right-0 h-8 w-8 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md">
+                <Camera className="h-3.5 w-3.5" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }}
+                />
+              </label>
+            )}
           </div>
 
           <div className="text-center mt-2">

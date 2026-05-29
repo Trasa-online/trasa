@@ -13,6 +13,8 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { isNative } from "@/lib/platform";
+import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 
 type Provider = "email" | "google" | "apple";
 
@@ -539,7 +541,35 @@ const Settings = () => {
       .upload(fileName, file, { upsert: true, contentType: file.type });
     if (uploadError) { toast.error(t("toast_avatar_error")); return; }
     const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
-    setAvatarUrl(publicUrl);
+    setAvatarUrl(`${publicUrl}?v=${Date.now()}`);
+  };
+
+  const handleNativePhotoPick = async () => {
+    try {
+      const photo = await CapCamera.getPhoto({
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Photos,
+        quality: 90,
+        width: 800,
+        height: 800,
+      });
+      if (!photo.base64String) {
+        toast.error(t("toast_avatar_error"));
+        return;
+      }
+      const format = photo.format || "jpeg";
+      const mime = format === "png" ? "image/png" : format === "webp" ? "image/webp" : "image/jpeg";
+      const binary = atob(photo.base64String);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const file = new File([bytes], `avatar.${format}`, { type: mime });
+      await handleAvatarUpload(file);
+    } catch (err: any) {
+      const msg = String(err?.message ?? err);
+      if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("denied")) return;
+      console.error("[Settings] native photo pick failed:", msg);
+      toast.error(t("toast_avatar_error"));
+    }
   };
 
   if (!user) return (
@@ -573,15 +603,26 @@ const Settings = () => {
                 {displayName.charAt(0).toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
-            <label className="absolute bottom-0 right-0 bg-foreground text-background p-1.5 rounded-full cursor-pointer shadow">
-              <Camera className="h-3.5 w-3.5" />
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }}
-              />
-            </label>
+            {isNative ? (
+              <button
+                type="button"
+                onClick={handleNativePhotoPick}
+                className="absolute bottom-0 right-0 bg-foreground text-background p-1.5 rounded-full cursor-pointer shadow"
+                aria-label="Zmień zdjęcie profilowe"
+              >
+                <Camera className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <label className="absolute bottom-0 right-0 bg-foreground text-background p-1.5 rounded-full cursor-pointer shadow">
+                <Camera className="h-3.5 w-3.5" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }}
+                />
+              </label>
+            )}
           </div>
           {displayName && <p className="text-base font-bold">{displayName}</p>}
         </div>
