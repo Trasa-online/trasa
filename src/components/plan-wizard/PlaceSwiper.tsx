@@ -779,6 +779,10 @@ interface PlaceSwiperProps {
   /** Called whenever the array of liked places changes - used by parent (PlanWizard)
    *  to render Dopasowania tab with current liked items without lifting all swiper state. */
   onLikedPlacesChange?: (places: MockPlace[]) => void;
+  /** Gdy ustawione, bottom CTA "Przejdz do dopasowan" wywoluje to zamiast nawigowac
+   *  do /create. PlanWizard przelacza wtedy tabke na "matches" gdzie user wybiera
+   *  miejsca do trasy. Bez tej props CTA wciaz wywoluje handleProceed (legacy). */
+  onSwitchToMatches?: () => void;
 }
 
 // Category groups for diversity balancing
@@ -892,7 +896,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
   } as MockPlace;
 }
 
-const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace, onLikedPlacesChange }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace, onLikedPlacesChange, onSwitchToMatches }: PlaceSwiperProps) => {
   // Normalize categoryFilter to a stable array (single id, multiple ids, or none).
   const categoryFilters: string[] = Array.isArray(categoryFilter)
     ? categoryFilter.filter(Boolean)
@@ -1538,16 +1542,10 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             = 100dvh - env(top) - 196
           - solo: env(top) + 64 TopBar + env(bottom) + 72 CTA + 32 gap
             = 100dvh - env(top) - env(bottom) - 168 */}
-      <div className="flex-1 min-h-0 flex items-start justify-center w-full pt-2">
-      <div
-        className="relative aspect-[9/16]"
-        style={{
-          width: exploreMode
-            ? "min(420px, calc(100vw - 48px), calc((100dvh - env(safe-area-inset-top, 0px) - 200px) * 9 / 16))"
-            : "min(420px, calc(100vw - 48px), calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 242px) * 9 / 16))",
-        }}
-      >
-        {showAddPlace ? (
+      {showAddPlace ? (
+        // AddCustomPlacePanel renderuje sie OBOK aspect-9:16 (nie wewnatrz) -
+        // full width z paddingiem, dla bardziej oczywistego widoku dodawania miejsca.
+        <div className="flex-1 min-h-0 w-full">
           <AddCustomPlacePanel
             city={city}
             onCancel={() => setShowAddPlace(false)}
@@ -1569,7 +1567,17 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
               setShowAddPlace(false);
             }}
           />
-        ) : (
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0 flex items-start justify-center w-full pt-2">
+        <div
+          className="relative aspect-[9/16]"
+          style={{
+            width: exploreMode
+              ? "min(420px, calc(100vw - 48px), calc((100dvh - env(safe-area-inset-top, 0px) - 200px) * 9 / 16))"
+              : "min(420px, calc(100vw - 48px), calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 242px) * 9 / 16))",
+          }}
+        >
           <>
             {isSearching && displayQueue.length === 0 && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
@@ -1609,21 +1617,24 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                 });
             })()}
           </>
-        )}
-      </div>
-      </div>
+        </div>
+        </div>
+      )}
 
 
       {/* Proceed CTA. Ukryty calkowicie w exploreMode (HomeSwipe = wolna eksploracja).
           Polubione miejsca laduja w exploreLikes localStorage; uzytkownik moze stworzyc
-          trase rece przez + -> Zaplanuj solo (dialog "Wykorzystac polubione z dzis?"). */}
+          trase rece przez + -> Zaplanuj solo (dialog "Wykorzystac polubione z dzis?").
+          W PlanWizard solo (onSwitchToMatches przekazane) CTA przelacza do tabki
+          Dopasowania, NIE nawiguje od razu do /create - user wybiera tam ktore
+          miejsca wezmie do trasy. Bez prop'a (legacy fallback) wywoluje handleProceed. */}
       {!exploreMode && !groupSessionId && (likedPlaces.length + superLikedPlaces.length > 0) && !showAddPlace && (
         <div className="px-4 pb-safe-4 pt-2 shrink-0 flex gap-2">
           <button
-            onClick={handleProceed}
+            onClick={() => { if (onSwitchToMatches) onSwitchToMatches(); else handleProceed(); }}
             className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
           >
-            Zaplanuj trasę · {likedPlaces.length + superLikedPlaces.length} {(likedPlaces.length + superLikedPlaces.length) === 1 ? "miejsce" : "miejsc"}
+            {onSwitchToMatches ? "Przejdź do dopasowań" : `Zaplanuj trasę · ${likedPlaces.length + superLikedPlaces.length} ${(likedPlaces.length + superLikedPlaces.length) === 1 ? "miejsce" : "miejsc"}`}
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>

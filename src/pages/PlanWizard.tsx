@@ -64,6 +64,9 @@ const PlanWizard = () => {
   const [likedSnapshot, setLikedSnapshot] = useState<MockPlace[]>([]);
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  // Wybor miejsc do trasy - mirror logiki z GroupSession matches tab (deselectedPlaces).
+  // User domyslnie ma wszystko zaznaczone, moze odznaczyc miejsca ktorych nie chce w trasie.
+  const [deselectedMatches, setDeselectedMatches] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (searchOpen) {
@@ -106,19 +109,21 @@ const PlanWizard = () => {
     else setStep((s) => (s - 1) as Step);
   };
 
-  // CTA z Dopasowania - skopiowane z PlaceSwiper.handleProceed zeby flow byl
-  // spojny (anon -> AuthDrawer + zachowaj guest plan w localStorage, non-anon
-  // -> nawigacja do /create z routeState).
+  // CTA z Dopasowania - przekazuje tylko ZAZNACZONE miejsca (deselectedMatches
+  // odejmowane od likedSnapshot). Spojne z GroupSession.matches gdzie host
+  // odznacza miejsca przed stworzeniem trasy.
   const handleProceedFromMatches = () => {
     if (!date) return;
+    const selected = likedSnapshot.filter(p => !deselectedMatches.has(p.place_name));
+    if (selected.length === 0) return;
     const routeState = {
       city,
       date: date.toISOString(),
       numDays,
       startingLocation: startingLocation || undefined,
-      likedPlaceNames: likedSnapshot.map((p) => p.place_name),
+      likedPlaceNames: selected.map((p) => p.place_name),
       skippedPlaceNames: [] as string[],
-      likedPlacesData: likedSnapshot.map((p) => ({
+      likedPlacesData: selected.map((p) => ({
         place_name: p.place_name,
         category: p.category as string,
         description: p.description,
@@ -133,6 +138,15 @@ const PlanWizard = () => {
       return;
     }
     navigate("/create", { state: routeState });
+  };
+
+  const toggleMatchSelection = (placeName: string) => {
+    setDeselectedMatches(prev => {
+      const next = new Set(prev);
+      if (next.has(placeName)) next.delete(placeName);
+      else next.add(placeName);
+      return next;
+    });
   };
 
   return (
@@ -300,10 +314,13 @@ const PlanWizard = () => {
                 onSuggestPlace={() => setShowAddPlace(true)}
                 exploreMode={exploreMode}
                 onLikedPlacesChange={setLikedSnapshot}
+                onSwitchToMatches={() => setStep4Tab("matches")}
               />
             </div>
 
-            {/* Dopasowania - lista polubionych miejsc z CTA na koncu */}
+            {/* Dopasowania - lista polubionych z checkbox'ami i CTA na koncu (mirror
+                GroupSession.matches tab UI). User moze odznaczyc miejsca ktorych
+                NIE chce w trasie - CTA pokazuje liczbe AKTUALNIE wybranych. */}
             {step4Tab === "matches" && !exploreMode && (
               <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4">
@@ -324,51 +341,72 @@ const PlanWizard = () => {
                   ) : (
                     <div className="space-y-2">
                       <p className="text-xs text-muted-foreground px-1 mb-2">
-                        {likedSnapshot.length} {likedSnapshot.length === 1 ? "polubione miejsce" : likedSnapshot.length < 5 ? "polubione miejsca" : "polubionych miejsc"}
+                        Odznacz miejsca, których nie chcesz w&nbsp;trasie
                       </p>
-                      {likedSnapshot.map((place) => (
-                        <button
-                          key={place.id}
-                          onClick={() => { setDetailPlace(place); setDetailOpen(true); }}
-                          className="w-full flex items-center gap-3 rounded-2xl border border-border/40 bg-card p-3 text-left transition-all active:scale-[0.98]"
-                        >
-                          {place.photo_url ? (
-                            <img src={place.photo_url} alt={place.place_name} className="h-14 w-14 rounded-2xl object-cover shrink-0" />
-                          ) : (
-                            <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center shrink-0">
-                              <MapPin className="h-5 w-5 text-muted-foreground" />
+                      {likedSnapshot.map((place) => {
+                        const isSelected = !deselectedMatches.has(place.place_name);
+                        return (
+                          <button
+                            key={place.id}
+                            onClick={() => { setDetailPlace(place); setDetailOpen(true); }}
+                            className={cn(
+                              "w-full flex items-center gap-3 rounded-2xl border bg-card p-3 text-left transition-all active:scale-[0.98]",
+                              isSelected ? "border-border/40" : "border-border/20 opacity-50"
+                            )}
+                          >
+                            {place.photo_url ? (
+                              <img src={place.photo_url} alt={place.place_name} className="h-14 w-14 rounded-2xl object-cover shrink-0" />
+                            ) : (
+                              <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center shrink-0">
+                                <MapPin className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm leading-tight truncate">{place.place_name}</p>
+                              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                {place.rating ? (
+                                  <span className="flex items-center gap-0.5">
+                                    <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                                    {place.rating}
+                                  </span>
+                                ) : null}
+                                {place.address && <span className="truncate">{place.address.split(",")[0]}</span>}
+                              </div>
                             </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-sm leading-tight truncate">{place.place_name}</p>
-                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                              {place.rating ? (
-                                <span className="flex items-center gap-0.5">
-                                  <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                                  {place.rating}
-                                </span>
-                              ) : null}
-                              {place.address && <span className="truncate">{place.address.split(",")[0]}</span>}
+                            {/* Checkbox - click stopuje propagacje zeby tap na nim NIE
+                                otwieral detail sheet, tylko toggleowal selekcje. */}
+                            <div
+                              onClick={(e) => { e.stopPropagation(); toggleMatchSelection(place.place_name); }}
+                              className={cn(
+                                "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
+                                isSelected ? "bg-primary border-orange-600" : "border-border/60 bg-background"
+                              )}
+                            >
+                              {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
                             </div>
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
 
-                {/* CTA - zapisz trasę z polubionych */}
-                {likedSnapshot.length > 0 && (
-                  <div className="px-4 pb-safe-4 pt-2 shrink-0 border-t border-border/20 flex gap-2">
-                    <button
-                      onClick={handleProceedFromMatches}
-                      className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-                    >
-                      Zaplanuj trasę · {likedSnapshot.length} {likedSnapshot.length === 1 ? "miejsce" : "miejsc"}
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
+                {/* CTA - zapisz trase z WYBRANYCH polubionych */}
+                {(() => {
+                  const selectedCount = likedSnapshot.filter(p => !deselectedMatches.has(p.place_name)).length;
+                  if (selectedCount === 0) return null;
+                  return (
+                    <div className="px-4 pb-safe-4 pt-2 shrink-0 border-t border-border/20 flex gap-2">
+                      <button
+                        onClick={handleProceedFromMatches}
+                        className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+                      >
+                        Zaplanuj trasę · {selectedCount} {selectedCount === 1 ? "miejsce" : "miejsc"}
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  );
+                })()}
 
                 {/* Detail sheet - podglad polubionego miejsca */}
                 <PlaceSwiperDetail

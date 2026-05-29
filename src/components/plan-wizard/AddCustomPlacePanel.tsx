@@ -215,9 +215,10 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
         </button>
       </div>
 
-      {/* Input */}
+      {/* Input - bialy bg + grubszy border zeby byl oczywiscie widoczny jako input
+          (poprzednio bg-background + cienki border ledwo widoczny na tle aplikacji). */}
       <div className="relative">
-        <div className="flex items-center bg-background border border-border rounded-2xl px-3 h-12 gap-2">
+        <div className="flex items-center bg-white border-2 border-border rounded-2xl px-4 h-14 gap-2 shadow-sm focus-within:border-orange-500 transition-colors">
           {inputIcon}
           <input
             autoFocus
@@ -226,6 +227,7 @@ const Inner = ({ city, onAdd, onCancel }: AddCustomPlacePanelProps) => {
             onChange={handleTextChange}
             placeholder="Nazwa miejsca lub wklej link…"
             className="flex-1 text-base bg-transparent outline-none placeholder:text-muted-foreground"
+            style={{ fontSize: "16px" }}
           />
           {query.length > 0 && (
             <button onClick={() => { setQuery(""); setPreview(null); setSuggestions([]); setStatus("idle"); setMode("text"); }} className="shrink-0 text-muted-foreground">

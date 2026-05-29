@@ -1254,10 +1254,19 @@ const GroupSession = () => {
 
             {/* Finish button */}
             <div className="px-4 py-3 shrink-0 border-t border-border/20 space-y-2">
-              {matches.length > 0 && (
+              {/* Tworzenie trasy: TYLKO host (created_by). Uczestnicy widza tylko
+                  "Otworz zapisana trase" jezeli host juz zapisal, w przeciwnym razie
+                  hint ze czekamy na hosta. */}
+              {matches.length > 0 && isCreator && (
                 <button
                   onClick={async () => {
                     const selectedMatches = matches.filter(m => !deselectedPlaces.has(m.place_name));
+                    // Przekazujemy wszystkich CZLONKOW oprocz hosta - RouteSummaryDialog
+                    // auto-tworzy kopie trasy dla kazdego (zeby uczestnicy mogli ja
+                    // otworzyc po host'owym save).
+                    const otherMemberIds = members
+                      .filter((m: any) => m.user_id && m.user_id !== user?.id)
+                      .map((m: any) => m.user_id);
                     const routeState = {
                       city: session?.city ?? "",
                       date: session?.trip_date ?? undefined,
@@ -1267,7 +1276,7 @@ const GroupSession = () => {
                         description: "",
                       })),
                       backTo: `/sesja/${session?.join_code}`,
-                      groupSession: { sessionId: session!.id, otherMemberIds: [] },
+                      groupSession: { sessionId: session!.id, otherMemberIds },
                     };
                     // Anon user musi zalozyc konto przed stworzeniem trasy (routes.user_id
                     // FK do auth.users + ownership w UI). Zachowaj routeState w localStorage
@@ -1289,6 +1298,14 @@ const GroupSession = () => {
                 >
                   {existingRoute ? "Stwórz nową trasę →" : "Przejdź do tworzenia trasy →"}
                 </button>
+              )}
+              {/* Hint dla uczestnikow gdy host jeszcze nie zapisal trasy */}
+              {matches.length > 0 && !isCreator && !existingRoute && (
+                <div className="w-full py-3 rounded-2xl bg-muted/40 border border-border/30 text-center">
+                  <p className="text-xs text-muted-foreground leading-relaxed px-4">
+                    Czekamy aż gospodarz sesji zapisze trasę z waszych dopasowań.
+                  </p>
+                </div>
               )}
               {existingRoute && (
                 <button
