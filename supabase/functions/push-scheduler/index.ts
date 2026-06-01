@@ -41,8 +41,37 @@ Deno.serve(async (req) => {
     let totalSent = 0;
     let totalFailed = 0;
 
+    const today = new Date().toISOString().split("T")[0];
+    const tomorrow = new Date(Date.now() + 86_400_000).toISOString().split("T")[0];
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().split("T")[0];
+
     for (const userId of uniqueUserIds) {
-      // Check for ongoing/planning trips
+      // Priority order: tomorrow (trip preview) > yesterday (review reminder) > today (active)
+      // Tylko jeden push per user per run zeby nie spamowac.
+      const { data: tomorrowRoutes } = await supabase
+        .from("routes")
+        .select("id, title, city")
+        .eq("user_id", userId)
+        .eq("status", "published")
+        .eq("start_date", tomorrow)
+        .limit(1);
+
+      const { data: yesterdayRoutes } = await supabase
+        .from("routes")
+        .select("id, title, city, review_photos")
+        .eq("user_id", userId)
+        .eq("status", "published")
+        .eq("start_date", yesterday)
+        .limit(1);
+
+      const { data: todayRoutes } = await supabase
+        .from("routes")
+        .select("id, title, city")
+        .eq("user_id", userId)
+        .eq("status", "published")
+        .eq("start_date", today)
+        .limit(1);
+
       const { data: activeTrips } = await supabase
         .from("route_folders")
         .select("id, name")
@@ -50,22 +79,31 @@ Deno.serve(async (req) => {
         .eq("is_trip", true)
         .limit(1);
 
-      // Check for today's routes (routes with today's date)
-      const today = new Date().toISOString().split("T")[0];
-      const { data: todayRoutes } = await supabase
-        .from("routes")
-        .select("id, title, city")
-        .eq("user_id", userId)
-        .eq("status", "published")
-        .gte("start_date", today)
-        .lte("start_date", today)
-        .limit(1);
-
-      let title = "📍 Trasa czeka!";
-      let body = "Zaplanuj jutrzejszy dzień lub zapisz wspomnienia z dzisiejszego.";
+      let title = "";
+      let body = "";
       let url = "/home";
 
-      if (todayRoutes && todayRoutes.length > 0) {
+      if (tomorrowRoutes && tomorrowRoutes.length > 0) {
+        // Trip reminder dnia przed
+        const route = tomorrowRoutes[0];
+        title = `🗺️ Jutro: ${route.title}`;
+        body = route.city
+          ? `Twoja trasa po ${route.city} startuje jutro. Sprawdź plan!`
+          : "Twoja trasa startuje jutro. Sprawdź plan!";
+        url = `/day-review?route=${route.id}`;
+      } else if (yesterdayRoutes && yesterdayRoutes.length > 0) {
+        // Review reminder dnia po - tylko jesli jeszcze nie ma recenzji ani zdjec
+        const route = yesterdayRoutes[0];
+        const hasReview = Array.isArray((route as any).review_photos) && (route as any).review_photos.length > 0;
+        if (!hasReview) {
+          title = `📷 Jak było wczoraj w ${route.city ?? route.title}?`;
+          body = "Dodaj recenzje miejsc i zdjęcia do dziennika podróży";
+          url = `/review-summary?route=${route.id}`;
+        } else {
+          continue; // ma juz recenzje, pomijamy
+        }
+      } else if (todayRoutes && todayRoutes.length > 0) {
+        // Active trip today
         const route = todayRoutes[0];
         title = `📍 Dziś: ${route.title}`;
         body = route.city
@@ -73,8 +111,12 @@ Deno.serve(async (req) => {
           : "Sprawdź swój plan na dzisiaj!";
         url = `/day/${route.id}`;
       } else if (activeTrips && activeTrips.length > 0) {
+        // Fallback - ma aktywna podroz, ale brak konkretnej daty
         title = `🗺️ ${activeTrips[0].name}`;
         body = "Zapisz wspomnienia z dzisiejszego dnia!";
+      } else {
+        // Brak nic istotnego - pomijamy (nie spamuj user'a kazdym dniem)
+        continue;
       }
 
       // Call send-push function

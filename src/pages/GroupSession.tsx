@@ -414,6 +414,59 @@ const GroupSession = () => {
       .eq("session_id", session.id)
       .eq("user_id", user!.id);
     setLocalActiveCategory(null); // clear local override - let server state take over
+
+    // Push do innych members o postepie. Best-effort - nie blokuje UI flow.
+    void (async () => {
+      try {
+        const { data: freshMembers } = await (supabase as any)
+          .from("group_session_members")
+          .select("user_id, categories_done")
+          .eq("session_id", session.id);
+        if (!freshMembers?.length) return;
+
+        const remainingIds: string[] = freshMembers
+          .filter((m: any) => !(m.categories_done ?? []).includes(currentCategory))
+          .map((m: any) => m.user_id);
+
+        const { data: prof } = await supabase
+          .from("profiles").select("first_name, username")
+          .eq("id", user!.id).single();
+        const myName = (prof as any)?.first_name ?? (prof as any)?.username ?? "Ktoś";
+        const url = `/sesja/${session.join_code}`;
+
+        if (remainingIds.length === 0) {
+          // Wszyscy skonczyli te kategorie - push do reszty (nie do mnie)
+          const recipients = freshMembers
+            .map((m: any) => m.user_id)
+            .filter((id: string) => id !== user!.id);
+          await Promise.allSettled(recipients.map((id: string) =>
+            supabase.functions.invoke("send-push", {
+              body: {
+                user_id: id,
+                title: "Cała grupa skończyła! 🎉",
+                body: `Wszyscy zagłosowali w ${currentCategory}. Czas na kolejną kategorię lub trasę.`,
+                url,
+              },
+            })
+          ));
+        } else {
+          // Inni czekaja na decyzje - powiedz im ze ja zaglosowalem
+          await Promise.allSettled(remainingIds.map((id: string) =>
+            supabase.functions.invoke("send-push", {
+              body: {
+                user_id: id,
+                title: `${myName} zakończył${myName.endsWith("a") ? "a" : ""} głosowanie 🎯`,
+                body: `Czekamy jeszcze na Twoje wybory w ${currentCategory}`,
+                url,
+              },
+            })
+          ));
+        }
+      } catch {
+        // Push fail nie blokuje UI - in-app state pokazuje to samo
+      }
+    })();
+
     queryClient.invalidateQueries({ queryKey: ["group-session-members", session.id] });
   };
 
