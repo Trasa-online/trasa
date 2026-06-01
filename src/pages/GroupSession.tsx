@@ -601,6 +601,15 @@ const GroupSession = () => {
         message: `Zaproszenie do sesji parowania w ${session.city}`,
       });
       setWaitingInvitedIds((prev) => new Set(prev).add(profile.id));
+      // Push notification - best-effort
+      void supabase.functions.invoke("send-push", {
+        body: {
+          user_id: profile.id,
+          title: "Zaproszenie do sesji 🗺️",
+          body: `Dołącz do parowania w ${session.city}`,
+          url: `/sesja/${joinCode}`,
+        },
+      }).catch(() => {});
     } catch {
       toast.error("Nie udało się wysłać zaproszenia");
     } finally {
@@ -612,13 +621,28 @@ const GroupSession = () => {
     if (selectedFriends.size === 0 || !session) return;
     setSendingInvites(true);
     try {
+      const friendIds = Array.from(selectedFriends);
+      // 1) In-app notifications (insert do notifications)
       await Promise.all(
-        Array.from(selectedFriends).map((friendId) =>
+        friendIds.map((friendId) =>
           (supabase as any).from("notifications").insert({
             user_id: friendId,
             type: "group_session_invite",
             data: { session_id: session.id, join_code: joinCode, city: session.city },
             message: `Zaproszenie do sesji parowania w ${session.city}`,
+          })
+        )
+      );
+      // 2) Push notifications (best-effort, fail nie blokuje)
+      await Promise.allSettled(
+        friendIds.map((friendId) =>
+          supabase.functions.invoke("send-push", {
+            body: {
+              user_id: friendId,
+              title: "Zaproszenie do sesji 🗺️",
+              body: `Dołącz do parowania w ${session.city}`,
+              url: `/sesja/${joinCode}`,
+            },
           })
         )
       );
