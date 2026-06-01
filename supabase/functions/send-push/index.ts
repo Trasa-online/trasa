@@ -370,26 +370,32 @@ Deno.serve(async (req) => {
     for (const sub of subscriptions) {
       try {
         let resp: Response;
+        const platform = (sub as any).platform;
+        const apnsToken = (sub as any).apns_token;
+        const hasApnsData = apnsToken && typeof apnsToken === "string";
+        const hasWebPushData = sub.endpoint && sub.p256dh && sub.auth;
 
-        // Native iOS: APNs token
-        if ((sub as any).platform === "ios" && (sub as any).apns_token) {
-          resp = await sendApnsPush((sub as any).apns_token, {
+        // Native iOS: APNs token (priorytet jesli platform=ios)
+        if (platform === "ios" && hasApnsData) {
+          resp = await sendApnsPush(apnsToken, {
             title,
             body: body || "",
             url: url || "/",
           });
         }
-        // Web/PWA: VAPID Web Push
-        else if (sub.endpoint && sub.p256dh && sub.auth) {
+        // Web/PWA: VAPID Web Push - tylko gdy mamy WSZYSTKIE 3 pola
+        else if (hasWebPushData) {
           resp = await sendWebPush(
-            { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
+            { endpoint: sub.endpoint!, p256dh: sub.p256dh!, auth: sub.auth! },
             payloadStr,
             vapidPublicKey,
             vapidPrivateKey,
             vapidSubject
           );
         } else {
-          console.warn(`[send-push] subscription ${sub.id} ma niepoprawny format`);
+          // Sub jest stale/nieprawidlowe - cleanup, nie spamuj logow.
+          console.warn(`[send-push] sub ${sub.id} stale (platform=${platform}, hasApns=${hasApnsData}, hasWeb=${hasWebPushData}) - deleting`);
+          await supabase.from("push_subscriptions").delete().eq("id", sub.id);
           failed++;
           continue;
         }
