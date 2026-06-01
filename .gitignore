@@ -35,3 +35,6 @@ ARCHITECTURE.md
 .vercel
 public/IMG_0294.MOV
 public/IMG_0295.MOV
+
+# PoC / ad-hoc script outputs (lokalne, nie do repo)
+scripts/poc-output/

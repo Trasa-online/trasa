@@ -11,6 +11,9 @@
     "preview": "vite preview",
     "backfill:photos": "npx tsx scripts/backfill-photo-cache.ts",
     "backfill:galleries": "npx tsx scripts/backfill-place-galleries.ts",
+    "poc:menu": "npx tsx scripts/poc-menu-classifier.ts",
+    "poc:menu-web": "npx tsx scripts/poc-menu-from-website.ts",
+    "poc:dishes": "npx tsx scripts/poc-popular-dishes.ts",
     "check:both": "npm run build && npx cap sync ios",
     "check:native": "npm run build && npx cap sync ios && npx cap sync android"
   },
