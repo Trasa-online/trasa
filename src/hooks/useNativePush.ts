@@ -1,8 +1,13 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { isNative } from "@/lib/platform";
 import { useNavigate } from "react-router-dom";
+
+// Module-level (zyje przez cala sesje JS), nie useRef. useRef reset'uje sie przy
+// re-mounts (App.tsx rerenderuje sie przy nawigacji po OAuth callback), co
+// powodowalo race conditions. Module-level state przezywa wszystko.
+let registeredForUser: string | null = null;
 
 // Native iOS push notifications via Capacitor APNs.
 // - Wywolywany RAZ z root tree (App.tsx) gdy user logged in i isNative.
@@ -17,11 +22,24 @@ import { useNavigate } from "react-router-dom";
 export function useNativePush() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    if (!isNative || !user || hasInitialized.current) return;
-    hasInitialized.current = true;
+    console.log("[NativePush] hook fired", {
+      isNative,
+      hasUser: !!user,
+      registeredForUser,
+      userId: user?.id?.slice(0, 8),
+    });
+    if (!isNative || !user) {
+      console.log("[NativePush] early return - not native or no user");
+      return;
+    }
+    if (registeredForUser === user.id) {
+      console.log("[NativePush] early return - already registered for this user");
+      return;
+    }
+    registeredForUser = user.id;
+    console.log("[NativePush] starting init for user", user.id.slice(0, 8));
 
     let removeReg: (() => void) | null = null;
     let removeRecv: (() => void) | null = null;
@@ -29,18 +47,22 @@ export function useNativePush() {
 
     (async () => {
       try {
+        console.log("[NativePush] importing plugin...");
         const { PushNotifications } = await import("@capacitor/push-notifications");
+        console.log("[NativePush] plugin imported, checking permissions...");
 
-        // Sprawdz permission, jesli denied/prompt - poproś
         const status = await PushNotifications.checkPermissions();
+        console.log("[NativePush] current permission status:", status.receive);
         if (status.receive === "denied") {
-          console.log("[NativePush] permission denied by user");
+          console.log("[NativePush] permission denied by user - cant register");
           return;
         }
         if (status.receive !== "granted") {
+          console.log("[NativePush] requesting permission...");
           const req = await PushNotifications.requestPermissions();
+          console.log("[NativePush] permission request result:", req.receive);
           if (req.receive !== "granted") {
-            console.log("[NativePush] permission not granted:", req.receive);
+            console.log("[NativePush] permission not granted - cant register");
             return;
           }
         }
@@ -49,7 +71,7 @@ export function useNativePush() {
         const regL = await PushNotifications.addListener("registration", async (token) => {
           console.log("[NativePush] APNs token received, len:", token.value?.length);
           if (!token.value) return;
-          await supabase.from("push_subscriptions" as any)
+          const { error: upsertErr } = await supabase.from("push_subscriptions" as any)
             .upsert({
               user_id: user.id,
               apns_token: token.value,
@@ -58,6 +80,11 @@ export function useNativePush() {
               p256dh: null,
               auth: null,
             } as any, { onConflict: "user_id,apns_token" });
+          if (upsertErr) {
+            console.error("[NativePush] DB upsert FAILED:", upsertErr.message, upsertErr.code);
+          } else {
+            console.log("[NativePush] DB upsert SUCCESS - token saved");
+          }
         });
         removeReg = () => regL.remove();
 
@@ -83,9 +110,11 @@ export function useNativePush() {
         });
         removeAction = () => actL.remove();
 
+        console.log("[NativePush] calling register() - iOS prompt should appear if first time...");
         await PushNotifications.register();
+        console.log("[NativePush] register() returned - waiting for 'registration' event...");
       } catch (err: any) {
-        console.error("[NativePush] init failed:", err?.message ?? err);
+        console.error("[NativePush] init failed:", err?.message ?? err, JSON.stringify(err));
       }
     })();
 
