@@ -192,7 +192,10 @@ const BottomNav = () => {
           Wczesniej left-0 right-0 rozciagal bg na pelna szerokosc na web ale ikonki
           byly w max-w-lg mx-auto - rozjazd. */}
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-background border-t border-border/40 z-50 pb-safe">
-        <div className="grid grid-cols-5 h-12">
+        {/* Web: 3 kolumny (Glowna, Plus, Profil - Eksploruj i Dziennik ukryte).
+            Native: 5 kolumn (wszystko). grid-cols-5 na webie powodowal ze 3
+            ikonki byly zbite po lewej, 2 puste kolumny po prawej. */}
+        <div className={`grid ${isNative ? "grid-cols-5" : "grid-cols-3"} h-12`}>
 
           {/* Główna */}
           <NavLink
