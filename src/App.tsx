@@ -6,6 +6,7 @@ import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from "r
 import { trackPageView } from "@/lib/analytics";
 import { useAuth, AuthProvider } from "@/hooks/useAuth";
 import { AuthDrawerProvider } from "@/hooks/useAuthDrawer";
+import { useNativePush } from "@/hooks/useNativePush";
 import AuthDrawer from "@/components/auth/AuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
@@ -592,6 +593,9 @@ const queryClient = new QueryClient({
 
 function AuthDrawerProviderWrapper({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  // Native iOS APNs registration - tylko gdy user logged in + isNative.
+  // Web/PWA uzywa osobnego usePushNotifications (Service Worker + VAPID).
+  useNativePush();
   return (
     <AuthDrawerProvider user={user} loading={loading}>
       {children}

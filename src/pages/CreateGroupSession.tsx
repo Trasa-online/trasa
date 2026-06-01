@@ -279,13 +279,42 @@ const CreateGroupSession = () => {
     if (selectedFriends.size > 0) {
       setSendingInvites(true);
       const ids = Array.from(selectedFriends);
+
+      // Pobierz imie hosta dla pretty push body (uzywane w title kazdego pusha).
+      const { data: { user } } = await supabase.auth.getUser();
+      let hostName = "Ktoś";
+      if (user?.id) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("first_name, username")
+          .eq("id", user.id)
+          .single();
+        hostName = (prof as any)?.first_name ?? (prof as any)?.username ?? "Ktoś";
+      }
+
       await Promise.allSettled(
-        ids.map(id =>
-          (supabase as any).rpc("send_group_invite", {
+        ids.map(async (id) => {
+          // 1) In-app notification w NotificationsDrawer (RPC: insert do notifications)
+          await (supabase as any).rpc("send_group_invite", {
             p_target_user_id: id,
             p_session_id: createdSessionId,
-          })
-        )
+          });
+          // 2) Push (web+iOS) - best-effort, nie blokuje jesli failuje.
+          //    Klient ma push_subscriptions dla iOS native (APNs) i/lub web (VAPID).
+          //    Brak push = uzytkownik dostanie tylko in-app po wejsciu w apke.
+          try {
+            await supabase.functions.invoke("send-push", {
+              body: {
+                user_id: id,
+                title: "Zaproszenie do sesji 🗺️",
+                body: `${hostName} zaprasza Cię do wspólnego parowania w ${selectedCity}`,
+                url: `/sesja/${createdCode}`,
+              },
+            });
+          } catch {
+            // failed push to nie blocker
+          }
+        })
       );
       setSendingInvites(false);
       posthog.capture("group_invites_sent", { invite_count: ids.length, city: selectedCity });

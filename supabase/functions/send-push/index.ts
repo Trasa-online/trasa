@@ -228,6 +228,99 @@ async function sendWebPush(
   });
 }
 
+// ── APNs (Apple Push Notification service) ──
+//
+// Native iOS push via APNs HTTP/2 API + JWT auth (ES256 z .p8 key).
+// Env vars: APNS_TEAM_ID, APNS_KEY_ID, APNS_PRIVATE_KEY (.p8 PEM as string),
+//   APNS_BUNDLE_ID (default: travel.trasa.app), APNS_USE_PRODUCTION (default false).
+// JWT cached przez 55 min - Apple wymaga < 1h waznosci. cachedJwt persistuje
+// pomiedzy invocations tej samej instancji edge fn (cold start = nowy JWT).
+
+let cachedJwt: { token: string; exp: number } | null = null;
+
+async function getApnsJwt(): Promise<string> {
+  const teamId = Deno.env.get("APNS_TEAM_ID");
+  const keyId = Deno.env.get("APNS_KEY_ID");
+  const privateKeyPem = Deno.env.get("APNS_PRIVATE_KEY");
+  if (!teamId || !keyId || !privateKeyPem) {
+    throw new Error("Missing APNs env (APNS_TEAM_ID, APNS_KEY_ID, APNS_PRIVATE_KEY)");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (cachedJwt && cachedJwt.exp - now > 300) {
+    return cachedJwt.token;
+  }
+
+  // Parse PEM (.p8) -> PKCS8 DER -> CryptoKey (ECDSA P-256)
+  const pemBody = privateKeyPem
+    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+    .replace(/-----END PRIVATE KEY-----/g, "")
+    .replace(/\s/g, "");
+  const padding = "=".repeat((4 - (pemBody.length % 4)) % 4);
+  const binary = atob(pemBody + padding);
+  const der = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) der[i] = binary.charCodeAt(i);
+
+  const key = await crypto.subtle.importKey(
+    "pkcs8",
+    der,
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"]
+  );
+
+  const header = { alg: "ES256", kid: keyId, typ: "JWT" };
+  const payload = { iss: teamId, iat: now };
+
+  const enc = new TextEncoder();
+  const headerB64 = uint8ArrayToBase64Url(enc.encode(JSON.stringify(header)));
+  const payloadB64 = uint8ArrayToBase64Url(enc.encode(JSON.stringify(payload)));
+  const signingInput = `${headerB64}.${payloadB64}`;
+
+  const signature = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    key,
+    enc.encode(signingInput)
+  );
+  const sigB64 = uint8ArrayToBase64Url(new Uint8Array(signature));
+
+  const token = `${signingInput}.${sigB64}`;
+  cachedJwt = { token, exp: now + 3600 };
+  return token;
+}
+
+async function sendApnsPush(
+  deviceToken: string,
+  payload: { title: string; body: string; url?: string }
+): Promise<Response> {
+  const jwt = await getApnsJwt();
+  const bundleId = Deno.env.get("APNS_BUNDLE_ID") ?? "travel.trasa.app";
+  const useProduction = Deno.env.get("APNS_USE_PRODUCTION") === "true";
+  const host = useProduction
+    ? "api.push.apple.com"
+    : "api.sandbox.push.apple.com";
+
+  const apnsBody = JSON.stringify({
+    aps: {
+      alert: { title: payload.title, body: payload.body },
+      sound: "default",
+    },
+    url: payload.url ?? "/",
+  });
+
+  return await fetch(`https://${host}/3/device/${deviceToken}`, {
+    method: "POST",
+    headers: {
+      authorization: `bearer ${jwt}`,
+      "apns-topic": bundleId,
+      "apns-push-type": "alert",
+      "apns-priority": "10",
+      "content-type": "application/json",
+    },
+    body: apnsBody,
+  });
+}
+
 // ── Main handler ──
 
 Deno.serve(async (req) => {
@@ -276,22 +369,40 @@ Deno.serve(async (req) => {
 
     for (const sub of subscriptions) {
       try {
-        const resp = await sendWebPush(
-          { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
-          payloadStr,
-          vapidPublicKey,
-          vapidPrivateKey,
-          vapidSubject
-        );
+        let resp: Response;
 
-        if (resp.ok || resp.status === 201) {
+        // Native iOS: APNs token
+        if ((sub as any).platform === "ios" && (sub as any).apns_token) {
+          resp = await sendApnsPush((sub as any).apns_token, {
+            title,
+            body: body || "",
+            url: url || "/",
+          });
+        }
+        // Web/PWA: VAPID Web Push
+        else if (sub.endpoint && sub.p256dh && sub.auth) {
+          resp = await sendWebPush(
+            { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
+            payloadStr,
+            vapidPublicKey,
+            vapidPrivateKey,
+            vapidSubject
+          );
+        } else {
+          console.warn(`[send-push] subscription ${sub.id} ma niepoprawny format`);
+          failed++;
+          continue;
+        }
+
+        if (resp.ok || resp.status === 201 || resp.status === 200) {
           sent++;
-        } else if (resp.status === 410 || resp.status === 404) {
+        } else if (resp.status === 410 || resp.status === 404 || resp.status === 400) {
+          // 410 Gone (web/apns) lub 400 BadDeviceToken (apns) = subskrypcja nieaktualna
           await supabase.from("push_subscriptions").delete().eq("id", sub.id);
           failed++;
         } else {
-          const errText = await resp.text();
-          console.error(`Push error for ${sub.id}: ${resp.status} ${errText}`);
+          const errText = await resp.text().catch(() => "");
+          console.error(`Push error for ${sub.id}: ${resp.status} ${errText.slice(0, 200)}`);
           failed++;
         }
       } catch (err) {
