@@ -48,7 +48,13 @@ function PostHogBoot({ children }: { children: React.ReactNode }) {
         autocapture: true,
         capture_pageview: true,
         capture_pageleave: true,
+        // GDPR: czekamy na zgode usera (cookie banner). Jesli juz wczesniej
+        // zaakceptowal, opt_in_capturing() ponizej wlaczy tracking.
+        opt_out_capturing_by_default: true,
       });
+      (window as any).posthog = posthog;
+      const existingConsent = localStorage.getItem("trasa_cookie_consent_v2");
+      if (existingConsent === "granted") posthog.opt_in_capturing();
       setState({ Provider: phReact.PostHogProvider, client: posthog });
     });
     return () => { cancelled = true; };

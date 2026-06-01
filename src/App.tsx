@@ -545,6 +545,7 @@ const DemoSession = lazy(() => import("./pages/DemoSession"));
 import ForBusinessPage from "./pages/ForBusinessPage";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 // Lazy loaded - only fetched when the user navigates to that route
 const AppLayout        = lazy(() => import("./components/layout/AppLayout"));
@@ -609,6 +610,7 @@ const App = () => (
           <Route path="/waitlist" element={<WaitlistPage />} />
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route path="/" element={<RootPage />} />
           <Route path="/home" element={<AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
           <Route path="/home-legacy" element={<AppLayout><Home /></AppLayout>} />

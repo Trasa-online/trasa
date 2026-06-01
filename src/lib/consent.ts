@@ -44,19 +44,27 @@ function applyClarityConsent(status: "granted" | "denied", email?: string | null
   }
 }
 
+function applyPosthogConsent(status: "granted" | "denied") {
+  if (typeof window === "undefined") return;
+  const ph = (window as any).posthog;
+  if (!ph) return;
+  if (status === "granted") ph.opt_in_capturing();
+  else ph.opt_out_capturing();
+}
+
 export async function grantConsent() {
   localStorage.setItem(CONSENT_KEY, "granted");
   applyGtagConsent("granted");
+  applyPosthogConsent("granted");
   const { data: { user } } = await supabase.auth.getUser();
   applyClarityConsent("granted", user?.email);
-  // Save to DB in the background (fire & forget)
   void saveConsentToProfile("granted");
   emitConsentResolved();
 }
 
 export function denyConsent() {
   localStorage.setItem(CONSENT_KEY, "denied");
-  // analytics_storage remains 'denied' - no gtag update needed
+  applyPosthogConsent("denied");
   void saveConsentToProfile("denied");
   emitConsentResolved();
 }
@@ -91,7 +99,10 @@ export async function syncConsentFromProfile(): Promise<boolean> {
     localStorage.setItem(CONSENT_KEY, dbConsent);
     if (dbConsent === "granted") {
       applyGtagConsent("granted");
+      applyPosthogConsent("granted");
       applyClarityConsent("granted", user.email);
+    } else {
+      applyPosthogConsent("denied");
     }
     return false;
   }
