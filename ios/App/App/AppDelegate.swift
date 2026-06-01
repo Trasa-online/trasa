@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,7 +8,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Foreground push notifications - bez tego iOS nie pokazuje banneru gdy apka
+        // jest aktywna (default behaviour). Apki typu Instagram/Discord/Spotify maja
+        // ten override - banner + sound nawet w foreground.
+        UNUserNotificationCenter.current().delegate = self
         return true
     }
 
@@ -59,4 +63,33 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
     }
 
+}
+
+// MARK: - Foreground Notifications
+// iOS domyslnie NIE pokazuje banneru push gdy apka jest aktywna. Zwracajac
+// [.banner, .sound, .badge, .list] w willPresent mowimy systemowi: pokaz tak
+// jakby apka byla w background. Konwencja typu Instagram/Discord/Spotify.
+//
+// Plus: gdy user tapnie banner foreground push -> didReceive jest callowane.
+// Forwardujemy to do Capacitor plugin'a tak samo jak background pushes.
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        if #available(iOS 14.0, *) {
+            completionHandler([.banner, .sound, .badge, .list])
+        } else {
+            completionHandler([.alert, .sound, .badge])
+        }
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        NotificationCenter.default.post(
+            name: Notification.Name(rawValue: "didReceiveRemoteNotification"),
+            object: response.notification.request.content.userInfo
+        )
+        completionHandler()
+    }
 }
