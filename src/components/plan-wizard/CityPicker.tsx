@@ -226,7 +226,7 @@ const CityPicker = ({ onConfirm }: CityPickerProps) => {
       <div className="mx-5 mb-3 px-4 py-3 rounded-2xl bg-background border border-border space-y-2 shadow-sm shrink-0">
         <p className="text-xs font-semibold text-foreground">Nie widzisz swojego miasta?</p>
         <div className="flex gap-2">
-          <Input type="text" placeholder="Wpisz nazwę miasta" value={notifyCity} onChange={e => setNotifyCity(e.target.value)} className="h-8 text-xs flex-1" onKeyDown={e => e.key === "Enter" && handleNotify()} />
+          <Input type="text" placeholder="Wpisz nazwę miasta" value={notifyCity} onChange={e => setNotifyCity(e.target.value)} className="h-8 text-base flex-1" onKeyDown={e => e.key === "Enter" && handleNotify()} />
           <Button size="sm" variant="outline" onClick={handleNotify} className="h-8 text-xs px-3 shrink-0">Wyślij</Button>
         </div>
         <p className="text-[10px] text-foreground/60 leading-relaxed">

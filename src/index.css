@@ -181,6 +181,13 @@ html, body {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
+  /* Cienszka, bardziej "Apple-owa" typografia na native + Retina. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Wylacza rubber-band bounce na koncu root scroll (widac szare tlo WebView
+     pod contentem). Zostawiamy bounce tam gdzie jest naturalny (feed, listy)
+     przez overflow-y: auto na konkretnych divach. */
+  overscroll-behavior: none;
 }
 input, textarea, [contenteditable="true"], [contenteditable=""] {
   -webkit-user-select: text;
