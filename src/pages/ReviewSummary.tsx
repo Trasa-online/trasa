@@ -29,6 +29,18 @@ const ReviewSummary = () => {
   const routeId = searchParams.get("route");
   const isNewCompletion = searchParams.get("new") === "1";
 
+  // Badge "Nowa trasa!" w JournalTab znika po wejsciu w wpis. JournalTab robi to
+  // optymistycznie zanim nawiguje, ale gdy user wchodzi bezposrednio (push
+  // notification, deep link, share link) - tam JournalTab nie odpalil. Tutaj
+  // backup: na mount route'a, jesli routes.new_for_users zawiera nas, RPC
+  // dismiss + invalidate cache w JournalTab.
+  useEffect(() => {
+    if (!routeId || !user) return;
+    void supabase.rpc("dismiss_route_badge", { p_route_id: routeId } as any).then(() => {
+      queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
+    });
+  }, [routeId, user, queryClient]);
+
   const [narrative, setNarrative] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const [isPublic, setIsPublic] = useState(true);

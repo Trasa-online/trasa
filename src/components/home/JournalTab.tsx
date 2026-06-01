@@ -124,7 +124,21 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         return (
           <div
             key={entry.id}
-            onClick={() => navigate(`/review-summary?route=${entry.id}`)}
+            onClick={async () => {
+              // Optymistycznie ukryj badge "Nowa trasa!" - update cache zanim nawiguje.
+              // Server-side dismiss leci w tle przez RPC dismiss_route_badge, ktore
+              // wywoluje array_remove(new_for_users, auth.uid()) na routes.
+              if (entry.new_for_users?.includes(userId)) {
+                queryClient.setQueryData(["journal-entries", userId], (old: any) =>
+                  (old ?? []).map((e: any) => e.id === entry.id
+                    ? { ...e, new_for_users: (e.new_for_users ?? []).filter((u: string) => u !== userId) }
+                    : e
+                  )
+                );
+                void supabase.rpc("dismiss_route_badge", { p_route_id: entry.id });
+              }
+              navigate(`/review-summary?route=${entry.id}`);
+            }}
             className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform cursor-pointer"
           >
             {/* Cover photo */}
