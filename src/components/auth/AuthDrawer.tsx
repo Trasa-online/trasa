@@ -18,7 +18,7 @@ type Mode = "login" | "register";
 
 const AuthDrawer = () => {
   const { isOpen, mode: initialMode, hint, close } = useAuthDrawer();
-  const { isAnonymous } = useAuth();
+  const { isAnonymous, user } = useAuth();
   const { t } = useTranslation("auth");
   const posthog = usePostHog();
 
@@ -57,6 +57,17 @@ const AuthDrawer = () => {
       setLoading(false);
     }
   }, [isOpen]);
+
+  // OAuth zwraca usera dopiero po redirect/deep linku - nie z handleOAuth.
+  // Domykamy drawer i resetujemy loading dopiero gdy user state faktycznie sie
+  // zmienil na non-null. To jedyne miejsce ktore zamyka po OAuth (handleLogin
+  // dla email/hasla zamyka jawnie close() po sukcesie).
+  useEffect(() => {
+    if (user && !isAnonymous && isOpen) {
+      setLoading(false);
+      close();
+    }
+  }, [user, isAnonymous, isOpen, close]);
 
   const handleOAuth = async (provider: "apple" | "google") => {
     setLoading(true);

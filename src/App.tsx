@@ -577,7 +577,18 @@ const BusinessOnePager  = lazy(() => import("./pages/BusinessOnePager"));
 const BusinessStart     = lazy(() => import("./pages/BusinessStart"));
 const BusinessLanding   = lazy(() => import("./pages/BusinessLanding"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Po wlaczeniu internetu po offline - automatyczny refetch wszystkich
+      // aktywnych queries. Bez tego user widzial bialy ekran / "brak miejsc"
+      // dopoki nie zrobil page reload (test Network edge cases / airplane mode).
+      refetchOnReconnect: "always",
+      retry: 2,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+    },
+  },
+});
 
 function AuthDrawerProviderWrapper({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
