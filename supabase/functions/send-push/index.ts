@@ -246,6 +246,19 @@ async function getApnsJwt(): Promise<string> {
     throw new Error("Missing APNs env (APNS_TEAM_ID, APNS_KEY_ID, APNS_PRIVATE_KEY)");
   }
 
+  // Diagnostyka env vars (bezpiecznie - bez ujawniania pelnego klucza)
+  console.log("[apns] env check", {
+    team_id: teamId, // public id, OK pokazac
+    team_id_len: teamId.length,
+    key_id: keyId, // public id, OK pokazac
+    key_id_len: keyId.length,
+    pem_len: privateKeyPem.length,
+    pem_starts_with_BEGIN: privateKeyPem.trim().startsWith("-----BEGIN PRIVATE KEY-----"),
+    pem_ends_with_END: privateKeyPem.trim().endsWith("-----END PRIVATE KEY-----"),
+    pem_first_20: privateKeyPem.slice(0, 20).replace(/\n/g, "\\n"),
+    pem_last_20: privateKeyPem.slice(-20).replace(/\n/g, "\\n"),
+  });
+
   const now = Math.floor(Date.now() / 1000);
   if (cachedJwt && cachedJwt.exp - now > 300) {
     return cachedJwt.token;
@@ -256,18 +269,36 @@ async function getApnsJwt(): Promise<string> {
     .replace(/-----BEGIN PRIVATE KEY-----/g, "")
     .replace(/-----END PRIVATE KEY-----/g, "")
     .replace(/\s/g, "");
-  const padding = "=".repeat((4 - (pemBody.length % 4)) % 4);
-  const binary = atob(pemBody + padding);
-  const der = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) der[i] = binary.charCodeAt(i);
+  console.log("[apns] PEM parsed, body length:", pemBody.length);
 
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    der,
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"]
-  );
+  if (pemBody.length === 0) {
+    throw new Error("APNS_PRIVATE_KEY is empty after stripping headers");
+  }
+
+  const padding = "=".repeat((4 - (pemBody.length % 4)) % 4);
+  let der: Uint8Array;
+  try {
+    const binary = atob(pemBody + padding);
+    der = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) der[i] = binary.charCodeAt(i);
+    console.log("[apns] DER bytes length:", der.length);
+  } catch (err: any) {
+    throw new Error(`Failed to decode PRIVATE_KEY base64: ${err.message}`);
+  }
+
+  let key: CryptoKey;
+  try {
+    key = await crypto.subtle.importKey(
+      "pkcs8",
+      der,
+      { name: "ECDSA", namedCurve: "P-256" },
+      false,
+      ["sign"]
+    );
+    console.log("[apns] crypto key imported successfully");
+  } catch (err: any) {
+    throw new Error(`Failed to import PKCS8 key: ${err.message}. Czy .p8 ma poprawny format?`);
+  }
 
   const header = { alg: "ES256", kid: keyId, typ: "JWT" };
   const payload = { iss: teamId, iat: now };
