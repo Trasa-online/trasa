@@ -61,8 +61,7 @@ const Terms = () => {
           <h2 className="font-bold text-base mb-2">3. Zakres usług</h2>
           <p className="text-muted-foreground">Aplikacja umożliwia:</p>
           <ul className="text-muted-foreground list-disc list-inside mt-1 space-y-1">
-            <li>planowanie tras i&nbsp;wycieczek z&nbsp;pomocą AI,</li>
-            <li>prowadzenie dziennika podróży przez rozmowę z&nbsp;asystentem AI,</li>
+            <li>planowanie tras i&nbsp;wycieczek z&nbsp;dopasowaniem opartym na AI,</li>
             <li>prowadzenie dziennika podróży w&nbsp;formie zapisanych tras, recenzji odwiedzonych miejsc oraz udostępnionych przez siebie zdjęć,</li>
             <li>przeglądanie własnych zapisanych tras, recenzji oraz zdjęć,</li>
             <li>wspólne planowanie tras z&nbsp;innymi użytkownikami (tryb grupowy).</li>

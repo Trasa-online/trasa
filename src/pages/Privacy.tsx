@@ -34,7 +34,6 @@ const Privacy = () => {
             <li>nazwę użytkownika i&nbsp;zdjęcie profilowe,</li>
             <li>historię tras, odwiedzonych miejsc i&nbsp;Twoich reakcji na miejsca,</li>
             <li>preferencje podróżnicze (na potrzeby personalizacji),</li>
-            <li>treści rozmów z&nbsp;asystentem AI,</li>
             <li>zdjęcia dodawane do dziennika podróży,</li>
             <li>identyfikator urządzenia i&nbsp;informacje techniczne (typ urządzenia, system, wersja Aplikacji).</li>
           </ul>
@@ -60,7 +59,7 @@ const Privacy = () => {
         <section>
           <h2 className="font-bold text-base mb-2">4. Profilowanie AI</h2>
           <p className="text-muted-foreground">
-            Aplikacja tworzy spersonalizowany profil Twoich preferencji podróżniczych na podstawie reakcji na miejsca, historii tras i&nbsp;treści rozmów z&nbsp;asystentem AI.
+            Aplikacja tworzy spersonalizowany profil Twoich preferencji podróżniczych na podstawie reakcji na miejsca i&nbsp;historii tras.
           </p>
           <p className="text-muted-foreground mt-2">
             Profilowanie odbywa się wyłącznie za Twoją wyraźną zgodą udzieloną podczas konfiguracji konta. Możesz wycofać tę zgodę w&nbsp;dowolnym momencie w&nbsp;Ustawieniach Aplikacji.
@@ -120,7 +119,7 @@ const Privacy = () => {
           <p className="text-muted-foreground">Korzystamy z&nbsp;następujących dostawców usług, którym powierzamy przetwarzanie danych:</p>
           <ul className="text-muted-foreground list-disc list-inside mt-1 space-y-1">
             <li><strong>Supabase</strong> - baza danych i&nbsp;uwierzytelnianie (serwery w&nbsp;UE),</li>
-            <li><strong>Google Gemini</strong> - przetwarzanie zapytań AI (zapytanie + odpowiedź),</li>
+            <li><strong>Google Gemini</strong> - przetwarzanie AI w&nbsp;celu dopasowania miejsc i&nbsp;generowania rekomendacji,</li>
             <li><strong>Google Maps / Google Places API</strong> - mapy i&nbsp;wyszukiwanie miejsc (przekazujemy zapytanie tekstowe, np. nazwę miasta),</li>
             <li><strong>Apple (Sign in with Apple)</strong> - opcjonalne logowanie przez Apple ID,</li>
             <li><strong>Google (OAuth)</strong> - opcjonalne logowanie przez konto Google,</li>
