@@ -20,6 +20,17 @@ const config: CapacitorConfig = {
       splashImmersive: false,
       splashFullScreen: false,
     },
+    Keyboard: {
+      // 'native' - iOS sam przesuwa viewport gdy klawiatura sie pokazuje
+      // (bez recznego 100vh workaroundu w CSS). Inputy w dolnej polowie ekranu
+      // (CityPicker, UserSearch, EditPlan) nie sa zaslaniane przez klawiature.
+      resize: 'native',
+      // Klawiatura ma styl native iOS (jasna na jasnym tle, ciemna na ciemnym)
+      style: 'default',
+      // Wymusza rerender contentu po pojawieniu klawiatury - czasem fix dla
+      // niespodziewanych blank spaces u dolu ekranu.
+      resizeOnFullScreen: true,
+    },
   },
 };
 

@@ -8,6 +8,9 @@ import CreatePolecajkaSheet from "@/components/home/CreatePolecajkaSheet";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
+import { isNative } from "@/lib/platform";
+import { Camera as CapCamera } from "@capacitor/camera";
+import { toast } from "sonner";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -195,15 +198,14 @@ const ReviewSummary = () => {
     saveNarrative(value);
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
+  const processFiles = async (files: File[]) => {
     if (!files.length || !routeId || !user) return;
     setUploading(true);
     const newUrls: string[] = [];
     for (const file of files.slice(0, 15 - photos.length)) {
       try {
         const compressed = await compressImage(file, 1200, 1200, 0.8);
-        const path = `${user.id}/${routeId}/review_${Date.now()}.jpg`;
+        const path = `${user.id}/${routeId}/review_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
         const { error } = await supabase.storage
           .from("route-images")
           .upload(path, compressed, { contentType: "image/jpeg", upsert: false });
@@ -216,7 +218,47 @@ const ReviewSummary = () => {
       await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
     }
     setUploading(false);
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    await processFiles(Array.from(e.target.files ?? []));
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleNativePhotoPick = async () => {
+    if (uploading) return;
+    const remaining = 15 - photos.length;
+    if (remaining <= 0) return;
+    try {
+      const result = await CapCamera.pickImages({
+        quality: 90,
+        limit: remaining,
+        width: 1200,
+        height: 1200,
+      });
+      const files: File[] = [];
+      for (const photo of result.photos) {
+        if (!photo.webPath) continue;
+        try {
+          const response = await fetch(photo.webPath);
+          const blob = await response.blob();
+          const format = photo.format || "jpeg";
+          const mime = format === "png" ? "image/png" : "image/jpeg";
+          files.push(new File([blob], `review-${Date.now()}-${files.length}.${format}`, { type: mime }));
+        } catch {}
+      }
+      if (files.length) await processFiles(files);
+    } catch (err: any) {
+      const msg = String(err?.message ?? err);
+      if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("denied")) return;
+      console.error("[ReviewSummary] native photo pick failed:", msg);
+      toast.error("Nie udało się wybrać zdjęć");
+    }
+  };
+
+  const triggerPhotoPick = () => {
+    if (isNative) handleNativePhotoPick();
+    else fileInputRef.current?.click();
   };
 
   const removePhoto = async (url: string) => {
@@ -438,7 +480,7 @@ const ReviewSummary = () => {
             </p>
             {photos.length > 0 && photos.length < 15 && (
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={triggerPhotoPick}
                 disabled={uploading}
                 className="text-xs font-semibold text-primary"
               >
@@ -477,7 +519,7 @@ const ReviewSummary = () => {
               ))}
               {photos.length < 15 && (
                 <button
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={triggerPhotoPick}
                   disabled={uploading}
                   className="flex-shrink-0 w-32 h-32 rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-1.5 text-muted-foreground"
                 >
@@ -488,7 +530,7 @@ const ReviewSummary = () => {
             </div>
           ) : (
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={triggerPhotoPick}
               disabled={uploading}
               className="mx-5 w-[calc(100%-40px)] h-24 rounded-2xl border-2 border-dashed border-border/40 flex items-center justify-center gap-2.5 text-muted-foreground active:bg-muted/40 transition-colors"
             >
