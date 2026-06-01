@@ -46,4 +46,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
+    // MARK: - Push Notifications
+    // Capacitor PushNotifications plugin czeka na te dwa events przez
+    // NotificationCenter. iOS calluje te metody w AppDelegate gdy APNs zwroci
+    // token (lub error). Bez forwarding event'ow nasz JS listener nigdy nie
+    // dostanie tokenu - register() w pluginie wisi w nieskonczonosc.
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+
 }
