@@ -1,4 +1,4 @@
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronUp, ChevronDown, Plus } from "lucide-react";
 
 interface TimelinePin {
   place_name: string;
@@ -27,6 +27,20 @@ const RoutePlanTimeline = ({ days, totalDays, onMovePin }: RoutePlanTimelineProp
               Dzień #{day.day_number} z {totalDays}
             </h3>
           )}
+          {day.pins.length === 0 ? (
+            // Pusty dzien - user wybral za malo polubionych miejsc na N dni.
+            // AI musi zwracac pins:[] zamiast placeholder fake miejsc (bug fix
+            // 2026-06-02 dla "Wieczorny spacer po Pradze-Polnoc" itp).
+            <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-6 flex flex-col items-center gap-2 text-center">
+              <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                <Plus className="h-5 w-5 text-orange-600" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">Ten dzień czeka na Twoje miejsca</p>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-[280px]">
+                Wybierz więcej miejsc w&nbsp;edycji trasy, żeby uzupełnić ten dzień.
+              </p>
+            </div>
+          ) : (
           <div className="space-y-0">
             {day.pins.map((pin, idx) => {
               const isLast = idx === day.pins.length - 1;
@@ -72,6 +86,7 @@ const RoutePlanTimeline = ({ days, totalDays, onMovePin }: RoutePlanTimelineProp
               );
             })}
           </div>
+          )}
         </div>
       ))}
     </div>
