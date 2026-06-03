@@ -288,6 +288,63 @@ function MotywyRow({
   );
 }
 
+// Polecajki tworzone przez uzytkownikow (discovery_collections z user_id != null).
+// Pokazujemy karty w formacie zblizonym do PolecaneRow (hero 16:10 + tytul + miasto
+// + autor + licznik miejsc). Tap otwiera CollectionDetail Sheet jak fallback.
+function UserPolecajkiRow({
+  collections,
+  onOpen,
+}: {
+  collections: DiscoveryCollection[];
+  onOpen: (col: DiscoveryCollection) => void;
+}) {
+  return (
+    <div>
+      <p className="text-sm font-bold mb-2 px-1">Polecajki od użytkowników</p>
+      <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
+        {collections.map((col, idx) => {
+          const photoItem = col.items.find((i) => i.photo_url) ?? col.items[0];
+          const gradient = PLACEHOLDER_GRADIENTS[idx % PLACEHOLDER_GRADIENTS.length];
+          const placesCount = col.items.length;
+          return (
+            <button
+              key={col.id}
+              onClick={() => onOpen(col)}
+              className="shrink-0 w-[68vw] max-w-[280px] rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.97] transition-transform snap-start"
+            >
+              <div className="aspect-[16/10] w-full overflow-hidden bg-muted relative">
+                {photoItem?.photo_url ? (
+                  <img src={photoItem.photo_url} alt={col.title} className="w-full h-full object-cover" loading="lazy" />
+                ) : (
+                  <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+                    <span className="text-3xl opacity-60">📍</span>
+                  </div>
+                )}
+                {placesCount > 0 && (
+                  <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm text-[10px] font-semibold text-white">
+                    {placesCount} {placesCount === 1 ? "miejsce" : placesCount < 5 ? "miejsca" : "miejsc"}
+                  </div>
+                )}
+              </div>
+              <div className="px-3.5 py-2.5 space-y-1">
+                <p className="font-bold text-sm leading-snug line-clamp-2">{col.title}</p>
+                {col.city && (
+                  <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                    <MapPin className="h-3 w-3" />
+                    {col.city}
+                  </div>
+                )}
+                <AuthorChip name={col.author_name} avatar={col.author_avatar} />
+              </div>
+            </button>
+          );
+        })}
+        <div className="shrink-0 w-2" />
+      </div>
+    </div>
+  );
+}
+
 function PolecaneRow({
   entries,
   onCreatorOpen,
@@ -492,6 +549,36 @@ export default function DiscoveryFeed() {
 
   const bothEmpty = !motywyLoading && !polecaneLoading && motywy.length === 0 && polecane.length === 0;
 
+  // Polecajki tworzone przez uzytkownikow (user_id != null) - feed user-generated
+  // content w odroznieniu od admin curated motywow. Zawsze enabled (nie tylko gdy
+  // bothEmpty), pokazuje top 10 najnowszych. Empty state = brak sekcji.
+  const { data: userPolecajki = [] } = useQuery({
+    queryKey: ["user-polecajki"],
+    queryFn: async () => {
+      const { data: cols, error } = await (supabase as any)
+        .from("discovery_collections")
+        .select("id, title, city, description, author_name, author_avatar")
+        .eq("is_public", true)
+        .not("user_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error || !cols?.length) return [] as DiscoveryCollection[];
+
+      const ids = cols.map((c: any) => c.id);
+      const { data: items } = await (supabase as any)
+        .from("discovery_items")
+        .select("id, collection_id, order_index, place_name, short_desc, photo_url, latitude, longitude")
+        .in("collection_id", ids)
+        .order("order_index", { ascending: true });
+
+      return cols.map((col: any): DiscoveryCollection => ({
+        ...col,
+        items: (items ?? []).filter((i: any) => i.collection_id === col.id),
+      }));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: fallbackCollections = [] } = useQuery({
     queryKey: ["discovery-fallback"],
     queryFn: async () => {
@@ -555,6 +642,7 @@ export default function DiscoveryFeed() {
       ) : (
         <div className="space-y-5">
           {motywy.length > 0 && <MotywyRow collections={motywy} onOpen={setActiveCol} />}
+          {userPolecajki.length > 0 && <UserPolecajkiRow collections={userPolecajki} onOpen={setActiveCol} />}
           {polecane.length > 0 && <PolecaneRow entries={polecane} onCreatorOpen={setActiveCreator} />}
           {bothEmpty && fallbackCollections.length > 0 && (
             <div>
