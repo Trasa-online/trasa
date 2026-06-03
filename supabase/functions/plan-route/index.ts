@@ -96,8 +96,7 @@ function buildRouteExamplesContext(examples: any[]): string {
   return `## 🏆 WZORCOWE TRASY (zatwierdzone przez redakcję TRASA)\nPoniższe trasy zostały ocenione jako idealne dla Krakowa. Planuj w podobnym rytmie, logice geograficznej i strukturze dnia:\n\n${lines.join("\n\n")}`;
 }
 
-function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string, superLikedPlaces?: string[], previousDayPlaces?: string[], previousDayCategoryCounts?: Record<string, number>, restrictToLiked?: boolean, extendMode?: boolean): string {
-  const isNightlife = preferences.priorities.includes("nightlife") || (userProfile?.travel_interests ?? []).includes("nightlife");
+function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, _userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string, superLikedPlaces?: string[], previousDayPlaces?: string[], previousDayCategoryCounts?: Record<string, number>, restrictToLiked?: boolean, extendMode?: boolean): string {
   const timeInfo = currentTime ? `- Aktualna godzina: ${currentTime} — planuj miejsca dostępne od tej pory, nie zaczynaj od miejsc które są już zamknięte lub których opening hours zaczyna się wcześniej` : "";
   const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}${currentTime ? " (dziś)" : ""}` : "";
   const cityInfo = preferences.city?.trim() ? `- Destynacja: ${preferences.city.trim()}` : "";
@@ -123,24 +122,6 @@ function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, user
     ? `\n\n## AKTUALNY PLAN (do edycji)\n${JSON.stringify(currentPlan, null, 2)}`
     : "";
 
-  const dietaryLabels = (userProfile?.dietary_prefs ?? []).map(k => DIETARY_LABEL[k] ?? k).filter(Boolean);
-  const interestLabels = (userProfile?.travel_interests ?? []).map(k => INTERESTS_LABEL[k] ?? k).filter(Boolean);
-
-  const userProfileContext = (dietaryLabels.length > 0 || interestLabels.length > 0)
-    ? `\n## PROFIL UŻYTKOWNIKA\n${dietaryLabels.length > 0 ? `- Dieta/jedzenie: ${dietaryLabels.join(", ")}\n` : ""}${interestLabels.length > 0 ? `- Zainteresowania i styl: ${interestLabels.join(", ")}\n` : ""}Uwzględnij te preferencje przy doborze miejsc, restauracji i kolejności trasy.`
-    : "";
-
-  const isRomantic = (userProfile?.travel_interests ?? []).includes("romantic");
-  const isFamily = (userProfile?.travel_interests ?? []).includes("family");
-
-  const prioritiesPL = preferences.priorities.length > 0
-    ? preferences.priorities.map(p => PRIORITY_LABEL_PL[p] ?? p).join(", ")
-    : null;
-
-  const maxPins = preferences.pace === "active" ? "7–8" : preferences.pace === "calm" ? "3–5" : isRomantic ? "4–5" : isNightlife ? "5–6 + 1–2 bary/kluby" : "5–6";
-  const maxMuseums = isRomantic ? "0 lub 1" : "1";
-  const dinnerEarliest = isRomantic ? "19:00" : isNightlife ? "18:00" : "18:30";
-
   return `Jesteś planistą podróży w aplikacji TRASA. Twoje plany muszą być realistyczne, przestrzennie spójne i emocjonalnie satysfakcjonujące.
 ${restrictToLiked && likedPlaces?.length ? `
 ## 🚨 ZASADA NUMER 1 (NAJWAŻNIEJSZA - NIE ŁAM JEJ NIGDY)
@@ -156,9 +137,9 @@ User wybrał konkretne ${likedPlaces.length} miejsc(a) i chce trasy TYLKO z nich
 - Jeśli liczba miejsc usera < ${preferences.numDays} × 5 (czyli mniej niż optymalna na ${preferences.numDays} dni), MUSISZ zostawić pusty dzień: \`"pins": []\`
 - Aplikacja pokaże user'owi empty state ZAMIAST fake'ów - to jest właściwe zachowanie
 - Jeśli user ma 3 miejsca + 3 dni → Dzień 1: 3 miejsca, Dzień 2: pins:[], Dzień 3: pins:[]
-- Jeśli user ma 5 miejsc + 2 dni → Dzień 1: 3 miejsca, Dzień 2: 2 miejsca (NIE wypełniaj do 5 na dzień)
+- Jeśli user ma 5 miejsc + 2 dni → Dzień 1: 3 miejsca, Dzień 2: 2 miejsca
 
-LIMITY PUNKTÓW NA DZIEŃ (z H2) NIE STOSUJĄ SIĘ tu - liczba punktów = liczba polubionych miejsc, koniec.
+Liczba punktów w planie = liczba polubionych miejsc. Bez sztucznych górnych limitów.
 
 Jeśli złamiesz tę regułę, plan zostanie ODRZUCONY przez post-processing servera i user dostanie błąd "AI wymyślił miejsca - spróbuj ponownie".
 ` : ""}${extendMode && currentPlan ? `
@@ -170,7 +151,7 @@ User właśnie wrócił z swipera z dodatkowymi polubionymi miejscami i chce, ż
 
 1. **Nie zmieniaj dni, które już mają pins** - jeśli Dzień 1 ma 3 miejsca w obecnym planie, dzień 1 musi mieć dokładnie te 3 miejsca w odpowiedzi (same nazwy, sama kolejność). NIE wymieniaj, NIE dodawaj, NIE usuwaj.
 
-2. **Wypełniaj TYLKO puste dni** (\`pins: []\` w AKTUALNYM PLANIE) - rozdzielaj nowe polubione miejsca między te dni z zachowaniem heurystyk H1-H8 (klaster dzielnicowy, kulminacja, godziny otwarcia).
+2. **Wypełniaj TYLKO puste dni** (\`pins: []\` w AKTUALNYM PLANIE) - rozdzielaj nowe polubione miejsca między te dni z zachowaniem heurystyk H1, H4-H6, H8 (klaster dzielnicowy, godziny otwarcia, logika przejść).
 
 3. **Używaj WYŁĄCZNIE polubionych miejsc** (lista poniżej "🔒 TYLKO TE MIEJSCA" lub "🎯 MIEJSCA DO UWZGLĘDNIENIA"). Nie wymyślaj nowych nazw, nie dodawaj generycznych haseł.
 
@@ -182,14 +163,11 @@ Plan zwracany w EXTEND MODE musi mieć tę samą liczbę dni co AKTUALNY PLAN. K
 ` : ""}
 ## PREFERENCJE USERA
 - Liczba dni: ${preferences.numDays}
-- Tempo: ${preferences.pace === "active" ? "aktywne (dużo zwiedzania)" : preferences.pace === "calm" ? "spokojne (mniej miejsc, więcej czasu)" : "mieszane"}
-- Priorytety: ${prioritiesPL ?? "brak konkretnych"}
 ${dateInfo}
 ${timeInfo}
 ${cityInfo}
 ${dayInfo}
 ${startInfo}
-${userProfileContext}
 ${currentPlanContext}
 ${previousDaysContext ? `\n## 🧠 PAMIĘĆ — POPRZEDNIE DNI TEJ PODRÓŻY\nPoniżej feedback z poprzednich dni tej samej podróży.\n\n${previousDaysContext}\n\nJAK UŻYWAĆ:\n- NIE modyfikuj planu automatycznie bez zgody usera.\n- Gdy user potwierdzi zmiany — uwzględnij feedback przy generowaniu planu.\n- Gdy generujesz plan, dodaj 1 zdanie co uwzględniłeś (np. "Unikam zatłoczonych miejsc przed 12").\n` : ""}${memoryContext ? `\n## 💡 DŁUGOTERMINOWE PREFERENCJE UŻYTKOWNIKA\nZ poprzednich podróży wiem o tym userze:\n\n${memoryContext}\n\nUwzględnij te preferencje przy wyborze miejsc i stylu planu. Nie wspominaj wprost że "pamiętasz" — po prostu planuj zgodnie z nimi.\n` : ""}
 ${cityKnown ? `\n## ⚠️ KLUCZOWA ZASADA\nUser wpisał już destynację: „${cityName}". NIE pytaj gdzie jedzie — to już wiesz.\n` : ""}
@@ -224,26 +202,15 @@ Jeśli masz wszystko — przejdź bezpośrednio do generowania planu.
 ## HEURYSTYKI PLANOWANIA — OBOWIĄZKOWE
 
 ### H1. STRUKTURA ENERGETYCZNA DNIA
-Każdy dzień MUSI respektować ten rytm (dostosuj godziny do podanego startu):
+Każdy dzień powinien mieć naturalny rytm:
 
-Faza START (+0h od startu): Landmark / spacer / zabytek
-Faza LUNCH (+2.5h): Restauracja
-Faza ODKRYWANIE (+4h): Dzielnica / kultura / park
-Faza RESET (+7h): Kawiarnia / chill / odpoczynek
-Faza KULMINACJA (+9h od startu): Kolacja + widok / wieczorny spacer
+Faza START: Landmark / spacer / zabytek
+Faza LUNCH: Restauracja
+Faza ODKRYWANIE: Dzielnica / kultura / park
+Faza RESET: Kawiarnia / chill / odpoczynek
+Faza KULMINACJA: Kolacja + widok / wieczorny spacer
 
-### H2. LIMITY PUNKTÓW (jakość > ilość)
-- Łącznie na dzień: max ${maxPins} punktów
-- Muzea: max ${maxMuseums} dziennie
-- Nie przepełniaj planu — każde miejsce musi mieć czas na oddychanie
-
-### H3. KULMINACJA EMOCJONALNA (OBOWIĄZKOWA)
-Każdy dzień MUSI kończyć się JEDNYM z:
-- kolacją w klimatycznym miejscu (atmosfera, widok, wino — nie fast food)
-- punktem widokowym o zachodzie słońca
-- wieczornym spacerem nad rzeką / przez park / klimatyczną dzielnicą
-${isNightlife ? "- barem / pubem / klubem jako ostatni punkt (PREFEROWANE przy priorytecie nocnym)" : ""}
-Brak kulminacji = słaby plan. Zawsze sprawdź czy ostatni punkt spełnia to kryterium.
+Ramy czasowe dopasuj do tego co user podał (godziny aktywności) — bez sztywnych przedziałów.
 
 ### H4. KLASTER DZIELNICOWY
 - Grupuj miejsca w promieniu 1–1.5 km od siebie
@@ -260,64 +227,10 @@ Brak kulminacji = słaby plan. Zawsze sprawdź czy ostatni punkt spełnia to kry
 - Wyjątek: max 1 dłuższe przejście dziennie (transport, wyjazd z centrum)
 - Przejścia muszą mieć sens geograficzny — nie skaczemy po mapie
 
-### H7. SYMULACJA CZASU — BLOKI CZASOWE
-Obliczaj suggested_time realistycznie na podstawie tych bloków:
-- Landmark / zabytek / kościół: 60–90 min wizyty
-- Muzeum: 120–180 min wizyty
-- Lunch: 60–90 min
-- Kawiarnia / reset: 45–60 min
-- Park / spacer dzielnicy: 45–90 min
-- Kolacja: 90–120 min
-- Punkt widokowy: 30–45 min
-
-suggested_time to GODZINA PRZYBYCIA. Następne miejsce = poprzednie suggested_time + duration_minutes + czas dojścia.
-
 ### H8. GODZINY OTWARCIA
 - Muzea: zwykle 10:00–18:00; nie planuj wizyty po 16:00 jeśli trwa 2h+
-- Kolacja: najwcześniej ${dinnerEarliest}
 - Poniedziałki: wiele muzeów zamkniętych — sprawdź przed wstawieniem
-${isRomantic ? `
-### H9–H11. TRYB ROMANTYCZNY ✓ (aktywny na podstawie profilu)
-
-H9. OGRANICZONA INTENSYWNOŚĆ
-- Max 8–10 km spaceru dziennie
-- Minimum 1 „moment bez celu" w planie: kawiarnia bez pośpiechu, ławka z widokiem, bulwar
-- Brak ekstremalnych tras — chodzi o bycie razem, nie o zaliczanie
-
-H10. KLIMAT > POPULARNOŚĆ
-- Gdy dwa miejsca mają podobny rating — wybierz kameralniejsze
-- Unikaj zatłoczonych, głośnych, fast-paced lokali
-- Preferuj: wine bary, tarasy z widokiem, klimatyczne podwórka, boczne zaułki, kameralne kawiarnie
-
-H11. MOMENT PRYWATNOŚCI (obowiązkowy)
-- Każdy dzień: minimum 1 mniej zatłoczone miejsce (ogród, bulwar, boczna uliczka, mniej centralna kawiarnia)
-- Romantyczny dzień ≠ lista top-10 TripAdvisor — balans między ikonicznymi miejscami a intymnością
-` : ""}${isFamily ? `
-### TRYB RODZINNY ✓
-- Planuj przerwy co 1.5–2h
-- Priorytet: parki, place zabaw, muzea interaktywne
-- Unikaj długich marszów bez punktu docelowego
-- Lunch obowiązkowo; kolacja wcześniej (17:30–19:00)
-` : ""}
-${isNightlife ? `### TRYB NOCNY ✓ (aktywny — priorytet: życie nocne)
-
-H_NL1. STRUKTURA DNIA NOCNEGO
-- Plan dzieli się na 2 fazy: DZIENNA (atrakcje, jedzenie) + NOCNA (bary, klimatyczne miejsca, klub)
-- Kolacja WCZEŚNIE: 18:00–19:00 — żeby mieć energię na noc
-- Po kolacji: minimum 2 nocne punkty (bar → klub LUB bar → bar → klub)
-- Ostatni punkt planu: klimatyczny bar lub klub — to jest kulminacja dnia
-
-H_NL2. DOBÓR MIEJSC NOCNYCH
-- Nie planuj standardowych restauracji na wieczór — szukaj: cocktail barów, pubów, wine barów, klubów muzycznych, jazz barów
-- Preferuj miejsca otwarte do 2:00+ (nie lokale zamykające się o 22:00)
-- W Krakowie: Kazimierz (klimatyczne bary), Stare Miasto okolice Floriańskiej / Szewskiej
-- Podaj KONKRETNE nazwy barów/klubów z rozpoznawalną marką online
-
-H_NL3. OGRANICZONE MUZEA
-- Max 1 muzeum w planie nocnym — dzień jest krótszy bo noc jest długa
-- Priorytet: spacery po mieście, kawiarnie, widoki, zabytkowe dzielnice — szybkie, wizualne, energetyczne
-
-` : ""}${preferences.numDays > 1 ? `### H14. MULTI-DAY — ZASADY CAŁEJ PODRÓŻY (OBOWIĄZKOWE)
+${preferences.numDays > 1 ? `### H14. MULTI-DAY — ZASADY CAŁEJ PODRÓŻY (OBOWIĄZKOWE)
 
 **Koniec dnia blisko noclegu/transportu:**
 - Ostatnie 1-2 miejsca każdego dnia (oprócz ostatniego dnia) powinny być geograficznie blisko noclegu lub dworca/przystanku
@@ -396,10 +309,10 @@ Napisz JEDNO krótkie zdanie komentarza (opcjonalnie), a PO NIM blok planu:
 ZASADY FORMATU:
 - day_metrics.total_walking_km: szacunkowa łączna odległość pieszego (suma distance_from_prev + wizyty) w km
 - day_metrics.crowd_level: "low" | "medium" | "high" — na podstawie dat, popularności i heurystyk H13
-- day_metrics.energy_cost: "low" | "medium" | "high" — na podstawie liczby punktów, tempa i długości dnia
+- day_metrics.energy_cost: "low" | "medium" | "high" — na podstawie liczby punktów i długości dnia
 - Pierwszy pin każdego dnia: walking_time_from_prev = null, distance_from_prev = null
 - Każdy kolejny pin: szacuj walking_time_from_prev i distance_from_prev na podstawie znajomości miasta (tempo piesze ~75 m/min = ~1.2 km w 15 min)
-- duration_minutes: czas spędzony w miejscu (bez dojścia), zgodnie z H7
+- duration_minutes: czas spędzony w miejscu (bez dojścia) - dobierz realistycznie do typu miejsca
 - suggested_time: godzina PRZYBYCIA = poprzedni suggested_time + poprzedni duration_minutes + czas dojścia
 - category: restaurant | cafe | museum | park | viewpoint | shopping | nightlife | monument | church | market | bar | gallery | walk
 
@@ -430,7 +343,7 @@ WAŻNE: pusty dzień to NIE jest błąd. Aplikacja pokaże user'owi empty state 
 
 - "Zamień X" → zaproponuj alternatywę w tej samej okolicy → WYEMITUJ pełny plan z zamianą
 - "Dodaj Y" → wstaw w logiczne miejsce, zaktualizuj suggested_time kolejnych punktów → WYEMITUJ pełny plan
-- "Usuń Z" → usuń, sprawdź kulminację (H3) → WYEMITUJ pełny plan
+- "Usuń Z" → usuń → WYEMITUJ pełny plan
 - NIE regeneruj całego planu strukturalnie — tylko zmień to co user prosił
 - NIE mów "za chwilę", "przygotowuję", "zaktualizuję" — po prostu zrób to i pokaż plan
 - Komentarz do zmiany: MAX 1 zdanie przed blokiem planu${superLikedPlaces?.length ? `\n\n## ⭐ MIEJSCA OBOWIĄZKOWE (SUPER LIKE)\nUżytkownik oznaczył te miejsca jako MUST-HAVE — MUSZĄ znaleźć się w planie bez wyjątku:\n${superLikedPlaces.map(p => `- ${p}`).join("\n")}` : ""}${likedPlaces?.length ? (restrictToLiked ? `\n\n## 🔒 TYLKO TE MIEJSCA — ZAKAZ DODAWANIA INNYCH\nUżytkownik wybrał te miejsca i NIE chce żadnych innych. BEZWZGLĘDNA ZASADA:\n- Używaj WYŁĄCZNIE miejsc z poniższej listy. Absolutny zakaz dodawania jakichkolwiek innych miejsc.\n- Jeśli lista jest krótka — zrób krótki plan z tych miejsc, NIE uzupełniaj innymi.\n- Każde miejsce spoza tej listy w planie = błąd krytyczny.\n\nDozwolone miejsca:\n${likedPlaces.map(p => `- ${p}`).join("\n")}` : `\n\n## 🎯 MIEJSCA DO UWZGLĘDNIENIA\nUżytkownik chce odwiedzić te miejsca — koniecznie wstaw je w plan:\n${likedPlaces.map(p => `- ${p}`).join("\n")}`) : ""}${(() => {
