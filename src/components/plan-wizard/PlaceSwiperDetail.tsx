@@ -770,12 +770,8 @@ const PlaceSwiperDetail = ({
                   {(() => {
                     const menuImages = place.businessMenuImageUrls ?? [];
                     if (menuImages.length === 0) return null;
-                    const sectionLabel = place.businessMainCategory === 'food'
-                      ? 'Menu'
-                      : (place.businessMainCategory === 'culture' || place.businessMainCategory === 'attractions')
-                      ? 'Cennik'
-                      : null;
-                    if (!sectionLabel) return null;
+                    // food -> Menu (zawsze), pozostale -> Cennik
+                    const sectionLabel = place.businessMainCategory === 'food' ? 'Menu' : 'Cennik';
                     return (
                       <div className="space-y-3 pt-2">
                         <h3 className="text-lg font-black tracking-tight">{sectionLabel}</h3>

@@ -1607,7 +1607,9 @@ const BusinessDashboard = () => {
         </div>
 
         {/* ── Content ── */}
-        <div className={`flex-1 p-4 md:p-6 max-w-4xl w-full ${isDirty ? 'pb-28' : 'pb-6'}`}>
+        {/* pb-40 gdy isDirty: sticky save bar (button h-12 + pt-3 + pb-6 + pb-safe-6) zajmuje
+            ~110-130 px zaleznie od safe-area. pb-40 (160px) daje margines bez ucinania ostatniej sekcji. */}
+        <div className={`flex-1 p-4 md:p-6 max-w-4xl w-full ${isDirty ? 'pb-40' : 'pb-10'}`}>
 
           {/* Banners (always visible) */}
           <div className="space-y-3 mb-4">
@@ -2162,20 +2164,14 @@ const BusinessDashboard = () => {
                 </div>
 
                 {/* ── Menu / Cennik (warunkowo per main_category) ──
-                    food            -> "Menu"
-                    culture, attractions -> "Cennik"
-                    nature, brak    -> sekcja sie nie pokazuje (parki nie maja cennika)
+                    food   -> "Menu" (zawsze, niezaleznie od subcategory)
+                    pozostale (culture, attractions, nature, brak) -> "Cennik"
                     Dziala niezaleznie od custom subcategory - liczy sie tylko main_category. */}
                 {(() => {
-                  const menuLabel = mainCategory === 'food'
-                    ? 'Menu'
-                    : (mainCategory === 'culture' || mainCategory === 'attractions')
-                    ? 'Cennik'
-                    : null;
-                  if (!menuLabel) return null;
+                  const menuLabel = mainCategory === 'food' ? 'Menu' : 'Cennik';
                   const hint = menuLabel === 'Menu'
                     ? 'Zdjęcia kartek menu (jedzenie, napoje, desery). Pokażą się na wizytówce w aplikacji.'
-                    : 'Zdjęcia z cennikiem biletów lub usług. Pokażą się na wizytówce w aplikacji.';
+                    : 'Zdjęcia z cennikiem (bilety, usługi, wstęp). Pokażą się na wizytówce w aplikacji.';
                   return (
                     <div className="pt-2 border-t border-border/40">
                       <div className="flex items-center justify-between mb-2">

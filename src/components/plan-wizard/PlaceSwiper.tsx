@@ -1570,6 +1570,50 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             }}
           />
         </div>
+      ) : isSearching ? (
+        // Search mode: list view zamiast 9:16 karty. Klawiatura zostaje na ekranie,
+        // user widzi liste wynikow i tapuje zeby otworzyc detail (PlaceSwiperDetail).
+        // Tam jest standardowy Dodaj/Odrzuc CTA - flow nieprzerwany.
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-4">
+          {displayQueue.length === 0 ? (
+            <div className="py-16 flex flex-col items-center gap-3 text-center">
+              <p className="text-sm text-muted-foreground">Brak wyników dla „{searchQuery.trim()}"</p>
+              {onSuggestPlace && (
+                <button
+                  onClick={onSuggestPlace}
+                  className="text-sm font-semibold text-orange-600 underline underline-offset-2"
+                >
+                  Zaproponuj dodanie miejsca
+                </button>
+              )}
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {displayQueue.slice(0, 50).map((place) => (
+                <li key={place.id}>
+                  <button
+                    onClick={() => handleTap(place)}
+                    className="w-full flex items-center gap-3 p-2 rounded-2xl bg-card border border-border/40 active:scale-[0.98] transition-transform text-left"
+                  >
+                    <div className="h-14 w-14 rounded-xl overflow-hidden bg-muted shrink-0 flex items-center justify-center text-2xl">
+                      {place.photo_url ? (
+                        <img src={place.photo_url} alt={place.place_name} className="w-full h-full object-cover" loading="lazy" />
+                      ) : (
+                        <span>{CATEGORY_EMOJI_MAP[place.category] ?? "📍"}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-foreground line-clamp-1">{place.place_name}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-1">
+                        {CATEGORY_LABELS[place.category] ?? place.category}{place.address ? ` · ${place.address}` : ""}
+                      </p>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       ) : (
         <div className="flex-1 min-h-0 flex items-start justify-center w-full pt-2">
         <div
@@ -1581,19 +1625,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           }}
         >
           <>
-            {isSearching && displayQueue.length === 0 && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
-                <p className="text-sm text-muted-foreground">Brak wyników dla „{searchQuery.trim()}"</p>
-                {onSuggestPlace && (
-                  <button
-                    onClick={onSuggestPlace}
-                    className="text-sm font-semibold text-orange-600 underline underline-offset-2"
-                  >
-                    Zaproponuj dodanie miejsca
-                  </button>
-                )}
-              </div>
-            )}
             {(() => {
               const cardSlice = displayQueue.slice(0, 3);
               return cardSlice
