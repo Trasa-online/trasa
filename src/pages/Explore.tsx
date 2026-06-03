@@ -9,6 +9,25 @@ import { getSubcategoryLabel, MAIN_CATEGORIES } from "@/lib/categories";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+
+// Usuwa reactions z DB dla zalogowanego usera zeby miejsca wrocily do swipera
+// (PlaceSwiper filtruje queue po user_place_reactions). Bez tego po usunieciu
+// polubienia z localStorage, miejsce nadal jest "polubione" w DB i swiper je pomija.
+// Best-effort - failure (np. RLS, brak siec) nie blokuje UI flow.
+async function removeReactionsFromDb(userId: string, city: string, placeNames: string[]) {
+  if (!placeNames.length) return;
+  try {
+    await (supabase as any)
+      .from("user_place_reactions")
+      .delete()
+      .eq("user_id", userId)
+      .ilike("city", city)
+      .in("place_name", placeNames);
+  } catch (err) {
+    console.warn("[Explore] removeReactionsFromDb failed:", err);
+  }
+}
 
 type Tab = "feed" | "liked";
 
@@ -108,7 +127,9 @@ const LikedTab = () => {
             <button
               onClick={() => {
                 if (!confirm(`Usunąć wszystkie polubione z ${formatGroupDate(group.date).toLowerCase()} (${group.city})?`)) return;
+                const placeNames = group.places.map(p => p.place_name);
                 clearGroup(group.date, group.city);
+                if (user?.id) void removeReactionsFromDb(user.id, group.city, placeNames);
                 refresh();
               }}
               className="h-8 w-8 flex items-center justify-center rounded-full text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
@@ -139,7 +160,11 @@ const LikedTab = () => {
                   </p>
                 </div>
                 <button
-                  onClick={() => { removeLike(group.date, group.city, p.place_name); refresh(); }}
+                  onClick={() => {
+                    removeLike(group.date, group.city, p.place_name);
+                    if (user?.id) void removeReactionsFromDb(user.id, group.city, [p.place_name]);
+                    refresh();
+                  }}
                   className="h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 shrink-0"
                   aria-label="Usuń"
                 >
