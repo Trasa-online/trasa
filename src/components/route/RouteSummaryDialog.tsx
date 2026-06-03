@@ -287,31 +287,52 @@ const RouteSummaryDialog = ({
         is_group: !!groupSession,
       });
 
-      // Push 'Trasa gotowa' do twórcy (solo + group host) - jako confirmation +
-      // path back-to-app gdy user zamknie aplikacje. Dla group memberów push idzie
-      // osobno w Home.tsx (przy finalize sesji), tu wysylamy tylko do user.id (host).
-      // Best-effort - failure nie blokuje navigate.
+      // Solo trasa z start_date today/null = user zaczyna trase teraz -> redirect
+      // do in-trip view (/trasa/{id}) gdzie ma mape + checkboxy 'bylem' + photo upload.
+      // Trasy z przyszla data (np. planuje na nastepny weekend) ida na /home - bedzie
+      // dostepna z Dziennika gdy nadejdzie dzien.
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      let tripStartDateNormalized: Date | null = null;
+      if (startDate) {
+        tripStartDateNormalized = new Date(startDate);
+        tripStartDateNormalized.setHours(0, 0, 0, 0);
+      }
+      const isStartingToday = !groupSession && !!firstRouteId && (
+        !tripStartDateNormalized || tripStartDateNormalized.getTime() <= today.getTime()
+      );
+
+      // Push 'Trasa gotowa' do twórcy - confirmation + path back-to-app.
+      // URL deep link prowadzi do in-trip jesli trasa startuje teraz, inaczej review-summary.
       if (firstRouteId) {
+        const pushUrl = isStartingToday
+          ? `/trasa/${firstRouteId}`
+          : `/review-summary?route=${firstRouteId}`;
         void supabase.functions.invoke("send-push", {
           body: {
             user_id: user.id,
             title: "Trasa gotowa",
-            body: `Plan po ${plan.city} jest gotowy - sprawdź szczegóły`,
-            url: `/review-summary?route=${firstRouteId}`,
+            body: isStartingToday
+              ? `Twoja trasa po ${plan.city} startuje teraz - sprawdź szczegóły`
+              : `Plan po ${plan.city} jest gotowy - sprawdź szczegóły`,
+            url: pushUrl,
           },
         }).catch(() => {});
       }
 
       // Invalidate query - JournalTab i journal-badge widza nowa trase od razu.
-      // Bez tego cache TanStack Query trzymal stare entries (uzytkownik widzial
-      // dziennik bez nowo dodanej trasy do pierwszego full-refresh).
       queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
       queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
 
       toast.success("Trasa zapisana! 🎉", { description: plan.city });
       onOpenChange(false);
-      // Solo route: open the plan directly; group route: go home (session is already handled)
-      navigate("/home");
+      // Solo today -> in-trip view (mapa + checkboxy + photo).
+      // Solo future / group -> home (group session juz ma swoj flow, future zaczyna pozniej).
+      if (isStartingToday) {
+        navigate(`/trasa/${firstRouteId}`);
+      } else {
+        navigate("/home");
+      }
     } catch (error) {
       console.error("Save error:", error);
       toast.error("Błąd zapisu", { description: "Spróbuj ponownie." });
