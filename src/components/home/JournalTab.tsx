@@ -101,12 +101,19 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         toast.success("Trasa usunięta");
       } else {
         if (!entry.group_session_id) throw new Error("missing group_session_id");
-        const { error } = await (supabase as any)
+        // count: 'exact' zeby wykryc silent RLS fail (DELETE zwraca success ale 0 rows
+        // gdy nie ma policy). Wczesniej brak DELETE policy na group_session_members
+        // powodowal ze user nie mogl opuscic trasy - DB nie blokowala explicit.
+        // Migracja 20260604_gsm_delete_policy.sql dodaje policy.
+        const { error, count } = await (supabase as any)
           .from("group_session_members")
-          .delete()
+          .delete({ count: "exact" })
           .eq("session_id", entry.group_session_id)
           .eq("user_id", userId);
         if (error) throw error;
+        if (count === 0) {
+          throw new Error("Brak uprawnień do opuszczenia trasy. Spróbuj ponownie po wklejeniu SQL z RLS policy.");
+        }
         toast.success("Opuszczono trasę");
       }
       // Optymistyczne usuniecie z cache + invalidate zeby trasa zniknela natychmiast
