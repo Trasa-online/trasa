@@ -273,9 +273,11 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                       if (isGroupMode) {
                         navigate(-1);
                       } else {
+                        // Step 4 = PlaceSwiper (po zmianie wizard: 1=City, 2=Date,
+                        // 3=StartingLocation, 4=Swiper). Wczesniej omylkowo step 3.
                         navigate("/plan", {
                           state: {
-                            step: 3,
+                            step: 4,
                             city: cityContext,
                             date: new Date().toISOString(),
                             likedPlaceNames: likedPlaces,

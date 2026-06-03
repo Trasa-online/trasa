@@ -57,7 +57,10 @@ const BottomNav = () => {
     setReusePrompt(null);
     navigate("/plan", {
       state: {
-        step: 3, // straight to CategoryPicker with likes preloaded
+        // Step 4 = PlaceSwiper (po refactor wizard: 1=City, 2=Date, 3=Starting,
+        // 4=Swiper). Wczesniej step 3 byl CategoryPicker, ale ten zostal
+        // usuniety - filtrowanie kategorii jest teraz w PlaceSwiper.
+        step: 4,
         city,
         date: new Date().toISOString(),
         likedPlaceNames: likes.map(l => l.place_name),
