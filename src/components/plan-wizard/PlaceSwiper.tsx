@@ -896,7 +896,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     businessTags: Array.isArray(bp.tags) ? bp.tags.filter(Boolean) : [],
     businessMainCategory: bp.main_category ?? undefined,
     businessMenuImageUrls: Array.isArray(bp.menu_image_urls) ? bp.menu_image_urls.filter(Boolean) : [],
-    businessOpeningHours: bp.opening_hours && typeof bp.opening_hours === "object" && Object.keys(bp.opening_hours, menu_image_urls).length > 0
+    businessOpeningHours: bp.opening_hours && typeof bp.opening_hours === "object" && Object.keys(bp.opening_hours).length > 0
       ? bp.opening_hours
       : undefined,
     coverVideoUrl: bp.cover_video_url ?? undefined,
@@ -965,7 +965,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       if (roundPlaceIds?.length) {
         const { data, error } = await (supabase as any)
           .from("places")
-          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, opening_hours, menu_image_urls)")
+          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, opening_hours)")
           .in("id", roundPlaceIds);
 
         if (error) console.error("[PlaceSwiper] round fetch error:", error);
@@ -987,7 +987,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // ── Normal mode ──────────────────────────────────────────────────────
       const { data, error: placesError } = await (supabase as any)
         .from("places")
-        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, opening_hours, menu_image_urls)")
+        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, opening_hours)")
         .ilike("city", city)
         .eq("is_active", true);
 
@@ -1012,7 +1012,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         if (reactions?.length) {
           ratedPlaceIds = new Set(reactions.map((r: { place_id: string }) => r.place_id));
         }
-        console.log("[PlaceSwiper] fetchPlaces reactions count for today:", reactions?.length ?? 0, "city:", city, "refreshNonce:", refreshNonce);
         // Also filter out places already swiped in the group session
         if (groupSessionId) {
           const { data: groupReactions } = await (supabase as any)
@@ -1276,23 +1275,16 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const handleResetToday = async () => {
     if (resetting) return;
     setResetting(true);
-    console.log("[PlaceSwiper] reset start", { city, userId: user?.id });
     try {
       if (user) {
-        // Usuwamy WSZYSTKIE reactions w tym miescie (nie tylko z dziennej) zeby user
-        // dostal pelny pool na nowo. Reactions na taste profile sa tracked osobno.
-        const { error: delError, count } = await (supabase as any)
+        // Usuwamy WSZYSTKIE reactions w tym miescie zeby user dostal pelny pool na nowo.
+        // Reactions na taste profile sa tracked osobno (place_features_user, etc).
+        const { error: delError } = await (supabase as any)
           .from("user_place_reactions")
-          .delete({ count: "exact" })
+          .delete()
           .eq("user_id", user.id)
           .ilike("city", city);
-        if (delError) {
-          console.error("[PlaceSwiper] DELETE reactions failed:", delError);
-          throw delError;
-        }
-        console.log("[PlaceSwiper] DELETE reactions success, deleted count:", count);
-      } else {
-        console.log("[PlaceSwiper] no user, skipping DB delete");
+        if (delError) throw delError;
       }
       // Wyczysc explore likes localStorage dla tego miasta + dziennej grupy
       const todayStr = (() => {
@@ -1300,7 +1292,6 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       })();
       clearExploreGroup(todayStr, city);
-      console.log("[PlaceSwiper] localStorage cleared");
       // Reset local state - history, queue, liked itp.
       setHistory([]);
       setLikedPlaces([]);
@@ -1308,10 +1299,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       setSuperLikedPlaces([]);
       setQueue([]);
       // Trigger re-fetch przez bumping nonce - useEffect odpali fetchPlaces od nowa
-      setRefreshNonce(n => {
-        console.log("[PlaceSwiper] bumping refreshNonce:", n, "->", n + 1);
-        return n + 1;
-      });
+      setRefreshNonce(n => n + 1);
     } catch (err) {
       console.error("[PlaceSwiper] reset today failed:", err);
       toast.error("Nie udało się zresetować, spróbuj ponownie");
