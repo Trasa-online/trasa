@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Loader2, X } from "lucide-react";
@@ -75,6 +76,7 @@ const RouteSummaryDialog = ({
   const { user, isAnonymous } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const days = plan.days ?? [];
 
@@ -148,6 +150,10 @@ const RouteSummaryDialog = ({
           pace: preferences.pace,
           priorities: preferences.priorities,
           is_shared: false,
+          // new_for_users = [user.id] dla solo zeby badge kropka w BottomNav Dziennik
+          // pojawila sie po stworzeniu trasy (analogicznie do group memberow). Po
+          // wejsciu do trasy, dismiss_route_badge RPC usuwa user.id z array.
+          new_for_users: groupSession ? null : [user.id],
           // Punkt startowy (hotel/nocleg) - identyczny dla wszystkich dni multi-day trasy.
           starting_location_name: preferences.startingLocation || null,
           starting_location_lat: preferences.startingLocationLat ?? null,
@@ -295,6 +301,12 @@ const RouteSummaryDialog = ({
           },
         }).catch(() => {});
       }
+
+      // Invalidate query - JournalTab i journal-badge widza nowa trase od razu.
+      // Bez tego cache TanStack Query trzymal stare entries (uzytkownik widzial
+      // dziennik bez nowo dodanej trasy do pierwszego full-refresh).
+      queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
 
       toast.success("Trasa zapisana! 🎉", { description: plan.city });
       onOpenChange(false);
