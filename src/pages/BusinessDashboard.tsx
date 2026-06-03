@@ -10,6 +10,7 @@ import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePl
 import 'driver.js/dist/driver.css';
 import { driver } from 'driver.js';
 import { MAIN_CATEGORIES } from "@/lib/categories";
+import { resizeImage } from "@/lib/imageResize";
 import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
@@ -941,11 +942,14 @@ const BusinessDashboard = () => {
   const uploadFile = async (file: File, folder: string): Promise<string> => {
     if (!ALLOWED_MIME.includes(file.type)) throw new Error("Niedozwolony format pliku (dozwolone: JPG, PNG, WEBP)");
     if (file.size > MAX_FILE_SIZE) throw new Error("Plik jest za duży (max 5 MB)");
-    const ext = file.name.split(".").pop() ?? "jpg";
+    // Resize + recompress przed uploadem zeby zdjecia w storage byly male (200-500 KB)
+    // i ladowaly sie szybko. Skipuje juz male pliki - patrz src/lib/imageResize.ts.
+    const optimized = await resizeImage(file);
+    const ext = optimized.name.split(".").pop() ?? "jpg";
     // Use profile.id as the storage folder (stable even when placeId is a UUID fallback)
     const folder_key = profile?.id ?? placeId;
     const path = `${folder_key}/${folder}/${Date.now()}.${ext}`;
-    const { data, error } = await supabase.storage.from("business-photos").upload(path, file, { upsert: true });
+    const { data, error } = await supabase.storage.from("business-photos").upload(path, optimized, { upsert: true });
     if (error) throw new Error(error.message);
     return supabase.storage.from("business-photos").getPublicUrl(data.path).data.publicUrl;
   };
@@ -1892,59 +1896,6 @@ const BusinessDashboard = () => {
                 <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
               </div>
 
-              {/* ── SEKCJA: Menu / Cennik (warunkowo per main_category) ──
-                  food            -> "Menu"
-                  culture, attractions -> "Cennik"
-                  nature, brak    -> sekcja sie nie pokazuje (parki nie maja cennika) */}
-              {(() => {
-                const menuLabel = mainCategory === 'food'
-                  ? 'Menu'
-                  : (mainCategory === 'culture' || mainCategory === 'attractions')
-                  ? 'Cennik'
-                  : null;
-                if (!menuLabel) return null;
-                const hint = menuLabel === 'Menu'
-                  ? 'Zdjęcia kartek z menu (food/napoje/desery). Pokażą się na wizytówce w aplikacji.'
-                  : 'Zdjęcia z cennikiem biletów lub usług. Pokażą się na wizytówce w aplikacji.';
-                return (
-                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-bold text-foreground">{menuLabel}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground shrink-0">{menuImageUrls.length}/{MAX_MENU_IMAGES}</p>
-                    </div>
-                    <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-                      {menuImageUrls.map((url, idx) => (
-                        <div
-                          key={idx}
-                          className="relative aspect-square rounded-xl overflow-hidden bg-muted group"
-                          onClick={() => setPhotoPreview({ url, label: `${menuLabel} ${idx + 1}` })}
-                        >
-                          <img src={url} className="w-full h-full object-cover pointer-events-none" />
-                          <button
-                            onClick={(e) => { e.stopPropagation(); removeMenuImage(idx); }}
-                            className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center active:opacity-70 z-10"
-                          >
-                            <X className="h-3 w-3 text-white" />
-                          </button>
-                          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-between px-1.5 pb-1.5 pointer-events-none">
-                            <ZoomIn className="h-3 w-3 text-white/80" />
-                          </div>
-                        </div>
-                      ))}
-                      {menuImageUrls.length < MAX_MENU_IMAGES && (
-                        <button onClick={() => menuInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
-                          {uploading === 'menu' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-5 w-5 text-muted-foreground" />}
-                        </button>
-                      )}
-                    </div>
-                    <input ref={menuInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleMenuUpload} />
-                  </div>
-                );
-              })()}
-
               {/* ── Personalizacja kolorow ── */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
                 <div>
@@ -2209,6 +2160,58 @@ const BusinessDashboard = () => {
                     <p className="text-[11px] text-muted-foreground text-right">{description.length}/500</p>
                   </div>
                 </div>
+
+                {/* ── Menu / Cennik (warunkowo per main_category) ──
+                    food            -> "Menu"
+                    culture, attractions -> "Cennik"
+                    nature, brak    -> sekcja sie nie pokazuje (parki nie maja cennika)
+                    Dziala niezaleznie od custom subcategory - liczy sie tylko main_category. */}
+                {(() => {
+                  const menuLabel = mainCategory === 'food'
+                    ? 'Menu'
+                    : (mainCategory === 'culture' || mainCategory === 'attractions')
+                    ? 'Cennik'
+                    : null;
+                  if (!menuLabel) return null;
+                  const hint = menuLabel === 'Menu'
+                    ? 'Zdjęcia kartek menu (jedzenie, napoje, desery). Pokażą się na wizytówce w aplikacji.'
+                    : 'Zdjęcia z cennikiem biletów lub usług. Pokażą się na wizytówce w aplikacji.';
+                  return (
+                    <div className="pt-2 border-t border-border/40">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{menuLabel} <span className="normal-case font-normal">(max {MAX_MENU_IMAGES})</span></p>
+                        <p className="text-xs text-muted-foreground shrink-0">{menuImageUrls.length}/{MAX_MENU_IMAGES}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">{hint}</p>
+                      <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                        {menuImageUrls.map((url, idx) => (
+                          <div
+                            key={idx}
+                            className="relative aspect-square rounded-xl overflow-hidden bg-muted group cursor-pointer"
+                            onClick={() => setPhotoPreview({ url, label: `${menuLabel} ${idx + 1}` })}
+                          >
+                            <img src={url} className="w-full h-full object-cover pointer-events-none" />
+                            <button
+                              onClick={(e) => { e.stopPropagation(); removeMenuImage(idx); }}
+                              className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center active:opacity-70 z-10"
+                            >
+                              <X className="h-3 w-3 text-white" />
+                            </button>
+                            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-between px-1.5 pb-1.5 pointer-events-none">
+                              <ZoomIn className="h-3 w-3 text-white/80" />
+                            </div>
+                          </div>
+                        ))}
+                        {menuImageUrls.length < MAX_MENU_IMAGES && (
+                          <button onClick={() => menuInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
+                            {uploading === 'menu' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-5 w-5 text-muted-foreground" />}
+                          </button>
+                        )}
+                      </div>
+                      <input ref={menuInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleMenuUpload} />
+                    </div>
+                  );
+                })()}
               </div>
               </div> {/* end flex-1 min-w-0 */}
 
