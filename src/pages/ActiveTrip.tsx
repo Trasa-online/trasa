@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { Component, type ReactNode, useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, Check, MapPin, Loader2, X, ZoomIn } from "lucide-react";
+import { ArrowLeft, Camera, Check, MapPin, Loader2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { resizeImage } from "@/lib/imageResize";
@@ -10,6 +10,33 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
+
+// Error boundary wokol RouteMap - Google Maps API (vis.gl/react-google-maps)
+// czasami crashuje (np. brak API key w env, network down, geocoding limit).
+// Bez tego cały widok ActiveTrip zostawal zablokowany przez render error.
+// Z fallback uzytkownik widzi liste pinów + checkboxy + photo - mapa to bonus.
+class MapErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error) {
+    console.error("[ActiveTrip MapErrorBoundary] caught:", error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground bg-muted/30">
+          Mapa chwilowo niedostępna
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // "W trakcie podrozy" view - mapa Leaflet + lista pinów z okraglymi checkboxami
 // 'bylem tutaj' (visited_at) + photo upload do trip-photos bucket (max 5 per pin).
@@ -241,10 +268,13 @@ const ActiveTrip = () => {
         </div>
       </div>
 
-      {/* Map */}
+      {/* Map - wrap w error boundary bo Google Maps moze crashowac na iOS WebView
+          gdy brakuje API key albo network failuje. Lista pinów pozostaje niezalezna. */}
       {pinsWithCoords.length > 0 && (
         <div className="shrink-0 h-[35dvh] min-h-[200px] max-h-[320px] border-b border-border/30">
-          <RouteMap pins={pinsWithCoords} className="h-full w-full" />
+          <MapErrorBoundary>
+            <RouteMap pins={pinsWithCoords} className="h-full w-full" />
+          </MapErrorBoundary>
         </div>
       )}
 
