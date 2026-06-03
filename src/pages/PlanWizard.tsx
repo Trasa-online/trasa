@@ -116,12 +116,36 @@ const PlanWizard = () => {
     if (!date) return;
     const selected = likedSnapshot.filter(p => !deselectedMatches.has(p.place_name));
     if (selected.length === 0) return;
+
+    // Continuation flow detect - jesli user wszedl tu z "Polub wiecej miejsc"
+    // CTA w AddPinSheet (PlanChat), AddPinSheet zapisal aktualny plan + previous
+    // likes w localStorage. Teraz mergujemy wszystko i pass initialPlan do
+    // CreateRoute zeby PlanChatExperience extended istniejacy plan zamiast
+    // generowac nowy od zera (bug feedback 2026-06-03).
+    let continueState: any = null;
+    try {
+      const raw = localStorage.getItem("trasa_continue_route");
+      if (raw) {
+        continueState = JSON.parse(raw);
+        // 1h TTL - po dluzszym czasie ignoruj (user mogl porzucic flow)
+        if (continueState.savedAt && Date.now() - continueState.savedAt > 3_600_000) {
+          continueState = null;
+        }
+        localStorage.removeItem("trasa_continue_route");
+      }
+    } catch { /* unavailable */ }
+
+    const selectedNames = selected.map((p) => p.place_name);
+    const mergedNames = continueState
+      ? Array.from(new Set([...(continueState.previousLikedNames ?? []), ...selectedNames]))
+      : selectedNames;
+
     const routeState = {
-      city,
-      date: date.toISOString(),
-      numDays,
-      startingLocation: startingLocation || undefined,
-      likedPlaceNames: selected.map((p) => p.place_name),
+      city: continueState?.city ?? city,
+      date: continueState?.date ?? date.toISOString(),
+      numDays: continueState?.numDays ?? numDays,
+      startingLocation: continueState?.startingLocation ?? (startingLocation || undefined),
+      likedPlaceNames: mergedNames,
       skippedPlaceNames: [] as string[],
       likedPlacesData: selected.map((p) => ({
         place_name: p.place_name,
@@ -131,6 +155,14 @@ const PlanWizard = () => {
         longitude: p.longitude,
       })),
       superLikedPlaceNames: [] as string[],
+      // KLUCZOWE - jesli continuation, przekazujemy istniejacy plan jako initial
+      // (CreateRoute -> PlanChatExperience uses initialPlan), plus flag zeby
+      // PlanChat wywolal plan-route w extend mode (zachowac dni z miejscami,
+      // wypelnic puste nowymi).
+      ...(continueState ? {
+        initialPlan: continueState.currentPlan,
+        continuationMode: true,
+      } : {}),
     };
     if (!user || isAnonymous) {
       try { localStorage.setItem("trasa_guest_plan", JSON.stringify(routeState)); } catch { /* unavailable */ }

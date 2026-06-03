@@ -68,6 +68,12 @@ interface PlanChatExperienceProps {
   // Group session context - wpływa na copy w AddPinSheet ("wspólne miejsce" vs
   // "polubione miejsce") i niektore CTA. Solo = undefined.
   groupSession?: { sessionId: string; otherMemberIds: string[] };
+  // Continuation flow - jesli true, initialPlan jest dostarczony jako bazowy
+  // (poprzedni stan trasy), a PlanChatExperience wywola plan-route z current_plan
+  // + force_plan + merged likes zeby AI rozbudowal istniejacy plan zamiast
+  // generowac nowy. Ustawiane przez PlanWizard po finish swipera w continuation
+  // flow z "Polub wiecej miejsc" CTA.
+  continuationMode?: boolean;
 }
 
 type SnapState = "peek" | "half" | "full";
@@ -432,7 +438,7 @@ function getCurrentTimeContext(): { current_time: string; current_date: string }
   };
 }
 
-const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlacesData, skippedPlaces, superLikedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt, readOnly, groupSession }: PlanChatExperienceProps) => {
+const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlacesData, skippedPlaces, superLikedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt, readOnly, groupSession, continuationMode }: PlanChatExperienceProps) => {
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
   const [input, setInput] = useState("");
@@ -603,10 +609,57 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
 
   // Initialize: if initialPlan provided (template fork) → skip AI; else generate
   useEffect(() => {
-    if (initialPlan) {
+    if (initialPlan && !continuationMode) {
       enrichPlanWithPhotos(initialPlan, supabase).then(enriched => setPlan(enriched));
       setMessages([{ role: "assistant", content: `Oto Twój plan w **${preferences.city}** 🗺️\n\nMogę go dostosować do Twoich potrzeb - powiedz co zmienić!` }]);
       setInitializing(false);
+      return;
+    }
+
+    // Continuation flow: user wrócił z dodatkowymi polubieniami z swipera. Chcemy
+    // zachować istniejący plan (initialPlan) jako bazę i poprosić AI o uzupełnienie
+    // pustych dni nowymi polubieniami zamiast generowac nowy plan od zera.
+    if (initialPlan && continuationMode) {
+      const continuationIntro = `Świetnie! Uzupełniam plan o Twoje nowe polubienia 🗺️`;
+      enrichPlanWithPhotos(initialPlan, supabase).then(enriched => setPlan(enriched));
+      setMessages([{ role: "assistant", content: continuationIntro }]);
+      setInitializing(false);
+      setPreparingPlan(true);
+
+      (async () => {
+        try {
+          const response = await supabase.functions.invoke("plan-route", {
+            body: {
+              preferences,
+              messages: [{ role: "user", content: "Uzupełnij plan o moje nowe polubione miejsca w pustych dniach. Zachowaj istniejące dni bez zmian." }],
+              force_plan: true,
+              current_plan: initialPlan,
+              extend_mode: true,
+              liked_places: likedPlaces,
+              restrict_to_liked: likedPlacesData?.length ? true : undefined,
+              skipped_places: skippedPlaces?.length ? skippedPlaces : undefined,
+              super_liked_places: superLikedPlaces?.length ? superLikedPlaces : undefined,
+              ideal_day: idealDay || undefined,
+              starting_location: preferences.startingLocation || undefined,
+              starting_location_lat: preferences.startingLocationLat,
+              starting_location_lng: preferences.startingLocationLng,
+              ...getCurrentTimeContext(),
+            },
+          });
+          if (!response.error && response.data?.plan) {
+            const { cleanMessage } = parseSuggestions(response.data.message ?? "");
+            if (cleanMessage) {
+              setMessages(prev => [...prev, { role: "assistant", content: cleanMessage }]);
+            }
+            enrichPlanWithPhotos(response.data.plan, supabase).then(enriched => setPlan(enriched));
+          }
+        } catch (err) {
+          console.error("[plan-route] continuation extend failed:", err);
+          toast.error("Nie udało się rozszerzyć planu", { description: "Plan pozostanie w obecnej wersji." });
+        } finally {
+          setPreparingPlan(false);
+        }
+      })();
       return;
     }
     const initialize = async () => {
@@ -1612,6 +1665,12 @@ window.addEventListener('message',function(e){
           restrictToLiked={!!likedPlacesData?.length}
           isGroupMode={!!groupSession}
           existingPinNames={plan?.days.flatMap(d => d.pins).map(p => p.place_name)}
+          currentPlanForContinuation={plan}
+          continuationContext={{
+            date: preferences.startDate,
+            numDays: preferences.numDays,
+            startingLocation: preferences.startingLocation,
+          }}
           onPinAdd={(pin) => {
             setPlan(prev => prev ? {
               ...prev,

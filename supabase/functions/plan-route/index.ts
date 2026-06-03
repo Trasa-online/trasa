@@ -96,7 +96,7 @@ function buildRouteExamplesContext(examples: any[]): string {
   return `## 🏆 WZORCOWE TRASY (zatwierdzone przez redakcję TRASA)\nPoniższe trasy zostały ocenione jako idealne dla Krakowa. Planuj w podobnym rytmie, logice geograficznej i strukturze dnia:\n\n${lines.join("\n\n")}`;
 }
 
-function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string, superLikedPlaces?: string[], previousDayPlaces?: string[], previousDayCategoryCounts?: Record<string, number>, restrictToLiked?: boolean): string {
+function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string, superLikedPlaces?: string[], previousDayPlaces?: string[], previousDayCategoryCounts?: Record<string, number>, restrictToLiked?: boolean, extendMode?: boolean): string {
   const isNightlife = preferences.priorities.includes("nightlife") || (userProfile?.travel_interests ?? []).includes("nightlife");
   const timeInfo = currentTime ? `- Aktualna godzina: ${currentTime} — planuj miejsca dostępne od tej pory, nie zaczynaj od miejsc które są już zamknięte lub których opening hours zaczyna się wcześniej` : "";
   const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}${currentTime ? " (dziś)" : ""}` : "";
@@ -161,6 +161,24 @@ User wybrał konkretne ${likedPlaces.length} miejsc(a) i chce trasy TYLKO z nich
 LIMITY PUNKTÓW NA DZIEŃ (z H2) NIE STOSUJĄ SIĘ tu - liczba punktów = liczba polubionych miejsc, koniec.
 
 Jeśli złamiesz tę regułę, plan zostanie ODRZUCONY przez post-processing servera i user dostanie błąd "AI wymyślił miejsca - spróbuj ponownie".
+` : ""}${extendMode && currentPlan ? `
+## 🔁 EXTEND MODE — UZUPEŁNIENIE ISTNIEJĄCEGO PLANU
+
+User właśnie wrócił z swipera z dodatkowymi polubionymi miejscami i chce, żeby DODAĆ je do istniejącego planu, NIE generować nowego.
+
+**KRYTYCZNE ZASADY EXTEND:**
+
+1. **Nie zmieniaj dni, które już mają pins** - jeśli Dzień 1 ma 3 miejsca w obecnym planie, dzień 1 musi mieć dokładnie te 3 miejsca w odpowiedzi (same nazwy, sama kolejność). NIE wymieniaj, NIE dodawaj, NIE usuwaj.
+
+2. **Wypełniaj TYLKO puste dni** (\`pins: []\` w AKTUALNYM PLANIE) - rozdzielaj nowe polubione miejsca między te dni z zachowaniem heurystyk H1-H8 (klaster dzielnicowy, kulminacja, godziny otwarcia).
+
+3. **Używaj WYŁĄCZNIE polubionych miejsc** (lista poniżej "🔒 TYLKO TE MIEJSCA" lub "🎯 MIEJSCA DO UWZGLĘDNIENIA"). Nie wymyślaj nowych nazw, nie dodawaj generycznych haseł.
+
+4. **Jeśli polubionych jest za mało, żeby wypełnić wszystkie puste dni** - zostaw niewypełnione dni jako \`pins: []\`. Lepszy pusty dzień niż fake'i.
+
+5. **Komentarz w odpowiedzi:** 1 krótkie zdanie "Dodałem X miejsc do Dnia Y" (lub "Uzupełniłem Dzień 2 i 3"). Bez wstępów typu "Świetnie!", "Czy chcesz...".
+
+Plan zwracany w EXTEND MODE musi mieć tę samą liczbę dni co AKTUALNY PLAN. Każdy dzień, który był pełny, pozostaje identyczny. Puste dni dostają nowe miejsca z listy polubionych.
 ` : ""}
 ## PREFERENCJE USERA
 - Liczba dni: ${preferences.numDays}
@@ -450,7 +468,7 @@ serve(async (req) => {
   }
 
   try {
-    const { preferences: rawPreferences, messages: userMessages, current_plan, force_plan, liked_places, skipped_places, super_liked_places, ideal_day, current_time, current_date, restrict_to_liked, starting_location_lat, starting_location_lng } = await req.json();
+    const { preferences: rawPreferences, messages: userMessages, current_plan, force_plan, liked_places, skipped_places, super_liked_places, ideal_day, current_time, current_date, restrict_to_liked, starting_location_lat, starting_location_lng, extend_mode } = await req.json();
 
     // Wstrzykuje top-level starting_location_lat/lng do preferences (snake_case w body
     // dla zgodnosci z JSON API convention - client wysyla na top level).
@@ -782,7 +800,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     }
 
     const isToday = current_date && preferences.startDate && preferences.startDate === current_date;
-    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined, super_liked_places ?? undefined, previousDayPlaces.length > 0 ? previousDayPlaces : undefined, Object.keys(previousDayCategoryCounts).length > 0 ? previousDayCategoryCounts : undefined, restrict_to_liked ?? false);
+    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined, super_liked_places ?? undefined, previousDayPlaces.length > 0 ? previousDayPlaces : undefined, Object.keys(previousDayCategoryCounts).length > 0 ? previousDayCategoryCounts : undefined, restrict_to_liked ?? false, extend_mode ?? false);
 
     // Call AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -911,6 +929,26 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
           });
           plan.days = filteredDays;
           console.log(`[plan-route] After post-processing: ${filteredDays.map((d: any) => `Day${d.day_number}=${d.pins.length}`).join(", ")}`);
+        }
+
+        // Extend mode safeguard: w extend_mode AI moze przypadkiem zmienic dni
+        // ktore juz mialy pins. Bezpieczenstwo: dla kazdego dnia w current_plan
+        // ktory mial pins.length > 0, restore te pins z current_plan. AI moze tylko
+        // wypelniac wczesniej puste dni.
+        if (extend_mode && current_plan?.days && Array.isArray(plan?.days)) {
+          const currentByDayNum = new Map<number, any>();
+          for (const d of current_plan.days as any[]) {
+            currentByDayNum.set(d.day_number, d);
+          }
+          plan.days = plan.days.map((day: any) => {
+            const original = currentByDayNum.get(day.day_number);
+            if (original && Array.isArray(original.pins) && original.pins.length > 0) {
+              // Ten dzien byl pelny - przywroc oryginalne piny zeby AI niczego nie zmienial.
+              return { ...day, pins: original.pins };
+            }
+            return day;
+          });
+          console.log(`[plan-route] After extend_mode safeguard: ${plan.days.map((d: any) => `Day${d.day_number}=${d.pins.length}`).join(", ")}`);
         }
       } catch (parseErr) {
         console.error("Failed to parse route_plan:", parseErr);

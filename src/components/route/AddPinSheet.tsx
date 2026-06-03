@@ -17,6 +17,17 @@ interface AddPinSheetProps {
   // Group session = wspólne miejsca (polubione przez wszystkich uczestników).
   // Solo = po prostu polubione przez Ciebie. Wpływa na copy + CTA.
   isGroupMode?: boolean;
+  // Continuation flow - "Polub wiecej miejsc" CTA potrzebuje aktualnego planu
+  // + preferences zeby zapisac state przed navigate. PlanChat dostarcza je
+  // z aktualnego stanu, AddPinSheet zapisuje w localStorage zeby po finish
+  // swipera PlanWizard mogl odtworzyc plan + merged likes (kontynuuje
+  // istniejaca trase zamiast tworzyc nowa).
+  currentPlanForContinuation?: any;
+  continuationContext?: {
+    date: string | null;
+    numDays: number;
+    startingLocation?: string | { name: string; latitude: number; longitude: number };
+  };
 }
 
 type Tab = "liked" | "search" | "category" | "manual";
@@ -65,7 +76,7 @@ function dbPlaceToPin(p: DbPlace): PlanPin {
   };
 }
 
-const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = [], existingPinNames = [], restrictToLiked = false, isGroupMode = false }: AddPinSheetProps) => {
+const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = [], existingPinNames = [], restrictToLiked = false, isGroupMode = false, currentPlanForContinuation, continuationContext }: AddPinSheetProps) => {
   const navigate = useNavigate();
   const existingSet = new Set(existingPinNames.map(n => n.toLowerCase()));
   const availableLiked = likedPlaces.filter(n => !existingSet.has(n.toLowerCase()));
@@ -273,13 +284,29 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                       if (isGroupMode) {
                         navigate(-1);
                       } else {
-                        // Step 4 = PlaceSwiper (po zmianie wizard: 1=City, 2=Date,
-                        // 3=StartingLocation, 4=Swiper). Wczesniej omylkowo step 3.
+                        // Continuation flow: zapisz current plan + preferences w
+                        // localStorage. PlanWizard po finish swipera odczyta to,
+                        // zmerguje likes (poprzednie + nowe) i navigate "/create"
+                        // z initialPlan zeby PlanChatExperience extended istniejacy
+                        // plan zamiast generowac nowy od zera.
+                        if (currentPlanForContinuation && continuationContext) {
+                          try {
+                            localStorage.setItem("trasa_continue_route", JSON.stringify({
+                              currentPlan: currentPlanForContinuation,
+                              previousLikedNames: likedPlaces,
+                              city: cityContext,
+                              date: continuationContext.date,
+                              numDays: continuationContext.numDays,
+                              startingLocation: continuationContext.startingLocation,
+                              savedAt: Date.now(),
+                            }));
+                          } catch { /* localStorage unavailable */ }
+                        }
                         navigate("/plan", {
                           state: {
                             step: 4,
                             city: cityContext,
-                            date: new Date().toISOString(),
+                            date: continuationContext?.date ?? new Date().toISOString(),
                             likedPlaceNames: likedPlaces,
                           },
                         });

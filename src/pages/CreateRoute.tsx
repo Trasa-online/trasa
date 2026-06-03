@@ -45,6 +45,9 @@ const CreateRoute = () => {
     backTo?: string;
     groupSession?: { sessionId: string; otherMemberIds: string[] };
     existingRouteId?: string;
+    // Continuation mode - jesli true, PlanChat dostaje initialPlan i ma extended
+    // istniejacy plan z merged likes zamiast generowac nowy.
+    continuationMode?: boolean;
   } | null);
   const matchedRoutes = wizardState?.matchedRoutes ?? [];
   const [altIndex, setAltIndex] = useState(wizardState?.selectedRouteIndex ?? 0);
@@ -239,6 +242,7 @@ const CreateRoute = () => {
           onSwitchAlt={setAltIndex}
           readOnly={!!wizardState?.existingRouteId}
           groupSession={wizardState?.groupSession}
+          continuationMode={wizardState?.continuationMode}
         />
       </div>
 
