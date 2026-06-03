@@ -58,6 +58,7 @@ interface BusinessProfile {
   logo_url: string | null;
   cover_image_url: string | null;
   gallery_urls: string[];
+  menu_image_urls: string[];
   phone: string | null;
   email: string | null;
   website: string | null;
@@ -86,6 +87,7 @@ interface ChartDay { date: string; views: number; routes: number; clicks: number
 interface HourlyBucket { hour: number; label: string; total: number; }
 
 const MAX_GALLERY = 10;
+const MAX_MENU_IMAGES = 6;
 
 // iOS Safari: imperative play() required for dynamically-inserted muted videos
 function AutoVideo({ src, className }: { src: string; className?: string }) {
@@ -596,6 +598,7 @@ const BusinessDashboard = () => {
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [coverVideoUrl, setCoverVideoUrl] = useState("");
   const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
+  const [menuImageUrls, setMenuImageUrls] = useState<string[]>([]);
   const [eventTitle, setEventTitle] = useState("");
   const [eventDescription, setEventDescription] = useState("");
   const [eventStartsAt, setEventStartsAt] = useState("");
@@ -645,6 +648,7 @@ const BusinessDashboard = () => {
   const [galleryDragIdx, setGalleryDragIdx] = useState<number | null>(null);
   const [galleryTargetIdx, setGalleryTargetIdx] = useState<number | null>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const menuInputRef = useRef<HTMLInputElement>(null);
   const postPhotoInputRef = useRef<HTMLInputElement>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -754,6 +758,7 @@ const BusinessDashboard = () => {
     setCoverImageUrl(profileData.cover_image_url ?? "");
     setCoverVideoUrl((profileData as any).cover_video_url ?? "");
     setGalleryUrls(profileData.gallery_urls ?? []);
+    setMenuImageUrls(profileData.menu_image_urls ?? []);
     setColorBadge((profileData as any).color_badge ?? "#f97316");
     setColorCardBg((profileData as any).color_card_bg ?? "#000000");
     setColorButton((profileData as any).color_button ?? "#f97316");
@@ -1071,6 +1076,26 @@ const BusinessDashboard = () => {
     setIsDirty(true);
   };
 
+  const handleMenuUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    const remaining = MAX_MENU_IMAGES - menuImageUrls.length;
+    const toUpload = files.slice(0, remaining);
+    setUploading("menu");
+    try {
+      const urls = await Promise.all(toUpload.map(f => uploadFile(f, "menu")));
+      setMenuImageUrls(prev => [...prev, ...urls]);
+      setIsDirty(true);
+    } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać zdjęć"); }
+    setUploading(null);
+    e.target.value = "";
+  };
+
+  const removeMenuImage = (idx: number) => {
+    setMenuImageUrls(prev => prev.filter((_, i) => i !== idx));
+    setIsDirty(true);
+  };
+
   const handlePostPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -1167,6 +1192,7 @@ const BusinessDashboard = () => {
         cover_image_url: coverImageUrl || null,
         cover_video_url: coverVideoUrl || null,
         gallery_urls: galleryUrls,
+        menu_image_urls: menuImageUrls,
         color_badge: colorBadge,
         color_card_bg: colorCardBg,
         color_button: colorButton,
@@ -1210,7 +1236,7 @@ const BusinessDashboard = () => {
   // Silent auto-save for draft mode — called on tab switch and after media uploads
   const autoSaveDraft = useCallback(async (overrides?: Partial<{
     businessName: string; description: string; street: string; city: string; phone: string; email: string;
-    website: string; tags: string[]; mainCategory: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[];
+    website: string; tags: string[]; mainCategory: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[]; menuImageUrls: string[];
   }>) => {
     if (!profile || !isDraft) return;
     const payload = {
@@ -1227,11 +1253,12 @@ const BusinessDashboard = () => {
       cover_image_url: (overrides?.coverImageUrl ?? coverImageUrl) || null,
       cover_video_url: (overrides?.coverVideoUrl ?? coverVideoUrl) || null,
       gallery_urls: overrides?.galleryUrls ?? galleryUrls,
+      menu_image_urls: overrides?.menuImageUrls ?? menuImageUrls,
       updated_at: new Date().toISOString(),
     };
     await (supabase as any).from("business_profiles").update(payload).eq("id", profile.id);
     setIsDirty(false);
-  }, [profile, isDraft, businessName, description, street, city, phone, email, website, tags, mainCategory, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls]);
+  }, [profile, isDraft, businessName, description, street, city, phone, email, website, tags, mainCategory, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, menuImageUrls]);
 
   const dismissVerifiedBanner = async () => {
     setShowVerifiedBanner(false);
@@ -1864,6 +1891,59 @@ const BusinessDashboard = () => {
                 </div>
                 <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} />
               </div>
+
+              {/* ── SEKCJA: Menu / Cennik (warunkowo per main_category) ──
+                  food            -> "Menu"
+                  culture, attractions -> "Cennik"
+                  nature, brak    -> sekcja sie nie pokazuje (parki nie maja cennika) */}
+              {(() => {
+                const menuLabel = mainCategory === 'food'
+                  ? 'Menu'
+                  : (mainCategory === 'culture' || mainCategory === 'attractions')
+                  ? 'Cennik'
+                  : null;
+                if (!menuLabel) return null;
+                const hint = menuLabel === 'Menu'
+                  ? 'Zdjęcia kartek z menu (food/napoje/desery). Pokażą się na wizytówce w aplikacji.'
+                  : 'Zdjęcia z cennikiem biletów lub usług. Pokażą się na wizytówce w aplikacji.';
+                return (
+                  <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-foreground">{menuLabel}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground shrink-0">{menuImageUrls.length}/{MAX_MENU_IMAGES}</p>
+                    </div>
+                    <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                      {menuImageUrls.map((url, idx) => (
+                        <div
+                          key={idx}
+                          className="relative aspect-square rounded-xl overflow-hidden bg-muted group"
+                          onClick={() => setPhotoPreview({ url, label: `${menuLabel} ${idx + 1}` })}
+                        >
+                          <img src={url} className="w-full h-full object-cover pointer-events-none" />
+                          <button
+                            onClick={(e) => { e.stopPropagation(); removeMenuImage(idx); }}
+                            className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center active:opacity-70 z-10"
+                          >
+                            <X className="h-3 w-3 text-white" />
+                          </button>
+                          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-between px-1.5 pb-1.5 pointer-events-none">
+                            <ZoomIn className="h-3 w-3 text-white/80" />
+                          </div>
+                        </div>
+                      ))}
+                      {menuImageUrls.length < MAX_MENU_IMAGES && (
+                        <button onClick={() => menuInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
+                          {uploading === 'menu' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-5 w-5 text-muted-foreground" />}
+                        </button>
+                      )}
+                    </div>
+                    <input ref={menuInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleMenuUpload} />
+                  </div>
+                );
+              })()}
 
               {/* ── Personalizacja kolorow ── */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">

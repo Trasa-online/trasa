@@ -762,6 +762,39 @@ const PlaceSwiperDetail = ({
                     </div>
                   )}
 
+                  {/* Menu / Cennik - warunkowo per main_category.
+                      food -> "Menu", culture/attractions -> "Cennik", nature -> nic.
+                      Pokazujemy tylko gdy biznes wrzucil zdjecia. Galeria pozioma scrollable
+                      z aspect [4/3] zgodnie z brand guideline (kazde zdjecie w wizytowce 4:3).
+                      Tap -> fullscreen viewer (reuse istniejacego). */}
+                  {(() => {
+                    const menuImages = place.businessMenuImageUrls ?? [];
+                    if (menuImages.length === 0) return null;
+                    const sectionLabel = place.businessMainCategory === 'food'
+                      ? 'Menu'
+                      : (place.businessMainCategory === 'culture' || place.businessMainCategory === 'attractions')
+                      ? 'Cennik'
+                      : null;
+                    if (!sectionLabel) return null;
+                    return (
+                      <div className="space-y-3 pt-2">
+                        <h3 className="text-lg font-black tracking-tight">{sectionLabel}</h3>
+                        <div className="flex gap-2 overflow-x-auto scrollbar-none snap-x snap-mandatory -mx-4 px-4 pb-1">
+                          {menuImages.map((url, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setFullscreen({ photos: menuImages, idx })}
+                              className="shrink-0 w-[78%] aspect-[4/3] rounded-2xl overflow-hidden bg-muted snap-center active:opacity-95 transition-opacity"
+                              aria-label={`Powiększ ${sectionLabel.toLowerCase()} ${idx + 1}`}
+                            >
+                              <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Loading skeleton */}
                   {loading && !detail && (
                     <div className="space-y-3 animate-pulse">
