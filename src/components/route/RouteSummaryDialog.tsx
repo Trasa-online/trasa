@@ -398,11 +398,6 @@ const RouteSummaryDialog = ({
                                 <p className="text-[11px] text-muted-foreground/60 mt-1">🚶 {pin.walking_time_from_prev}</p>
                               )}
                             </div>
-                            {pin.suggested_time && (
-                              <span className="text-sm font-semibold text-foreground shrink-0 tabular-nums">
-                                {pin.suggested_time}
-                              </span>
-                            )}
                           </div>
                         </div>
                       </div>

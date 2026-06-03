@@ -38,7 +38,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         const sessionIds = memberRows.map((m: any) => m.session_id);
         const { data } = await (supabase as any)
           .from("routes")
-          .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, new_for_users, chat_status")
+          .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, new_for_users, chat_status, group_session_id")
           .in("group_session_id", sessionIds)
           .neq("user_id", userId)
           .order("updated_at", { ascending: false });
@@ -55,14 +55,33 @@ const JournalTab = ({ userId }: JournalTabProps) => {
 
   const handleDelete = async (e: React.MouseEvent, entry: any) => {
     e.stopPropagation();
-    if (!confirm(`Usunąć trasę "${entry.city}"? Tego nie można cofnąć.`)) return;
+    // Trasa wlasna: konfirm delete na zawsze.
+    // Trasa od kogos innego (member sesji grupowej): konfirm tylko "ukryj z dziennika".
+    const confirmMsg = entry.is_own
+      ? `Usunąć trasę "${entry.city}"? Tego nie można cofnąć.`
+      : `Ukryć trasę "${entry.city}" z dziennika? Trasa pozostanie u twórcy.`;
+    if (!confirm(confirmMsg)) return;
     setDeletingId(entry.id);
     try {
-      await supabase.from("pins").delete().eq("route_id", entry.id);
-      await (supabase as any).from("chat_sessions").delete().eq("route_id", entry.id);
-      const { error } = await supabase.from("routes").delete().eq("id", entry.id);
-      if (error) throw error;
-      toast.success("Trasa usunięta");
+      if (entry.is_own) {
+        // Wlasna trasa - hard delete (CASCADE z routes do pins, chat_sessions)
+        await supabase.from("pins").delete().eq("route_id", entry.id);
+        await (supabase as any).from("chat_sessions").delete().eq("route_id", entry.id);
+        const { error } = await supabase.from("routes").delete().eq("id", entry.id);
+        if (error) throw error;
+        toast.success("Trasa usunięta");
+      } else {
+        // Member trasy grupowej - usun siebie z group_session_members. Trasa
+        // zostaje u creatora. RLS dla group routes nie pokaze nam jej po tym.
+        if (!entry.group_session_id) throw new Error("missing group_session_id");
+        const { error } = await (supabase as any)
+          .from("group_session_members")
+          .delete()
+          .eq("session_id", entry.group_session_id)
+          .eq("user_id", userId);
+        if (error) throw error;
+        toast.success("Ukryto z dziennika");
+      }
       queryClient.invalidateQueries({ queryKey: ["journal-entries", userId] });
     } catch {
       toast.error("Nie udało się usunąć trasy");
@@ -187,7 +206,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
                     📷 Twoje zdjęcie
                   </div>
                 )}
-                {entry.is_own && (
+                {(entry.is_own || entry.group_session_id) && (
                   <button
                     onClick={(e) => handleDelete(e, entry)}
                     disabled={deletingId === entry.id}

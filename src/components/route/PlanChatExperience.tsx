@@ -1030,7 +1030,7 @@ window.addEventListener('message',function(e){
             iframeRef.current?.contentWindow?.postMessage({ type: "flyTo", lat, lng }, "*");
           };
           return (
-            <div className="absolute inset-0 bg-background z-30 flex flex-col">
+            <div className="fixed inset-0 bg-background z-50 flex flex-col pt-safe">
               <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 shrink-0">
                 <button
                   onClick={() => setShowMap(false)}
