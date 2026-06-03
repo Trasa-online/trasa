@@ -31,7 +31,6 @@ interface Pin {
   description: string | null;
   latitude: number | null;
   longitude: number | null;
-  walking_time_from_prev: string | null;
   visited_at: string | null;
   user_photo_urls: string[];
   photo_url: string | null;
@@ -73,7 +72,7 @@ const ActiveTrip = () => {
 
       const { data: pins, error: pinsError } = await (supabase as any)
         .from("pins")
-        .select("id, place_name, pin_order, suggested_time, address, description, latitude, longitude, walking_time_from_prev, visited_at, user_photo_urls, photo_url")
+        .select("id, place_name, pin_order, suggested_time, address, description, latitude, longitude, visited_at, user_photo_urls, photo_url")
         .eq("route_id", routeId)
         .order("pin_order", { ascending: true });
       if (pinsError) {
@@ -311,15 +310,9 @@ const ActiveTrip = () => {
                       </span>
                     </div>
                   )}
-                  {(pin.suggested_time || pin.walking_time_from_prev) && (
+                  {pin.suggested_time && (
                     <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      {pin.suggested_time && <span>{pin.suggested_time}</span>}
-                      {pin.walking_time_from_prev && (
-                        <>
-                          {pin.suggested_time && <span>·</span>}
-                          <span>🚶 {pin.walking_time_from_prev}</span>
-                        </>
-                      )}
+                      <span>{pin.suggested_time}</span>
                     </div>
                   )}
                   {pin.address && (
