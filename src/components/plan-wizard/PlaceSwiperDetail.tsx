@@ -466,21 +466,13 @@ const PlaceSwiperDetail = ({
     }
 
     const fetchAll = async () => {
-      // Business with own photos → use their media, skip Google photos
-      if (skipGoogleFetch || place.businessHasOwnPhoto) {
-        setDetail(null);
+      // Business with own photos → use their photos (don't override with Google),
+      // ale NADAL fetchujemy Google detail dla reviews, formatted_address, rating,
+      // user_ratings_total. Wczesniej setDetail(null) blokowal te dane co powodowal
+      // ze wizytowka premium tracila Opinie + adres + count opinii vs non-premium.
+      const hasBizPhotos = place.businessHasOwnPhoto || skipGoogleFetch;
+      if (hasBizPhotos) {
         setPhotos([place.photo_url, ...(place.galleryPhotos ?? [])].filter(Boolean) as string[]);
-        if (place.businessLogoUrl !== undefined) {
-          const { data } = await (supabase as any)
-            .from("business_posts")
-            .select("id, description, photo_urls, created_at")
-            .eq("place_id", place.id)
-            .order("created_at", { ascending: false })
-            .limit(10);
-          if (data) setBusinessPosts(data);
-        }
-        setLoading(false);
-        return;
       }
 
       const alreadyCached = isCachedPhotoUrl(place.photo_url);
@@ -500,7 +492,9 @@ const PlaceSwiperDetail = ({
         .then(({ data }) => {
           if (data?.result) {
             setDetail(data.result);
-            if (!alreadyCached && !hasGallery) {
+            // Nie nadpisuj photos Google'em gdy biznes ma juz wlasne zdjecia (premium)
+            // lub gdy gallery juz wypelniona z backfillu.
+            if (!alreadyCached && !hasGallery && !hasBizPhotos) {
               const urls = (data.result.photos ?? [])
                 .slice(0, 3)
                 .map((p: any) => p.photo_url ?? getPhotoUrl(p.photo_reference, 800))
@@ -666,7 +660,17 @@ const PlaceSwiperDetail = ({
                     const mainLabel = place.businessMainCategory
                       ? MAIN_CATEGORIES.find(c => c.id === place.businessMainCategory)?.label
                       : null;
-                    const subs = place.businessSubcategories ?? [];
+                    // Dedup subcategories case-insensitive zeby ten sam tag nie pojawial
+                    // sie 2x (np. user dodal "Bar mleczny" jako custom_subcategory I dashboard
+                    // zapisal ten sam slug do subcategories array).
+                    const subsRaw = place.businessSubcategories ?? [];
+                    const seen = new Set<string>();
+                    const subs = subsRaw.filter(s => {
+                      const k = s.toLowerCase().trim();
+                      if (!k || seen.has(k)) return false;
+                      seen.add(k);
+                      return true;
+                    });
                     if (!mainLabel && subs.length === 0) return null;
                     return (
                       <div className="flex flex-wrap gap-1.5">
@@ -696,9 +700,12 @@ const PlaceSwiperDetail = ({
                     googleOpenNow={detail?.opening_hours?.open_now}
                   />
 
-                  {/* Description */}
-                  {place.description && (
-                    <p className="text-sm text-foreground/85 leading-relaxed">{place.description}</p>
+                  {/* Description - biznes priorytet (z business_profiles.description),
+                      fallback na places.description (z bazy lub Google). */}
+                  {(place.businessDescription || place.description) && (
+                    <p className="text-sm text-foreground/85 leading-relaxed">
+                      {place.businessDescription || place.description}
+                    </p>
                   )}
 
                   {/* Promo CTA badge (active business event) */}
