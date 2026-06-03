@@ -238,6 +238,7 @@ const CreateRoute = () => {
           altIndex={altIndex}
           onSwitchAlt={setAltIndex}
           readOnly={!!wizardState?.existingRouteId}
+          groupSession={wizardState?.groupSession}
         />
       </div>
 

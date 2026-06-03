@@ -65,6 +65,9 @@ interface PlanChatExperienceProps {
   altIndex?: number;
   readOnly?: boolean;
   onSwitchAlt?: (i: number) => void;
+  // Group session context - wpływa na copy w AddPinSheet ("wspólne miejsce" vs
+  // "polubione miejsce") i niektore CTA. Solo = undefined.
+  groupSession?: { sessionId: string; otherMemberIds: string[] };
 }
 
 type SnapState = "peek" | "half" | "full";
@@ -429,7 +432,7 @@ function getCurrentTimeContext(): { current_time: string; current_date: string }
   };
 }
 
-const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlacesData, skippedPlaces, superLikedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt, readOnly }: PlanChatExperienceProps) => {
+const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlacesData, skippedPlaces, superLikedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt, readOnly, groupSession }: PlanChatExperienceProps) => {
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
   const [input, setInput] = useState("");
@@ -1516,7 +1519,25 @@ window.addEventListener('message',function(e){
                           {plan.days.flatMap((day, dayIdx) => {
                             const DAY_COLORS = ['#ea580c','#2563eb','#16a34a','#7c3aed','#d97706'];
                             const color = DAY_COLORS[(day.day_number - 1) % DAY_COLORS.length];
-                            const cards = day.pins.map((pin, idx) => (
+                            // Per-day empty state: gdy AI zwrocilo pins:[] (mało polubien dla N dni),
+                            // pokaz zachecajaca karte zamiast pustego miejsca w carouselu.
+                            // Bug fix 2026-06-03 - wczesniej tylko koncowy "Dodaj miejsce" button,
+                            // co bylo niejasne dla user'a w multi-day flow.
+                            const cards = day.pins.length === 0 ? [
+                              <button
+                                key={`empty-day-${day.day_number}`}
+                                onClick={() => setAddPinDay(day.day_number)}
+                                className="flex-shrink-0 w-[80vw] h-full rounded-2xl border-2 border-dashed border-border/50 bg-muted/20 flex flex-col items-center justify-center gap-3 text-muted-foreground snap-center px-6 active:scale-[0.98] transition-transform"
+                              >
+                                <div className="h-12 w-12 rounded-full bg-orange-100 flex items-center justify-center">
+                                  <Plus className="h-6 w-6 text-orange-600" />
+                                </div>
+                                <p className="text-sm font-bold text-foreground">Ten dzień jest pusty</p>
+                                <p className="text-xs text-center leading-relaxed max-w-[260px]">
+                                  Wróć do wyboru i polub jeszcze kilka miejsc, żeby wypełnić ten dzień.
+                                </p>
+                              </button>
+                            ] : day.pins.map((pin, idx) => (
                               <LargeCarouselCard
                                 key={`${day.day_number}-${pin.place_name}`}
                                 pin={pin}
@@ -1543,14 +1564,17 @@ window.addEventListener('message',function(e){
                             }
                             return cards;
                           })}
-                          {/* Add pin button - same height as cards */}
-                          <button
-                            onClick={() => setAddPinDay(plan.days[plan.days.length - 1].day_number)}
-                            className="flex-shrink-0 w-[80vw] h-full rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-2 text-muted-foreground snap-center"
-                          >
-                            <Plus className="h-6 w-6" />
-                            <span className="text-sm">Dodaj miejsce</span>
-                          </button>
+                          {/* Add pin button na koncu - tylko gdy ostatni dzien ma juz pinów
+                              (inaczej duplikuje per-day empty state ktorego juz mamy wyzej) */}
+                          {plan.days[plan.days.length - 1].pins.length > 0 && (
+                            <button
+                              onClick={() => setAddPinDay(plan.days[plan.days.length - 1].day_number)}
+                              className="flex-shrink-0 w-[80vw] h-full rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-2 text-muted-foreground snap-center"
+                            >
+                              <Plus className="h-6 w-6" />
+                              <span className="text-sm">Dodaj miejsce</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                       <div className="flex-shrink-0 px-4 pb-4 pt-1 border-t border-border/40 flex gap-2">
@@ -1586,6 +1610,7 @@ window.addEventListener('message',function(e){
           cityContext={preferences.city}
           likedPlaces={likedPlaces}
           restrictToLiked={!!likedPlacesData?.length}
+          isGroupMode={!!groupSession}
           existingPinNames={plan?.days.flatMap(d => d.pins).map(p => p.place_name)}
           onPinAdd={(pin) => {
             setPlan(prev => prev ? {

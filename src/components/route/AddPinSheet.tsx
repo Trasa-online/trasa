@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Search, Loader2, MapPin, Plus, Heart, Tag, PenLine } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Search, Loader2, MapPin, Plus, Heart, Tag, PenLine, ArrowLeft } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +14,9 @@ interface AddPinSheetProps {
   likedPlaces?: string[];
   existingPinNames?: string[];
   restrictToLiked?: boolean;
+  // Group session = wspólne miejsca (polubione przez wszystkich uczestników).
+  // Solo = po prostu polubione przez Ciebie. Wpływa na copy + CTA.
+  isGroupMode?: boolean;
 }
 
 type Tab = "liked" | "search" | "category" | "manual";
@@ -61,7 +65,8 @@ function dbPlaceToPin(p: DbPlace): PlanPin {
   };
 }
 
-const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = [], existingPinNames = [], restrictToLiked = false }: AddPinSheetProps) => {
+const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = [], existingPinNames = [], restrictToLiked = false, isGroupMode = false }: AddPinSheetProps) => {
+  const navigate = useNavigate();
   const existingSet = new Set(existingPinNames.map(n => n.toLowerCase()));
   const availableLiked = likedPlaces.filter(n => !existingSet.has(n.toLowerCase()));
 
@@ -192,10 +197,16 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
         <SheetHeader className="text-left pb-2 flex-shrink-0">
           <SheetTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
-            {restrictToLiked ? "Dodaj wspólne miejsce" : "Dodaj punkt"}
+            {restrictToLiked
+              ? (isGroupMode ? "Dodaj wspólne miejsce" : "Dodaj polubione miejsce")
+              : "Dodaj punkt"}
           </SheetTitle>
           {restrictToLiked && (
-            <p className="text-xs text-muted-foreground mt-0.5">Tylko miejsca polubione przez wszystkich uczestników</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isGroupMode
+                ? "Tylko miejsca polubione przez wszystkich uczestników"
+                : "Z miejsc polubionych przez Ciebie w głosowaniu"}
+            </p>
           )}
         </SheetHeader>
 
@@ -233,10 +244,37 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
           {tab === "liked" && (
             <div className="space-y-1.5">
               {availableLiked.length === 0 ? (
-                <div className="text-center py-12 text-sm text-muted-foreground">
-                  {likedPlaces.length === 0
-                    ? "Nie wybrałeś żadnych miejsc podczas przeglądania"
-                    : "Wszystkie wybrane miejsca są już w planie"}
+                <div className="flex flex-col items-center gap-4 py-10 px-6 text-center">
+                  <div className="h-14 w-14 rounded-full bg-orange-100 flex items-center justify-center">
+                    <Heart className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-semibold text-foreground">
+                      {likedPlaces.length === 0
+                        ? "Nie wybrałeś żadnych miejsc w głosowaniu"
+                        : isGroupMode
+                          ? "Wszystkie wspólne miejsca są już w planie"
+                          : "Wszystkie polubione miejsca są już w planie"}
+                    </p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {isGroupMode
+                        ? "Wróć do parowania, żeby wraz z grupą wybrać więcej miejsc."
+                        : "Wróć do przeglądania, żeby polubić więcej miejsc do trasy."}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      onOpenChange(false);
+                      // Wraca do swipera. Group session -> back do sesji parowania
+                      // (navigate -1 zachowuje stan), solo -> /plan (wizard od poczatku).
+                      if (isGroupMode) navigate(-1);
+                      else navigate("/plan");
+                    }}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    {isGroupMode ? "Wróć do parowania" : "Polub więcej miejsc"}
+                  </button>
                 </div>
               ) : (
                 availableLiked.map(name => {
