@@ -1012,6 +1012,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         if (reactions?.length) {
           ratedPlaceIds = new Set(reactions.map((r: { place_id: string }) => r.place_id));
         }
+        console.log("[PlaceSwiper] fetchPlaces reactions count for today:", reactions?.length ?? 0, "city:", city, "refreshNonce:", refreshNonce);
         // Also filter out places already swiped in the group session
         if (groupSessionId) {
           const { data: groupReactions } = await (supabase as any)
@@ -1268,21 +1269,30 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   };
 
   // "Zacznij od nowa" w EmptyState - prawdziwy reset zamiast window.location.reload()
-  // (ktore nie czyscilo DB reactions ani localStorage). Czysci dzisiejsze reactions
-  // dla tego miasta + exploreLikes localStorage + history state + re-fetch queue.
+  // (ktore nie czyscilo DB reactions ani localStorage). Czysci CALA historie reactions
+  // dla tego miasta (NIE tylko dziennie - app filtruje tylko reactions z dzisiaj,
+  // ale jesli user mial wczorajsze reactions na te same miejsca, te tez excludowaly).
+  // Plus exploreLikes localStorage + history state + re-fetch queue.
   const handleResetToday = async () => {
     if (resetting) return;
     setResetting(true);
+    console.log("[PlaceSwiper] reset start", { city, userId: user?.id });
     try {
       if (user) {
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-        await (supabase as any)
+        // Usuwamy WSZYSTKIE reactions w tym miescie (nie tylko z dziennej) zeby user
+        // dostal pelny pool na nowo. Reactions na taste profile sa tracked osobno.
+        const { error: delError, count } = await (supabase as any)
           .from("user_place_reactions")
-          .delete()
+          .delete({ count: "exact" })
           .eq("user_id", user.id)
-          .ilike("city", city)
-          .gte("created_at", todayStart.toISOString());
+          .ilike("city", city);
+        if (delError) {
+          console.error("[PlaceSwiper] DELETE reactions failed:", delError);
+          throw delError;
+        }
+        console.log("[PlaceSwiper] DELETE reactions success, deleted count:", count);
+      } else {
+        console.log("[PlaceSwiper] no user, skipping DB delete");
       }
       // Wyczysc explore likes localStorage dla tego miasta + dziennej grupy
       const todayStr = (() => {
@@ -1290,13 +1300,18 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       })();
       clearExploreGroup(todayStr, city);
+      console.log("[PlaceSwiper] localStorage cleared");
       // Reset local state - history, queue, liked itp.
       setHistory([]);
       setLikedPlaces([]);
       setSkippedPlaces([]);
       setSuperLikedPlaces([]);
+      setQueue([]);
       // Trigger re-fetch przez bumping nonce - useEffect odpali fetchPlaces od nowa
-      setRefreshNonce(n => n + 1);
+      setRefreshNonce(n => {
+        console.log("[PlaceSwiper] bumping refreshNonce:", n, "->", n + 1);
+        return n + 1;
+      });
     } catch (err) {
       console.error("[PlaceSwiper] reset today failed:", err);
       toast.error("Nie udało się zresetować, spróbuj ponownie");
