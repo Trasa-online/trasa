@@ -609,7 +609,7 @@ const Home = () => {
                                       supabase.functions.invoke("send-push", {
                                         body: {
                                           user_id: memberId,
-                                          title: "Trasa zakończona! 🗺️",
+                                          title: "Trasa gotowa",
                                           body: `Oceń miejsca z ${sessionRoute.city || "trasy"} i dodaj wspomnienia`,
                                           url: `/review-summary?route=${sessionRoute.id}`,
                                         },

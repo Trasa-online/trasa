@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { isWeb } from "@/lib/platform";
+import { sendGroupInvitePush } from "@/lib/sendGroupInvitePush";
 import { usePostHog } from "@posthog/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -299,21 +300,13 @@ const CreateGroupSession = () => {
             p_target_user_id: id,
             p_session_id: createdSessionId,
           });
-          // 2) Push (web+iOS) - best-effort, nie blokuje jesli failuje.
-          //    Klient ma push_subscriptions dla iOS native (APNs) i/lub web (VAPID).
-          //    Brak push = uzytkownik dostanie tylko in-app po wejsciu w apke.
-          try {
-            await supabase.functions.invoke("send-push", {
-              body: {
-                user_id: id,
-                title: "Zaproszenie do sesji 🗺️",
-                body: `${hostName} zaprasza Cię do wspólnego parowania w ${selectedCity}`,
-                url: `/sesja/${createdCode}`,
-              },
-            });
-          } catch {
-            // failed push to nie blocker
-          }
+          // 2) Push (web+iOS) przez helper - jednolita tresc we wszystkich miejscach
+          await sendGroupInvitePush({
+            targetUserId: id,
+            hostName,
+            city: selectedCity,
+            joinCode: createdCode,
+          });
         })
       );
       setSendingInvites(false);

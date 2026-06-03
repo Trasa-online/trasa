@@ -6,6 +6,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+type ScheduleWindow = "morning" | "evening";
+
+// Push scheduler odpalany przez pg_cron 2x dziennie:
+// - morning (cron 7:00 UTC = 9:00 PL latem): review yesterday + active today
+// - evening (cron 17:00 UTC = 19:00 PL latem): trip preview tomorrow
+//
+// Body przykład: { "window": "morning" } lub { "window": "evening" }
+// Bez parametru = legacy behavior (wszystkie 3 typy w kolejnosci priorytetu).
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -16,6 +24,19 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // Parse window param z body (default = bez filtra = legacy)
+    let windowParam: ScheduleWindow | null = null;
+    try {
+      const body = await req.json();
+      if (body?.window === "morning" || body?.window === "evening") {
+        windowParam = body.window;
+      }
+    } catch {
+      // Brak body / niepoprawny JSON = legacy mode
+    }
+
+    console.log(`[push-scheduler] window=${windowParam ?? "legacy"}`);
 
     // Get all users with active push subscriptions
     const { data: subscriptions, error: subError } = await supabase
@@ -37,7 +58,6 @@ Deno.serve(async (req) => {
     // Get unique user IDs
     const uniqueUserIds = [...new Set(subscriptions.map((s) => s.user_id))];
 
-    // For each user, check if they have ongoing trips and send reminder
     let totalSent = 0;
     let totalFailed = 0;
 
@@ -46,77 +66,101 @@ Deno.serve(async (req) => {
     const yesterday = new Date(Date.now() - 86_400_000).toISOString().split("T")[0];
 
     for (const userId of uniqueUserIds) {
-      // Priority order: tomorrow (trip preview) > yesterday (review reminder) > today (active)
-      // Tylko jeden push per user per run zeby nie spamowac.
-      const { data: tomorrowRoutes } = await supabase
-        .from("routes")
-        .select("id, title, city")
-        .eq("user_id", userId)
-        .eq("status", "published")
-        .eq("start_date", tomorrow)
-        .limit(1);
-
-      const { data: yesterdayRoutes } = await supabase
-        .from("routes")
-        .select("id, title, city, review_photos")
-        .eq("user_id", userId)
-        .eq("status", "published")
-        .eq("start_date", yesterday)
-        .limit(1);
-
-      const { data: todayRoutes } = await supabase
-        .from("routes")
-        .select("id, title, city")
-        .eq("user_id", userId)
-        .eq("status", "published")
-        .eq("start_date", today)
-        .limit(1);
-
-      const { data: activeTrips } = await supabase
-        .from("route_folders")
-        .select("id, name")
-        .eq("user_id", userId)
-        .eq("is_trip", true)
-        .limit(1);
-
       let title = "";
       let body = "";
       let url = "/home";
 
-      if (tomorrowRoutes && tomorrowRoutes.length > 0) {
-        // Trip reminder dnia przed
-        const route = tomorrowRoutes[0];
-        title = `🗺️ Jutro: ${route.title}`;
-        body = route.city
-          ? `Twoja trasa po ${route.city} startuje jutro. Sprawdź plan!`
-          : "Twoja trasa startuje jutro. Sprawdź plan!";
-        url = `/day-review?route=${route.id}`;
-      } else if (yesterdayRoutes && yesterdayRoutes.length > 0) {
-        // Review reminder dnia po - tylko jesli jeszcze nie ma recenzji ani zdjec
-        const route = yesterdayRoutes[0];
-        const hasReview = Array.isArray((route as any).review_photos) && (route as any).review_photos.length > 0;
-        if (!hasReview) {
-          title = `📷 Jak było wczoraj w ${route.city ?? route.title}?`;
-          body = "Dodaj recenzje miejsc i zdjęcia do dziennika podróży";
-          url = `/review-summary?route=${route.id}`;
-        } else {
-          continue; // ma juz recenzje, pomijamy
+      // Morning window: review yesterday (jesli nie ma jeszcze recenzji) lub active today
+      // Evening window: trip preview tomorrow
+      // Legacy (windowParam null): priorytet tomorrow > yesterday > today
+      const wantTomorrow = windowParam === "evening" || windowParam === null;
+      const wantYesterday = windowParam === "morning" || windowParam === null;
+      const wantToday = windowParam === "morning" || windowParam === null;
+
+      let route: { id: string; title?: string; city?: string; review_photos?: unknown[] } | null = null;
+      let kind: "tomorrow" | "yesterday" | "today" | "active" | null = null;
+
+      if (wantTomorrow) {
+        const { data } = await supabase
+          .from("routes")
+          .select("id, title, city")
+          .eq("user_id", userId)
+          .eq("status", "published")
+          .eq("start_date", tomorrow)
+          .limit(1);
+        if (data && data.length > 0) {
+          route = data[0] as typeof route;
+          kind = "tomorrow";
         }
-      } else if (todayRoutes && todayRoutes.length > 0) {
-        // Active trip today
-        const route = todayRoutes[0];
-        title = `📍 Dziś: ${route.title}`;
-        body = route.city
-          ? `Twój plan na ${route.city} jest gotowy. Sprawdź!`
-          : "Sprawdź swój plan na dzisiaj!";
-        url = `/day/${route.id}`;
-      } else if (activeTrips && activeTrips.length > 0) {
-        // Fallback - ma aktywna podroz, ale brak konkretnej daty
-        title = `🗺️ ${activeTrips[0].name}`;
-        body = "Zapisz wspomnienia z dzisiejszego dnia!";
-      } else {
-        // Brak nic istotnego - pomijamy (nie spamuj user'a kazdym dniem)
+      }
+
+      if (!route && wantYesterday) {
+        const { data } = await supabase
+          .from("routes")
+          .select("id, title, city, review_photos")
+          .eq("user_id", userId)
+          .eq("status", "published")
+          .eq("start_date", yesterday)
+          .limit(1);
+        if (data && data.length > 0) {
+          const r = data[0] as typeof route;
+          const hasReview = Array.isArray(r?.review_photos) && r.review_photos.length > 0;
+          if (!hasReview) {
+            route = r;
+            kind = "yesterday";
+          }
+        }
+      }
+
+      if (!route && wantToday) {
+        const { data } = await supabase
+          .from("routes")
+          .select("id, title, city")
+          .eq("user_id", userId)
+          .eq("status", "published")
+          .eq("start_date", today)
+          .limit(1);
+        if (data && data.length > 0) {
+          route = data[0] as typeof route;
+          kind = "today";
+        }
+      }
+
+      // Legacy fallback - active trip folder bez konkretnej daty
+      if (!route && windowParam === null) {
+        const { data: activeTrips } = await supabase
+          .from("route_folders")
+          .select("id, name")
+          .eq("user_id", userId)
+          .eq("is_trip", true)
+          .limit(1);
+        if (activeTrips && activeTrips.length > 0) {
+          title = `Twoja podróż: ${activeTrips[0].name}`;
+          body = "Zapisz wspomnienia z dzisiejszego dnia";
+          kind = "active";
+        }
+      }
+
+      if (!kind) {
+        // Brak nic istotnego dla tego usera w tym oknie - pomijamy
         continue;
+      }
+
+      if (route) {
+        const cityName = route.city ?? "trasy";
+        if (kind === "tomorrow") {
+          title = `Jutro: ${cityName}`;
+          body = `Twoja trasa po ${cityName} startuje jutro. Sprawdź plan`;
+          url = `/day-review?route=${route.id}`;
+        } else if (kind === "yesterday") {
+          title = `Jak wczoraj w ${cityName}?`;
+          body = "Dodaj recenzje i zdjęcia do dziennika";
+          url = `/review-summary?route=${route.id}`;
+        } else if (kind === "today") {
+          title = `Dziś trasa po ${cityName}`;
+          body = "Twój plan jest gotowy - powodzenia";
+          url = `/day/${route.id}`;
+        }
       }
 
       // Call send-push function
@@ -141,11 +185,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Push scheduler done: ${totalSent} sent, ${totalFailed} failed`);
+    console.log(`[push-scheduler] window=${windowParam ?? "legacy"} done: ${totalSent} sent, ${totalFailed} failed`);
 
     return new Response(
       JSON.stringify({
         message: "Push scheduler completed",
+        window: windowParam ?? "legacy",
         users_notified: uniqueUserIds.length,
         total_sent: totalSent,
         total_failed: totalFailed,

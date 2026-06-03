@@ -13,6 +13,7 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { sendGroupInvitePush, getCurrentHostName } from "@/lib/sendGroupInvitePush";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
 
@@ -443,8 +444,8 @@ const GroupSession = () => {
             supabase.functions.invoke("send-push", {
               body: {
                 user_id: id,
-                title: "Cała grupa skończyła! 🎉",
-                body: `Wszyscy zagłosowali w ${currentCategory}. Czas na kolejną kategorię lub trasę.`,
+                title: "Wszyscy gotowi 🎉",
+                body: `Możecie ułożyć trasę po ${session.city}`,
                 url,
               },
             })
@@ -455,8 +456,8 @@ const GroupSession = () => {
             supabase.functions.invoke("send-push", {
               body: {
                 user_id: id,
-                title: `${myName} zakończył${myName.endsWith("a") ? "a" : ""} głosowanie 🎯`,
-                body: `Czekamy jeszcze na Twoje wybory w ${currentCategory}`,
+                title: `${myName} skończył${myName.endsWith("a") ? "a" : ""}`,
+                body: `Czeka tylko Twój głos w "${currentCategory}"`,
                 url,
               },
             })
@@ -601,15 +602,14 @@ const GroupSession = () => {
         message: `Zaproszenie do sesji parowania w ${session.city}`,
       });
       setWaitingInvitedIds((prev) => new Set(prev).add(profile.id));
-      // Push notification - best-effort
-      void supabase.functions.invoke("send-push", {
-        body: {
-          user_id: profile.id,
-          title: "Zaproszenie do sesji 🗺️",
-          body: `Dołącz do parowania w ${session.city}`,
-          url: `/sesja/${joinCode}`,
-        },
-      }).catch(() => {});
+      // Push notification - jednolita tresc przez helper
+      const hostName = await getCurrentHostName();
+      void sendGroupInvitePush({
+        targetUserId: profile.id,
+        hostName,
+        city: session.city,
+        joinCode,
+      });
     } catch {
       toast.error("Nie udało się wysłać zaproszenia");
     } finally {
@@ -633,16 +633,15 @@ const GroupSession = () => {
           })
         )
       );
-      // 2) Push notifications (best-effort, fail nie blokuje)
+      // 2) Push notifications przez helper - jednolita tresc, hostName pobrany raz
+      const hostName = await getCurrentHostName();
       await Promise.allSettled(
         friendIds.map((friendId) =>
-          supabase.functions.invoke("send-push", {
-            body: {
-              user_id: friendId,
-              title: "Zaproszenie do sesji 🗺️",
-              body: `Dołącz do parowania w ${session.city}`,
-              url: `/sesja/${joinCode}`,
-            },
+          sendGroupInvitePush({
+            targetUserId: friendId,
+            hostName,
+            city: session.city,
+            joinCode,
           })
         )
       );
