@@ -122,8 +122,10 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       );
       queryClient.invalidateQueries({ queryKey: ["journal-entries", userId] });
       queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
-    } catch {
-      toast.error("Nie udało się usunąć trasy");
+    } catch (err: any) {
+      console.error("[JournalTab] delete/leave failed:", err);
+      const msg = err?.message ?? "Nieznany błąd";
+      toast.error("Nie udało się", { description: msg });
     }
     setDeletingId(null);
   };
