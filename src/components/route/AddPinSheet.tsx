@@ -266,9 +266,22 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                     onClick={() => {
                       onOpenChange(false);
                       // Wraca do swipera. Group session -> back do sesji parowania
-                      // (navigate -1 zachowuje stan), solo -> /plan (wizard od poczatku).
-                      if (isGroupMode) navigate(-1);
-                      else navigate("/plan");
+                      // (navigate -1 zachowuje stan).
+                      // Solo -> /plan z state step=3 (CategoryPicker) + preserved
+                      // city + likedPlaceNames - omija CityPicker, wraca prosto
+                      // do swipera. Bez state poszedlby na CityPicker = bug.
+                      if (isGroupMode) {
+                        navigate(-1);
+                      } else {
+                        navigate("/plan", {
+                          state: {
+                            step: 3,
+                            city: cityContext,
+                            date: new Date().toISOString(),
+                            likedPlaceNames: likedPlaces,
+                          },
+                        });
+                      }
                     }}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
                   >
