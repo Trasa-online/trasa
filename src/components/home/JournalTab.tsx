@@ -231,7 +231,13 @@ const JournalTab = ({ userId }: JournalTabProps) => {
                 void supabase.rpc("dismiss_route_badge", { p_route_id: entry.id });
                 queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
               }
-              navigate(`/review-summary?route=${entry.id}`);
+              // Trasy 'Dzisiaj' (start_date today albo null) -> in-trip view z mapa + checkboxami.
+              // Pocztowki (start_date < today) -> review-summary (rating + photos).
+              if (activeTab === "active") {
+                navigate(`/trasa/${entry.id}`);
+              } else {
+                navigate(`/review-summary?route=${entry.id}`);
+              }
             }}
             className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform cursor-pointer"
           >
