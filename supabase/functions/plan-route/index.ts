@@ -142,7 +142,26 @@ function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, user
   const dinnerEarliest = isRomantic ? "19:00" : isNightlife ? "18:00" : "18:30";
 
   return `Jesteś planistą podróży w aplikacji TRASA. Twoje plany muszą być realistyczne, przestrzennie spójne i emocjonalnie satysfakcjonujące.
+${restrictToLiked && likedPlaces?.length ? `
+## 🚨 ZASADA NUMER 1 (NAJWAŻNIEJSZA - NIE ŁAM JEJ NIGDY)
 
+User wybrał konkretne ${likedPlaces.length} miejsc(a) i chce trasy TYLKO z nich. To jest TWOJA ROLA - układać te miejsca w trasę, NIE PROPONOWAĆ żadnych nowych miejsc.
+
+**ZAKAZY BEZWZGLĘDNE:**
+- NIE WOLNO Ci dodać NICZEGO co nie jest w liście user'a (poniżej w sekcji "🔒 TYLKO TE MIEJSCA")
+- NIE WOLNO wymyślać generycznych miejsc typu "Wieczorny spacer po [dzielnica]", "Romantyczna kolacja", "Klimatyczna kawiarnia", "Punkt widokowy", "Spacer po starówce"
+- NIE WOLNO uzupełniać dni "dla balansu" lub "dla kompletności" - LEPSZY PUSTY DZIEŃ NIŻ FAKE MIEJSCA
+
+**OBOWIĄZKOWE:**
+- Jeśli liczba miejsc usera < ${preferences.numDays} × 5 (czyli mniej niż optymalna na ${preferences.numDays} dni), MUSISZ zostawić pusty dzień: \`"pins": []\`
+- Aplikacja pokaże user'owi empty state ZAMIAST fake'ów - to jest właściwe zachowanie
+- Jeśli user ma 3 miejsca + 3 dni → Dzień 1: 3 miejsca, Dzień 2: pins:[], Dzień 3: pins:[]
+- Jeśli user ma 5 miejsc + 2 dni → Dzień 1: 3 miejsca, Dzień 2: 2 miejsca (NIE wypełniaj do 5 na dzień)
+
+LIMITY PUNKTÓW NA DZIEŃ (z H2) NIE STOSUJĄ SIĘ tu - liczba punktów = liczba polubionych miejsc, koniec.
+
+Jeśli złamiesz tę regułę, plan zostanie ODRZUCONY przez post-processing servera i user dostanie błąd "AI wymyślił miejsca - spróbuj ponownie".
+` : ""}
 ## PREFERENCJE USERA
 - Liczba dni: ${preferences.numDays}
 - Tempo: ${preferences.pace === "active" ? "aktywne (dużo zwiedzania)" : preferences.pace === "calm" ? "spokojne (mniej miejsc, więcej czasu)" : "mieszane"}
@@ -381,8 +400,8 @@ Jeśli MIEJSCA DO UWZGLĘDNIENIA / SUPER LIKE razem dają mniej niż optymalna l
 - **NIGDY nie wstawiaj zmyślonych nazw atrakcji** ani fałszywych koordynatów. Lepszy pusty dzień niż dzień z fake miejscami.
 
 Przykłady poprawnego zachowania:
-- User ma 3 polubione + 2 dni → Dzień 1: 3 polubione + 1 restauracja blisko, Dzień 2: `"pins": []`
-- User ma 4 polubione + 2 dni → Dzień 1: 4 polubione, Dzień 2: `"pins": []`
+- User ma 3 polubione + 2 dni → Dzień 1: 3 polubione + 1 restauracja blisko, Dzień 2: \`"pins": []\`
+- User ma 4 polubione + 2 dni → Dzień 1: 4 polubione, Dzień 2: \`"pins": []\`
 - User ma 8 polubionych + 2 dni → po 4 miejsca dziennie OK
 
 WAŻNE: pusty dzień to NIE jest błąd. Aplikacja pokaże user'owi empty state z CTA "Dodaj więcej miejsc". Lepiej żeby user widział pustkę i wrócił uzupełnić preferencje, niż żeby otrzymał plan z fake miejscami które niszczą zaufanie.
@@ -841,6 +860,58 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       try {
         plan = JSON.parse(planMatch[1]);
         cleanMessage = textWithoutSuggestions.replace(/<route_plan>[\s\S]*?<\/route_plan>/, "").trim();
+
+        // Post-processing: filtruj fake placeholdery jesli AI je dodalo mimo
+        // explicit zakaz w prompcie. Defensive layer - bez polegania na cooperacji AI.
+        // Bug 2026-06-02: gdy user wybiera mało polubionych dla N dni, AI generuje
+        // generic miejsca typu "Wieczorny spacer po Pradze-Polnoc" z fake koordynatami.
+        if (plan && Array.isArray(plan.days) && (liked_places?.length || restrict_to_liked)) {
+          const GENERIC_FRAZES = [
+            /wieczorny spacer/i,
+            /romantyczna kolacja/i,
+            /klimatyczna kawiarnia/i,
+            /^punkt widokowy$/i,
+            /^spacer po/i,
+            /^kolacja w /i,
+            /^lunch w /i,
+            /^kawa w /i,
+            /^chill w /i,
+            /^wieczor w /i,
+            /^poranek w /i,
+          ];
+          const isGeneric = (name: string): boolean => {
+            const trimmed = (name ?? "").trim();
+            if (!trimmed) return true;
+            return GENERIC_FRAZES.some(rx => rx.test(trimmed));
+          };
+          const likedNamesNormalized = (liked_places ?? []).map((p: string) => p.toLowerCase().trim());
+          const superLikedNormalized = (super_liked_places ?? []).map((p: string) => p.toLowerCase().trim());
+          const allowedNames = new Set([...likedNamesNormalized, ...superLikedNormalized]);
+
+          const filteredDays = plan.days.map((day: any) => {
+            const pins = Array.isArray(day.pins) ? day.pins : [];
+            const filteredPins = pins.filter((pin: any) => {
+              const name = (pin.place_name ?? "").toString();
+              // Wyrzuc generic placeholdery
+              if (isGeneric(name)) {
+                console.warn(`[plan-route] Filter generic placeholder: "${name}"`);
+                return false;
+              }
+              // Jesli restrict_to_liked=true, wymagaj zeby kazdy pin byl na liscie
+              if (restrict_to_liked) {
+                const inLiked = allowedNames.has(name.toLowerCase().trim());
+                if (!inLiked) {
+                  console.warn(`[plan-route] Filter out non-liked place (restrict mode): "${name}"`);
+                  return false;
+                }
+              }
+              return true;
+            });
+            return { ...day, pins: filteredPins };
+          });
+          plan.days = filteredDays;
+          console.log(`[plan-route] After post-processing: ${filteredDays.map((d: any) => `Day${d.day_number}=${d.pins.length}`).join(", ")}`);
+        }
       } catch (parseErr) {
         console.error("Failed to parse route_plan:", parseErr);
         cleanMessage = textWithoutSuggestions.replace(/<route_plan>[\s\S]*?<\/route_plan>/, "").trim();
