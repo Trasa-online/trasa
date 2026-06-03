@@ -28,6 +28,7 @@ interface Pin {
   pin_order: number;
   suggested_time: string | null;
   address: string | null;
+  description: string | null;
   latitude: number | null;
   longitude: number | null;
   walking_time_from_prev: string | null;
@@ -47,27 +48,44 @@ const ActiveTrip = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const currentUploadPinRef = useRef<string | null>(null);
 
-  const { data: routeData, isLoading } = useQuery({
+  const { data: routeData, isLoading, error: queryError } = useQuery({
     queryKey: ["active-trip", routeId],
     queryFn: async () => {
-      if (!routeId) return null;
+      if (!routeId) {
+        console.error("[ActiveTrip] routeId is null/undefined", { routeId });
+        throw new Error("Brak ID trasy w URL");
+      }
+      console.log("[ActiveTrip] fetching route", { routeId });
       const { data: route, error: routeError } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, day_number, start_date, user_id, status")
+        .select("id, title, city, day_number, start_date, user_id, status, group_session_id")
         .eq("id", routeId)
-        .single();
-      if (routeError) throw routeError;
+        .maybeSingle();
+      if (routeError) {
+        console.error("[ActiveTrip] route query error:", routeError);
+        throw routeError;
+      }
+      if (!route) {
+        console.warn("[ActiveTrip] route not found (RLS blocked or wrong id)", { routeId });
+        throw new Error(`Trasa ${routeId} nie istnieje lub nie masz do niej dostępu (RLS)`);
+      }
+      console.log("[ActiveTrip] route loaded:", route);
 
       const { data: pins, error: pinsError } = await (supabase as any)
         .from("pins")
-        .select("id, place_name, pin_order, suggested_time, address, latitude, longitude, walking_time_from_prev, visited_at, user_photo_urls, photo_url")
+        .select("id, place_name, pin_order, suggested_time, address, description, latitude, longitude, walking_time_from_prev, visited_at, user_photo_urls, photo_url")
         .eq("route_id", routeId)
         .order("pin_order", { ascending: true });
-      if (pinsError) throw pinsError;
+      if (pinsError) {
+        console.error("[ActiveTrip] pins query error:", pinsError);
+        throw pinsError;
+      }
+      console.log("[ActiveTrip] pins loaded:", pins?.length ?? 0);
 
       return { route, pins: (pins ?? []) as Pin[] };
     },
     enabled: !!routeId,
+    retry: false,
   });
 
   const route = routeData?.route;
@@ -185,6 +203,14 @@ const ActiveTrip = () => {
     return (
       <div className="h-[100dvh] flex flex-col items-center justify-center gap-4 px-8 text-center">
         <p className="text-lg font-bold">Nie znaleziono trasy</p>
+        {queryError && (
+          <p className="text-xs text-muted-foreground max-w-[280px]">
+            {(queryError as Error).message ?? "Nieznany błąd"}
+          </p>
+        )}
+        <p className="text-[10px] text-muted-foreground/50 font-mono">
+          routeId: {routeId ?? "null"}
+        </p>
         <button
           onClick={() => navigate("/home")}
           className="px-6 py-3 rounded-full bg-primary text-white font-semibold text-sm"
@@ -265,7 +291,7 @@ const ActiveTrip = () => {
 
                 {/* Pin info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
+                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                     <p className={cn("text-sm font-bold leading-tight flex-1 truncate", visited && "line-through text-muted-foreground")}>
                       {pin.place_name}
                     </p>
@@ -275,6 +301,16 @@ const ActiveTrip = () => {
                       </span>
                     )}
                   </div>
+                  {/* Hours warning badge - polubione miejsce dodane przez safeguard
+                      gdy AI uznal ze godziny otwarcia nie pasuja. Description zaczyna sie
+                      od ⚠️ Sprawdz godziny otwarcia. Reuse opis jako sygnal. */}
+                  {pin.description?.startsWith("⚠️") && !visited && (
+                    <div className="flex items-center gap-1.5 mt-1 mb-1 px-2 py-1 rounded-lg bg-amber-50 border border-amber-200">
+                      <span className="text-[11px] text-amber-800 leading-snug">
+                        {pin.description}
+                      </span>
+                    </div>
+                  )}
                   {(pin.suggested_time || pin.walking_time_from_prev) && (
                     <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                       {pin.suggested_time && <span>{pin.suggested_time}</span>}

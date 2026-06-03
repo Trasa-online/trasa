@@ -386,7 +386,7 @@ serve(async (req) => {
   }
 
   try {
-    const { preferences: rawPreferences, messages: userMessages, current_plan, force_plan, liked_places, skipped_places, super_liked_places, ideal_day, current_time, current_date, restrict_to_liked, starting_location_lat, starting_location_lng, extend_mode } = await req.json();
+    const { preferences: rawPreferences, messages: userMessages, current_plan, force_plan, liked_places, liked_places_data, skipped_places, super_liked_places, ideal_day, current_time, current_date, restrict_to_liked, starting_location_lat, starting_location_lng, extend_mode } = await req.json();
 
     // Wstrzykuje top-level starting_location_lat/lng do preferences (snake_case w body
     // dla zgodnosci z JSON API convention - client wysyla na top level).
@@ -883,6 +883,52 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
           });
           plan.days = filteredDays;
           console.log(`[plan-route] After post-processing: ${filteredDays.map((d: any) => `Day${d.day_number}=${d.pins.length}`).join(", ")}, filtered out: ${filteredCount}`);
+
+          // SAFEGUARD: Jesli AI mimo prompta wycial ktores polubione (np. uznal ze
+          // park jest zamkniety wieczorem), wymuszamy dodanie ich z powrotem do
+          // ostatniego dnia z note 'hours_warning'. User decyduje co zrobic z tymi
+          // miejscami - moze je usunac recznie. Lepiej miec opcje niz zero.
+          if (restrict_to_liked && Array.isArray(liked_places) && liked_places.length > 0) {
+            const planPinNames = new Set<string>();
+            for (const d of plan.days) {
+              for (const pin of (d.pins ?? [])) {
+                const n = (pin.place_name ?? "").toLowerCase().trim();
+                if (n) planPinNames.add(n);
+              }
+            }
+            const dataByName = new Map<string, any>();
+            for (const item of (liked_places_data ?? [])) {
+              if (item?.place_name) {
+                dataByName.set(item.place_name.toLowerCase().trim(), item);
+              }
+            }
+            const missing = liked_places.filter((name: string) => !planPinNames.has(name.toLowerCase().trim()));
+            if (missing.length > 0) {
+              console.warn(`[plan-route] SAFEGUARD: AI wycial ${missing.length} polubionych. Dodaje do ostatniego dnia z hours_warning.`);
+              const lastDay = plan.days[plan.days.length - 1];
+              if (lastDay) {
+                if (!Array.isArray(lastDay.pins)) lastDay.pins = [];
+                for (const missingName of missing) {
+                  const meta = dataByName.get(missingName.toLowerCase().trim()) ?? {};
+                  lastDay.pins.push({
+                    place_name: missingName,
+                    address: "",
+                    description: meta.description ?? "⚠️ Sprawdź godziny otwarcia - możliwe że zamknięte o tej porze",
+                    suggested_time: "",
+                    duration_minutes: 60,
+                    category: meta.category ?? "walk",
+                    latitude: meta.latitude ?? 0,
+                    longitude: meta.longitude ?? 0,
+                    day_number: lastDay.day_number,
+                    walking_time_from_prev: null,
+                    distance_from_prev: null,
+                    hours_warning: true,
+                  });
+                }
+                console.log(`[plan-route] After safeguard: ${plan.days.map((d: any) => `Day${d.day_number}=${d.pins.length}`).join(", ")}`);
+              }
+            }
+          }
         }
 
         // Extend mode safeguard: w extend_mode AI moze przypadkiem zmienic dni
