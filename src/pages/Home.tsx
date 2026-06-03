@@ -112,16 +112,6 @@ function SoloTripCard({ route, onDelete }: { route: any; onDelete: () => void })
 
       {/* Action buttons */}
       <div className="px-4 pb-4 pt-1 space-y-2">
-        {/* CTA 'W trakcie trasy' - tylko gdy trasa dzisiaj (daysUntil === 0) albo brak daty.
-            Prowadzi do /trasa/{id} z mapa + checkboxami 'bylem' + photo upload. */}
-        {(daysUntil === 0 || daysUntil === null) && pins.length > 0 && (
-          <button
-            onClick={() => navigate(`/trasa/${route.id}`)}
-            className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-95 transition-transform shadow-md shadow-primary/20 flex items-center justify-center gap-2"
-          >
-            ▶ W trakcie trasy
-          </button>
-        )}
         <div className="flex gap-2">
           <button
             onClick={() => navigate(`/edit-plan?route=${route.id}`)}

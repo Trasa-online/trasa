@@ -287,35 +287,14 @@ const RouteSummaryDialog = ({
         is_group: !!groupSession,
       });
 
-      // Solo trasa z start_date today/null = user zaczyna trase teraz -> redirect
-      // do in-trip view (/trasa/{id}) gdzie ma mape + checkboxy 'bylem' + photo upload.
-      // Trasy z przyszla data (np. planuje na nastepny weekend) ida na /home - bedzie
-      // dostepna z Dziennika gdy nadejdzie dzien.
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      let tripStartDateNormalized: Date | null = null;
-      if (startDate) {
-        tripStartDateNormalized = new Date(startDate);
-        tripStartDateNormalized.setHours(0, 0, 0, 0);
-      }
-      const isStartingToday = !groupSession && !!firstRouteId && (
-        !tripStartDateNormalized || tripStartDateNormalized.getTime() <= today.getTime()
-      );
-
       // Push 'Trasa gotowa' do twórcy - confirmation + path back-to-app.
-      // URL deep link prowadzi do in-trip jesli trasa startuje teraz, inaczej review-summary.
       if (firstRouteId) {
-        const pushUrl = isStartingToday
-          ? `/trasa/${firstRouteId}`
-          : `/review-summary?route=${firstRouteId}`;
         void supabase.functions.invoke("send-push", {
           body: {
             user_id: user.id,
             title: "Trasa gotowa",
-            body: isStartingToday
-              ? `Twoja trasa po ${plan.city} startuje teraz - sprawdź szczegóły`
-              : `Plan po ${plan.city} jest gotowy - sprawdź szczegóły`,
-            url: pushUrl,
+            body: `Plan po ${plan.city} jest gotowy - sprawdź szczegóły`,
+            url: `/review-summary?route=${firstRouteId}`,
           },
         }).catch(() => {});
       }
@@ -326,13 +305,7 @@ const RouteSummaryDialog = ({
 
       toast.success("Trasa zapisana! 🎉", { description: plan.city });
       onOpenChange(false);
-      // Solo today -> in-trip view (mapa + checkboxy + photo).
-      // Solo future / group -> home (group session juz ma swoj flow, future zaczyna pozniej).
-      if (isStartingToday) {
-        navigate(`/trasa/${firstRouteId}`);
-      } else {
-        navigate("/home");
-      }
+      navigate("/home");
     } catch (error) {
       console.error("Save error:", error);
       toast.error("Błąd zapisu", { description: "Spróbuj ponownie." });

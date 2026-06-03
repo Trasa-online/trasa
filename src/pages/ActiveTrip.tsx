@@ -125,20 +125,26 @@ const ActiveTrip = () => {
     if (togglingPinId) return;
     setTogglingPinId(pin.id);
     const newVisitedAt = pin.visited_at ? null : new Date().toISOString();
+    console.log("[ActiveTrip] toggle pin", { pinId: pin.id, oldVisitedAt: pin.visited_at, newVisitedAt });
     // Optymistycznie
     queryClient.setQueryData(["active-trip", routeId], (old: any) =>
       old ? { ...old, pins: old.pins.map((p: Pin) => p.id === pin.id ? { ...p, visited_at: newVisitedAt } : p) } : old
     );
     try {
-      const { error } = await (supabase as any)
+      // count: 'exact' detekcja silent RLS fail (UPDATE bez policy zwraca OK ale 0 rows).
+      const { error, count } = await (supabase as any)
         .from("pins")
-        .update({ visited_at: newVisitedAt })
+        .update({ visited_at: newVisitedAt }, { count: "exact" })
         .eq("id", pin.id);
       if (error) throw error;
-    } catch (err) {
-      // Rollback
+      console.log("[ActiveTrip] update result:", { count });
+      if (count === 0) {
+        throw new Error("RLS zablokowal update (0 rows). Sprawdz policy 'Users can update pins for their routes'.");
+      }
+    } catch (err: any) {
+      console.error("[ActiveTrip] toggle failed:", err);
       queryClient.invalidateQueries({ queryKey: ["active-trip", routeId] });
-      toast.error("Nie udało się zapisać");
+      toast.error("Nie udało się zapisać", { description: err?.message ?? "" });
     }
     setTogglingPinId(null);
   };
@@ -266,6 +272,34 @@ const ActiveTrip = () => {
           <p className="text-base font-bold leading-tight truncate">{route.city || route.title || "Trasa"}</p>
           {dateLabel && <p className="text-xs text-muted-foreground">{dateLabel}</p>}
         </div>
+        {/* Reset zaznaczonych pinów - przydaje sie gdy user przetestowala wczoraj
+            i chce zaczac od zera, albo pomylkowo zaznaczyla wszystko. */}
+        {pins.some((p) => p.visited_at) && (
+          <button
+            onClick={async () => {
+              if (!confirm("Cofnąć oznaczenia wszystkich miejsc jako odwiedzone?")) return;
+              const visitedPins = pins.filter((p) => p.visited_at);
+              queryClient.setQueryData(["active-trip", routeId], (old: any) =>
+                old ? { ...old, pins: old.pins.map((p: Pin) => ({ ...p, visited_at: null })) } : old
+              );
+              try {
+                const ids = visitedPins.map((p) => p.id);
+                const { error } = await (supabase as any)
+                  .from("pins")
+                  .update({ visited_at: null })
+                  .in("id", ids);
+                if (error) throw error;
+                toast.success("Wszystkie miejsca odznaczone");
+              } catch (err: any) {
+                queryClient.invalidateQueries({ queryKey: ["active-trip", routeId] });
+                toast.error("Nie udało się", { description: err?.message ?? "" });
+              }
+            }}
+            className="text-xs text-muted-foreground underline px-2"
+          >
+            Resetuj
+          </button>
+        )}
       </div>
 
       {/* Map - wrap w error boundary bo Google Maps moze crashowac na iOS WebView
