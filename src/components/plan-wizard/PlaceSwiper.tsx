@@ -12,7 +12,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { useHaptics } from "@/hooks/useHaptics";
 import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGORIES } from "@/lib/categories";
-import { addLike as saveExploreLike } from "@/lib/exploreLikes";
+import { addLike as saveExploreLike, clearGroup as clearExploreGroup } from "@/lib/exploreLikes";
+import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -627,6 +628,8 @@ const EmptyState = ({
   loadingExamples,
   hasCategoryFilter,
   hasSwipedAny,
+  onResetToday,
+  resetting,
 }: {
   likedPlaces: MockPlace[];
   matchedRoutes: MatchedRoute[];
@@ -635,6 +638,8 @@ const EmptyState = ({
   loadingExamples: boolean;
   hasCategoryFilter?: boolean;
   hasSwipedAny?: boolean;
+  onResetToday: () => void;
+  resetting: boolean;
 }) => {
   if (likedPlaces.length === 0) {
     // Empty from start (filter restrictive, no places match) vs swiped-through-all
@@ -653,10 +658,21 @@ const EmptyState = ({
           </p>
         </div>
         <button
-          onClick={() => window.location.reload()}
-          className="border border-border rounded-full px-6 py-3 text-sm text-muted-foreground"
+          onClick={() => {
+            // window.location.reload() w Capacitor WebView nie czyscil user_place_reactions
+            // ani exploreLikes - po reloadzie te same miejsca byly excludowane z queue.
+            // Reset wykonuje DELETE z DB + clearGroup localStorage + re-fetch swipera.
+            if (emptyFromStart) {
+              // emptyFromStart = filter restrictive, reload nie pomoze - tu po prostu reload OK
+              window.location.reload();
+            } else {
+              onResetToday();
+            }
+          }}
+          disabled={resetting}
+          className="border border-border rounded-full px-6 py-3 text-sm text-muted-foreground active:scale-95 transition-transform disabled:opacity-50"
         >
-          {emptyFromStart ? "Zmień filtry" : "Zacznij od nowa"}
+          {resetting ? "Resetuje..." : emptyFromStart ? "Zmień filtry" : "Zacznij od nowa"}
         </button>
       </div>
     );
@@ -914,6 +930,10 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const [allPlaces, setAllPlaces] = useState<MockPlace[]>([]);
   const [queue, setQueue] = useState<MockPlace[]>([]);
   const [loading, setLoading] = useState(true);
+  // Bumping refreshNonce trigeruje re-fetch w useEffect (np. po "Zacznij od nowa")
+  // - czyscimy DB reactions z dziennej + localStorage exploreLikes i fetchujemy queue na nowo.
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const [resetting, setResetting] = useState(false);
   const [likedPlaces, setLikedPlaces] = useState<MockPlace[]>([]);
   const [skippedPlaces, setSkippedPlaces] = useState<MockPlace[]>([]);
   const [superLikedPlaces, setSuperLikedPlaces] = useState<MockPlace[]>([]);
@@ -1083,7 +1103,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       }
     };
     fetchPlaces().finally(() => clearTimeout(safetyTimeout));
-  }, [city, user, roundPlaceIds, categoryFilterKey, dietFilterKey, sortByNearest]);
+  }, [city, user, roundPlaceIds, categoryFilterKey, dietFilterKey, sortByNearest, refreshNonce]);
 
   // Reorder queue when a category group has been liked too many times consecutively
   const rebalanceQueue = (newRecentGroups: (Set<string> | null)[]) => {
@@ -1245,6 +1265,44 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const handleTap = (place: MockPlace) => {
     setDetailPlace(place);
     setDetailOpen(true);
+  };
+
+  // "Zacznij od nowa" w EmptyState - prawdziwy reset zamiast window.location.reload()
+  // (ktore nie czyscilo DB reactions ani localStorage). Czysci dzisiejsze reactions
+  // dla tego miasta + exploreLikes localStorage + history state + re-fetch queue.
+  const handleResetToday = async () => {
+    if (resetting) return;
+    setResetting(true);
+    try {
+      if (user) {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        await (supabase as any)
+          .from("user_place_reactions")
+          .delete()
+          .eq("user_id", user.id)
+          .ilike("city", city)
+          .gte("created_at", todayStart.toISOString());
+      }
+      // Wyczysc explore likes localStorage dla tego miasta + dziennej grupy
+      const todayStr = (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      })();
+      clearExploreGroup(todayStr, city);
+      // Reset local state - history, queue, liked itp.
+      setHistory([]);
+      setLikedPlaces([]);
+      setSkippedPlaces([]);
+      setSuperLikedPlaces([]);
+      // Trigger re-fetch przez bumping nonce - useEffect odpali fetchPlaces od nowa
+      setRefreshNonce(n => n + 1);
+    } catch (err) {
+      console.error("[PlaceSwiper] reset today failed:", err);
+      toast.error("Nie udało się zresetować, spróbuj ponownie");
+    } finally {
+      setResetting(false);
+    }
   };
 
   const handleProceed = () => {
@@ -1483,6 +1541,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         loadingExamples={loadingExamples}
         hasCategoryFilter={hasCategoryFilter}
         hasSwipedAny={history.length > 0}
+        onResetToday={handleResetToday}
+        resetting={resetting}
       />
     );
   }
