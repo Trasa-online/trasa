@@ -134,12 +134,15 @@ User wybrał konkretne ${likedPlaces.length} miejsc(a) i chce trasy TYLKO z nich
 - NIE WOLNO uzupełniać dni "dla balansu" lub "dla kompletności" - LEPSZY PUSTY DZIEŃ NIŻ FAKE MIEJSCA
 
 **OBOWIĄZKOWE:**
-- Jeśli liczba miejsc usera < ${preferences.numDays} × 5 (czyli mniej niż optymalna na ${preferences.numDays} dni), MUSISZ zostawić pusty dzień: \`"pins": []\`
-- Aplikacja pokaże user'owi empty state ZAMIAST fake'ów - to jest właściwe zachowanie
-- Jeśli user ma 3 miejsca + 3 dni → Dzień 1: 3 miejsca, Dzień 2: pins:[], Dzień 3: pins:[]
-- Jeśli user ma 5 miejsc + 2 dni → Dzień 1: 3 miejsca, Dzień 2: 2 miejsca
+- **WSZYSTKIE polubione miejsca MUSZĄ znaleźć się w planie.** Liczba pinów w planie = liczba polubionych. Bez wyjątku, bez "zaokrąglania w dół", bez pomijania.
+- **Skopiuj nazwy DOKŁADNIE jak są podane** w sekcji "🔒 TYLKO TE MIEJSCA" - bez dodawania słów typu "Restauracja", "Bar", bez skracania, bez zmiany wielkości liter, bez interpunkcji. Plan zostanie zwalidowany 1:1 z lista usera.
+- Jeśli polubionych jest WIĘCEJ niż ${preferences.numDays} × 5, mozesz nadmiar zostawić na inny dzień. Jeśli mniej - umieść WSZYSTKO w pierwszym dniu (lub rozłóż między dni, ale każde polubione musi być).
+- NIE zostawiaj pustych dni gdy user MA polubienia do umieszczenia. Pusty dzień = OK tylko gdy polubione już rozłożone w innych dniach.
 
-Liczba punktów w planie = liczba polubionych miejsc. Bez sztucznych górnych limitów.
+Przykłady:
+- 5 polubione + 1 dzień → Dzień 1: WSZYSTKIE 5 miejsc (nie 3, nie 4, dokładnie 5)
+- 8 polubione + 2 dni → Dzień 1: 4-5 miejsc, Dzień 2: 3-4 miejsc (suma = 8)
+- 3 polubione + 3 dni → Dzień 1: 3 polubione, Dzień 2: pins:[], Dzień 3: pins:[]
 
 Jeśli złamiesz tę regułę, plan zostanie ODRZUCONY przez post-processing servera i user dostanie błąd "AI wymyślił miejsca - spróbuj ponownie".
 ` : ""}${extendMode && currentPlan ? `
@@ -324,18 +327,20 @@ ZASADY FORMATU:
 - NIE WYMYŚLAJ nazw restauracji — to najczęstszy błąd który niszczy zaufanie do planu
 
 ## ⚠️ REGUŁA ROZMIARU PLANU (BEZWZGLĘDNA)
-Jeśli MIEJSCA DO UWZGLĘDNIENIA / SUPER LIKE razem dają mniej niż optymalna liczba miejsc dla zaplanowanej liczby dni (np. 4 miejsca dla 2 dni):
-- **Wygeneruj plan ZAWIERAJĄCY TYLKO te miejsca + max 1-2 sensowne miejsca okoliczne na cały plan** (np. restauracja blisko centrum kluczowej dzielnicy)
-- **Dla pozostałych dni ustaw "pins": []** (pusta tablica)
-- **NIGDY nie wymyślaj generycznych miejsc typu** "Wieczorny spacer po Pradze-Północ", "Zakończ dzień klimatyczną kolacją", "Romantyczny spacer po starówce" jako wypełniaczy bez konkretnej nazwy lokalu
-- **NIGDY nie wstawiaj zmyślonych nazw atrakcji** ani fałszywych koordynatów. Lepszy pusty dzień niż dzień z fake miejscami.
+**Liczba pinów w planie = liczba miejsc polubionych przez usera. Bez wyjątku.**
 
-Przykłady poprawnego zachowania:
-- User ma 3 polubione + 2 dni → Dzień 1: 3 polubione + 1 restauracja blisko, Dzień 2: \`"pins": []\`
-- User ma 4 polubione + 2 dni → Dzień 1: 4 polubione, Dzień 2: \`"pins": []\`
-- User ma 8 polubionych + 2 dni → po 4 miejsca dziennie OK
+- Jeśli user polubił 5 miejsc, plan ma DOKŁADNIE 5 pinów (nie 3, nie 4, dokładnie 5)
+- Jeśli polubionych jest mniej niż dni, zostaw nadmiarowe dni puste: \`"pins": []\`
+- NIGDY nie zostawiaj polubionych miejsc poza planem - user je wybrał, my je układamy
+- NIGDY nie wymyślaj generycznych miejsc typu "Wieczorny spacer po Pradze-Północ" jako wypełniaczy
+- NIGDY nie wstawiaj zmyślonych nazw atrakcji ani fałszywych koordynatów
 
-WAŻNE: pusty dzień to NIE jest błąd. Aplikacja pokaże user'owi empty state z CTA "Dodaj więcej miejsc". Lepiej żeby user widział pustkę i wrócił uzupełnić preferencje, niż żeby otrzymał plan z fake miejscami które niszczą zaufanie.
+Przykłady:
+- 5 polubionych + 1 dzień → Dzień 1: WSZYSTKIE 5 miejsc
+- 8 polubionych + 2 dni → łącznie 8 pinów (np. 4+4 lub 5+3)
+- 3 polubione + 2 dni → Dzień 1: 3 polubione, Dzień 2: \`"pins": []\`
+
+Pusty dzień to NIE jest błąd gdy user nie ma więcej polubień. Aplikacja pokaże user'owi empty state z CTA "Dodaj więcej miejsc".
 
 ## EDYCJA PLANU (ZASADA KLUCZOWA: JEDNA ZMIANA + NATYCHMIASTOWE WYKONANIE)
 
@@ -815,10 +820,39 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
             if (!trimmed) return true;
             return GENERIC_FRAZES.some(rx => rx.test(trimmed));
           };
-          const likedNamesNormalized = (liked_places ?? []).map((p: string) => p.toLowerCase().trim());
-          const superLikedNormalized = (super_liked_places ?? []).map((p: string) => p.toLowerCase().trim());
-          const allowedNames = new Set([...likedNamesNormalized, ...superLikedNormalized]);
+          // Normalizacja do porownan: lowercase + trim + usun interpunkcje + collapse whitespace
+          const normalize = (s: string) => s
+            .toLowerCase()
+            .trim()
+            .replace(/[.,!?;:()\[\]"'`–—-]/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+          const allowedRaw = [...(liked_places ?? []), ...(super_liked_places ?? [])];
+          const allowedNorm = allowedRaw.map(normalize);
 
+          // Fuzzy match: AI moze zwrocic "Stary Dom Restauracja" gdy polubione "Stary Dom",
+          // albo "Pijalnia Wodki" gdy polubione "Pijalnia Wodki i Piwa". Akceptujemy
+          // bidirectional substring (po normalizacji). Tylko wycina jesli zadna z polubionych
+          // nie ma sensownego overlap z nazwa pin'a.
+          const matchesAnyLiked = (pinName: string): { matched: boolean; matchedTo: string | null } => {
+            const pinNorm = normalize(pinName);
+            if (!pinNorm) return { matched: false, matchedTo: null };
+            for (let i = 0; i < allowedNorm.length; i++) {
+              const liked = allowedNorm[i];
+              if (!liked) continue;
+              // Exact match
+              if (liked === pinNorm) return { matched: true, matchedTo: allowedRaw[i] };
+              // Substring bidirectional - jedna nazwa zawiera druga (i overlap > 50% krotszej)
+              const shorter = liked.length < pinNorm.length ? liked : pinNorm;
+              const longer = liked.length < pinNorm.length ? pinNorm : liked;
+              if (longer.includes(shorter) && shorter.length >= 4) {
+                return { matched: true, matchedTo: allowedRaw[i] };
+              }
+            }
+            return { matched: false, matchedTo: null };
+          };
+
+          let filteredCount = 0;
           const filteredDays = plan.days.map((day: any) => {
             const pins = Array.isArray(day.pins) ? day.pins : [];
             const filteredPins = pins.filter((pin: any) => {
@@ -826,14 +860,21 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
               // Wyrzuc generic placeholdery
               if (isGeneric(name)) {
                 console.warn(`[plan-route] Filter generic placeholder: "${name}"`);
+                filteredCount++;
                 return false;
               }
-              // Jesli restrict_to_liked=true, wymagaj zeby kazdy pin byl na liscie
+              // Jesli restrict_to_liked=true, wymagaj fuzzy match z polubionymi
               if (restrict_to_liked) {
-                const inLiked = allowedNames.has(name.toLowerCase().trim());
-                if (!inLiked) {
+                const { matched, matchedTo } = matchesAnyLiked(name);
+                if (!matched) {
                   console.warn(`[plan-route] Filter out non-liked place (restrict mode): "${name}"`);
+                  filteredCount++;
                   return false;
+                }
+                // Normalize do oryginalnej polubionej nazwy zeby plan byl spojny z DB lookup
+                if (matchedTo && matchedTo !== name) {
+                  console.log(`[plan-route] Normalized "${name}" -> "${matchedTo}"`);
+                  pin.place_name = matchedTo;
                 }
               }
               return true;
@@ -841,7 +882,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
             return { ...day, pins: filteredPins };
           });
           plan.days = filteredDays;
-          console.log(`[plan-route] After post-processing: ${filteredDays.map((d: any) => `Day${d.day_number}=${d.pins.length}`).join(", ")}`);
+          console.log(`[plan-route] After post-processing: ${filteredDays.map((d: any) => `Day${d.day_number}=${d.pins.length}`).join(", ")}, filtered out: ${filteredCount}`);
         }
 
         // Extend mode safeguard: w extend_mode AI moze przypadkiem zmienic dni
