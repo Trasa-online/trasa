@@ -19,6 +19,6 @@ create policy "Session creator can remove members"
     exists (
       select 1 from public.group_sessions gs
       where gs.id = group_session_members.session_id
-        and gs.creator_id = auth.uid()
+        and gs.created_by = auth.uid()
     )
   );
