@@ -7,6 +7,7 @@ import { trackPageView } from "@/lib/analytics";
 import { useAuth, AuthProvider } from "@/hooks/useAuth";
 import { AuthDrawerProvider } from "@/hooks/useAuthDrawer";
 import { useNativePush } from "@/hooks/useNativePush";
+import { useNetworkReconnect } from "@/hooks/useNetworkReconnect";
 import AuthDrawer from "@/components/auth/AuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
@@ -596,6 +597,9 @@ function AuthDrawerProviderWrapper({ children }: { children: React.ReactNode }) 
   // Native iOS APNs registration - tylko gdy user logged in + isNative.
   // Web/PWA uzywa osobnego usePushNotifications (Service Worker + VAPID).
   useNativePush();
+  // Native network reconnect detection - invalidateQueries gdy connection wraca.
+  // No-op na webie (refetchOnReconnect: "always" w queryClient zalatwia sprawe).
+  useNetworkReconnect();
   return (
     <AuthDrawerProvider user={user} loading={loading}>
       {children}

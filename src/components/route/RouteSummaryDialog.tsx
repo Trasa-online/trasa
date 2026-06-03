@@ -281,6 +281,21 @@ const RouteSummaryDialog = ({
         is_group: !!groupSession,
       });
 
+      // Push 'Trasa gotowa' do twórcy (solo + group host) - jako confirmation +
+      // path back-to-app gdy user zamknie aplikacje. Dla group memberów push idzie
+      // osobno w Home.tsx (przy finalize sesji), tu wysylamy tylko do user.id (host).
+      // Best-effort - failure nie blokuje navigate.
+      if (firstRouteId) {
+        void supabase.functions.invoke("send-push", {
+          body: {
+            user_id: user.id,
+            title: "Trasa gotowa",
+            body: `Plan po ${plan.city} jest gotowy - sprawdź szczegóły`,
+            url: `/review-summary?route=${firstRouteId}`,
+          },
+        }).catch(() => {});
+      }
+
       toast.success("Trasa zapisana! 🎉", { description: plan.city });
       onOpenChange(false);
       // Solo route: open the plan directly; group route: go home (session is already handled)

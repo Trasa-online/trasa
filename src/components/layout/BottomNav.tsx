@@ -1,7 +1,10 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { BookOpen, Compass, Home, Plus, X, MapPin, Users, Link2, User, Heart } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { getTodayLikes, type ExploreLike } from "@/lib/exploreLikes";
 import { isNative } from "@/lib/platform";
 
@@ -20,10 +23,35 @@ function getActiveHomeCity(): string {
 
 const BottomNav = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [reusePrompt, setReusePrompt] = useState<{ city: string; likes: ExploreLike[] } | null>(null);
+
+  // Badge kropka na ikonie Dziennik gdy uzytkownik ma niewidziane trasy
+  // (routes.new_for_users zawiera user.id). Refetch przy navigation - gdy user
+  // wraca na Home, kropka znika lub pojawia sie wedlug stanu DB. Query tylko w native
+  // bo Dziennik dla web jest ukryty.
+  const { data: hasNewJournalEntries = false, refetch: refetchJournalBadge } = useQuery({
+    queryKey: ["journal-badge", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      const { count } = await (supabase as any)
+        .from("routes")
+        .select("id", { count: "exact", head: true })
+        .contains("new_for_users", [user.id]);
+      return (count ?? 0) > 0;
+    },
+    enabled: !!user?.id && isNative,
+    staleTime: 30_000,
+  });
+
+  // Refetch przy zmianie route (np. wyjscie z /dziennik - kropka mogla zostac wyczyszczona)
+  useEffect(() => {
+    if (user?.id && isNative) refetchJournalBadge();
+  }, [location.pathname, user?.id, refetchJournalBadge]);
 
   const handleJoinSubmit = () => {
     const code = joinCode.trim();
@@ -258,7 +286,12 @@ const BottomNav = () => {
             >
               {({ isActive }) => (
                 <>
-                  <BookOpen className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
+                  <div className="relative">
+                    <BookOpen className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
+                    {hasNewJournalEntries && !isActive && (
+                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
+                    )}
+                  </div>
                   <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Dziennik</span>
                 </>
               )}

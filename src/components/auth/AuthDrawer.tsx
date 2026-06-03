@@ -1,39 +1,25 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { isNative } from "@/lib/platform";
 import { Browser } from "@capacitor/browser";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
 import { usePostHog } from "@posthog/react";
 import { X } from "lucide-react";
 
-type Mode = "login" | "register";
+// OAuth-only drawer (Apple / Google + continue as guest). Email/haslo + magic link
+// register zostaly usuniete - obecnie kazdy uzytkownik laczy sie przez OAuth, a stary
+// kod email/password (handleLogin, handleRegister, handleForgotPassword + cale form'y)
+// nie byl wywolywany z UI od kilku tygodni. JSX renderuje tylko 2 OAuth buttons + gosc.
 
 const AuthDrawer = () => {
-  const { isOpen, mode: initialMode, hint, close } = useAuthDrawer();
+  const { isOpen, hint, close } = useAuthDrawer();
   const { isAnonymous, user } = useAuth();
-  const { t } = useTranslation("auth");
   const posthog = usePostHog();
 
-  const [mode, setMode] = useState<Mode>(initialMode);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [username, setUsername] = useState("");
-  const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
-  const [signupDone, setSignupDone] = useState(false);
-
-  // Sync mode when drawer reopens with a different intent
-  useEffect(() => { if (isOpen) setMode(initialMode); }, [isOpen, initialMode]);
 
   // Intent-based cleanup: gdy user otwiera login NIE w celu zapisu trasy
   // (np. z Dziennika, Profilu, HomeSwipe topbar), wyczyść 'trasa_guest_plan' i
@@ -52,16 +38,12 @@ const AuthDrawer = () => {
 
   // Reset transient state when drawer closes
   useEffect(() => {
-    if (!isOpen) {
-      setSignupDone(false);
-      setLoading(false);
-    }
+    if (!isOpen) setLoading(false);
   }, [isOpen]);
 
   // OAuth zwraca usera dopiero po redirect/deep linku - nie z handleOAuth.
   // Domykamy drawer i resetujemy loading dopiero gdy user state faktycznie sie
-  // zmienil na non-null. To jedyne miejsce ktore zamyka po OAuth (handleLogin
-  // dla email/hasla zamyka jawnie close() po sukcesie).
+  // zmienil na non-null.
   useEffect(() => {
     if (user && !isAnonymous && isOpen) {
       setLoading(false);
@@ -96,93 +78,6 @@ const AuthDrawer = () => {
       } else {
         toast.error(err.message || "Błąd logowania");
       }
-      setLoading(false);
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      posthog.identify(data.user!.id, { email: data.user!.email });
-      posthog.capture("user_signed_in", { source: "drawer" });
-      close();
-      // Redirect po loginie (do /plan z guest_plan jesli istnieje) jest zrobiony
-      // globalnie w AppLayout - useEffect na user state change. Drawer tylko sie zamyka.
-    } catch (err: any) {
-      posthog.captureException(err);
-      toast.error(err.message || t("errors.login"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!email.trim()) { toast.error("Podaj najpierw swój adres email"); return; }
-    // Osobny resetLoading zeby button 'Zaloguj' nie pokazywal 'Logowanie...'
-    // gdy klikamy 'Zapomnialem hasla'. Wczesniej oba dzialalismy na shared `loading`.
-    setResetLoading(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/#/set-password`,
-      });
-      if (error) throw error;
-      toast.success("Link do resetowania hasła wysłany na " + email);
-    } catch (err: any) {
-      toast.error(err.message || "Błąd wysyłania emaila");
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!agreed) { toast.error(t("errors.terms_required")); return; }
-    if (username.trim().length < 2) { toast.error(t("errors.username_short")); return; }
-    if (firstName.trim().length < 1) { toast.error("Podaj swoje imię"); return; }
-    if (!email.trim()) { toast.error("Podaj adres email"); return; }
-    setLoading(true);
-    try {
-      const referralCode = localStorage.getItem("pending_referral_code") || null;
-      const userData = {
-        first_name: firstName.trim(),
-        username: username.trim(),
-        referral_code: referralCode,
-      };
-
-      // FLOW BEZ HASLA: signInWithOtp wysyla magic link (tworzy usera jezeli nie istnieje).
-      // User klika link -> GlobalAuthCallback verifyOtp -> redirect /set-password?invite=1
-      // -> ustawia haslo -> /home. Bez PKCE, bez raceconditions.
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim().toLowerCase(),
-        options: {
-          data: userData,
-          shouldCreateUser: true,
-          emailRedirectTo: `${window.location.origin}/`,
-        },
-      });
-      if (error) {
-        const msg = error.message?.toLowerCase() || "";
-        if (msg.includes("rate") || msg.includes("too many")) {
-          toast.error("Za szybko. Spróbuj ponownie za chwilę.");
-        } else {
-          throw error;
-        }
-        return;
-      }
-      localStorage.removeItem("pending_referral_code");
-      posthog.capture("user_signed_up", {
-        source: referralCode ? "referral" : "drawer",
-        was_anonymous: isAnonymous,
-        flow: "magic_link",
-      });
-      setSignupDone(true);
-    } catch (err: any) {
-      posthog.captureException(err);
-      toast.error(err.message || t("errors.register"));
-    } finally {
       setLoading(false);
     }
   };
