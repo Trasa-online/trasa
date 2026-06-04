@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
 import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,16 @@ const MapContent = ({ pins, onPinAdd, onMapClick }: {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingPin, setPendingPin] = useState<PendingPin | null>(null);
   const [selectedPin, setSelectedPin] = useState<number | null>(null);
+  // Debounce reverse geocoding: szybkie klikanie powoduje wiele calls do Google ($0.005/call).
+  // Trzymamy timer + ostatni lat/lng i wolamy Google dopiero po 300ms ciszy.
+  const geocodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeout przy unmount zeby uniknac call po zamknieciu komponentu.
+  useEffect(() => {
+    return () => {
+      if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current);
+    };
+  }, []);
 
   const validPins = useMemo(() =>
     pins.filter(pin => pin.latitude && pin.longitude),
@@ -72,46 +82,44 @@ const MapContent = ({ pins, onPinAdd, onMapClick }: {
     };
   }, [map, validPins]);
 
-  const handleMapClick = async (e: any) => {
+  const handleMapClick = (e: any) => {
     if (!e.latLng) return;
 
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
 
-    // Remove previous pending pin
-    setPendingPin(null);
+    // Natychmiast pokaz pin z fallback adresem (coords) zeby user mial visual feedback.
+    // Reverse geocoding jest debounce'd zeby rapid clicki nie wywolaly wielu calli Google.
+    setPendingPin({
+      latitude: lat,
+      longitude: lng,
+      place_name: 'Nowe miejsce',
+      address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+    });
     setIsLoading(true);
 
-    try {
-      // Reverse geocode
-      const result = await reverseGeocode(lat, lng);
+    // Reset poprzedni timer
+    if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current);
 
-      if (result) {
-        setPendingPin({
-          latitude: lat,
-          longitude: lng,
-          place_name: result.placeName || result.fullAddress.split(',')[0],
-          address: result.fullAddress
-        });
-      } else {
-        setPendingPin({
-          latitude: lat,
-          longitude: lng,
-          place_name: 'Nowe miejsce',
-          address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`
-        });
+    geocodeTimeoutRef.current = setTimeout(async () => {
+      try {
+        const result = await reverseGeocode(lat, lng);
+        if (result) {
+          setPendingPin({
+            latitude: lat,
+            longitude: lng,
+            place_name: result.placeName || result.fullAddress.split(',')[0],
+            address: result.fullAddress,
+          });
+        }
+        // Jesli result null, zostawiamy fallback (coords) ktore juz jest ustawione.
+      } catch (error) {
+        console.error('Reverse geocoding error:', error);
+        // Fallback juz ustawiony, nic nie zmieniamy.
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Reverse geocoding error:', error);
-      setPendingPin({
-        latitude: lat,
-        longitude: lng,
-        place_name: 'Nowe miejsce',
-        address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    }, 300);
   };
 
   const handleAddPin = () => {

@@ -514,7 +514,11 @@ function ReviewsSection({ data }: SectionProps) {
   if (reviews.length === 0) return null;
   return (
     <div className="pt-2">
-      <h3 className="text-lg font-black tracking-tight mb-3">Opinie</h3>
+      {/* Google attribution wymagane przez ToS gdy pokazujemy Google reviews. */}
+      <div className="flex items-baseline justify-between mb-3 gap-2">
+        <h3 className="text-lg font-black tracking-tight">Opinie</h3>
+        <span className="text-[11px] text-muted-foreground shrink-0">powered by Google</span>
+      </div>
       <div className="space-y-4">
         {reviews.slice(0, 3).map((review, i) => (
           <div key={i} className="space-y-1.5">
