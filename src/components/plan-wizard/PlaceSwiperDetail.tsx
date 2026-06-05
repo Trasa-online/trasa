@@ -9,7 +9,6 @@
 // - Maps button w header slot
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { MapPin } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
@@ -188,15 +187,11 @@ const PlaceSwiperDetail = ({
         side="bottom"
         className="h-[96dvh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden bg-background"
       >
-        <motion.div
-          drag="y"
-          dragConstraints={{ top: 0, bottom: 0 }}
-          dragElastic={{ top: 0, bottom: 0.35 }}
-          onDragEnd={(_, info) => {
-            if (info.offset.y > 60 || info.velocity.y > 300) onOpenChange(false);
-          }}
+        {/* Scrollable wrapper - motion.div drag-to-dismiss wyrzucone bo blokowal native scroll
+            na iOS WebView. Sheet ma close button (Hero X) + tap-outside-to-close + Esc. */}
+        <div
           className="flex-1 min-h-0 overflow-y-auto"
-          style={{ touchAction: "pan-y", WebkitOverflowScrolling: "touch" }}
+          style={{ WebkitOverflowScrolling: "touch" }}
         >
           <PremiumBusinessCard
             data={businessData}
@@ -206,7 +201,7 @@ const PlaceSwiperDetail = ({
             onClose={() => onOpenChange(false)}
             header={mapsButton}
           />
-        </motion.div>
+        </div>
 
         {/* Like / Skip CTA - fixed bottom poza PremiumBusinessCard */}
         {(onLike || onSkip) && (
