@@ -1,6 +1,6 @@
 import { memo, useMemo, useState, useEffect, useRef } from 'react';
 import { Maximize2 } from 'lucide-react';
-import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
+import { APIProvider, Map as GoogleMap, AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { GOOGLE_MAPS_API_KEY } from '@/lib/googleMaps';
 
 // Colors per day (day 1 = orange, day 2 = blue, day 3 = green, day 4+ = purple)
@@ -282,7 +282,7 @@ const RouteMap = memo(function RouteMap({
     >
       <div className="w-full h-full min-h-[160px]">
         <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-          <Map
+          <GoogleMap
             defaultCenter={center}
             defaultZoom={zoom}
             gestureHandling="greedy"
@@ -291,7 +291,7 @@ const RouteMap = memo(function RouteMap({
             mapId="roadmap"
           >
             <MapContent validPins={validPins} onPinClick={onPinClick} startingLocation={startingLocation} />
-          </Map>
+          </GoogleMap>
         </APIProvider>
       </div>
 

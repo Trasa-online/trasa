@@ -538,7 +538,6 @@ function BusinessGuard() {
 }
 import CookieBanner from "./components/CookieBanner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { isNative } from "@/lib/platform";
 import { isHardcodedAdmin } from "@/lib/admins";
 // Lazy-loaded public pages - one chunk each, fetched on demand
 const WaitlistPage = lazy(() => import("./pages/WaitlistPage"));
