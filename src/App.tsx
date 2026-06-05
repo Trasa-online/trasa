@@ -550,10 +550,8 @@ import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 // Lazy loaded - only fetched when the user navigates to that route
 const AppLayout        = lazy(() => import("./components/layout/AppLayout"));
-const Home             = lazy(() => import("./pages/Home"));
 const HomeSwipe        = lazy(() => import("./pages/HomeSwipe"));
 const Explore          = lazy(() => import("./pages/Explore"));
-const CreateRoute      = lazy(() => import("./pages/CreateRoute"));
 const Settings         = lazy(() => import("./pages/Settings"));
 const DayReview        = lazy(() => import("./pages/DayReview"));
 const SetPassword      = lazy(() => import("./pages/SetPassword"));
@@ -632,9 +630,7 @@ const App = () => (
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/" element={<RootPage />} />
           <Route path="/home" element={<AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
-          <Route path="/home-legacy" element={<AppLayout><Home /></AppLayout>} />
           <Route path="/eksploruj" element={<AppLayout hideTopBar><Explore /></AppLayout>} />
-          <Route path="/create" element={<CreateRoute />} />
           <Route path="/settings" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
           <Route path="/day-review" element={<DayReview />} />
           <Route path="/set-password" element={<SetPassword />} />
