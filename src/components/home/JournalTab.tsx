@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Globe, Lock, Loader2, Sparkles, ArrowRight, Trash2 } from "lucide-react";
+import { Globe, Lock, Loader2, Trash2, MapPin, Users, Link2, X, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +20,18 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<JournalTabKey>("active");
+  // Bottom sheet z 3 opcjami planowania (solo / z grupa / mam kod)
+  const [showPlanSheet, setShowPlanSheet] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+
+  const handleJoinSubmit = () => {
+    const code = joinCode.trim();
+    if (!code) return;
+    setShowJoinModal(false);
+    setJoinCode("");
+    navigate(`/sesja/${code}`);
+  };
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["journal-entries", userId],
@@ -192,21 +204,172 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         ))}
       </div>
 
-      {/* CTA tylko w Aktywnych - na jutro rozbudowa do atrakcyjniejszego banera (TODO) */}
+      {/* Atrakcyjny hero baner CTA - tylko w Dzisiaj tabie.
+          Tap otwiera bottom sheet z 3 opcjami: solo / z grupa / mam kod. */}
       {activeTab === "active" && (
         <button
-          onClick={() => navigate("/sesja/nowa", { state: { from: "journal" } })}
-          className="w-full flex items-center gap-3 p-3.5 rounded-3xl bg-card border border-border/50 active:scale-[0.98] transition-transform"
+          onClick={() => setShowPlanSheet(true)}
+          className="w-full relative overflow-hidden rounded-3xl active:scale-[0.98] transition-transform shadow-lg shadow-orange-500/15"
+          style={{ background: "linear-gradient(135deg, #F4A259 0%, #F9662B 100%)" }}
         >
-          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-            <Sparkles className="h-5 w-5 text-orange-600" />
+          {/* Dekoracja w tle - orb */}
+          <div
+            className="absolute -top-12 -right-12 w-40 h-40 rounded-full opacity-20"
+            style={{ background: "radial-gradient(circle, #ffffff, transparent 70%)" }}
+            aria-hidden="true"
+          />
+          <div
+            className="absolute -bottom-16 -left-10 w-44 h-44 rounded-full opacity-15"
+            style={{ background: "radial-gradient(circle, #ffffff, transparent 70%)" }}
+            aria-hidden="true"
+          />
+          <div className="relative px-5 py-5 flex items-center gap-4 text-left">
+            <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 border border-white/30">
+              <MapPin className="h-7 w-7 text-white" strokeWidth={2.5} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-black leading-tight text-white drop-shadow-sm">
+                Zaplanuj nową trasę
+              </p>
+              <p className="text-xs text-white/85 mt-1 leading-relaxed">
+                Sam, z grupą znajomych, lub po kodzie zaproszenia
+              </p>
+            </div>
+            <ArrowRight className="h-5 w-5 text-white shrink-0" />
           </div>
-          <div className="flex-1 text-left min-w-0">
-            <p className="text-sm font-bold leading-tight">Zaplanuj kolejną trasę</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Wybierz datę i miasto · Możesz zaprosić znajomych</p>
-          </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
         </button>
+      )}
+
+      {/* Bottom sheet z 3 opcjami */}
+      {showPlanSheet && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowPlanSheet(false)}
+        >
+          <div
+            className="w-full max-w-md bg-card rounded-t-3xl px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))] flex flex-col gap-3 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <p className="text-lg font-black leading-tight">Zaplanuj nową trasę</p>
+                <p className="text-xs text-muted-foreground mt-1">Wybierz jak chcesz planować</p>
+              </div>
+              <button
+                onClick={() => setShowPlanSheet(false)}
+                className="h-8 w-8 -mt-1 -mr-1 flex items-center justify-center text-muted-foreground active:text-foreground"
+                aria-label="Zamknij"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2 mt-1">
+              {/* Solo planowanie */}
+              <button
+                onClick={() => {
+                  setShowPlanSheet(false);
+                  navigate("/plan");
+                }}
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-card border border-border/60 active:scale-[0.98] transition-transform text-left"
+              >
+                <div className="h-11 w-11 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
+                  <MapPin className="h-5 w-5 text-orange-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold leading-tight">Sam</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                    Pełna kontrola, Twój styl. Wybierz datę i miasto.
+                  </p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+
+              {/* Z grupą - zaproś znajomych */}
+              <button
+                onClick={() => {
+                  setShowPlanSheet(false);
+                  navigate("/sesja/nowa", { state: { from: "journal" } });
+                }}
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-card border border-border/60 active:scale-[0.98] transition-transform text-left"
+              >
+                <div className="h-11 w-11 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                  <Users className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold leading-tight">Z grupą</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                    Zaproś znajomych do wspólnego parowania miejsc
+                  </p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+
+              {/* Mam kod - dołącz do sesji */}
+              <button
+                onClick={() => {
+                  setShowPlanSheet(false);
+                  setShowJoinModal(true);
+                }}
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-card border border-border/60 active:scale-[0.98] transition-transform text-left"
+              >
+                <div className="h-11 w-11 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
+                  <Link2 className="h-5 w-5 text-violet-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold leading-tight">Mam kod</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                    Dołącz do trasy znajomych po otrzymanym kodzie
+                  </p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Join code modal - opcja "Mam kod" otwiera ten modal */}
+      {showJoinModal && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowJoinModal(false)}
+        >
+          <div
+            className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <h2 className="font-black text-lg">Dołącz do sesji</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Wpisz kod sesji otrzymany od znajomych</p>
+            </div>
+            <input
+              type="text"
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+              onKeyDown={(e) => { if (e.key === "Enter") handleJoinSubmit(); }}
+              placeholder="np. ABC123"
+              maxLength={10}
+              autoFocus
+              className="w-full px-4 py-3.5 rounded-2xl border border-border bg-muted/40 text-base font-mono font-semibold tracking-widest text-center placeholder:text-muted-foreground/50 placeholder:font-normal placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition-colors"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowJoinModal(false)}
+                className="flex-1 py-3 rounded-full border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
+              >
+                Anuluj
+              </button>
+              <button
+                onClick={handleJoinSubmit}
+                disabled={!joinCode.trim()}
+                className="flex-[2] py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform disabled:opacity-40 disabled:active:scale-100"
+              >
+                Dołącz
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Empty state per tab */}
