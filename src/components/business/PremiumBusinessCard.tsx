@@ -541,17 +541,29 @@ function ReviewsSection({ data }: SectionProps) {
           </div>
         ))}
       </div>
-      {data.googlePlaceId && (
-        <a
-          href={`https://www.google.com/maps/place/?q=place_id:${data.googlePlaceId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl border border-border text-sm text-foreground"
-        >
-          <span className="font-black text-[#4285F4]">G</span>
-          Więcej opinii na Google
-        </a>
-      )}
+      {(() => {
+        // URL strategy:
+        // - Mamy prawidłowy place_id -> direct link do reviews tab w Google Maps
+        // - Brak place_id -> search query z nazwą + adresem (zawsze dziala)
+        // Wczesniej uzywany link 'maps/place/?q=place_id:XXX' bral randomowe location
+        // gdy place_id byl pusty albo stale - teraz mamy fallback.
+        const placeIdValid = data.googlePlaceId && data.googlePlaceId.length > 10;
+        const searchQuery = [data.name, data.address, data.city].filter(Boolean).join(" ");
+        const url = placeIdValid
+          ? `https://search.google.com/local/reviews?placeid=${data.googlePlaceId}`
+          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchQuery)}`;
+        return (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl border border-border text-sm text-foreground"
+          >
+            <span className="font-black text-[#4285F4]">G</span>
+            Więcej opinii na Google
+          </a>
+        );
+      })()}
     </div>
   );
 }

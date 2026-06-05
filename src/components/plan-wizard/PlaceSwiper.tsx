@@ -879,8 +879,13 @@ function enrichWithBusinessProfile(p: any): MockPlace {
   // i jest ignorowane na froncie. Wszystkim wyswietlamy pelna premium wizytowke.
   const plan: 'zero' | 'basic' | 'premium' = 'premium';
   const bizGallery: string[] = Array.isArray(bp.gallery_urls) ? bp.gallery_urls.filter(Boolean) : [];
-  // Biznes wpisuje swoje zdjęcia jako pierwsze, potem kurowana galeria z places, dedupe po URL.
-  const mergedGallery = Array.from(new Set([...bizGallery, ...placeGallery]));
+  // Logika galerii: jesli biznes wgral wlasne zdjecia (cover_image, cover_video, gallery_urls)
+  // -> uzywamy TYLKO biznesowych. Biznes wybral jak chce sie prezentowac, nie nadpisujemy
+  // kurowanymi Google Photos z places.gallery_urls (backfill).
+  // Jesli biznes NIE ma zadnych wlasnych zdjec -> uzywamy placeGallery (Google backfill)
+  // jako fallback zeby wizytowka miala chociaz placeholder.
+  const hasBizPhotos = !!(bp.cover_image_url || bp.cover_video_url || bizGallery.length > 0);
+  const mergedGallery = hasBizPhotos ? bizGallery : placeGallery;
   return {
     ...p,
     businessPlan: plan,
