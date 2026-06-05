@@ -435,7 +435,7 @@ const RouteSummaryDialog = ({
           <button
             onClick={saveRoute}
             disabled={saving}
-            className="w-full py-4 rounded-full bg-primary text-white font-bold text-base disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-primary/25 active:scale-[0.98] transition-transform"
+            className="w-full py-4 rounded-full bg-primary text-white font-bold text-base disabled:opacity-60 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
           >
             {saving
               ? <><Loader2 className="h-4 w-4 animate-spin" />Zapisuję...</>
@@ -445,7 +445,7 @@ const RouteSummaryDialog = ({
           <button
             onClick={() => onOpenChange(false)}
             disabled={saving}
-            className="w-full py-3.5 rounded-full border border-border text-sm font-medium text-muted-foreground disabled:opacity-50 active:scale-[0.98] transition-transform"
+            className="w-full py-3.5 rounded-full border border-border bg-muted text-sm font-medium text-foreground disabled:opacity-50 active:scale-[0.98] transition-transform"
           >
             Wróć do edycji
           </button>

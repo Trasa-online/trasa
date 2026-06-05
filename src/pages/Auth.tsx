@@ -611,7 +611,7 @@ const Auth = () => {
           )}
 
           {/* OAuth - Apple + Google */}
-          <div className="flex flex-col gap-2 mb-5">
+          <div className="flex flex-col gap-6 mb-5">
             <button
               type="button"
               onClick={() => handleOAuth("apple")}

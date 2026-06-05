@@ -734,7 +734,7 @@ const ReviewSummary = () => {
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         <button
           onClick={() => navigate("/")}
-          className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-primary/20"
+          className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
         >
           Gotowe
         </button>

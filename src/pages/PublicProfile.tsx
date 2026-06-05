@@ -33,18 +33,6 @@ export default function PublicProfile() {
     enabled: !!username,
   });
 
-  const { data: counts } = useQuery({
-    queryKey: ["profile-follow-counts", profile?.id],
-    queryFn: async () => {
-      const [{ count: followers }, { count: following }] = await Promise.all([
-        supabase.from("followers").select("*", { count: "exact", head: true }).eq("following_id", profile!.id),
-        supabase.from("followers").select("*", { count: "exact", head: true }).eq("follower_id", profile!.id),
-      ]);
-      return { followers: followers ?? 0, following: following ?? 0 };
-    },
-    enabled: !!profile?.id,
-  });
-
   const { data: stats } = useQuery({
     queryKey: ["public-profile-stats", profile?.id],
     queryFn: async () => {
@@ -123,18 +111,6 @@ export default function PublicProfile() {
             <p className="text-sm text-muted-foreground">@{profile.username}</p>
           </div>
           <FollowButton targetUserId={profile.id} initialIsFollowing={isFollowing} />
-        </div>
-
-        {/* Counts */}
-        <div className="flex justify-center gap-8">
-          <div className="text-center">
-            <p className="text-xl font-black">{counts?.followers ?? 0}</p>
-            <p className="text-xs text-muted-foreground">Obserwujący</p>
-          </div>
-          <div className="text-center">
-            <p className="text-xl font-black">{counts?.following ?? 0}</p>
-            <p className="text-xs text-muted-foreground">Obserwuje</p>
-          </div>
         </div>
 
         {/* Stats */}

@@ -980,7 +980,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
 
         <div className="text-center space-y-2">
           <p className="text-base font-semibold text-foreground">Tworzę Twoją trasę</p>
-          <p className="text-sm text-muted-foreground leading-relaxed">Ty się zrelaksuj, trasowiczu!</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">Ty się zrelaksuj, zaraz będzie gotowe 🧡</p>
         </div>
       </div>
     );

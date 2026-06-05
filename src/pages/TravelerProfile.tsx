@@ -141,7 +141,7 @@ function GuestProfile() {
       <div className="flex flex-col items-center gap-3 w-full max-w-[280px]">
         <button
           onClick={() => open({ mode: "register" })}
-          className="w-full px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-primary/25"
+          className="w-full px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           Załóż konto
           <ArrowRight className="h-4 w-4" />
