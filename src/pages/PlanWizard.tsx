@@ -18,6 +18,17 @@ import { cn } from "@/lib/utils";
 // inline w TopBar (chip + drawer multi-select) w trakcie swipe'owania.
 type Step = 1 | 2 | 3 | 4;
 
+// Grupowanie matches po kategorii - spojne z GroupSession (parowanie grupowe).
+const MATCH_CATEGORIES = [
+  { label: "Kawiarnia",   emoji: "☕",  dbValues: ["cafe"] },
+  { label: "Restauracja", emoji: "🍽️", dbValues: ["restaurant"] },
+  { label: "Bar",         emoji: "🍺",  dbValues: ["bar"] },
+  { label: "Kultura",     emoji: "🏛️", dbValues: ["museum", "monument"] },
+  { label: "Natura",      emoji: "🌿",  dbValues: ["park", "viewpoint"] },
+  { label: "Rozrywka",    emoji: "🎪",  dbValues: ["experience"] },
+  { label: "Zakupy",      emoji: "🛍️", dbValues: ["shopping", "market"] },
+];
+
 const PlanWizard = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -371,55 +382,77 @@ const PlanWizard = () => {
                       </button>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground px-1 mb-2">
-                        Odznacz miejsca, których nie chcesz w&nbsp;trasie
-                      </p>
-                      {likedSnapshot.map((place) => {
-                        const isSelected = !deselectedMatches.has(place.place_name);
-                        return (
-                          <button
-                            key={place.id}
-                            onClick={() => { setDetailPlace(place); setDetailOpen(true); }}
-                            className={cn(
-                              "w-full flex items-center gap-3 rounded-2xl border bg-card p-3 text-left transition-all active:scale-[0.98]",
-                              isSelected ? "border-border/40" : "border-border/20 opacity-50"
-                            )}
-                          >
-                            {place.photo_url ? (
-                              <img src={place.photo_url} alt={place.place_name} className="h-14 w-14 rounded-2xl object-cover shrink-0" />
-                            ) : (
-                              <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center shrink-0">
-                                <MapPin className="h-5 w-5 text-muted-foreground" />
+                    (() => {
+                      // Grupowanie polubionych po kategorii - jak w parowaniu grupowym.
+                      const grouped = likedSnapshot.reduce<Record<string, MockPlace[]>>((acc, p) => {
+                        const key = (p.category as string) || "inne";
+                        (acc[key] ??= []).push(p);
+                        return acc;
+                      }, {});
+                      return (
+                        <div className="space-y-5">
+                          <p className="text-xs text-muted-foreground px-1">
+                            Odznacz miejsca, których nie chcesz w&nbsp;trasie
+                          </p>
+                          {Object.entries(grouped).map(([cat, items]) => {
+                            const meta = MATCH_CATEGORIES.find(c => c.dbValues.includes(cat));
+                            return (
+                              <div key={cat}>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+                                  {meta ? `${meta.emoji} ${meta.label}` : cat}
+                                </p>
+                                <div className="space-y-2">
+                                  {items.map((place) => {
+                                    const isSelected = !deselectedMatches.has(place.place_name);
+                                    return (
+                                      <button
+                                        key={place.id}
+                                        onClick={() => { setDetailPlace(place); setDetailOpen(true); }}
+                                        className={cn(
+                                          "w-full flex items-center gap-3 rounded-2xl border bg-card p-3 text-left transition-all active:scale-[0.98]",
+                                          isSelected ? "border-border/40" : "border-border/20 opacity-50"
+                                        )}
+                                      >
+                                        {place.photo_url ? (
+                                          <img src={place.photo_url} alt={place.place_name} className="h-14 w-14 rounded-2xl object-cover shrink-0" />
+                                        ) : (
+                                          <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center shrink-0">
+                                            <MapPin className="h-5 w-5 text-muted-foreground" />
+                                          </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-semibold text-sm leading-tight truncate">{place.place_name}</p>
+                                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                            {place.rating ? (
+                                              <span className="flex items-center gap-0.5">
+                                                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                                                {place.rating}
+                                              </span>
+                                            ) : null}
+                                            {place.address && <span className="truncate">{place.address.split(",")[0]}</span>}
+                                          </div>
+                                        </div>
+                                        {/* Checkbox - click stopuje propagacje zeby tap na nim NIE
+                                            otwieral detail sheet, tylko toggleowal selekcje. */}
+                                        <div
+                                          onClick={(e) => { e.stopPropagation(); toggleMatchSelection(place.place_name); }}
+                                          className={cn(
+                                            "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
+                                            isSelected ? "bg-primary border-orange-600" : "border-border/60 bg-background"
+                                          )}
+                                        >
+                                          {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm leading-tight truncate">{place.place_name}</p>
-                              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                {place.rating ? (
-                                  <span className="flex items-center gap-0.5">
-                                    <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                                    {place.rating}
-                                  </span>
-                                ) : null}
-                                {place.address && <span className="truncate">{place.address.split(",")[0]}</span>}
-                              </div>
-                            </div>
-                            {/* Checkbox - click stopuje propagacje zeby tap na nim NIE
-                                otwieral detail sheet, tylko toggleowal selekcje. */}
-                            <div
-                              onClick={(e) => { e.stopPropagation(); toggleMatchSelection(place.place_name); }}
-                              className={cn(
-                                "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
-                                isSelected ? "bg-primary border-orange-600" : "border-border/60 bg-background"
-                              )}
-                            >
-                              {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
 

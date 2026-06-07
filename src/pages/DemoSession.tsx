@@ -472,7 +472,7 @@ function DemoSwiper({ places, city, category, onComplete, isBiznesDemo }: {
           </svg>
           <div className="text-center space-y-2">
             <p className="text-base font-semibold text-foreground">Tworzę Twoją trasę</p>
-            <p className="text-sm text-muted-foreground leading-relaxed">Ty się zrelaksuj, zaraz będzie gotowe 🧡</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">Ty się zrelaksuj!</p>
           </div>
         </div>
       )}

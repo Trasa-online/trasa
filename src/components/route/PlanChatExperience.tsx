@@ -99,7 +99,7 @@ function getSnapPx(snap: SnapState, containerH?: number): number {
   const h = containerH ?? window.innerHeight;
   if (snap === "peek") return 80;
   if (snap === "half") return Math.round(h * 0.62);
-  return Math.round(h * 0.82);
+  return Math.round(h * 0.85);
 }
 
 // ─── Mock plan data for Kraków ────────────────────────────────────────────────
@@ -750,6 +750,8 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
   // ─── Drag handlers ──────────────────────────────────────────────────────────
 
   const handleDragStart = (e: React.PointerEvent) => {
+    // Gdy otwarty detal wizytowki - sheet zostaje na 85% (full), bez zwijania.
+    if (detailPin) return;
     dragStartY.current = e.clientY;
     dragStartH.current = dragH ?? getSnapPx(snap);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -997,7 +999,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
 
         <div className="text-center space-y-2">
           <p className="text-base font-semibold text-foreground">Tworzę Twoją trasę</p>
-          <p className="text-sm text-muted-foreground leading-relaxed">Ty się zrelaksuj, zaraz będzie gotowe 🧡</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">Ty się zrelaksuj!</p>
         </div>
       </div>
     );

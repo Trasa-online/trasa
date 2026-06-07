@@ -677,7 +677,6 @@ const PremiumBusinessCard = ({
             {!hidePosts && <PostsSection data={data} onPhotoExpand={handleExpand} />}
             {!hideMenu && <MenuSection data={data} onPhotoExpand={handleExpand} />}
             {!hideReviews && <ReviewsSection data={data} />}
-            {!hideContact && <ContactButtonsSection data={data} />}
             {footer}
           </div>
         </div>
@@ -819,7 +818,6 @@ const PremiumBusinessCard = ({
               </div>
             </div>
           )}
-          {!hideContact && <ContactButtonsSection data={data} />}
           {footer}
         </div>
         {fullscreen && (
