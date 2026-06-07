@@ -152,17 +152,19 @@ User właśnie wrócił z swipera z dodatkowymi polubionymi miejscami i chce, ż
 
 **KRYTYCZNE ZASADY EXTEND:**
 
-1. **Nie zmieniaj dni, które już mają pins** - jeśli Dzień 1 ma 3 miejsca w obecnym planie, dzień 1 musi mieć dokładnie te 3 miejsca w odpowiedzi (same nazwy, sama kolejność). NIE wymieniaj, NIE dodawaj, NIE usuwaj.
+1. **Zachowaj WSZYSTKIE miejsca, które już są w planie** - nie usuwaj i nie wymieniaj istniejących. Dzień, który miał miejsca, nadal je ma (mogą dojść nowe).
 
-2. **Wypełniaj TYLKO puste dni** (\`pins: []\` w AKTUALNYM PLANIE) - rozdzielaj nowe polubione miejsca między te dni z zachowaniem heurystyk H1, H4-H6, H8 (klaster dzielnicowy, godziny otwarcia, logika przejść).
+2. **DODAJ wszystkie nowe polubione miejsca do planu - TO JEST CEL EXTEND:**
+   - Najpierw wypełnij puste dni (\`pins: []\`).
+   - Jeśli NIE MA pustych dni LUB zostały nierozdzielone polubienia - DOPISZ je do istniejących dni (zwykle na końcu dnia, z późniejszym \`suggested_time\`), z zachowaniem heurystyk H1, H4-H6, H8 (klaster dzielnicowy, godziny otwarcia, logika przejść). Przelicz godziny i kolejność tak, żeby dzień był spójny.
 
 3. **Używaj WYŁĄCZNIE polubionych miejsc** (lista poniżej "🔒 TYLKO TE MIEJSCA" lub "🎯 MIEJSCA DO UWZGLĘDNIENIA"). Nie wymyślaj nowych nazw, nie dodawaj generycznych haseł.
 
-4. **Jeśli polubionych jest za mało, żeby wypełnić wszystkie puste dni** - zostaw niewypełnione dni jako \`pins: []\`. Lepszy pusty dzień niż fake'i.
+4. **KAŻDE nowe polubione miejsce MUSI znaleźć się w zwróconym planie** - nie pomijaj żadnego. Lepiej dopisać miejsce do istniejącego dnia niż je pominąć.
 
-5. **Komentarz w odpowiedzi:** 1 krótkie zdanie "Dodałem X miejsc do Dnia Y" (lub "Uzupełniłem Dzień 2 i 3"). Bez wstępów typu "Świetnie!", "Czy chcesz...".
+5. **Komentarz w odpowiedzi:** 1 krótkie zdanie "Dodałem X miejsc do Dnia Y". Bez wstępów typu "Świetnie!", "Czy chcesz...".
 
-Plan zwracany w EXTEND MODE musi mieć tę samą liczbę dni co AKTUALNY PLAN. Każdy dzień, który był pełny, pozostaje identyczny. Puste dni dostają nowe miejsca z listy polubionych.
+Plan zwracany w EXTEND MODE ma tę samą liczbę DNI co AKTUALNY PLAN (dni mogą mieć WIĘCEJ miejsc niż wcześniej). Istniejące miejsca zostają, dochodzą nowe z listy polubionych.
 ` : ""}
 ## PREFERENCJE USERA
 - Liczba dni: ${preferences.numDays}

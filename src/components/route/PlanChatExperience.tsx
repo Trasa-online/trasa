@@ -1407,7 +1407,13 @@ window.addEventListener('message',function(e){
                       <span className="text-[12px] text-muted-foreground">Plan uwzględnia Twoje wcześniejsze preferencje</span>
                     </div>
                   )}
-                  {preparingPlan ? (
+                  {preparingPlan && plan && (
+                    <div className="flex items-center gap-2 px-4 py-2 border-b border-border/40 flex-shrink-0">
+                      <Loader2 className="h-3.5 w-3.5 text-orange-600 animate-spin shrink-0" />
+                      <span className="text-[12px] text-muted-foreground">Dodaję nowe miejsca do planu...</span>
+                    </div>
+                  )}
+                  {preparingPlan && !plan ? (
                     <div className="px-4 py-3 overflow-y-auto flex-1">
                       <PlanSkeleton numDays={preferences.numDays} />
                     </div>
