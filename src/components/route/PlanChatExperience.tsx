@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Brain, Plus, ExternalLink, ArrowLeft, Star, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Brain, Plus, ExternalLink, ArrowLeft, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import { type PlanPin } from "./DayPinList";
 import AddPinSheet from "./AddPinSheet";
 import { getPhotoUrl } from "@/lib/placePhotos";
-import { API_BASE } from "@/lib/platform";
+import PremiumBusinessCard from "@/components/business/PremiumBusinessCard";
+import { fromPin, type BusinessProfileForPreview } from "@/components/business/premiumBusinessAdapters";
+import type { BusinessPost, GoogleReview } from "@/components/business/premiumBusiness.types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,6 +79,21 @@ interface PlanChatExperienceProps {
 }
 
 type SnapState = "peek" | "half" | "full";
+
+// google-places-proxy result shape (subset uzywany w fromPin adapterze).
+interface GoogleDetail {
+  place_id?: string;
+  formatted_address?: string;
+  rating?: number;
+  user_ratings_total?: number;
+  price_level?: number;
+  opening_hours?: { open_now?: boolean; weekday_text?: string[] };
+  reviews?: GoogleReview[];
+}
+
+const validPhotoUrl = (url?: string | null): url is string =>
+  !!url && (url.startsWith("http") || url.startsWith("/")) &&
+  !url.includes("staticmap") && !url.includes("maps/api/staticmap");
 
 function getSnapPx(snap: SnapState, containerH?: number): number {
   const h = containerH ?? window.innerHeight;
@@ -173,12 +190,6 @@ const CATEGORY_BG: Record<string, string> = {
   walk: "bg-teal-100 text-teal-600",
 };
 
-const PLATFORM_BADGE: Record<string, { label: string; className: string }> = {
-  instagram: { label: "IG", className: "bg-pink-500 text-white" },
-  tiktok:    { label: "TK", className: "bg-black text-white" },
-  youtube:   { label: "YT", className: "bg-red-500 text-white" },
-};
-
 // ─── Helper components ────────────────────────────────────────────────────────
 
 const AVATAR_COLORS = ["#e85d04","#2d6a4f","#9d4edd","#1d3557","#c77dff","#f4a261","#f97316","#0096c7"];
@@ -195,20 +206,6 @@ function CreatorAvatar({ name, thumbnailUrl, zIndex, size = 7 }: { name: string;
         : initials
       }
     </div>
-  );
-}
-
-function PostThumbnail({ post }: { post: { thumbnail_url: string; creator_name: string; post_url: string } }) {
-  const [failed, setFailed] = useState(false);
-  return (
-    <a href={post.post_url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 w-24 rounded-xl overflow-hidden relative block">
-      {post.thumbnail_url && !failed
-        ? <img src={post.thumbnail_url} alt={post.creator_name} className="w-24 h-24 object-cover" onError={() => setFailed(true)} />
-        : <div className="w-24 h-24 flex items-center justify-center text-white text-2xl font-bold" style={{ backgroundColor: nameColor(post.creator_name) }}>{post.creator_name.charAt(0).toUpperCase()}</div>
-      }
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-      <p className="absolute bottom-1 left-1 right-1 text-white text-[10px] font-medium truncate">@{post.creator_name}</p>
-    </a>
   );
 }
 
@@ -450,10 +447,10 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
     pin: PlanPin; dayNumber: number; pinIndex: number;
   } | null>(null);
   const [detailExtra, setDetailExtra] = useState<{
-    photoUrl: string | null;
-    rating: number | null;
-    ratingsTotal: number | null;
-    scrapedPosts: { thumbnail_url: string; creator_name: string; post_url: string; description: string }[];
+    biz: BusinessProfileForPreview | null;
+    googleDetail: GoogleDetail | null;
+    posts: BusinessPost[];
+    detailPhotos: string[];
   } | null>(null);
   const [addPinDay, setAddPinDay] = useState<number | null>(null);
   const [showMap, setShowMap] = useState(false);
@@ -539,8 +536,21 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
 
   const sheetHeight = dragH ?? getSnapPx(snap, containerH || undefined);
 
+  // Zamkniecie detalu pinu - przywraca carousel + scroll position.
+  const closeDetail = useCallback(() => {
+    setDetailPin(null);
+    setDetailExtra(null);
+    setShowSwapOptions(false);
+    setSnap("half");
+    requestAnimationFrame(() => {
+      if (carouselRef.current) carouselRef.current.scrollLeft = savedCarouselScroll.current;
+    });
+  }, []);
 
-  // Fetch Google Places details + scraped Instagram posts when a pin is opened
+
+  // Fetch business_profiles + business_posts + Google Places detail when a pin is opened.
+  // Sklada pelna premium wizytowke - ten sam komponent (PremiumBusinessCard mode="detail")
+  // co w swiperze.
   useEffect(() => {
     if (!detailPin) { setDetailExtra(null); return; }
     setDetailExtra(null);
@@ -548,11 +558,41 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
     const city = preferences.city || "";
 
     const fetchDetailData = async () => {
-      // Google Places: photo + rating
-      let photoUrl: string | null = pin.photoUrl ?? null;
-      let rating: number | null = null;
-      let ratingsTotal: number | null = null;
+      // ── 1. business_profiles match: places (ilike place_name + ilike city) → biz row.
+      let biz: BusinessProfileForPreview | null = null;
+      let placeId: string | null = null;
+      try {
+        const { data: placeRows } = await (supabase as any)
+          .from("places")
+          .select("id, business_profiles(logo_url, cover_image_url, cover_video_url, description, main_category, subcategories, tags, gallery_urls, menu_image_urls, event_title, event_description, opening_hours, phone, website, is_verified, color_badge, color_card_bg, color_button)")
+          .ilike("place_name", pin.place_name)
+          .ilike("city", city || "%")
+          .limit(1);
+        const row = placeRows?.[0];
+        if (row) {
+          placeId = row.id ?? null;
+          const bp = Array.isArray(row.business_profiles) ? row.business_profiles[0] : row.business_profiles;
+          if (bp) biz = bp as BusinessProfileForPreview;
+        }
+      } catch { /* biz stays null - zwykle miejsce */ }
 
+      // ── 2. business_posts (tylko gdy premium lokal istnieje).
+      let posts: BusinessPost[] = [];
+      if (biz && placeId) {
+        try {
+          const { data } = await (supabase as any)
+            .from("business_posts")
+            .select("id, description, photo_urls, created_at")
+            .eq("place_id", placeId)
+            .order("created_at", { ascending: false })
+            .limit(10);
+          if (data) posts = data as BusinessPost[];
+        } catch { /* ignore */ }
+      }
+
+      // ── 3. Google Places detail (place_id, address, rating, reviews, hours, photos).
+      let googleDetail: GoogleDetail | null = null;
+      let googlePhotos: string[] = [];
       if (pin.latitude && pin.longitude) {
         try {
           const { data } = await supabase.functions.invoke("google-places-proxy", {
@@ -560,48 +600,25 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
           });
           const result = data?.result;
           if (result) {
-            // Only use Google photo if no business/custom photo already set
-            if (!photoUrl) {
-              const photoRef = result.photos?.[0]?.photo_reference;
-              if (photoRef) photoUrl = getPhotoUrl(photoRef, 800) ?? null;
-            }
-            rating = result.rating ?? null;
-            ratingsTotal = result.user_ratings_total ?? null;
+            googleDetail = result as GoogleDetail;
+            googlePhotos = (result.photos ?? [])
+              .slice(0, 5)
+              .map((p: { photo_reference?: string }) => getPhotoUrl(p.photo_reference ?? "", 800))
+              .filter(validPhotoUrl);
           }
         } catch { /* keep defaults */ }
       }
 
-      // scraped_places: match by caption (description) containing pin name keywords
-      const keywords = pin.place_name
-        .toLowerCase().split(/[\s,.\-/()]+/).filter(w => w.length >= 4);
-      let scrapedPosts: { thumbnail_url: string; creator_name: string; post_url: string; description: string }[] = [];
-      // First try from already-enriched creators on the pin
-      if (pin.creators?.length) {
-        scrapedPosts = pin.creators
-          .filter(c => c.thumbnailUrl)
-          .map(c => ({ thumbnail_url: c.thumbnailUrl, creator_name: c.name, post_url: c.postUrl, description: c.description ?? "" }));
-      }
-      // If no creators on pin, fetch from DB
-      if (!scrapedPosts.length && keywords.length > 0) {
-        try {
-          const { data } = await supabase
-            .from("scraped_places")
-            .select("thumbnail_url, creator_name, post_url, description")
-            .ilike("city", `%${city}%`)
-            .not("thumbnail_url", "is", null)
-            .limit(200);
-          if (data) {
-            scrapedPosts = data
-              .filter(sp => {
-                const desc = (sp.description ?? "").toLowerCase();
-                return keywords.some(kw => desc.includes(kw));
-              })
-              .slice(0, 6) as { thumbnail_url: string; creator_name: string; post_url: string; description: string }[];
-          }
-        } catch { /* ignore */ }
-      }
+      // ── 4. Sklej detailPhotos. Biznes z wlasnymi zdjeciami blokuje Google Photos
+      // (regula z CLAUDE.md). Priorytet: biz cover + galeria, inaczej Google + pin photo.
+      const hasOwnBizPhotos = !!(biz?.cover_image_url || biz?.cover_video_url || (biz?.gallery_urls?.length ?? 0) > 0);
+      const bizPhotos = [biz?.cover_image_url, ...(biz?.gallery_urls ?? [])].filter(validPhotoUrl);
+      const ordered = hasOwnBizPhotos
+        ? [...bizPhotos, ...(validPhotoUrl(pin.photoUrl) ? [pin.photoUrl] : [])]
+        : [...(validPhotoUrl(pin.photoUrl) ? [pin.photoUrl] : []), ...googlePhotos, ...bizPhotos];
+      const detailPhotos = [...new Set(ordered)];
 
-      setDetailExtra({ photoUrl, rating, ratingsTotal, scrapedPosts });
+      setDetailExtra({ biz, googleDetail, posts, detailPhotos });
     };
 
     fetchDetailData();
@@ -1224,171 +1241,19 @@ window.addEventListener('message',function(e){
               {detailPin ? (
                 /* ── Detail view ── */
                 <>
-                  <div className="flex-1 overflow-y-auto">
-                    {/* Hero image with gradient overlay */}
-                    <div className="relative w-full h-56 bg-muted flex-shrink-0">
-                      {detailExtra === null ? (
-                        <div className="w-full h-full bg-muted animate-pulse" />
-                      ) : detailExtra.photoUrl ? (
-                        <img src={detailExtra.photoUrl} alt={detailPin.pin.place_name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-orange-100 to-amber-200" />
+                  <div className="flex-1 min-h-0 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+                    <PremiumBusinessCard
+                      data={fromPin(
+                        detailPin.pin,
+                        detailExtra?.biz ?? null,
+                        detailExtra?.googleDetail ?? null,
+                        detailExtra?.posts ?? [],
                       )}
-                      {/* Gradient overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                      {/* Back button */}
-                      <button
-                        onClick={() => {
-                          setDetailPin(null);
-                          setDetailExtra(null);
-                          setShowSwapOptions(false);
-                          setSnap("half");
-                          requestAnimationFrame(() => {
-                            if (carouselRef.current) carouselRef.current.scrollLeft = savedCarouselScroll.current;
-                          });
-                        }}
-                        className="absolute top-3 left-3 h-9 w-9 rounded-full bg-black/70 flex items-center justify-center text-white ring-1 ring-white/30"
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </button>
-                      {/* Place name + time overlay */}
-                      <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
-                        <h3 className="text-lg font-bold text-white leading-tight">{detailPin.pin.place_name}</h3>
-                        <div className="flex items-center gap-3 mt-1">
-                          {detailPin.pin.suggested_time && (
-                            <span className="text-sm font-semibold text-white/90">{detailPin.pin.suggested_time}</span>
-                          )}
-                          {detailExtra?.rating && (
-                            <span className="flex items-center gap-1 text-sm text-white/90">
-                              <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                              {detailExtra.rating.toFixed(1)}
-                              {detailExtra.ratingsTotal && (
-                                <span className="text-white/60 text-xs">({detailExtra.ratingsTotal.toLocaleString()})</span>
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="px-5 py-4 space-y-4">
-                      {/* Category + duration */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {detailPin.pin.category && (
-                          <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">
-                            {CATEGORY_EMOJI[detailPin.pin.category]} {CATEGORY_LABEL[detailPin.pin.category] ?? detailPin.pin.category}
-                          </span>
-                        )}
-                        {detailPin.pin.duration_minutes && (
-                          <span className="text-xs text-muted-foreground">{detailPin.pin.duration_minutes} min</span>
-                        )}
-                        {detailPin.pin.walking_time_from_prev && (
-                          <span className="text-xs text-muted-foreground">· {detailPin.pin.walking_time_from_prev} od poprzedniego</span>
-                        )}
-                      </div>
-
-                      {/* Description */}
-                      {detailPin.pin.description && (
-                        <p className="text-sm text-muted-foreground leading-relaxed">{detailPin.pin.description}</p>
-                      )}
-
-                      {/* Mini map */}
-                      {detailPin.pin.latitude && detailPin.pin.longitude && (
-                        <div className="rounded-2xl overflow-hidden h-32 w-full bg-muted">
-                          <img
-                            src={`${API_BASE}/api/static-map?center=${detailPin.pin.latitude},${detailPin.pin.longitude}&zoom=16&size=600x240&scale=2&markers=color:black%7C${detailPin.pin.latitude},${detailPin.pin.longitude}&style=feature:poi%7Cvisibility:off`}
-                            alt="Mapa"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-
-                      {/* Influencer recommendations from scraped_places */}
-                      {(detailExtra?.scrapedPosts?.length ?? 0) > 0 && (
-                        <div>
-                          <p className="text-xs font-semibold text-foreground/50 uppercase tracking-wide mb-2">Polecane przez twórców</p>
-                          {/* Thumbnails row */}
-                          <div className="flex gap-2 overflow-x-auto pb-2 -mx-5 px-5">
-                            {detailExtra!.scrapedPosts.map((post, i) => (
-                              <PostThumbnail key={i} post={post} />
-                            ))}
-                          </div>
-                          {/* First influencer's quote/description */}
-                          {detailExtra!.scrapedPosts[0]?.description && (
-                            <div className="mt-3 p-3 rounded-2xl bg-muted/60">
-                              <p className="text-xs font-semibold text-foreground/60 mb-1">@{detailExtra!.scrapedPosts[0].creator_name} poleca</p>
-                              <p className="text-sm text-foreground/80 leading-relaxed line-clamp-4">
-                                {detailExtra!.scrapedPosts[0].description}
-                              </p>
-                              <a
-                                href={detailExtra!.scrapedPosts[0].post_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                              >
-                                Zobacz post <ExternalLink className="h-3 w-3" />
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Pros */}
-                      {(detailPin.pin.pros?.length ?? 0) > 0 && (
-                        <div>
-                          <p className="text-xs font-semibold text-foreground/60 mb-1.5">Dlaczego warto</p>
-                          <ul className="space-y-1">
-                            {detailPin.pin.pros!.map((p, i) => (
-                              <li key={i} className="text-sm flex gap-2"><span className="text-green-500">✓</span>{p}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Cons */}
-                      {(detailPin.pin.cons?.length ?? 0) > 0 && (
-                        <div>
-                          <p className="text-xs font-semibold text-foreground/60 mb-1.5">Warto wiedzieć</p>
-                          <ul className="space-y-1">
-                            {detailPin.pin.cons!.map((c, i) => (
-                              <li key={i} className="text-sm flex gap-2"><span className="text-yellow-500">!</span>{c}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Creator (from AI enrichment) */}
-                      {detailPin.pin.creator && (
-                        <div>
-                          <p className="text-xs font-semibold text-foreground/50 uppercase tracking-wide mb-2">Poleca</p>
-                          <a
-                            href={detailPin.pin.creator.postUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-3 p-3 rounded-2xl bg-muted/60 hover:bg-muted transition-colors"
-                          >
-                            {detailPin.pin.creator.thumbnailUrl ? (
-                              <img src={detailPin.pin.creator.thumbnailUrl} alt={detailPin.pin.creator.name} className="h-10 w-10 rounded-full object-cover flex-shrink-0" />
-                            ) : (
-                              <div className={cn(
-                                "h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold",
-                                PLATFORM_BADGE[detailPin.pin.creator.platform]?.className ?? "bg-muted-foreground/20 text-foreground"
-                              )}>
-                                {PLATFORM_BADGE[detailPin.pin.creator.platform]?.label ?? "?"}
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold truncate">{detailPin.pin.creator.name}</p>
-                              <p className="text-xs text-muted-foreground capitalize">{detailPin.pin.creator.platform} · Zobacz post</p>
-                            </div>
-                            <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          </a>
-                        </div>
-                      )}
-
-                      {/* Spacer for bottom buttons */}
-                      <div className="h-4" />
-                    </div>
+                      mode="detail"
+                      detailPhotos={detailExtra?.detailPhotos ?? []}
+                      detailLoading={detailExtra === null}
+                      onClose={closeDetail}
+                    />
                   </div>
 
                   <div className="flex-shrink-0 border-t border-border/40">
