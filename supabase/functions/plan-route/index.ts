@@ -933,10 +933,12 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
           }
         }
 
-        // Extend mode safeguard: w extend_mode AI moze przypadkiem zmienic dni
-        // ktore juz mialy pins. Bezpieczenstwo: dla kazdego dnia w current_plan
-        // ktory mial pins.length > 0, restore te pins z current_plan. AI moze tylko
-        // wypelniac wczesniej puste dni.
+        // Extend mode safeguard: w extend_mode chronimy istniejace piny przed
+        // zmiana/usunieciem przez AI, ALE pozwalamy dopisac nowo polubione miejsca.
+        // Dla kazdego dnia ktory mial pins w current_plan: zachowaj oryginalne piny
+        // (w oryginalnej kolejnosci) i DOPISZ na koniec nowe piny ktorych jeszcze nie
+        // bylo (np. swiezo polubione). Wczesniej puste dni AI wypelnia swobodnie.
+        // UWAGA: NIE nadpisujemy pinow dnia oryginalami (to wycinalo dodane miejsce).
         if (extend_mode && current_plan?.days && Array.isArray(plan?.days)) {
           const currentByDayNum = new Map<number, any>();
           for (const d of current_plan.days as any[]) {
@@ -945,8 +947,15 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
           plan.days = plan.days.map((day: any) => {
             const original = currentByDayNum.get(day.day_number);
             if (original && Array.isArray(original.pins) && original.pins.length > 0) {
-              // Ten dzien byl pelny - przywroc oryginalne piny zeby AI niczego nie zmienial.
-              return { ...day, pins: original.pins };
+              const origNames = new Set(
+                (original.pins as any[]).map((p) => (p.place_name ?? "").toLowerCase().trim()).filter(Boolean)
+              );
+              // Nowe piny ktore AI dodalo do tego dnia (nie byly w oryginale).
+              const appended = (day.pins ?? []).filter(
+                (p: any) => !origNames.has((p.place_name ?? "").toLowerCase().trim())
+              );
+              // Oryginalne piny bez zmian + dopisane nowe na koniec.
+              return { ...day, pins: [...original.pins, ...appended] };
             }
             return day;
           });
