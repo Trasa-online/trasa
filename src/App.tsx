@@ -508,6 +508,7 @@ function BusinessGuard() {
     if (
       location.pathname.startsWith("/biznes") ||
       location.pathname.startsWith("/dla-firm") ||
+      location.pathname.startsWith("/admin") ||
       location.pathname === "/auth" ||
       location.pathname.startsWith("/set-password") ||
       location.pathname === "/settings" ||

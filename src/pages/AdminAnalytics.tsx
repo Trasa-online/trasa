@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { isHardcodedAdmin } from "@/lib/admins";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import {
   ArrowLeft, Loader2, TrendingUp, TrendingDown, Search, Eye, MapPin,
@@ -108,6 +109,7 @@ export default function AdminAnalytics() {
   useEffect(() => {
     if (loading) return;
     if (!user) { navigate("/auth"); return; }
+    if (isHardcodedAdmin(user.email)) { setIsAdmin(true); return; }
     supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle()
       .then(({ data }) => { if (!data) { navigate("/"); return; } setIsAdmin(true); });
   }, [user, loading, navigate]);
