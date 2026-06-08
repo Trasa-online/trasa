@@ -13,7 +13,6 @@ interface WaitlistEntry {
   created_at: string;
   notified_at: string | null;
   source: string | null;
-  referral_code?: string | null;
   has_account?: boolean;
 }
 
@@ -210,7 +209,7 @@ const Admin = () => {
     setFetchingList(true);
     const { data, error } = await (supabase as any)
       .from("waitlist")
-      .select("id, email, created_at, notified_at, source, referral_code")
+      .select("id, email, created_at, notified_at, source")
       .order("created_at", { ascending: false });
     if (error) console.error("[Admin] waitlist fetch error:", error);
 
@@ -656,11 +655,6 @@ const Admin = () => {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {entry.referral_code && (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
-                        🔗 Zaproszony
-                      </span>
-                    )}
                     {userTab === "pending" && (
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${entry.notified_at ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
                         {entry.notified_at ? "Zaproszono" : "Oczekuje"}

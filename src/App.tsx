@@ -62,7 +62,6 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
     location.pathname === "/waitlist" ||
     location.pathname === "/landing" ||
     location.pathname.startsWith("/set-password") ||
-    location.pathname.startsWith("/join/") ||
     location.pathname.startsWith("/biznes/") ||
     location.pathname.startsWith("/dla-firm/");
   if (!user && !isPublicRoute) return <MaintenanceScreen onUnlock={() => setUnlocked(true)} />;
@@ -570,7 +569,6 @@ const QuickPlanReview  = lazy(() => import("./pages/QuickPlanReview"));
 const UserSearch       = lazy(() => import("./pages/UserSearch"));
 const AdminRoutes      = lazy(() => import("./pages/AdminRoutes"));
 const SharedRoute      = lazy(() => import("./pages/SharedRoute"));
-const JoinPage         = lazy(() => import("./pages/JoinPage"));
 const PublicProfile    = lazy(() => import("./pages/PublicProfile"));
 const ClaimPlace       = lazy(() => import("./pages/ClaimPlace"));
 const BusinessDashboard = lazy(() => import("./pages/BusinessDashboard"));
@@ -651,7 +649,6 @@ const App = () => (
           <Route path="/search" element={<UserSearch />} />
           <Route path="/admin/routes" element={<RequireAuth><AdminRoutes /></RequireAuth>} />
           <Route path="/route/:id" element={<SharedRoute />} />
-          <Route path="/join/:code" element={<JoinPage />} />
           <Route path="/lokal/:placeId" element={<ClaimPlace />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
           <Route path="/quick-plan-review" element={<QuickPlanReview />} />

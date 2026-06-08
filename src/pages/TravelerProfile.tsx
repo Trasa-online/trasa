@@ -241,19 +241,6 @@ const TravelerProfile = () => {
     staleTime: 0,
   });
 
-  const { data: referralCodes = [] } = useQuery({
-    queryKey: ["referral-codes", user?.id],
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("referral_codes")
-        .select("code, slot, used_by_name, used_by_email")
-        .eq("owner_id", user!.id)
-        .order("slot");
-      return (data ?? []) as Array<{ code: string; slot: number; used_by_name: string | null; used_by_email: string | null }>;
-    },
-    enabled: !!user,
-  });
-
   const { data: followCounts } = useQuery({
     queryKey: ["follow-counts", user?.id],
     queryFn: async () => {

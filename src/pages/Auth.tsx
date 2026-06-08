@@ -51,12 +51,6 @@ const Auth = () => {
       ? "Zaloguj się, żeby zmieniać ustawienia konta."
       : null;
 
-  // Pick up referral code from URL (?ref=CODE) or landing page (localStorage)
-  useEffect(() => {
-    const refFromUrl = searchParams.get("ref");
-    if (refFromUrl) localStorage.setItem("pending_referral_code", refFromUrl);
-  }, [searchParams]);
-
   // Post-login redirect. Reaguje na user state change (kluczowe dla native: po
   // OAuth Google na native, deep link wraca i NativeDeepLinkHandler robi
   // exchangeCodeForSession -> user state w supabase auth updateuje sie -> useAuth
@@ -342,7 +336,6 @@ const Auth = () => {
     }
     setLoading(true);
     try {
-      const referralCode = localStorage.getItem("pending_referral_code") || null;
       const { error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
@@ -350,7 +343,6 @@ const Auth = () => {
           data: {
             first_name: firstName.trim(),
             username: username.trim(),
-            referral_code: referralCode,
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -366,8 +358,7 @@ const Auth = () => {
         }
         return;
       }
-      localStorage.removeItem("pending_referral_code");
-      posthog.capture("user_signed_up", { source: referralCode ? "referral" : "website" });
+      posthog.capture("user_signed_up", { source: "website" });
       setSignupDone(true);
     } catch (error: any) {
       posthog.captureException(error);
