@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { isHardcodedAdmin } from "@/lib/admins";
 import { Bell, UserCircle2, Settings, BarChart3 } from "lucide-react";
 import NotificationsDrawer from "./NotificationsDrawer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -51,6 +52,7 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
     queryKey: ["is-admin-topbar", user?.id],
     queryFn: async () => {
       if (!user) return false;
+      if (isHardcodedAdmin(user.email)) return true;
       const { data } = await supabase
         .from("user_roles")
         .select("role")
