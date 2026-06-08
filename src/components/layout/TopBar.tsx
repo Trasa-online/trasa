@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, UserCircle2, Settings } from "lucide-react";
+import { Bell, UserCircle2, Settings, BarChart3 } from "lucide-react";
 import NotificationsDrawer from "./NotificationsDrawer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -106,6 +106,15 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
 
         {/* Right: Admin gear (admins only) + Bell */}
         <div className="flex items-center gap-1">
+          {isAdmin && (
+            <button
+              onClick={() => navigate("/admin/analytics")}
+              className="h-9 w-9 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Analityka"
+            >
+              <BarChart3 className="h-5 w-5" />
+            </button>
+          )}
           {isAdmin && (
             <button
               onClick={() => navigate("/admin")}

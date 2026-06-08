@@ -569,7 +569,6 @@ const CreateGroupSession = lazy(() => import("./pages/CreateGroupSession"));
 const GroupSession     = lazy(() => import("./pages/GroupSession"));
 const QuickPlanReview  = lazy(() => import("./pages/QuickPlanReview"));
 const UserSearch       = lazy(() => import("./pages/UserSearch"));
-const AdminRoutes      = lazy(() => import("./pages/AdminRoutes"));
 const SharedRoute      = lazy(() => import("./pages/SharedRoute"));
 const PublicProfile    = lazy(() => import("./pages/PublicProfile"));
 const ClaimPlace       = lazy(() => import("./pages/ClaimPlace"));
@@ -650,7 +649,6 @@ const App = () => (
           <Route path="/sesja/nowa" element={<CreateGroupSession />} />
           <Route path="/sesja/:joinCode" element={<GroupSession />} />
           <Route path="/search" element={<UserSearch />} />
-          <Route path="/admin/routes" element={<RequireAuth><AdminRoutes /></RequireAuth>} />
           <Route path="/route/:id" element={<SharedRoute />} />
           <Route path="/lokal/:placeId" element={<ClaimPlace />} />
           <Route path="/profil/:username" element={<PublicProfile />} />
