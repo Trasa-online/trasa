@@ -602,6 +602,12 @@ const Admin = () => {
         </button>
         <h1 className="text-lg font-semibold flex-1">Panel admina</h1>
         <button
+          onClick={() => navigate("/admin/analytics")}
+          className="text-xs bg-orange-600 text-white font-semibold px-3 py-1.5 rounded-full hover:bg-orange-700 transition-colors"
+        >
+          📊 Analityka
+        </button>
+        <button
           onClick={() => navigate("/admin/routes")}
           className="text-xs bg-primary/10 text-orange-600 font-semibold px-3 py-1.5 rounded-full hover:bg-primary/90/20 transition-colors"
         >

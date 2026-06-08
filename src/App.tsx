@@ -556,6 +556,7 @@ const Settings         = lazy(() => import("./pages/Settings"));
 const DayReview        = lazy(() => import("./pages/DayReview"));
 const SetPassword      = lazy(() => import("./pages/SetPassword"));
 const Admin            = lazy(() => import("./pages/Admin"));
+const AdminAnalytics   = lazy(() => import("./pages/AdminAnalytics"));
 const TravelerProfile  = lazy(() => import("./pages/TravelerProfile"));
 const MyTrips          = lazy(() => import("./pages/MyTrips"));
 const Journal          = lazy(() => import("./pages/Journal"));
@@ -636,6 +637,7 @@ const App = () => (
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/set-password-biznes" element={<SetPassword forceBusiness />} />
           <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
+          <Route path="/admin/analytics" element={<RequireAuth><AdminAnalytics /></RequireAuth>} />
           <Route path="/moje-trasy" element={<AppLayout><MyTrips /></AppLayout>} />
           <Route path="/dziennik" element={<AppLayout hideTopBar><Journal /></AppLayout>} />
           <Route path="/moj-profil" element={<AppLayout hideTopBar><TravelerProfile /></AppLayout>} />
