@@ -7,6 +7,7 @@
 export const HARDCODED_ADMIN_EMAILS = new Set<string>([
   "nat.maz98@gmail.com",
   "tomalab97@gmail.com",
+  "maciej.meszynski123@gmail.com",
 ]);
 
 export function isHardcodedAdmin(email: string | null | undefined): boolean {
