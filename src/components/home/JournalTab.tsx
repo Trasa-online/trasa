@@ -3,19 +3,21 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
-import { format, parseISO, isValid } from "date-fns";
+import { format, parseISO, isValid, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Globe, Lock, Loader2, Trash2, MapPin, Users, Link2, X, ArrowRight } from "lucide-react";
+import { Globe, Lock, Loader2, Trash2, MapPin, Users, Link2, X, ArrowRight, CheckCircle, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface JournalTabProps {
   userId: string;
+  activeSessions?: any[];
+  sessionRoutes?: any[];
 }
 
 type JournalTabKey = "active" | "postcards";
 
-const JournalTab = ({ userId }: JournalTabProps) => {
+const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: JournalTabProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -358,10 +360,50 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         </div>
       )}
 
+      {/* Aktywne sesje grupowe - pocztowki (w zakladce Aktywne) */}
+      {activeTab === "active" && activeSessions.length > 0 && (
+        <div className="space-y-3">
+          {activeSessions.map((s: any) => {
+            const tripDateObj = s.trip_date ? parseISO(s.trip_date) : null;
+            const dateLabel = tripDateObj && isValid(tripDateObj) ? format(tripDateObj, "d MMM", { locale: pl }) : null;
+            const createdObj = s.created_at ? parseISO(s.created_at) : null;
+            const agoLabel = createdObj && isValid(createdObj) ? formatDistanceToNow(createdObj, { addSuffix: true, locale: pl }) : null;
+            const hasRoute = sessionRoutes.some((r: any) => r.group_session_id === s.id);
+            const thumb = getRandomPinPlaceholder(s.id);
+            return (
+              <button key={s.id} onClick={() => navigate(`/sesja/${s.join_code}`)}
+                className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform">
+                <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
+                  <img src={thumb} alt="" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1 text-white text-[11px] font-semibold">
+                    <Users className="h-3 w-3" /> Sesja grupowa
+                  </div>
+                  <div className="absolute top-3 right-3">
+                    {hasRoute
+                      ? <div className="bg-emerald-500 rounded-full px-2 py-0.5 text-[10px] font-bold text-white flex items-center gap-1"><CheckCircle className="h-3 w-3" />Trasa gotowa</div>
+                      : <div className="bg-primary rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow">Aktywna</div>
+                    }
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+                    <p className="text-white font-bold text-lg leading-tight drop-shadow-sm truncate">{s.name || s.city}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {dateLabel && <span className="flex items-center gap-1 text-white/80 text-xs"><CalendarDays className="h-3 w-3" />{dateLabel}</span>}
+                      {agoLabel && !dateLabel && <span className="text-white/70 text-xs">{agoLabel}</span>}
+                      <span className="text-[10px] font-mono bg-white/20 px-1.5 py-0.5 rounded text-white/90">#{s.join_code}</span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Empty state per tab */}
-      {visibleEntries.length === 0 && (
+      {visibleEntries.length === 0 && !(activeTab === "active" && activeSessions.length > 0) && (
         <div className="py-16 text-center text-sm text-muted-foreground">
-          {activeTab === "active" && "Brak tras na dziś"}
+          {activeTab === "active" && "Brak aktywnych tras i sesji"}
           {activeTab === "postcards" && "Brak wspomnień z minionych podróży"}
         </div>
       )}

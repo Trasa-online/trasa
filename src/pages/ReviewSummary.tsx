@@ -517,41 +517,64 @@ const ReviewSummary = () => {
               </div>
             </div>
             {planView === "list" ? (
-              <div className="space-y-2">
-                {planPins.map((pin: any, i: number) => (
-                  <div key={pin.id} className="flex items-center gap-3 bg-card border border-border/40 rounded-2xl px-3 py-2.5">
-                    <div className="h-7 w-7 rounded-full bg-orange-600 text-white text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</div>
-                    <span className="text-lg shrink-0">{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold leading-tight truncate">{pin.place_name}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {CATEGORY_LABEL[pin.category] ?? "Miejsce"}{pin.suggested_time ? ` · ${pin.suggested_time}` : ""}
+              // Lista grupowana po kategorii (jak zakladka Dopasowania)
+              <div className="space-y-4">
+                {(() => {
+                  const groups: Record<string, any[]> = {};
+                  planPins.forEach((p: any) => { const k = p.category || "other"; (groups[k] ??= []).push(p); });
+                  return Object.entries(groups).map(([cat, items]) => (
+                    <div key={cat}>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                        <span>{CATEGORY_EMOJI[cat] ?? "📍"}</span>{CATEGORY_LABEL[cat] ?? "Miejsce"}
                       </p>
+                      <div className="space-y-2">
+                        {items.map((pin: any) => {
+                          const img = pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null);
+                          return (
+                            <div key={pin.id} className="flex items-center gap-3 bg-card border border-border/40 rounded-2xl p-2.5">
+                              {img ? (
+                                <img src={getPhotoUrl(img)} alt="" className="h-14 w-14 rounded-xl object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                              ) : (
+                                <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center shrink-0 text-xl">{CATEGORY_EMOJI[pin.category] ?? "📍"}</div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
+                                {(pin.address || pin.suggested_time) && (
+                                  <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                                    {pin.suggested_time ? `🕐 ${pin.suggested_time}` : ""}{pin.suggested_time && pin.address ? " · " : ""}{pin.address ?? ""}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ));
+                })()}
               </div>
             ) : (
+              // Karty szczegolowe (jak kreator trasy)
               <div className="space-y-3">
                 {planPins.map((pin: any, i: number) => {
                   const img = pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null);
                   return (
-                    <div key={pin.id} className="rounded-2xl bg-card border border-border/40 overflow-hidden">
-                      {img && (
-                        <div className="relative w-full aspect-[4/3] bg-muted">
+                    <div key={pin.id} className="rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm">
+                      <div className="relative w-full aspect-[4/3] bg-muted">
+                        {img ? (
                           <img src={getPhotoUrl(img)} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                        </div>
-                      )}
-                      <div className="p-3.5">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className="h-6 w-6 rounded-full bg-orange-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">{i + 1}</div>
-                          <span className="text-base shrink-0">{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>
-                          <p className="text-sm font-bold leading-tight flex-1 min-w-0 truncate">{pin.place_name}</p>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground mb-1">
-                          {CATEGORY_LABEL[pin.category] ?? "Miejsce"}{pin.suggested_time ? ` · 🕐 ${pin.suggested_time}` : ""}
-                        </p>
-                        {pin.description && <p className="text-xs text-muted-foreground leading-relaxed">{pin.description}</p>}
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-4xl">{CATEGORY_EMOJI[pin.category] ?? "📍"}</div>
+                        )}
+                        <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
+                      </div>
+                      <div className="p-4">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
+                          <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+                        </span>
+                        <p className="text-base font-black leading-tight">{pin.place_name}</p>
+                        {pin.suggested_time && <p className="text-xs text-muted-foreground mt-0.5">🕐 {pin.suggested_time}</p>}
+                        {pin.description && <p className="text-sm text-muted-foreground leading-relaxed mt-2">{pin.description}</p>}
                       </div>
                     </div>
                   );

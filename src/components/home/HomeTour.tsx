@@ -247,20 +247,21 @@ export const useHomeTour = (isGuest: boolean) => {
   const [showTour, setShowTour] = useState(false);
 
   useEffect(() => {
-    if (isGuest) {
-      if (!localStorage.getItem(GUEST_TOUR_KEY)) setShowTour(true);
-      return;
-    }
+    // localStorage = raz na URZADZENIE, niezawodne (przetrwa restart + nawigacje, guest i zalogowani).
+    if (localStorage.getItem(GUEST_TOUR_KEY)) return;
+    if (isGuest) { setShowTour(true); return; }
     if (!user) return;
     supabase.from("profiles").select("onboarding_completed").eq("id", user.id).single()
-      .then(({ data }) => { if (!data?.onboarding_completed) setShowTour(true); });
+      .then(({ data }) => {
+        if (!data?.onboarding_completed) setShowTour(true);
+        else { try { localStorage.setItem(GUEST_TOUR_KEY, "1"); } catch { /* ignore */ } }
+      });
   }, [isGuest, user]);
 
   const dismissTour = () => {
     setShowTour(false);
-    if (isGuest) { localStorage.setItem(GUEST_TOUR_KEY, "1"); return; }
-    if (!user) return;
-    supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
+    try { localStorage.setItem(GUEST_TOUR_KEY, "1"); } catch { /* ignore */ } // ZAWSZE - blokuje ponowne otwarcie na tym urzadzeniu
+    if (!isGuest && user) supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
   };
 
   return { showTour, dismissTour };

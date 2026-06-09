@@ -107,68 +107,7 @@ const Journal = () => {
     <div className="flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
       <h1 className="text-xl font-black tracking-tight pt-2 pb-3">Dziennik podróży</h1>
 
-      <>
-          {/* Active group sessions */}
-          {activeSessions.length > 0 && (
-            <div className="space-y-2.5 mb-6">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
-                Aktywne sesje grupowe
-              </p>
-              {activeSessions.map((s: any) => {
-                const tripDateObj = s.trip_date ? parseISO(s.trip_date) : null;
-                const dateLabel = tripDateObj && isValid(tripDateObj)
-                  ? format(tripDateObj, "d MMM", { locale: pl })
-                  : null;
-                const createdObj = s.created_at ? parseISO(s.created_at) : null;
-                const agoLabel = createdObj && isValid(createdObj)
-                  ? formatDistanceToNow(createdObj, { addSuffix: true, locale: pl })
-                  : null;
-                const sessionRouteEntry = sessionRoutes.find((r: any) => r.group_session_id === s.id);
-                const hasRoute = !!sessionRouteEntry;
-                const thumb = getRandomPinPlaceholder(s.id);
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => navigate(`/sesja/${s.join_code}`)}
-                    className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform"
-                  >
-                    <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
-                      <img src={thumb} alt="" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                      <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1 text-white text-[11px] font-semibold">
-                        <Users className="h-3 w-3" /> Sesja grupowa
-                      </div>
-                      <div className="absolute top-3 right-3">
-                        {hasRoute
-                          ? <div className="bg-emerald-500 rounded-full px-2 py-0.5 text-[10px] font-bold text-white flex items-center gap-1"><CheckCircle className="h-3 w-3" />Trasa gotowa</div>
-                          : <div className="bg-primary rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow">Aktywna</div>
-                        }
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-                        <p className="text-white font-bold text-lg leading-tight drop-shadow-sm truncate">{s.name || s.city}</p>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {dateLabel && (
-                            <span className="flex items-center gap-1 text-white/80 text-xs">
-                              <CalendarDays className="h-3 w-3" />{dateLabel}
-                            </span>
-                          )}
-                          {agoLabel && !dateLabel && (
-                            <span className="text-white/70 text-xs">{agoLabel}</span>
-                          )}
-                          <span className="text-[10px] font-mono bg-white/20 px-1.5 py-0.5 rounded text-white/90">
-                            #{s.join_code}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          <JournalTab userId={user.id} />
-        </>
+      <JournalTab userId={user.id} activeSessions={activeSessions} sessionRoutes={sessionRoutes} />
     </div>
   );
 };
