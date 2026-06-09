@@ -7,6 +7,7 @@ import { CalendarDays, Users, ArrowRight, CheckCircle, BookOpen } from "lucide-r
 import { parseISO, isValid, format, formatDistanceToNow, startOfToday } from "date-fns";
 import { pl } from "date-fns/locale";
 import JournalTab from "@/components/home/JournalTab";
+import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 
 const Journal = () => {
   const { user, isAnonymous } = useAuth();
@@ -124,35 +125,42 @@ const Journal = () => {
                   : null;
                 const sessionRouteEntry = sessionRoutes.find((r: any) => r.group_session_id === s.id);
                 const hasRoute = !!sessionRouteEntry;
+                const thumb = getRandomPinPlaceholder(s.id);
                 return (
                   <button
                     key={s.id}
                     onClick={() => navigate(`/sesja/${s.join_code}`)}
-                    className="w-full flex items-center gap-3 p-3.5 rounded-3xl bg-card border border-border/50 active:scale-[0.98] transition-transform text-left"
+                    className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform"
                   >
-                    <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                      <Users className="h-5 w-5 text-orange-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold leading-tight truncate">{s.name || s.city}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        {dateLabel && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <CalendarDays className="h-3 w-3" />{dateLabel}
+                    <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
+                      <img src={thumb} alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1 text-white text-[11px] font-semibold">
+                        <Users className="h-3 w-3" /> Sesja grupowa
+                      </div>
+                      <div className="absolute top-3 right-3">
+                        {hasRoute
+                          ? <div className="bg-emerald-500 rounded-full px-2 py-0.5 text-[10px] font-bold text-white flex items-center gap-1"><CheckCircle className="h-3 w-3" />Trasa gotowa</div>
+                          : <div className="bg-primary rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow">Aktywna</div>
+                        }
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+                        <p className="text-white font-bold text-lg leading-tight drop-shadow-sm truncate">{s.name || s.city}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {dateLabel && (
+                            <span className="flex items-center gap-1 text-white/80 text-xs">
+                              <CalendarDays className="h-3 w-3" />{dateLabel}
+                            </span>
+                          )}
+                          {agoLabel && !dateLabel && (
+                            <span className="text-white/70 text-xs">{agoLabel}</span>
+                          )}
+                          <span className="text-[10px] font-mono bg-white/20 px-1.5 py-0.5 rounded text-white/90">
+                            #{s.join_code}
                           </span>
-                        )}
-                        {agoLabel && !dateLabel && (
-                          <span className="text-xs text-muted-foreground">{agoLabel}</span>
-                        )}
-                        <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-                          #{s.join_code}
-                        </span>
+                        </div>
                       </div>
                     </div>
-                    {hasRoute
-                      ? <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
-                      : <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                    }
                   </button>
                 );
               })}

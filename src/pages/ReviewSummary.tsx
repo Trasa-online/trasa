@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Star } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Star, Pencil, Check } from "lucide-react";
 import CreatePolecajkaSheet from "@/components/home/CreatePolecajkaSheet";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
@@ -28,6 +28,9 @@ const ReviewSummary = () => {
   const [searchParams] = useSearchParams();
   const routeId = searchParams.get("route");
   const isNewCompletion = searchParams.get("new") === "1";
+  const [editingName, setEditingName] = useState(false);
+  const [nameVal, setNameVal] = useState("");
+  const [savingName, setSavingName] = useState(false);
 
   // Badge "Nowa trasa!" w JournalTab znika po wejsciu w wpis. JournalTab robi to
   // optymistycznie zanim nawiguje, ale gdy user wchodzi bezposrednio (push
@@ -64,7 +67,7 @@ const ReviewSummary = () => {
       if (!routeId || !user) return null;
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative, is_shared, group_session_id, overall_rating")
+        .select("id, title, user_id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative, is_shared, group_session_id, overall_rating")
         .eq("id", routeId)
         .single();
       return data as any;
@@ -352,6 +355,22 @@ const ReviewSummary = () => {
 
   const cityLabel = route?.city || "Podróż";
   const dayLabel = route?.day_number ? `Dzień ${route.day_number}` : "";
+  const isOwner = !!route && !!user && route.user_id === user.id;
+  // Nazwa wpisu: wlasna nazwa (title) albo fallback "Dzień N". Edytowalna przez wlasciciela.
+  const displayName = route?.title || dayLabel;
+
+  const saveName = async () => {
+    if (!routeId) return;
+    const trimmed = nameVal.trim();
+    setSavingName(true);
+    const { error } = await (supabase as any).from("routes").update({ title: trimmed || null }).eq("id", routeId);
+    setSavingName(false);
+    setEditingName(false);
+    if (error) { toast.error("Nie udało się zapisać nazwy"); return; }
+    queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, title: trimmed || null } : old);
+    if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
+    toast.success("Zapisano nazwę");
+  };
   const dateLabel = route?.start_date
     ? format(new Date(route.start_date), "d MMMM yyyy", { locale: pl })
     : "";
@@ -403,8 +422,32 @@ const ReviewSummary = () => {
           <h1 className="text-white text-3xl font-black leading-tight drop-shadow-sm">
             {cityLabel}
           </h1>
-          {dayLabel && (
-            <p className="text-white/70 text-base font-medium mt-0.5">{dayLabel}</p>
+          {/* Edytowalna nazwa wpisu (wlasna nazwa zamiast "Dzień N") */}
+          {editingName ? (
+            <div className="flex items-center gap-2 mt-1.5">
+              <input
+                value={nameVal}
+                onChange={(e) => setNameVal(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setEditingName(false); }}
+                autoFocus
+                maxLength={60}
+                placeholder={dayLabel || "Nazwa wpisu"}
+                className="flex-1 min-w-0 bg-white/20 backdrop-blur-sm border border-white/40 rounded-lg px-3 py-1.5 text-white text-base font-medium placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/40"
+                style={{ fontSize: "16px" }}
+              />
+              <button onClick={saveName} disabled={savingName} aria-label="Zapisz nazwę"
+                className="h-9 w-9 shrink-0 rounded-lg bg-white/90 text-orange-600 flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
+                <Check className="h-4 w-4" strokeWidth={3} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => { if (!isOwner) return; setNameVal(route?.title || ""); setEditingName(true); }}
+              className={`flex items-center gap-1.5 mt-0.5 text-white/80 text-base font-medium ${isOwner ? "active:opacity-70" : "cursor-default"}`}
+            >
+              <span>{displayName || (isOwner ? "Dodaj nazwę wpisu" : "")}</span>
+              {isOwner && <Pencil className="h-3.5 w-3.5 text-white/60 shrink-0" />}
+            </button>
           )}
           {/* Group participant avatars */}
           {groupParticipants.length > 0 && (

@@ -39,7 +39,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       // Own routes (all statuses)
       const { data: ownRoutes } = await (supabase as any)
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, is_shared, overall_rating, new_for_users, chat_status")
+        .select("id, title, city, day_number, start_date, ai_summary, ai_highlight, review_photos, is_shared, overall_rating, new_for_users, chat_status")
         .eq("user_id", userId)
         .order("updated_at", { ascending: false });
 
@@ -54,7 +54,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         const sessionIds = memberRows.map((m: any) => m.session_id);
         const { data } = await (supabase as any)
           .from("routes")
-          .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, new_for_users, chat_status, group_session_id")
+          .select("id, title, city, day_number, start_date, ai_summary, ai_highlight, review_photos, new_for_users, chat_status, group_session_id")
           .in("group_session_id", sessionIds)
           .neq("user_id", userId)
           .order("updated_at", { ascending: false });
@@ -172,7 +172,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
   }
 
   const TABS: { id: JournalTabKey; label: string; count: number }[] = [
-    { id: "active", label: "Dzisiaj", count: active.length },
+    { id: "active", label: "Aktywne", count: active.length },
     { id: "postcards", label: "Pocztówki", count: postcards.length },
   ];
 
@@ -209,33 +209,19 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       {activeTab === "active" && (
         <button
           onClick={() => setShowPlanSheet(true)}
-          className="w-full relative overflow-hidden rounded-3xl active:scale-[0.98] transition-transform shadow-lg shadow-orange-500/15"
-          style={{ background: "linear-gradient(135deg, #F4A259 0%, #F9662B 100%)" }}
+          className="w-full relative overflow-hidden rounded-2xl active:scale-[0.98] transition-transform shadow-sm"
+          style={{ background: "linear-gradient(135deg, #FDBA74 0%, #FB923C 100%)" }}
         >
-          {/* Dekoracja w tle - orb */}
-          <div
-            className="absolute -top-12 -right-12 w-40 h-40 rounded-full opacity-20"
-            style={{ background: "radial-gradient(circle, #ffffff, transparent 70%)" }}
-            aria-hidden="true"
-          />
-          <div
-            className="absolute -bottom-16 -left-10 w-44 h-44 rounded-full opacity-15"
-            style={{ background: "radial-gradient(circle, #ffffff, transparent 70%)" }}
-            aria-hidden="true"
-          />
-          <div className="relative px-5 py-5 flex items-center gap-4 text-left">
-            <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 border border-white/30">
-              <MapPin className="h-7 w-7 text-white" strokeWidth={2.5} />
-            </div>
+          <div className="relative px-4 py-3.5 flex items-center gap-3 text-left">
             <div className="flex-1 min-w-0">
-              <p className="text-base font-black leading-tight text-white drop-shadow-sm">
+              <p className="text-sm font-bold leading-tight text-white">
                 Zaplanuj nową trasę
               </p>
-              <p className="text-xs text-white/85 mt-1 leading-relaxed">
+              <p className="text-[11px] text-white/90 mt-0.5 leading-relaxed">
                 Sam, z grupą znajomych, lub po kodzie zaproszenia
               </p>
             </div>
-            <ArrowRight className="h-5 w-5 text-white shrink-0" />
+            <ArrowRight className="h-4 w-4 text-white shrink-0" />
           </div>
         </button>
       )}
@@ -418,8 +404,8 @@ const JournalTab = ({ userId }: JournalTabProps) => {
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
                 <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">
-                  {entry.city || "Podróż"}
-                  {entry.day_number ? <span className="font-normal text-white/80"> · Dzień {entry.day_number}</span> : ""}
+                  {entry.title || entry.city || "Podróż"}
+                  {!entry.title && entry.day_number ? <span className="font-normal text-white/80"> · Dzień {entry.day_number}</span> : ""}
                 </p>
                 {dateLabel && (
                   <p className="text-white/70 text-xs mt-0.5">{dateLabel}</p>
