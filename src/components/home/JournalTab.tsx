@@ -5,9 +5,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { format, parseISO, isValid, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Globe, Lock, Loader2, Trash2, MapPin, Users, Link2, X, ArrowRight, CheckCircle, CalendarDays, Sparkles } from "lucide-react";
+import { Globe, Lock, Loader2, Trash2, MapPin, Users, Link2, X, ArrowRight, ChevronRight, CheckCircle, CalendarDays, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+const CATEGORY_LABEL: Record<string, string> = {
+  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum", park: "Park",
+  bar: "Bar", club: "Klub", monument: "Zabytek", gallery: "Galeria",
+  market: "Targ", viewpoint: "Punkt widokowy", shopping: "Zakupy", experience: "Atrakcja",
+  walk: "Spacer", other: "Miejsce",
+};
 
 interface JournalTabProps {
   userId: string;
@@ -59,6 +66,40 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
     enabled: !!userId,
   });
 
+  // Kategorie miejsc per route (do tagow na kafelku - 3 glowne poczatkowe).
+  const entryIds = useMemo(() => entries.map((e: any) => e.id), [entries]);
+  const { data: catMap = {} } = useQuery({
+    queryKey: ["journal-pin-cats", entryIds.join(",")],
+    queryFn: async () => {
+      if (!entryIds.length) return {};
+      const { data } = await (supabase as any)
+        .from("pins")
+        .select("route_id, category, pin_order")
+        .in("route_id", entryIds)
+        .order("pin_order", { ascending: true });
+      const map: Record<string, string[]> = {};
+      for (const p of data ?? []) {
+        if (!p.category) continue;
+        (map[p.route_id] ??= []).push(p.category);
+      }
+      return map;
+    },
+    enabled: entryIds.length > 0,
+  });
+
+  // 3 glowne (pierwsze, unikalne) kategorie z pinow danych route'ow.
+  const topCategories = (routeIds: string[]): string[] => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const rid of routeIds) {
+      for (const c of (catMap as Record<string, string[]>)[rid] ?? []) {
+        if (!seen.has(c)) { seen.add(c); out.push(c); }
+        if (out.length >= 3) return out;
+      }
+    }
+    return out;
+  };
+
   // Grupuj trasy wielodniowe (folder_id) w JEDNA pocztowke (dzien 1 = reprezentant).
   // Granica aktywny/wspomnienie liczona po OSTATNIM dniu trasy (end_date ?? start_date).
   // Trasa jednodniowa = osobny wpis, granica po end_date ?? start_date.
@@ -70,7 +111,7 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
         if (!folderMap.has(e.folder_id)) folderMap.set(e.folder_id, []);
         folderMap.get(e.folder_id)!.push(e);
       } else {
-        collapsed.push({ ...e, _numDays: 1, _lastDate: e.end_date ?? e.start_date });
+        collapsed.push({ ...e, _numDays: 1, _lastDate: e.end_date ?? e.start_date, _categories: topCategories([e.id]) });
       }
     }
     for (const days of folderMap.values()) {
@@ -84,6 +125,7 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
         review_photos: sorted.flatMap((d) => d.review_photos ?? []),
         _numDays: sorted.length,
         _lastDate: last.end_date ?? last.start_date,
+        _categories: topCategories(sorted.map((d) => d.id)),
       });
     }
 
@@ -108,7 +150,8 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
       return bD - aD;
     });
     return { active, postcards };
-  }, [entries]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries, catMap]);
 
   const visibleEntries = activeTab === "active" ? active : postcards;
 
@@ -193,25 +236,20 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
 
   return (
     <div className="space-y-3 pb-2">
-      {/* Tabs - segmentowane pills (jak galeria / plan dnia we wpisie) */}
-      <div className="flex rounded-full bg-muted p-0.5">
+      {/* Tabs - tekstowe (jak "Recent items" / "Saved"), bez pillsow i chipow */}
+      <div className="flex items-baseline gap-5 px-1">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-sm font-semibold transition-colors",
-              activeTab === tab.id ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
+              "flex items-baseline gap-1.5 transition-colors",
+              activeTab === tab.id ? "text-foreground" : "text-muted-foreground/40"
             )}
           >
-            {tab.label}
+            <span className="text-xl font-extrabold tracking-tight">{tab.label}</span>
             {tab.count > 0 && (
-              <span className={cn(
-                "text-[10px] font-bold rounded-full px-1.5 py-0.5",
-                activeTab === tab.id ? "bg-muted text-muted-foreground" : "bg-background/60 text-muted-foreground"
-              )}>
-                {tab.count}
-              </span>
+              <span className="text-xs font-semibold">{tab.count}</span>
             )}
           </button>
         ))}
@@ -287,20 +325,24 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
         </div>
       )}
 
-      {/* Lista tras */}
+      {/* Lista tras - kafelek: miniatura + duza nazwa + data/miasto + tagi + strzalka */}
       {visibleEntries.map((entry) => {
         const validPhotos = (entry.review_photos ?? []).filter((url: any) => !!url && typeof url === "string" && url.trim() !== "");
         const thumb = validPhotos[0] ?? getRandomPinPlaceholder(entry.id);
         const _d = entry.start_date ? parseISO(entry.start_date) : null;
-        const dateLabel = _d && isValid(_d) ? format(_d, "d MMMM yyyy", { locale: pl }) : "";
-        const hasUserPhoto = validPhotos.length > 0;
+        const dateLabel = _d && isValid(_d) ? format(_d, "d MMM yyyy", { locale: pl }) : "";
+        const isNew = entry.new_for_users?.includes(userId);
+        const displayName = entry.title || entry.city || "Podróż";
+        const showCity = entry.city && entry.city !== displayName;
+        const cats: string[] = entry._categories ?? [];
+        const canDelete = entry.is_own || entry.group_session_id;
 
         return (
           <div
             key={entry.id}
             onClick={async () => {
               // Optymistycznie ukryj badge "Nowa trasa!" - update cache zanim nawiguje.
-              if (entry.new_for_users?.includes(userId)) {
+              if (isNew) {
                 queryClient.setQueryData(["journal-entries", userId], (old: any) =>
                   (old ?? []).map((e: any) => e.id === entry.id
                     ? { ...e, new_for_users: (e.new_for_users ?? []).filter((u: string) => u !== userId) }
@@ -312,85 +354,60 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
               }
               navigate(`/review-summary?route=${entry.id}`);
             }}
-            className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform cursor-pointer"
+            className="relative w-full rounded-3xl bg-muted/50 p-3 text-left active:scale-[0.98] transition-transform cursor-pointer"
           >
-            {/* Cover photo */}
-            <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
-              <img
-                src={thumb}
-                alt=""
-                className="w-full h-full object-cover"
-                onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(entry.id + "_fallback"); }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-                <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">
-                  {entry.title || entry.city || "Podróż"}
+            <div className="flex items-center gap-3">
+              {/* Miniatura */}
+              <div className="relative h-[76px] w-[76px] rounded-2xl overflow-hidden bg-muted shrink-0">
+                <img
+                  src={thumb}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(entry.id + "_fallback"); }}
+                />
+                {isNew && <span className="absolute top-1.5 left-1.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-white" />}
+              </div>
+
+              {/* Tresc */}
+              <div className="min-w-0 flex-1 pr-8">
+                <p className="text-[17px] font-bold leading-tight line-clamp-2 text-foreground">
+                  {displayName}
                 </p>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  {dateLabel && <p className="text-white/70 text-xs">{dateLabel}</p>}
-                  {entry._numDays > 1 && (
-                    <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                      <CalendarDays className="h-2.5 w-2.5" />{entry._numDays} dni
-                    </span>
-                  )}
+                <div className="flex items-center gap-x-3 gap-y-0.5 mt-1 flex-wrap text-[11px] text-muted-foreground">
+                  {dateLabel && <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />{dateLabel}</span>}
+                  {showCity && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{entry.city}</span>}
+                  {entry._numDays > 1 && <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />{entry._numDays} dni</span>}
                 </div>
-                {entry.overall_rating && (
-                  <div className="flex items-center gap-0.5 mt-0.5">
-                    {Array.from({length: entry.overall_rating}).map((_,i) => (
-                      <span key={i} className="text-[10px]">⭐</span>
+                {cats.length > 0 && (
+                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                    {cats.map((c) => (
+                      <span key={c} className="text-[10px] font-medium text-muted-foreground bg-background rounded-full px-2 py-0.5 border border-border/40">
+                        {CATEGORY_LABEL[c] ?? c}
+                      </span>
                     ))}
                   </div>
                 )}
               </div>
-              <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm rounded-full p-1.5">
-                {entry.is_shared === false
-                  ? <Lock className="h-3 w-3 text-white/80" />
-                  : <Globe className="h-3 w-3 text-white/80" />
-                }
-              </div>
-              {/* Top-right: badges + delete (kosz) */}
-              <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                {entry.new_for_users?.includes(userId) && (
-                  <div className="bg-primary rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow">
-                    Nowa trasa!
-                  </div>
-                )}
-                {hasUserPhoto && (
-                  <div className="bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-[10px] text-white/90">
-                    📷 Twoje zdjęcie
-                  </div>
-                )}
-                {(entry.is_own || entry.group_session_id) && (
-                  <button
-                    onClick={(e) => handleDelete(e, entry)}
-                    disabled={deletingId === entry.id}
-                    className="h-7 w-7 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-full text-white/80 hover:text-white hover:bg-black/60 transition-colors disabled:opacity-50"
-                    aria-label={entry.is_own ? "Usuń trasę" : "Opuść trasę"}
-                  >
-                    {deletingId === entry.id
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : <Trash2 className="h-3.5 w-3.5" />
-                    }
-                  </button>
-                )}
-              </div>
             </div>
 
-            {/* Text below photo */}
-            {(entry.ai_highlight || entry.ai_summary) && (
-              <div className="px-4 py-3">
-                {entry.ai_highlight && (
-                  <p className="text-sm text-foreground/80 italic leading-snug mb-1.5">
-                    "{entry.ai_highlight}"
-                  </p>
-                )}
-                {entry.ai_summary && (
-                  <p className="text-xs text-muted-foreground line-clamp-2 leading-snug">
-                    {entry.ai_summary}
-                  </p>
-                )}
-              </div>
+            {/* Strzalka w koleczku (top-right) */}
+            <div className="absolute top-3 right-3 h-7 w-7 rounded-full bg-background flex items-center justify-center shadow-sm">
+              <ChevronRight className="h-4 w-4 text-foreground/70" />
+            </div>
+
+            {/* Usun / opusc (subtelny, bottom-right) */}
+            {canDelete && (
+              <button
+                onClick={(e) => handleDelete(e, entry)}
+                disabled={deletingId === entry.id}
+                className="absolute bottom-3 right-3 h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive transition-colors disabled:opacity-50"
+                aria-label={entry.is_own ? "Usuń trasę" : "Opuść trasę"}
+              >
+                {deletingId === entry.id
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Trash2 className="h-3.5 w-3.5" />
+                }
+              </button>
             )}
           </div>
         );
