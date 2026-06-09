@@ -3,9 +3,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2 } from "lucide-react";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
+import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
@@ -421,7 +422,9 @@ const ReviewSummary = () => {
   };
   const removeWorkingPin = (id: string) => setWorking(workingPins.filter((p: any) => p.id !== id));
 
-  const savePlanDay = async () => {
+  // Zapis edycji planu. finalize=true (wspomnienie): zamraza plan + odblokowuje
+  // ocene/notki/share. finalize=false (aktywny wpis): tylko persystuje zmiany.
+  const savePlan = async (finalize: boolean) => {
     if (!activeRouteId) return;
     setSavingPlan(true);
     try {
@@ -430,16 +433,16 @@ const ReviewSummary = () => {
       await Promise.all(workingPins.map((p: any, idx: number) =>
         supabase.from("pins").update({ pin_order: idx } as any).eq("id", p.id)
       ));
-      await (supabase as any).from("routes").update({ plan_finalized: true }).eq("id", activeRouteId);
+      if (finalize) await (supabase as any).from("routes").update({ plan_finalized: true }).eq("id", activeRouteId);
       setDraft(null);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["review-all-pins", idsKey] }),
         queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] }),
         queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] }),
       ]);
-      toast.success("Plan dnia zapisany");
+      toast.success(finalize ? "Plan dnia zapisany" : "Zapisano zmiany");
     } catch (e: any) {
-      console.error("[ReviewSummary] savePlanDay failed:", e?.message ?? e);
+      console.error("[ReviewSummary] savePlan failed:", e?.message ?? e);
       toast.error("Nie udało się zapisać planu");
     }
     setSavingPlan(false);
@@ -502,7 +505,10 @@ const ReviewSummary = () => {
   if (authLoading) return null;
   if (!user) { navigate("/auth"); return null; }
 
-  const heroPhoto = myPhotos[0]?.url ?? (groupPhotos[0] as any)?.url;
+  // Hero: zdjecie usera/grupy, a gdy brak - ilustracja placeholder (zamiast emoji
+  // mapy). Ciemny gradient overlay zapewnia kontrast tekstu (WCAG).
+  const hasRealPhoto = !!(myPhotos[0]?.url ?? (groupPhotos[0] as any)?.url);
+  const heroPhoto = myPhotos[0]?.url ?? (groupPhotos[0] as any)?.url ?? getRandomPinPlaceholder(routeId ?? undefined);
   const galleryPhotos = [
     ...myPhotos.map((p) => ({ ...p, mine: true, username: "Ty" })),
     ...groupPhotos.map((p: any) => ({ url: p.url, owner: "", mine: false, username: p.username })),
@@ -560,84 +566,96 @@ const ReviewSummary = () => {
     );
   };
 
-  // ── Twój plan (lista / szczegoly). withRating => dodaje Ocena+Notka pod miejscem. ──
-  const renderPlan = (withRating: boolean) => (
-    <>
-      {planView === "list" ? (
-        <div className="space-y-4">
-          {(() => {
-            const groups: Record<string, any[]> = {};
-            currentPins.forEach((p: any) => { const kk = p.category || "other"; (groups[kk] ??= []).push(p); });
-            return Object.entries(groups).map(([cat, items]) => (
-              <div key={cat}>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                  <span>{CATEGORY_EMOJI[cat] ?? "📍"}</span>{CATEGORY_LABEL[cat] ?? "Miejsce"}
-                </p>
-                <div className="space-y-2">
-                  {items.map((pin: any) => {
-                    return (
-                      <div key={pin.id} className="bg-card border border-border/40 rounded-2xl p-2.5">
-                        <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 text-left active:opacity-70 transition-opacity">
-                          <PlacePhoto pin={pin} className="h-14 w-14 rounded-xl object-cover shrink-0" emojiClass="text-xl" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-                            {pin.address && (
-                              <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{pin.address}</p>
-                            )}
-                          </div>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-                        </button>
-                        {withRating && renderRatingNote(pin.place_name)}
-                      </div>
-                    );
-                  })}
+  // ── Lista (read-only): miejsca grupowane po kategorii. Klik => wizytowka. ──
+  const renderListReadonly = (withRating: boolean) => (
+    <div className="space-y-4">
+      {(() => {
+        const groups: Record<string, any[]> = {};
+        currentPins.forEach((p: any) => { const kk = p.category || "other"; (groups[kk] ??= []).push(p); });
+        return Object.entries(groups).map(([cat, items]) => (
+          <div key={cat}>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <span>{CATEGORY_EMOJI[cat] ?? "📍"}</span>{CATEGORY_LABEL[cat] ?? "Miejsce"}
+            </p>
+            <div className="space-y-2">
+              {items.map((pin: any) => (
+                <div key={pin.id} className="bg-card border border-border/40 rounded-2xl p-2.5">
+                  <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 text-left active:opacity-70 transition-opacity">
+                    <PlacePhoto pin={pin} className="h-14 w-14 rounded-xl object-cover shrink-0" emojiClass="text-xl" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
+                      {pin.address && <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{pin.address}</p>}
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                  </button>
+                  {withRating && renderRatingNote(pin.place_name)}
                 </div>
-              </div>
-            ));
-          })()}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {currentPins.map((pin: any, i: number) => {
-            return (
-              <div key={pin.id} className="rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm">
-                <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
-                  <div className="relative w-full aspect-[4/3] bg-muted">
-                    <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-4xl" />
-                    <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
-                  </div>
-                  <div className="px-4 pt-4">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
-                      <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
-                    </span>
-                    <p className="text-base font-black leading-tight">{pin.place_name}</p>
-                    {pin.description && <p className="text-sm text-muted-foreground leading-relaxed mt-2">{pin.description}</p>}
-                  </div>
+              ))}
+            </div>
+          </div>
+        ));
+      })()}
+    </div>
+  );
+
+  // ── Szczegoly: poziomy swiper kart (jak kreator trasy). editable => move/usun,
+  // withRating => Ocena + Notka pod karta. Klik w karte => wizytowka. ──
+  const renderSwiper = (editable: boolean, withRating: boolean) => (
+    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
+      {workingPins.map((pin: any, i: number) => (
+        <div key={pin.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm flex flex-col">
+          <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
+            <div className="relative w-full aspect-[4/3] bg-muted">
+              <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-4xl" />
+              <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
+              {editable && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); removeWorkingPin(pin.id); }}
+                  aria-label="Usuń miejsce"
+                  className="absolute top-3 right-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white flex items-center justify-center active:scale-90"
+                >
+                  <Trash2 className="h-4 w-4" />
                 </button>
-                {withRating ? (
-                  <div className="px-4 pb-4 pt-2">{renderRatingNote(pin.place_name)}</div>
-                ) : (
-                  <div className="pb-4" />
-                )}
-              </div>
-            );
-          })}
+              )}
+            </div>
+            <div className="px-4 pt-4">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
+                <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+              </span>
+              <p className="text-base font-black leading-tight">{pin.place_name}</p>
+              {pin.description && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{pin.description}</p>}
+            </div>
+          </button>
+          {editable && (
+            <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
+              <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
+                <ChevronLeft className="h-4 w-4" />Wcześniej
+              </button>
+              <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
+                Później<ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          {withRating && <div className="px-4 pb-4 pt-1">{renderRatingNote(pin.place_name)}</div>}
         </div>
-      )}
-    </>
+      ))}
+    </div>
   );
 
   // Edytowalna lista planu (reorder strzalkami gora/dol + usuwanie). Bez drag&drop
   // - HTML5 DnD nie dziala w natywnym WebView iOS, strzalki sa niezawodne na dotyku.
+  // Klik w miejsce (zdjecie/nazwa) => wizytowka.
   const renderEditablePlan = () => (
     <div className="space-y-2">
       {workingPins.map((pin: any, i: number) => (
         <div key={pin.id} className="flex items-center gap-2 bg-card border border-border/40 rounded-2xl p-2">
-          <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" emojiClass="text-lg" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-            <p className="text-[11px] text-muted-foreground truncate">{CATEGORY_LABEL[pin.category] ?? "Miejsce"}</p>
-          </div>
+          <button onClick={() => openDetail(pin)} className="flex items-center gap-2 min-w-0 flex-1 text-left active:opacity-70 transition-opacity">
+            <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" emojiClass="text-lg" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{CATEGORY_LABEL[pin.category] ?? "Miejsce"}</p>
+            </div>
+          </button>
           <div className="flex flex-col shrink-0">
             <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label="W górę" className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
             <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label="W dół" className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
@@ -681,13 +699,9 @@ const ReviewSummary = () => {
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <div className="relative w-full aspect-[4/5] flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
-        {heroPhoto && (
-          <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/75" />
-        {!heroPhoto && (
-          <div className="absolute inset-0 flex items-center justify-center text-8xl opacity-20 select-none">🗺️</div>
-        )}
+        <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        {/* Ciemny gradient overlay - dla placeholdera mocniejszy (kontrast tekstu, WCAG) */}
+        <div className={`absolute inset-0 bg-gradient-to-b ${hasRealPhoto ? "from-black/40 via-transparent to-black/75" : "from-black/35 via-black/25 to-black/80"}`} />
 
         <div className="absolute left-0 right-0 flex items-center justify-between px-4"
           style={{ top: "max(16px, env(safe-area-inset-top, 16px))" }}>
@@ -815,7 +829,7 @@ const ReviewSummary = () => {
                         Popraw plan, jeśli coś się zmieniło - usuń miejsca, w&nbsp;których nie&nbsp;byliście, lub zmień kolejność (w&nbsp;widoku Lista). Potem zapisz, żeby ocenić miejsca i&nbsp;udostępnić trasę.
                       </p>
                     </div>
-                    {planView === "list" ? renderEditablePlan() : renderPlan(false)}
+                    {planView === "list" ? renderEditablePlan() : renderSwiper(true, false)}
                   </>
                 ) : (
                   /* Plan zamrozony: read-only + ocena + notka + udostepnianie */
@@ -824,7 +838,7 @@ const ReviewSummary = () => {
                       <Lock className="h-3 w-3" /> Plan dnia zapisany
                     </div>
                     {renderPlanHeader()}
-                    {renderPlan(true)}
+                    {planView === "list" ? renderListReadonly(true) : renderSwiper(false, true)}
 
                     {/* Udostepnianie (odblokowane po zapisaniu planu) */}
                     <div className="mt-6 pt-5 border-t border-border/30 flex items-center gap-3">
@@ -844,12 +858,12 @@ const ReviewSummary = () => {
             )}
           </>
         ) : (
-          /* ══ AKTYWNY WPIS: tylko plan (bez oceny trasy / oceny miejsc / wspomnien / share) ══ */
+          /* ══ AKTYWNY WPIS: edytowalny plan (Lista + Szczegoly), bez oceny/wspomnien ══ */
           <>
             {currentPins.length > 0 && (
               <div className="px-5 pt-5 pb-5 border-b border-border/30">
-                {renderPlanHeader()}
-                {renderPlan(false)}
+                {renderPlanHeader(true)}
+                {planView === "list" ? renderEditablePlan() : renderSwiper(true, false)}
               </div>
             )}
 
@@ -955,11 +969,19 @@ const ReviewSummary = () => {
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         {isMemory && memoryTab === "plan" && !finalized && currentPins.length > 0 ? (
           <button
-            onClick={savePlanDay}
+            onClick={() => savePlan(true)}
             disabled={savingPlan || workingPins.length === 0}
             className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
           >
             {savingPlan ? "Zapisywanie…" : "Zapisz plan dnia"}
+          </button>
+        ) : !isMemory && draft && draft.dayId === activeRouteId ? (
+          <button
+            onClick={() => savePlan(false)}
+            disabled={savingPlan || workingPins.length === 0}
+            className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
+          >
+            {savingPlan ? "Zapisywanie…" : "Zapisz zmiany"}
           </button>
         ) : (
           <button onClick={() => navigate("/dziennik")} className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
