@@ -103,21 +103,34 @@ function getSnapPx(snap: SnapState, containerH?: number): number {
   return Math.round(h * 0.85);
 }
 
-// Mini-mapa (podglad) - Leaflet, nieinteraktywny, markery + linia trasy.
+// Mini-mapa (podglad) - Leaflet z zoomem (przyciski + pinch), markery + linia trasy.
+// Auto-focus: reaguje na postMessage {type:'focus',lat,lng} (pin aktywnej karty) oraz
+// {type:'fit'} (cala trasa). Aktywny marker jest powiekszony.
 function buildMiniLeaflet(pins: { lat: number; lng: number }[]): string {
   const json = JSON.stringify(pins.map((p, i) => ({ lat: p.lat, lng: p.lng, n: i + 1 })));
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
-<style>*{margin:0;padding:0}#map{height:100vh;width:100%}.pm{background:#ea580c;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:-apple-system,sans-serif;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}</style>
+<style>*{margin:0;padding:0}#map{height:100vh;width:100%}
+.pm{background:#ea580c;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:-apple-system,sans-serif;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:all .2s}
+.pm.active{width:30px;height:30px;font-size:13px;background:#c2410c;box-shadow:0 2px 10px rgba(0,0,0,.45);z-index:1000}
+.leaflet-control-zoom{box-shadow:0 1px 6px rgba(0,0,0,.2)!important;border:none!important}</style>
 </head><body><div id="map"></div><script>
 const pins=${json};
-const map=L.map('map',{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,tap:false,touchZoom:false});
+const map=L.map('map',{zoomControl:true,attributionControl:false,scrollWheelZoom:false,doubleClickZoom:true,boxZoom:false,keyboard:false,touchZoom:true,dragging:true});
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
 const ll=pins.map(p=>[p.lat,p.lng]);
 if(ll.length>1)L.polyline(ll,{color:'#F9662B',weight:3,opacity:.85}).addTo(map);
-pins.forEach(p=>L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class=pm>'+p.n+'</div>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map));
-if(ll.length>1)map.fitBounds(ll,{padding:[26,26]});else if(ll.length===1)map.setView(ll[0],14);
+const markers=[];
+pins.forEach(p=>{const m=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class=pm>'+p.n+'</div>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map);markers.push(m);});
+function fitAll(){if(ll.length>1)map.fitBounds(ll,{padding:[26,26]});else if(ll.length===1)map.setView(ll[0],14);}
+fitAll();
+function setActive(idx){markers.forEach((m,i)=>{const el=m.getElement();if(el){const d=el.querySelector('.pm');if(d)d.classList.toggle('active',i===idx);}});}
+window.addEventListener('message',function(e){
+  const d=e.data||{};
+  if(d.type==='focus'){map.flyTo([d.lat,d.lng],16,{duration:0.5});if(typeof d.idx==='number')setActive(d.idx);}
+  else if(d.type==='fit'){fitAll();setActive(-1);}
+});
 <\/script></body></html>`;
 }
 
@@ -456,10 +469,13 @@ function getCurrentTimeContext(): { current_time: string; current_date: string }
 
 const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlacesData, skippedPlaces, superLikedPlaces, idealDay, initialUserMessage, initialPlan, altRoutes, altIndex, onSwitchAlt, readOnly, groupSession, continuationMode }: PlanChatExperienceProps) => {
   const [messages, setMessages] = useState<TextMessage[]>([]);
-  const [plan, setPlan] = useState<RoutePlan | null>(null);
+  // W trybie kontynuacji (dodawanie miejsca do istniejacej trasy) plan JUZ istnieje -
+  // pokaz go od razu, bez ekranu "Tworze trase" (dodajemy tylko miejsce -> badge).
+  const hasExistingPlan = !!(continuationMode && initialPlan);
+  const [plan, setPlan] = useState<RoutePlan | null>(hasExistingPlan ? initialPlan! : null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [initializing, setInitializing] = useState(true);
+  const [initializing, setInitializing] = useState(!hasExistingPlan);
   const [preparingPlan, setPreparingPlan] = useState(false);
   const [memoryUsed, setMemoryUsed] = useState(false);
   const [detailPin, setDetailPin] = useState<{
@@ -542,6 +558,28 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const savedCarouselScroll = useRef<number>(0);
+  const miniMapRef = useRef<HTMLIFrameElement>(null);
+  const miniFocusRaf = useRef<number | null>(null);
+
+  // Auto-focus mini-mapy na pin aktywnej (wycentrowanej) karty miejsca podczas scrolla.
+  const focusMiniToActiveCard = useCallback(() => {
+    if (miniFocusRaf.current) cancelAnimationFrame(miniFocusRaf.current);
+    miniFocusRaf.current = requestAnimationFrame(() => {
+      const el = carouselRef.current; const ifr = miniMapRef.current;
+      if (!el || !ifr || !plan) return;
+      const cards: (PlanPin | null)[] = [];
+      plan.days.forEach(d => { if (!d.pins || d.pins.length === 0) cards.push(null); else d.pins.forEach(p => cards.push(p)); });
+      if (cards.length === 0) return;
+      const cardW = el.scrollWidth / (cards.length + 1); // +1 = przycisk "Dodaj miejsce"
+      const idx = Math.min(cards.length - 1, Math.max(0, Math.round(el.scrollLeft / cardW)));
+      const pin = cards[idx];
+      if (pin && pin.latitude && pin.longitude) {
+        const coordsPins = plan.days.flatMap(d => (d.pins ?? []).filter(p => p.latitude && p.longitude));
+        const ci = coordsPins.findIndex(p => p === pin);
+        ifr.contentWindow?.postMessage({ type: "focus", lat: pin.latitude, lng: pin.longitude, idx: ci }, "*");
+      }
+    });
+  }, [plan]);
   const [containerH, setContainerH] = useState(0);
 
   // Measure the real height of the chat+sheet container so the sheet never overflows into the input
@@ -1452,7 +1490,7 @@ window.addEventListener('message',function(e){
                       )}
                       {/* Large card carousel - fills available height */}
                       <div className="flex-1 min-h-0 overflow-hidden py-2">
-                        <div ref={carouselRef} className="h-full flex gap-3 overflow-x-auto px-[10vw] snap-x snap-mandatory scrollbar-none">
+                        <div ref={carouselRef} onScroll={focusMiniToActiveCard} className="h-full flex gap-3 overflow-x-auto px-[10vw] snap-x snap-mandatory scrollbar-none">
                           {plan.days.flatMap((day, dayIdx) => {
                             const DAY_COLORS = ['#ea580c','#2563eb','#16a34a','#7c3aed','#d97706'];
                             const color = DAY_COLORS[(day.day_number - 1) % DAY_COLORS.length];
@@ -1521,7 +1559,7 @@ window.addEventListener('message',function(e){
                         return (
                           <div className="flex-shrink-0 px-4 pb-2">
                             <div className="relative h-28 rounded-2xl overflow-hidden border border-border/40 bg-muted">
-                              <iframe srcDoc={buildMiniLeaflet(miniPins)} className="absolute inset-0 w-full h-full border-0 pointer-events-none" title="Podgląd mapy" />
+                              <iframe ref={miniMapRef} onLoad={() => setTimeout(focusMiniToActiveCard, 300)} srcDoc={buildMiniLeaflet(miniPins)} className="absolute inset-0 w-full h-full border-0" title="Podgląd mapy" />
                               <button onClick={() => setShowMap(true)} aria-label="Rozwiń mapę" className="absolute right-2 bottom-2 h-8 w-8 rounded-lg bg-white shadow-md flex items-center justify-center active:scale-95 transition-transform">
                                 <Maximize2 className="h-4 w-4 text-foreground" />
                               </button>
