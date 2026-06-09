@@ -22,18 +22,6 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<JournalTabKey>("active");
-  // Bottom sheet z 3 opcjami planowania (solo / z grupa / mam kod)
-  const [showPlanSheet, setShowPlanSheet] = useState(false);
-  const [showJoinModal, setShowJoinModal] = useState(false);
-  const [joinCode, setJoinCode] = useState("");
-
-  const handleJoinSubmit = () => {
-    const code = joinCode.trim();
-    if (!code) return;
-    setShowJoinModal(false);
-    setJoinCode("");
-    navigate(`/sesja/${code}`);
-  };
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["journal-entries", userId],
@@ -205,24 +193,22 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
 
   return (
     <div className="space-y-3 pb-2">
-      {/* Tabs */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1 pb-1">
+      {/* Tabs - segmentowane pills (jak galeria / plan dnia we wpisie) */}
+      <div className="flex rounded-full bg-muted p-0.5">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5",
-              activeTab === tab.id
-                ? "bg-foreground text-background"
-                : "bg-card border border-border/50 text-muted-foreground"
+              "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-sm font-semibold transition-colors",
+              activeTab === tab.id ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
             )}
           >
             {tab.label}
             {tab.count > 0 && (
               <span className={cn(
                 "text-[10px] font-bold rounded-full px-1.5 py-0.5",
-                activeTab === tab.id ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"
+                activeTab === tab.id ? "bg-muted text-muted-foreground" : "bg-background/60 text-muted-foreground"
               )}>
                 {tab.count}
               </span>
@@ -231,11 +217,11 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
         ))}
       </div>
 
-      {/* Atrakcyjny hero baner CTA - tylko w Dzisiaj tabie.
-          Tap otwiera bottom sheet z 3 opcjami: solo / z grupa / mam kod. */}
+      {/* Atrakcyjny hero baner CTA - tylko w Aktywne tabie.
+          Tap otwiera menu nad orba "+" (te same opcje: solo / grupa / kod). */}
       {activeTab === "active" && (
         <button
-          onClick={() => setShowPlanSheet(true)}
+          onClick={() => window.dispatchEvent(new Event("trasa:open-plan-menu"))}
           className="w-full relative overflow-hidden rounded-2xl active:scale-[0.98] transition-transform shadow-sm"
           style={{ background: "linear-gradient(135deg, #FDBA74 0%, #FB923C 100%)" }}
         >
@@ -251,138 +237,6 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
             <ArrowRight className="h-4 w-4 text-white shrink-0" />
           </div>
         </button>
-      )}
-
-      {/* Bottom sheet z 3 opcjami */}
-      {showPlanSheet && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setShowPlanSheet(false)}
-        >
-          <div
-            className="w-full max-w-md bg-card rounded-t-3xl px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))] flex flex-col gap-3 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1">
-                <p className="text-lg font-black leading-tight">Zaplanuj nową trasę</p>
-                <p className="text-xs text-muted-foreground mt-1">Wybierz jak chcesz planować</p>
-              </div>
-              <button
-                onClick={() => setShowPlanSheet(false)}
-                className="h-8 w-8 -mt-1 -mr-1 flex items-center justify-center text-muted-foreground active:text-foreground"
-                aria-label="Zamknij"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-2 mt-1">
-              {/* Solo planowanie */}
-              <button
-                onClick={() => {
-                  setShowPlanSheet(false);
-                  navigate("/plan");
-                }}
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-card border border-border/60 active:scale-[0.98] transition-transform text-left"
-              >
-                <div className="h-11 w-11 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-                  <MapPin className="h-5 w-5 text-orange-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold leading-tight">Sam</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                    Pełna kontrola, Twój styl. Wybierz datę i miasto.
-                  </p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
-
-              {/* Z grupą - zaproś znajomych */}
-              <button
-                onClick={() => {
-                  setShowPlanSheet(false);
-                  navigate("/sesja/nowa", { state: { from: "journal" } });
-                }}
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-card border border-border/60 active:scale-[0.98] transition-transform text-left"
-              >
-                <div className="h-11 w-11 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-                  <Users className="h-5 w-5 text-blue-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold leading-tight">Z grupą</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                    Zaproś znajomych do wspólnego parowania miejsc
-                  </p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
-
-              {/* Mam kod - dołącz do sesji */}
-              <button
-                onClick={() => {
-                  setShowPlanSheet(false);
-                  setShowJoinModal(true);
-                }}
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-card border border-border/60 active:scale-[0.98] transition-transform text-left"
-              >
-                <div className="h-11 w-11 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
-                  <Link2 className="h-5 w-5 text-violet-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold leading-tight">Mam kod</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                    Dołącz do trasy znajomych po otrzymanym kodzie
-                  </p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Join code modal - opcja "Mam kod" otwiera ten modal */}
-      {showJoinModal && (
-        <div
-          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setShowJoinModal(false)}
-        >
-          <div
-            className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div>
-              <h2 className="font-black text-lg">Dołącz do sesji</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Wpisz kod sesji otrzymany od znajomych</p>
-            </div>
-            <input
-              type="text"
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              onKeyDown={(e) => { if (e.key === "Enter") handleJoinSubmit(); }}
-              placeholder="np. ABC123"
-              maxLength={10}
-              autoFocus
-              className="w-full px-4 py-3.5 rounded-2xl border border-border bg-muted/40 text-base font-mono font-semibold tracking-widest text-center placeholder:text-muted-foreground/50 placeholder:font-normal placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition-colors"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowJoinModal(false)}
-                className="flex-1 py-3 rounded-full border border-border text-sm font-medium text-muted-foreground active:scale-[0.97] transition-transform"
-              >
-                Anuluj
-              </button>
-              <button
-                onClick={handleJoinSubmit}
-                disabled={!joinCode.trim()}
-                className="flex-[2] py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform disabled:opacity-40 disabled:active:scale-100"
-              >
-                Dołącz
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Aktywne sesje grupowe - pocztowki (w zakladce Aktywne) */}

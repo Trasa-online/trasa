@@ -30,6 +30,14 @@ const BottomNav = () => {
   const [joinCode, setJoinCode] = useState("");
   const [reusePrompt, setReusePrompt] = useState<{ city: string; likes: ExploreLike[] } | null>(null);
 
+  // Inne ekrany (np. baner "Zaplanuj nową trasę" w dzienniku) moga otworzyc to
+  // samo menu nad orba "+" zamiast wlasnego drawera.
+  useEffect(() => {
+    const open = () => setShowMenu(true);
+    window.addEventListener("trasa:open-plan-menu", open);
+    return () => window.removeEventListener("trasa:open-plan-menu", open);
+  }, []);
+
   // Badge kropka na ikonie Dziennik gdy uzytkownik ma niewidziane trasy
   // (routes.new_for_users zawiera user.id). Refetch przy navigation - gdy user
   // wraca na Home, kropka znika lub pojawia sie wedlug stanu DB. Query tylko w native

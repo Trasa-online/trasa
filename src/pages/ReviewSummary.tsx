@@ -345,6 +345,19 @@ const ReviewSummary = () => {
     return out;
   }, [photos, sortedDays, routeId]);
 
+  // Okladka wpisu = pierwsze zdjecie primary route (myPhotos[0]). Przenosi url na
+  // poczatek review_photos primary route (dziala tez dla zdjec z innych dni/grupy).
+  const setCover = async (url: string) => {
+    if (!routeId) return;
+    const updated = [url, ...photos.filter((p) => p !== url)];
+    setPhotos(updated);
+    await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
+    queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
+    if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
+    setViewerUrl(null);
+    toast.success("Ustawiono okładkę");
+  };
+
   const removePhoto = async (url: string, owner: string) => {
     if (owner === routeId) {
       const updated = photos.filter((p) => p !== url);
@@ -896,15 +909,27 @@ const ReviewSummary = () => {
           >
             <X className="h-5 w-5 text-white" />
           </button>
-          {myPhotos.some((p) => p.url === viewerUrl) && (
+          <div
+            className="absolute left-0 right-0 flex items-center justify-center gap-2 px-4"
+            style={{ bottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
-              onClick={(e) => { e.stopPropagation(); const owner = myPhotos.find((p) => p.url === viewerUrl)?.owner ?? routeId!; removePhoto(viewerUrl, owner); }}
-              className="absolute left-4 px-4 py-2 rounded-full bg-red-500/90 text-white text-sm font-semibold active:scale-95 transition-transform"
-              style={{ bottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}
+              onClick={() => { if (viewerUrl !== heroPhoto) setCover(viewerUrl); }}
+              disabled={viewerUrl === heroPhoto}
+              className="px-4 py-2 rounded-full bg-white/15 backdrop-blur-sm text-white text-sm font-semibold active:scale-95 transition-transform disabled:opacity-60"
             >
-              Usuń zdjęcie
+              {viewerUrl === heroPhoto ? "Okładka ✓" : "Ustaw jako okładkę"}
             </button>
-          )}
+            {myPhotos.some((p) => p.url === viewerUrl) && (
+              <button
+                onClick={() => { const owner = myPhotos.find((p) => p.url === viewerUrl)?.owner ?? routeId!; removePhoto(viewerUrl, owner); }}
+                className="px-4 py-2 rounded-full bg-red-500/90 text-white text-sm font-semibold active:scale-95 transition-transform"
+              >
+                Usuń zdjęcie
+              </button>
+            )}
+          </div>
         </div>
       )}
 
