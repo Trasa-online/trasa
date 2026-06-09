@@ -7,27 +7,39 @@ const GUEST_TOUR_KEY = "trasa_guest_tour_session";
 
 const STEPS = [
   {
-    emoji: "➕",
-    title: "Zacznij od przycisku +",
-    desc: "Na środku paska nawigacji masz przycisk +. Wybierz 'Zaplanuj solo' żeby samodzielnie układać trasę, albo 'Zaplanuj grupowo' żeby eksplorować ze znajomymi.",
-    hint: "↓ Przycisk + na środku paska nawigacji",
-    arrowUp: false,
+    emoji: "👋",
+    title: "Witaj w Trasie!",
+    desc: "Trasa to speed dating z miastem. W kilka minut ułożysz plan dnia: przeglądasz miejsca, dodajesz te które Cię ciekawią, dostajesz gotową trasę. Pokażemy Ci podstawy.",
+    hint: "Przesuń dalej, żeby zacząć",
+  },
+  {
+    emoji: "🧭",
+    title: "Planuj solo",
+    desc: "Kliknij przycisk + na środku paska i wybierz „Zaplanuj solo”. Sam przeglądasz miejsca dopasowane do Ciebie i dodajesz te, które chcesz odwiedzić.",
+    hint: "↓ Przycisk + → Zaplanuj solo",
   },
   {
     emoji: "👥",
-    title: "Planuj razem ze znajomymi",
-    desc: "Stwórz sesję grupową, udostępnij kod znajomym i razem przeglądajcie miejsca. Trasa pokaże, co Was łączy!",
-    hint: "↑ '+' → Zaplanuj grupowo",
-    arrowUp: true,
+    title: "Planuj grupowo",
+    desc: "Przycisk + → „Zaplanuj grupowo”. Tworzysz sesję, udostępniasz znajomym kod, a każdy przegląda miejsca u siebie. Trasa pokaże Wasze wspólne dopasowania.",
+    hint: "↓ Przycisk + → Zaplanuj grupowo",
   },
   {
-    emoji: "📖",
-    title: "Dziennik i trasy 🔒",
-    desc: "Chcesz zapisywać trasy i wracać do wspomnień z podróży? Dziennik i historia tras są dostępne po założeniu darmowego konta.",
-    hint: "↓ Zakładka 'Dziennik' • wymaga konta",
-    arrowUp: false,
+    emoji: "🔗",
+    title: "Dołącz do znajomych",
+    desc: "Masz kod sesji od znajomych? Przycisk + → „Dołącz do sesji”, wpisz kod i parujecie się razem. Każdy widzi te same miejsca i dorzuca swoje typy.",
+    hint: "↓ Przycisk + → Dołącz do sesji",
+  },
+  {
+    emoji: "🗺️",
+    title: "Z dopasowań powstaje trasa",
+    desc: "Gdy masz polubione lub wspólne miejsca, Trasa układa z nich gotowy plan dnia w sensownej kolejności. Plan edytujesz, a potem zapisujesz w dzienniku (po założeniu darmowego konta).",
+    hint: "Dopasowania → „Przejdź do tworzenia trasy”",
   },
 ];
+
+// Polskie sieroty: po pojedynczych literach (a i o u w z) twarda spacja, zeby nie konczyly linii.
+const nbsp = (s: string) => s.replace(/ ([aiouwzAIOUWZ]) /g, (_m, l) => " " + l + String.fromCharCode(160));
 
 interface HomeTourProps {
   onDone: () => void;
@@ -81,8 +93,8 @@ const HomeTour = ({ onDone }: HomeTourProps) => {
           {/* Content */}
           <div className="px-5 pt-3 pb-2">
             <div className="text-4xl mb-3">{current.emoji}</div>
-            <h2 className="text-lg font-black mb-1.5 leading-tight">{current.title}</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed mb-2">{current.desc}</p>
+            <h2 className="text-lg font-black mb-1.5 leading-tight">{nbsp(current.title)}</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-2">{nbsp(current.desc)}</p>
             <p className="text-xs font-medium text-orange-600">{current.hint}</p>
           </div>
 
