@@ -6,7 +6,7 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings } from "lucide-react";
 import 'driver.js/dist/driver.css';
 import { driver } from 'driver.js';
 import { MAIN_CATEGORIES } from "@/lib/categories";
@@ -554,6 +554,44 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
   );
 }
 
+// Usuwanie konta biznesowego (Apple 5.1.1v). RPC delete_current_user_account kasuje
+// auth.uid() + kaskadowo profil/wizytowke. Renderowane TYLKO realnemu wlascicielowi.
+function BusinessDeleteAccount() {
+  const [confirm, setConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const { error } = await supabase.rpc("delete_current_user_account" as any);
+      if (error) throw error;
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    } catch {
+      toast.error("Nie udało się usunąć konta. Spróbuj ponownie.");
+      setDeleting(false);
+      setConfirm(false);
+    }
+  };
+  if (!confirm) {
+    return (
+      <button onClick={() => setConfirm(true)} className="w-full flex items-center gap-3 px-4 py-3.5 bg-white rounded-2xl border border-red-200 hover:bg-red-50 transition-colors text-left">
+        <Trash2 className="h-4 w-4 text-red-600 flex-shrink-0" />
+        <span className="text-sm font-semibold text-red-600 flex-1">Usuń konto biznesowe</span>
+      </button>
+    );
+  }
+  return (
+    <div className="rounded-2xl border border-red-300 bg-red-50 p-4 space-y-3">
+      <p className="text-sm font-bold text-red-700">Usunąć konto na stałe?</p>
+      <p className="text-xs text-slate-600 leading-relaxed">Twoja wizytówka, posty, galeria i konto zostaną trwale usunięte. Miejsce pozostanie w aplikacji jako niezarządzane. Tej operacji nie można cofnąć.</p>
+      <div className="flex gap-2">
+        <button onClick={() => setConfirm(false)} disabled={deleting} className="flex-1 py-2.5 rounded-2xl border border-slate-300 text-sm font-medium text-slate-700">Anuluj</button>
+        <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2.5 rounded-2xl bg-red-600 text-white text-sm font-bold disabled:opacity-60">{deleting ? "Usuwanie..." : "Usuń konto"}</button>
+      </div>
+    </div>
+  );
+}
+
 const BusinessDashboard = () => {
   const { placeId } = useParams<{ placeId: string }>();
   const { user, loading: authLoading } = useAuth();
@@ -623,7 +661,7 @@ const BusinessDashboard = () => {
   const [uploading, setUploading] = useState<string | null>(null); // which slot is uploading
   const [isDirty, setIsDirty] = useState(false);
 
-  const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'posts' | 'analytics'>('gallery');
+  const [activeSection, setActiveSection] = useState<'overview' | 'gallery' | 'profile' | 'posts' | 'analytics' | 'settings'>('gallery');
   const [recentEvents, setRecentEvents] = useState<Array<{event_type: string, created_at: string}>>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -1486,6 +1524,7 @@ const BusinessDashboard = () => {
           { id: 'profile',    label: 'Dane lokalu',    icon: Store,          disabled: false, hidden: false },
           { id: 'posts',      label: 'Aktualności',    icon: Megaphone,      disabled: false, hidden: false },
           { id: 'analytics',  label: 'Analityka',      icon: TrendingUp,     disabled: true,  hidden: false },
+          { id: 'settings',   label: 'Ustawienia',     icon: Settings,       disabled: false, hidden: false },
         ] as const).filter(item => !item.hidden).map(item => (
           <button
             key={item.id}
@@ -1593,6 +1632,7 @@ const BusinessDashboard = () => {
             { id: 'profile', label: 'Dane', disabled: false, hidden: false },
             { id: 'posts', label: 'Aktualności', disabled: false, hidden: false },
             { id: 'analytics', label: 'Analityka', disabled: true,  hidden: false },
+            { id: 'settings', label: 'Ustawienia', disabled: false, hidden: false },
           ] as const).filter(item => !item.hidden).map(item => (
             <button
               key={item.id}
@@ -2322,6 +2362,32 @@ const BusinessDashboard = () => {
           )}
 
           {/* ── ANALITYKA ── */}
+          {activeSection === 'settings' && (
+            <div className="space-y-5 max-w-lg">
+              <div>
+                <h2 className="text-lg font-black">Ustawienia konta</h2>
+                <p className="text-sm text-slate-400">Zarządzaj swoim kontem biznesowym.</p>
+              </div>
+              {(!previewMode && !isDraft && user && (profile as any)?.owner_user_id === user.id) ? (
+                <div className="space-y-3">
+                  <div className="bg-white rounded-2xl border border-slate-100 p-4">
+                    <p className="text-sm font-semibold text-slate-700">Zalogowano jako</p>
+                    <p className="text-xs text-slate-400 mt-0.5 break-all">{user.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Strefa niebezpieczna</p>
+                    <BusinessDeleteAccount />
+                    <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">Usunięcie konta kasuje wizytówkę, posty i galerię. Miejsce zostaje w aplikacji jako niezarządzane (stan zero).</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-slate-100 p-4">
+                  <p className="text-sm text-slate-500">Zaloguj się i przejmij konto, aby zarządzać ustawieniami i usunąć konto.</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeSection === 'analytics' && (
             <div className="space-y-5">
               {/* Header + range picker */}
