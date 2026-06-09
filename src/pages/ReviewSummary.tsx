@@ -448,6 +448,26 @@ const ReviewSummary = () => {
     setSavingPlan(false);
   };
 
+  // Autozapis: jesli user wyjdzie z edycji bez "Zapisz", persystujemy zmiany planu
+  // (kolejnosc + usuniecia) w tle przy unmouncie. NIE finalizuje - wspomnienie
+  // zostaje edytowalne, a aktywny wpis po prostu zachowuje zmiany.
+  const autosaveRef = useRef<{ working: any[]; originalIds: string[] } | null>(null);
+  useEffect(() => {
+    if (!draft) { autosaveRef.current = null; return; }
+    const originalIds = allPins.filter((p: any) => p.route_id === draft.dayId).map((p: any) => p.id);
+    autosaveRef.current = { working: draft.pins, originalIds };
+  }, [draft, allPins]);
+
+  useEffect(() => () => {
+    const a = autosaveRef.current;
+    if (!a || !a.working.length) return;
+    const removed = a.originalIds.filter((id) => !a.working.some((w: any) => w.id === id));
+    if (removed.length) void supabase.from("pins").delete().in("id", removed);
+    void Promise.all(a.working.map((p: any, idx: number) =>
+      supabase.from("pins").update({ pin_order: idx } as any).eq("id", p.id)
+    ));
+  }, []);
+
   const cityLabel = route?.city || "Podróż";
   const isOwner = !!route && !!user && route.user_id === user.id;
 
@@ -644,23 +664,26 @@ const ReviewSummary = () => {
 
   // Edytowalna lista planu (reorder strzalkami gora/dol + usuwanie). Bez drag&drop
   // - HTML5 DnD nie dziala w natywnym WebView iOS, strzalki sa niezawodne na dotyku.
-  // Klik w miejsce (zdjecie/nazwa) => wizytowka.
-  const renderEditablePlan = () => (
+  // Klik w miejsce (zdjecie/nazwa) => wizytowka. withRating => Ocena + Notka pod miejscem.
+  const renderEditablePlan = (withRating: boolean) => (
     <div className="space-y-2">
       {workingPins.map((pin: any, i: number) => (
-        <div key={pin.id} className="flex items-center gap-2 bg-card border border-border/40 rounded-2xl p-2">
-          <button onClick={() => openDetail(pin)} className="flex items-center gap-2 min-w-0 flex-1 text-left active:opacity-70 transition-opacity">
-            <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" emojiClass="text-lg" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-              <p className="text-[11px] text-muted-foreground truncate">{CATEGORY_LABEL[pin.category] ?? "Miejsce"}</p>
+        <div key={pin.id} className="bg-card border border-border/40 rounded-2xl p-2">
+          <div className="flex items-center gap-2">
+            <button onClick={() => openDetail(pin)} className="flex items-center gap-2 min-w-0 flex-1 text-left active:opacity-70 transition-opacity">
+              <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" emojiClass="text-lg" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{CATEGORY_LABEL[pin.category] ?? "Miejsce"}</p>
+              </div>
+            </button>
+            <div className="flex flex-col shrink-0">
+              <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label="W górę" className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
+              <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label="W dół" className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
             </div>
-          </button>
-          <div className="flex flex-col shrink-0">
-            <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label="W górę" className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
-            <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label="W dół" className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
+            <button onClick={() => removeWorkingPin(pin.id)} aria-label="Usuń miejsce" className="h-8 w-8 shrink-0 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center active:scale-90"><Trash2 className="h-4 w-4" /></button>
           </div>
-          <button onClick={() => removeWorkingPin(pin.id)} aria-label="Usuń miejsce" className="h-8 w-8 shrink-0 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center active:scale-90"><Trash2 className="h-4 w-4" /></button>
+          {withRating && <div className="px-0.5">{renderRatingNote(pin.place_name)}</div>}
         </div>
       ))}
     </div>
@@ -826,10 +849,10 @@ const ReviewSummary = () => {
                     {renderPlanHeader(true)}
                     <div className="mb-3 rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5">
                       <p className="text-xs text-orange-800 leading-relaxed">
-                        Popraw plan, jeśli coś się zmieniło - usuń miejsca, w&nbsp;których nie&nbsp;byliście, lub zmień kolejność (w&nbsp;widoku Lista). Potem zapisz, żeby ocenić miejsca i&nbsp;udostępnić trasę.
+                        Popraw plan, jeśli coś się zmieniło - usuń miejsca, w&nbsp;których nie&nbsp;byliście, lub zmień kolejność. Oceń miejsca i&nbsp;dodaj notki, a&nbsp;potem zapisz, żeby zablokować plan i&nbsp;udostępnić trasę.
                       </p>
                     </div>
-                    {planView === "list" ? renderEditablePlan() : renderSwiper(true, false)}
+                    {planView === "list" ? renderEditablePlan(true) : renderSwiper(true, true)}
                   </>
                 ) : (
                   /* Plan zamrozony: read-only + ocena + notka + udostepnianie */
@@ -863,7 +886,7 @@ const ReviewSummary = () => {
             {currentPins.length > 0 && (
               <div className="px-5 pt-5 pb-5 border-b border-border/30">
                 {renderPlanHeader(true)}
-                {planView === "list" ? renderEditablePlan() : renderSwiper(true, false)}
+                {planView === "list" ? renderEditablePlan(false) : renderSwiper(true, false)}
               </div>
             )}
 
