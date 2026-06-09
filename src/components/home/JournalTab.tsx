@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { format, parseISO, isValid, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Globe, Lock, Loader2, Trash2, MapPin, Users, Link2, X, ArrowRight, CheckCircle, CalendarDays } from "lucide-react";
+import { Globe, Lock, Loader2, Trash2, MapPin, Users, Link2, X, ArrowRight, CheckCircle, CalendarDays, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +41,7 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
       // Own routes (all statuses)
       const { data: ownRoutes } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, day_number, start_date, ai_summary, ai_highlight, review_photos, is_shared, overall_rating, new_for_users, chat_status")
+        .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, is_shared, overall_rating, new_for_users, chat_status")
         .eq("user_id", userId)
         .order("updated_at", { ascending: false });
 
@@ -56,7 +56,7 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
         const sessionIds = memberRows.map((m: any) => m.session_id);
         const { data } = await (supabase as any)
           .from("routes")
-          .select("id, title, city, day_number, start_date, ai_summary, ai_highlight, review_photos, new_for_users, chat_status, group_session_id")
+          .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, new_for_users, chat_status, group_session_id")
           .in("group_session_id", sessionIds)
           .neq("user_id", userId)
           .order("updated_at", { ascending: false });
@@ -71,16 +71,41 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
     enabled: !!userId,
   });
 
-  // Kategoryzuj entries: Aktywne (start_date >= today albo null) vs Pocztowki (start_date < today).
-  // Aktywne sortowane asc (najblizsze na gorze), pocztowki desc (najnowsze ukonczone na gorze).
+  // Grupuj trasy wielodniowe (folder_id) w JEDNA pocztowke (dzien 1 = reprezentant).
+  // Granica aktywny/wspomnienie liczona po OSTATNIM dniu trasy (end_date ?? start_date).
+  // Trasa jednodniowa = osobny wpis, granica po end_date ?? start_date.
   const { active, postcards } = useMemo(() => {
+    const folderMap = new Map<string, any[]>();
+    const collapsed: any[] = [];
+    for (const e of entries) {
+      if (e.folder_id) {
+        if (!folderMap.has(e.folder_id)) folderMap.set(e.folder_id, []);
+        folderMap.get(e.folder_id)!.push(e);
+      } else {
+        collapsed.push({ ...e, _numDays: 1, _lastDate: e.end_date ?? e.start_date });
+      }
+    }
+    for (const days of folderMap.values()) {
+      const sorted = [...days].sort((a, b) => (a.day_number ?? 0) - (b.day_number ?? 0));
+      const rep = sorted[0];
+      const last = sorted[sorted.length - 1];
+      collapsed.push({
+        ...rep,
+        // dla trasy wielodniowej naglowek = miasto (bez "Dzień 1"); chip "N dni"
+        title: sorted.length > 1 ? null : rep.title,
+        review_photos: sorted.flatMap((d) => d.review_photos ?? []),
+        _numDays: sorted.length,
+        _lastDate: last.end_date ?? last.start_date,
+      });
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const active: any[] = [];
     const postcards: any[] = [];
-    for (const e of entries) {
-      const startDate = e.start_date ? parseISO(e.start_date) : null;
-      const isPast = startDate && isValid(startDate) && startDate < today;
+    for (const e of collapsed) {
+      const lastDate = e._lastDate ? parseISO(e._lastDate) : null;
+      const isPast = lastDate && isValid(lastDate) && lastDate < today;
       if (isPast) postcards.push(e);
       else active.push(e);
     }
@@ -90,8 +115,8 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
       return aD - bD;
     });
     postcards.sort((a, b) => {
-      const aD = a.start_date ? parseISO(a.start_date).getTime() : 0;
-      const bD = b.start_date ? parseISO(b.start_date).getTime() : 0;
+      const aD = a._lastDate ? parseISO(a._lastDate).getTime() : 0;
+      const bD = b._lastDate ? parseISO(b._lastDate).getTime() : 0;
       return bD - aD;
     });
     return { active, postcards };
@@ -447,11 +472,15 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
               <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
                 <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">
                   {entry.title || entry.city || "Podróż"}
-                  {!entry.title && entry.day_number ? <span className="font-normal text-white/80"> · Dzień {entry.day_number}</span> : ""}
                 </p>
-                {dateLabel && (
-                  <p className="text-white/70 text-xs mt-0.5">{dateLabel}</p>
-                )}
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  {dateLabel && <p className="text-white/70 text-xs">{dateLabel}</p>}
+                  {entry._numDays > 1 && (
+                    <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                      <CalendarDays className="h-2.5 w-2.5" />{entry._numDays} dni
+                    </span>
+                  )}
+                </div>
                 {entry.overall_rating && (
                   <div className="flex items-center gap-0.5 mt-0.5">
                     {Array.from({length: entry.overall_rating}).map((_,i) => (

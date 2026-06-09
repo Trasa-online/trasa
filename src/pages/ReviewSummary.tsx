@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Star, Pencil, Check } from "lucide-react";
-import CreatePolecajkaSheet from "@/components/home/CreatePolecajkaSheet";
+import { ArrowLeft, Camera, X, Globe, Lock, Star, Pencil, Check, Image as ImageIcon, Map as MapIcon } from "lucide-react";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
@@ -29,23 +28,28 @@ const CATEGORY_LABEL: Record<string, string> = {
   walk: "Spacer", other: "Miejsce",
 };
 
+// Klucz kompozytowy ocena/notka per miejsce w danym dniu (route_id + place_name),
+// zeby to samo miejsce w roznych dniach trasy wielodniowej bylo niezalezne.
+const rkey = (routeId: string, placeName: string) => `${routeId}::${placeName}`;
+
 const ReviewSummary = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const routeId = searchParams.get("route");
-  const isNewCompletion = searchParams.get("new") === "1";
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [planView, setPlanView] = useState<"list" | "cards">("list");
+  // Pod-zakladki w widoku wspomnienia: galeria zdjec / plan dnia.
+  const [memoryTab, setMemoryTab] = useState<"galeria" | "plan">("galeria");
+  // Wybrany dzien (trasa wielodniowa). Domyslnie dzien z URL.
+  const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
+  // Fullscreen podglad zdjecia z galerii.
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
 
-  // Badge "Nowa trasa!" w JournalTab znika po wejsciu w wpis. JournalTab robi to
-  // optymistycznie zanim nawiguje, ale gdy user wchodzi bezposrednio (push
-  // notification, deep link, share link) - tam JournalTab nie odpalil. Tutaj
-  // backup: na mount route'a, jesli routes.new_for_users zawiera nas, RPC
-  // dismiss + invalidate cache w JournalTab.
+  // Badge "Nowa trasa!" w JournalTab znika po wejsciu w wpis.
   useEffect(() => {
     if (!routeId || !user) return;
     void supabase.rpc("dismiss_route_badge", { p_route_id: routeId } as any).then(() => {
@@ -53,21 +57,14 @@ const ReviewSummary = () => {
     });
   }, [routeId, user, queryClient]);
 
-  const [narrative, setNarrative] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const [isPublic, setIsPublic] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pinRatings, setPinRatings] = useState<Record<string, number>>({});
-  const [highlightPlace, setHighlightPlace] = useState<string | null>(null);
-  const [overallRating, setOverallRating] = useState<number | null>(null);
-  const [notVisited, setNotVisited] = useState<Record<string, boolean>>({});
-  const [notVisitedReason, setNotVisitedReason] = useState<Record<string, string>>({});
-  const [notVisitedSaved, setNotVisitedSaved] = useState<Record<string, boolean>>({});
-  const [showPolecajkaSheet, setShowPolecajkaSheet] = useState(false);
-  const [polecajkaPublished, setPolecajkaPublished] = useState(false);
-  const notVisitedTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const narrativeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [noteSaved, setNoteSaved] = useState<Record<string, boolean>>({});
+  const noteTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: route } = useQuery({
@@ -76,7 +73,7 @@ const ReviewSummary = () => {
       if (!routeId || !user) return null;
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, title, user_id, city, day_number, start_date, ai_summary, ai_highlight, review_photos, review_narrative, is_shared, group_session_id, overall_rating")
+        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, is_shared, group_session_id")
         .eq("id", routeId)
         .single();
       return data as any;
@@ -84,27 +81,66 @@ const ReviewSummary = () => {
     enabled: !!routeId && !!user,
   });
 
-  // Pins (miejsca w planie) - do sekcji "Twój plan"
-  const { data: planPins = [] } = useQuery({
-    queryKey: ["review-summary-pins", routeId],
+  const folderId = route?.folder_id ?? null;
+
+  // Dni trasy: jesli wpis nalezy do folderu (trasa wielodniowa) - wszystkie dni;
+  // inaczej tylko ten jeden route. Jeden wpis w dzienniku = cala trasa, dni
+  // przelaczane wewnatrz.
+  const { data: dayRoutes = [] } = useQuery({
+    queryKey: ["review-trip-days", folderId, routeId],
     queryFn: async () => {
-      if (!routeId) return [];
+      if (!route) return [];
+      if (!folderId) return [route];
+      const { data } = await (supabase as any)
+        .from("routes")
+        .select("id, title, city, day_number, start_date, end_date, ai_summary, ai_highlight, review_photos")
+        .eq("folder_id", folderId)
+        .eq("user_id", route.user_id)
+        .order("day_number", { ascending: true });
+      return (data && data.length) ? data : [route];
+    },
+    enabled: !!route,
+  });
+
+  const sortedDays = useMemo(
+    () => [...dayRoutes].sort((a: any, b: any) => (a.day_number ?? 0) - (b.day_number ?? 0)),
+    [dayRoutes],
+  );
+  const isMultiDay = sortedDays.length > 1;
+  const dayRouteIds = useMemo(() => sortedDays.map((d: any) => d.id), [sortedDays]);
+  const activeRouteId = selectedDayId && dayRouteIds.includes(selectedDayId) ? selectedDayId : routeId;
+  const activeDay = sortedDays.find((d: any) => d.id === activeRouteId) ?? route;
+
+  // Domyslny wybrany dzien = dzien z URL (pierwszy raz po zaladowaniu).
+  useEffect(() => {
+    if (!selectedDayId && routeId && dayRouteIds.includes(routeId)) setSelectedDayId(routeId);
+  }, [routeId, dayRouteIds, selectedDayId]);
+
+  // Pins wszystkich dni naraz (grupowane po route_id).
+  const idsKey = dayRouteIds.join(",");
+  const { data: allPins = [] } = useQuery({
+    queryKey: ["review-all-pins", idsKey],
+    queryFn: async () => {
+      if (!dayRouteIds.length) return [];
       const { data } = await (supabase as any)
         .from("pins")
-        .select("id, place_name, address, category, suggested_time, description, image_url, images, pin_order")
-        .eq("route_id", routeId)
+        .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, pin_order")
+        .in("route_id", dayRouteIds)
         .order("pin_order", { ascending: true });
       return data ?? [];
     },
-    enabled: !!routeId,
+    enabled: dayRouteIds.length > 0,
   });
+  const currentPins = useMemo(
+    () => allPins.filter((p: any) => p.route_id === activeRouteId),
+    [allPins, activeRouteId],
+  );
 
-  // Group session: fetch all participants
+  // Group session: participants (awatary w hero).
   const { data: groupParticipants = [] } = useQuery({
     queryKey: ["review-summary-participants", route?.group_session_id],
     queryFn: async () => {
       if (!route?.group_session_id) return [];
-      // Use group_session_members - always populated when users join
       const { data: members } = await (supabase as any)
         .from("group_session_members")
         .select("user_id")
@@ -120,19 +156,17 @@ const ReviewSummary = () => {
     enabled: !!route?.group_session_id,
   });
 
-  // Group session: fetch other participants' photos
+  // Group session: zdjecia innych uczestnikow (do wspolnej galerii).
   const { data: groupPhotos = [] } = useQuery({
     queryKey: ["review-summary-group-photos", route?.group_session_id],
     queryFn: async () => {
       if (!route?.group_session_id || !user) return [];
-      // Get all routes in the same group session (excluding current)
       const { data: groupRoutes } = await supabase
         .from("routes")
         .select("id, user_id, review_photos")
         .eq("group_session_id", route.group_session_id)
-        .neq("id", routeId);
+        .neq("user_id", user.id);
       if (!groupRoutes?.length) return [];
-      // Fetch profiles for those users
       const userIds = [...new Set(groupRoutes.map((r: any) => r.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
@@ -150,68 +184,39 @@ const ReviewSummary = () => {
     enabled: !!route?.group_session_id,
   });
 
-  const { data: pins = [] } = useQuery({
-    queryKey: ["review-summary-pins", routeId],
-    queryFn: async () => {
-      if (!routeId || !user) return [];
-      const { data } = await supabase
-        .from("pins")
-        .select("id, place_name, category, suggested_time, images, image_url, pin_order")
-        .eq("route_id", routeId)
-        .order("pin_order");
-      return (data ?? []) as any[];
-    },
-    enabled: !!routeId && !!user,
-  });
-
+  // Oceny + notki (wszystkie dni naraz).
   const { data: existingRatings = [] } = useQuery({
-    queryKey: ["pin-ratings", routeId, user?.id],
+    queryKey: ["pin-ratings", idsKey, user?.id],
     queryFn: async () => {
-      if (!routeId || !user) return [];
+      if (!dayRouteIds.length || !user) return [];
       const { data } = await (supabase as any)
         .from("pin_ratings")
-        .select("place_name, rating, is_highlight, not_visited, not_visited_reason")
-        .eq("route_id", routeId)
+        .select("route_id, place_name, rating, note")
+        .in("route_id", dayRouteIds)
         .eq("user_id", user.id);
       return data ?? [];
     },
-    enabled: !!routeId && !!user,
+    enabled: dayRouteIds.length > 0 && !!user,
   });
 
   useEffect(() => {
-    if (route?.review_narrative) setNarrative(route.review_narrative);
     if (route?.review_photos?.length) setPhotos(route.review_photos);
     if (route?.is_shared != null) setIsPublic(route.is_shared);
-  }, [route?.review_narrative, route?.review_photos, route?.is_shared]);
+  }, [route?.review_photos, route?.is_shared]);
 
   useEffect(() => {
     if (existingRatings.length) {
-      const map: Record<string, number> = {};
-      const nv: Record<string, boolean> = {};
-      const nvr: Record<string, string> = {};
-      let hl: string | null = null;
+      const rmap: Record<string, number> = {};
+      const nmap: Record<string, string> = {};
       for (const r of existingRatings) {
-        if (r.rating) map[r.place_name] = r.rating;
-        if (r.is_highlight) hl = r.place_name;
-        if (r.not_visited) nv[r.place_name] = true;
-        if (r.not_visited_reason) nvr[r.place_name] = r.not_visited_reason;
+        const k = rkey(r.route_id, r.place_name);
+        if (r.rating) rmap[k] = r.rating;
+        if (r.note) nmap[k] = r.note;
       }
-      setPinRatings(map);
-      setHighlightPlace(hl);
-      setNotVisited(nv);
-      setNotVisitedReason(nvr);
+      setPinRatings(rmap);
+      setNotes(nmap);
     }
   }, [existingRatings]);
-
-  // Dismiss "Nowa trasa!" badge when user opens the review
-  useEffect(() => {
-    if (!routeId || !user) return;
-    (supabase as any).rpc("dismiss_route_badge", { p_route_id: routeId });
-  }, [routeId, user]);
-
-  useEffect(() => {
-    if (route?.overall_rating) setOverallRating(route.overall_rating);
-  }, [route?.overall_rating]);
 
   const togglePublic = async (val: boolean) => {
     setIsPublic(val);
@@ -220,21 +225,6 @@ const ReviewSummary = () => {
       queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
       queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
     }
-  };
-
-  const saveNarrative = useCallback((value: string) => {
-    if (!routeId) return;
-    if (narrativeTimer.current) clearTimeout(narrativeTimer.current);
-    narrativeTimer.current = setTimeout(async () => {
-      setSaving(true);
-      await supabase.from("routes").update({ review_narrative: value } as any).eq("id", routeId);
-      setSaving(false);
-    }, 1000);
-  }, [routeId]);
-
-  const handleNarrativeChange = (value: string) => {
-    setNarrative(value);
-    saveNarrative(value);
   };
 
   const processFiles = async (files: File[]) => {
@@ -255,6 +245,7 @@ const ReviewSummary = () => {
       const updated = [...photos, ...newUrls];
       setPhotos(updated);
       await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
+      queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
     }
     setUploading(false);
   };
@@ -269,21 +260,16 @@ const ReviewSummary = () => {
     const remaining = 15 - photos.length;
     if (remaining <= 0) return;
     try {
-      const result = await CapCamera.pickImages({
-        quality: 90,
-        limit: remaining,
-        width: 1200,
-        height: 1200,
-      });
+      const result = await CapCamera.pickImages({ quality: 90, limit: remaining, width: 1200, height: 1200 });
       const files: File[] = [];
       for (const photo of result.photos) {
         if (!photo.webPath) continue;
         try {
           const response = await fetch(photo.webPath);
           const blob = await response.blob();
-          const format = photo.format || "jpeg";
-          const mime = format === "png" ? "image/png" : "image/jpeg";
-          files.push(new File([blob], `review-${Date.now()}-${files.length}.${format}`, { type: mime }));
+          const fmt = photo.format || "jpeg";
+          const mime = fmt === "png" ? "image/png" : "image/jpeg";
+          files.push(new File([blob], `review-${Date.now()}-${files.length}.${fmt}`, { type: mime }));
         } catch {}
       }
       if (files.length) await processFiles(files);
@@ -300,88 +286,70 @@ const ReviewSummary = () => {
     else fileInputRef.current?.click();
   };
 
-  const removePhoto = async (url: string) => {
-    const updated = photos.filter(p => p !== url);
-    setPhotos(updated);
-    await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
-  };
+  // Zdjecia uzytkownika ze wszystkich dni (do wspolnej galerii). owner = route_id
+  // do ktorego zdjecie nalezy (potrzebne przy usuwaniu).
+  const myPhotos = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { url: string; owner: string }[] = [];
+    photos.forEach((u) => { if (u && !seen.has(u)) { seen.add(u); out.push({ url: u, owner: routeId! }); } });
+    sortedDays.forEach((d: any) => (d.review_photos ?? []).forEach((u: string) => {
+      if (u && !seen.has(u)) { seen.add(u); out.push({ url: u, owner: d.id }); }
+    }));
+    return out;
+  }, [photos, sortedDays, routeId]);
 
-  const setCoverPhoto = async (url: string) => {
-    const updated = [url, ...photos.filter(p => p !== url)];
-    setPhotos(updated);
-    await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
+  const removePhoto = async (url: string, owner: string) => {
+    if (owner === routeId) {
+      const updated = photos.filter((p) => p !== url);
+      setPhotos(updated);
+      await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
+    } else {
+      const dr = sortedDays.find((d: any) => d.id === owner);
+      const updated = (dr?.review_photos ?? []).filter((p: string) => p !== url);
+      await supabase.from("routes").update({ review_photos: updated } as any).eq("id", owner);
+    }
+    setViewerUrl(null);
+    queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
   };
 
   const ratePinHandler = async (placeName: string, rating: number) => {
-    if (!routeId || !user) return;
-    setPinRatings(prev => ({ ...prev, [placeName]: rating }));
+    if (!activeRouteId || !user) return;
+    setPinRatings((prev) => ({ ...prev, [rkey(activeRouteId, placeName)]: rating }));
     await (supabase as any).from("pin_ratings").upsert({
-      route_id: routeId,
+      route_id: activeRouteId,
       user_id: user.id,
       place_name: placeName,
       rating,
-      is_highlight: highlightPlace === placeName,
     }, { onConflict: "route_id,user_id,place_name" });
   };
 
-  const toggleHighlight = async (placeName: string) => {
-    if (!routeId || !user) return;
-    const newHL = highlightPlace === placeName ? null : placeName;
-    // Remove highlight from previous
-    if (highlightPlace && highlightPlace !== placeName) {
+  const handleNoteChange = (placeName: string, value: string) => {
+    if (!activeRouteId) return;
+    const k = rkey(activeRouteId, placeName);
+    setNotes((prev) => ({ ...prev, [k]: value }));
+    if (noteTimer.current[k]) clearTimeout(noteTimer.current[k]);
+    noteTimer.current[k] = setTimeout(async () => {
+      if (!user) return;
       await (supabase as any).from("pin_ratings").upsert({
-        route_id: routeId, user_id: user.id, place_name: highlightPlace,
-        rating: pinRatings[highlightPlace] ?? null, is_highlight: false,
+        route_id: activeRouteId,
+        user_id: user.id,
+        place_name: placeName,
+        note: value || null,
       }, { onConflict: "route_id,user_id,place_name" });
-    }
-    setHighlightPlace(newHL);
-    if (newHL) {
-      await (supabase as any).from("pin_ratings").upsert({
-        route_id: routeId, user_id: user.id, place_name: newHL,
-        rating: pinRatings[newHL] ?? null, is_highlight: true,
-      }, { onConflict: "route_id,user_id,place_name" });
-    }
-  };
-
-  const toggleNotVisited = async (placeName: string) => {
-    if (!routeId || !user) return;
-    const newVal = !notVisited[placeName];
-    setNotVisited(prev => ({ ...prev, [placeName]: newVal }));
-    await (supabase as any).from("pin_ratings").upsert({
-      route_id: routeId, user_id: user.id, place_name: placeName,
-      not_visited: newVal,
-      not_visited_reason: notVisitedReason[placeName] ?? null,
-      rating: null, is_highlight: false,
-    }, { onConflict: "route_id,user_id,place_name" });
-  };
-
-  const handleNotVisitedReason = (placeName: string, value: string) => {
-    setNotVisitedReason(prev => ({ ...prev, [placeName]: value }));
-    if (notVisitedTimer.current[placeName]) clearTimeout(notVisitedTimer.current[placeName]);
-    notVisitedTimer.current[placeName] = setTimeout(async () => {
-      if (!routeId || !user) return;
-      await (supabase as any).from("pin_ratings").upsert({
-        route_id: routeId, user_id: user.id, place_name: placeName,
-        not_visited: true, not_visited_reason: value,
-        rating: null, is_highlight: false,
-      }, { onConflict: "route_id,user_id,place_name" });
-      setNotVisitedSaved(prev => ({ ...prev, [placeName]: true }));
-      setTimeout(() => setNotVisitedSaved(prev => ({ ...prev, [placeName]: false })), 2000);
+      setNoteSaved((prev) => ({ ...prev, [k]: true }));
+      setTimeout(() => setNoteSaved((prev) => ({ ...prev, [k]: false })), 2000);
     }, 800);
   };
 
-  const rateOverall = async (rating: number) => {
-    if (!routeId) return;
-    setOverallRating(rating);
-    await (supabase as any).from("routes").update({ overall_rating: rating }).eq("id", routeId);
-  };
-
-
   const cityLabel = route?.city || "Podróż";
-  const dayLabel = route?.day_number ? `Dzień ${route.day_number}` : "";
   const isOwner = !!route && !!user && route.user_id === user.id;
-  // Nazwa wpisu: wlasna nazwa (title) albo fallback "Dzień N". Edytowalna przez wlasciciela.
-  const displayName = route?.title || dayLabel;
+
+  // Nazwa wpisu: wlasna (title) albo placeholder. Auto-tytul "City - Dzień N"
+  // traktujemy jak brak wlasnej nazwy.
+  const isAutoTitle = (t: string | null | undefined) =>
+    !t || /(-\s*Dzień\s*\d+)$/i.test(t) || t === route?.city;
+  const customName = isAutoTitle(route?.title) ? "" : (route?.title ?? "");
+  const displayName = customName || (isOwner ? "Dodaj nazwę wpisu" : "");
 
   const saveName = async () => {
     if (!routeId) return;
@@ -395,14 +363,181 @@ const ReviewSummary = () => {
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
     toast.success("Zapisano nazwę");
   };
-  const dateLabel = route?.start_date
-    ? format(new Date(route.start_date), "d MMMM yyyy", { locale: pl })
-    : "";
+
+  // Zakres dat: trasa wielodniowa => "12 - 14 maja 2026", jednodniowa => "12 maja 2026".
+  const dateLabel = useMemo(() => {
+    const first = sortedDays[0]?.start_date;
+    const lastRaw = sortedDays[sortedDays.length - 1];
+    const last = lastRaw?.end_date ?? lastRaw?.start_date;
+    if (!first) return "";
+    const fd = new Date(first);
+    if (isMultiDay && last) {
+      const ld = new Date(last);
+      return `${format(fd, "d", { locale: pl })} - ${format(ld, "d MMMM yyyy", { locale: pl })}`;
+    }
+    const single = route?.end_date && route.end_date !== route.start_date ? route.end_date : first;
+    const sd = new Date(single);
+    if (route?.end_date && route.end_date !== route.start_date) {
+      return `${format(fd, "d", { locale: pl })} - ${format(sd, "d MMMM yyyy", { locale: pl })}`;
+    }
+    return format(fd, "d MMMM yyyy", { locale: pl });
+  }, [sortedDays, isMultiDay, route?.end_date, route?.start_date]);
+
+  // Aktywny wpis vs wspomnienie: wspomnienie gdy minal OSTATNI dzien trasy.
+  const isMemory = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let lastTs = -Infinity;
+    for (const d of sortedDays) {
+      const ds = d.end_date ?? d.start_date;
+      if (ds) lastTs = Math.max(lastTs, new Date(ds).getTime());
+    }
+    return Number.isFinite(lastTs) && lastTs < today.getTime();
+  }, [sortedDays]);
 
   if (authLoading) return null;
   if (!user) { navigate("/auth"); return null; }
 
-  const heroPhoto = photos[0];
+  const heroPhoto = myPhotos[0]?.url ?? (groupPhotos[0] as any)?.url;
+  const galleryPhotos = [
+    ...myPhotos.map((p) => ({ ...p, mine: true, username: "Ty" })),
+    ...groupPhotos.map((p: any) => ({ url: p.url, owner: "", mine: false, username: p.username })),
+  ];
+
+  // ── Sekcja Ocena + Notka pod miejscem (tylko widok wspomnienia / plan dnia) ──
+  const renderRatingNote = (placeName: string) => {
+    const k = rkey(activeRouteId!, placeName);
+    const rating = pinRatings[k] ?? 0;
+    return (
+      <div className="mt-3 pt-3 border-t border-border/40">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Ocena miejsca</p>
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              onClick={() => ratePinHandler(placeName, n)}
+              className={`text-lg leading-none transition-transform active:scale-90 ${n <= rating ? "opacity-100" : "opacity-25"}`}
+            >
+              ⭐
+            </button>
+          ))}
+        </div>
+        <div className="my-3 h-px bg-border/40" />
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notka</p>
+        <div className="relative">
+          <textarea
+            value={notes[k] ?? ""}
+            onChange={(e) => handleNoteChange(placeName, e.target.value)}
+            placeholder="Twoja rada lub notka o tym miejscu…"
+            rows={2}
+            className="w-full bg-muted/50 rounded-xl px-3 py-2 text-xs text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
+          />
+          {noteSaved[k] && (
+            <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">Zapisano ✓</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ── Twój plan (lista / szczegoly). withRating => dodaje Ocena+Notka pod miejscem. ──
+  const renderPlan = (withRating: boolean) => (
+    <>
+      {planView === "list" ? (
+        <div className="space-y-4">
+          {(() => {
+            const groups: Record<string, any[]> = {};
+            currentPins.forEach((p: any) => { const kk = p.category || "other"; (groups[kk] ??= []).push(p); });
+            return Object.entries(groups).map(([cat, items]) => (
+              <div key={cat}>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <span>{CATEGORY_EMOJI[cat] ?? "📍"}</span>{CATEGORY_LABEL[cat] ?? "Miejsce"}
+                </p>
+                <div className="space-y-2">
+                  {items.map((pin: any) => {
+                    const img = pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null);
+                    return (
+                      <div key={pin.id} className="bg-card border border-border/40 rounded-2xl p-2.5">
+                        <div className="flex items-center gap-3">
+                          {img ? (
+                            <img src={getPhotoUrl(img)} alt="" className="h-14 w-14 rounded-xl object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                          ) : (
+                            <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center shrink-0 text-xl">{CATEGORY_EMOJI[pin.category] ?? "📍"}</div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
+                            {(pin.address || pin.suggested_time) && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                                {pin.suggested_time ? `🕐 ${pin.suggested_time}` : ""}{pin.suggested_time && pin.address ? " · " : ""}{pin.address ?? ""}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {withRating && renderRatingNote(pin.place_name)}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ));
+          })()}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {currentPins.map((pin: any, i: number) => {
+            const img = pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null);
+            return (
+              <div key={pin.id} className="rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm">
+                <div className="relative w-full aspect-[4/3] bg-muted">
+                  {img ? (
+                    <img src={getPhotoUrl(img)} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-4xl">{CATEGORY_EMOJI[pin.category] ?? "📍"}</div>
+                  )}
+                  <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
+                </div>
+                <div className="p-4">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
+                    <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+                  </span>
+                  <p className="text-base font-black leading-tight">{pin.place_name}</p>
+                  {pin.suggested_time && <p className="text-xs text-muted-foreground mt-0.5">🕐 {pin.suggested_time}</p>}
+                  {pin.description && <p className="text-sm text-muted-foreground leading-relaxed mt-2">{pin.description}</p>}
+                  {withRating && renderRatingNote(pin.place_name)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+
+  // Naglowek "Twój plan" + przelacznik Lista/Szczegoly + (multi-day) przelacznik dni.
+  const renderPlanHeader = () => (
+    <>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Twój plan</p>
+        <div className="flex rounded-full bg-muted p-0.5">
+          <button onClick={() => setPlanView("list")} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Lista</button>
+          <button onClick={() => setPlanView("cards")} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Szczegóły</button>
+        </div>
+      </div>
+      {isMultiDay && (
+        <div className="flex gap-2 overflow-x-auto scrollbar-none mb-3 -mx-1 px-1">
+          {sortedDays.map((d: any) => (
+            <button
+              key={d.id}
+              onClick={() => setSelectedDayId(d.id)}
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${d.id === activeRouteId ? "bg-foreground text-background" : "bg-card border border-border/50 text-muted-foreground"}`}
+            >
+              Dzień {d.day_number ?? "?"}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col">
@@ -412,41 +547,25 @@ const ReviewSummary = () => {
         {heroPhoto && (
           <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
         )}
-        {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/75" />
-
-        {/* No photo placeholder */}
         {!heroPhoto && (
-          <div className="absolute inset-0 flex items-center justify-center text-8xl opacity-20 select-none">
-            🗺️
-          </div>
+          <div className="absolute inset-0 flex items-center justify-center text-8xl opacity-20 select-none">🗺️</div>
         )}
 
-        {/* Back + save indicator */}
         <div className="absolute left-0 right-0 flex items-center justify-between px-4"
           style={{ top: "max(16px, env(safe-area-inset-top, 16px))" }}>
-          <button
-            onClick={() => navigate("/")}
-            className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center"
-          >
+          <button onClick={() => navigate("/")} className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
             <ArrowLeft className="h-5 w-5 text-white" />
           </button>
           {saving && (
-            <span className="text-xs text-white/70 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5">
-              Zapisywanie...
-            </span>
+            <span className="text-xs text-white/70 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5">Zapisywanie...</span>
           )}
         </div>
 
-        {/* City + date */}
         <div className="absolute bottom-0 left-0 right-0 px-5 pb-6">
-          {dateLabel && (
-            <p className="text-white/70 text-sm mb-1">{dateLabel}</p>
-          )}
-          <h1 className="text-white text-3xl font-black leading-tight drop-shadow-sm">
-            {cityLabel}
-          </h1>
-          {/* Edytowalna nazwa wpisu (wlasna nazwa zamiast "Dzień N") */}
+          {dateLabel && <p className="text-white/70 text-sm mb-1">{dateLabel}</p>}
+          <h1 className="text-white text-3xl font-black leading-tight drop-shadow-sm">{cityLabel}</h1>
+
           {editingName ? (
             <div className="flex items-center gap-2 mt-1.5">
               <input
@@ -455,7 +574,7 @@ const ReviewSummary = () => {
                 onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setEditingName(false); }}
                 autoFocus
                 maxLength={60}
-                placeholder={dayLabel || "Nazwa wpisu"}
+                placeholder="Nazwa wpisu"
                 className="flex-1 min-w-0 bg-white/20 backdrop-blur-sm border border-white/40 rounded-lg px-3 py-1.5 text-white text-base font-medium placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/40"
                 style={{ fontSize: "16px" }}
               />
@@ -465,39 +584,30 @@ const ReviewSummary = () => {
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => { if (!isOwner) return; setNameVal(route?.title || ""); setEditingName(true); }}
-              className={`flex items-center gap-1.5 mt-0.5 text-white/80 text-base font-medium ${isOwner ? "active:opacity-70" : "cursor-default"}`}
-            >
-              <span>{displayName || (isOwner ? "Dodaj nazwę wpisu" : "")}</span>
-              {isOwner && <Pencil className="h-3.5 w-3.5 text-white/60 shrink-0" />}
-            </button>
+            (customName || isOwner) && (
+              <button
+                onClick={() => { if (!isOwner) return; setNameVal(customName); setEditingName(true); }}
+                className={`flex items-center gap-1.5 mt-0.5 text-white/80 text-base font-medium ${isOwner ? "active:opacity-70" : "cursor-default"}`}
+              >
+                <span>{displayName}</span>
+                {isOwner && <Pencil className="h-3.5 w-3.5 text-white/60 shrink-0" />}
+              </button>
+            )
           )}
-          {/* Group participant avatars */}
+
           {groupParticipants.length > 0 && (
             <div className="flex items-center gap-2 mt-3">
               <div className="flex -space-x-2">
                 {groupParticipants.slice(0, 5).map((p) => (
-                  <div
-                    key={p.id}
-                    className="h-7 w-7 rounded-full border-2 border-white/60 overflow-hidden bg-primary flex items-center justify-center text-white text-[10px] font-bold"
-                  >
-                    {p.avatar_url ? (
-                      <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      (p.first_name || p.username || "?")[0].toUpperCase()
-                    )}
+                  <div key={p.id} className="h-7 w-7 rounded-full border-2 border-white/60 overflow-hidden bg-primary flex items-center justify-center text-white text-[10px] font-bold">
+                    {p.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" /> : (p.first_name || p.username || "?")[0].toUpperCase()}
                   </div>
                 ))}
                 {groupParticipants.length > 5 && (
-                  <div className="h-7 w-7 rounded-full border-2 border-white/60 bg-black/50 flex items-center justify-center text-white text-[9px] font-bold">
-                    +{groupParticipants.length - 5}
-                  </div>
+                  <div className="h-7 w-7 rounded-full border-2 border-white/60 bg-black/50 flex items-center justify-center text-white text-[9px] font-bold">+{groupParticipants.length - 5}</div>
                 )}
               </div>
-              <span className="text-white/70 text-xs font-medium">
-                {groupParticipants.length} uczestników
-              </span>
+              <span className="text-white/70 text-xs font-medium">{groupParticipants.length} uczestników</span>
             </div>
           )}
         </div>
@@ -506,381 +616,171 @@ const ReviewSummary = () => {
       {/* ── Scrollable content ────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto pb-32">
 
-        {/* ── Twój plan: miejsca po kolei z kategoriami (lista / szczegoly) ── */}
-        {planPins.length > 0 && (
-          <div className="px-5 pt-5 pb-5 border-b border-border/30">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Twój plan</p>
+        {isMemory ? (
+          /* ══ WSPOMNIENIE: pod-zakladki Galeria / Plan dnia ══ */
+          <>
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/30 px-5 pt-3 pb-2">
               <div className="flex rounded-full bg-muted p-0.5">
-                <button onClick={() => setPlanView("list")} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Lista</button>
-                <button onClick={() => setPlanView("cards")} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Szczegóły</button>
+                <button onClick={() => setMemoryTab("galeria")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-sm font-semibold transition-colors ${memoryTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  <ImageIcon className="h-4 w-4" /> Galeria
+                </button>
+                <button onClick={() => setMemoryTab("plan")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-sm font-semibold transition-colors ${memoryTab === "plan" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  <MapIcon className="h-4 w-4" /> Plan dnia
+                </button>
               </div>
             </div>
-            {planView === "list" ? (
-              // Lista grupowana po kategorii (jak zakladka Dopasowania)
-              <div className="space-y-4">
-                {(() => {
-                  const groups: Record<string, any[]> = {};
-                  planPins.forEach((p: any) => { const k = p.category || "other"; (groups[k] ??= []).push(p); });
-                  return Object.entries(groups).map(([cat, items]) => (
-                    <div key={cat}>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                        <span>{CATEGORY_EMOJI[cat] ?? "📍"}</span>{CATEGORY_LABEL[cat] ?? "Miejsce"}
-                      </p>
-                      <div className="space-y-2">
-                        {items.map((pin: any) => {
-                          const img = pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null);
-                          return (
-                            <div key={pin.id} className="flex items-center gap-3 bg-card border border-border/40 rounded-2xl p-2.5">
-                              {img ? (
-                                <img src={getPhotoUrl(img)} alt="" className="h-14 w-14 rounded-xl object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-                              ) : (
-                                <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center shrink-0 text-xl">{CATEGORY_EMOJI[pin.category] ?? "📍"}</div>
-                              )}
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-                                {(pin.address || pin.suggested_time) && (
-                                  <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                                    {pin.suggested_time ? `🕐 ${pin.suggested_time}` : ""}{pin.suggested_time && pin.address ? " · " : ""}{pin.address ?? ""}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ));
-                })()}
-              </div>
-            ) : (
-              // Karty szczegolowe (jak kreator trasy)
-              <div className="space-y-3">
-                {planPins.map((pin: any, i: number) => {
-                  const img = pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null);
-                  return (
-                    <div key={pin.id} className="rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm">
-                      <div className="relative w-full aspect-[4/3] bg-muted">
-                        {img ? (
-                          <img src={getPhotoUrl(img)} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-4xl">{CATEGORY_EMOJI[pin.category] ?? "📍"}</div>
-                        )}
-                        <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
-                      </div>
-                      <div className="p-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
-                          <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
-                        </span>
-                        <p className="text-base font-black leading-tight">{pin.place_name}</p>
-                        {pin.suggested_time && <p className="text-xs text-muted-foreground mt-0.5">🕐 {pin.suggested_time}</p>}
-                        {pin.description && <p className="text-sm text-muted-foreground leading-relaxed mt-2">{pin.description}</p>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* Celebration banner - only when arriving from "Zakończ trasę" */}
-        {isNewCompletion && (
-          <div className="px-5 pt-6 pb-5 text-center border-b border-border/30">
-            <div className="text-5xl mb-2">🎉</div>
-            <h2 className="text-xl font-black">Świetna trasa!</h2>
-            <p className="text-sm text-muted-foreground mt-1">Oceń miejsca i zachowaj wspomnienia</p>
-          </div>
-        )}
-
-        {/* Overall rating */}
-        <div className="px-5 pt-5 pb-5 border-b border-border/30">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Ocena trasy</p>
-          <div className="flex gap-2">
-            {[1,2,3,4,5].map(n => (
-              <button
-                key={n}
-                onClick={() => rateOverall(n)}
-                className={`text-2xl transition-transform active:scale-90 ${n <= (overallRating ?? 0) ? "opacity-100" : "opacity-25"}`}
-              >
-                ⭐
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* AI highlight - big pull quote */}
-        {route?.ai_highlight && (
-          <div className="px-5 pt-6 pb-5 border-b border-border/30">
-            <p className="text-[22px] font-bold leading-snug text-foreground">
-              „{route.ai_highlight}"
-            </p>
-          </div>
-        )}
-
-        {/* AI summary */}
-        <div className="px-5 pt-5 pb-5 border-b border-border/30">
-          {route?.ai_summary ? (
-            <p className="text-sm text-foreground/70 leading-relaxed">{route.ai_summary}</p>
-          ) : (
-            <p className="text-sm text-muted-foreground/50 italic leading-relaxed">
-              Brak podsumowania AI - dodaj zdjęcia i opis, żeby zachować wspomnienia z tego dnia.
-            </p>
-          )}
-        </div>
-
-        {/* ── Photos ── */}
-        <div className="pt-5 pb-5 border-b border-border/30">
-          <div className="flex items-center justify-between px-5 mb-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Zdjęcia
-            </p>
-            {photos.length > 0 && photos.length < 15 && (
-              <button
-                onClick={triggerPhotoPick}
-                disabled={uploading}
-                className="text-xs font-semibold text-primary"
-              >
-                {uploading ? "Dodawanie…" : "+ Dodaj"}
-              </button>
-            )}
-          </div>
-
-          {/* My photos */}
-          {photos.length > 0 ? (
-            <div className="flex gap-2.5 overflow-x-auto px-5 scrollbar-none pb-1">
-              {photos.map((url, idx) => (
-                <div key={url} className="relative flex-shrink-0 w-32 h-32 rounded-2xl overflow-hidden shadow-sm">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                  {idx !== 0 && (
+            {memoryTab === "galeria" ? (
+              /* ── Galeria: grid 3-kol (jak instagram) ── */
+              <div className="px-1 pt-1">
+                <div className="grid grid-cols-3 gap-0.5">
+                  {photos.length < 15 && (
                     <button
-                      onClick={() => setCoverPhoto(url)}
-                      title="Ustaw jako okładkę"
-                      className="absolute bottom-1.5 left-1.5 bg-black/60 backdrop-blur-sm rounded-full p-1"
+                      onClick={triggerPhotoPick}
+                      disabled={uploading}
+                      className="aspect-square flex flex-col items-center justify-center gap-1 bg-muted/40 text-muted-foreground active:bg-muted/60 transition-colors"
                     >
-                      <Star className="h-3 w-3 text-white" />
+                      <Camera className="h-6 w-6" />
+                      <span className="text-[10px] font-medium">{uploading ? "…" : "Dodaj"}</span>
                     </button>
                   )}
-                  {idx === 0 && (
-                    <div className="absolute bottom-1.5 left-1.5 bg-primary/90 rounded-full px-1.5 py-0.5 text-[9px] font-bold text-white">
-                      Okładka
-                    </div>
-                  )}
-                  <button
-                    onClick={() => removePhoto(url)}
-                    className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm rounded-full p-1"
-                  >
-                    <X className="h-3 w-3 text-white" />
+                  {galleryPhotos.map((item, idx) => (
+                    <button
+                      key={`${item.url}-${idx}`}
+                      onClick={() => setViewerUrl(item.url)}
+                      className="relative aspect-square overflow-hidden bg-muted active:opacity-90"
+                    >
+                      <img src={item.url} alt="" className="w-full h-full object-cover" />
+                      {!item.mine && (
+                        <span className="absolute bottom-1 left-1 bg-black/55 backdrop-blur-sm rounded px-1.5 py-0.5 text-[9px] font-medium text-white max-w-[90%] truncate">{item.username}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {galleryPhotos.length === 0 && (
+                  <p className="text-center text-sm text-muted-foreground py-10 px-6">Brak zdjęć z tej podróży. Dodaj pierwsze wspomnienia.</p>
+                )}
+
+                {/* Widocznosc (publiczne / prywatne) */}
+                <div className="px-5 pt-5 pb-4 mt-2 flex items-center gap-3 border-t border-border/30">
+                  {isPublic ? <Globe className="h-4 w-4 text-orange-600 flex-shrink-0" /> : <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">{isPublic ? "Publiczne" : "Prywatne"}</p>
+                    <p className="text-xs text-muted-foreground">{isPublic ? "Widoczne na feedzie znajomych" : "Tylko dla Ciebie"}</p>
+                  </div>
+                  <button onClick={() => togglePublic(!isPublic)}
+                    className={`flex-shrink-0 relative w-11 h-6 rounded-full transition-colors duration-200 ${isPublic ? "bg-primary" : "bg-muted-foreground/30"}`}>
+                    <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${isPublic ? "translate-x-5" : "translate-x-0"}`} />
                   </button>
                 </div>
-              ))}
-              {photos.length < 15 && (
-                <button
-                  onClick={triggerPhotoPick}
-                  disabled={uploading}
-                  className="flex-shrink-0 w-32 h-32 rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-1.5 text-muted-foreground"
-                >
-                  <Camera className="h-6 w-6" />
-                  <span className="text-xs">{uploading ? "…" : "Dodaj"}</span>
+              </div>
+            ) : (
+              /* ── Plan dnia: Twój plan + Ocena + Notka pod miejscem ── */
+              <div className="px-5 pt-5 pb-5">
+                {currentPins.length > 0 ? (
+                  <>
+                    {renderPlanHeader()}
+                    {renderPlan(true)}
+                  </>
+                ) : (
+                  <p className="text-center text-sm text-muted-foreground py-10">Brak miejsc w planie tego dnia.</p>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          /* ══ AKTYWNY WPIS: tylko plan (bez oceny trasy / oceny miejsc / wspomnien / share) ══ */
+          <>
+            {currentPins.length > 0 && (
+              <div className="px-5 pt-5 pb-5 border-b border-border/30">
+                {renderPlanHeader()}
+                {renderPlan(false)}
+              </div>
+            )}
+
+            {activeDay?.ai_highlight && (
+              <div className="px-5 pt-6 pb-5 border-b border-border/30">
+                <p className="text-[22px] font-bold leading-snug text-foreground">„{activeDay.ai_highlight}"</p>
+              </div>
+            )}
+
+            {activeDay?.ai_summary && (
+              <div className="px-5 pt-5 pb-5 border-b border-border/30">
+                <p className="text-sm text-foreground/70 leading-relaxed">{activeDay.ai_summary}</p>
+              </div>
+            )}
+
+            {/* Zdjecia (poziomy scroll) */}
+            <div className="pt-5 pb-5 border-b border-border/30">
+              <div className="flex items-center justify-between px-5 mb-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Zdjęcia</p>
+                {photos.length > 0 && photos.length < 15 && (
+                  <button onClick={triggerPhotoPick} disabled={uploading} className="text-xs font-semibold text-primary">
+                    {uploading ? "Dodawanie…" : "+ Dodaj"}
+                  </button>
+                )}
+              </div>
+              {photos.length > 0 ? (
+                <div className="flex gap-2.5 overflow-x-auto px-5 scrollbar-none pb-1">
+                  {photos.map((url) => (
+                    <div key={url} className="relative flex-shrink-0 w-32 h-32 rounded-2xl overflow-hidden shadow-sm">
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                      <button onClick={() => removePhoto(url, routeId!)} className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm rounded-full p-1">
+                        <X className="h-3 w-3 text-white" />
+                      </button>
+                    </div>
+                  ))}
+                  {photos.length < 15 && (
+                    <button onClick={triggerPhotoPick} disabled={uploading}
+                      className="flex-shrink-0 w-32 h-32 rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-1.5 text-muted-foreground">
+                      <Camera className="h-6 w-6" />
+                      <span className="text-xs">{uploading ? "…" : "Dodaj"}</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button onClick={triggerPhotoPick} disabled={uploading}
+                  className="mx-5 w-[calc(100%-40px)] h-24 rounded-2xl border-2 border-dashed border-border/40 flex items-center justify-center gap-2.5 text-muted-foreground active:bg-muted/40 transition-colors">
+                  <Camera className="h-5 w-5" />
+                  <span className="text-sm">{uploading ? "Dodawanie…" : "Dodaj zdjęcia z podróży"}</span>
                 </button>
               )}
             </div>
-          ) : (
-            <button
-              onClick={triggerPhotoPick}
-              disabled={uploading}
-              className="mx-5 w-[calc(100%-40px)] h-24 rounded-2xl border-2 border-dashed border-border/40 flex items-center justify-center gap-2.5 text-muted-foreground active:bg-muted/40 transition-colors"
-            >
-              <Camera className="h-5 w-5" />
-              <span className="text-sm">{uploading ? "Dodawanie…" : "Dodaj zdjęcia z tego dnia"}</span>
-            </button>
-          )}
-
-          {/* Group participants' photos */}
-          {groupPhotos.length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-5 mb-3">
-                Zdjęcia uczestników
-              </p>
-              <div className="flex gap-2.5 overflow-x-auto px-5 scrollbar-none pb-1">
-                {groupPhotos.map((item, idx) => (
-                  <div key={`${item.url}-${idx}`} className="relative flex-shrink-0 w-32 rounded-2xl overflow-hidden shadow-sm">
-                    <img src={item.url} alt="" className="w-full h-32 object-cover" />
-                    <div className="px-1.5 py-1 bg-card/80 backdrop-blur-sm">
-                      <p className="text-[10px] font-medium text-foreground/70 truncate">{item.username}</p>
-                    </div>
-                    <button
-                      onClick={() => setCoverPhoto(item.url)}
-                      title="Ustaw jako moją okładkę"
-                      className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm rounded-full p-1"
-                    >
-                      <Star className="h-3 w-3 text-white" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
-        </div>
-
-        {/* ── Visibility toggle ── */}
-        <div className="px-5 pt-4 pb-4 border-b border-border/30 flex items-center gap-3">
-          {isPublic ? <Globe className="h-4 w-4 text-orange-600 flex-shrink-0" /> : <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold">{isPublic ? "Publiczne" : "Prywatne"}</p>
-            <p className="text-xs text-muted-foreground">{isPublic ? "Widoczne na feedzie znajomych" : "Tylko dla Ciebie"}</p>
-          </div>
-          <button
-            onClick={() => togglePublic(!isPublic)}
-            className={`flex-shrink-0 relative w-11 h-6 rounded-full transition-colors duration-200 ${isPublic ? "bg-primary" : "bg-muted-foreground/30"}`}
-          >
-            <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${isPublic ? "translate-x-5" : "translate-x-0"}`} />
-          </button>
-        </div>
-
-        {/* ── Places with star ratings ── */}
-        {pins.length > 0 && (
-          <div className="px-5 pt-5 pb-5 border-b border-border/30">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Oceń miejsca</p>
-            <div className="space-y-4">
-              {pins.map((pin: any) => {
-                const thumb = pin.images?.[0] ?? pin.image_url ?? null;
-                const currentRating = pinRatings[pin.place_name] ?? 0;
-                const isHL = highlightPlace === pin.place_name;
-                const isNV = notVisited[pin.place_name] ?? false;
-                return (
-                  <div key={pin.id} className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <div className={`h-11 w-11 rounded-xl overflow-hidden bg-muted shrink-0 ${isNV ? "opacity-40" : ""}`}>
-                        {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : (
-                          <div className="w-full h-full flex items-center justify-center text-lg">{CATEGORY_EMOJI[pin.category] ?? "📍"}</div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className={`text-sm font-semibold leading-tight truncate flex-1 ${isNV ? "line-through text-muted-foreground" : ""}`}>{pin.place_name}</p>
-                          {isNV && (
-                            <span className="text-[10px] font-semibold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded-full shrink-0">Nie było</span>
-                          )}
-                        </div>
-                        {!isNV && (
-                          <div className="flex items-center gap-1 mt-1">
-                            {[1,2,3,4,5].map(n => (
-                              <button key={n} onClick={() => ratePinHandler(pin.place_name, n)}
-                                className={`text-lg leading-none transition-transform active:scale-90 ${n <= currentRating ? "opacity-100" : "opacity-25"}`}>
-                                ⭐
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {!isNV && (
-                      <button
-                        onClick={() => toggleHighlight(pin.place_name)}
-                        className={`w-full py-1.5 rounded-xl text-xs font-semibold border transition-colors ${isHL ? "bg-amber-400/20 border-amber-400 text-amber-700" : "border-border/40 text-muted-foreground"}`}
-                      >
-                        {isHL ? "⭐ Miejsce dnia!" : "Wyróżnij jako miejsce dnia"}
-                      </button>
-                    )}
-                    {isNV ? (
-                      <div className="space-y-1.5">
-                        <button
-                          onClick={() => toggleNotVisited(pin.place_name)}
-                          className="w-full py-1.5 rounded-xl text-xs font-semibold border transition-colors bg-red-500/10 border-red-400/60 text-red-600"
-                        >
-                          ✕ Odznacz nieobecność
-                        </button>
-                        <div className="relative">
-                          <textarea
-                            value={notVisitedReason[pin.place_name] ?? ""}
-                            onChange={e => handleNotVisitedReason(pin.place_name, e.target.value)}
-                            placeholder="Powód (np. było zamknięte)…"
-                            rows={2}
-                            className="w-full bg-muted/50 rounded-xl px-3 py-2 text-xs text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/65"
-                          />
-                          {notVisitedSaved[pin.place_name] && (
-                            <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">Zapisano ✓</span>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => toggleNotVisited(pin.place_name)}
-                        className="w-full py-2 rounded-full text-xs font-medium border border-dashed border-border/60 text-muted-foreground bg-muted/20 active:scale-[0.98] transition-transform"
-                      >
-                        ✕ Nie było tego miejsca na trasie
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          </>
         )}
 
-        {/* ── Narrative ── */}
-        <div className="px-5 pt-5 pb-5 border-b border-border/30">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-            Twoje wspomnienia
-          </p>
-          <textarea
-            value={narrative}
-            onChange={e => handleNarrativeChange(e.target.value)}
-            placeholder="Co zapamiętasz z tego dnia? Opisz swoje wrażenia, emocje, niespodzianki…"
-            rows={5}
-            className="w-full bg-transparent border-0 text-[15px] text-foreground resize-none focus:outline-none placeholder:text-muted-foreground/40 leading-relaxed"
-          />
-        </div>
-
-        {/* ── Polecajka CTA ── */}
-        {pins.length >= 2 && (
-          <div className="px-5 pt-5 pb-6">
-            {polecajkaPublished ? (
-              <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4 text-center">
-                <p className="text-2xl mb-1">✓</p>
-                <p className="font-bold text-sm text-emerald-800">Polecajka opublikowana!</p>
-                <p className="text-xs text-emerald-600 mt-0.5">Widoczna dla wszystkich na stronie głównej</p>
-              </div>
-            ) : (
-              <div className="rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100 p-4">
-                <p className="text-base font-black leading-tight">Podziel się tą trasą 🗺️</p>
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  Twoje miejsca trafią na discovery feed innych. Ktoś zaplanuje trasę dzięki Tobie!
-                </p>
-                <button
-                  onClick={() => setShowPolecajkaSheet(true)}
-                  className="mt-3 w-full py-3 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-sm shadow-orange-400/20"
-                >
-                  Stwórz polecajkę →
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
+        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
       </div>
 
-      {user && (
-        <CreatePolecajkaSheet
-          open={showPolecajkaSheet}
-          onClose={() => setShowPolecajkaSheet(false)}
-          onPublished={() => setPolecajkaPublished(true)}
-          city={route?.city ?? ""}
-          pins={pins}
-          userId={user.id}
-        />
+      {/* ── Fullscreen photo viewer ──────────────────────────────────────── */}
+      {viewerUrl && (
+        <div className="fixed inset-0 z-[70] bg-black flex items-center justify-center" onClick={() => setViewerUrl(null)}>
+          <img src={viewerUrl} alt="" className="max-w-full max-h-full object-contain" />
+          <button
+            onClick={() => setViewerUrl(null)}
+            className="absolute h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center"
+            style={{ top: "max(16px, env(safe-area-inset-top, 16px))", right: "16px" }}
+          >
+            <X className="h-5 w-5 text-white" />
+          </button>
+          {myPhotos.some((p) => p.url === viewerUrl) && (
+            <button
+              onClick={(e) => { e.stopPropagation(); const owner = myPhotos.find((p) => p.url === viewerUrl)?.owner ?? routeId!; removePhoto(viewerUrl, owner); }}
+              className="absolute left-4 px-4 py-2 rounded-full bg-red-500/90 text-white text-sm font-semibold active:scale-95 transition-transform"
+              style={{ bottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}
+            >
+              Usuń zdjęcie
+            </button>
+          )}
+        </div>
       )}
 
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
-        <button
-          onClick={() => navigate("/")}
-          className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
-        >
+        <button onClick={() => navigate("/")} className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
           Gotowe
         </button>
       </div>
