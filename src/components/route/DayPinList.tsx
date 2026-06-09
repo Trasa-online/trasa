@@ -215,17 +215,14 @@ const DayPinList = ({
                   </div>
                 </div>
 
-                {/* Time */}
-                <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                  <span className="text-xs font-medium text-foreground">
-                    {pin.suggested_time || ""}
-                  </span>
-                  {pin.duration_minutes && (
+                {/* Czas trwania (bez godzin - usuniete jako zbedne) */}
+                {pin.duration_minutes ? (
+                  <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                     <span className="text-[10px] text-muted-foreground/60">
                       {pin.duration_minutes} min
                     </span>
-                  )}
-                </div>
+                  </div>
+                ) : null}
 
                 {/* Alternatives */}
                 {onAlternatives && (
