@@ -103,6 +103,8 @@ const ReviewSummary = () => {
   const [draft, setDraft] = useState<{ dayId: string; pins: any[] } | null>(null);
   const [savingPlan, setSavingPlan] = useState(false);
   const [addingPlace, setAddingPlace] = useState(false);
+  // Popup po finalizacji planu: udostepnic w Eksploruj czy zostawic prywatna.
+  const [showSharePrompt, setShowSharePrompt] = useState(false);
 
   // Badge "Nowa trasa!" w JournalTab znika po wejsciu w wpis.
   useEffect(() => {
@@ -448,6 +450,8 @@ const ReviewSummary = () => {
         queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] }),
       ]);
       toast.success(finalize ? "Plan dnia zapisany" : "Zapisano zmiany");
+      // Po zatwierdzeniu planu (notki/oceny gotowe) - zapytaj o udostepnienie.
+      if (finalize) setShowSharePrompt(true);
     } catch (e: any) {
       console.error("[ReviewSummary] savePlan failed:", e?.message ?? e);
       toast.error("Nie udało się zapisać planu");
@@ -920,7 +924,7 @@ const ReviewSummary = () => {
                       {isPublic ? <Globe className="h-4 w-4 text-orange-600 flex-shrink-0" /> : <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold">{isPublic ? "Udostępnione" : "Prywatne"}</p>
-                        <p className="text-xs text-muted-foreground">{isPublic ? "Widoczne na feedzie znajomych" : "Tylko dla Ciebie"}</p>
+                        <p className="text-xs text-muted-foreground">{isPublic ? "Widoczne w zakładce Eksploruj" : "Tylko dla Ciebie"}</p>
                       </div>
                       <button onClick={() => togglePublic(!isPublic)}
                         className={`flex-shrink-0 relative w-11 h-6 rounded-full transition-colors duration-200 ${isPublic ? "bg-primary" : "bg-muted-foreground/30"}`}>
@@ -1013,6 +1017,45 @@ const ReviewSummary = () => {
           cityContext={route?.city ?? ""}
           existingPinNames={currentPins.map((p: any) => p.place_name)}
         />
+      )}
+
+      {/* ── Popup: udostepnic trase w Eksploruj? (po zatwierdzeniu planu) ──── */}
+      {showSharePrompt && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowSharePrompt(false)}
+        >
+          <div
+            className="w-full max-w-md bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="h-11 w-11 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                <Globe className="h-5 w-5 text-orange-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-base font-black leading-snug">Udostępnić tę trasę innym?</p>
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                  Trafi do zakładki Eksploruj i&nbsp;pomoże innym zaplanować podróż. Jeśli nie, zostanie prywatna w&nbsp;Twoich Wspomnieniach. Zmienisz to w&nbsp;każdej chwili.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => { togglePublic(true); setShowSharePrompt(false); toast.success("Trasa widoczna w Eksploruj"); }}
+                className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+              >
+                Udostępnij w Eksploruj
+              </button>
+              <button
+                onClick={() => { togglePublic(false); setShowSharePrompt(false); }}
+                className="w-full py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
+              >
+                Zostaw prywatną
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Fullscreen photo viewer ──────────────────────────────────────── */}
