@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus } from "lucide-react";
+import AddPinSheet from "@/components/route/AddPinSheet";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
@@ -101,6 +102,7 @@ const ReviewSummary = () => {
   // draft.dayId = ktory dzien edytowany; draft.pins = robocza lista.
   const [draft, setDraft] = useState<{ dayId: string; pins: any[] } | null>(null);
   const [savingPlan, setSavingPlan] = useState(false);
+  const [addingPlace, setAddingPlace] = useState(false);
 
   // Badge "Nowa trasa!" w JournalTab znika po wejsciu w wpis.
   useEffect(() => {
@@ -420,7 +422,12 @@ const ReviewSummary = () => {
     next.splice(to, 0, m);
     setWorking(next);
   };
-  const removeWorkingPin = (id: string) => setWorking(workingPins.filter((p: any) => p.id !== id));
+  const removeWorkingPin = (id: string) => {
+    const pin = workingPins.find((p: any) => p.id === id);
+    const name = pin?.place_name ? `„${pin.place_name}"` : "to miejsce";
+    if (!confirm(`Czy na pewno chcesz usunąć ${name} z planu dnia?`)) return;
+    setWorking(workingPins.filter((p: any) => p.id !== id));
+  };
 
   // Zapis edycji planu. finalize=true (wspomnienie): zamraza plan + odblokowuje
   // ocene/notki/share. finalize=false (aktywny wpis): tylko persystuje zmiany.
@@ -446,6 +453,35 @@ const ReviewSummary = () => {
       toast.error("Nie udało się zapisać planu");
     }
     setSavingPlan(false);
+  };
+
+  // Dodanie miejsca do planu aktywnego dnia (AddPinSheet zwraca PlanPin).
+  const handleAddPin = async (pin: any) => {
+    if (!activeRouteId || !user) { setAddingPlace(false); return; }
+    const { data: row, error } = await (supabase as any)
+      .from("pins")
+      .insert({
+        route_id: activeRouteId,
+        place_name: pin.place_name,
+        address: pin.address || null,
+        description: pin.description || null,
+        category: pin.category || "other",
+        latitude: pin.latitude || null,
+        longitude: pin.longitude || null,
+        place_id: pin.place_id ?? null,
+        suggested_time: pin.suggested_time || null,
+        photo_url: pin.photoUrl ?? null,
+        pin_order: workingPins.length,
+        original_creator_id: user.id,
+      })
+      .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, latitude, longitude, place_id, photo_url, pin_order")
+      .single();
+    setAddingPlace(false);
+    if (error || !row) { console.error("[ReviewSummary] add pin failed:", error?.message); toast.error("Nie udało się dodać miejsca"); return; }
+    // Jesli trwa edycja (draft) - dopisz do draftu zeby nie zginal przy kolejnym zapisie.
+    if (draft && draft.dayId === activeRouteId) setDraft({ dayId: activeRouteId, pins: [...draft.pins, row] });
+    queryClient.invalidateQueries({ queryKey: ["review-all-pins", idsKey] });
+    toast.success("Dodano miejsce");
   };
 
   // Autozapis: jesli user wyjdzie z edycji bez "Zapisz", persystujemy zmiany planu
@@ -550,14 +586,15 @@ const ReviewSummary = () => {
     description: pin.description || "",
   } satisfies MockPlace);
 
-  // ── Sekcja Ocena + Notka pod miejscem (tylko widok wspomnienia / plan dnia) ──
-  const renderRatingNote = (placeName: string) => {
+  // ── Sekcja Ocena + Notka pod miejscem (widok wspomnienia / plan dnia). ──
+  // centered => gwiazdki + etykiety wysrodkowane (widok Szczegoly / swiper).
+  const renderRatingNote = (placeName: string, centered = false) => {
     const k = rkey(activeRouteId!, placeName);
     const rating = pinRatings[k] ?? 0;
     return (
-      <div className="mt-3 pt-3 border-t border-border/40">
+      <div className={`mt-3 pt-3 border-t border-border/40 ${centered ? "text-center" : ""}`}>
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Ocena miejsca</p>
-        <div className="flex items-center gap-1">
+        <div className={`flex items-center gap-1 ${centered ? "justify-center" : ""}`}>
           {[1, 2, 3, 4, 5].map((n) => (
             <button
               key={n}
@@ -576,7 +613,7 @@ const ReviewSummary = () => {
             onChange={(e) => handleNoteChange(placeName, e.target.value)}
             placeholder="Twoja rada lub notka o tym miejscu…"
             rows={2}
-            className="w-full bg-muted/50 rounded-xl px-3 py-2 text-xs text-foreground resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
+            className="w-full bg-muted/50 rounded-xl px-3 py-2.5 text-sm text-foreground text-left resize-none focus:outline-none border border-border/30 placeholder:text-muted-foreground/55"
           />
           {noteSaved[k] && (
             <span className="absolute bottom-2 right-2.5 text-[10px] text-green-600 font-medium">Zapisano ✓</span>
@@ -656,7 +693,7 @@ const ReviewSummary = () => {
               </button>
             </div>
           )}
-          {withRating && <div className="px-4 pb-4 pt-1">{renderRatingNote(pin.place_name)}</div>}
+          {withRating && <div className="px-4 pb-4 pt-1">{renderRatingNote(pin.place_name, true)}</div>}
         </div>
       ))}
     </div>
@@ -687,6 +724,16 @@ const ReviewSummary = () => {
         </div>
       ))}
     </div>
+  );
+
+  // Przycisk dodania miejsca do planu dnia (wspomnienie - Lista i Szczegoly).
+  const renderAddPlaceButton = () => (
+    <button
+      onClick={() => setAddingPlace(true)}
+      className="mt-3 w-full py-3 rounded-2xl border-2 border-dashed border-border/50 text-sm font-semibold text-muted-foreground flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+    >
+      <Plus className="h-4 w-4" /> Dodaj miejsce
+    </button>
   );
 
   // Naglowek "Twój plan" + przelacznik Lista/Szczegoly + (multi-day) przelacznik dni.
@@ -841,7 +888,10 @@ const ReviewSummary = () => {
               /* ── Plan dnia ── */
               <div className="px-5 pt-5 pb-5">
                 {currentPins.length === 0 ? (
-                  <p className="text-center text-sm text-muted-foreground py-10">Brak miejsc w planie tego dnia.</p>
+                  <>
+                    <p className="text-center text-sm text-muted-foreground py-8">Brak miejsc w planie tego dnia.</p>
+                    {renderAddPlaceButton()}
+                  </>
                 ) : !finalized ? (
                   /* Tryb edycji: popraw plan (reorder strzalkami / usun) i zapisz.
                      Lista = edytowalna, Szczegoly = podglad kart. */
@@ -853,6 +903,7 @@ const ReviewSummary = () => {
                       </p>
                     </div>
                     {planView === "list" ? renderEditablePlan(true) : renderSwiper(true, true)}
+                    {renderAddPlaceButton()}
                   </>
                 ) : (
                   /* Plan zamrozony: read-only + ocena + notka + udostepnianie */
@@ -862,6 +913,7 @@ const ReviewSummary = () => {
                     </div>
                     {renderPlanHeader()}
                     {planView === "list" ? renderListReadonly(true) : renderSwiper(false, true)}
+                    {renderAddPlaceButton()}
 
                     {/* Udostepnianie (odblokowane po zapisaniu planu) */}
                     <div className="mt-6 pt-5 border-t border-border/30 flex items-center gap-3">
@@ -951,6 +1003,17 @@ const ReviewSummary = () => {
         place={detailPin}
         city={route?.city}
       />
+
+      {/* ── Dodawanie miejsca do planu dnia ──────────────────────────────── */}
+      {addingPlace && (
+        <AddPinSheet
+          open={addingPlace}
+          onOpenChange={(o) => !o && setAddingPlace(false)}
+          onPinAdd={handleAddPin}
+          cityContext={route?.city ?? ""}
+          existingPinNames={currentPins.map((p: any) => p.place_name)}
+        />
+      )}
 
       {/* ── Fullscreen photo viewer ──────────────────────────────────────── */}
       {viewerUrl && (
