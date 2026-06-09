@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Brain, Plus, ExternalLink, ArrowLeft, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Brain, Plus, ExternalLink, ArrowLeft, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight, Loader2, Maximize2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -100,6 +101,24 @@ function getSnapPx(snap: SnapState, containerH?: number): number {
   if (snap === "peek") return 80;
   if (snap === "half") return Math.round(h * 0.62);
   return Math.round(h * 0.85);
+}
+
+// Mini-mapa (podglad) - Leaflet, nieinteraktywny, markery + linia trasy.
+function buildMiniLeaflet(pins: { lat: number; lng: number }[]): string {
+  const json = JSON.stringify(pins.map((p, i) => ({ lat: p.lat, lng: p.lng, n: i + 1 })));
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+<style>*{margin:0;padding:0}#map{height:100vh;width:100%}.pm{background:#ea580c;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:-apple-system,sans-serif;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}</style>
+</head><body><div id="map"></div><script>
+const pins=${json};
+const map=L.map('map',{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,tap:false,touchZoom:false});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
+const ll=pins.map(p=>[p.lat,p.lng]);
+if(ll.length>1)L.polyline(ll,{color:'#F9662B',weight:3,opacity:.85}).addTo(map);
+pins.forEach(p=>L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class=pm>'+p.n+'</div>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map));
+if(ll.length>1)map.fitBounds(ll,{padding:[26,26]});else if(ll.length===1)map.setView(ll[0],14);
+<\/script></body></html>`;
 }
 
 // ─── Mock plan data for Kraków ────────────────────────────────────────────────
@@ -453,6 +472,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
     detailPhotos: string[];
   } | null>(null);
   const [addPinDay, setAddPinDay] = useState<number | null>(null);
+  const navigate = useNavigate();
   const [showMap, setShowMap] = useState(false);
   const [showSwapOptions, setShowSwapOptions] = useState(false);
   const [swapCandidates, setSwapCandidates] = useState<{ place_name: string; category: string; description: string; suggested_time: string | null; walking_time?: string | null }[]>([]);
@@ -534,7 +554,8 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
     return () => ro.disconnect();
   }, []);
 
-  const sheetHeight = dragH ?? getSnapPx(snap, containerH || undefined);
+  // Drawer ZABLOKOWANY na full (85%) - nie zwija sie (decyzja produktowa).
+  const sheetHeight = getSnapPx("full", containerH || undefined);
 
   // Zamkniecie detalu pinu - przywraca carousel + scroll position.
   const closeDetail = useCallback(() => {
@@ -1187,18 +1208,6 @@ window.addEventListener('message',function(e){
         >
           {/* Drag handle */}
           <div className="flex-shrink-0 relative flex justify-center items-center py-4 select-none">
-            <div
-              className="absolute inset-0 cursor-grab active:cursor-grabbing"
-              style={{ touchAction: "none" }}
-              onPointerDown={handleDragStart}
-              onPointerMove={handleDragMove}
-              onPointerUp={handleDragEnd}
-              onPointerCancel={handleDragEnd}
-              onClick={() => {
-                if (dragH !== null) return;
-                setSnap(s => s === "full" ? "half" : "full");
-              }}
-            />
             <div className="w-10 h-1 rounded-full bg-muted-foreground/25" />
             {altRoutes && altRoutes.length > 1 && onSwitchAlt && altIndex !== undefined && (
               <div className="absolute right-3 flex items-center gap-1" onClick={e => e.stopPropagation()}>
@@ -1505,14 +1514,39 @@ window.addEventListener('message',function(e){
                           )}
                         </div>
                       </div>
+                      {/* Mini-podglad mapy nad przyciskami */}
+                      {(() => {
+                        const miniPins = plan.days.flatMap(d => (d.pins ?? []).filter(p => p.latitude && p.longitude).map(p => ({ lat: p.latitude as number, lng: p.longitude as number })));
+                        if (miniPins.length === 0) return null;
+                        return (
+                          <div className="flex-shrink-0 px-4 pb-2">
+                            <div className="relative h-28 rounded-2xl overflow-hidden border border-border/40 bg-muted">
+                              <iframe srcDoc={buildMiniLeaflet(miniPins)} className="absolute inset-0 w-full h-full border-0 pointer-events-none" title="Podgląd mapy" />
+                              <button onClick={() => setShowMap(true)} aria-label="Rozwiń mapę" className="absolute right-2 bottom-2 h-8 w-8 rounded-lg bg-white shadow-md flex items-center justify-center active:scale-95 transition-transform">
+                                <Maximize2 className="h-4 w-4 text-foreground" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
                       <div className="flex-shrink-0 px-4 pb-4 pt-1 border-t border-border/40 flex gap-2">
-                        <button
-                          onClick={() => setShowMap(true)}
-                          className="flex items-center gap-1.5 px-4 py-3.5 rounded-xl border border-border/60 text-sm font-medium text-muted-foreground shrink-0"
-                        >
-                          <MapIcon className="h-4 w-4" />
-                          Mapa
-                        </button>
+                        {!readOnly ? (
+                          <button
+                            onClick={() => navigate(-1)}
+                            className="flex items-center gap-1.5 px-3 py-3.5 rounded-xl border border-border/60 text-sm font-medium text-muted-foreground shrink-0 whitespace-nowrap"
+                          >
+                            <ArrowLeft className="h-4 w-4" />
+                            Cofnij do dopasowań
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setShowMap(true)}
+                            className="flex items-center gap-1.5 px-4 py-3.5 rounded-xl border border-border/60 text-sm font-medium text-muted-foreground shrink-0"
+                          >
+                            <MapIcon className="h-4 w-4" />
+                            Mapa
+                          </button>
+                        )}
                         <button
                           onClick={handleConfirm}
                           className="flex-1 py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold"

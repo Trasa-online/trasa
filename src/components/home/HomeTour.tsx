@@ -3,7 +3,8 @@ import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-const GUEST_TOUR_KEY = "trasa_guest_tour_session";
+// localStorage (NIE sessionStorage) - onboarding raz na urzadzenie, przetrwa restart apki.
+const GUEST_TOUR_KEY = "trasa_onboarding_done_v1";
 
 // Polskie sieroty: po pojedynczych literach (a i o u w z) twarda spacja.
 const nbsp = (s: string) => s.replace(/ ([aiouwzAIOUWZ]) /g, (_m, l) => " " + l + String.fromCharCode(160));
@@ -23,6 +24,8 @@ const STYLES = `
 @keyframes onb-scroll { 0%,55%{transform:translateY(0)} 80%,100%{transform:translateY(-34px)} }
 @keyframes onb-screenfade { from{opacity:0;transform:translateX(28px)} to{opacity:1;transform:translateX(0)} }
 @keyframes onb-finger { 0%{top:86%;opacity:0} 18%{opacity:1} 45%,100%{top:42%;opacity:0} }
+@keyframes onb-draw { 0%{stroke-dashoffset:400} 55%,100%{stroke-dashoffset:0} }
+@keyframes onb-drop { 0%{opacity:0;transform:translateY(-14px)} 30%,100%{opacity:1;transform:translateY(0)} }
 `;
 
 function Screen({ children }: { children: React.ReactNode }) {
@@ -153,12 +156,35 @@ function AnimRoute() {
   );
 }
 
+// 6. Mapa - trasa na mapie + podglad
+function AnimMap() {
+  const pins: [number, number][] = [[28, 30], [62, 26], [70, 58], [38, 72]];
+  return (
+    <Screen>
+      <div className="absolute inset-0 bg-slate-50">
+        <div className="absolute inset-0 opacity-50" style={{ backgroundImage: "linear-gradient(#e2e8f0 1px,transparent 1px),linear-gradient(90deg,#e2e8f0 1px,transparent 1px)", backgroundSize: "26px 26px" }} />
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 230 330" preserveAspectRatio="none">
+          <polyline points="64,99 143,86 161,191 87,238" fill="none" stroke="#F9662B" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="400" style={{ animation: "onb-draw 2.6s ease-out infinite" }} />
+        </svg>
+        {pins.map(([x, y], i) => (
+          <div key={i} className="absolute" style={{ left: `${x}%`, top: `${y}%`, transform: "translate(-50%, -100%)" }}>
+            <div className="h-6 w-6 rounded-full bg-orange-600 text-white text-[10px] font-bold flex items-center justify-center shadow-lg ring-2 ring-white"
+              style={{ animation: `onb-drop 2.6s ease-out ${i * 0.35}s infinite`, opacity: 0 }}>{i + 1}</div>
+          </div>
+        ))}
+        <div className="absolute right-2 top-2 h-7 w-7 rounded-lg bg-white shadow flex items-center justify-center text-slate-500 text-xs" style={{ animation: "onb-pulse 2s ease-in-out infinite" }}>⤢</div>
+      </div>
+    </Screen>
+  );
+}
+
 const STEPS = [
   { title: "Witaj w Trasie!", desc: "Trasa to speed dating z miastem. W kilka minut ułożysz plan dnia: przeglądasz miejsca, dodajesz te które Cię ciekawią, dostajesz gotową trasę.", Anim: AnimIntro },
   { title: "Planuj solo", desc: "Kliknij przycisk + na środku paska i wybierz „Zaplanuj solo”. Sam przeglądasz miejsca i dodajesz te, które chcesz odwiedzić.", Anim: AnimSolo },
   { title: "Planuj grupowo", desc: "Przycisk + → „Zaplanuj grupowo”. Tworzysz sesję, udostępniasz znajomym kod, a Trasa pokaże Wasze wspólne dopasowania.", Anim: AnimGroup },
   { title: "Dołącz do znajomych", desc: "Masz kod od znajomych? Przycisk + → „Dołącz do sesji”, wpisz kod i parujecie się razem.", Anim: AnimJoin },
   { title: "Z dopasowań powstaje trasa", desc: "Z polubionych i wspólnych miejsc Trasa układa gotowy plan dnia w sensownej kolejności. Plan edytujesz i zapisujesz w dzienniku.", Anim: AnimRoute },
+  { title: "Zobacz trasę na mapie", desc: "Twoje miejsca lądują na mapie w kolejności zwiedzania. W każdej chwili rozwiniesz pełny podgląd mapy, żeby zobaczyć całą trasę.", Anim: AnimMap },
 ];
 
 interface HomeTourProps { onDone: () => void; }
@@ -222,7 +248,7 @@ export const useHomeTour = (isGuest: boolean) => {
 
   useEffect(() => {
     if (isGuest) {
-      if (!sessionStorage.getItem(GUEST_TOUR_KEY)) setShowTour(true);
+      if (!localStorage.getItem(GUEST_TOUR_KEY)) setShowTour(true);
       return;
     }
     if (!user) return;
@@ -232,7 +258,7 @@ export const useHomeTour = (isGuest: boolean) => {
 
   const dismissTour = () => {
     setShowTour(false);
-    if (isGuest) { sessionStorage.setItem(GUEST_TOUR_KEY, "1"); return; }
+    if (isGuest) { localStorage.setItem(GUEST_TOUR_KEY, "1"); return; }
     if (!user) return;
     supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
   };
