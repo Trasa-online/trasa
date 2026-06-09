@@ -142,43 +142,14 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
 
     setForking(true);
     try {
-      const { data: route, error: routeError } = await supabase
-        .from("routes")
-        .insert({
-          user_id: user.id,
-          title: `${selected.title} – ${city}`,
-          city,
-          start_date: format(date, "yyyy-MM-dd"),
-          trip_type: "planning",
-          status: "draft",
-          day_number: 1,
-        })
-        .select("id")
-        .single();
-
-      if (routeError || !route) throw routeError;
-
-      const pinsToInsert = selected.pins.map((pin, i) => ({
-        route_id: route.id,
-        place_name: pin.place_name,
-        address: pin.address,
-        latitude: pin.latitude,
-        longitude: pin.longitude,
-        category: pin.category,
-        description: pin.description,
-        suggested_time: pin.suggested_time,
-        pin_order: i + 1,
-      }));
-
-      const { error: pinsError } = await supabase.from("pins").insert(pinsToInsert);
-      if (pinsError) throw pinsError;
-
-      posthog.capture("route_created", {
-        source: "template",
+      // NIE tworzymy trasy tutaj (to robilo osierocony wpis w dzienniku przed potwierdzeniem).
+      // Trasa powstaje dopiero po "Wybieram ten plan" -> saveRoute. Kreator dostaje szablon
+      // jako initialPlan.
+      posthog.capture("template_opened", {
         template_id: selected.id,
         template_title: selected.title,
         city,
-        pins_count: pinsToInsert.length,
+        pins_count: selected.pins.length,
       });
 
       (supabase as any)
@@ -187,7 +158,6 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
         .eq("id", selected.id)
         .then(() => {});
 
-      // Build RoutePlan from template pins for PlanChatExperience
       const initialPlan = {
         city,
         days: [{ day_number: 1, pins: selected.pins.map(p => ({ ...p, day_number: 1 })) }],
@@ -196,7 +166,6 @@ const TemplateSelection = ({ city, date }: TemplateSelectionProps) => {
       navigate("/create", {
         state: {
           fromTemplate: true,
-          routeId: route.id,
           city,
           date: date.toISOString(),
           initialPlan,

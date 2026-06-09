@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Camera, X, Globe, Lock, Star, Pencil, Check } from "lucide-react";
 import CreatePolecajkaSheet from "@/components/home/CreatePolecajkaSheet";
+import { getPhotoUrl } from "@/lib/placePhotos";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -21,6 +22,13 @@ const CATEGORY_EMOJI: Record<string, string> = {
   walk: "🚶",
 };
 
+const CATEGORY_LABEL: Record<string, string> = {
+  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum", park: "Park",
+  bar: "Bar", club: "Klub", monument: "Zabytek", gallery: "Galeria",
+  market: "Targ", viewpoint: "Punkt widokowy", shopping: "Zakupy", experience: "Atrakcja",
+  walk: "Spacer", other: "Miejsce",
+};
+
 const ReviewSummary = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -31,6 +39,7 @@ const ReviewSummary = () => {
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState("");
   const [savingName, setSavingName] = useState(false);
+  const [planView, setPlanView] = useState<"list" | "cards">("list");
 
   // Badge "Nowa trasa!" w JournalTab znika po wejsciu w wpis. JournalTab robi to
   // optymistycznie zanim nawiguje, ale gdy user wchodzi bezposrednio (push
@@ -73,6 +82,21 @@ const ReviewSummary = () => {
       return data as any;
     },
     enabled: !!routeId && !!user,
+  });
+
+  // Pins (miejsca w planie) - do sekcji "Twój plan"
+  const { data: planPins = [] } = useQuery({
+    queryKey: ["review-summary-pins", routeId],
+    queryFn: async () => {
+      if (!routeId) return [];
+      const { data } = await (supabase as any)
+        .from("pins")
+        .select("id, place_name, address, category, suggested_time, description, image_url, images, pin_order")
+        .eq("route_id", routeId)
+        .order("pin_order", { ascending: true });
+      return data ?? [];
+    },
+    enabled: !!routeId,
   });
 
   // Group session: fetch all participants
@@ -481,6 +505,61 @@ const ReviewSummary = () => {
 
       {/* ── Scrollable content ────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto pb-32">
+
+        {/* ── Twój plan: miejsca po kolei z kategoriami (lista / szczegoly) ── */}
+        {planPins.length > 0 && (
+          <div className="px-5 pt-5 pb-5 border-b border-border/30">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Twój plan</p>
+              <div className="flex rounded-full bg-muted p-0.5">
+                <button onClick={() => setPlanView("list")} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Lista</button>
+                <button onClick={() => setPlanView("cards")} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Szczegóły</button>
+              </div>
+            </div>
+            {planView === "list" ? (
+              <div className="space-y-2">
+                {planPins.map((pin: any, i: number) => (
+                  <div key={pin.id} className="flex items-center gap-3 bg-card border border-border/40 rounded-2xl px-3 py-2.5">
+                    <div className="h-7 w-7 rounded-full bg-orange-600 text-white text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</div>
+                    <span className="text-lg shrink-0">{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold leading-tight truncate">{pin.place_name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {CATEGORY_LABEL[pin.category] ?? "Miejsce"}{pin.suggested_time ? ` · ${pin.suggested_time}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {planPins.map((pin: any, i: number) => {
+                  const img = pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null);
+                  return (
+                    <div key={pin.id} className="rounded-2xl bg-card border border-border/40 overflow-hidden">
+                      {img && (
+                        <div className="relative w-full aspect-[4/3] bg-muted">
+                          <img src={getPhotoUrl(img)} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                        </div>
+                      )}
+                      <div className="p-3.5">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="h-6 w-6 rounded-full bg-orange-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">{i + 1}</div>
+                          <span className="text-base shrink-0">{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>
+                          <p className="text-sm font-bold leading-tight flex-1 min-w-0 truncate">{pin.place_name}</p>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mb-1">
+                          {CATEGORY_LABEL[pin.category] ?? "Miejsce"}{pin.suggested_time ? ` · 🕐 ${pin.suggested_time}` : ""}
+                        </p>
+                        {pin.description && <p className="text-xs text-muted-foreground leading-relaxed">{pin.description}</p>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Celebration banner - only when arriving from "Zakończ trasę" */}
         {isNewCompletion && (

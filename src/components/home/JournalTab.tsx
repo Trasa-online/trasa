@@ -173,7 +173,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
 
   const TABS: { id: JournalTabKey; label: string; count: number }[] = [
     { id: "active", label: "Aktywne", count: active.length },
-    { id: "postcards", label: "Pocztówki", count: postcards.length },
+    { id: "postcards", label: "Wspomnienia", count: postcards.length },
   ];
 
   return (
@@ -362,7 +362,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       {visibleEntries.length === 0 && (
         <div className="py-16 text-center text-sm text-muted-foreground">
           {activeTab === "active" && "Brak tras na dziś"}
-          {activeTab === "postcards" && "Brak pocztówek z minionych podróży"}
+          {activeTab === "postcards" && "Brak wspomnień z minionych podróży"}
         </div>
       )}
 
