@@ -2,6 +2,13 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import imgHome from "@/assets/onboarding/home.png";
+import imgPlusMenu from "@/assets/onboarding/plusmenu.png";
+import imgGroup from "@/assets/onboarding/group.png";
+import imgJoin from "@/assets/onboarding/join.png";
+import imgRoute from "@/assets/onboarding/route.png";
+
+const STEP_IMAGES = [imgHome, imgPlusMenu, imgGroup, imgJoin, imgRoute];
 
 const GUEST_TOUR_KEY = "trasa_guest_tour_session";
 
@@ -92,8 +99,10 @@ const HomeTour = ({ onDone }: HomeTourProps) => {
 
           {/* Content */}
           <div className="px-5 pt-3 pb-2">
-            <div className="text-4xl mb-3">{current.emoji}</div>
-            <h2 className="text-lg font-black mb-1.5 leading-tight">{nbsp(current.title)}</h2>
+            <div className="rounded-2xl overflow-hidden bg-slate-100 border border-border/40 mb-3 flex items-center justify-center" style={{ height: 210 }}>
+              <img src={STEP_IMAGES[step]} alt="" className="h-full w-auto object-contain" draggable={false} />
+            </div>
+            <h2 className="text-lg font-black mb-1.5 leading-tight">{current.emoji} {nbsp(current.title)}</h2>
             <p className="text-sm text-muted-foreground leading-relaxed mb-2">{nbsp(current.desc)}</p>
             <p className="text-xs font-medium text-orange-600">{current.hint}</p>
           </div>
