@@ -4,7 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
-import PlaceDetailSheet from "@/components/home/PlaceDetailSheet";
+import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
@@ -507,17 +508,21 @@ const ReviewSummary = () => {
     ...groupPhotos.map((p: any) => ({ url: p.url, owner: "", mine: false, username: p.username })),
   ];
 
-  // Podglad wizytowki miejsca (PlaceDetailSheet) - mapuje pin na ksztalt Pin.
+  // Podglad wizytowki miejsca - ta sama wizytowka co na swiperze (PlaceSwiperDetail).
+  // Mapujemy pin na MockPlace (jak w FeedActivityCard).
   const openDetail = (pin: any) => setDetailPin({
-    id: pin.id,
+    id: pin.place_id || pin.id || pin.place_name,
     place_name: pin.place_name,
-    address: pin.address,
-    latitude: pin.latitude,
-    longitude: pin.longitude,
-    suggested_time: pin.suggested_time,
-    place_id: pin.place_id,
-    photo_url: pin.photo_url || pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null),
-  });
+    category: (pin.category || "other") as any,
+    city: route?.city ?? "",
+    address: pin.address || "",
+    latitude: pin.latitude ?? 0,
+    longitude: pin.longitude ?? 0,
+    rating: 0,
+    photo_url: resolveStored(pin.photo_url || pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null)) ?? "",
+    vibe_tags: [],
+    description: pin.description || "",
+  } satisfies MockPlace);
 
   // ── Sekcja Ocena + Notka pod miejscem (tylko widok wspomnienia / plan dnia) ──
   const renderRatingNote = (placeName: string) => {
@@ -811,13 +816,6 @@ const ReviewSummary = () => {
                       </p>
                     </div>
                     {planView === "list" ? renderEditablePlan() : renderPlan(false)}
-                    <button
-                      onClick={savePlanDay}
-                      disabled={savingPlan || workingPins.length === 0}
-                      className="mt-4 w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40"
-                    >
-                      {savingPlan ? "Zapisywanie…" : "Zapisz plan dnia"}
-                    </button>
                   </>
                 ) : (
                   /* Plan zamrozony: read-only + ocena + notka + udostepnianie */
@@ -909,10 +907,13 @@ const ReviewSummary = () => {
         <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
       </div>
 
-      {/* ── Podglad wizytowki miejsca ────────────────────────────────────── */}
-      {detailPin && (
-        <PlaceDetailSheet pin={detailPin} open={!!detailPin} onOpenChange={(o) => !o && setDetailPin(null)} />
-      )}
+      {/* ── Podglad wizytowki miejsca (ta sama co na swiperze) ───────────── */}
+      <PlaceSwiperDetail
+        open={!!detailPin}
+        onOpenChange={(o) => !o && setDetailPin(null)}
+        place={detailPin}
+        city={route?.city}
+      />
 
       {/* ── Fullscreen photo viewer ──────────────────────────────────────── */}
       {viewerUrl && (
@@ -952,9 +953,19 @@ const ReviewSummary = () => {
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
-        <button onClick={() => navigate("/dziennik")} className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
-          Gotowe
-        </button>
+        {isMemory && memoryTab === "plan" && !finalized && currentPins.length > 0 ? (
+          <button
+            onClick={savePlanDay}
+            disabled={savingPlan || workingPins.length === 0}
+            className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
+          >
+            {savingPlan ? "Zapisywanie…" : "Zapisz plan dnia"}
+          </button>
+        ) : (
+          <button onClick={() => navigate("/dziennik")} className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
+            Gotowe
+          </button>
+        )}
       </div>
     </div>
   );
