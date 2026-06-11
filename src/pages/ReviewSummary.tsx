@@ -8,7 +8,7 @@ import AddPinSheet from "@/components/route/AddPinSheet";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
-import { getPhotoUrl } from "@/lib/placePhotos";
+import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { compressImage } from "@/lib/imageCompression";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -38,47 +38,6 @@ const CATEGORY_LABEL: Record<string, string> = {
 // Klucz kompozytowy ocena/notka per miejsce w danym dniu (route_id + place_name),
 // zeby to samo miejsce w roznych dniach trasy wielodniowej bylo niezalezne.
 const rkey = (routeId: string, placeName: string) => `${routeId}::${placeName}`;
-
-// Pelny URL (cache/storage/http) uzywamy bezposrednio; surowy photo_reference
-// przepuszczamy przez proxy getPhotoUrl.
-const resolveStored = (img: string | null | undefined): string | null => {
-  if (!img) return null;
-  return /^(https?:|\/api\/|\/storage\/|blob:|data:)/.test(img) ? img : getPhotoUrl(img);
-};
-
-// Zdjecie miejsca: stored (image_url/images) albo fallback do Google Places (jak
-// w kreatorze trasy - LargeCarouselCard). Dzieki temu pins bez wlasnego zdjecia
-// dostaja zdjecie z Google zamiast samej emoji.
-function PlacePhoto({ pin, className, emojiClass }: { pin: any; className?: string; emojiClass?: string }) {
-  const stored = pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null);
-  const [url, setUrl] = useState<string | null>(resolveStored(stored));
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    if (url) return;
-    let cancelled = false;
-    supabase.functions
-      .invoke("google-places-proxy", {
-        body: { placeName: pin.place_name, latitude: pin.latitude || undefined, longitude: pin.longitude || undefined },
-      })
-      .then(({ data }: any) => {
-        const ref = data?.result?.photos?.[0]?.photo_reference;
-        if (ref && !cancelled) { const u = getPhotoUrl(ref, 800); if (u) setUrl(u); }
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pin.place_name]);
-
-  if (url && !failed) {
-    return <img src={url} alt="" className={className} onError={() => setFailed(true)} />;
-  }
-  return (
-    <div className={`${className ?? ""} flex items-center justify-center bg-muted ${emojiClass ?? "text-xl"}`}>
-      {CATEGORY_EMOJI[pin.category] ?? "📍"}
-    </div>
-  );
-}
 
 const ReviewSummary = () => {
   const { user, loading: authLoading } = useAuth();
@@ -1036,7 +995,7 @@ const ReviewSummary = () => {
               <div className="flex-1">
                 <p className="text-base font-black leading-snug">Udostępnić tę trasę innym?</p>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                  Trafi do zakładki Eksploruj i&nbsp;pomoże innym zaplanować podróż. Jeśli nie, zostanie prywatna w&nbsp;Twoich Wspomnieniach. Zmienisz to w&nbsp;każdej chwili.
+                  Trafi do zakładki Eksploruj i&nbsp;pomoże innym zaplanować podróż. Udostępniamy tylko sam plan trasy z&nbsp;Twoimi notkami i&nbsp;ocenami - bez Twoich zdjęć. Jeśli nie, zostanie prywatna w&nbsp;Twoich Wspomnieniach. Zmienisz to w&nbsp;każdej chwili.
                 </p>
               </div>
             </div>

@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { format, parseISO, isValid, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Globe, Lock, Loader2, Trash2, MapPin, Users, Link2, X, ArrowRight, CheckCircle, CalendarDays, Sparkles } from "lucide-react";
+import { Globe, Lock, Loader2, Trash2, MapPin, Users, Link2, X, ArrowRight, CheckCircle, CalendarDays, Sparkles, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,14 @@ interface JournalTabProps {
 }
 
 type JournalTabKey = "active" | "postcards";
+
+// Polska liczba mnoga: 1 osoba obejrzala / 2-4 osoby obejrzaly / 5+ osob obejrzalo.
+const viewsLabel = (n: number): string => {
+  if (n === 1) return "1 osoba obejrzała trasę";
+  const last = n % 10, last2 = n % 100;
+  if (last >= 2 && last <= 4 && (last2 < 10 || last2 >= 20)) return `${n} osoby obejrzały trasę`;
+  return `${n} osób obejrzało trasę`;
+};
 
 const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: JournalTabProps) => {
   const navigate = useNavigate();
@@ -29,7 +37,7 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
       // Own routes (all statuses)
       const { data: ownRoutes } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, is_shared, overall_rating, new_for_users, chat_status")
+        .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, is_shared, overall_rating, views, new_for_users, chat_status")
         .eq("user_id", userId)
         .order("updated_at", { ascending: false });
 
@@ -335,6 +343,12 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
                     </span>
                   )}
                 </div>
+                {/* Nagroda: ile osob skorzystalo z udostepnionej trasy */}
+                {entry.is_shared && (entry.views ?? 0) > 0 && (
+                  <div className="flex items-center gap-1 mt-1.5 bg-orange-500/90 rounded-full px-2 py-0.5 text-[10px] font-bold text-white w-fit">
+                    <Eye className="h-3 w-3" />{viewsLabel(entry.views)}
+                  </div>
+                )}
               </div>
               <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm rounded-full p-1.5">
                 {entry.is_shared === false

@@ -1,9 +1,15 @@
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { MapPin, Clock, ArrowLeft, Sparkles } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft } from "lucide-react";
+import { PlacePhoto } from "@/components/PlacePhoto";
+import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
+import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import { resolveStored } from "@/components/PlacePhoto";
+import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   restaurant: "🍽️", cafe: "☕", museum: "🏛️", park: "🌳",
@@ -11,38 +17,70 @@ const CATEGORY_EMOJI: Record<string, string> = {
   market: "🛒", viewpoint: "🌅", shopping: "🛍️", experience: "🎭",
   walk: "🚶", other: "📍",
 };
+const CATEGORY_LABEL: Record<string, string> = {
+  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum", park: "Park",
+  bar: "Bar", club: "Klub", monument: "Zabytek", gallery: "Galeria",
+  market: "Targ", viewpoint: "Punkt widokowy", shopping: "Zakupy", experience: "Atrakcja",
+  walk: "Spacer", other: "Miejsce",
+};
 
 export default function SharedRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [planView, setPlanView] = useState<"list" | "cards">("list");
+  const [detailPin, setDetailPin] = useState<any | null>(null);
 
   const { data: route, isLoading: routeLoading } = useQuery({
     queryKey: ["shared-route", id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("routes")
-        .select("id, city, day_number, start_date, ai_summary, ai_highlight, review_photos")
+        .select("id, title, city, user_id, day_number, start_date, ai_summary, ai_highlight")
         .eq("id", id as string)
         .eq("is_shared", true)
         .single();
       if (error) return null;
-      return data;
+      return data as any;
     },
     enabled: !!id,
   });
 
+  // Inkrementacja licznika wyswietlen (nagroda dla autora w jego dzienniku).
+  useEffect(() => {
+    if (!route?.id) return;
+    void (supabase as any).rpc("increment_route_views", { route_id: route.id });
+  }, [route?.id]);
+
   const { data: pins = [] } = useQuery({
     queryKey: ["shared-route-pins", id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("pins")
-        .select("id, place_name, address, category, suggested_time, images, image_url, pin_order, description")
+        .select("id, place_name, address, category, suggested_time, images, image_url, photo_url, place_id, latitude, longitude, pin_order, description")
         .eq("route_id", id!)
         .order("pin_order");
       return (data ?? []) as any[];
     },
     enabled: !!id,
   });
+
+  // Oceny + notki autora trasy (pin_ratings SELECT jest publiczny).
+  const { data: ratings = [] } = useQuery({
+    queryKey: ["shared-route-ratings", id, route?.user_id],
+    queryFn: async () => {
+      if (!route?.user_id) return [];
+      const { data } = await (supabase as any)
+        .from("pin_ratings")
+        .select("place_name, rating, note")
+        .eq("route_id", id!)
+        .eq("user_id", route.user_id);
+      return (data ?? []) as any[];
+    },
+    enabled: !!id && !!route?.user_id,
+  });
+
+  const ratingMap: Record<string, { rating: number | null; note: string | null }> = {};
+  for (const r of ratings) ratingMap[r.place_name] = { rating: r.rating, note: r.note };
 
   if (routeLoading) {
     return (
@@ -65,117 +103,157 @@ export default function SharedRoute() {
     );
   }
 
-  const heroPhoto = route.review_photos?.[0];
-  const dateLabel = route.start_date
-    ? format(new Date(route.start_date), "d MMMM yyyy", { locale: pl })
-    : "";
+  // #2: udostepniona trasa NIE zawiera zdjec uzytkownika - hero to ilustracja
+  // placeholder (mocny gradient overlay dla kontrastu tekstu, WCAG).
+  const heroPhoto = getRandomPinPlaceholder(route.id);
+  const dateLabel = route.start_date ? format(new Date(route.start_date), "d MMMM yyyy", { locale: pl }) : "";
   const cityLabel = route.city || "Podróż";
-  const dayLabel = route.day_number ? `Dzień ${route.day_number}` : "";
+
+  const openDetail = (pin: any) => setDetailPin({
+    id: pin.place_id || pin.id || pin.place_name,
+    place_name: pin.place_name,
+    category: (pin.category || "other") as any,
+    city: route.city ?? "",
+    address: pin.address || "",
+    latitude: pin.latitude ?? 0,
+    longitude: pin.longitude ?? 0,
+    rating: 0,
+    photo_url: resolveStored(pin.photo_url || pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null)) ?? "",
+    vibe_tags: [],
+    description: pin.description || "",
+  } satisfies MockPlace);
+
+  // Read-only ocena + notka autora pod miejscem.
+  const renderRatingNote = (placeName: string, centered = false) => {
+    const r = ratingMap[placeName];
+    if (!r || (!r.rating && !r.note)) return null;
+    return (
+      <div className={`mt-3 pt-3 border-t border-border/40 ${centered ? "text-center" : ""}`}>
+        {r.rating ? (
+          <>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Ocena autora</p>
+            <div className={`flex items-center gap-1 ${centered ? "justify-center" : ""}`}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <span key={n} className={`text-lg leading-none ${n <= r.rating! ? "opacity-100" : "opacity-20"}`}>⭐</span>
+              ))}
+            </div>
+          </>
+        ) : null}
+        {r.note ? (
+          <>
+            {r.rating ? <div className="my-3 h-px bg-border/40" /> : null}
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notka autora</p>
+            <p className="text-sm text-foreground/80 leading-relaxed text-left whitespace-pre-wrap">{r.note}</p>
+          </>
+        ) : null}
+      </div>
+    );
+  };
+
+  const renderList = () => {
+    const groups: Record<string, any[]> = {};
+    pins.forEach((p: any) => { const k = p.category || "other"; (groups[k] ??= []).push(p); });
+    return (
+      <div className="space-y-4">
+        {Object.entries(groups).map(([cat, items]) => (
+          <div key={cat}>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <span>{CATEGORY_EMOJI[cat] ?? "📍"}</span>{CATEGORY_LABEL[cat] ?? "Miejsce"}
+            </p>
+            <div className="space-y-2">
+              {items.map((pin: any) => (
+                <div key={pin.id} className="bg-card border border-border/40 rounded-2xl p-2.5">
+                  <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 text-left active:opacity-70 transition-opacity">
+                    <PlacePhoto pin={pin} className="h-14 w-14 rounded-xl object-cover shrink-0" emojiClass="text-xl" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
+                      {pin.address && <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{pin.address}</p>}
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                  </button>
+                  {renderRatingNote(pin.place_name)}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderSwiper = () => (
+    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
+      {pins.map((pin: any, i: number) => (
+        <div key={pin.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm flex flex-col">
+          <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
+            <div className="relative w-full aspect-[4/3] bg-muted">
+              <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-4xl" />
+              <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
+            </div>
+            <div className="px-4 pt-4">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
+                <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+              </span>
+              <p className="text-base font-black leading-tight">{pin.place_name}</p>
+              {pin.description && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{pin.description}</p>}
+            </div>
+          </button>
+          <div className="px-4 pb-4 pt-1">{renderRatingNote(pin.place_name, true)}</div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
 
-      {/* Hero */}
+      {/* Hero - ilustracja placeholder (bez zdjec autora) */}
       <div className="relative w-full aspect-[4/5] flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
-        {heroPhoto ? (
-          <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-8xl opacity-20">🗺️</div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/75" />
+        <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/25 to-black/80" />
 
-        {/* Back */}
         <div className="absolute left-0 right-0 flex items-center px-4"
           style={{ top: "max(16px, env(safe-area-inset-top, 16px))" }}>
           <button onClick={() => navigate("/")}
             className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
             <ArrowLeft className="h-5 w-5 text-white" />
           </button>
-          {/* Shared badge */}
           <span className="ml-3 text-xs font-semibold text-white/80 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-1.5">
             <Sparkles className="h-3 w-3" /> Trasa polecana
           </span>
         </div>
 
-        {/* City + date */}
         <div className="absolute bottom-0 left-0 right-0 px-5 pb-6">
           {dateLabel && <p className="text-white/70 text-sm mb-1">{dateLabel}</p>}
-          <h1 className="text-white text-3xl font-black leading-tight drop-shadow-sm">{cityLabel}</h1>
-          {dayLabel && <p className="text-white/70 text-base font-medium mt-0.5">{dayLabel}</p>}
+          <h1 className="text-white text-3xl font-black leading-tight drop-shadow-sm">{route.title || cityLabel}</h1>
         </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto pb-32">
 
-        {/* AI highlight */}
         {route.ai_highlight && (
           <div className="px-5 pt-6 pb-5 border-b border-border/30">
-            <p className="text-[22px] font-bold leading-snug text-foreground">
-              „{route.ai_highlight}"
-            </p>
+            <p className="text-[22px] font-bold leading-snug text-foreground">„{route.ai_highlight}"</p>
           </div>
         )}
-
-        {/* AI summary */}
         {route.ai_summary && (
           <div className="px-5 pt-5 pb-5 border-b border-border/30">
             <p className="text-sm text-foreground/70 leading-relaxed">{route.ai_summary}</p>
           </div>
         )}
 
-        {/* Places */}
+        {/* Plan trasy - toggle Lista / Szczegoly */}
         {pins.length > 0 && (
           <div className="px-5 pt-5 pb-5 border-b border-border/30">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-              Miejsca w tej trasie
-            </p>
-            <div className="space-y-3">
-              {pins.map((pin: any, i: number) => {
-                const thumb = pin.images?.[0] ?? pin.image_url ?? null;
-                return (
-                  <div key={pin.id} className="flex items-center gap-3">
-                    {/* Number */}
-                    <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
-                      {i + 1}
-                    </div>
-                    {/* Thumbnail */}
-                    <div className="h-12 w-12 rounded-xl overflow-hidden bg-muted shrink-0">
-                      {thumb ? (
-                        <img src={thumb} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xl">
-                          {CATEGORY_EMOJI[pin.category] ?? "📍"}
-                        </div>
-                      )}
-                    </div>
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold leading-tight truncate">{pin.place_name}</p>
-                      {pin.suggested_time && (
-                        <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <Clock className="h-3 w-3" /> {pin.suggested_time}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Plan trasy</p>
+              <div className="flex rounded-full bg-muted p-0.5">
+                <button onClick={() => setPlanView("list")} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Lista</button>
+                <button onClick={() => setPlanView("cards")} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Szczegóły</button>
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* User photos (rest) */}
-        {(route.review_photos?.length ?? 0) > 1 && (
-          <div className="pt-5 pb-5 border-b border-border/30">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 px-5">Zdjęcia</p>
-            <div className="flex gap-2.5 overflow-x-auto px-5 scrollbar-none pb-1">
-              {route.review_photos.slice(1).map((url: string) => (
-                <div key={url} className="flex-shrink-0 w-32 h-32 rounded-2xl overflow-hidden shadow-sm">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                </div>
-              ))}
-            </div>
+            {planView === "list" ? renderList() : renderSwiper()}
           </div>
         )}
 
@@ -185,6 +263,14 @@ export default function SharedRoute() {
           <span>Stworzone z pomocą <span className="font-semibold text-foreground">Trasa</span></span>
         </div>
       </div>
+
+      {/* Podglad wizytowki miejsca */}
+      <PlaceSwiperDetail
+        open={!!detailPin}
+        onOpenChange={(o) => !o && setDetailPin(null)}
+        place={detailPin}
+        city={route.city}
+      />
 
       {/* CTA */}
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-3 bg-background/90 backdrop-blur-md border-t border-border/30"
