@@ -106,23 +106,30 @@ function getSnapPx(snap: SnapState, containerH?: number): number {
 // Mini-mapa (podglad) - Leaflet z zoomem (przyciski + pinch), markery + linia trasy.
 // Auto-focus: reaguje na postMessage {type:'focus',lat,lng} (pin aktywnej karty) oraz
 // {type:'fit'} (cala trasa). Aktywny marker jest powiekszony.
-function buildMiniLeaflet(pins: { lat: number; lng: number }[]): string {
-  const json = JSON.stringify(pins.map((p, i) => ({ lat: p.lat, lng: p.lng, n: i + 1 })));
+function buildMiniLeaflet(pins: { lat: number; lng: number; day: number; n: number }[]): string {
+  const json = JSON.stringify(pins);
+  // Kolory per dzien (te same co karty karuzeli / RouteMap). Markery numerowane
+  // 1..X w obrebie dnia, polilinia laczy punkty danego dnia w jego kolorze - user
+  // widzi uklad trasy podzielony na dni i moze go dostosowac.
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
 <style>*{margin:0;padding:0}#map{height:100vh;width:100%}
-.pm{background:#ea580c;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:-apple-system,sans-serif;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:all .2s}
-.pm.active{width:30px;height:30px;font-size:13px;background:#c2410c;box-shadow:0 2px 10px rgba(0,0,0,.45);z-index:1000}
+.pm{color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:-apple-system,sans-serif;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:all .2s}
+.pm.active{width:30px;height:30px;font-size:13px;box-shadow:0 2px 10px rgba(0,0,0,.5);z-index:1000}
 .leaflet-control-zoom{box-shadow:0 1px 6px rgba(0,0,0,.2)!important;border:none!important}</style>
 </head><body><div id="map"></div><script>
 const pins=${json};
+const COLORS=['#ea580c','#2563eb','#16a34a','#7c3aed','#d97706'];
+const colorFor=function(d){return COLORS[(((d||1)-1)%COLORS.length+COLORS.length)%COLORS.length];};
 const map=L.map('map',{zoomControl:true,attributionControl:false,scrollWheelZoom:false,doubleClickZoom:true,boxZoom:false,keyboard:false,touchZoom:true,dragging:true});
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
 const ll=pins.map(p=>[p.lat,p.lng]);
-if(ll.length>1)L.polyline(ll,{color:'#F9662B',weight:3,opacity:.85}).addTo(map);
+const byDay={};
+pins.forEach(p=>{(byDay[p.day]=byDay[p.day]||[]).push([p.lat,p.lng]);});
+Object.keys(byDay).forEach(function(d){const seg=byDay[d];if(seg.length>1)L.polyline(seg,{color:colorFor(+d),weight:3,opacity:.85}).addTo(map);});
 const markers=[];
-pins.forEach(p=>{const m=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class=pm>'+p.n+'</div>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map);markers.push(m);});
+pins.forEach(p=>{const m=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class=pm style="background:'+colorFor(p.day)+'">'+p.n+'</div>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map);markers.push(m);});
 function fitAll(){if(ll.length>1)map.fitBounds(ll,{padding:[26,26]});else if(ll.length===1)map.setView(ll[0],14);}
 fitAll();
 function setActive(idx){markers.forEach((m,i)=>{const el=m.getElement();if(el){const d=el.querySelector('.pm');if(d)d.classList.toggle('active',i===idx);}});}
@@ -1554,7 +1561,7 @@ window.addEventListener('message',function(e){
                       </div>
                       {/* Mini-podglad mapy nad przyciskami */}
                       {(() => {
-                        const miniPins = plan.days.flatMap(d => (d.pins ?? []).filter(p => p.latitude && p.longitude).map(p => ({ lat: p.latitude as number, lng: p.longitude as number })));
+                        const miniPins = plan.days.flatMap(d => (d.pins ?? []).filter(p => p.latitude && p.longitude).map((p, i) => ({ lat: p.latitude as number, lng: p.longitude as number, day: d.day_number, n: i + 1 })));
                         if (miniPins.length === 0) return null;
                         return (
                           <div className="flex-shrink-0 px-4 pb-2">

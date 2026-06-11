@@ -168,6 +168,10 @@ Plan zwracany w EXTEND MODE ma tę samą liczbę DNI co AKTUALNY PLAN (dni mogą
 ` : ""}
 ## PREFERENCJE USERA
 - Liczba dni: ${preferences.numDays}
+
+## ⛔ TWARDY LIMIT DNI (NIENARUSZALNY)
+- Plan ma DOKŁADNIE ${preferences.numDays} ${preferences.numDays === 1 ? "dzień" : "dni"}. NIGDY nie zwracaj więcej dni niż ${preferences.numDays}. Maksimum w całej aplikacji to 3 dni.
+- Jeśli user ma DUŻO miejsc (nawet kilkanaście) - NIE twórz nowego dnia. Upchnij wszystkie w istniejące ${preferences.numDays} ${preferences.numDays === 1 ? "dzień" : "dni"} (gęstszy plan, więcej punktów na dzień, przeliczone godziny). Lepiej bardzo pełny dzień niż dodatkowy dzień.
 ${dateInfo}
 ${timeInfo}
 ${cityInfo}
@@ -394,6 +398,9 @@ serve(async (req) => {
     // dla zgodnosci z JSON API convention - client wysyla na top level).
     const preferences = rawPreferences ? {
       ...rawPreferences,
+      // [#5] Twardy limit 3 dni - AI nigdy nie planuje wiecej. Nadmiar miejsc
+      // upycha w istniejace dni, nie tworzy nowych.
+      numDays: Math.min(Math.max(Number(rawPreferences.numDays) || 1, 1), 3),
       starting_location_lat: starting_location_lat ?? rawPreferences.startingLocationLat,
       starting_location_lng: starting_location_lng ?? rawPreferences.startingLocationLng,
     } : rawPreferences;

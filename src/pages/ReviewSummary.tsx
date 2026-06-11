@@ -15,7 +15,7 @@ import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { isNative } from "@/lib/platform";
 import { Camera as CapCamera } from "@capacitor/camera";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -241,7 +241,7 @@ const ReviewSummary = () => {
     if (!routeId) return;
     const url = `https://trasa.travel/#/route/${routeId}`;
     const res = await share({ title: route?.title || route?.city || "Trasa", text: "Zobacz moją trasę w Trasa", url });
-    if (res.ok && res.method === "clipboard") toast.success("Link skopiowany");
+    if (res.ok && res.method === "clipboard") notify.success("Link skopiowany");
   };
 
   const togglePublic = async (val: boolean) => {
@@ -303,7 +303,7 @@ const ReviewSummary = () => {
       const msg = String(err?.message ?? err);
       if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("denied")) return;
       console.error("[ReviewSummary] native photo pick failed:", msg);
-      toast.error("Nie udało się wybrać zdjęć");
+      notify.error("Nie udało się wybrać zdjęć");
     }
   };
 
@@ -334,7 +334,7 @@ const ReviewSummary = () => {
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
     setViewerUrl(null);
-    toast.success("Ustawiono okładkę");
+    notify.success("Ustawiono okładkę");
   };
 
   const removePhoto = async (url: string, owner: string) => {
@@ -418,12 +418,12 @@ const ReviewSummary = () => {
         queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] }),
         queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] }),
       ]);
-      toast.success(finalize ? "Plan dnia zapisany" : "Zapisano zmiany");
+      notify.success(finalize ? "Plan dnia zapisany" : "Zapisano zmiany");
       // Po zatwierdzeniu planu (notki/oceny gotowe) - zapytaj o udostepnienie.
       if (finalize) setShowSharePrompt(true);
     } catch (e: any) {
       console.error("[ReviewSummary] savePlan failed:", e?.message ?? e);
-      toast.error("Nie udało się zapisać planu");
+      notify.error("Nie udało się zapisać planu");
     }
     setSavingPlan(false);
   };
@@ -450,11 +450,11 @@ const ReviewSummary = () => {
       .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, latitude, longitude, place_id, photo_url, pin_order")
       .single();
     setAddingPlace(false);
-    if (error || !row) { console.error("[ReviewSummary] add pin failed:", error?.message); toast.error("Nie udało się dodać miejsca"); return; }
+    if (error || !row) { console.error("[ReviewSummary] add pin failed:", error?.message); notify.error("Nie udało się dodać miejsca"); return; }
     // Jesli trwa edycja (draft) - dopisz do draftu zeby nie zginal przy kolejnym zapisie.
     if (draft && draft.dayId === activeRouteId) setDraft({ dayId: activeRouteId, pins: [...draft.pins, row] });
     queryClient.invalidateQueries({ queryKey: ["review-all-pins", idsKey] });
-    toast.success("Dodano miejsce");
+    notify.success("Dodano miejsce");
   };
 
   // Autozapis: jesli user wyjdzie z edycji bez "Zapisz", persystujemy zmiany planu
@@ -494,10 +494,10 @@ const ReviewSummary = () => {
     const { error } = await (supabase as any).from("routes").update({ title: trimmed || null }).eq("id", routeId);
     setSavingName(false);
     setEditingName(false);
-    if (error) { toast.error("Nie udało się zapisać nazwy"); return; }
+    if (error) { notify.error("Nie udało się zapisać nazwy"); return; }
     queryClient.setQueryData(["review-summary-route", routeId], (old: any) => old ? { ...old, title: trimmed || null } : old);
     if (user) queryClient.invalidateQueries({ queryKey: ["journal-entries", user.id] });
-    toast.success("Zapisano nazwę");
+    notify.success("Zapisano nazwę");
   };
 
   // Zakres dat: trasa wielodniowa => "12 - 14 maja 2026", jednodniowa => "12 maja 2026".
@@ -937,43 +937,8 @@ const ReviewSummary = () => {
                 <p className="text-sm text-foreground/70 leading-relaxed">{activeDay.ai_summary}</p>
               </div>
             )}
-
-            {/* Zdjecia (poziomy scroll) */}
-            <div className="pt-5 pb-5 border-b border-border/30">
-              <div className="flex items-center justify-between px-5 mb-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Zdjęcia</p>
-                {photos.length > 0 && photos.length < MAX_PHOTOS && (
-                  <button onClick={triggerPhotoPick} disabled={uploading} className="text-xs font-semibold text-primary">
-                    {uploading ? "Dodawanie…" : "+ Dodaj"}
-                  </button>
-                )}
-              </div>
-              {photos.length > 0 ? (
-                <div className="flex gap-2.5 overflow-x-auto px-5 scrollbar-none pb-1">
-                  {photos.map((url) => (
-                    <div key={url} className="relative flex-shrink-0 w-32 h-32 rounded-2xl overflow-hidden shadow-sm">
-                      <img src={url} alt="" className="w-full h-full object-cover" />
-                      <button onClick={() => removePhoto(url, routeId!)} className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm rounded-full p-1">
-                        <X className="h-3 w-3 text-white" />
-                      </button>
-                    </div>
-                  ))}
-                  {photos.length < MAX_PHOTOS && (
-                    <button onClick={triggerPhotoPick} disabled={uploading}
-                      className="flex-shrink-0 w-32 h-32 rounded-2xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-1.5 text-muted-foreground">
-                      <Camera className="h-6 w-6" />
-                      <span className="text-xs">{uploading ? "…" : "Dodaj"}</span>
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <button onClick={triggerPhotoPick} disabled={uploading}
-                  className="mx-5 w-[calc(100%-40px)] h-24 rounded-2xl border-2 border-dashed border-border/40 flex items-center justify-center gap-2.5 text-muted-foreground active:bg-muted/40 transition-colors">
-                  <Camera className="h-5 w-5" />
-                  <span className="text-sm">{uploading ? "Dodawanie…" : "Dodaj zdjęcia z podróży"}</span>
-                </button>
-              )}
-            </div>
+            {/* Sekcja zdjec usunieta w aktywnym wpisie - zostaje sam plan trasy.
+                Zdjecia dodaje sie dopiero we wspomnieniu (zakladka Galeria). */}
           </>
         )}
 
@@ -1022,7 +987,7 @@ const ReviewSummary = () => {
             </div>
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => { togglePublic(true); setShowSharePrompt(false); toast.success("Trasa widoczna w Eksploruj"); }}
+                onClick={() => { togglePublic(true); setShowSharePrompt(false); notify.success("Trasa widoczna w Eksploruj"); }}
                 className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
               >
                 Udostępnij w Eksploruj

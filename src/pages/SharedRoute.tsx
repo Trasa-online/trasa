@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark } from "lucide-react";
@@ -100,11 +100,11 @@ export default function SharedRoute() {
           original_creator_id: user.id,
         }))
       );
-      toast.success("Trasa zapisana w Twoim dzienniku");
+      notify.success("Trasa zapisana w Twoim dzienniku");
       navigate(`/review-summary?route=${newRoute.id}`);
     } catch (e: any) {
       console.error("[SharedRoute] save failed:", e?.message ?? e);
-      toast.error("Nie udało się zapisać trasy");
+      notify.error("Nie udało się zapisać trasy");
     }
     setSaving(false);
   };
