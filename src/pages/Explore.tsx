@@ -1,5 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { MapPin, Heart, Trash2, ArrowRight, Compass } from "lucide-react";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -194,9 +196,17 @@ const LikedTab = () => {
 
 const Explore = () => {
   const [tab, setTab] = useState<Tab>("feed");
+  const [likedVersion, setLikedVersion] = useState(0);
+  const queryClient = useQueryClient();
+
+  const handleRefresh = async () => {
+    // Odswiez feed (queries TanStack) + polubione (localStorage -> re-render).
+    await queryClient.invalidateQueries();
+    setLikedVersion((v) => v + 1);
+  };
 
   return (
-    <div className="flex-1 flex flex-col pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
+    <PullToRefresh onRefresh={handleRefresh} className="flex-1 flex flex-col pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
       <div className="px-4 mb-3">
         <h1 className="text-xl font-black tracking-tight pt-2">Eksploruj</h1>
         <p className="text-xs text-muted-foreground mt-1">Polecane miejsca, trasy i&nbsp;Twoje polubione.</p>
@@ -229,9 +239,9 @@ const Explore = () => {
       </div>
 
       <div className="flex-1 px-4">
-        {tab === "feed" ? <DiscoveryFeed /> : <LikedTab />}
+        {tab === "feed" ? <DiscoveryFeed /> : <LikedTab key={likedVersion} />}
       </div>
-    </div>
+    </PullToRefresh>
   );
 };
 

@@ -41,7 +41,7 @@ export default function SharedRoute() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("routes")
-        .select("id, title, city, user_id, day_number, start_date, ai_summary, ai_highlight")
+        .select("id, title, city, user_id, day_number, start_date, ai_summary, ai_highlight, review_photos")
         .eq("id", id as string)
         .eq("is_shared", true)
         .single();
@@ -167,9 +167,11 @@ export default function SharedRoute() {
     );
   }
 
-  // #2: udostepniona trasa NIE zawiera zdjec uzytkownika - hero to ilustracja
-  // placeholder (mocny gradient overlay dla kontrastu tekstu, WCAG).
-  const heroPhoto = getRandomPinPlaceholder(route.id);
+  // Hero = okladka wybrana przez autora (review_photos[0]) jesli istnieje, inaczej
+  // ilustracja placeholder. Sama OKLADKA jest pokazywana (galeria zdjec nie).
+  const cover = (route.review_photos ?? []).find((u: any) => typeof u === "string" && u.trim() !== "") ?? null;
+  const hasRealPhoto = !!cover;
+  const heroPhoto = cover ?? getRandomPinPlaceholder(route.id);
   const dateLabel = route.start_date ? format(new Date(route.start_date), "d MMMM yyyy", { locale: pl }) : "";
   const cityLabel = route.city || "Podróż";
 
@@ -272,9 +274,9 @@ export default function SharedRoute() {
     <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
 
       {/* Hero - ilustracja placeholder (bez zdjec autora) */}
-      <div className="relative w-full aspect-[4/5] flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
+      <div className={`relative w-full ${hasRealPhoto ? "aspect-[4/5]" : "aspect-[16/10]"} flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500`}>
         <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/25 to-black/80" />
+        <div className={`absolute inset-0 bg-gradient-to-b ${hasRealPhoto ? "from-black/40 via-transparent to-black/75" : "from-black/35 via-black/25 to-black/80"}`} />
 
         <div className="absolute left-0 right-0 flex items-center px-4"
           style={{ top: "max(16px, env(safe-area-inset-top, 16px))" }}>

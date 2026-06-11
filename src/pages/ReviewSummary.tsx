@@ -981,7 +981,7 @@ const ReviewSummary = () => {
               <div className="flex-1">
                 <p className="text-base font-black leading-snug">Udostępnić tę trasę innym?</p>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                  Trafi do zakładki Eksploruj i&nbsp;pomoże innym zaplanować podróż. Udostępniamy tylko sam plan trasy z&nbsp;Twoimi notkami i&nbsp;ocenami - bez Twoich zdjęć. Jeśli nie, zostanie prywatna w&nbsp;Twoich Wspomnieniach. Zmienisz to w&nbsp;każdej chwili.
+                  Trafi do zakładki Eksploruj i&nbsp;pomoże innym zaplanować podróż. Udostępniamy plan trasy z&nbsp;Twoją okładką, notkami i&nbsp;ocenami - bez galerii Twoich zdjęć. Jeśli nie, zostanie prywatna w&nbsp;Twoich Wspomnieniach. Zmienisz to w&nbsp;każdej chwili.
                 </p>
               </div>
             </div>
