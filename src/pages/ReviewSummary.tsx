@@ -923,6 +923,13 @@ const ReviewSummary = () => {
               <div className="px-5 pt-5 pb-5 border-b border-border/30">
                 {renderPlanHeader(true)}
                 {planView === "list" ? renderEditablePlan(false) : renderSwiper(true, false)}
+                {/* Wejscie do pelnego kreatora trasy (AI chat + karuzela + mapa) dla tego dnia */}
+                <button
+                  onClick={() => navigate("/create", { state: { existingRouteId: activeRouteId, city: route?.city } })}
+                  className="mt-4 w-full py-3 rounded-full border-2 border-orange-600 text-orange-600 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                >
+                  <MapIcon className="h-4 w-4" /> Otwórz w kreatorze trasy
+                </button>
               </div>
             )}
 
