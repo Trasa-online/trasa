@@ -150,7 +150,7 @@ const DayPinList = ({
                 onDrop={(e) => handleDrop(e, index)}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                  "flex items-center gap-2 bg-card rounded-xl p-3 transition-all border border-border/40",
+                  "flex items-center gap-2 bg-card rounded-2xl p-3 transition-all border border-border/40",
                   isDragging && "opacity-40 scale-[0.97]",
                   isDragOver && "ring-2 ring-foreground/20",
                   onPinClick && "cursor-pointer active:scale-[0.98]"

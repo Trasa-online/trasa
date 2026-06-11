@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share2 } from "lucide-react";
+import { useShare } from "@/hooks/useShare";
 import AddPinSheet from "@/components/route/AddPinSheet";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -43,6 +44,7 @@ const ReviewSummary = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const share = useShare();
   const [searchParams] = useSearchParams();
   const routeId = searchParams.get("route");
   const [editingName, setEditingName] = useState(false);
@@ -233,6 +235,14 @@ const ReviewSummary = () => {
       setNotes(nmap);
     }
   }, [existingRatings]);
+
+  // Udostepnij link do publicznej trasy (/#/route/:id). HashRouter => link z #.
+  const shareLink = async () => {
+    if (!routeId) return;
+    const url = `https://trasa.travel/#/route/${routeId}`;
+    const res = await share({ title: route?.title || route?.city || "Trasa", text: "Zobacz moją trasę w Trasa", url });
+    if (res.ok && res.method === "clipboard") toast.success("Link skopiowany");
+  };
 
   const togglePublic = async (val: boolean) => {
     setIsPublic(val);
@@ -890,6 +900,14 @@ const ReviewSummary = () => {
                         <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${isPublic ? "translate-x-5" : "translate-x-0"}`} />
                       </button>
                     </div>
+                    {isPublic && (
+                      <button
+                        onClick={shareLink}
+                        className="mt-3 w-full py-3 rounded-full border-2 border-orange-600 text-orange-600 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                      >
+                        <Share2 className="h-4 w-4" /> Udostępnij link do trasy
+                      </button>
+                    )}
                   </>
                 )}
               </div>

@@ -360,6 +360,31 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // [H2] verify_jwt=false na tej funkcji => musimy sami sprawdzic auth, inaczej
+    // KTOKOLWIEK moglby wyslac dowolny push (z dowolnym deep-link url) do dowolnego
+    // usera. Dozwolone: wywolanie service-role (push-scheduler) ALBO zalogowany user.
+    const authToken = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    let authorized = !!authToken && authToken === serviceRoleKey;
+    if (!authorized && authToken) {
+      try {
+        const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+        const authClient = createClient(supabaseUrl, anonKey, {
+          global: { headers: { Authorization: `Bearer ${authToken}` } },
+        });
+        const { data: { user } } = await authClient.auth.getUser(authToken);
+        authorized = !!user;
+      } catch (_e) { /* nieprawidlowy token */ }
+    }
+    if (!authorized) {
+      return new Response(
+        JSON.stringify({ error: "unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { user_id, title, body, url } = await req.json();
 
     if (!user_id || !title) {
@@ -369,8 +394,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
     const vapidSubject = Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@trasa.app";

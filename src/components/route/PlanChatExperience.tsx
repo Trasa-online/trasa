@@ -292,7 +292,7 @@ function LargeCarouselCard({
         {fetchedPhoto && !imgFailed ? (
           <img src={fetchedPhoto} alt={pin.place_name} className="w-full h-full object-cover" onError={() => setImgFailed(true)} />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-br from-stone-100 to-stone-200 dark:from-stone-800 dark:to-stone-900">
+          <div className="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-br from-stone-100 to-stone-200">
             {CATEGORY_EMOJI[pin.category] ?? "📍"}
           </div>
         )}

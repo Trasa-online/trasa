@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft } from "lucide-react";
+import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -27,8 +29,10 @@ const CATEGORY_LABEL: Record<string, string> = {
 export default function SharedRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [planView, setPlanView] = useState<"list" | "cards">("list");
   const [detailPin, setDetailPin] = useState<any | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const { data: route, isLoading: routeLoading } = useQuery({
     queryKey: ["shared-route", id],
@@ -45,11 +49,65 @@ export default function SharedRoute() {
     enabled: !!id,
   });
 
-  // Inkrementacja licznika wyswietlen (nagroda dla autora w jego dzienniku).
+  // Inkrementacja licznika wyswietlen (nagroda dla autora). Dedup per-urzadzenie
+  // (localStorage), zeby refresh/powroty nie zawyzaly "X osob obejrzalo".
   useEffect(() => {
     if (!route?.id) return;
+    try {
+      const key = "trasa_viewed_routes";
+      const seen: string[] = JSON.parse(localStorage.getItem(key) || "[]");
+      if (seen.includes(route.id)) return;
+      localStorage.setItem(key, JSON.stringify([...seen, route.id].slice(-200)));
+    } catch { /* brak localStorage - i tak inkrementuj raz na mount */ }
     void (supabase as any).rpc("increment_route_views", { route_id: route.id });
   }, [route?.id]);
+
+  // Zapisz cudza trase do swojego dziennika (kopia pinow). Domyka petle
+  // discovery -> moja sesja (re-discovery). Wymaga konta.
+  const saveToMine = async () => {
+    if (!user) { navigate("/auth"); return; }
+    if (!route || !pins.length || saving) return;
+    setSaving(true);
+    try {
+      const { data: newRoute, error } = await (supabase as any)
+        .from("routes")
+        .insert({
+          user_id: user.id,
+          title: route.title || route.city,
+          city: route.city,
+          status: "draft",
+          trip_type: "planning",
+          day_number: 1,
+          is_shared: false,
+          new_for_users: [user.id],
+        })
+        .select("id")
+        .single();
+      if (error || !newRoute) throw error;
+      await (supabase as any).from("pins").insert(
+        pins.map((p: any, idx: number) => ({
+          route_id: newRoute.id,
+          place_name: p.place_name,
+          address: p.address ?? null,
+          description: p.description ?? null,
+          category: p.category ?? "other",
+          latitude: p.latitude ?? null,
+          longitude: p.longitude ?? null,
+          place_id: p.place_id ?? null,
+          photo_url: p.photo_url ?? null,
+          suggested_time: p.suggested_time ?? null,
+          pin_order: idx,
+          original_creator_id: user.id,
+        }))
+      );
+      toast.success("Trasa zapisana w Twoim dzienniku");
+      navigate(`/review-summary?route=${newRoute.id}`);
+    } catch (e: any) {
+      console.error("[SharedRoute] save failed:", e?.message ?? e);
+      toast.error("Nie udało się zapisać trasy");
+    }
+    setSaving(false);
+  };
 
   const { data: pins = [] } = useQuery({
     queryKey: ["shared-route-pins", id],
@@ -276,10 +334,17 @@ export default function SharedRoute() {
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-3 bg-background/90 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         <button
-          onClick={() => navigate(`/plan?city=${encodeURIComponent(cityLabel)}`)}
-          className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform shadow-lg shadow-primary/25"
+          onClick={saveToMine}
+          disabled={saving}
+          className="w-full py-4 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25 disabled:opacity-50"
         >
-          Zaplanuj podobną trasę w {cityLabel}
+          <Bookmark className="h-5 w-5" />{saving ? "Zapisywanie…" : "Zapisz tę trasę do siebie"}
+        </button>
+        <button
+          onClick={() => navigate(`/plan?city=${encodeURIComponent(cityLabel)}`)}
+          className="w-full mt-2 py-2 text-sm font-medium text-muted-foreground active:text-foreground transition-colors"
+        >
+          Zaplanuj własną trasę w&nbsp;{cityLabel}
         </button>
       </div>
     </div>

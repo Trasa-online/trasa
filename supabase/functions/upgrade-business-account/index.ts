@@ -111,15 +111,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (!userId) {
-      const payload = decodeJwtPayload(token);
-      if (payload?.sub && typeof payload.sub === "string") {
-        userId = payload.sub;
-        verifyMethod = "decode-trust";
-        console.warn("[upgrade-business-account] using untrusted JWT sub, both verify methods failed");
-      }
-    }
-
+    // [C2] USUNIETO fallback "decode-trust": wczesniej, gdy obie zweryfikowane
+    // sciezki zawiodly, braliśmy payload.sub z NIEPODPISANEGO (tylko base64) JWT
+    // i ustawialiśmy email/haslo dla tego usera -> atakujacy forge'ujac sub mogl
+    // przejac dowolne konto (takze admina). Teraz brak zweryfikowanego userId => odmowa.
     if (!userId) {
       console.error("[upgrade-business-account] all verify methods failed", {
         tokenLen: token.length,
