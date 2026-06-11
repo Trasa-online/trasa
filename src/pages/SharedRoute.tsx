@@ -10,6 +10,7 @@ import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark } from
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import { resolveStored } from "@/components/PlacePhoto";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 
@@ -33,6 +34,7 @@ export default function SharedRoute() {
   const [planView, setPlanView] = useState<"list" | "cards">("list");
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showDateSheet, setShowDateSheet] = useState(false);
 
   const { data: route, isLoading: routeLoading } = useQuery({
     queryKey: ["shared-route", id],
@@ -64,10 +66,12 @@ export default function SharedRoute() {
 
   // Zapisz cudza trase do swojego dziennika (kopia pinow). Domyka petle
   // discovery -> moja sesja (re-discovery). Wymaga konta.
-  const saveToMine = async () => {
+  const saveToMine = async (tripDate?: Date) => {
     if (!user) { navigate("/auth"); return; }
     if (!route || !pins.length || saving) return;
     setSaving(true);
+    setShowDateSheet(false);
+    const dateStr = tripDate ? format(tripDate, "yyyy-MM-dd") : null;
     try {
       const { data: newRoute, error } = await (supabase as any)
         .from("routes")
@@ -78,6 +82,8 @@ export default function SharedRoute() {
           status: "draft",
           trip_type: "planning",
           day_number: 1,
+          start_date: dateStr,
+          end_date: dateStr,
           is_shared: false,
           new_for_users: [user.id],
         })
@@ -288,7 +294,7 @@ export default function SharedRoute() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto pb-32">
+      <div className="flex-1 overflow-y-auto pb-44">
 
         {route.ai_highlight && (
           <div className="px-5 pt-6 pb-5 border-b border-border/30">
@@ -334,7 +340,7 @@ export default function SharedRoute() {
       <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-5 pt-3 bg-background/90 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         <button
-          onClick={saveToMine}
+          onClick={() => { if (!user) { navigate("/auth"); return; } setShowDateSheet(true); }}
           disabled={saving}
           className="w-full py-4 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25 disabled:opacity-50"
         >
@@ -347,6 +353,34 @@ export default function SharedRoute() {
           Zaplanuj własną trasę w&nbsp;{cityLabel}
         </button>
       </div>
+
+      {/* Sheet wyboru daty wyjazdu przy zapisie cudzej trasy do dziennika */}
+      {showDateSheet && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowDateSheet(false)}
+        >
+          <div
+            className="w-full max-w-md bg-card rounded-t-3xl flex flex-col max-h-[88dvh] shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 pt-5 pb-1 text-center shrink-0">
+              <p className="text-lg font-black leading-tight">Kiedy planujesz tę trasę?</p>
+              <p className="text-xs text-muted-foreground mt-1">Wybierz datę, żeby trasa trafiła do&nbsp;dziennika.</p>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <FullCalendarPicker onConfirm={(d) => saveToMine(d)} />
+            </div>
+            <button
+              onClick={() => saveToMine()}
+              disabled={saving}
+              className="mx-5 mt-1 mb-[max(16px,env(safe-area-inset-bottom))] py-2.5 text-sm font-medium text-muted-foreground active:text-foreground transition-colors shrink-0 disabled:opacity-50"
+            >
+              Zapisz bez daty
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

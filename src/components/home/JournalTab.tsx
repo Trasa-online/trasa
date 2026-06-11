@@ -322,8 +322,8 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
             }}
             className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform cursor-pointer"
           >
-            {/* Cover photo - w "Aktywne" nizsza (to tylko placeholder, nie realne zdjecie) */}
-            <div className={cn("relative w-full overflow-hidden bg-muted", activeTab === "active" ? "aspect-[5/2]" : "aspect-[16/9]")}>
+            {/* Cover photo */}
+            <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
               <img
                 src={thumb}
                 alt=""

@@ -16,8 +16,12 @@ const STYLES: Record<ToastType, { wrap: string; icon: string; Icon: typeof Info 
 function show(type: ToastType, title: string, description?: string, duration = 4000) {
   const s = STYLES[type];
   const Ic = s.Icon;
+  // unstyled:true wylacza wlasne style Sonnera, ale toaster-level
+  // toastOptions.classNames.toast (bg-card, padding, border, shadow) nadal sie
+  // aplikuje i tworzy podwojny/bialy box. Inline `style` (wyzsza specyficznosc
+  // niz klasy) neutralizuje kontener; szerokosc i dolny margines tez tu ustawiamy.
   return toast.custom((id) => (
-    <div className={`w-[calc(100vw-2rem)] max-w-md rounded-2xl border ${s.wrap} shadow-lg shadow-black/5 p-3.5 flex items-start gap-3 mb-[calc(4rem+env(safe-area-inset-bottom,0px))]`}>
+    <div className={`w-full rounded-2xl border ${s.wrap} shadow-lg shadow-black/5 p-3.5 flex items-start gap-3`}>
       <div className="h-11 w-11 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
         <Ic className={`h-5 w-5 ${s.icon}`} strokeWidth={2.4} />
       </div>
@@ -33,7 +37,19 @@ function show(type: ToastType, title: string, description?: string, duration = 4
         <X className="h-4 w-4" />
       </button>
     </div>
-  ), { duration, unstyled: true });
+  ), {
+    duration,
+    unstyled: true,
+    style: {
+      background: "transparent",
+      border: "none",
+      boxShadow: "none",
+      padding: 0,
+      width: "calc(100vw - 2rem)",
+      maxWidth: "28rem",
+      marginBottom: "calc(4rem + env(safe-area-inset-bottom, 0px))",
+    },
+  });
 }
 
 export const notify = {
