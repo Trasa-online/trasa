@@ -218,8 +218,10 @@ const RouteSummaryDialog = ({
           completed_at: new Date().toISOString(),
         }]);
 
-        // Save the same route for all other group session participants
-        if (groupSession?.otherMemberIds?.length && day.day_number === 1) {
+        // Save the same route for all other group session participants.
+        // Per-day (routePayload jest per-dzien): czlonkowie grupy dostaja KOMPLETNA
+        // trase wielodniowa (folder_id wspoldzielony) - nie tylko dzien 1.
+        if (groupSession?.otherMemberIds?.length) {
           for (const memberId of groupSession.otherMemberIds) {
             const { data: memberRoute } = await supabase
               .from("routes")

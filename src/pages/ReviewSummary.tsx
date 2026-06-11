@@ -853,6 +853,9 @@ const ReviewSummary = () => {
                     </button>
                   ))}
                 </div>
+                {galleryPhotos.length > 0 && (
+                  <p className="text-center text-[11px] text-muted-foreground/70 px-6 pt-3">Dotknij zdjęcia, żeby zobaczyć je w&nbsp;pełni i&nbsp;ustawić okładkę wpisu.</p>
+                )}
                 {galleryPhotos.length === 0 && (
                   <p className="text-center text-sm text-muted-foreground py-10 px-6">Brak zdjęć z tej podróży. Dodaj pierwsze wspomnienia.</p>
                 )}

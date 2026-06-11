@@ -179,7 +179,7 @@ const LikedTab = () => {
             <div className="px-4 py-3 border-t border-border/20">
               <button
                 onClick={() => handleCreateRoute(group)}
-                className="w-full py-2.5 rounded-full bg-foreground text-background font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+                className="w-full py-2.5 rounded-full bg-primary text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
               >
                 Stwórz trasę z tych miejsc
                 <ArrowRight className="h-3.5 w-3.5" />
