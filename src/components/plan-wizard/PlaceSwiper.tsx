@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Star, ArrowRight, ChevronUp, RotateCcw } from "lucide-react";
+import { MapPin, Star, ArrowRight, ChevronUp, RotateCcw, CheckCircle2 } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
@@ -630,6 +630,8 @@ const EmptyState = ({
   hasSwipedAny,
   onResetToday,
   resetting,
+  onGoToMatches,
+  reviewedTitle,
 }: {
   likedPlaces: MockPlace[];
   matchedRoutes: MatchedRoute[];
@@ -640,6 +642,8 @@ const EmptyState = ({
   hasSwipedAny?: boolean;
   onResetToday: () => void;
   resetting: boolean;
+  onGoToMatches?: () => void;
+  reviewedTitle: string;
 }) => {
   if (likedPlaces.length === 0) {
     // Empty from start (filter restrictive, no places match) vs swiped-through-all
@@ -678,15 +682,39 @@ const EmptyState = ({
     );
   }
 
+  // Brak dopasowanych tras wzorcowych - wycentrowany komunikat o przejrzeniu
+  // kategorii/wszystkich miejsc + przejscie do zakladki Dopasowania (gdzie user
+  // uklada plan). W exploreMode (brak onGoToMatches) fallback do onProceed.
+  if (matchedRoutes.length === 0 && !loadingExamples) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5">
+        <div className="h-16 w-16 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center">
+          <CheckCircle2 className="h-8 w-8 text-orange-600" strokeWidth={2.2} />
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-2xl font-black text-foreground leading-tight">{reviewedTitle}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-[300px]">
+            Przejdź do zakładki dopasowań i&nbsp;stwórz swój plan.
+          </p>
+        </div>
+        <button
+          onClick={() => (onGoToMatches ? onGoToMatches() : onProceed())}
+          className="px-8 py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center gap-2 active:scale-[0.97] transition-transform shadow-lg shadow-primary/25"
+        >
+          {onGoToMatches ? "Przechodzę do dopasowań" : `Ułóż plan z ${likedPlaces.length} miejsc`}
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-safe-6 pb-6">
       {/* Header */}
       <div className="pt-6 pb-4 text-center">
         <p className="text-2xl font-black text-foreground">Gotowe!</p>
         <p className="text-sm text-muted-foreground mt-1">
-          {matchedRoutes.length > 0
-            ? "Znalazłam trasy pasujące do Twoich wyborów"
-            : "Zaplanujmy trasę z Twoich miejsc"}
+          {loadingExamples ? "Szukam tras pasujących do Twoich wyborów…" : "Znalazłam trasy pasujące do Twoich wyborów"}
         </p>
       </div>
 
@@ -927,6 +955,18 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const categoryFilterKey = categoryFilters.join(",");
   const dietFilterKey = (dietFilters ?? []).join(",");
   const hasCategoryFilter = categoryFilters.length > 0;
+  // Naglowek empty state po przejrzeniu wszystkich miejsc: "{kategoria} przejrzana!"
+  // (1 kategoria) / "Wybrane kategorie przejrzane!" (kilka) / "Wszystkie miejsca
+  // przejrzane!" (brak filtra).
+  const reviewedTitle = (() => {
+    if (categoryFilters.length === 0) return "Wszystkie miejsca przejrzane!";
+    if (categoryFilters.length > 1) return "Wybrane kategorie przejrzane!";
+    const id = categoryFilters[0];
+    const main = MAIN_CATEGORIES.find(c => c.id === id);
+    const sub = MAIN_CATEGORIES.flatMap(c => c.subcategories).find(s => s.id === id);
+    const label = main?.label ?? sub?.label ?? (CATEGORY_LABELS as Record<string, string>)[id];
+    return label ? `${label} przejrzana!` : "Wszystkie miejsca przejrzane!";
+  })();
   const navigate = useNavigate();
   const { user, isAnonymous } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
@@ -1551,6 +1591,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         hasSwipedAny={history.length > 0}
         onResetToday={handleResetToday}
         resetting={resetting}
+        onGoToMatches={onSwitchToMatches}
+        reviewedTitle={reviewedTitle}
       />
     );
   }
