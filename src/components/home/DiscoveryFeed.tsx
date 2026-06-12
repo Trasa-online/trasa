@@ -36,6 +36,7 @@ type PolecaneRoute = {
   ai_highlight: string | null;
   author_name: string;
   author_avatar: string | null;
+  placeCount?: number;
 };
 
 type PolecaneCreatorPlan = {
@@ -419,14 +420,153 @@ function PolecaneRow({
   );
 }
 
+// ── Redesign: trasy uzytkownikow (Najnowsze + w Warszawie) ─────────────────────
+
+// Ranking kategorii dla okladki: najbardziej "pocztowkowe" pierwsze.
+const CAT_RANK: Record<string, number> = {
+  viewpoint: 0, monument: 1, park: 2, gallery: 3, museum: 4, experience: 5,
+  market: 6, shopping: 7, club: 8, bar: 9, cafe: 10, restaurant: 11, walk: 12,
+};
+
+const placesLabel = (n: number): string => {
+  if (n === 1) return "1 miejsce";
+  const l = n % 10, l2 = n % 100;
+  if (l >= 2 && l <= 4 && (l2 < 10 || l2 >= 20)) return `${n} miejsca`;
+  return `${n} miejsc`;
+};
+
+// Wzbogaca wiersze routes o okladke (najatrakcyjniejsze zdjecie miejsca),
+// autora (profil) i liczbe miejsc. Reuzywane przez obie sekcje.
+async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
+  if (!routes.length) return [];
+  const routeIds = routes.map((r) => r.id);
+  const photoMap = new Map<string, string>();
+  const countMap = new Map<string, number>();
+  const { data: pinRows } = await (supabase as any)
+    .from("pins")
+    .select("route_id, photo_url, image_url, category, pin_order")
+    .in("route_id", routeIds);
+  const best = new Map<string, { url: string; rank: number; order: number }>();
+  for (const p of (pinRows ?? []) as any[]) {
+    countMap.set(p.route_id, (countMap.get(p.route_id) ?? 0) + 1);
+    const url = resolveStored(p.photo_url || p.image_url);
+    if (!url) continue;
+    const rank = CAT_RANK[p.category as string] ?? 50;
+    const order = p.pin_order ?? 999;
+    const cur = best.get(p.route_id);
+    if (!cur || rank < cur.rank || (rank === cur.rank && order < cur.order)) {
+      best.set(p.route_id, { url, rank, order });
+    }
+  }
+  for (const [rid, v] of best) photoMap.set(rid, v.url);
+
+  const userIds = [...new Set(routes.map((r) => r.user_id).filter(Boolean))];
+  const profileMap = new Map<string, any>();
+  if (userIds.length) {
+    const { data: profiles } = await (supabase as any)
+      .from("profiles").select("id, username, first_name, avatar_url").in("id", userIds);
+    for (const p of profiles ?? []) profileMap.set(p.id, p);
+  }
+
+  return routes.map((r): PolecaneRoute => {
+    const prof = profileMap.get(r.user_id);
+    return {
+      kind: "route", id: r.id, title: r.title, city: r.city,
+      photo: photoMap.get(r.id) ?? null,
+      ai_highlight: r.ai_highlight ?? null,
+      author_name: prof?.first_name || prof?.username || "Użytkownik",
+      author_avatar: prof?.avatar_url ?? null,
+      placeCount: countMap.get(r.id) ?? 0,
+    };
+  });
+}
+
+// Karta pozioma (Najnowsze trasy) - portretowa okladka z tytulem na zdjeciu.
+function RouteCardH({ route, onClick }: { route: PolecaneRoute; onClick: () => void }) {
+  const photo = route.photo ?? getRandomPinPlaceholder(route.id);
+  return (
+    <button onClick={onClick} className="shrink-0 w-[46vw] max-w-[200px] snap-start text-left active:scale-[0.97] transition-transform">
+      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted shadow-sm">
+        <img src={photo} alt={route.title} loading="lazy" className="w-full h-full object-cover"
+          onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(route.id + "_fb"); }} />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-3">
+          <p className="text-white font-bold text-sm leading-snug line-clamp-2 drop-shadow-sm">{route.title}</p>
+          <p className="text-white/85 text-[11px] mt-1 flex items-center gap-1">
+            <MapPin className="h-3 w-3 shrink-0" />{route.city ?? "-"}
+            {route.placeCount ? <span className="opacity-70">· {route.placeCount}</span> : null}
+          </p>
+        </div>
+      </div>
+      <div className="mt-2 px-0.5"><AuthorChip name={route.author_name} avatar={route.author_avatar} /></div>
+    </button>
+  );
+}
+
+// Karta pionowa (Trasy w Warszawie) - duza okladka + tytul + autor pod spodem.
+function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => void }) {
+  const photo = route.photo ?? getRandomPinPlaceholder(route.id);
+  return (
+    <button onClick={onClick} className="w-full text-left active:scale-[0.98] transition-transform">
+      <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-muted shadow-sm">
+        <img src={photo} alt={route.title} loading="lazy" className="w-full h-full object-cover"
+          onError={(e) => { (e.target as HTMLImageElement).src = getRandomPinPlaceholder(route.id + "_fb"); }} />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+        {route.placeCount ? (
+          <span className="absolute top-3 left-3 bg-black/45 backdrop-blur-sm rounded-full px-2.5 py-1 text-[11px] font-semibold text-white flex items-center gap-1">
+            <MapPin className="h-3 w-3" />{placesLabel(route.placeCount)}
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-2.5">
+        <p className="font-black text-base leading-snug line-clamp-2">{route.title}</p>
+        {route.ai_highlight && <p className="text-xs text-muted-foreground italic line-clamp-1 mt-0.5">„{route.ai_highlight}"</p>}
+        <div className="mt-2"><AuthorChip name={route.author_name} avatar={route.author_avatar} /></div>
+      </div>
+    </button>
+  );
+}
+
 // ── Main export ────────────────────────────────────────────────────────────────
 
 export default function DiscoveryFeed() {
   const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
   const [activeCreator, setActiveCreator] = useState<PolecaneCreatorPlan | null>(null);
+  const navigate = useNavigate();
+
+  // Najnowsze udostepnione trasy (poziomy scroll).
+  const { data: newest = [], isLoading: newestLoading } = useQuery({
+    queryKey: ["discovery-newest-routes"],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("routes")
+        .select("id, title, city, ai_highlight, user_id, created_at")
+        .eq("is_shared", true).not("title", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(12);
+      return enrichRouteRows(data ?? []);
+    },
+    staleTime: 60_000,
+  });
+
+  // Trasy w Warszawie (lista pionowa).
+  const { data: warszawa = [], isLoading: wawaLoading } = useQuery({
+    queryKey: ["discovery-warszawa-routes"],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("routes")
+        .select("id, title, city, ai_highlight, user_id, created_at, views")
+        .eq("is_shared", true).not("title", "is", null).ilike("city", "warszawa%")
+        .order("views", { ascending: false, nullsFirst: false })
+        .limit(30);
+      return enrichRouteRows(data ?? []);
+    },
+    staleTime: 60_000,
+  });
 
   const { data: motywy = [], isLoading: motywyLoading } = useQuery({
     queryKey: ["discovery-motywy-warszawa"],
+    enabled: false,
     queryFn: async () => {
       const { data: cols, error } = await (supabase as any)
         .from("discovery_collections")
@@ -472,6 +612,7 @@ export default function DiscoveryFeed() {
 
   const { data: polecane = [], isLoading: polecaneLoading } = useQuery({
     queryKey: ["discovery-polecane"],
+    enabled: false,
     queryFn: async () => {
       const [routesRes, creatorRes] = await Promise.all([
         (supabase as any)
@@ -584,6 +725,7 @@ export default function DiscoveryFeed() {
   // bothEmpty), pokazuje top 10 najnowszych. Empty state = brak sekcji.
   const { data: userPolecajki = [] } = useQuery({
     queryKey: ["user-polecajki"],
+    enabled: false,
     queryFn: async () => {
       const { data: cols, error } = await (supabase as any)
         .from("discovery_collections")
@@ -611,6 +753,7 @@ export default function DiscoveryFeed() {
 
   const { data: fallbackCollections = [] } = useQuery({
     queryKey: ["discovery-fallback"],
+    enabled: false,
     queryFn: async () => {
       const { data: cols, error } = await (supabase as any)
         .from("discovery_collections")
@@ -654,7 +797,8 @@ export default function DiscoveryFeed() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const isLoading = motywyLoading || polecaneLoading;
+  const isLoading = newestLoading || wawaLoading;
+  void motywyLoading; void polecaneLoading;
 
   return (
     <>
@@ -670,43 +814,40 @@ export default function DiscoveryFeed() {
           </div>
         </div>
       ) : (
-        <div className="space-y-5">
-          {motywy.length > 0 && <MotywyRow collections={motywy} onOpen={setActiveCol} />}
-          {userPolecajki.length > 0 && <UserPolecajkiRow collections={userPolecajki} onOpen={setActiveCol} />}
-          {polecane.length > 0 && <PolecaneRow entries={polecane} onCreatorOpen={setActiveCreator} />}
-          {bothEmpty && fallbackCollections.length > 0 && (
+        <div className="space-y-7">
+          {/* Najnowsze trasy - poziomy scroll (jak RECENT ISSUES) */}
+          {newest.length > 0 && (
             <div>
-              <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
-                {fallbackCollections.map((col) => {
-                  const photoItem = col.items.find((i) => i.photo_url) ?? col.items[0];
-                  return (
-                    <button
-                      key={col.id}
-                      onClick={() => setActiveCol(col)}
-                      className="shrink-0 w-[82vw] max-w-[320px] rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.97] transition-transform snap-start"
-                    >
-                      <div className="aspect-[16/10] overflow-hidden bg-muted">
-                        {photoItem?.photo_url ? (
-                          <img src={photoItem.photo_url} alt={col.title} className="w-full h-full object-cover" loading="lazy" />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-amber-200 to-orange-300" />
-                        )}
-                      </div>
-                      <div className="px-3.5 py-2.5 space-y-1">
-                        <p className="font-bold text-sm leading-snug line-clamp-2">{col.title}</p>
-                        {col.city && (
-                          <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            {col.city}
-                          </div>
-                        )}
-                        <AuthorChip name={col.author_name} avatar={col.author_avatar} />
-                      </div>
-                    </button>
-                  );
-                })}
-                <div className="shrink-0 w-2" />
+              <p className="text-sm font-black uppercase tracking-wide mb-3 px-1">Najnowsze trasy</p>
+              <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1 -mx-1 px-1">
+                {newest.map((r) => (
+                  <RouteCardH key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
+                ))}
+                <div className="shrink-0 w-0.5" />
               </div>
+            </div>
+          )}
+
+          {/* Trasy w Warszawie - lista pionowa (jak LATEST) */}
+          {warszawa.length > 0 && (
+            <div>
+              <div className="flex items-center gap-3 mb-4 px-1">
+                <h2 className="text-xl font-black tracking-tight shrink-0">Trasy w Warszawie</h2>
+                <div className="flex-1 h-[3px] bg-foreground rounded-full" />
+              </div>
+              <div className="space-y-5">
+                {warszawa.map((r) => (
+                  <RouteCardV key={r.id} route={r} onClick={() => navigate(`/route/${r.id}`)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {newest.length === 0 && warszawa.length === 0 && (
+            <div className="py-16 text-center px-8">
+              <div className="text-5xl mb-3">🗺️</div>
+              <p className="text-base font-bold">Brak tras w Eksploruj</p>
+              <p className="text-sm text-muted-foreground mt-1">Udostępnij swoją trasę, żeby pojawiła się tutaj i&nbsp;pomogła innym zaplanować podróż.</p>
             </div>
           )}
         </div>
