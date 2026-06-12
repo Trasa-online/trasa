@@ -19,17 +19,33 @@ export function PullToRefresh({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const startY = useRef<number | null>(null);
+  const startX = useRef<number>(0);
+  // Kierunek gestu ustalany RAZ na gest: "v" pionowy (pull), "h" poziomy (scroll w
+  // bok np. w "Najnowsze trasy" - wtedy NIE odpalamy pull), null = jeszcze nieznany.
+  const lockDir = useRef<"v" | "h" | null>(null);
   const [pull, setPull] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
   const onTouchStart = (e: React.TouchEvent) => {
     if (refreshing) return;
+    lockDir.current = null;
+    startX.current = e.touches[0].clientX;
     startY.current = (ref.current?.scrollTop ?? 0) <= 0 ? e.touches[0].clientY : null;
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
     if (startY.current === null || refreshing) return;
     const dy = e.touches[0].clientY - startY.current;
+    const dx = e.touches[0].clientX - startX.current;
+    // Ustal kierunek gdy ruch przekroczy maly prog; potem zablokuj na caly gest.
+    if (lockDir.current === null) {
+      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+        lockDir.current = Math.abs(dy) > Math.abs(dx) ? "v" : "h";
+      } else {
+        return;
+      }
+    }
+    if (lockDir.current !== "v") { setPull(0); return; } // gest poziomy -> nie ruszamy
     if (dy > 0 && (ref.current?.scrollTop ?? 0) <= 0) {
       setPull(Math.min(MAX, dy * 0.5)); // opor (resistance)
     } else {
@@ -41,6 +57,7 @@ export function PullToRefresh({
     if (startY.current === null) { setPull(0); return; }
     const reached = pull >= THRESHOLD;
     startY.current = null;
+    lockDir.current = null;
     if (reached && !refreshing) {
       setRefreshing(true);
       setPull(THRESHOLD);
