@@ -27,6 +27,26 @@ const CATEGORY_LABEL: Record<string, string> = {
   walk: "Spacer", other: "Miejsce",
 };
 
+// Lekka mapa trasy (Leaflet w iframe) - bez zaleznosci od Google Maps providera,
+// dziala na samodzielnej publicznej stronie udostepnionej trasy.
+function buildRouteMapHtml(pins: { lat: number; lng: number; n: number; name: string }[]): string {
+  const json = JSON.stringify(pins);
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+<style>*{margin:0;padding:0;box-sizing:border-box}#map{height:100vh;width:100%}
+.pm{color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:-apple-system,sans-serif;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);background:#ea580c}</style>
+</head><body><div id="map"></div><script>
+const pins=${json};
+const map=L.map('map',{zoomControl:true,attributionControl:false,scrollWheelZoom:false,touchZoom:true,dragging:true});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
+const ll=pins.map(p=>[p.lat,p.lng]);
+if(ll.length>1)L.polyline(ll,{color:'#ea580c',weight:3,opacity:.7,dashArray:'6 5'}).addTo(map);
+pins.forEach(p=>{L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class=pm>'+p.n+'</div>',iconSize:[26,26],iconAnchor:[13,13]})}).bindPopup('<b style="font-size:12px">'+p.name+'</b>').addTo(map);});
+if(ll.length>1)map.fitBounds(ll,{padding:[30,30]});else if(ll.length===1)map.setView(ll[0],14);
+<\/script></body></html>`;
+}
+
 export default function SharedRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -195,6 +215,9 @@ export default function SharedRoute() {
   // -> ilustracja placeholder. Sama okladka/zdjecie miejsca (galeria zdjec nie).
   const userCover = (route.review_photos ?? []).find((u: any) => typeof u === "string" && u.trim() !== "") ?? null;
   const placeCover = resolveStored(pins[0]?.photo_url || pins[0]?.image_url);
+  const mapPins = (pins as any[])
+    .filter((p) => p.latitude && p.longitude)
+    .map((p, i) => ({ lat: p.latitude as number, lng: p.longitude as number, n: i + 1, name: p.place_name as string }));
   const cover = userCover ?? placeCover;
   const hasRealPhoto = !!cover;
   const heroPhoto = cover ?? getRandomPinPlaceholder(route.id);
@@ -377,6 +400,16 @@ export default function SharedRoute() {
               </div>
             </div>
             {planView === "list" ? renderList() : renderSwiper()}
+          </div>
+        )}
+
+        {/* Mapa trasy na samym dole pod miejscami */}
+        {mapPins.length > 0 && (
+          <div className="px-5 pt-5 pb-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Mapa trasy</p>
+            <div className="rounded-2xl overflow-hidden border border-border/40 h-64">
+              <iframe srcDoc={buildRouteMapHtml(mapPins)} className="w-full h-full border-0" title="Mapa trasy" loading="lazy" />
+            </div>
           </div>
         )}
 

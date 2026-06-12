@@ -466,7 +466,7 @@ const PlanWizard = () => {
                         onClick={handleProceedFromMatches}
                         className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
                       >
-                        Zaplanuj trasę · {selectedCount} {selectedCount === 1 ? "miejsce" : "miejsc"}
+                        Zaproponuj trasę z wybranych miejsc
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </div>

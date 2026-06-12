@@ -1372,7 +1372,7 @@ const GroupSession = () => {
                   }}
                   className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
                 >
-                  {existingRoute ? "Stwórz nową trasę →" : "Przejdź do tworzenia trasy →"}
+                  {existingRoute ? "Zaproponuj nową trasę →" : "Zaproponuj trasę z wybranych miejsc →"}
                 </button>
               )}
               {/* Hint dla uczestnikow gdy host jeszcze nie zapisal trasy */}

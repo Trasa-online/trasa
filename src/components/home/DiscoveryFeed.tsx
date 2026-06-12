@@ -34,9 +34,18 @@ type PolecaneRoute = {
   city: string | null;
   photo: string | null;
   ai_highlight: string | null;
+  summary?: string | null;
+  categories?: string[];
   author_name: string;
   author_avatar: string | null;
   placeCount?: number;
+};
+
+const CAT_LABEL: Record<string, string> = {
+  restaurant: "Restauracja", cafe: "Kawiarnia", museum: "Muzeum", park: "Park",
+  bar: "Bar", club: "Klub", monument: "Zabytek", gallery: "Galeria",
+  market: "Targ", viewpoint: "Punkt widokowy", shopping: "Zakupy", experience: "Atrakcja",
+  walk: "Spacer", other: "Miejsce",
 };
 
 type PolecaneCreatorPlan = {
@@ -442,13 +451,19 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
   const routeIds = routes.map((r) => r.id);
   const photoMap = new Map<string, string>();
   const countMap = new Map<string, number>();
+  const catMap = new Map<string, string[]>(); // 3 glowne kategorie (wg pin_order)
   const { data: pinRows } = await (supabase as any)
     .from("pins")
     .select("route_id, photo_url, image_url, category, pin_order")
-    .in("route_id", routeIds);
+    .in("route_id", routeIds)
+    .order("pin_order", { ascending: true });
   const best = new Map<string, { url: string; rank: number; order: number }>();
   for (const p of (pinRows ?? []) as any[]) {
     countMap.set(p.route_id, (countMap.get(p.route_id) ?? 0) + 1);
+    if (p.category) {
+      const arr = catMap.get(p.route_id) ?? [];
+      if (arr.length < 3 && !arr.includes(p.category)) { arr.push(p.category); catMap.set(p.route_id, arr); }
+    }
     const url = resolveStored(p.photo_url || p.image_url);
     if (!url) continue;
     const rank = CAT_RANK[p.category as string] ?? 50;
@@ -474,6 +489,8 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
       kind: "route", id: r.id, title: r.title, city: r.city,
       photo: photoMap.get(r.id) ?? null,
       ai_highlight: r.ai_highlight ?? null,
+      summary: r.ai_summary ?? null,
+      categories: catMap.get(r.id) ?? [],
       author_name: prof?.first_name || prof?.username || "Użytkownik",
       author_avatar: prof?.avatar_url ?? null,
       placeCount: countMap.get(r.id) ?? 0,
@@ -520,8 +537,19 @@ function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => v
       </div>
       <div className="mt-2.5">
         <p className="font-black text-base leading-snug line-clamp-2">{route.title}</p>
-        {route.ai_highlight && <p className="text-xs text-muted-foreground italic line-clamp-1 mt-0.5">„{route.ai_highlight}"</p>}
-        <div className="mt-2"><AuthorChip name={route.author_name} avatar={route.author_avatar} /></div>
+        {(route.summary || route.ai_highlight) && (
+          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mt-1">{route.summary || route.ai_highlight}</p>
+        )}
+        {route.categories && route.categories.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {route.categories.slice(0, 3).map((c) => (
+              <span key={c} className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                {CAT_LABEL[c] ?? c}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="mt-2.5"><AuthorChip name={route.author_name} avatar={route.author_avatar} /></div>
       </div>
     </button>
   );
@@ -555,7 +583,7 @@ export default function DiscoveryFeed() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, ai_highlight, user_id, created_at, views")
+        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views")
         .eq("is_shared", true).not("title", "is", null).ilike("city", "warszawa%")
         .order("views", { ascending: false, nullsFirst: false })
         .limit(30);
