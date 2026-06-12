@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MapPin, X, Globe, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
+import { resolveStored } from "@/components/PlacePhoto";
 
 type DiscoveryItem = {
   id: string;
@@ -491,6 +492,34 @@ export default function DiscoveryFeed() {
       const routes = (routesRes.data ?? []) as any[];
       const creatorPlans = (creatorRes.data ?? []) as any[];
 
+      // Okladka karty = najatrakcyjniejsze ZDJECIE MIEJSCA z trasy (nie zdjecie
+      // usera). Ranking kategorii (najbardziej "pocztowkowe" pierwsze) + pierwszy
+      // pin ze zdjeciem jako tie-break.
+      const routeIds = routes.map((r) => r.id);
+      const placePhotoMap = new Map<string, string>();
+      if (routeIds.length > 0) {
+        const { data: pinRows } = await (supabase as any)
+          .from("pins")
+          .select("route_id, photo_url, image_url, category, pin_order")
+          .in("route_id", routeIds);
+        const RANK: Record<string, number> = {
+          viewpoint: 0, monument: 1, park: 2, gallery: 3, museum: 4, experience: 5,
+          market: 6, shopping: 7, club: 8, bar: 9, cafe: 10, restaurant: 11, walk: 12,
+        };
+        const best = new Map<string, { url: string; rank: number; order: number }>();
+        for (const p of (pinRows ?? []) as any[]) {
+          const url = resolveStored(p.photo_url || p.image_url);
+          if (!url) continue;
+          const rank = RANK[p.category as string] ?? 50;
+          const order = p.pin_order ?? 999;
+          const cur = best.get(p.route_id);
+          if (!cur || rank < cur.rank || (rank === cur.rank && order < cur.order)) {
+            best.set(p.route_id, { url, rank, order });
+          }
+        }
+        for (const [rid, v] of best) placePhotoMap.set(rid, v.url);
+      }
+
       // Fetch profiles for routes
       const userIds = [...new Set(routes.map((r) => r.user_id).filter(Boolean))];
       let profileMap = new Map<string, { username: string | null; first_name: string | null; avatar_url: string | null }>();
@@ -508,7 +537,8 @@ export default function DiscoveryFeed() {
 
       const routeEntries: PolecaneRoute[] = routes.map((r) => {
         const profile = profileMap.get(r.user_id);
-        const photo = (r.review_photos ?? []).find((url: any) => typeof url === "string" && url.trim() !== "") ?? null;
+        // Okladka ze zdjec miejsc (najatrakcyjniejsze), nie ze zdjec usera.
+        const photo = placePhotoMap.get(r.id) ?? null;
         const authorName = profile?.first_name || profile?.username || "Użytkownik";
         return {
           kind: "route",

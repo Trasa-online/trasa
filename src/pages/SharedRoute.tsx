@@ -325,11 +325,6 @@ export default function SharedRoute() {
           </div>
         )}
 
-        {/* Attribution */}
-        <div className="px-5 pt-5 pb-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <MapPin className="h-3.5 w-3.5" />
-          <span>Stworzone z pomocą <span className="font-semibold text-foreground">Trasa</span></span>
-        </div>
       </div>
 
       {/* Podglad wizytowki miejsca */}
@@ -346,9 +341,9 @@ export default function SharedRoute() {
         <button
           onClick={() => { if (!user) { navigate("/auth"); return; } setShowDateSheet(true); }}
           disabled={saving}
-          className="w-full py-4 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25 disabled:opacity-50"
+          className="w-full py-3 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary/25 disabled:opacity-50"
         >
-          <Bookmark className="h-5 w-5" />{saving ? "Zapisywanie…" : "Zapisz tę trasę do siebie"}
+          <Bookmark className="h-4 w-4" />{saving ? "Zapisywanie…" : "Użyj tej trasy"}
         </button>
         <button
           onClick={() => navigate(`/plan?city=${encodeURIComponent(cityLabel)}`)}
