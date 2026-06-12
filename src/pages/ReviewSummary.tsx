@@ -536,8 +536,13 @@ const ReviewSummary = () => {
 
   // Hero: zdjecie usera/grupy, a gdy brak - ilustracja placeholder (zamiast emoji
   // mapy). Ciemny gradient overlay zapewnia kontrast tekstu (WCAG).
-  const hasRealPhoto = !!(myPhotos[0]?.url ?? (groupPhotos[0] as any)?.url);
-  const heroPhoto = myPhotos[0]?.url ?? (groupPhotos[0] as any)?.url ?? getRandomPinPlaceholder(routeId ?? undefined);
+  // Tlo hero: zdjecie usera -> zdjecie pierwszego miejsca z trasy (cached
+  // photo_url/image_url) -> ilustracja placeholder. Zdjecie miejsca liczy sie
+  // jako realne tlo (wyzsze hero).
+  const userCover = myPhotos[0]?.url ?? (groupPhotos[0] as any)?.url ?? null;
+  const placeCover = resolveStored(currentPins[0]?.photo_url || currentPins[0]?.image_url);
+  const hasRealPhoto = !!(userCover || placeCover);
+  const heroPhoto = userCover ?? placeCover ?? getRandomPinPlaceholder(routeId ?? undefined);
   const galleryPhotos = [
     ...myPhotos.map((p) => ({ ...p, mine: true, username: "Ty" })),
     ...groupPhotos.map((p: any) => ({ url: p.url, owner: "", mine: false, username: p.username })),

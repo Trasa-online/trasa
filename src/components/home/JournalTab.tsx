@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
+import { resolveStored } from "@/components/PlacePhoto";
 import { format, parseISO, isValid, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Globe, Lock, Loader2, Trash2, MapPin, Users, Link2, X, ArrowRight, CheckCircle, CalendarDays, Sparkles, Eye } from "lucide-react";
@@ -65,6 +66,30 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
       ] as any[];
     },
     enabled: !!userId,
+  });
+
+  // Okladka karty gdy brak zdjec usera: zdjecie pierwszego miejsca z trasy
+  // (cached pin.photo_url/image_url). Mapa route_id -> URL (pierwszy pin Z
+  // jakimkolwiek zdjeciem, wg pin_order). Reprezentant multi-day = dzien 1.
+  const entryIds = useMemo(() => entries.map((e: any) => e.id), [entries]);
+  const { data: coverMap = {} } = useQuery({
+    queryKey: ["journal-cover-pins", entryIds.join(",")],
+    queryFn: async () => {
+      if (!entryIds.length) return {};
+      const { data } = await (supabase as any)
+        .from("pins")
+        .select("route_id, photo_url, image_url, pin_order")
+        .in("route_id", entryIds)
+        .order("pin_order", { ascending: true });
+      const map: Record<string, string> = {};
+      for (const p of data ?? []) {
+        if (map[p.route_id]) continue;
+        const u = resolveStored(p.photo_url || p.image_url);
+        if (u) map[p.route_id] = u;
+      }
+      return map;
+    },
+    enabled: entryIds.length > 0,
   });
 
   // Grupuj trasy wielodniowe (folder_id) w JEDNA pocztowke (dzien 1 = reprezentant).
@@ -298,7 +323,7 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
       {/* Lista tras */}
       {visibleEntries.map((entry) => {
         const validPhotos = (entry.review_photos ?? []).filter((url: any) => !!url && typeof url === "string" && url.trim() !== "");
-        const thumb = validPhotos[0] ?? getRandomPinPlaceholder(entry.id);
+        const thumb = validPhotos[0] ?? (coverMap as Record<string, string>)[entry.id] ?? getRandomPinPlaceholder(entry.id);
         const _d = entry.start_date ? parseISO(entry.start_date) : null;
         const dateLabel = _d && isValid(_d) ? format(_d, "d MMMM yyyy", { locale: pl }) : "";
         const hasUserPhoto = validPhotos.length > 0;

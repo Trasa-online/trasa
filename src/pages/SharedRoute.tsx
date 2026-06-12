@@ -167,9 +167,11 @@ export default function SharedRoute() {
     );
   }
 
-  // Hero = okladka wybrana przez autora (review_photos[0]) jesli istnieje, inaczej
-  // ilustracja placeholder. Sama OKLADKA jest pokazywana (galeria zdjec nie).
-  const cover = (route.review_photos ?? []).find((u: any) => typeof u === "string" && u.trim() !== "") ?? null;
+  // Hero: okladka autora (review_photos[0]) -> zdjecie pierwszego miejsca z trasy
+  // -> ilustracja placeholder. Sama okladka/zdjecie miejsca (galeria zdjec nie).
+  const userCover = (route.review_photos ?? []).find((u: any) => typeof u === "string" && u.trim() !== "") ?? null;
+  const placeCover = resolveStored(pins[0]?.photo_url || pins[0]?.image_url);
+  const cover = userCover ?? placeCover;
   const hasRealPhoto = !!cover;
   const heroPhoto = cover ?? getRandomPinPlaceholder(route.id);
   const dateLabel = route.start_date ? format(new Date(route.start_date), "d MMMM yyyy", { locale: pl }) : "";
