@@ -146,6 +146,30 @@ export default function SharedRoute() {
   const ratingMap: Record<string, { rating: number | null; note: string | null }> = {};
   for (const r of ratings) ratingMap[r.place_name] = { rating: r.rating, note: r.note };
 
+  // Opis + tagi z tabeli places (wizytowka miejsca). Piny nie maja vibe_tags.
+  const { data: placeMeta = {} } = useQuery({
+    queryKey: ["shared-place-meta", route?.city, id],
+    queryFn: async () => {
+      const names = [...new Set((pins as any[]).map((p) => p.place_name).filter(Boolean))];
+      if (!names.length || !route?.city) return {};
+      const { data } = await (supabase as any)
+        .from("places")
+        .select("place_name, description, vibe_tags")
+        .ilike("city", `${route.city}%`)
+        .in("place_name", names);
+      const map: Record<string, { description: string | null; tags: string[] }> = {};
+      for (const pl of data ?? []) {
+        map[String(pl.place_name).toLowerCase()] = {
+          description: pl.description ?? null,
+          tags: Array.isArray(pl.vibe_tags) ? pl.vibe_tags.filter(Boolean) : [],
+        };
+      }
+      return map;
+    },
+    enabled: pins.length > 0 && !!route?.city,
+  });
+  const metaFor = (pin: any) => (placeMeta as Record<string, any>)[String(pin?.place_name ?? "").toLowerCase()] ?? { description: null, tags: [] };
+
   if (routeLoading) {
     return (
       <div className="min-h-[100dvh] bg-background flex items-center justify-center">
@@ -187,8 +211,8 @@ export default function SharedRoute() {
     longitude: pin.longitude ?? 0,
     rating: 0,
     photo_url: resolveStored(pin.photo_url || pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null)) ?? "",
-    vibe_tags: [],
-    description: pin.description || "",
+    vibe_tags: metaFor(pin).tags,
+    description: pin.description || metaFor(pin).description || "",
   } satisfies MockPlace);
 
   // Read-only ocena + notka autora pod miejscem.
@@ -239,6 +263,22 @@ export default function SharedRoute() {
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                   </button>
+                  {(() => {
+                    const m = metaFor(pin);
+                    const desc = pin.description || m.description;
+                    return (desc || m.tags.length > 0) ? (
+                      <div className="mt-2 px-0.5">
+                        {desc && <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{desc}</p>}
+                        {m.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {m.tags.slice(0, 3).map((t: string) => (
+                              <span key={t} className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{t}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : null;
+                  })()}
                   {renderRatingNote(pin.place_name)}
                 </div>
               ))}
@@ -263,7 +303,22 @@ export default function SharedRoute() {
                 <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
               </span>
               <p className="text-base font-black leading-tight">{pin.place_name}</p>
-              {pin.description && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{pin.description}</p>}
+              {(() => {
+                const m = metaFor(pin);
+                const desc = pin.description || m.description;
+                return (
+                  <>
+                    {desc && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{desc}</p>}
+                    {m.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {m.tags.slice(0, 3).map((t: string) => (
+                          <span key={t} className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{t}</span>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </button>
           <div className="px-4 pb-4 pt-1">{renderRatingNote(pin.place_name, true)}</div>
@@ -282,7 +337,7 @@ export default function SharedRoute() {
 
         <div className="absolute left-0 right-0 flex items-center px-4"
           style={{ top: "max(16px, env(safe-area-inset-top, 16px))" }}>
-          <button onClick={() => navigate("/")}
+          <button onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/eksploruj"); }}
             className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
             <ArrowLeft className="h-5 w-5 text-white" />
           </button>

@@ -543,7 +543,7 @@ export default function DiscoveryFeed() {
         .select("id, title, city, ai_highlight, user_id, created_at")
         .eq("is_shared", true).not("title", "is", null)
         .order("created_at", { ascending: false })
-        .limit(12);
+        .limit(10);
       return enrichRouteRows(data ?? []);
     },
     staleTime: 60_000,
@@ -793,7 +793,6 @@ export default function DiscoveryFeed() {
           .map((i: any) => ({ ...i, ...coordMap.get(i.id) })),
       }));
     },
-    enabled: bothEmpty,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -831,9 +830,8 @@ export default function DiscoveryFeed() {
           {/* Trasy w Warszawie - lista pionowa (jak LATEST) */}
           {warszawa.length > 0 && (
             <div>
-              <div className="flex items-center gap-3 mb-4 px-1">
-                <h2 className="text-xl font-black tracking-tight shrink-0">Trasy w Warszawie</h2>
-                <div className="flex-1 h-[3px] bg-foreground rounded-full" />
+              <div className="mb-4 px-1">
+                <h2 className="text-xl font-black tracking-tight">Trasy w Warszawie</h2>
               </div>
               <div className="space-y-5">
                 {warszawa.map((r) => (

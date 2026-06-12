@@ -154,6 +154,35 @@ const ReviewSummary = () => {
     [allPins, activeRouteId],
   );
 
+  // Opis + tagi (vibe_tags) z tabeli places - dla wizytowek i kart (lista/szczegoly).
+  // Piny nie maja vibe_tags, wiec dociagamy je po nazwie miejsca + miescie.
+  const placeNames = useMemo(
+    () => [...new Set(allPins.map((p: any) => p.place_name).filter(Boolean))],
+    [allPins],
+  );
+  const { data: placeMeta = {} } = useQuery({
+    queryKey: ["review-place-meta", route?.city, placeNames.join("|")],
+    queryFn: async () => {
+      if (!placeNames.length || !route?.city) return {};
+      const { data } = await (supabase as any)
+        .from("places")
+        .select("place_name, description, vibe_tags")
+        .ilike("city", `${route.city}%`)
+        .in("place_name", placeNames);
+      const map: Record<string, { description: string | null; tags: string[] }> = {};
+      for (const pl of data ?? []) {
+        map[String(pl.place_name).toLowerCase()] = {
+          description: pl.description ?? null,
+          tags: Array.isArray(pl.vibe_tags) ? pl.vibe_tags.filter(Boolean) : [],
+        };
+      }
+      return map;
+    },
+    enabled: placeNames.length > 0 && !!route?.city,
+  });
+  const metaFor = (pin: any): { description: string | null; tags: string[] } =>
+    (placeMeta as Record<string, any>)[String(pin?.place_name ?? "").toLowerCase()] ?? { description: null, tags: [] };
+
   // Group session: participants (awatary w hero).
   const { data: groupParticipants = [] } = useQuery({
     queryKey: ["review-summary-participants", route?.group_session_id],
@@ -560,8 +589,8 @@ const ReviewSummary = () => {
     longitude: pin.longitude ?? 0,
     rating: 0,
     photo_url: resolveStored(pin.photo_url || pin.image_url || (Array.isArray(pin.images) ? pin.images[0] : null)) ?? "",
-    vibe_tags: [],
-    description: pin.description || "",
+    vibe_tags: metaFor(pin).tags,
+    description: pin.description || metaFor(pin).description || "",
   } satisfies MockPlace);
 
   // ── Sekcja Ocena + Notka pod miejscem (widok wspomnienia / plan dnia). ──
@@ -570,7 +599,7 @@ const ReviewSummary = () => {
     const k = rkey(activeRouteId!, placeName);
     const rating = pinRatings[k] ?? 0;
     return (
-      <div className={`mt-3 pt-3 border-t border-border/40 ${centered ? "text-center" : ""}`}>
+      <div className={`mt-3 pt-1 ${centered ? "text-center" : ""}`}>
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Ocena miejsca</p>
         <div className={`flex items-center gap-1 ${centered ? "justify-center" : ""}`}>
           {[1, 2, 3, 4, 5].map((n) => (
@@ -583,7 +612,7 @@ const ReviewSummary = () => {
             </button>
           ))}
         </div>
-        <div className="my-3 h-px bg-border/40" />
+        <div className="h-3" />
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notka</p>
         <div className="relative">
           <textarea
@@ -623,6 +652,22 @@ const ReviewSummary = () => {
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                   </button>
+                  {(() => {
+                    const m = metaFor(pin);
+                    const desc = pin.description || m.description;
+                    return (desc || m.tags.length > 0) ? (
+                      <div className="mt-2 px-0.5">
+                        {desc && <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{desc}</p>}
+                        {m.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {m.tags.slice(0, 3).map((t: string) => (
+                              <span key={t} className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{t}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : null;
+                  })()}
                   {withRating && renderRatingNote(pin.place_name)}
                 </div>
               ))}
@@ -658,7 +703,22 @@ const ReviewSummary = () => {
                 <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
               </span>
               <p className="text-base font-black leading-tight">{pin.place_name}</p>
-              {pin.description && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{pin.description}</p>}
+              {(() => {
+                const m = metaFor(pin);
+                const desc = pin.description || m.description;
+                return (
+                  <>
+                    {desc && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{desc}</p>}
+                    {m.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {m.tags.slice(0, 3).map((t: string) => (
+                          <span key={t} className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{t}</span>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </button>
           {editable && (
