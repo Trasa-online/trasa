@@ -370,27 +370,14 @@ function RouteTracker() {
 // OUTSIDE the WebView — we only need to call SplashScreen.hide() when ready.
 // This React component is the web/PWA fallback (no native splash there).
 
+// Animowany splash (logo "mryga" - pulsuje). Renderowany w WebView na natywnym i
+// web; natywny statyczny splash chowamy zaraz po starcie (oba tla #FEFEFE).
 function SplashScreen({ done }: { done: boolean }) {
-  if (isNative) return null;
-  const [progress, setProgress] = useState(5);
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    if (done) return;
-    const id = setInterval(() => {
-      setProgress(p => {
-        const next = p + Math.random() * 12 + 4;
-        if (next >= 85) { clearInterval(id); return 85; }
-        return next;
-      });
-    }, 130);
-    return () => clearInterval(id);
-  }, [done]);
-
-  useEffect(() => {
     if (!done) return;
-    setProgress(100);
-    const t = setTimeout(() => setHidden(true), 500);
+    const t = setTimeout(() => setHidden(true), 450);
     return () => clearTimeout(t);
   }, [done]);
 
@@ -398,23 +385,17 @@ function SplashScreen({ done }: { done: boolean }) {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] bg-background flex flex-col items-center justify-center gap-5"
+      className="fixed inset-0 z-[9999] bg-background flex items-center justify-center"
       style={{ transition: "opacity 0.4s", opacity: done ? 0 : 1 }}
     >
-      <div
-        className="h-20 w-20 rounded-full shadow-lg"
-        style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }}
+      <style>{`@keyframes trasaBlink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.9)}}`}</style>
+      <img
+        src="/Icon_Trasa.png"
+        alt="trasa"
+        className="w-28 h-auto select-none"
+        style={{ animation: "trasaBlink 1.15s ease-in-out infinite" }}
+        draggable={false}
       />
-      <p className="font-black text-2xl tracking-tight text-foreground">trasa</p>
-      <div className="flex flex-col items-center gap-1.5 w-44">
-        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full bg-primary"
-            style={{ width: `${progress}%`, transition: "width 0.3s ease-out" }}
-          />
-        </div>
-        <p className="text-xs text-muted-foreground tabular-nums">{Math.round(progress)}%</p>
-      </div>
     </div>
   );
 }
@@ -434,13 +415,35 @@ function SplashController() {
     location.pathname === "/demo";
 
   const [visible, setVisible] = useState(!skipSplash);
-  const [done, setDone] = useState(false);
+  const [bootDone, setBootDone] = useState(false);
+  const [minElapsed, setMinElapsed] = useState(false);
+  // Splash znika dopiero gdy boot gotowy ORAZ minal min. czas (zeby animacja
+  // "mrygania" byla widoczna nawet przy blyskawicznym starcie).
+  const done = bootDone && minElapsed;
+
+  useEffect(() => {
+    const t = setTimeout(() => setMinElapsed(true), 1100);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Ukryj natywny statyczny splash zaraz po pierwszym paint React splasha -
+  // animowany (w WebView) przejmuje plynnie (oba tla #FEFEFE).
+  useEffect(() => {
+    if (!isNative) return;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      import("@capacitor/splash-screen").then(({ SplashScreen: NativeSplash }) => {
+        if (!cancelled) NativeSplash.hide({ fadeOutDuration: 200 }).catch(() => {});
+      });
+    }, 90);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, []);
 
   useEffect(() => {
     if (!visible || loading || booted.current) return;
     booted.current = true;
 
-    if (!user) { setDone(true); setTimeout(() => setVisible(false), 500); return; }
+    if (!user) { setBootDone(true); return; }
 
     (async () => {
       try {
@@ -459,24 +462,17 @@ function SplashController() {
         if (bp?.is_draft) return;
         if (bp?.id) navigate(`/biznes/${bp.place_id ?? bp.id}`, { replace: true });
       } finally {
-        setDone(true);
-        setTimeout(() => setVisible(false), 500);
+        setBootDone(true);
       }
     })();
   }, [loading, user, visible]);
 
-  // Hide native Capacitor splash once we're ready (boot logic done) or on a skipSplash route.
-  // On web this is a no-op (lazy import never resolves to a meaningful action — see useShare pattern).
-  const readyToHideNative = isNative && !loading && (skipSplash || done);
+  // Po gotowosci (boot + min czas) - fade out i odmontowanie.
   useEffect(() => {
-    if (!readyToHideNative) return;
-    let cancelled = false;
-    import("@capacitor/splash-screen").then(({ SplashScreen: NativeSplash }) => {
-      if (cancelled) return;
-      NativeSplash.hide({ fadeOutDuration: 300 }).catch(() => {});
-    });
-    return () => { cancelled = true; };
-  }, [readyToHideNative]);
+    if (!done) return;
+    const t = setTimeout(() => setVisible(false), 450);
+    return () => clearTimeout(t);
+  }, [done]);
 
   if (!visible) return null;
   return <SplashScreen done={done} />;

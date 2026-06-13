@@ -54,7 +54,7 @@ else:
     splash = Image.new("RGB", (S, S), (254, 254, 254))  # #FEFEFE
     bg_hex = "#FEFEFE"
 
-lw = int(S*0.34); lh = int(logo.height*lw/logo.width)
+lw = int(S*0.22); lh = int(logo.height*lw/logo.width)
 logo_r = logo.resize((lw, lh), Image.LANCZOS)
 splash.paste(logo_r, ((S-lw)//2, (S-lh)//2), logo_r)
 for name in ("splash-2732x2732.png", "splash-2732x2732-1.png", "splash-2732x2732-2.png"):
