@@ -388,12 +388,10 @@ function SplashScreen({ done }: { done: boolean }) {
       className="fixed inset-0 z-[9999] bg-background flex items-center justify-center"
       style={{ transition: "opacity 0.4s", opacity: done ? 0 : 1 }}
     >
-      <style>{`@keyframes trasaBlink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.9)}}`}</style>
       <img
         src="/Icon_Trasa.png"
         alt="trasa"
         className="w-28 h-auto select-none"
-        style={{ animation: "trasaBlink 1.15s ease-in-out infinite" }}
         draggable={false}
       />
     </div>
@@ -417,12 +415,12 @@ function SplashController() {
   const [visible, setVisible] = useState(!skipSplash);
   const [bootDone, setBootDone] = useState(false);
   const [minElapsed, setMinElapsed] = useState(false);
-  // Splash znika dopiero gdy boot gotowy ORAZ minal min. czas (zeby animacja
-  // "mrygania" byla widoczna nawet przy blyskawicznym starcie).
+  // Splash znika gdy boot gotowy ORAZ minal krotki min. czas (zeby statyczny
+  // splash nie mrugnal na 1 klatke przy blyskawicznym starcie).
   const done = bootDone && minElapsed;
 
   useEffect(() => {
-    const t = setTimeout(() => setMinElapsed(true), 1100);
+    const t = setTimeout(() => setMinElapsed(true), 500);
     return () => clearTimeout(t);
   }, []);
 
