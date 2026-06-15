@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 
 // localStorage (NIE sessionStorage) - onboarding raz na urzadzenie, przetrwa restart apki.
 const GUEST_TOUR_KEY = "trasa_onboarding_done_v1";
@@ -178,13 +176,13 @@ function AnimMap() {
   );
 }
 
+// Skondensowane intro (mniej klikania): tworzenie trasy solo+grupowo+kod = JEDEN
+// ekran, a powstanie trasy + mapa = jeden ekran. Setup profilu (username/awatar/
+// powiadomienia) to osobny etap po zalogowaniu (ProfileSetup).
 const STEPS = [
-  { title: "Witaj w Trasie!", desc: "Trasa to speed dating z miastem. W kilka minut ułożysz plan dnia: przeglądasz miejsca, dodajesz te które Cię ciekawią, dostajesz gotową trasę.", Anim: AnimIntro },
-  { title: "Planuj solo", desc: "Kliknij przycisk + na środku paska i wybierz „Zaplanuj solo”. Sam przeglądasz miejsca i dodajesz te, które chcesz odwiedzić.", Anim: AnimSolo },
-  { title: "Planuj grupowo", desc: "Przycisk + → „Zaplanuj grupowo”. Tworzysz sesję, udostępniasz znajomym kod, a Trasa pokaże Wasze wspólne dopasowania.", Anim: AnimGroup },
-  { title: "Dołącz do znajomych", desc: "Masz kod od znajomych? Przycisk + → „Dołącz do sesji”, wpisz kod i parujecie się razem.", Anim: AnimJoin },
-  { title: "Z dopasowań powstaje trasa", desc: "Z polubionych i wspólnych miejsc Trasa układa gotowy plan dnia w sensownej kolejności. Plan edytujesz i zapisujesz w dzienniku.", Anim: AnimRoute },
-  { title: "Zobacz trasę na mapie", desc: "Twoje miejsca lądują na mapie w kolejności zwiedzania. W każdej chwili rozwiniesz pełny podgląd mapy, żeby zobaczyć całą trasę.", Anim: AnimMap },
+  { title: "Witaj w Trasie!", desc: "Trasa to speed dating z miastem. W kilka minut ułożysz plan dnia: przeglądasz miejsca, dodajesz te które Cię ciekawią i dostajesz gotową trasę.", Anim: AnimIntro },
+  { title: "Planuj sam lub z grupą", desc: "Kliknij + na pasku i wybierz: planuj solo, zaproś grupę kodem albo dołącz do znajomych. Przeglądacie miejsca, a Trasa zbiera Wasze dopasowania.", Anim: AnimSolo },
+  { title: "Gotowa trasa na mapie", desc: "Z dopasowań Trasa układa plan dnia w dobrej kolejności i pokazuje go na mapie. Plan dopracujesz i zapiszesz w dzienniku.", Anim: AnimMap },
 ];
 
 interface HomeTourProps { onDone: () => void; }
@@ -242,26 +240,22 @@ const HomeTour = ({ onDone }: HomeTourProps) => {
   );
 };
 
+// Intro-tour (Witaj / solo+grupa / mapa) pokazujemy GOSCIOM (niezalogowanym).
+// Zalogowany user dostaje osobny setup profilu (ProfileSetup: username + awatar
+// + powiadomienia) - patrz useProfileSetup. Dzieki temu intro tlumaczy aplikacje
+// zanim ktos zalozy konto, a setup uzupelnia profil dopiero po zalogowaniu.
 export const useHomeTour = (isGuest: boolean) => {
-  const { user } = useAuth();
   const [showTour, setShowTour] = useState(false);
 
   useEffect(() => {
-    // localStorage = raz na URZADZENIE, niezawodne (przetrwa restart + nawigacje, guest i zalogowani).
+    // localStorage = raz na URZADZENIE, niezawodne (przetrwa restart + nawigacje).
     if (localStorage.getItem(GUEST_TOUR_KEY)) return;
-    if (isGuest) { setShowTour(true); return; }
-    if (!user) return;
-    supabase.from("profiles").select("onboarding_completed").eq("id", user.id).single()
-      .then(({ data }) => {
-        if (!data?.onboarding_completed) setShowTour(true);
-        else { try { localStorage.setItem(GUEST_TOUR_KEY, "1"); } catch { /* ignore */ } }
-      });
-  }, [isGuest, user]);
+    if (isGuest) setShowTour(true);
+  }, [isGuest]);
 
   const dismissTour = () => {
     setShowTour(false);
-    try { localStorage.setItem(GUEST_TOUR_KEY, "1"); } catch { /* ignore */ } // ZAWSZE - blokuje ponowne otwarcie na tym urzadzeniu
-    if (!isGuest && user) supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
+    try { localStorage.setItem(GUEST_TOUR_KEY, "1"); } catch { /* ignore */ } // blokuje ponowne otwarcie na tym urzadzeniu
   };
 
   return { showTour, dismissTour };

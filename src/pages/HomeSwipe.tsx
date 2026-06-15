@@ -4,6 +4,7 @@ import { MapPin, ChevronDown, Check, Lock, X, Bell } from "lucide-react";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import HomeTour, { useHomeTour } from "@/components/home/HomeTour";
+import ProfileSetup, { useProfileSetup } from "@/components/home/ProfileSetup";
 import { MAIN_CATEGORIES, getSubcategoryLabel } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,6 +55,7 @@ const HomeSwipe = () => {
   const { open: openAuthDrawer } = useAuthDrawer();
   const isGuest = !user || isAnonymous;
   const { showTour, dismissTour } = useHomeTour(isGuest);
+  const { showSetup, finishSetup } = useProfileSetup();
   const [filters, setFilters] = useState<StoredFilters>(() => readFilters());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -113,6 +115,7 @@ const HomeSwipe = () => {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {showTour && <HomeTour onDone={dismissTour} />}
+      {showSetup && <ProfileSetup onDone={finishSetup} />}
       {/* Sticky top bar: 'Zaloguj sie' (gosc) lub Bell (zalogowany non-anon) po lewej +
           filter chip po prawej */}
       <div className="shrink-0 bg-background px-4 pt-3 pb-2.5 flex items-center justify-between gap-2">
