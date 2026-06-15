@@ -81,11 +81,12 @@ export async function requestAndRegisterNativePush(
     await attachListeners(PushNotifications);
     if (userId) currentUserId = userId;
 
-    let status = await PushNotifications.checkPermissions();
-    if (status.receive !== "granted" && status.receive !== "denied") {
-      status = await PushNotifications.requestPermissions();
-    }
-    if (status.receive === "granted") {
+    // requestPermissions() pokazuje systemowy modal. UWAGA iOS: alert pojawia sie
+    // TYLKO RAZ na instalacje - jesli zgoda zostala juz raz ustalona (np. w
+    // poprzednim buildzie), zwraca zapisany status bez UI. Zeby znow zobaczyc
+    // modal trzeba odinstalowac i zainstalowac apke od nowa (rebuild nie wystarczy).
+    const perm = await PushNotifications.requestPermissions();
+    if (perm.receive === "granted") {
       if (userId) registeredForUser = userId;
       await PushNotifications.register();
       return "granted";

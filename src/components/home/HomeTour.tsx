@@ -185,9 +185,9 @@ const STEPS = [
   { title: "Gotowa trasa na mapie", desc: "Z dopasowań Trasa układa plan dnia w dobrej kolejności i pokazuje go na mapie. Plan dopracujesz i zapiszesz w dzienniku.", Anim: AnimMap },
 ];
 
-interface HomeTourProps { onDone: () => void; }
+interface HomeTourProps { onDone: () => void; lastLabel?: string; }
 
-const HomeTour = ({ onDone }: HomeTourProps) => {
+const HomeTour = ({ onDone, lastLabel }: HomeTourProps) => {
   const [step, setStep] = useState(0);
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
@@ -233,7 +233,7 @@ const HomeTour = ({ onDone }: HomeTourProps) => {
         <button onClick={next}
           className="w-full py-4 rounded-full text-white font-bold text-base shadow-lg active:scale-[0.98] transition-transform"
           style={{ background: "linear-gradient(to right, #F4A259, #F9662B)" }}>
-          {isLast ? "Zaczynamy! 🚀" : "Dalej"}
+          {isLast ? (lastLabel ?? "Zaczynamy! 🚀") : "Dalej"}
         </button>
       </div>
     </div>

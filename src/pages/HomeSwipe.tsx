@@ -56,6 +56,8 @@ const HomeSwipe = () => {
   const isGuest = !user || isAnonymous;
   const { showTour, dismissTour } = useHomeTour(isGuest);
   const { showSetup, finishSetup } = useProfileSetup();
+  // Zalogowany nowy user: najpierw intro (czym jest apka + solo/grupowo), potem setup profilu.
+  const [introSeen, setIntroSeen] = useState(false);
   const [filters, setFilters] = useState<StoredFilters>(() => readFilters());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -115,7 +117,8 @@ const HomeSwipe = () => {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {showTour && <HomeTour onDone={dismissTour} />}
-      {showSetup && <ProfileSetup onDone={finishSetup} />}
+      {showSetup && !introSeen && <HomeTour lastLabel="Dalej" onDone={() => setIntroSeen(true)} />}
+      {showSetup && introSeen && <ProfileSetup onDone={finishSetup} />}
       {/* Sticky top bar: 'Zaloguj sie' (gosc) lub Bell (zalogowany non-anon) po lewej +
           filter chip po prawej */}
       <div className="shrink-0 bg-background px-4 pt-3 pb-2.5 flex items-center justify-between gap-2">
