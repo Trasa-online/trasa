@@ -24,6 +24,9 @@ const STYLES = `
 @keyframes onb-finger { 0%{top:86%;opacity:0} 18%{opacity:1} 45%,100%{top:42%;opacity:0} }
 @keyframes onb-draw { 0%{stroke-dashoffset:400} 55%,100%{stroke-dashoffset:0} }
 @keyframes onb-drop { 0%{opacity:0;transform:translateY(-14px)} 30%,100%{opacity:1;transform:translateY(0)} }
+@keyframes onb-frame { 0%{opacity:0;transform:translateY(10px) scale(.96)} 3%{opacity:1;transform:translateY(0) scale(1)} 11.4%{opacity:1;transform:translateY(0) scale(1)} 14.3%{opacity:0;transform:translateY(-10px) scale(.96)} 100%{opacity:0;transform:translateY(-10px) scale(.96)} }
+@keyframes onb-stepon { 0%,2%{background-color:#e2e8f0;width:6px} 3%,11%{background-color:#F9662B;width:18px} 13%,100%{background-color:#e2e8f0;width:6px} }
+@keyframes onb-live { 0%,100%{opacity:1} 50%{opacity:.35} }
 `;
 
 function Screen({ children }: { children: React.ReactNode }) {
@@ -176,12 +179,133 @@ function AnimMap() {
   );
 }
 
+// 7. Cykl trasy - cala droga "od + do wspomnien" jako jeden auto-grajacy ekran.
+// Kazda klatka widoczna ~2s w 14s petli (onb-frame, delay i*2s). Stepper u gory
+// (onb-stepon) podswietla aktywny etap. Pokazuje: + > solo/grupowo > miejsca >
+// dopasowania > trasa > w trakcie > po trasie (oceny + dziennik).
+function FrameShell({ i, emoji, caption, children }: { i: number; emoji: string; caption: string; children: React.ReactNode }) {
+  return (
+    <div className="absolute inset-x-0 bottom-0 top-9 flex flex-col items-center justify-center gap-3 px-4"
+      style={{ animation: `onb-frame 14s ease-in-out ${i * 2}s infinite`, opacity: 0 }}>
+      <div className="flex-1 min-h-0 w-full flex items-center justify-center">{children}</div>
+      <div className="shrink-0 flex items-center gap-1.5 text-[11px] font-bold text-slate-600 text-center leading-tight">
+        <span className="text-sm">{emoji}</span>{nbsp(caption)}
+      </div>
+    </div>
+  );
+}
+
+function AnimLifecycle() {
+  const tiles = ["#fdba74,#fb7185", "#7dd3fc,#3b82f6", "#86efac,#16a34a", "#c4b5fd,#7c3aed"];
+  const route = [
+    { n: 1, emoji: "🏛️", name: "Muzeum" },
+    { n: 2, emoji: "🍳", name: "Brunch" },
+    { n: 3, emoji: "🌿", name: "Park" },
+  ];
+  return (
+    <Screen>
+      {/* Stepper - 7 etapow cyklu */}
+      <div className="absolute inset-x-0 top-3 flex items-center justify-center gap-1.5 px-4">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <span key={i} className="h-1.5 rounded-full block" style={{ width: 6, backgroundColor: "#e2e8f0", animation: `onb-stepon 14s ease-in-out ${i * 2}s infinite` }} />
+        ))}
+      </div>
+
+      {/* 1. Klik + */}
+      <FrameShell i={0} emoji="➕" caption="Kliknij + aby zacząć">
+        <div className="w-[156px] h-12 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-around">
+          <span className="text-slate-300 text-lg">🏠</span>
+          <div className="h-11 w-11 -mt-7 rounded-full flex items-center justify-center text-white text-2xl font-light shadow-lg" style={{ background: ORANGE_ORB, animation: "onb-press 2s ease-in-out infinite" }}>+</div>
+          <span className="text-slate-300 text-lg">📖</span>
+        </div>
+      </FrameShell>
+
+      {/* 2. Solo / grupowo */}
+      <FrameShell i={1} emoji="🧭" caption="Solo czy grupowe parowanie">
+        <div className="flex flex-col gap-2.5 w-[150px]">
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-orange-600 text-white text-xs font-bold shadow"><span>📍</span>Planuj solo</div>
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-slate-900 text-white text-xs font-bold shadow"><span>👥</span>Planuj grupowo</div>
+        </div>
+      </FrameShell>
+
+      {/* 3. Przegladanie miejsc */}
+      <FrameShell i={2} emoji="🔎" caption="Przeglądasz miejsca w mieście">
+        <div className="relative w-[118px] h-[148px]">
+          <div className="absolute inset-0 rounded-2xl shadow-md border border-slate-200 bg-slate-100" style={{ transform: "rotate(6deg) translate(8px,4px)" }} />
+          <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-lg border border-slate-200" style={{ background: "linear-gradient(160deg,#fdba74,#fb7185)" }}>
+            <div className="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-black/55 to-transparent">
+              <div className="text-white text-[11px] font-black leading-tight">Kawiarnia Lato</div>
+              <div className="text-white/80 text-[9px]">☕ Śródmieście</div>
+            </div>
+            <div className="absolute top-2 right-2 h-6 w-6 rounded-full bg-white/90 flex items-center justify-center text-orange-600 text-sm font-bold shadow" style={{ animation: "onb-press 2s ease-in-out infinite" }}>+</div>
+          </div>
+        </div>
+      </FrameShell>
+
+      {/* 4. Dopasowania */}
+      <FrameShell i={3} emoji="✨" caption="Zbieracie dopasowania">
+        <div className="grid grid-cols-2 gap-2 w-[140px]">
+          {tiles.map((g, k) => (
+            <div key={k} className="relative h-14 rounded-xl shadow-sm" style={{ background: `linear-gradient(150deg,${g})` }}>
+              <div className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-green-500 border-2 border-white flex items-center justify-center text-white text-[10px] font-bold"
+                style={{ animation: `onb-pop 4s ease-in-out ${0.3 + k * 0.4}s infinite`, opacity: 0 }}>✓</div>
+            </div>
+          ))}
+        </div>
+      </FrameShell>
+
+      {/* 5. Gotowa trasa */}
+      <FrameShell i={4} emoji="🗺️" caption="Trasa układa plan dnia">
+        <div className="flex flex-col gap-1.5 w-[150px]">
+          {route.map((p, k) => (
+            <div key={p.n} className="flex items-center gap-2 bg-white rounded-xl border border-slate-100 shadow-sm px-2 py-1.5"
+              style={{ animation: `onb-slidein 0.5s ease-out ${0.2 + k * 0.45}s both` }}>
+              <div className="h-5 w-5 rounded-full bg-orange-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">{p.n}</div>
+              <span className="text-sm">{p.emoji}</span>
+              <span className="text-[11px] font-bold text-slate-800">{p.name}</span>
+            </div>
+          ))}
+        </div>
+      </FrameShell>
+
+      {/* 6. W trakcie */}
+      <FrameShell i={5} emoji="🚶" caption="Ruszacie w miasto: trasa w trakcie">
+        <div className="flex flex-col items-center gap-3 w-[150px]">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-[11px] font-black">
+            <span className="h-2 w-2 rounded-full bg-green-500" style={{ animation: "onb-live 1.4s ease-in-out infinite" }} />W TRAKCIE
+          </div>
+          <div className="relative w-full h-px bg-slate-200">
+            {[0, 1, 2].map((k) => (
+              <div key={k} className="absolute -top-1.5 h-3.5 w-3.5 rounded-full border-2 border-white shadow flex items-center justify-center"
+                style={{ left: `${k * 50}%`, transform: "translateX(-50%)", background: k === 1 ? "#F9662B" : "#cbd5e1", animation: k === 1 ? "onb-pulse 1.6s ease-in-out infinite" : undefined }} />
+            ))}
+          </div>
+          <div className="text-[10px] font-semibold text-slate-500">Przystanek 2 z 3 🕐</div>
+        </div>
+      </FrameShell>
+
+      {/* 7. Po trasie - oceny + dziennik */}
+      <FrameShell i={6} emoji="📔" caption="Po trasie: oceny i dziennik">
+        <div className="flex flex-col items-center gap-2.5 w-[150px]">
+          <div className="relative w-[112px] h-[78px] rounded-xl shadow-lg border-2 border-white overflow-hidden" style={{ background: "linear-gradient(150deg,#fb923c,#f43f5e)", transform: "rotate(-4deg)" }}>
+            <div className="absolute bottom-0 inset-x-0 px-2 py-1 bg-black/30 text-white text-[9px] font-bold">Pocztówka z trasy</div>
+          </div>
+          <div className="flex gap-0.5 text-base" style={{ animation: "onb-char 4s ease-in-out 0.5s infinite", opacity: 0 }}>
+            <span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span><span className="opacity-30">⭐</span>
+          </div>
+        </div>
+      </FrameShell>
+    </Screen>
+  );
+}
+
 // Skondensowane intro (mniej klikania): tworzenie trasy solo+grupowo+kod = JEDEN
 // ekran, a powstanie trasy + mapa = jeden ekran. Setup profilu (username/awatar/
 // powiadomienia) to osobny etap po zalogowaniu (ProfileSetup).
 const STEPS = [
   { title: "Witaj w Trasie!", desc: "Trasa to speed dating z miastem. W kilka minut ułożysz plan dnia: przeglądasz miejsca, dodajesz te które Cię ciekawią i dostajesz gotową trasę.", Anim: AnimIntro },
   { title: "Planuj sam lub z grupą", desc: "Kliknij + na pasku i wybierz: planuj solo, zaproś grupę kodem albo dołącz do znajomych. Przeglądacie miejsca, a Trasa zbiera Wasze dopasowania.", Anim: AnimSolo },
+  { title: "Tak powstaje Twoja trasa", desc: "Cała droga w jednym miejscu: klikasz +, wybierasz tryb solo lub grupowe parowanie, przeglądacie miejsca, zbieracie dopasowania, dostajecie gotową trasę, ruszacie w miasto, a po wszystkim oceniacie i zapisujecie wspomnienia w dzienniku.", Anim: AnimLifecycle },
   { title: "Gotowa trasa na mapie", desc: "Z dopasowań Trasa układa plan dnia w dobrej kolejności i pokazuje go na mapie. Plan dopracujesz i zapiszesz w dzienniku.", Anim: AnimMap },
 ];
 
