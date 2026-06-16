@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { avatarSrc } from "@/lib/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
@@ -314,7 +315,7 @@ const TravelerProfile = () => {
           <div className="relative">
             <CompletionRing percent={completionPct}>
               <Avatar className="h-[88px] w-[88px]">
-                <AvatarImage src={profile?.avatar_url || ""} />
+                <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
                 <AvatarFallback className="bg-orange-100 text-orange-600 text-3xl font-black">
                   {displayName.charAt(0).toUpperCase() || "U"}
                 </AvatarFallback>

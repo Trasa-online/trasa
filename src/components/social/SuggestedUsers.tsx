@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { avatarSrc } from "@/lib/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import FollowButton from "./FollowButton";
@@ -43,7 +44,7 @@ export default function SuggestedUsers({ currentUserId, onProfileTap }: Suggeste
             <div key={user.id} className="flex items-center gap-3 py-2">
               <button onClick={() => onProfileTap(user.username)}>
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={user.avatar_url || ""} />
+                  <AvatarImage src={avatarSrc(user.avatar_url)} className="object-cover bg-orange-100" />
                   <AvatarFallback className="bg-orange-100 text-orange-600 text-sm font-bold">
                     {displayName?.charAt(0).toUpperCase() || "?"}
                   </AvatarFallback>

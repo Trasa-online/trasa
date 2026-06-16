@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { avatarSrc } from "@/lib/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,16 +85,9 @@ function buildLeafletHtml(items: DiscoveryItem[]) {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function AuthorChip({ name, avatar }: { name: string; avatar: string | null }) {
-  const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return (
     <div className="flex items-center gap-1.5">
-      {avatar ? (
-        <img src={avatar} alt={name} className="h-5 w-5 rounded-full object-cover" />
-      ) : (
-        <div className="h-5 w-5 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center text-[9px] font-bold text-white shrink-0">
-          {initials}
-        </div>
-      )}
+      <img src={avatarSrc(avatar)} alt={name} className="h-5 w-5 rounded-full object-cover bg-orange-100" />
       <span className="text-xs text-muted-foreground">{name}</span>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { avatarSrc } from "@/lib/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -101,7 +102,7 @@ export default function PublicProfile() {
         {/* Avatar + name + follow */}
         <div className="flex flex-col items-center gap-4">
           <Avatar className="h-24 w-24">
-            <AvatarImage src={profile.avatar_url || ""} />
+            <AvatarImage src={avatarSrc(profile.avatar_url)} className="object-cover bg-orange-100" />
             <AvatarFallback className="bg-orange-100 text-orange-600 text-4xl font-black">
               {displayName?.charAt(0).toUpperCase() || "?"}
             </AvatarFallback>

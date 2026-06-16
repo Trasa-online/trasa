@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { avatarSrc, DEFAULT_AVATAR } from "@/lib/avatar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -91,7 +92,7 @@ export default function RouteCommentsSheet({ routeId, open, onOpenChange }: Rout
                 <div key={c.id} className="flex gap-3 px-5 py-3">
                   <button onClick={() => profile?.username && navigate(`/profil/${profile.username}`)}>
                     <Avatar className="h-8 w-8 flex-shrink-0">
-                      <AvatarImage src={profile?.avatar_url || ""} />
+                      <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
                       <AvatarFallback className="bg-orange-100 text-orange-600 text-xs font-bold">
                         {displayName.charAt(0).toUpperCase()}
                       </AvatarFallback>
@@ -124,6 +125,7 @@ export default function RouteCommentsSheet({ routeId, open, onOpenChange }: Rout
         {user && (
           <div className="border-t border-border/40 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] flex items-center gap-3 bg-background">
             <Avatar className="h-8 w-8 flex-shrink-0">
+              <AvatarImage src={DEFAULT_AVATAR} className="object-cover bg-orange-100" />
               <AvatarFallback className="bg-orange-100 text-orange-600 text-xs font-bold">
                 {(user.email?.[0] ?? "U").toUpperCase()}
               </AvatarFallback>

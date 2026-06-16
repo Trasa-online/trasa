@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { avatarSrc } from "@/lib/avatar";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -598,7 +599,7 @@ const Settings = () => {
         <div className="flex flex-col items-center gap-3 py-4">
           <div className="relative">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={avatarUrl} />
+              <AvatarImage src={avatarSrc(avatarUrl)} className="object-cover bg-orange-100" />
               <AvatarFallback className="bg-orange-100 text-orange-600 text-2xl font-bold">
                 {displayName.charAt(0).toUpperCase() || "U"}
               </AvatarFallback>

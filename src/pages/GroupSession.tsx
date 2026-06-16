@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { avatarSrc } from "@/lib/avatar";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, MapPin, Star, Check, UserPlus, CalendarDays, Copy, Share2, Search, X, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -741,9 +742,7 @@ const GroupSession = () => {
               <div className="flex flex-col gap-2">
                 {members.map((m: any) => (
                   <div key={m.user_id} className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-orange-700 shrink-0">
-                      {(m.profile?.first_name || m.profile?.username || "?")[0].toUpperCase()}
-                    </div>
+                    <img src={avatarSrc(m.profile?.avatar_url)} alt="" className="h-8 w-8 rounded-full object-cover bg-orange-100 shrink-0" />
                     <span className="text-sm font-medium">{m.profile?.first_name || m.profile?.username || "Użytkownik"}</span>
                   </div>
                 ))}
@@ -799,13 +798,7 @@ const GroupSession = () => {
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex -space-x-2">
             {members.slice(0, 4).map((m: any) => (
-              m.profile?.avatar_url ? (
-                <img key={m.user_id} src={m.profile.avatar_url} alt={m.profile?.first_name || m.profile?.username || "?"} className="h-7 w-7 rounded-full border-2 border-background object-cover" title={m.profile?.first_name || m.profile?.username} />
-              ) : (
-                <div key={m.user_id} className="h-7 w-7 rounded-full bg-primary/20 border-2 border-background flex items-center justify-center text-xs font-bold text-orange-700" title={m.profile?.first_name || m.profile?.username}>
-                  {(m.profile?.first_name || m.profile?.username || "?")[0].toUpperCase()}
-                </div>
-              )
+              <img key={m.user_id} src={avatarSrc(m.profile?.avatar_url)} alt={m.profile?.first_name || m.profile?.username || "?"} className="h-7 w-7 rounded-full border-2 border-background object-cover bg-orange-100" title={m.profile?.first_name || m.profile?.username} />
             ))}
           </div>
           <button
@@ -1143,17 +1136,11 @@ const GroupSession = () => {
                     return (
                       <div key={m.user_id} className="flex flex-col items-center gap-2">
                         <div className="relative">
-                          {m.profile?.avatar_url ? (
-                            <img
-                              src={m.profile.avatar_url}
-                              alt={name}
-                              className={`h-14 w-14 rounded-full object-cover border-2 transition-all ${done ? "border-orange-600" : "border-border/40 opacity-60"}`}
-                            />
-                          ) : (
-                            <div className={`h-14 w-14 rounded-full flex items-center justify-center text-lg font-bold border-2 transition-all ${done ? "bg-primary text-white border-orange-600" : "bg-muted text-muted-foreground border-border/40 opacity-60"}`}>
-                              {name[0].toUpperCase()}
-                            </div>
-                          )}
+                          <img
+                            src={avatarSrc(m.profile?.avatar_url)}
+                            alt={name}
+                            className={`h-14 w-14 rounded-full object-cover bg-orange-100 border-2 transition-all ${done ? "border-orange-600" : "border-border/40 opacity-60"}`}
+                          />
                           {done && (
                             <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-primary border-2 border-background flex items-center justify-center">
                               <Check className="h-2.5 w-2.5 text-white" />
@@ -1478,13 +1465,7 @@ const GroupSession = () => {
                           selected ? "bg-primary/10" : "active:bg-muted"
                         )}
                       >
-                        {f.avatar_url ? (
-                          <img src={f.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
-                        ) : (
-                          <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-orange-700 shrink-0">
-                            {(f.first_name || f.username || "?")[0].toUpperCase()}
-                          </div>
-                        )}
+                        <img src={avatarSrc(f.avatar_url)} alt="" className="h-9 w-9 rounded-full object-cover bg-orange-100 shrink-0" />
                         <div className="flex-1 text-left min-w-0">
                           <p className="text-sm font-semibold leading-tight">{f.first_name || f.username}</p>
                           {f.username && <p className="text-xs text-muted-foreground">@{f.username}</p>}

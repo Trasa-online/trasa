@@ -1,4 +1,5 @@
 import { MapPin } from "lucide-react";
+import { avatarSrc } from "@/lib/avatar";
 
 export interface CreatorPlan {
   id: string;
@@ -78,19 +79,11 @@ export default function CreatorPlanCard({ plan, onClick }: CreatorPlanCardProps)
 
         {/* Creator badge - bottom left */}
         <div className="absolute bottom-3 left-3 flex items-center gap-2.5">
-          {plan.creator_avatar_url ? (
-            <img
-              src={plan.creator_avatar_url}
-              alt={plan.creator_handle}
-              className="h-9 w-9 rounded-full border-2 border-white/40 object-cover shrink-0"
-            />
-          ) : (
-            <div className="h-9 w-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
-              <span className="text-white text-sm font-bold">
-                {plan.creator_handle.replace("@", "").charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )}
+          <img
+            src={avatarSrc(plan.creator_avatar_url)}
+            alt={plan.creator_handle}
+            className="h-9 w-9 rounded-full border-2 border-white/40 object-cover bg-orange-100 shrink-0"
+          />
           <div>
             <p className="text-white text-sm font-semibold leading-tight">{plan.creator_handle}</p>
             {platform && (

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { avatarSrc } from "@/lib/avatar";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Copy, Check, ArrowRight, Users, Trash2, LogOut, Search, UserPlus, CalendarDays, Bell, Share2, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -564,17 +565,10 @@ const CreateGroupSession = () => {
               {friendResults.length > 0 && (
                 <div className="space-y-1">
                   {friendResults.map(profile => {
-                    const initials = (profile.first_name || profile.username || "?")[0].toUpperCase();
                     const isSelected = selectedFriends.has(profile.id);
                     return (
                       <div key={profile.id} className="flex items-center gap-3 rounded-2xl bg-background p-2">
-                        {profile.avatar_url ? (
-                          <img src={profile.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
-                        ) : (
-                          <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold text-orange-700 shrink-0">
-                            {initials}
-                          </div>
-                        )}
+                        <img src={avatarSrc(profile.avatar_url)} alt="" className="h-8 w-8 rounded-full object-cover bg-orange-100 shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold leading-tight">{profile.first_name || profile.username}</p>
                           <p className="text-xs text-muted-foreground">@{profile.username}</p>

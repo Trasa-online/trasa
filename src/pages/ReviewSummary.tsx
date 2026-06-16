@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { avatarSrc } from "@/lib/avatar";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -859,7 +860,7 @@ const ReviewSummary = () => {
               <div className="flex -space-x-2">
                 {groupParticipants.slice(0, 5).map((p) => (
                   <div key={p.id} className="h-7 w-7 rounded-full border-2 border-white/60 overflow-hidden bg-primary flex items-center justify-center text-white text-[10px] font-bold">
-                    {p.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" /> : (p.first_name || p.username || "?")[0].toUpperCase()}
+                    <img src={avatarSrc(p.avatar_url)} alt="" className="w-full h-full object-cover" />
                   </div>
                 ))}
                 {groupParticipants.length > 5 && (

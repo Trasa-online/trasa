@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { avatarSrc } from "@/lib/avatar";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,7 +92,7 @@ export default function UserSearch() {
                 <div key={profile.id} className="flex items-center gap-3 px-4 py-3">
                   <button onClick={() => navigate(`/profil/${profile.username}`)}>
                     <Avatar className="h-11 w-11">
-                      <AvatarImage src={profile.avatar_url || ""} />
+                      <AvatarImage src={avatarSrc(profile.avatar_url)} className="object-cover bg-orange-100" />
                       <AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-sm">
                         {displayName?.charAt(0).toUpperCase() || "?"}
                       </AvatarFallback>

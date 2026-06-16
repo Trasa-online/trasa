@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { avatarSrc } from "@/lib/avatar";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -99,7 +100,7 @@ const TopBar = (_props: { onOrbClick?: () => void }) => {
           aria-label="Mój profil"
         >
           <Avatar className="h-8 w-8">
-            <AvatarImage src={profile?.avatar_url || ""} />
+            <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
             <AvatarFallback className="bg-orange-100 text-orange-600 text-sm font-bold">
               {profile?.first_name ? profile.first_name.charAt(0).toUpperCase() : "?"}
             </AvatarFallback>

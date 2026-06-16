@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { avatarSrc } from "@/lib/avatar";
 import { ArrowLeft, Check, Plus, Bell, Loader2 } from "lucide-react";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { toast } from "sonner";
@@ -169,8 +170,6 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
     }
   };
 
-  const initial = (username || user?.email || "T").trim().charAt(0).toUpperCase();
-
   // CTA per krok
   const primaryDisabled =
     (stepName === "username" && uStatus !== "ok") ||
@@ -250,13 +249,8 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
             </div>
             <div className="flex-1 flex items-center justify-center">
               <button onClick={pickAvatar} className="relative active:scale-[0.98] transition-transform" aria-label="Wybierz zdjęcie">
-                <div className="h-40 w-40 rounded-full overflow-hidden flex items-center justify-center"
-                  style={{ background: avatarUrl ? "transparent" : "linear-gradient(135deg, #F4A259, #F9662B)" }}>
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="text-white text-6xl font-black select-none">{initial}</span>
-                  )}
+                <div className="h-40 w-40 rounded-full overflow-hidden flex items-center justify-center bg-orange-100">
+                  <img src={avatarSrc(avatarUrl)} alt="" className="h-full w-full object-cover" />
                 </div>
                 <div className="absolute bottom-1 right-1 h-12 w-12 rounded-full bg-orange-600 border-4 border-[#FEFEFE] flex items-center justify-center shadow-md">
                   {uploading ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Plus className="h-6 w-6 text-white" strokeWidth={2.5} />}

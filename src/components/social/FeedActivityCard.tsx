@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { avatarSrc } from "@/lib/avatar";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -151,7 +152,7 @@ export default function FeedActivityCard({ route, actor }: { route: FeedRoute; a
         <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
           <button onClick={goToProfile}>
             <Avatar className="h-10 w-10">
-              <AvatarImage src={actor.avatar_url || ""} />
+              <AvatarImage src={avatarSrc(actor.avatar_url)} className="object-cover bg-orange-100" />
               <AvatarFallback className="bg-orange-100 text-orange-600 text-sm font-bold">
                 {displayName.charAt(0).toUpperCase()}
               </AvatarFallback>
