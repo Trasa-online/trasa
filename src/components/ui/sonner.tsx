@@ -9,7 +9,16 @@ type ToasterProps = React.ComponentProps<typeof Sonner>;
 // setek wywolan.
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
-    <Sonner
+    <>
+      {/* Toast bez opisu (sam tytul + ikona): wysrodkuj zawartosc wzgledem calego
+          toasta. Toasty z opisem zostaja wyrownane do gory (items-start). :has()
+          jest wspierane w nowoczesnym WebKit (iOS WebView Capacitor). */}
+      <style>{`
+        [data-sonner-toast]:not(:has([data-description])){align-items:center!important}
+        [data-sonner-toast]:not(:has([data-description])) [data-icon]{align-self:center!important}
+        [data-sonner-toast]:not(:has([data-description])) [data-content]{flex:1 1 auto;text-align:center}
+      `}</style>
+      <Sonner
       theme="light"
       className="toaster group"
       position="bottom-center"
@@ -38,6 +47,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       {...props}
     />
+    </>
   );
 };
 

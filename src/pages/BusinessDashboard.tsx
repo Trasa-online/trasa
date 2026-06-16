@@ -6,7 +6,7 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, Sparkles } from "lucide-react";
 import 'driver.js/dist/driver.css';
 import { driver } from 'driver.js';
 import { MAIN_CATEGORIES } from "@/lib/categories";
@@ -163,13 +163,13 @@ function getContrastColor(hex: string): string {
 function AppLikePreviewModal({
   onClose, onConvert, isDraft, convertingDraft,
   businessName, mainCategory, subcategories, tags, description, street, city, logoUrl, coverImageUrl, coverVideoUrl, galleryUrls, posts, eventTitle, openingHours,
-  colorBadge, colorCardBg, colorButton,
+  colorBadge, colorCardBg, colorButton, colorPromo,
 }: {
   onClose: () => void; onConvert: () => void; isDraft: boolean; convertingDraft: boolean;
   businessName: string; mainCategory: string; subcategories: string[]; tags: string[]; description: string;
   street: string; city: string; logoUrl: string; coverImageUrl: string; coverVideoUrl: string; galleryUrls: string[];
   posts: BusinessPost[]; eventTitle: string; openingHours: OpeningHours;
-  colorBadge: string; colorCardBg: string; colorButton: string;
+  colorBadge: string; colorCardBg: string; colorButton: string; colorPromo?: string;
 }) {
   const [view, setView] = useState<'card' | 'detail'>('card');
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -246,7 +246,8 @@ function AppLikePreviewModal({
                 </div>
                 {description && <p className="text-white/70 text-sm line-clamp-2 leading-snug">{description}</p>}
                 {eventTitle && (
-                  <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2.5 py-0.5 text-white font-semibold text-xs">
+                  <div className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold text-xs"
+                    style={{ background: colorPromo || "linear-gradient(to right,#F4A259,#F9662B)", color: colorPromo ? getContrastColor(colorPromo) : "#ffffff" }}>
                     {eventTitle}
                   </div>
                 )}
@@ -480,11 +481,11 @@ function AppLikePreviewModal({
   );
 }
 
-function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessName, mainCategory, subcategories, tags, eventTitle, street, description, onPreviewClick, previewReady, colorBadge, colorCardBg, colorButton }: {
+function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessName, mainCategory, subcategories, tags, eventTitle, street, description, onPreviewClick, previewReady, colorBadge, colorCardBg, colorButton, colorPromo }: {
   logoUrl: string; coverImageUrl: string; coverVideoUrl: string; businessName: string; mainCategory: string;
   subcategories: string[]; tags: string[]; eventTitle: string; street?: string; description?: string;
   onPreviewClick?: () => void; previewReady?: boolean;
-  colorBadge?: string; colorCardBg?: string; colorButton?: string;
+  colorBadge?: string; colorCardBg?: string; colorButton?: string; colorPromo?: string;
 }) {
   const catLabel = mainCategory ? MAIN_CATEGORIES.find(c => c.id === mainCategory)?.label : null;
   const badge   = colorBadge  ?? "#f97316";
@@ -520,7 +521,8 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
           </div>
           {description && <p className="text-white/70 text-[10px] line-clamp-2 leading-snug">{description}</p>}
           {eventTitle && (
-            <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2 py-0.5 text-white font-semibold text-[9px]">
+            <div className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold text-[9px]"
+              style={{ background: colorPromo || "linear-gradient(to right,#F4A259,#F9662B)", color: colorPromo ? getContrastColor(colorPromo) : "#ffffff" }}>
               {eventTitle}
             </div>
           )}
@@ -651,6 +653,7 @@ const BusinessDashboard = () => {
   const [colorBadge, setColorBadge]   = useState<string>("#f97316"); // orange-500 default
   const [colorCardBg, setColorCardBg] = useState<string>("#000000"); // black default (card overlay)
   const [colorButton, setColorButton] = useState<string>("#f97316"); // orange default
+  const [colorPromo, setColorPromo]   = useState<string>(""); // badge promocji/aktualnosci; puste = domyslny gradient pomaranczowy
   const [plan, setPlan] = useState<BizPlan>('premium');
   const [previewTab, setPreviewTab] = useState<'basic' | 'premium'>('premium');
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
@@ -801,6 +804,7 @@ const BusinessDashboard = () => {
     setColorBadge((profileData as any).color_badge ?? "#f97316");
     setColorCardBg((profileData as any).color_card_bg ?? "#000000");
     setColorButton((profileData as any).color_button ?? "#f97316");
+    setColorPromo((profileData as any).color_promo ?? "");
     setOpeningHours(((profileData as any).opening_hours ?? {}) as OpeningHours);
     setEventTitle(profileData.event_title ?? "");
     setEventDescription(profileData.event_description ?? "");
@@ -1238,6 +1242,7 @@ const BusinessDashboard = () => {
         color_badge: colorBadge,
         color_card_bg: colorCardBg,
         color_button: colorButton,
+        color_promo: colorPromo || null,
         event_title: eventTitle || null,
         event_description: eventDescription || null,
         event_starts_at: eventStartsAt || null,
@@ -1503,7 +1508,7 @@ const BusinessDashboard = () => {
         {/* Logo + collapse toggle */}
         <div className="mb-6">
           <div className={`flex items-center gap-2 px-2 mb-2 ${!sidebarOpen && 'justify-center'}`}>
-            <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            <img src="/Icon_Trasa.png" alt="trasa" className="h-6 w-6 shrink-0 object-contain" draggable={false} />
             {sidebarOpen && <span className="font-black text-sm">trasa.biznes</span>}
           </div>
           <button
@@ -1581,8 +1586,8 @@ const BusinessDashboard = () => {
 
         {/* ── Top bar ── */}
         <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 md:px-6 h-14 flex items-center gap-3 shrink-0">
-          {/* Mobile: orb logo */}
-          <div className="md:hidden h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+          {/* Mobile: logo */}
+          <img src="/Icon_Trasa.png" alt="trasa" className="md:hidden h-6 w-6 shrink-0 object-contain" draggable={false} />
           <div className="flex-1 flex items-center gap-2 min-w-0">
             <div className="relative flex items-center min-w-0 w-full max-w-[260px] group">
               <input
@@ -1972,11 +1977,29 @@ const BusinessDashboard = () => {
                     <input type="color" value={colorButton} onChange={e => { setColorButton(e.target.value); setIsDirty(true); }}
                       className="h-9 w-14 rounded-lg cursor-pointer border border-slate-200 p-0.5" />
                   </div>
+                  {/* Badge promocji / aktualnosci */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Kolor badge promocji</p>
+                      <p className="text-xs text-muted-foreground">Pill z aktualna promocja na wizytowce</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {colorPromo && (
+                        <button type="button" onClick={() => { setColorPromo(""); setIsDirty(true); }}
+                          className="text-[11px] font-medium text-slate-400 hover:text-slate-600 transition-colors">Domyślny</button>
+                      )}
+                      <input type="color" value={colorPromo || "#F9662B"} onChange={e => { setColorPromo(e.target.value); setIsDirty(true); }}
+                        className="h-9 w-14 rounded-lg cursor-pointer border border-slate-200 p-0.5" />
+                    </div>
+                  </div>
                 </div>
                 {/* Live preview strip */}
-                <div className="flex items-center gap-3 pt-1">
-                  <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0" style={{ background: colorBadge, color: getContrastColor(colorBadge) }}>Jedzenie &amp; Napoje</span>
-                  <button className="flex-1 py-2 rounded-full text-xs font-bold" style={{ background: colorButton, color: getContrastColor(colorButton) }}>Dodaj</button>
+                <div className="flex flex-col gap-2 pt-1">
+                  <div className="flex items-center gap-3">
+                    <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0" style={{ background: colorBadge, color: getContrastColor(colorBadge) }}>Jedzenie &amp; Napoje</span>
+                    <button className="flex-1 py-2 rounded-full text-xs font-bold" style={{ background: colorButton, color: getContrastColor(colorButton) }}>Dodaj</button>
+                  </div>
+                  <span className="self-start px-3 py-1 rounded-full text-xs font-bold" style={{ background: colorPromo || "linear-gradient(to right,#F4A259,#F9662B)", color: colorPromo ? getContrastColor(colorPromo) : "#ffffff" }}>Dzisiaj promocja -20%</span>
                 </div>
               </div>
 
@@ -1989,7 +2012,7 @@ const BusinessDashboard = () => {
                   businessName={businessName} mainCategory={mainCategory} subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
                   street={street} description={description}
                   onPreviewClick={() => setShowAppPreview(true)} previewReady={previewReady}
-                  colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton}
+                  colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton} colorPromo={colorPromo}
                 />
               </div>
               </div> {/* end flex flex-col lg:flex-row */}
@@ -2095,35 +2118,49 @@ const BusinessDashboard = () => {
                 {/* Podkategoria */}
                 {mainCategory && (
                   <div className="pt-2 border-t border-border/40">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Podkategoria</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Podkategoria</p>
+                      <span className={`text-[11px] font-bold ${bizSubcategories.length >= 3 ? 'text-orange-500' : 'text-muted-foreground'}`}>{bizSubcategories.length}/3</span>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {(MAIN_CATEGORIES.find(c => c.id === mainCategory)?.subcategories ?? []).map(sub => {
                         const active = bizSubcategories.includes(sub.label);
+                        const limitReached = bizSubcategories.length >= 3;
+                        const disabled = !active && limitReached;
                         return (
                           <button key={sub.id} type="button"
-                            onClick={() => { setBizSubcategories(prev => active ? prev.filter(s => s !== sub.label) : [...prev, sub.label]); setIsDirty(true); }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${active ? 'bg-orange-500 border-orange-500 text-white' : 'bg-background border-border text-muted-foreground hover:border-orange-300 hover:text-foreground'}`}>
+                            disabled={disabled}
+                            onClick={() => { setBizSubcategories(prev => active ? prev.filter(s => s !== sub.label) : (prev.length >= 3 ? prev : [...prev, sub.label])); setIsDirty(true); }}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${active ? 'bg-orange-500 border-orange-500 text-white' : disabled ? 'bg-background border-border text-muted-foreground/40 cursor-not-allowed' : 'bg-background border-border text-muted-foreground hover:border-orange-300 hover:text-foreground'}`}>
                             <span>{sub.emoji}</span>{sub.label}
                           </button>
                         );
                       })}
                     </div>
                     {/* Własna podkategoria */}
-                    <div className="mt-4 p-3 rounded-xl bg-muted/50 border border-border/40 space-y-2">
-                      <p className="text-[11px] text-muted-foreground leading-snug">Nie widzisz swojej? Zaproponuj własną - sprawdzimy i dodamy.</p>
+                    <div className="mt-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="h-7 w-7 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
+                          <Sparkles className="h-3.5 w-3.5 text-orange-500" />
+                        </span>
+                        <div>
+                          <p className="text-xs font-bold text-foreground leading-tight">Nie widzisz swojej kategorii?</p>
+                          <p className="text-[11px] text-muted-foreground leading-snug">Zaproponuj własną - sprawdzimy i dodamy.</p>
+                        </div>
+                      </div>
                       <div className="flex gap-2 items-center">
                         <input
                           value={customSubcategory}
                           onChange={e => { setCustomSubcategory(e.target.value); setCustomSubcategoryStatus(null); setIsDirty(true); }}
                           maxLength={40}
                           placeholder="np. Browar rzemieślniczy..."
-                          className="flex-1 rounded-xl border border-input bg-background px-3 py-1.5 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="flex-1 min-w-0 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-foreground placeholder:text-slate-400 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/60 transition-colors"
                         />
                         <button
                           type="button"
                           disabled={!customSubcategory.trim() || customSubcategoryStatus === 'pending' || customSubcategoryStatus === 'approved'}
                           onClick={() => { if (customSubcategory.trim()) { setCustomSubcategoryStatus('pending'); setIsDirty(true); } }}
-                          className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold bg-primary text-white disabled:opacity-40 transition-opacity"
+                          className="shrink-0 px-4 py-2 rounded-xl text-xs font-bold bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-40 disabled:hover:bg-orange-500 transition-colors"
                         >
                           Zaproponuj
                         </button>
@@ -2258,7 +2295,7 @@ const BusinessDashboard = () => {
                   businessName={businessName} mainCategory={mainCategory} subcategories={bizSubcategories} tags={tags} eventTitle={eventTitle}
                   street={street} description={description}
                   onPreviewClick={() => setShowAppPreview(true)} previewReady={previewReady}
-                  colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton}
+                  colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton} colorPromo={colorPromo}
                 />
               </div>
               </div> {/* end flex flex-col lg:flex-row */}
@@ -2354,7 +2391,7 @@ const BusinessDashboard = () => {
                     description={description}
                     onPreviewClick={() => setShowAppPreview(true)}
                     previewReady={previewReady}
-                    colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton}
+                    colorBadge={colorBadge} colorCardBg={colorCardBg} colorButton={colorButton} colorPromo={colorPromo}
                   />
                 </div>
               </div>
@@ -2375,7 +2412,6 @@ const BusinessDashboard = () => {
                     <p className="text-xs text-slate-400 mt-0.5 break-all">{user.email}</p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Strefa niebezpieczna</p>
                     <BusinessDeleteAccount />
                     <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">Usunięcie konta kasuje wizytówkę, posty i galerię. Miejsce zostaje w aplikacji jako niezarządzane (stan zero).</p>
                   </div>
@@ -2753,6 +2789,7 @@ const BusinessDashboard = () => {
           colorBadge={colorBadge}
           colorCardBg={colorCardBg}
           colorButton={colorButton}
+          colorPromo={colorPromo}
           posts={[
             ...(postDescription.trim() || postPhotos.length > 0 ? [{
               id: 'draft-preview',

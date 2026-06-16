@@ -53,6 +53,7 @@ export interface MockPlace {
   businessColorBadge?: string;     // kolor badge kategorii
   businessColorCardBg?: string;    // kolor gradient overlay
   businessColorButton?: string;    // kolor primary CTA "Dodaj"
+  businessColorPromo?: string;     // kolor badge promocji/aktualnosci (puste = gradient pomaranczowy)
 }
 
 export type PlaceCategory =
@@ -516,7 +517,8 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
         {/* Business event pill - 1:1 z BusinessCardPreview na dashboardzie */}
         {place.businessEventTitle && (
-          <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2.5 py-0.5 text-white font-semibold text-xs">
+          <div className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold text-xs"
+            style={{ background: place.businessColorPromo || "linear-gradient(to right,#F4A259,#F9662B)", color: place.businessColorPromo ? getHexContrast(place.businessColorPromo) : "#ffffff" }}>
             {place.businessEventTitle}
           </div>
         )}
@@ -939,6 +941,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     businessColorBadge: bp.color_badge ?? undefined,
     businessColorCardBg: bp.color_card_bg ?? undefined,
     businessColorButton: bp.color_button ?? undefined,
+    businessColorPromo: bp.color_promo ?? undefined,
     // Pomijaj Google Photos tylko gdy biznes ma WŁASNE zdjęcia (cover/video/własna galeria).
     // places.gallery_urls (kurowane z Google) NIE liczy się jako "własne zdjęcia biznesu".
     businessHasOwnPhoto: !!(
