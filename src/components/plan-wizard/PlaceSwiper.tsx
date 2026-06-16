@@ -1013,7 +1013,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       if (roundPlaceIds?.length) {
         const { data, error } = await (supabase as any)
           .from("places")
-          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, opening_hours)")
+          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours)")
           .in("id", roundPlaceIds);
 
         if (error) console.error("[PlaceSwiper] round fetch error:", error);
@@ -1035,7 +1035,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // ── Normal mode ──────────────────────────────────────────────────────
       const { data, error: placesError } = await (supabase as any)
         .from("places")
-        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, opening_hours)")
+        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours)")
         .ilike("city", city)
         .eq("is_active", true);
 
