@@ -1,5 +1,59 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import posthog from "posthog-js";
+
+// ─── BusinessWaitlist (zapis do waitlisty, branding B2B = niebieski) ──────────
+
+function BusinessWaitlist({ source }: { source: string }) {
+  const [email, setEmail] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !consent || status !== "idle") return;
+    setStatus("loading");
+    const trimmed = email.trim().toLowerCase();
+    // Lead B2B trafia do tej samej tabeli co B2C, ale z source="business_landing" - zeby
+    // odroznic. NIE wysylamy konsumenckiego maila powitalnego (send-waitlist-email) - to
+    // lokale, nie goscie. Trigger notify-waitlist-signup i tak powiadomi admina o zapisie.
+    await (supabase as any).from("waitlist").insert({ email: trimmed, source: "business_landing" });
+    posthog.capture("business_landing_waitlist_signup", { source });
+    setStatus("done");
+  };
+
+  if (status === "done") return (
+    <div className="w-full px-5 py-4 rounded-2xl bg-blue-50 border border-blue-200">
+      <p className="text-sm font-semibold text-[#0E0E0E]">{`Dzięki za zapis! Odezwiemy się, gdy otworzymy zapisy dla lokali.`}</p>
+    </div>
+  );
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-3 w-full">
+      <input
+        type="email" required value={email} onChange={e => setEmail(e.target.value)}
+        placeholder="twoj@lokal.pl"
+        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-[#0E0E0E] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-300"
+      />
+
+      <label className="flex items-start gap-2.5 text-left cursor-pointer select-none px-1">
+        <input type="checkbox" required checked={consent} onChange={e => setConsent(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-blue-600 focus:ring-blue-300 cursor-pointer shrink-0" />
+        <span className="text-[11px] text-slate-500 leading-snug">
+          {`Wyrażam zgodę na kontakt w sprawie premiery Trasy dla firm. Zapoznałem się z `}
+          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-700">polityką prywatności</a>.
+        </span>
+      </label>
+
+      <button type="submit" disabled={status === "loading" || !consent || !email.trim()}
+        className="w-full rounded-2xl text-white font-bold px-5 py-3.5 text-sm whitespace-nowrap active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed"
+        style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)", boxShadow: "0 8px 24px -6px rgba(59,130,246,0.4)" }}>
+        {status === "loading" ? "..." : "Zapisz się"}
+      </button>
+    </form>
+  );
+}
 
 // ─── VideoMockup ──────────────────────────────────────────────────────────────
 
@@ -91,13 +145,9 @@ export default function BusinessLanding() {
             <h2 className="text-xl font-black text-[#0E0E0E] mb-1">Bądź pierwszy</h2>
             <p className="text-sm text-[#979797]">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
           </div>
-          <button
-            onClick={() => { posthog.capture("business_landing_cta_clicked", { location: "mobile_hero" }); navigate("/biznes/start"); }}
-            className="w-full max-w-xs rounded-2xl text-white font-bold py-4 text-base active:scale-[0.98] transition-all"
-            style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)", boxShadow: "0 8px 24px -6px rgba(59,130,246,0.4)" }}
-          >
-            Sprawdź
-          </button>
+          <div className="w-full max-w-xs">
+            <BusinessWaitlist source="mobile_hero" />
+          </div>
 
           {/* Existing premiera + h1 + body */}
           <div className="text-center mt-4">
@@ -140,13 +190,9 @@ export default function BusinessLanding() {
           {/* Hero copy + blue CTA */}
           <h2 className="text-xl font-bold text-slate-500 mb-2">Bądź pierwszy</h2>
           <p className="text-base text-[#979797] mb-5">Twój lokal w Trasie zanim aplikacja trafi do gości.</p>
-          <button
-            onClick={() => { posthog.capture("business_landing_cta_clicked", { location: "desktop_hero" }); navigate("/biznes/start"); }}
-            className="rounded-2xl text-white font-bold px-8 py-4 text-base active:scale-[0.98] transition-all mb-10"
-            style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)", boxShadow: "0 8px 24px -6px rgba(59,130,246,0.4)" }}
-          >
-            Sprawdź
-          </button>
+          <div className="w-full max-w-sm mb-10">
+            <BusinessWaitlist source="desktop_hero" />
+          </div>
 
           <div className="flex gap-3 w-full">
             <div className="flex-1"><AppStoreBadge store="ios" /></div>
