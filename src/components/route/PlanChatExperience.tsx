@@ -1309,6 +1309,7 @@ window.addEventListener('message',function(e){
                       detailPhotos={detailExtra?.detailPhotos ?? []}
                       detailLoading={detailExtra === null}
                       onClose={closeDetail}
+                      hideReviews
                     />
                   </div>
 

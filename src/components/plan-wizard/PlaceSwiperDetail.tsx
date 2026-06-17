@@ -198,6 +198,7 @@ const PlaceSwiperDetail = ({
             detailLoading={loading}
             onClose={() => onOpenChange(false)}
             header={mapsButton}
+            hideReviews
           />
         </div>
 
