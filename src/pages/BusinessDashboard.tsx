@@ -251,7 +251,7 @@ function AppLikePreviewModal({
                 {description && <p className="text-white/70 text-sm line-clamp-2 leading-snug">{description}</p>}
                 {eventTitle && (
                   <div className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold text-xs"
-                    style={{ background: colorPromo || "linear-gradient(to right,#F4A259,#F9662B)", color: colorPromo ? getContrastColor(colorPromo) : "#ffffff" }}>
+                    style={{ background: "linear-gradient(to right,#F4A259,#F9662B)", color: "#ffffff" }}>
                     {eventTitle}
                   </div>
                 )}
@@ -517,7 +517,7 @@ function BusinessCardPreview({ logoUrl, coverImageUrl, coverVideoUrl, businessNa
           {description && <p className="text-white/70 text-[10px] line-clamp-2 leading-snug">{description}</p>}
           {eventTitle && (
             <div className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold text-[9px]"
-              style={{ background: colorPromo || "linear-gradient(to right,#F4A259,#F9662B)", color: colorPromo ? getContrastColor(colorPromo) : "#ffffff" }}>
+              style={{ background: "linear-gradient(to right,#F4A259,#F9662B)", color: "#ffffff" }}>
               {eventTitle}
             </div>
           )}
@@ -2007,26 +2007,11 @@ const BusinessDashboard = () => {
                     <input type="color" value={colorButton} onChange={e => { setColorButton(e.target.value); setIsDirty(true); }}
                       className="h-9 w-14 rounded-lg cursor-pointer border border-slate-200 p-0.5" />
                   </div>
-                  {/* Badge promocji / aktualnosci */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Kolor badge promocji</p>
-                      <p className="text-xs text-muted-foreground">Pill z aktualna promocja na wizytowce</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {colorPromo && (
-                        <button type="button" onClick={() => { setColorPromo(""); setIsDirty(true); }}
-                          className="text-[11px] font-medium text-slate-400 hover:text-slate-600 transition-colors">Domyślny</button>
-                      )}
-                      <input type="color" value={colorPromo || "#F9662B"} onChange={e => { setColorPromo(e.target.value); setIsDirty(true); }}
-                        className="h-9 w-14 rounded-lg cursor-pointer border border-slate-200 p-0.5" />
-                    </div>
-                  </div>
                 </div>
-                {/* Live preview strip */}
+                {/* Live preview strip. Badge promocji jest ZAWSZE pomaranczowy (nie personalizowany). */}
                 <div className="flex items-center gap-3 pt-1">
                   <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0" style={{ background: colorBadge, color: getContrastColor(colorBadge) }}>Jedzenie &amp; Napoje</span>
-                  <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0" style={{ background: colorPromo || "linear-gradient(to right,#F4A259,#F9662B)", color: colorPromo ? getContrastColor(colorPromo) : "#ffffff" }}>Promocja</span>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "linear-gradient(to right,#F4A259,#F9662B)" }}>Promocja</span>
                   <button className="flex-1 py-2 rounded-full text-xs font-bold" style={{ background: colorButton, color: getContrastColor(colorButton) }}>Dodaj</button>
                 </div>
               </div>

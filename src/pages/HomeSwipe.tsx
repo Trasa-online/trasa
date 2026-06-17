@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { MapPin, ChevronDown, Check, Lock, X, Bell } from "lucide-react";
+import { MapPin, ChevronDown, Check, Lock, X, Bell, Shield } from "lucide-react";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import HomeTour, { useHomeTour } from "@/components/home/HomeTour";
@@ -11,6 +11,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { isHardcodedAdmin } from "@/lib/admins";
 
 const FILTERS_STORAGE_KEY = "trasa_home_filters";
 
@@ -52,6 +54,8 @@ function writeFilters(f: StoredFilters) {
 
 const HomeSwipe = () => {
   const { user, isAnonymous } = useAuth();
+  const navigate = useNavigate();
+  const isAdmin = isHardcodedAdmin(user?.email);
   const { open: openAuthDrawer } = useAuthDrawer();
   const isGuest = !user || isAnonymous;
   const { showTour, dismissTour } = useHomeTour(isGuest);
@@ -130,18 +134,30 @@ const HomeSwipe = () => {
             Zaloguj się
           </button>
         ) : (
-          <button
-            onClick={() => setNotifOpen(true)}
-            className="relative h-9 w-9 flex items-center justify-center text-muted-foreground active:scale-90 transition-transform"
-            aria-label="Powiadomienia"
-          >
-            <Bell className="h-5 w-5" />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 h-3.5 min-w-3.5 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center px-1 leading-none">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setNotifOpen(true)}
+              className="relative h-9 w-9 flex items-center justify-center text-muted-foreground active:scale-90 transition-transform"
+              aria-label="Powiadomienia"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 h-3.5 min-w-3.5 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center px-1 leading-none">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
+            {isAdmin && (
+              <button
+                onClick={() => navigate("/admin")}
+                className="h-9 w-9 flex items-center justify-center text-blue-600 active:scale-90 transition-transform"
+                aria-label="Panel admina"
+                title="Panel admina"
+              >
+                <Shield className="h-5 w-5" />
+              </button>
             )}
-          </button>
+          </div>
         )}
         <button
           onClick={() => setDrawerOpen(true)}

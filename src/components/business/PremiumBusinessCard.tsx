@@ -363,14 +363,9 @@ function DescriptionSection({ data, lineClamp }: SectionProps & { lineClamp?: nu
 
 function EventBannerSection({ data }: SectionProps) {
   if (!data.eventTitle) return null;
+  // Badge promocji ZAWSZE pomaranczowy - nie personalizowany przez biznes.
   return (
-    <div
-      className="rounded-full px-4 py-3 flex items-center justify-center font-bold text-sm shadow-md text-center leading-tight"
-      style={{
-        background: data.colorPromo || "linear-gradient(to right,#F4A259,#F9662B)",
-        color: data.colorPromo ? getHexContrast(data.colorPromo) : "#fff",
-      }}
-    >
+    <div className="rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] px-4 py-3 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-orange-500/20 text-center leading-tight">
       {data.eventTitle}
     </div>
   );

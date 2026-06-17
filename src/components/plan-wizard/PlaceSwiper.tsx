@@ -522,8 +522,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
         {/* Business event pill - 1:1 z BusinessCardPreview na dashboardzie */}
         {place.businessEventTitle && (
-          <div className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold text-xs"
-            style={{ background: place.businessColorPromo || "linear-gradient(to right,#F4A259,#F9662B)", color: place.businessColorPromo ? getHexContrast(place.businessColorPromo) : "#ffffff" }}>
+          <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#F4A259] to-[#F9662B] rounded-full px-2.5 py-0.5 text-white font-semibold text-xs">
             {place.businessEventTitle}
           </div>
         )}
