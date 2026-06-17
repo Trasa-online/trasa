@@ -79,7 +79,8 @@ Deno.serve(async (req) => {
       ? "https://trasa.travel/#/set-password-biznes"
       : "https://trasa.travel/#/set-password";
 
-    let inviteLink: string | undefined;
+    let hashedToken: string | undefined;
+    let linkType: "invite" | "recovery" | "magiclink" | undefined;
     let invitedUserId: string | undefined;
     let isExistingUser = false;
 
@@ -90,8 +91,9 @@ Deno.serve(async (req) => {
       options: { data: { username }, redirectTo },
     });
 
-    if (!linkError && linkData?.properties?.action_link) {
-      inviteLink = linkData.properties.action_link;
+    if (!linkError && linkData?.properties?.hashed_token) {
+      hashedToken = linkData.properties.hashed_token;
+      linkType = "invite";
       invitedUserId = linkData.user.id;
     } else {
       // User already exists — try recovery link
@@ -101,8 +103,9 @@ Deno.serve(async (req) => {
         options: { redirectTo },
       });
 
-      if (!recError && recData?.properties?.action_link) {
-        inviteLink = recData.properties.action_link;
+      if (!recError && recData?.properties?.hashed_token) {
+        hashedToken = recData.properties.hashed_token;
+        linkType = "recovery";
         invitedUserId = recData.user.id;
         isExistingUser = true;
       } else {
@@ -113,8 +116,9 @@ Deno.serve(async (req) => {
           options: { redirectTo },
         });
 
-        if (!mlError && mlData?.properties?.action_link) {
-          inviteLink = mlData.properties.action_link;
+        if (!mlError && mlData?.properties?.hashed_token) {
+          hashedToken = mlData.properties.hashed_token;
+          linkType = "magiclink";
           invitedUserId = mlData.user.id;
           isExistingUser = true;
         } else {
@@ -126,6 +130,16 @@ Deno.serve(async (req) => {
         }
       }
     }
+
+    // Buduj link BEZPOSREDNIO do appki z token_hash (NIE Supabase action_link!).
+    // Powod: action_link idzie przez /auth/v1/verify -> redirect z ?code= (PKCE), a
+    // admin-generated link NIE ma client-side code_verifier -> exchangeCodeForSession
+    // cicho failuje i zostaje stara (anonimowa) sesja -> "Updating password of an
+    // anonymous user". verifyOtp({token_hash,type}) NIE wymaga verifiera (1:1 z mailami
+    // confirm-signup). token_hash w realnym query (przed #) zeby SetPassword je odczytal
+    // z window.location.search; hash route po # zeby HashRouter trafil na wlasciwa strone.
+    const appPath = isBusiness ? "set-password-biznes" : "set-password";
+    const inviteLink = `https://trasa.travel/?token_hash=${hashedToken}&type=${linkType}#/${appPath}`;
 
     // Create profile only for new users
     if (!isExistingUser && invitedUserId) {

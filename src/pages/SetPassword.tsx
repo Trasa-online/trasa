@@ -151,6 +151,14 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
     }
     setLoading(true);
     try {
+      // Sesja musi nalezec do zaproszonego usera (z verifyOtp), nie do starej anonimowej
+      // (z /biznes/start). Anon = link nie zostal zweryfikowany -> czytelny komunikat.
+      const { data: { user: preUser } } = await supabase.auth.getUser();
+      if (!preUser || preUser.is_anonymous) {
+        toast.error("Link aktywacyjny wygasł lub jest nieprawidłowy. Poproś o nowe zaproszenie.");
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
