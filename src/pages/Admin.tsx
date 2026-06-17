@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Copy, Check, Loader2, ArrowLeft, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { forwardGeocode } from "@/lib/googleMaps";
 
 interface WaitlistEntry {
   id: string;
@@ -494,6 +495,16 @@ const Admin = () => {
       const placeCategory = mainCategoryToPlaceCategory(bp.main_category, bp.subcategories);
       const firstPhoto = bp.cover_image_url || (bp.gallery_urls && bp.gallery_urls[0]) || null;
 
+      // Geokoduj adres -> wspolrzedne. Bez tego places.latitude/longitude = NULL i pin
+      // na mapie trasy nie odpowiada adresowi (albo znika). Best-effort - aktywuj nawet bez.
+      let lat: number | null = null, lng: number | null = null;
+      if (bp.street) {
+        try {
+          const geo = await forwardGeocode(`${bp.street}, ${bp.city ?? "Polska"}`);
+          if (geo[0]?.coordinates) { lat = geo[0].coordinates.latitude; lng = geo[0].coordinates.longitude; }
+        } catch { /* aktywuj mimo bledu geocodingu */ }
+      }
+
       // Wstaw row do places
       const { data: place, error: placeErr } = await (supabase as any)
         .from("places")
@@ -502,6 +513,8 @@ const Admin = () => {
           city: bp.city || "Warszawa",
           category: placeCategory,
           address: bp.street || null,
+          latitude: lat,
+          longitude: lng,
           description: bp.description || null,
           photo_url: firstPhoto,
           is_active: true,
@@ -521,6 +534,13 @@ const Admin = () => {
       if (linkErr) {
         toast.error(`Błąd powiazania: ${linkErr.message}`);
         return;
+      }
+      // Wspolrzedne do business_profiles osobno (best-effort) - places juz je ma (INSERT),
+      // a enrichWithBusinessProfile ma fallback na places.latitude. Nie blokuj aktywacji.
+      if (lat != null && lng != null) {
+        const { error: geoErr } = await (supabase as any)
+          .from("business_profiles").update({ latitude: lat, longitude: lng }).eq("id", bp.id);
+        if (geoErr) console.warn("[Admin] zapis wspolrzednych do business_profiles nie powiodl sie:", geoErr.message);
       }
 
       toast.success(`Aktywowano: ${place.place_name} (${place.category}, ${place.city})`);
@@ -957,31 +977,29 @@ const Admin = () => {
                     <div className="space-y-3">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Lokale do aktywacji ({pendingActivation.length})</p>
                       {pendingActivation.map(biz => (
-                        <div key={biz.id} className="flex items-center gap-3 p-3 rounded-2xl border border-orange-200 bg-orange-50">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold truncate">{biz.business_name}</p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                        <div key={biz.id} className="p-4 rounded-2xl border border-orange-200 bg-orange-50 space-y-3">
+                          <div className="min-w-0">
+                            <p className="text-base font-bold truncate">{biz.business_name}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
                               {biz.city ?? "?"} · {biz.main_category ?? "brak kategorii"}
                               {!biz.main_category && <span className="text-orange-700 font-semibold"> · uwaga: defaultem 'restaurant'</span>}
                             </p>
                           </div>
-                          <div className="flex gap-2 shrink-0">
+                          <div className="flex flex-col gap-2">
                             <Button
-                              size="sm"
                               disabled={activatingPlaceId === biz.id}
                               onClick={() => handleActivatePlace(biz.id)}
-                              className="h-7 px-3 text-xs rounded-xl bg-orange-600 hover:bg-orange-700 text-white border-0"
+                              className="w-full h-12 text-sm font-bold rounded-2xl bg-orange-600 hover:bg-orange-700 text-white border-0 active:scale-[0.98] transition-transform"
                             >
-                              {activatingPlaceId === biz.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Aktywuj"}
+                              {activatingPlaceId === biz.id ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Aktywuję…</> : "Aktywuj lokal"}
                             </Button>
                             <Button
-                              size="sm"
                               variant="outline"
                               disabled={deletingBizId === biz.id}
                               onClick={() => handleDeleteBusiness(biz.id)}
-                              className="h-7 px-3 text-xs rounded-xl text-red-600 border-red-200 hover:bg-red-50"
+                              className="w-full h-11 text-sm font-semibold rounded-2xl text-red-600 border-red-200 hover:bg-red-50 active:scale-[0.98] transition-transform"
                             >
-                              Usuń
+                              {deletingBizId === biz.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Usuń"}
                             </Button>
                           </div>
                         </div>

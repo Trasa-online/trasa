@@ -165,6 +165,8 @@ export interface BusinessProfileForPreview {
   color_badge?: string | null;
   color_card_bg?: string | null;
   color_button?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export function fromPin(
@@ -210,8 +212,9 @@ export function fromPin(
     phone: biz?.phone ?? undefined,
     website: biz?.website ?? undefined,
 
-    latitude: pin.latitude ?? undefined,
-    longitude: pin.longitude ?? undefined,
+    // Pozycja pinu: geokodowany adres biznesu ma pierwszenstwo nad coords z pinu/places.
+    latitude: biz?.latitude ?? pin.latitude ?? undefined,
+    longitude: biz?.longitude ?? pin.longitude ?? undefined,
 
     colorBadge: biz?.color_badge ?? undefined,
     colorCardBg: biz?.color_card_bg ?? undefined,

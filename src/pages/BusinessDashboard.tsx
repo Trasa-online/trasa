@@ -14,6 +14,7 @@ import 'driver.js/dist/driver.css';
 import { driver } from 'driver.js';
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { resizeImage } from "@/lib/imageResize";
+import { forwardGeocode } from "@/lib/googleMaps";
 import { formatDistanceToNow, subDays, format, addDays, differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
@@ -1223,6 +1224,20 @@ const BusinessDashboard = () => {
     const nowIso = new Date().toISOString();
     const reviewAt = isComplete && !reviewRequestedAt ? nowIso : reviewRequestedAt;
 
+    // Geokoduj adres -> business_profiles.latitude/longitude. Tym nadpisujemy pozycje pinu
+    // na mapie (enrichWithBusinessProfile), bo places nie ma innego zrodla wspolrzednych
+    // i biznes nie ma RLS do edycji places. Geokodujemy tylko gdy adres sie zmienil albo
+    // brak wspolrzednych - zeby nie wolac Google przy kazdym zapisie.
+    const prevAddr = `${(profile as any).street ?? ""}|${(profile as any).city ?? ""}|${(profile as any).postal_code ?? ""}`;
+    const curAddr = `${street}|${city}|${postalCode}`;
+    let geoCoords: { latitude: number; longitude: number } | null = null;
+    if (street.trim() && (curAddr !== prevAddr || (profile as any).latitude == null)) {
+      try {
+        const r = await forwardGeocode(`${street}, ${city || "Polska"}`);
+        if (r[0]?.coordinates) geoCoords = r[0].coordinates;
+      } catch { /* zapisz profil nawet gdy geocoding padnie */ }
+    }
+
     const { error } = await (supabase as any)
       .from("business_profiles")
       .update({
@@ -1274,6 +1289,16 @@ const BusinessDashboard = () => {
         toast.error(`Błąd zapisu: ${error.message ?? "nieznany"}`);
       }
     } else {
+      // Zapisz geokodowane wspolrzedne OSOBNYM update'em (best-effort). Gdyby kolumn
+      // latitude/longitude jeszcze nie bylo (przed uruchomieniem migracji), blad NIE
+      // wywala glownego zapisu - tylko logujemy.
+      if (geoCoords) {
+        const { error: geoErr } = await (supabase as any)
+          .from("business_profiles")
+          .update({ latitude: geoCoords.latitude, longitude: geoCoords.longitude })
+          .eq("id", profile.id);
+        if (geoErr) console.warn("[BusinessDashboard] zapis wspolrzednych nie powiodl sie (uruchom migracje?):", geoErr.message);
+      }
       if (isComplete && !reviewRequestedAt) {
         setReviewRequestedAt(nowIso);
         toast.success("Zmiany zapisane! Wizytówka trafiła do weryfikacji.");

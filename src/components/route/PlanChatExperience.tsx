@@ -630,7 +630,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
       try {
         const { data: placeRows } = await (supabase as any)
           .from("places")
-          .select("id, business_profiles(logo_url, cover_image_url, cover_video_url, description, main_category, subcategories, tags, gallery_urls, menu_image_urls, event_title, event_description, opening_hours, phone, website, is_verified, color_badge, color_card_bg, color_button, color_promo)")
+          .select("id, business_profiles(logo_url, cover_image_url, cover_video_url, description, main_category, subcategories, tags, gallery_urls, menu_image_urls, event_title, event_description, opening_hours, phone, website, is_verified, color_badge, color_card_bg, color_button, color_promo, latitude, longitude)")
           .ilike("place_name", pin.place_name)
           .ilike("city", city || "%")
           .limit(1);
