@@ -72,9 +72,12 @@ Deno.serve(async (req) => {
       });
     }
 
+    // HashRouter (jeden build web+native): redirect MUSI miec '#/' inaczej trafia na
+    // RootPage (route '/') zamiast na SetPassword -> user laduje na /home zamiast biznes.
+    // 1:1 z dzialajacym resetem hasla (Auth.tsx: "https://trasa.travel/#/set-password").
     const redirectTo = isBusiness
-      ? "https://trasa.travel/set-password-biznes"
-      : "https://trasa.travel/set-password";
+      ? "https://trasa.travel/#/set-password-biznes"
+      : "https://trasa.travel/#/set-password";
 
     let inviteLink: string | undefined;
     let invitedUserId: string | undefined;

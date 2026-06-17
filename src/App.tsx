@@ -101,6 +101,10 @@ function GlobalAuthCallback() {
 
   useEffect(() => {
     if (processed.current) return;
+    // Invite biznesu: redirect_to z maila celuje w '#/set-password-biznes'. Strona
+    // SetPassword(forceBusiness) sama wymienia code i pokazuje formularz - GlobalAuthCallback
+    // nie moze sie wtracac (inaczej podwojny exchange code'a albo redirect na /home).
+    if ((window.location.hash || "").includes("set-password-biznes")) return;
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     const tokenHash = params.get("token_hash");

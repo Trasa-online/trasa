@@ -162,24 +162,15 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       }
 
       if (isBusiness && user) {
-        // Business flow - find their profile and go to dashboard
-        const { data: bp } = await (supabase as any)
-          .from("business_profiles")
-          .select("place_id, id")
-          .eq("owner_user_id", user.id)
-          .maybeSingle();
-
-        if (bp?.id) {
-          // Mark account as activated
-          await (supabase as any).from("business_profiles")
-            .update({ activated_at: new Date().toISOString() })
-            .eq("owner_user_id", user.id);
-          toast.success("Hasło ustawione! Witaj w panelu biznesowym Trasy.");
-          navigate(`/biznes/${bp.place_id ?? bp.id}`);
-        } else {
-          toast.success("Hasło ustawione! Zaloguj się do panelu biznesowego.");
-          navigate("/auth?business=true");
-        }
+        // Oznacz konto jako aktywowane (no-op gdy brak profilu biznesowego - bezpieczne).
+        await (supabase as any).from("business_profiles")
+          .update({ activated_at: new Date().toISOString() })
+          .eq("owner_user_id", user.id);
+        // Po ustawieniu hasla wylogowujemy i kierujemy na LOGOWANIE biznesowe - user
+        // loguje sie swiezym haslem do panelu (swiadomy krok aktywacji konta).
+        await supabase.auth.signOut();
+        toast.success("Hasło ustawione! Zaloguj się do panelu biznesowego.");
+        navigate("/auth?business=true");
         return;
       }
 
