@@ -6,7 +6,10 @@ import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings } from "lucide-react";
+import { Loader2, BarChart2, MapPin, MousePointerClick, Plus, X, LogOut, ImagePlus, Trash2, Users, LayoutDashboard, Images, Store, Megaphone, TrendingUp, MessageCircle, Expand, ZoomIn, Video, Play, Camera, Star, Heart, ChevronUp, ChevronDown, ChevronLeft, GripVertical, HelpCircle, Eye, KeyRound, Clock, Settings, FileText } from "lucide-react";
+
+// Menu moze byc obrazem (JPG/PNG/WEBP) albo PDF - rozpoznajemy po rozszerzeniu URL.
+const isPdfUrl = (u: string): boolean => u.split("?")[0].toLowerCase().endsWith(".pdf");
 import 'driver.js/dist/driver.css';
 import { driver } from 'driver.js';
 import { MAIN_CATEGORIES } from "@/lib/categories";
@@ -425,15 +428,6 @@ function AppLikePreviewModal({
                       </div>
                     )}
                   </div>
-                  {/* Feed zero state */}
-                  <div>
-                    <h3 className="font-bold text-base mb-2">Feed</h3>
-                    <div className="flex flex-col items-center gap-1.5 py-5 rounded-2xl bg-slate-50 border border-slate-100">
-                      <Images className="h-7 w-7 text-slate-300" />
-                      <p className="text-xs font-medium text-muted-foreground">Brak zdjec w feedzie</p>
-                      <p className="text-[11px] text-muted-foreground/70 text-center px-4">Zdjecia pojawia sie po dodaniu przez lokal</p>
-                    </div>
-                  </div>
                   {/* Opinie */}
                   <div>
                     <h3 className="font-bold text-base mb-3">Opinie</h3>
@@ -693,6 +687,7 @@ const BusinessDashboard = () => {
   const menuInputRef = useRef<HTMLInputElement>(null);
   const postPhotoInputRef = useRef<HTMLInputElement>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadedKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!placeId) return;
@@ -702,6 +697,11 @@ const BusinessDashboard = () => {
       navigate(`/auth?business=true&return=${encodeURIComponent(`/biznes/${placeId}`)}`, { replace: true });
       return;
     }
+    // Powrot do karty (focus) odswieza token -> nowy obiekt `user` (ten sam id) -> efekt
+    // re-odpalal loadData i migal loaderem. Laduj tylko raz na (user.id + placeId).
+    const loadKey = `${user?.id ?? previewToken ?? "anon"}:${placeId}`;
+    if (loadedKeyRef.current === loadKey) return;
+    loadedKeyRef.current = loadKey;
     loadData();
   }, [user, placeId, previewToken, authLoading]);
 
@@ -980,18 +980,23 @@ const BusinessDashboard = () => {
 
   const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"];
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB - menu PDF moze byc wieksze niz zdjecie
 
-  const uploadFile = async (file: File, folder: string): Promise<string> => {
-    if (!ALLOWED_MIME.includes(file.type)) throw new Error("Niedozwolony format pliku (dozwolone: JPG, PNG, WEBP)");
-    if (file.size > MAX_FILE_SIZE) throw new Error("Plik jest za duży (max 5 MB)");
-    // Resize + recompress przed uploadem zeby zdjecia w storage byly male (200-500 KB)
-    // i ladowaly sie szybko. Skipuje juz male pliki - patrz src/lib/imageResize.ts.
-    const optimized = await resizeImage(file);
-    const ext = optimized.name.split(".").pop() ?? "jpg";
+  const uploadFile = async (file: File, folder: string, opts?: { allowPdf?: boolean }): Promise<string> => {
+    const isPdf = file.type === "application/pdf";
+    if (isPdf && !opts?.allowPdf) throw new Error("Niedozwolony format pliku (dozwolone: JPG, PNG, WEBP)");
+    if (!isPdf && !ALLOWED_MIME.includes(file.type)) {
+      throw new Error(opts?.allowPdf ? "Niedozwolony format (JPG, PNG, WEBP, PDF)" : "Niedozwolony format pliku (dozwolone: JPG, PNG, WEBP)");
+    }
+    if (file.size > (isPdf ? MAX_PDF_SIZE : MAX_FILE_SIZE)) throw new Error(`Plik jest za duży (max ${isPdf ? 10 : 5} MB)`);
+    // PDF wgrywamy bez przetwarzania (resizeImage to canvas - zniszczyloby PDF).
+    // Obrazy: resize + recompress zeby byly male i szybko sie ladowaly (src/lib/imageResize.ts).
+    const body = isPdf ? file : await resizeImage(file);
+    const ext = isPdf ? "pdf" : (body.name.split(".").pop() ?? "jpg");
     // Use profile.id as the storage folder (stable even when placeId is a UUID fallback)
     const folder_key = profile?.id ?? placeId;
     const path = `${folder_key}/${folder}/${Date.now()}.${ext}`;
-    const { data, error } = await supabase.storage.from("business-photos").upload(path, optimized, { upsert: true });
+    const { data, error } = await supabase.storage.from("business-photos").upload(path, body, { upsert: true, contentType: isPdf ? "application/pdf" : undefined });
     if (error) throw new Error(error.message);
     return supabase.storage.from("business-photos").getPublicUrl(data.path).data.publicUrl;
   };
@@ -1129,7 +1134,7 @@ const BusinessDashboard = () => {
     const toUpload = files.slice(0, remaining);
     setUploading("menu");
     try {
-      const urls = await Promise.all(toUpload.map(f => uploadFile(f, "menu")));
+      const urls = await Promise.all(toUpload.map(f => uploadFile(f, "menu", { allowPdf: true })));
       setMenuImageUrls(prev => [...prev, ...urls]);
       setIsDirty(true);
     } catch (err: any) { toast.error(err.message ?? "Nie udało się przesłać zdjęć"); }
@@ -2240,8 +2245,8 @@ const BusinessDashboard = () => {
                 {(() => {
                   const menuLabel = mainCategory === 'food' ? 'Menu' : 'Cennik';
                   const hint = menuLabel === 'Menu'
-                    ? 'Zdjęcia kartek menu (jedzenie, napoje, desery). Pokażą się na wizytówce w aplikacji.'
-                    : 'Zdjęcia z cennikiem (bilety, usługi, wstęp). Pokażą się na wizytówce w aplikacji.';
+                    ? 'Zdjęcia kartek menu (JPG, PNG) lub plik PDF. Pokażą się na wizytówce w aplikacji.'
+                    : 'Zdjęcia z cennikiem (JPG, PNG) lub plik PDF. Pokażą się na wizytówce w aplikacji.';
                   return (
                     <div className="pt-2 border-t border-border/40">
                       <div className="flex items-center justify-between mb-2">
@@ -2250,31 +2255,43 @@ const BusinessDashboard = () => {
                       </div>
                       <p className="text-xs text-muted-foreground mb-2">{hint}</p>
                       <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-                        {menuImageUrls.map((url, idx) => (
+                        {menuImageUrls.map((url, idx) => {
+                          const pdf = isPdfUrl(url);
+                          return (
                           <div
                             key={idx}
                             className="relative aspect-square rounded-xl overflow-hidden bg-muted group cursor-pointer"
-                            onClick={() => setPhotoPreview({ url, label: `${menuLabel} ${idx + 1}` })}
+                            onClick={() => pdf ? window.open(url, "_blank", "noopener,noreferrer") : setPhotoPreview({ url, label: `${menuLabel} ${idx + 1}` })}
                           >
-                            <img src={url} className="w-full h-full object-cover pointer-events-none" />
+                            {pdf ? (
+                              <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 pointer-events-none">
+                                <FileText className="h-7 w-7 text-red-400" />
+                                <span className="text-[10px] font-bold text-red-500">PDF</span>
+                              </div>
+                            ) : (
+                              <img src={url} className="w-full h-full object-cover pointer-events-none" />
+                            )}
                             <button
                               onClick={(e) => { e.stopPropagation(); removeMenuImage(idx); }}
                               className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center active:opacity-70 z-10"
                             >
                               <X className="h-3 w-3 text-white" />
                             </button>
-                            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-between px-1.5 pb-1.5 pointer-events-none">
-                              <ZoomIn className="h-3 w-3 text-white/80" />
-                            </div>
+                            {!pdf && (
+                              <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-between px-1.5 pb-1.5 pointer-events-none">
+                                <ZoomIn className="h-3 w-3 text-white/80" />
+                              </div>
+                            )}
                           </div>
-                        ))}
+                          );
+                        })}
                         {menuImageUrls.length < MAX_MENU_IMAGES && (
                           <button onClick={() => menuInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 active:opacity-70">
                             {uploading === 'menu' ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Plus className="h-5 w-5 text-muted-foreground" />}
                           </button>
                         )}
                       </div>
-                      <input ref={menuInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleMenuUpload} />
+                      <input ref={menuInputRef} type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleMenuUpload} />
                     </div>
                   );
                 })()}

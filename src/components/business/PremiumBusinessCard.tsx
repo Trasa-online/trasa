@@ -18,7 +18,7 @@ import { type ReactNode, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { cn } from "@/lib/utils";
-import { Star, MapPin, Clock, ChevronRight, ChevronLeft, X, Maximize2, Phone, Globe } from "lucide-react";
+import { Star, MapPin, Clock, ChevronRight, ChevronLeft, X, Maximize2, Phone, Globe, FileText } from "lucide-react";
 import { parseISO, isValid, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import RouteMap from "@/components/RouteMap";
@@ -71,6 +71,9 @@ function dedupSubcategories(subs: string[] | undefined): string[] {
 const validUrl = (url?: string | null): boolean =>
   !!url && (url.startsWith("http") || url.startsWith("/")) &&
   !url.includes("staticmap") && !url.includes("maps/api/staticmap");
+
+// Menu moze byc obrazem albo PDF - PDF otwieramy w nowej karcie (nie da sie go pokazac w <img>).
+const isPdfUrl = (u: string): boolean => u.split("?")[0].toLowerCase().endsWith(".pdf");
 
 // ─── Opening hours helpers ────────────────────────────────────────────────────
 
@@ -497,20 +500,38 @@ function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (p
   const menuImages = data.menuImageUrls ?? [];
   if (menuImages.length === 0) return null;
   const sectionLabel = data.mainCategoryId === "food" ? "Menu" : "Cennik";
+  // PDF nie da sie pokazac w fullscreen viewerze (<img>) - do niego trafiaja tylko obrazy.
+  const imageOnly = menuImages.filter((u) => !isPdfUrl(u));
   return (
     <div className="space-y-3 pt-2">
       <h3 className="text-lg font-black tracking-tight">{sectionLabel}</h3>
       <div className="flex gap-2 overflow-x-auto scrollbar-none snap-x snap-mandatory -mx-4 px-4 pb-1">
-        {menuImages.map((url, idx) => (
-          <button
-            key={idx}
-            onClick={() => onPhotoExpand(menuImages, idx)}
-            className="shrink-0 w-[78%] aspect-[4/3] rounded-2xl overflow-hidden bg-muted snap-center active:opacity-95"
-            aria-label={`Powiększ ${sectionLabel.toLowerCase()} ${idx + 1}`}
-          >
-            <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
-          </button>
-        ))}
+        {menuImages.map((url, idx) => {
+          if (isPdfUrl(url)) {
+            return (
+              <a
+                key={idx}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 w-[78%] aspect-[4/3] rounded-2xl bg-muted snap-center flex flex-col items-center justify-center gap-2 border border-border/40 active:opacity-95"
+              >
+                <FileText className="h-9 w-9 text-muted-foreground" />
+                <span className="text-sm font-bold text-foreground">Otwórz {sectionLabel} (PDF)</span>
+              </a>
+            );
+          }
+          return (
+            <button
+              key={idx}
+              onClick={() => onPhotoExpand(imageOnly, imageOnly.indexOf(url))}
+              className="shrink-0 w-[78%] aspect-[4/3] rounded-2xl overflow-hidden bg-muted snap-center active:opacity-95"
+              aria-label={`Powiększ ${sectionLabel.toLowerCase()} ${idx + 1}`}
+            >
+              <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
+            </button>
+          );
+        })}
       </div>
     </div>
   );
