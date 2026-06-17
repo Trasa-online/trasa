@@ -246,6 +246,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [googleRating, setGoogleRating] = useState<number | null>(null);
+  const [googleRatingCount, setGoogleRatingCount] = useState<number | null>(null);
   const [googleAddress, setGoogleAddress] = useState<string | null>(null);
   const [googleDescription, setGoogleDescription] = useState<string | null>(null);
   const [googleTags, setGoogleTags] = useState<string[] | null>(null);
@@ -307,6 +308,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           ).catch(() => {});
         }
         if (!place.rating && data?.result?.rating) setGoogleRating(data.result.rating);
+        if (data?.result?.user_ratings_total) setGoogleRatingCount(data.result.user_ratings_total);
         if (!place.address && data?.result?.formatted_address) setGoogleAddress(data.result.formatted_address);
         if (!place.description) {
           const summary = data?.result?.editorial_summary?.overview;
@@ -499,6 +501,9 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             <div className="flex items-center gap-1">
               <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
               <span className="text-white/90 text-sm font-medium">{displayRating}</span>
+              {googleRatingCount ? (
+                <span className="text-white/60 text-sm">({googleRatingCount.toLocaleString("pl")})</span>
+              ) : null}
             </div>
           ) : null}
           {place.price_level && (
