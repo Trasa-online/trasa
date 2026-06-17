@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { Star, MapPin, Clock, ChevronRight, ChevronLeft, X, Maximize2, Phone, Globe } from "lucide-react";
 import { parseISO, isValid, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
+import RouteMap from "@/components/RouteMap";
 import type {
   PremiumBusinessData,
   PremiumBusinessMode,
@@ -360,7 +361,13 @@ function DescriptionSection({ data, lineClamp }: SectionProps & { lineClamp?: nu
 function EventBannerSection({ data }: SectionProps) {
   if (!data.eventTitle) return null;
   return (
-    <div className="rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] px-4 py-3 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-orange-500/20 text-center leading-tight">
+    <div
+      className="rounded-full px-4 py-3 flex items-center justify-center font-bold text-sm shadow-md text-center leading-tight"
+      style={{
+        background: data.colorPromo || "linear-gradient(to right,#F4A259,#F9662B)",
+        color: data.colorPromo ? getHexContrast(data.colorPromo) : "#fff",
+      }}
+    >
       {data.eventTitle}
     </div>
   );
@@ -505,6 +512,19 @@ function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (p
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function MapSection({ data }: SectionProps) {
+  if (!data.latitude || !data.longitude) return null;
+  return (
+    <div className="space-y-3 pt-2">
+      <h3 className="text-lg font-black tracking-tight">Na mapie</h3>
+      <RouteMap
+        pins={[{ latitude: data.latitude, longitude: data.longitude, place_name: data.name, address: data.address }]}
+        className="h-44 rounded-2xl border-2 border-primary/25"
+      />
     </div>
   );
 }
@@ -655,7 +675,7 @@ const PremiumBusinessCard = ({
   if (mode === "detail") {
     return (
       <>
-        <div className={cn("flex flex-col", className)}>
+        <div className={cn("flex flex-col bg-[#F6F5F1]", className)}>
           <HeroPhotoCarousel
             photos={detailPhotos}
             placeName={data.name}
@@ -663,19 +683,36 @@ const PremiumBusinessCard = ({
             onClose={onClose}
             loading={detailLoading}
           />
-          <div className="flex-1 px-4 py-4 space-y-3">
-            {header}
-            <h2 className="text-xl font-black leading-tight">{data.name}</h2>
-            <RatingSection data={data} />
-            <AddressSection data={data} />
-            <CategoriesSection data={data} />
-            {!hideHours && <OpeningHoursSection data={data} />}
-            <DescriptionSection data={data} />
-            <HoursWarningBadge data={data} />
-            {!hideEventBanner && <EventBannerSection data={data} />}
-            <TagsSection data={data} />
+          {/* space-y-6 = duzy odstep MIEDZY sekcjami (prawo bliskosci / common region).
+              Wewnatrz kazdej grupy ciasny spacing - powiazane elementy trzymaja sie razem. */}
+          <div className="flex-1 px-4 pt-4 pb-6 space-y-6">
+
+            {/* Tozsamosc lokalu - jedna zwarta grupa */}
+            <div className="space-y-2.5">
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-2xl font-black leading-tight">{data.name}</h2>
+                {header}
+              </div>
+              <RatingSection data={data} />
+              <AddressSection data={data} />
+              <CategoriesSection data={data} />
+              {!hideHours && <OpeningHoursSection data={data} />}
+            </div>
+
+            {/* Opis + promo + tagi - zwarta grupa */}
+            {(data.description || data.eventTitle || (data.tags && data.tags.length > 0)) && (
+              <div className="space-y-3">
+                <DescriptionSection data={data} />
+                <HoursWarningBadge data={data} />
+                {!hideEventBanner && <EventBannerSection data={data} />}
+                <TagsSection data={data} />
+              </div>
+            )}
+
+            {/* Sekcje z naglowkami - osobne 'common regions' oddzielone duzym spacingiem */}
             {!hidePosts && <PostsSection data={data} onPhotoExpand={handleExpand} />}
             {!hideMenu && <MenuSection data={data} onPhotoExpand={handleExpand} />}
+            <MapSection data={data} />
             {!hideReviews && <ReviewsSection data={data} />}
             {footer}
           </div>

@@ -161,20 +161,18 @@ const PlaceSwiperDetail = ({
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.place_name} ${place.address ?? ""}`)}`
     : "#";
   const mapsButton = (
-    <div className="flex justify-end -mt-2">
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          window.open(mapsUrl, "_blank", "noopener,noreferrer");
-        }}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/60 bg-card text-foreground text-xs font-semibold active:scale-95 transition-transform"
-      >
-        <MapPin className="h-3.5 w-3.5" />
-        Maps
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.open(mapsUrl, "_blank", "noopener,noreferrer");
+      }}
+      className="shrink-0 mt-0.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/60 bg-white text-foreground text-xs font-semibold active:scale-95 transition-transform"
+    >
+      <MapPin className="h-3.5 w-3.5" />
+      Maps
+    </button>
   );
 
   if (!place) return null;
@@ -185,7 +183,7 @@ const PlaceSwiperDetail = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-[96dvh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden bg-background"
+        className="h-[96dvh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden bg-[#F6F5F1]"
       >
         {/* Scrollable wrapper - motion.div drag-to-dismiss wyrzucone bo blokowal native scroll
             na iOS WebView. Sheet ma close button (Hero X) + tap-outside-to-close + Esc. */}
@@ -205,7 +203,7 @@ const PlaceSwiperDetail = ({
 
         {/* Like / Skip CTA - fixed bottom poza PremiumBusinessCard */}
         {(onLike || onSkip) && (
-          <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-border/10 bg-background">
+          <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-black/5 bg-[#F6F5F1]">
             <div className="flex gap-3">
               <button
                 onClick={handleSkip}

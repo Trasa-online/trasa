@@ -71,6 +71,7 @@ export function fromMockPlace(
     colorBadge: place.businessColorBadge,
     colorCardBg: place.businessColorCardBg,
     colorButton: place.businessColorButton,
+    colorPromo: place.businessColorPromo,
 
     hasOwnPhoto: place.businessHasOwnPhoto,
   };

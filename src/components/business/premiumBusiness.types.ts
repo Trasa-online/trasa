@@ -95,6 +95,7 @@ export interface PremiumBusinessData {
   colorBadge?: string;
   colorCardBg?: string;
   colorButton?: string;
+  colorPromo?: string;
 
   // ── Flags ──────────────────────────────────────────────────────────────────
   /** True gdy biz wgral swoje zdjecia (cover/video/galeria). Skip Google Photos. */
