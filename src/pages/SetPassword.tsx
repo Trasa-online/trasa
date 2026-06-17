@@ -170,8 +170,6 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
       }
 
       if (isBusiness && user) {
-        // Po ustawieniu hasla wchodzimy PROSTO do panelu (zostajemy zalogowani swiezym
-        // haslem) - bez signOut/round-tripu i bez szansy na odbicie na B2C /home.
         const { data: bp } = await (supabase as any)
           .from("business_profiles")
           .select("place_id, id")
@@ -182,14 +180,13 @@ const SetPassword = ({ forceBusiness }: { forceBusiness?: boolean } = {}) => {
           await (supabase as any).from("business_profiles")
             .update({ activated_at: new Date().toISOString() })
             .eq("owner_user_id", user.id);
-          toast.success("Hasło ustawione! Witaj w panelu biznesowym Trasy.");
-          navigate(`/biznes/${bp.place_id ?? bp.id}`);
-        } else {
-          // Konto bez podpietej wizytowki (owner_user_id nieustawiony) - login biznesowy,
-          // NIGDY B2C /home.
-          toast.success("Hasło ustawione! Zaloguj się do panelu biznesowego.");
-          navigate("/auth?business=true");
         }
+        // Twardy redirect zamiast SPA-navigate: czysci zalegajacy ?token_hash z URL i
+        // boot-uje od razu na celu. Eliminuje posrednie re-rendery globalnych handlerow
+        // (RootPage -> Navigate '/home' itp.), ktore migaly widokiem B2C podczas przejscia.
+        // Brak ?token_hash w search vs poprzedni URL => realny reload (nie tylko hash).
+        const dest = bp?.id ? `/#/biznes/${bp.place_id ?? bp.id}` : "/#/auth?business=true";
+        window.location.replace(dest);
         return;
       }
 
