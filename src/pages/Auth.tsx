@@ -76,6 +76,13 @@ const Auth = () => {
           navigate(`/biznes/${bp.place_id ?? bp.id}`);
           return;
         }
+        // Kontekst biznesowy (zakladka Panel Biznesowy): NIGDY nie odbijaj na B2C /home.
+        // Draft owner -> panel draft; brak wizytowki -> zostan na logowaniu z komunikatem.
+        if (businessMode) {
+          if (bp?.id) { navigate(`/biznes/${bp.place_id ?? bp.id}`); return; }
+          toast.error("To konto nie jest jeszcze powiązane z wizytówką biznesową.");
+          return;
+        }
       }
       const demoRaw = localStorage.getItem("trasa_demo_liked");
       if (demoRaw) {
