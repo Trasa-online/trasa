@@ -118,8 +118,11 @@ function PlacePhoto({
   placeholderIdx?: number;
 }) {
   const gradient = PLACEHOLDER_GRADIENTS[placeholderIdx % PLACEHOLDER_GRADIENTS.length];
-  return item.photo_url ? (
-    <img src={item.photo_url} alt={item.place_name} className={`object-cover ${className ?? ""}`} loading="lazy" />
+  // Custom miejsca (spoza bazy) trzymaja surowy Google photo_reference - przepusc przez proxy
+  // (resolveStored: pelny URL bez zmian, raw ref -> getPhotoUrl). Inaczej <img src=ref> = pusty kafel.
+  const url = resolveStored(item.photo_url);
+  return url ? (
+    <img src={url} alt={item.place_name} className={`object-cover ${className ?? ""}`} loading="lazy" />
   ) : (
     <div className={`bg-gradient-to-br ${gradient} flex items-center justify-center ${className ?? ""}`}>
       <span className="text-2xl opacity-60">📍</span>
@@ -339,6 +342,7 @@ function MotywyRow({
       <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory px-1 pb-1">
         {collections.map((col, idx) => {
           const photoItem = col.items.find((i) => i.photo_url) ?? col.items[0];
+          const photoUrl = resolveStored(photoItem?.photo_url);
           const gradient = PLACEHOLDER_GRADIENTS[idx % PLACEHOLDER_GRADIENTS.length];
           return (
             <button
@@ -347,8 +351,8 @@ function MotywyRow({
               className="shrink-0 w-[88px] flex flex-col items-center gap-1.5 snap-start active:scale-95 transition-transform"
             >
               <div className="h-[88px] w-[88px] rounded-full overflow-hidden ring-1 ring-border/40">
-                {photoItem?.photo_url ? (
-                  <img src={photoItem.photo_url} alt={col.title} className="w-full h-full object-cover" loading="lazy" />
+                {photoUrl ? (
+                  <img src={photoUrl} alt={col.title} className="w-full h-full object-cover" loading="lazy" />
                 ) : (
                   <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
                     <span className="text-2xl opacity-60">📍</span>
@@ -383,6 +387,7 @@ function UserPolecajkiRow({
       <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
         {collections.map((col, idx) => {
           const photoItem = col.items.find((i) => i.photo_url) ?? col.items[0];
+          const photoUrl = resolveStored(photoItem?.photo_url);
           const gradient = PLACEHOLDER_GRADIENTS[idx % PLACEHOLDER_GRADIENTS.length];
           const placesCount = col.items.length;
           const isLocal = !!col.author_home_city && !!col.city && col.author_home_city.trim().toLowerCase() === col.city.trim().toLowerCase();
@@ -393,8 +398,8 @@ function UserPolecajkiRow({
               className="shrink-0 w-[68vw] max-w-[280px] rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.97] transition-transform snap-start"
             >
               <div className="aspect-[16/10] w-full overflow-hidden bg-muted relative">
-                {photoItem?.photo_url ? (
-                  <img src={photoItem.photo_url} alt={col.title} className="w-full h-full object-cover" loading="lazy" />
+                {photoUrl ? (
+                  <img src={photoUrl} alt={col.title} className="w-full h-full object-cover" loading="lazy" />
                 ) : (
                   <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
                     <span className="text-3xl opacity-60">📍</span>
