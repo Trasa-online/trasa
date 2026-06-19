@@ -99,7 +99,8 @@ Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery mał
    - ⛔ ZAKAZ: słowa "swipe", "match" (jak w Tinder)
    - ✅ Używaj: "przeglądanie", "eksploracja", "dopasowania", "dodanie do trasy"
 3. **Tworzenie trasy** — z wybranych/dopasowanych miejsc
-4. **Podsumowanie podróży** — plan vs rzeczywistość, ocenianie miejsc (solo lub przez grupę)
+4. **Podsumowanie podróży** — plan vs rzeczywistość, **notki** o miejscach (solo lub przez grupę)
+   - ⛔ **ZAKAZ ocen gwiazdkowych miejsc:** Użytkownik NIE wystawia żadnych ocen (gwiazdek/punktów) miejscom. Bazujemy WYŁĄCZNIE na wartościowych **notkach** userów. Nie dodawaj inputu oceny w podsumowaniu, dzienniku, wizytówce ani nigdzie indziej. (Gwiazdki Google na kartach to zewnętrzny rating do wyświetlania — to co innego, zostaje.)
 5. **Dziennik** — zapisywanie "pocztówek" z trasy (Baloo font na nagłówkach kart)
 
 ### B2B (Firmy)

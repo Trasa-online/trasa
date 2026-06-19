@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { MapPin, ChevronDown, Check, Lock, X, Bell, Shield } from "lucide-react";
+import { MapPin, ChevronDown, Check, Lock, X, Bell, Shield, Heart, Users } from "lucide-react";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
 import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import HomeTour, { useHomeTour } from "@/components/home/HomeTour";
@@ -13,8 +13,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { isHardcodedAdmin } from "@/lib/admins";
+import { LikedTab } from "./Explore";
 
 const FILTERS_STORAGE_KEY = "trasa_home_filters";
+// Po odrzuceniu propozycji trasy z polubionych - nie pokazuj jej juz nigdy (per urzadzenie).
+const ROUTE_PROMPT_DISMISSED_KEY = "trasa_home_route_prompt_dismissed_v1";
 
 type AvailableCity = { name: string; available: boolean };
 
@@ -65,7 +68,34 @@ const HomeSwipe = () => {
   const [filters, setFilters] = useState<StoredFilters>(() => readFilters());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [likedOpen, setLikedOpen] = useState(false);
+  const [showRoutePrompt, setShowRoutePrompt] = useState(false);
+  const [likedExplore, setLikedExplore] = useState<{ place_name: string }[]>([]);
+  const routePromptShownRef = useRef(false);
   const queryClient = useQueryClient();
+
+  // Po polubieniu ~4 miejsc proponujemy stworzenie trasy (raz na sesje; po odrzuceniu nigdy
+  // wiecej - flaga w localStorage). onLikedPlacesChange z PlaceSwiper raportuje liste polubionych.
+  const handleExploreLikesChange = (places: { place_name: string }[]) => {
+    setLikedExplore(places);
+    if (places.length >= 4 && !routePromptShownRef.current && !localStorage.getItem(ROUTE_PROMPT_DISMISSED_KEY)) {
+      routePromptShownRef.current = true;
+      setShowRoutePrompt(true);
+    }
+  };
+  const startRouteFromLiked = (mode: "solo" | "group") => {
+    setShowRoutePrompt(false);
+    const likedPlaceNames = likedExplore.map((p) => p.place_name).filter(Boolean);
+    if (mode === "solo") {
+      navigate("/plan", { state: { step: 3, city: filters.city, date: new Date().toISOString(), likedPlaceNames } });
+    } else {
+      navigate("/sesja/nowa");
+    }
+  };
+  const dismissRoutePrompt = () => {
+    setShowRoutePrompt(false);
+    try { localStorage.setItem(ROUTE_PROMPT_DISMISSED_KEY, "1"); } catch { /* ignore */ }
+  };
 
   // Powiadomienia tylko dla zalogowanych non-anon (anon nie ma rekordow w notifications)
   const { data: unreadCount = 0 } = useQuery({
@@ -126,15 +156,15 @@ const HomeSwipe = () => {
       {/* Sticky top bar: 'Zaloguj sie' (gosc) lub Bell (zalogowany non-anon) po lewej +
           filter chip po prawej */}
       <div className="shrink-0 bg-background px-4 pt-3 pb-2.5 flex items-center justify-between gap-2">
-        {isGuest ? (
-          <button
-            onClick={() => openAuthDrawer({ mode: "login" })}
-            className="text-xs font-semibold text-orange-600 px-3 py-2 rounded-full hover:bg-orange-50 active:scale-[0.97] transition-all"
-          >
-            Zaloguj się
-          </button>
-        ) : (
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1">
+          {isGuest ? (
+            <button
+              onClick={() => openAuthDrawer({ mode: "login" })}
+              className="text-xs font-semibold text-orange-600 px-3 py-2 rounded-full hover:bg-orange-50 active:scale-[0.97] transition-all"
+            >
+              Zaloguj się
+            </button>
+          ) : (
             <button
               onClick={() => setNotifOpen(true)}
               className="relative h-9 w-9 flex items-center justify-center text-muted-foreground active:scale-90 transition-transform"
@@ -147,18 +177,26 @@ const HomeSwipe = () => {
                 </span>
               )}
             </button>
-            {isAdmin && (
-              <button
-                onClick={() => navigate("/admin")}
-                className="h-9 w-9 flex items-center justify-center text-blue-600 active:scale-90 transition-transform"
-                aria-label="Panel admina"
-                title="Panel admina"
-              >
-                <Shield className="h-5 w-5" />
-              </button>
-            )}
-          </div>
-        )}
+          )}
+          <button
+            onClick={() => setLikedOpen(true)}
+            className="h-9 w-9 flex items-center justify-center text-muted-foreground active:scale-90 transition-transform"
+            aria-label="Polubione miejsca"
+            title="Polubione"
+          >
+            <Heart className="h-5 w-5" />
+          </button>
+          {isAdmin && (
+            <button
+              onClick={() => navigate("/admin")}
+              className="h-9 w-9 flex items-center justify-center text-blue-600 active:scale-90 transition-transform"
+              aria-label="Panel admina"
+              title="Panel admina"
+            >
+              <Shield className="h-5 w-5" />
+            </button>
+          )}
+        </div>
         <button
           onClick={() => setDrawerOpen(true)}
           className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-card border border-border/60 active:scale-[0.97] transition-transform max-w-full"
@@ -191,6 +229,7 @@ const HomeSwipe = () => {
           numDays={1}
           categoryFilter={filters.categories}
           exploreMode
+          onLikedPlacesChange={handleExploreLikesChange}
         />
       </div>
 
@@ -324,6 +363,66 @@ const HomeSwipe = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Polubione miejsca (przeniesione z Eksploruj na /home, ikona serca) */}
+      <Sheet open={likedOpen} onOpenChange={setLikedOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col" style={{ maxHeight: "85dvh" }}>
+          <div className="shrink-0 flex items-center justify-between px-5 pb-3" style={{ paddingTop: "max(1.25rem, env(safe-area-inset-top))" }}>
+            <p className="text-lg font-black">Polubione miejsca</p>
+            <button
+              type="button"
+              onClick={() => setLikedOpen(false)}
+              className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70 transition-colors"
+              aria-label="Zamknij"
+            >
+              <X className="h-4 w-4 text-foreground" />
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-[max(20px,env(safe-area-inset-bottom))]">
+            <LikedTab />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Propozycja stworzenia trasy po polubieniu ~4 miejsc (raz; po "Nie teraz" - nigdy wiecej) */}
+      {showRoutePrompt && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+          onClick={dismissRoutePrompt}
+        >
+          <div className="w-full max-w-sm bg-background rounded-3xl shadow-2xl p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex flex-col items-center text-center gap-2">
+              <div className="h-12 w-12 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center">
+                <Heart className="h-6 w-6 text-orange-600 fill-orange-600" />
+              </div>
+              <p className="text-lg font-black leading-tight">
+                {`Masz już ${likedExplore.length} ${likedExplore.length === 1 ? "polubione miejsce" : likedExplore.length < 5 ? "polubione miejsca" : "polubionych miejsc"}!`}
+              </p>
+              <p className="text-sm text-muted-foreground leading-snug">{"Stworzyć z nich trasę?"}</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => startRouteFromLiked("solo")}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm active:scale-[0.98] transition-transform shadow-md shadow-orange-500/20"
+              >
+                <MapPin className="h-4 w-4" /> Trasa solo
+              </button>
+              <button
+                onClick={() => startRouteFromLiked("group")}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-900 text-white font-bold text-sm active:scale-[0.98] transition-transform"
+              >
+                <Users className="h-4 w-4" /> Trasa grupowa
+              </button>
+              <button
+                onClick={dismissRoutePrompt}
+                className="w-full py-2.5 rounded-2xl text-muted-foreground font-semibold text-sm active:scale-[0.98] transition-transform"
+              >
+                Nie teraz
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

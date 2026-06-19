@@ -47,7 +47,7 @@ function formatGroupDate(dateStr: string): string {
   return format(d, "d MMMM yyyy", { locale: pl });
 }
 
-const LikedTab = () => {
+export const LikedTab = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
@@ -194,52 +194,23 @@ const LikedTab = () => {
   );
 };
 
+// Polubione przeniesione na /home (ikona serca). Eksploruj = sam feed polecanych.
 const Explore = () => {
-  const [tab, setTab] = useState<Tab>("feed");
-  const [likedVersion, setLikedVersion] = useState(0);
   const queryClient = useQueryClient();
 
   const handleRefresh = async () => {
-    // Odswiez feed (queries TanStack) + polubione (localStorage -> re-render).
     await queryClient.invalidateQueries();
-    setLikedVersion((v) => v + 1);
   };
 
   return (
     <PullToRefresh onRefresh={handleRefresh} className="flex-1 flex flex-col pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
       <div className="px-4 mb-3">
         <h1 className="text-xl font-black tracking-tight pt-2">Eksploruj</h1>
-        <p className="text-xs text-muted-foreground mt-1">Polecane miejsca, trasy i&nbsp;Twoje polubione.</p>
-      </div>
-
-      {/* Tabs */}
-      <div className="px-4 mb-4">
-        <div className="flex rounded-2xl bg-muted p-1">
-          <button
-            onClick={() => setTab("feed")}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-semibold rounded-2xl transition-all",
-              tab === "feed" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-            )}
-          >
-            <Compass className="h-4 w-4" />
-            Polecane
-          </button>
-          <button
-            onClick={() => setTab("liked")}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-semibold rounded-2xl transition-all",
-              tab === "liked" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-            )}
-          >
-            <Heart className="h-4 w-4" />
-            Polubione
-          </button>
-        </div>
+        <p className="text-xs text-muted-foreground mt-1">Polecane miejsca i&nbsp;trasy.</p>
       </div>
 
       <div className="flex-1 px-4">
-        {tab === "feed" ? <DiscoveryFeed /> : <LikedTab key={likedVersion} />}
+        <DiscoveryFeed />
       </div>
     </PullToRefresh>
   );

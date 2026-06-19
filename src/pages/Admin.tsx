@@ -45,7 +45,7 @@ const Admin = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"waitlist" | "cities" | "businesses" | "bugs">("waitlist");
+  const [tab, setTab] = useState<"waitlist" | "cities" | "businesses" | "bugs">("businesses");
   const [bizTab, setBizTab] = useState<"action" | "claims" | "all" | "support">("action");
   const [userTab, setUserTab] = useState<"pending" | "created" | "all">("pending");
 
@@ -625,7 +625,7 @@ const Admin = () => {
 
       {/* Tabs */}
       <div className="flex border-b border-border/40">
-        {(["waitlist", "cities", "businesses", "bugs"] as const).map(t => {
+        {(["cities", "businesses", "bugs"] as const).map(t => {
           const newBugs = bugReports.filter(r => r.status === "new").length;
           const badge = t === "businesses" ? pendingClaims : t === "waitlist" ? pendingWaitlist : t === "bugs" ? newBugs : 0;
           return (

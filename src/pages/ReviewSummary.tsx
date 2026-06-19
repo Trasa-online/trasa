@@ -596,24 +596,12 @@ const ReviewSummary = () => {
 
   // ── Sekcja Ocena + Notka pod miejscem (widok wspomnienia / plan dnia). ──
   // centered => gwiazdki + etykiety wysrodkowane (widok Szczegoly / swiper).
+  // Oceny gwiazdkowe USUNIETE - bazujemy wylacznie na wartosciowych notkach userow.
+  // (patrz CLAUDE.md "Brak ocen miejsc"). Zostaje tylko pole notki.
   const renderRatingNote = (placeName: string, centered = false) => {
     const k = rkey(activeRouteId!, placeName);
-    const rating = pinRatings[k] ?? 0;
     return (
       <div className={`mt-3 pt-1 ${centered ? "text-center" : ""}`}>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Ocena miejsca</p>
-        <div className={`flex items-center gap-1 ${centered ? "justify-center" : ""}`}>
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              onClick={() => ratePinHandler(placeName, n)}
-              className={`text-lg leading-none transition-transform active:scale-90 ${n <= rating ? "opacity-100" : "opacity-25"}`}
-            >
-              ⭐
-            </button>
-          ))}
-        </div>
-        <div className="h-3" />
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notka</p>
         <div className="relative">
           <textarea
