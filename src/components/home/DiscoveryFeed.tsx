@@ -85,9 +85,15 @@ function buildLeafletHtml(items: DiscoveryItem[]) {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function AuthorChip({ name, avatar }: { name: string; avatar: string | null }) {
+  // Oficjalne trasy ("trasa") - realne logo Trasy zamiast placeholdera awatara.
+  const isTrasa = ["trasa", "trasa.travel", "@trasa"].includes(name.trim().toLowerCase());
   return (
     <div className="flex items-center gap-1.5">
-      <img src={avatarSrc(avatar)} alt={name} className="h-5 w-5 rounded-full object-cover bg-orange-100" />
+      {isTrasa ? (
+        <img src="/Icon_Trasa.png" alt="trasa" className="h-5 w-5 object-contain shrink-0" />
+      ) : (
+        <img src={avatarSrc(avatar)} alt={name} className="h-5 w-5 rounded-full object-cover bg-orange-100" />
+      )}
       <span className="text-xs text-muted-foreground">{name}</span>
     </div>
   );

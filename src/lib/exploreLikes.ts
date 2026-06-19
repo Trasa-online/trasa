@@ -82,6 +82,37 @@ export function getTodayLikes(city: string): ExploreLike[] {
   return getHistory().find(g => g.date === date && g.city === city)?.places ?? [];
 }
 
+// Zestawienie polubien per MIASTO (scalone ze wszystkich dni, zdedupowane po nazwie).
+export interface ExploreCityGroup {
+  city: string;
+  places: ExploreLike[];
+}
+export function getHistoryByCity(): ExploreCityGroup[] {
+  const byCity = new Map<string, ExploreLike[]>();
+  for (const g of getHistory()) {
+    const arr = byCity.get(g.city) ?? [];
+    for (const p of g.places) {
+      if (!arr.some(x => x.place_name.toLowerCase() === p.place_name.toLowerCase())) arr.push(p);
+    }
+    byCity.set(g.city, arr);
+  }
+  return [...byCity.entries()].map(([city, places]) => ({ city, places }));
+}
+
+// Usun polubienie z danego miasta (ze wszystkich dni).
+export function removeLikeFromCity(city: string, place_name: string) {
+  const nameLower = place_name.toLowerCase();
+  const next = getHistory()
+    .map(g => g.city === city ? { ...g, places: g.places.filter(p => p.place_name.toLowerCase() !== nameLower) } : g)
+    .filter(g => g.places.length > 0);
+  writeHistory(next);
+}
+
+// Wyczysc wszystkie polubienia danego miasta.
+export function clearCity(city: string) {
+  writeHistory(getHistory().filter(g => g.city !== city));
+}
+
 export function clearHistory() {
   writeHistory([]);
 }

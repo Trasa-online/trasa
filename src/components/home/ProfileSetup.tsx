@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { isNative } from "@/lib/platform";
 import { requestAndRegisterNativePush } from "@/hooks/useNativePush";
+import { ORIGIN_COUNTRIES, citiesForCountry } from "@/lib/locations";
 
 // Polskie sieroty: po pojedynczych literach (a i o u w z) twarda spacja.
 const nbsp = (s: string) => s.replace(/ ([aiouwzAIOUWZ]) /g, (_m, l) => " " + l + String.fromCharCode(160));
@@ -14,7 +15,7 @@ const nbsp = (s: string) => s.replace(/ ([aiouwzAIOUWZ]) /g, (_m, l) => " " + l 
 // Setup profilu po pierwszym zalogowaniu: username -> awatar (BEZ bio) -> powiadomienia.
 // Osobny etap od intro-tour (HomeTour). Tlo #FEFEFE + pomaranczowy brand B2C
 // (NIE ciemne/zolte z referencji - to brand innej apki).
-const STEPS = ["username", "avatar", "notify"] as const;
+const STEPS = ["username", "avatar", "origin", "notify"] as const;
 type Step = typeof STEPS[number];
 
 type UStatus = "idle" | "short" | "checking" | "ok" | "taken" | "invalid";
@@ -39,6 +40,10 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [homeCountry, setHomeCountry] = useState("Polska");
+  const [homeCity, setHomeCity] = useState("");
+  const [savingOrigin, setSavingOrigin] = useState(false);
+
   const [notifLoading, setNotifLoading] = useState(false);
   const [finishing, setFinishing] = useState(false);
 
@@ -52,6 +57,15 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
         if ((data as any).username) setUsername(sanitizeUsername((data as any).username));
         if ((data as any).avatar_url) setAvatarUrl((data as any).avatar_url);
       });
+    // home_country/home_city osobnym selectem (best-effort) - gdyby kolumn jeszcze nie
+    // bylo (przed migracja), nie psuje to prefilla username/avatar.
+    (supabase as any).from("profiles").select("home_country, home_city").eq("id", user.id).maybeSingle()
+      .then(({ data }: any) => {
+        if (cancelled || !data) return;
+        if (data.home_country) setHomeCountry(data.home_country);
+        if (data.home_city) setHomeCity(data.home_city);
+      })
+      .catch(() => {});
     return () => { cancelled = true; };
   }, [user]);
 
@@ -101,6 +115,18 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
       toast.error("Nie udało się zapisać nazwy");
       return;
     }
+    goNext();
+  };
+
+  // ── Skąd jesteś: zapis kraj + miasto rodzime ──
+  const saveOrigin = async () => {
+    if (!user || savingOrigin) return;
+    setSavingOrigin(true);
+    const { error } = await (supabase as any).from("profiles")
+      .update({ home_country: homeCountry || null, home_city: homeCity || null }).eq("id", user.id);
+    setSavingOrigin(false);
+    // Best-effort: gdyby kolumny jeszcze nie bylo (przed migracja), nie blokuj usera.
+    if (error) console.warn("[ProfileSetup] zapis 'skąd jesteś' nieudany (uruchom migracje?):", error.message);
     goNext();
   };
 
@@ -174,14 +200,17 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
   const primaryDisabled =
     (stepName === "username" && uStatus !== "ok") ||
     (stepName === "username" && savingU) ||
+    (stepName === "origin" && (!homeCity || savingOrigin)) ||
     (stepName === "notify" && (notifLoading || finishing));
   const primaryLabel =
     stepName === "username" ? "Dalej" :
     stepName === "avatar" ? "Dalej" :
+    stepName === "origin" ? "Dalej" :
     "Pozwól na powiadomienia";
   const onPrimary =
     stepName === "username" ? saveUsername :
     stepName === "avatar" ? goNext :
+    stepName === "origin" ? saveOrigin :
     allowNotifications;
 
   return (
@@ -261,6 +290,42 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
           </>
         )}
 
+        {stepName === "origin" && (
+          <>
+            <div className="pt-6 text-center">
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Skąd jesteś?")}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Dzięki temu pokażemy, że polecasz miejsca jako lokals w swoim mieście.")}</p>
+            </div>
+            <div className="mt-8 space-y-4">
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">Kraj</label>
+                <select
+                  value={homeCountry}
+                  onChange={(e) => { setHomeCountry(e.target.value); setHomeCity(""); }}
+                  className="w-full rounded-2xl border border-border bg-white px-4 py-3.5 text-base outline-none focus:ring-2 focus:ring-orange-500/60"
+                >
+                  {ORIGIN_COUNTRIES.map((c) => (
+                    <option key={c.name} value={c.name}>{c.flag} {c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">Miasto</label>
+                <select
+                  value={homeCity}
+                  onChange={(e) => setHomeCity(e.target.value)}
+                  className="w-full rounded-2xl border border-border bg-white px-4 py-3.5 text-base outline-none focus:ring-2 focus:ring-orange-500/60"
+                >
+                  <option value="" disabled>Wybierz miasto</option>
+                  {citiesForCountry(homeCountry).map((city) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </>
+        )}
+
         {stepName === "notify" && (
           <>
             <div className="pt-6 text-center">
@@ -284,12 +349,15 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
           className="w-full py-4 rounded-full text-white font-bold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
           style={{ background: "linear-gradient(to right, #F4A259, #F9662B)" }}
         >
-          {(savingU || (stepName === "notify" && (notifLoading || finishing)))
+          {(savingU || savingOrigin || (stepName === "notify" && (notifLoading || finishing)))
             ? <Loader2 className="h-5 w-5 animate-spin mx-auto" />
             : primaryLabel}
         </button>
         {/* sekundarne wyjscie tylko tam, gdzie krok jest opcjonalny */}
         {stepName === "avatar" && (
+          <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Pomiń</button>
+        )}
+        {stepName === "origin" && (
           <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Pomiń</button>
         )}
         {stepName === "notify" && (

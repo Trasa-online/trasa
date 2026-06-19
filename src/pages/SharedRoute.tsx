@@ -9,6 +9,7 @@ import { pl } from "date-fns/locale";
 import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark } from "lucide-react";
 import { PlacePhoto } from "@/components/PlacePhoto";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
+import { avatarSrc } from "@/lib/avatar";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import { resolveStored } from "@/components/PlacePhoto";
@@ -69,6 +70,20 @@ export default function SharedRoute() {
       return data as any;
     },
     enabled: !!id,
+  });
+
+  // Autor trasy - do logiki "lokals poleca!" (home_city autora == miasto trasy).
+  const { data: author } = useQuery({
+    queryKey: ["shared-route-author", route?.user_id],
+    enabled: !!route?.user_id,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("profiles")
+        .select("username, first_name, avatar_url, home_city")
+        .eq("id", route!.user_id)
+        .maybeSingle();
+      return data as any;
+    },
   });
 
   // Inkrementacja licznika wyswietlen (nagroda dla autora). Dedup per-urzadzenie
@@ -223,6 +238,10 @@ export default function SharedRoute() {
   const heroPhoto = cover ?? getRandomPinPlaceholder(route.id);
   const dateLabel = route.start_date ? format(new Date(route.start_date), "d MMMM yyyy", { locale: pl }) : "";
   const cityLabel = route.city || "Podróż";
+  // "lokals poleca!" - autor pochodzi z miasta tej trasy.
+  const authorName = author?.first_name || author?.username || "Użytkownik";
+  const isLocal = !!author?.home_city && !!route.city &&
+    author.home_city.trim().toLowerCase() === route.city.trim().toLowerCase();
 
   const openDetail = (pin: any) => setDetailPin({
     id: pin.place_id || pin.id || pin.place_name,
@@ -353,8 +372,8 @@ export default function SharedRoute() {
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto">
 
-      {/* Hero - ilustracja placeholder (bez zdjec autora) */}
-      <div className={`relative w-full ${hasRealPhoto ? "aspect-[4/5]" : "aspect-[16/10]"} flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500`}>
+      {/* Hero - nizsza okladka (zdjecie nie jest kluczowe w polecajce trasy) */}
+      <div className="relative w-full aspect-[16/10] flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500">
         <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
         <div className={`absolute inset-0 bg-gradient-to-b ${hasRealPhoto ? "from-black/40 via-transparent to-black/75" : "from-black/35 via-black/25 to-black/80"}`} />
 
@@ -364,9 +383,12 @@ export default function SharedRoute() {
             className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
             <ArrowLeft className="h-5 w-5 text-white" />
           </button>
-          <span className="ml-3 text-xs font-semibold text-white/80 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-1.5">
-            <Sparkles className="h-3 w-3" /> Trasa polecana
-          </span>
+          {isLocal && (
+            <span className="ml-3 text-xs font-bold text-white bg-black/45 backdrop-blur-sm rounded-full pl-1 pr-3 py-1 flex items-center gap-1.5">
+              <img src={avatarSrc(author?.avatar_url)} alt="" className="h-5 w-5 rounded-full object-cover bg-orange-100" />
+              lokals poleca! · {authorName}
+            </span>
+          )}
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 px-5 pb-6">

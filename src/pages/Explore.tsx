@@ -6,7 +6,7 @@ import { MapPin, Heart, Trash2, ArrowRight, Compass } from "lucide-react";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { pl } from "date-fns/locale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
-import { getHistory, removeLike, clearGroup, type ExploreLikeGroup } from "@/lib/exploreLikes";
+import { getHistoryByCity, removeLikeFromCity, clearCity, type ExploreCityGroup } from "@/lib/exploreLikes";
 import { getSubcategoryLabel, MAIN_CATEGORIES } from "@/lib/categories";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
@@ -69,10 +69,9 @@ export const LikedTab = () => {
     };
   }, []);
 
-  const groups = useMemo<ExploreLikeGroup[]>(() => {
-    // Sort by date descending (most recent first). Re-eval na zmiane nonce -
-    // forsujemy re-load gdy refresh() zostal wywolany.
-    return [...getHistory()].sort((a, b) => b.date.localeCompare(a.date));
+  const groups = useMemo<ExploreCityGroup[]>(() => {
+    // Zestawienie per MIASTO (nie per dzien). Najwiecej polubien na gorze.
+    return getHistoryByCity().sort((a, b) => b.places.length - a.places.length);
   }, [nonce]);
 
   const totalLikes = groups.reduce((sum, g) => sum + g.places.length, 0);
@@ -99,7 +98,7 @@ export const LikedTab = () => {
     );
   }
 
-  const handleCreateRoute = (group: ExploreLikeGroup) => {
+  const handleCreateRoute = (group: ExploreCityGroup) => {
     if (!user) { openAuthDrawer({ mode: "register", hint: "save_route" }); return; }
     navigate("/plan", {
       state: {
@@ -114,23 +113,23 @@ export const LikedTab = () => {
   return (
     <div className="flex flex-col gap-5">
       {groups.map((group) => (
-        <div key={`${group.date}-${group.city}`} className="rounded-3xl bg-card border border-border/50 overflow-hidden">
-          {/* Header */}
+        <div key={group.city} className="rounded-3xl bg-card border border-border/50 overflow-hidden">
+          {/* Header - miasto */}
           <div className="flex items-center gap-2 px-4 pt-4 pb-3">
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-base leading-tight">{formatGroupDate(group.date)}</p>
-              <div className="flex items-center gap-1 mt-0.5">
-                <MapPin className="h-3 w-3 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">{group.city}</span>
-                <span className="text-muted-foreground/40 text-xs">·</span>
-                <span className="text-xs text-muted-foreground">{group.places.length} {group.places.length === 1 ? "miejsce" : group.places.length < 5 ? "miejsca" : "miejsc"}</span>
-              </div>
+              <p className="font-bold text-base leading-tight flex items-center gap-1.5">
+                <MapPin className="h-4 w-4 text-orange-600 shrink-0" />
+                {group.city}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {group.places.length} {group.places.length === 1 ? "polubione miejsce" : group.places.length < 5 ? "polubione miejsca" : "polubionych miejsc"}
+              </p>
             </div>
             <button
               onClick={() => {
-                if (!confirm(`Usunąć wszystkie polubione z ${formatGroupDate(group.date).toLowerCase()} (${group.city})?`)) return;
+                if (!confirm(`Usunąć wszystkie polubione z ${group.city}?`)) return;
                 const placeNames = group.places.map(p => p.place_name);
-                clearGroup(group.date, group.city);
+                clearCity(group.city);
                 if (user?.id) void removeReactionsFromDb(user.id, group.city, placeNames);
                 refresh();
               }}
@@ -163,7 +162,7 @@ export const LikedTab = () => {
                 </div>
                 <button
                   onClick={() => {
-                    removeLike(group.date, group.city, p.place_name);
+                    removeLikeFromCity(group.city, p.place_name);
                     if (user?.id) void removeReactionsFromDb(user.id, group.city, [p.place_name]);
                     refresh();
                   }}
