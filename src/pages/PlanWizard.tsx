@@ -116,6 +116,8 @@ const PlanWizard = () => {
 
   const handleBack = () => {
     if (step === 1) navigate("/");
+    // Parowanie (step 4): z "Dopasowania" wracaj najpierw do "Eksploruj", nie skacz do step 3.
+    else if (step === 4 && step4Tab === "matches") setStep4Tab("swipe");
     else if (step === 4) setStep(3);    // back to starting location
     else setStep((s) => (s - 1) as Step);
   };

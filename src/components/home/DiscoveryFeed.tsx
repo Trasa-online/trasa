@@ -221,31 +221,37 @@ function CreatorPlanDetail({ plan }: { plan: PolecaneCreatorPlan }) {
 
 // ── Skeleton ───────────────────────────────────────────────────────────────────
 
-function MotywySkeleton() {
+// Skeletony 1:1 z realna trescia Eksploruj (RouteCardH poziome + RouteCardV pionowe),
+// zeby przy zaladowaniu nie bylo skoku layoutu.
+function RouteCardHSkeleton() {
   return (
-    <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1 px-1">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="shrink-0 w-[88px] flex flex-col items-center gap-1.5 animate-pulse">
-          <div className="h-[88px] w-[88px] rounded-full bg-muted" />
-          <div className="h-2.5 w-16 bg-muted rounded" />
-        </div>
-      ))}
+    <div className="shrink-0 w-[46vw] max-w-[200px] animate-pulse">
+      <div className="aspect-[3/4] rounded-2xl bg-muted" />
+      <div className="mt-2 flex items-center gap-1.5 px-0.5">
+        <div className="h-4 w-4 rounded-full bg-muted" />
+        <div className="h-3 w-20 bg-muted rounded" />
+      </div>
     </div>
   );
 }
 
-function PolecaneSkeleton() {
+function RouteCardVSkeleton() {
   return (
-    <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
-      {Array.from({ length: 2 }).map((_, i) => (
-        <div key={i} className="shrink-0 w-[68vw] max-w-[280px] rounded-2xl bg-card border border-border/50 overflow-hidden animate-pulse">
-          <div className="aspect-[16/10] bg-muted" />
-          <div className="px-3 py-2.5 space-y-2">
-            <div className="h-4 bg-muted rounded w-3/4" />
-            <div className="h-3 bg-muted rounded w-1/2" />
-          </div>
+    <div className="w-full animate-pulse">
+      <div className="aspect-[16/9] rounded-2xl bg-muted" />
+      <div className="mt-2.5 space-y-2">
+        <div className="h-4 w-3/4 bg-muted rounded" />
+        <div className="h-3 w-full bg-muted rounded" />
+        <div className="h-3 w-2/3 bg-muted rounded" />
+        <div className="flex gap-1.5 pt-0.5">
+          <div className="h-4 w-14 bg-muted rounded-full" />
+          <div className="h-4 w-16 bg-muted rounded-full" />
         </div>
-      ))}
+        <div className="flex items-center gap-1.5 pt-0.5">
+          <div className="h-5 w-5 rounded-full bg-muted" />
+          <div className="h-3 w-24 bg-muted rounded" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -824,14 +830,20 @@ export default function DiscoveryFeed() {
   return (
     <>
       {isLoading ? (
-        <div className="space-y-5">
+        <div className="space-y-7">
+          {/* Najnowsze trasy - poziomy scroll */}
           <div>
-            <div className="h-4 w-44 bg-muted rounded mb-2 mx-1 animate-pulse" />
-            <MotywySkeleton />
+            <div className="h-3.5 w-32 bg-muted rounded mb-3 mx-1 animate-pulse" />
+            <div className="flex gap-3 overflow-hidden pb-1 -mx-1 px-1">
+              {Array.from({ length: 3 }).map((_, i) => <RouteCardHSkeleton key={i} />)}
+            </div>
           </div>
+          {/* Trasy w Warszawie - duze pionowe karty */}
           <div>
-            <div className="h-4 w-24 bg-muted rounded mb-2 mx-1 animate-pulse" />
-            <PolecaneSkeleton />
+            <div className="h-6 w-44 bg-muted rounded mb-4 mx-1 animate-pulse" />
+            <div className="space-y-5">
+              {Array.from({ length: 2 }).map((_, i) => <RouteCardVSkeleton key={i} />)}
+            </div>
           </div>
         </div>
       ) : (
