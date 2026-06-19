@@ -20,13 +20,16 @@ const ROUTE_PROMPT_DISMISSED_KEY = "trasa_home_route_prompt_dismissed_v1";
 
 type AvailableCity = { name: string; available: boolean };
 
-// Only Warszawa is active (matches CityPicker). Others shown as locked.
+// Aktywne: Warszawa + Trójmiasto (Gdańsk/Sopot/Gdynia + wszystkie). Reszta locked. 1:1 z CityPicker.
 const AVAILABLE_CITIES: AvailableCity[] = [
   { name: "Warszawa", available: true },
+  { name: "Gdańsk", available: true },
+  { name: "Sopot", available: true },
+  { name: "Gdynia", available: true },
+  { name: "Trójmiasto", available: true },
   { name: "Kraków", available: false },
   { name: "Łódź", available: false },
   { name: "Poznań", available: false },
-  { name: "Trójmiasto", available: false },
   { name: "Wrocław", available: false },
 ];
 

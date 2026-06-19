@@ -8,7 +8,7 @@ export interface OriginCountry {
 }
 
 export const ORIGIN_COUNTRIES: OriginCountry[] = [
-  { name: "Polska", flag: "🇵🇱", cities: ["Warszawa", "Kraków", "Łódź", "Wrocław", "Poznań", "Gdańsk", "Trójmiasto", "Szczecin", "Lublin", "Katowice", "Bydgoszcz", "Białystok", "Toruń", "Rzeszów", "Olsztyn"] },
+  { name: "Polska", flag: "🇵🇱", cities: ["Warszawa", "Kraków", "Łódź", "Wrocław", "Poznań", "Gdańsk", "Sopot", "Gdynia", "Trójmiasto", "Szczecin", "Lublin", "Katowice", "Bydgoszcz", "Białystok", "Toruń", "Rzeszów", "Olsztyn"] },
   { name: "Niemcy", flag: "🇩🇪", cities: ["Berlin", "Monachium", "Hamburg", "Kolonia"] },
   { name: "Czechy", flag: "🇨🇿", cities: ["Praga", "Brno", "Ostrawa"] },
   { name: "Wielka Brytania", flag: "🇬🇧", cities: ["Londyn", "Manchester", "Edynburg"] },

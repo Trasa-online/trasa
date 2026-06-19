@@ -28,10 +28,14 @@ const COUNTRIES: Country[] = [
       // Etap 1 (Warszawa) - cache zdjęć działa tylko dla Warszawy.
       // Pozostałe miasta zablokowane do czasu rozszerzenia cache.
       { name: "Warszawa" },
+      // Trójmiasto: sub-miasta osobno + "Trójmiasto" = wszystkie trzy naraz (expandCity).
+      { name: "Gdańsk" },
+      { name: "Sopot" },
+      { name: "Gdynia" },
+      { name: "Trójmiasto" },
       { name: "Kraków",     comingSoon: true },
       { name: "Łódź",       comingSoon: true },
       { name: "Poznań",     comingSoon: true },
-      { name: "Trójmiasto", comingSoon: true },
       { name: "Wrocław",    comingSoon: true },
     ],
   },

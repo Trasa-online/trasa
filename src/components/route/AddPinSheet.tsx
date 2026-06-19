@@ -4,6 +4,7 @@ import { Search, Loader2, MapPin, Plus, Heart, Tag, PenLine, ArrowLeft } from "l
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { expandCity } from "@/lib/cities";
 import type { PlanPin } from "./DayPinList";
 
 interface AddPinSheetProps {
@@ -104,7 +105,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
     (supabase as any)
       .from("places")
       .select("id, place_name, category, address, latitude, longitude, description, rating")
-      .ilike("city", cityContext)
+      .in("city", expandCity(cityContext))
       .eq("is_active", true)
       .then(({ data }: { data: DbPlace[] | null }) => {
         setAllCityPlaces(data ?? []);
@@ -123,7 +124,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
       const { data } = await (supabase as any)
         .from("places")
         .select("id, place_name, category, address, latitude, longitude, description, rating")
-        .ilike("city", cityContext)
+        .in("city", expandCity(cityContext))
         .ilike("place_name", `%${query}%`)
         .eq("is_active", true)
         .limit(10);

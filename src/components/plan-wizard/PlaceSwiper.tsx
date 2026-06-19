@@ -13,6 +13,7 @@ import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { useHaptics } from "@/hooks/useHaptics";
 import { getSubcategoryIds, getMainCategoryFor, getDbCategoriesFor, MAIN_CATEGORIES } from "@/lib/categories";
 import { addLike as saveExploreLike, clearGroup as clearExploreGroup } from "@/lib/exploreLikes";
+import { expandCity } from "@/lib/cities";
 import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1044,7 +1045,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       const { data, error: placesError } = await (supabase as any)
         .from("places")
         .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude)")
-        .ilike("city", city)
+        .in("city", expandCity(city))
         .eq("is_active", true);
 
       if (placesError) console.error("[PlaceSwiper] places fetch error:", placesError);
@@ -1063,7 +1064,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           .from("user_place_reactions")
           .select("place_id")
           .eq("user_id", user.id)
-          .ilike("city", city)
+          .in("city", expandCity(city))
           .gte("created_at", todayStart.toISOString());
         if (reactions?.length) {
           ratedPlaceIds = new Set(reactions.map((r: { place_id: string }) => r.place_id));
@@ -1339,7 +1340,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           .from("user_place_reactions")
           .delete()
           .eq("user_id", user.id)
-          .ilike("city", city);
+          .in("city", expandCity(city));
         if (delError) throw delError;
       }
       // Wyczysc explore likes localStorage dla tego miasta + dziennej grupy
@@ -1422,7 +1423,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     (supabase as any)
       .from("route_examples")
       .select("id, title, personality_type, description, pins")
-      .ilike("city", city)
+      .in("city", expandCity(city))
       .eq("is_approved", true)
       .then(({ data }: { data: RouteExample[] | null }) => {
         if (!data?.length) { setLoadingExamples(false); return; }
