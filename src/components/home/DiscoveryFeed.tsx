@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { avatarSrc } from "@/lib/avatar";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2 } from "lucide-react";
+import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
@@ -16,6 +19,10 @@ type DiscoveryItem = {
   photo_url: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  place_id?: string | null;     // != null -> miejsce z bazy (tap -> wizytowka)
+  category?: string | null;
+  address?: string | null;
+  rating?: number | null;       // gwiazdki Google (dla miejsca spoza bazy)
 };
 
 type DiscoveryCollection = {
@@ -26,6 +33,8 @@ type DiscoveryCollection = {
   author_name: string;
   author_avatar: string | null;
   items: DiscoveryItem[];
+  user_id?: string | null;
+  author_home_city?: string | null;  // do badge "lokals poleca!"
 };
 
 type PolecaneRoute = {
@@ -120,24 +129,56 @@ function PlacePhoto({
 
 // ── Detail sheet ───────────────────────────────────────────────────────────────
 
-function CollectionDetail({ col }: { col: DiscoveryCollection }) {
+function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose: () => void }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const leafletHtml = buildLeafletHtml(col.items);
   const hasPins = col.items.some((i) => i.latitude && i.longitude);
+  const isOwner = !!user && user.id === col.user_id;
+  const isLocal = !!col.author_home_city && !!col.city && col.author_home_city.trim().toLowerCase() === col.city.trim().toLowerCase();
+
+  // Miejsce z bazy (place_id) -> otworz pelna wizytowke. Custom (place_id null) = nieklikalne.
+  const openPlace = async (item: DiscoveryItem) => {
+    if (!item.place_id) return;
+    const { data } = await (supabase as any).from("places").select("*").eq("id", item.place_id).maybeSingle();
+    if (!data) return;
+    setDetailPlace({
+      id: data.id, place_name: data.place_name, category: (data.category || "other"),
+      city: data.city ?? col.city ?? "", address: data.address ?? "", latitude: data.latitude ?? 0, longitude: data.longitude ?? 0,
+      rating: data.rating ?? 0, photo_url: data.photo_url ?? "", vibe_tags: data.vibe_tags ?? [], description: data.description ?? "",
+    } as MockPlace);
+  };
+
+  const handleDelete = async () => {
+    if (!isOwner || deleting) return;
+    if (!confirm("Usunąć to zestawienie?")) return;
+    setDeleting(true);
+    await (supabase as any).from("discovery_collections").delete().eq("id", col.id);
+    queryClient.invalidateQueries({ queryKey: ["explore-rankings"] });
+    onClose();
+  };
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex items-start gap-3 px-4 pt-4 pb-3 border-b border-border/20 shrink-0">
         <div className="flex-1 min-w-0">
           <p className="font-bold text-base leading-tight line-clamp-2">{col.title}</p>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
             <AuthorChip name={col.author_name} avatar={col.author_avatar} />
+            {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5">lokals poleca!</span>}
             {col.city && (
-              <>
-                <span className="text-muted-foreground/40 text-xs">·</span>
-                <span className="text-xs text-muted-foreground">{col.city}</span>
-              </>
+              <><span className="text-muted-foreground/40 text-xs">·</span><span className="text-xs text-muted-foreground">{col.city}</span></>
             )}
           </div>
+          {isOwner && (
+            <div className="flex gap-3 mt-2">
+              <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} className="text-xs font-semibold text-orange-600 flex items-center gap-1"><Pencil className="h-3 w-3" /> Edytuj</button>
+              <button onClick={handleDelete} disabled={deleting} className="text-xs font-semibold text-destructive flex items-center gap-1 disabled:opacity-50"><Trash2 className="h-3 w-3" /> Usuń</button>
+            </div>
+          )}
         </div>
         <SheetClose className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-90 transition-transform shrink-0 mt-0.5">
           <X className="h-4 w-4" />
@@ -154,24 +195,35 @@ function CollectionDetail({ col }: { col: DiscoveryCollection }) {
         {col.description && (
           <p className="text-sm text-muted-foreground leading-relaxed">{col.description}</p>
         )}
-        {col.items.map((item, idx) => (
-          <div key={item.id} className="space-y-2">
-            <div className="relative rounded-2xl overflow-hidden h-44">
-              <PlacePhoto item={item} placeholderIdx={idx} className="w-full h-full" />
-              <div className="absolute top-2.5 left-2.5 h-7 w-7 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shadow-md">
-                <span className="text-white text-[11px] font-black">{idx + 1}</span>
+        {col.items.map((item, idx) => {
+          const tappable = !!item.place_id;
+          const Tag: any = tappable ? "button" : "div";
+          return (
+            <Tag key={item.id} {...(tappable ? { onClick: () => openPlace(item) } : {})} className={`w-full text-left space-y-2 ${tappable ? "active:opacity-90" : ""}`}>
+              <div className="relative rounded-2xl overflow-hidden h-44">
+                <PlacePhoto item={item} placeholderIdx={idx} className="w-full h-full" />
+                <div className="absolute top-2.5 left-2.5 h-7 w-7 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shadow-md">
+                  <span className="text-white text-[11px] font-black">{idx + 1}</span>
+                </div>
               </div>
-            </div>
-            <div className="px-0.5">
-              <p className="font-bold text-sm leading-snug">{item.place_name}</p>
-              {item.short_desc && (
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.short_desc}</p>
-              )}
-            </div>
-          </div>
-        ))}
+              <div className="px-0.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="font-bold text-sm leading-snug">{item.place_name}</p>
+                  {item.rating != null && <span className="text-[11px] text-muted-foreground flex items-center gap-0.5"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{item.rating}</span>}
+                  {!tappable && <span className="text-[9px] font-bold text-muted-foreground bg-muted rounded-full px-1.5 py-0.5">spoza bazy</span>}
+                </div>
+                {item.address && <p className="text-[11px] text-muted-foreground mt-0.5">{item.address}</p>}
+                {item.short_desc && <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.short_desc}</p>}
+              </div>
+            </Tag>
+          );
+        })}
         <div className="h-4" />
       </div>
+
+      {detailPlace && (
+        <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={col.city ?? undefined} skipGoogleFetch={false} />
+      )}
     </div>
   );
 }
@@ -317,12 +369,13 @@ function UserPolecajkiRow({
 }) {
   return (
     <div>
-      <p className="text-sm font-bold mb-2 px-1">Polecajki od użytkowników</p>
+      <p className="text-sm font-bold mb-2 px-1">Zestawienia miejsc</p>
       <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
         {collections.map((col, idx) => {
           const photoItem = col.items.find((i) => i.photo_url) ?? col.items[0];
           const gradient = PLACEHOLDER_GRADIENTS[idx % PLACEHOLDER_GRADIENTS.length];
           const placesCount = col.items.length;
+          const isLocal = !!col.author_home_city && !!col.city && col.author_home_city.trim().toLowerCase() === col.city.trim().toLowerCase();
           return (
             <button
               key={col.id}
@@ -351,7 +404,10 @@ function UserPolecajkiRow({
                     {col.city}
                   </div>
                 )}
-                <AuthorChip name={col.author_name} avatar={col.author_avatar} />
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <AuthorChip name={col.author_name} avatar={col.author_avatar} />
+                  {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5">lokals poleca!</span>}
+                </div>
               </div>
             </button>
           );
@@ -757,28 +813,39 @@ export default function DiscoveryFeed() {
   // Polecajki tworzone przez uzytkownikow (user_id != null) - feed user-generated
   // content w odroznieniu od admin curated motywow. Zawsze enabled (nie tylko gdy
   // bothEmpty), pokazuje top 10 najnowszych. Empty state = brak sekcji.
+  // Zestawienia/rankingi miejsc tworzone przez userow (kind='ranking').
   const { data: userPolecajki = [] } = useQuery({
-    queryKey: ["user-polecajki"],
-    enabled: false,
+    queryKey: ["explore-rankings"],
+    enabled: true,
     queryFn: async () => {
       const { data: cols, error } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, description, author_name, author_avatar")
+        .select("id, title, city, description, author_name, author_avatar, user_id")
         .eq("is_public", true)
+        .eq("kind", "ranking")
         .not("user_id", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(10);
+        .order("updated_at", { ascending: false })
+        .limit(20);
       if (error || !cols?.length) return [] as DiscoveryCollection[];
 
       const ids = cols.map((c: any) => c.id);
       const { data: items } = await (supabase as any)
         .from("discovery_items")
-        .select("id, collection_id, order_index, place_name, short_desc, photo_url, latitude, longitude")
+        .select("id, collection_id, order_index, place_name, short_desc, photo_url, latitude, longitude, place_id, category, address, rating")
         .in("collection_id", ids)
         .order("order_index", { ascending: true });
 
+      // home_city autorow -> badge "lokals poleca!"
+      const userIds = [...new Set(cols.map((c: any) => c.user_id).filter(Boolean))];
+      const homeMap = new Map<string, string | null>();
+      if (userIds.length) {
+        const { data: profs } = await (supabase as any).from("profiles").select("id, home_city").in("id", userIds);
+        for (const p of profs ?? []) homeMap.set(p.id, p.home_city ?? null);
+      }
+
       return cols.map((col: any): DiscoveryCollection => ({
         ...col,
+        author_home_city: homeMap.get(col.user_id) ?? null,
         items: (items ?? []).filter((i: any) => i.collection_id === col.id),
       }));
     },
@@ -867,6 +934,11 @@ export default function DiscoveryFeed() {
             </div>
           )}
 
+          {/* Zestawienia/rankingi miejsc tworzone przez userow */}
+          {userPolecajki.length > 0 && (
+            <UserPolecajkiRow collections={userPolecajki} onOpen={setActiveCol} />
+          )}
+
           {/* Trasy w Warszawie - lista pionowa (jak LATEST) */}
           {warszawa.length > 0 && (
             <div>
@@ -897,7 +969,7 @@ export default function DiscoveryFeed() {
           className="rounded-t-2xl p-0 [&>button:last-child]:hidden"
           style={{ maxHeight: "92vh", height: "92vh" }}
         >
-          {activeCol && <CollectionDetail col={activeCol} />}
+          {activeCol && <CollectionDetail col={activeCol} onClose={() => setActiveCol(null)} />}
         </SheetContent>
       </Sheet>
 

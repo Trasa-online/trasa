@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { MapPin, Heart, Trash2, ArrowRight, Compass } from "lucide-react";
+import { MapPin, Heart, Trash2, ArrowRight, Plus } from "lucide-react";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { pl } from "date-fns/locale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
@@ -177,13 +177,19 @@ export const LikedTab = () => {
 
           {/* CTA */}
           {group.places.length > 0 && (
-            <div className="px-4 py-3 border-t border-border/20">
+            <div className="px-4 py-3 border-t border-border/20 space-y-2">
               <button
                 onClick={() => handleCreateRoute(group)}
                 className="w-full py-2.5 rounded-full bg-primary text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
               >
                 Stwórz trasę z tych miejsc
                 <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => navigate(`/zestawienie/nowe?from=liked&city=${encodeURIComponent(group.city)}`)}
+                className="w-full py-2.5 rounded-full border border-orange-600 text-orange-600 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+              >
+                Stwórz zestawienie z tych miejsc
               </button>
             </div>
           )}
@@ -196,6 +202,7 @@ export const LikedTab = () => {
 // Polubione przeniesione na /home (ikona serca). Eksploruj = sam feed polecanych.
 const Explore = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
@@ -203,9 +210,17 @@ const Explore = () => {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} className="flex-1 flex flex-col pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
-      <div className="px-4 mb-3">
-        <h1 className="text-xl font-black tracking-tight pt-2">Eksploruj</h1>
-        <p className="text-xs text-muted-foreground mt-1">Polecane miejsca i&nbsp;trasy.</p>
+      <div className="px-4 mb-3 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-black tracking-tight pt-2">Eksploruj</h1>
+          <p className="text-xs text-muted-foreground mt-1">Polecane miejsca, trasy i&nbsp;zestawienia.</p>
+        </div>
+        <button
+          onClick={() => navigate("/zestawienie/nowe")}
+          className="shrink-0 mt-2 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-white text-xs font-bold active:scale-[0.97] transition-transform shadow-sm shadow-orange-500/20"
+        >
+          <Plus className="h-3.5 w-3.5" /> Zestawienie
+        </button>
       </div>
 
       <div className="flex-1 px-4">
