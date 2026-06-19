@@ -550,6 +550,7 @@ import NotFound from "./pages/NotFound";
 const AppLayout        = lazy(() => import("./components/layout/AppLayout"));
 const HomeSwipe        = lazy(() => import("./pages/HomeSwipe"));
 const Explore          = lazy(() => import("./pages/Explore"));
+const LikedPlaces      = lazy(() => import("./pages/LikedPlaces"));
 const CreateRoute      = lazy(() => import("./pages/CreateRoute"));
 const Settings         = lazy(() => import("./pages/Settings"));
 const DayReview        = lazy(() => import("./pages/DayReview"));
@@ -629,6 +630,7 @@ const App = () => (
           <Route path="/" element={<RootPage />} />
           <Route path="/home" element={<AppLayout hideTopBar><HomeSwipe /></AppLayout>} />
           <Route path="/eksploruj" element={<AppLayout hideTopBar><Explore /></AppLayout>} />
+          <Route path="/polubione" element={<AppLayout hideTopBar><LikedPlaces /></AppLayout>} />
           <Route path="/create" element={<CreateRoute />} />
           <Route path="/settings" element={<RequireAuth><AppLayout><Settings /></AppLayout></RequireAuth>} />
           <Route path="/day-review" element={<DayReview />} />

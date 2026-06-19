@@ -13,7 +13,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { isHardcodedAdmin } from "@/lib/admins";
-import { LikedTab } from "./Explore";
 
 const FILTERS_STORAGE_KEY = "trasa_home_filters";
 // Po odrzuceniu propozycji trasy z polubionych - nie pokazuj jej juz nigdy (per urzadzenie).
@@ -68,7 +67,6 @@ const HomeSwipe = () => {
   const [filters, setFilters] = useState<StoredFilters>(() => readFilters());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [likedOpen, setLikedOpen] = useState(false);
   const [showRoutePrompt, setShowRoutePrompt] = useState(false);
   const [likedExplore, setLikedExplore] = useState<{ place_name: string }[]>([]);
   const routePromptShownRef = useRef(false);
@@ -180,7 +178,7 @@ const HomeSwipe = () => {
           )}
           {!isGuest && (
             <button
-              onClick={() => setLikedOpen(true)}
+              onClick={() => navigate("/polubione")}
               className="h-9 w-9 flex items-center justify-center text-muted-foreground active:scale-90 transition-transform"
               aria-label="Polubione miejsca"
               title="Polubione"
@@ -362,26 +360,6 @@ const HomeSwipe = () => {
             >
               Pokaż miejsca
             </button>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Polubione miejsca (przeniesione z Eksploruj na /home, ikona serca) */}
-      <Sheet open={likedOpen} onOpenChange={setLikedOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col" style={{ maxHeight: "85dvh" }}>
-          <div className="shrink-0 flex items-center justify-between px-5 pb-3" style={{ paddingTop: "max(1.25rem, env(safe-area-inset-top))" }}>
-            <p className="text-lg font-black">Polubione miejsca</p>
-            <button
-              type="button"
-              onClick={() => setLikedOpen(false)}
-              className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70 transition-colors"
-              aria-label="Zamknij"
-            >
-              <X className="h-4 w-4 text-foreground" />
-            </button>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-[max(20px,env(safe-area-inset-bottom))]">
-            <LikedTab />
           </div>
         </SheetContent>
       </Sheet>
