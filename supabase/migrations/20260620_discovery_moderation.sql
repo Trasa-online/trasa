@@ -22,7 +22,14 @@ CREATE POLICY "discovery_items_public_read" ON discovery_items
               AND c.hidden_by_admin = false AND c.moderation_status = 'approved')
   );
 
--- Owner widzi wlasne (takze pending/rejected) - zeby autor wiedzial, ze czeka na akceptacje.
+-- Owner widzi wlasne (takze pending/rejected) - zeby autor wiedzial, ze czeka na akceptacje
+-- i mogl edytowac wlasne pending zestawienie (CreateRanking laduje itemy po collection_id).
 DROP POLICY IF EXISTS "discovery_collections_owner_read" ON discovery_collections;
 CREATE POLICY "discovery_collections_owner_read" ON discovery_collections
   FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "discovery_items_owner_read" ON discovery_items;
+CREATE POLICY "discovery_items_owner_read" ON discovery_items
+  FOR SELECT TO authenticated USING (
+    EXISTS (SELECT 1 FROM discovery_collections c WHERE c.id = collection_id AND c.user_id = auth.uid())
+  );
