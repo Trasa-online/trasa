@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Copy, Check, Loader2, ArrowLeft, Trash2 } from "lucide-react";
+import { Copy, Check, Loader2, ArrowLeft, Trash2, Eye, EyeOff, Star, MapPin, Store } from "lucide-react";
 import { format } from "date-fns";
 import { forwardGeocode } from "@/lib/googleMaps";
 
@@ -41,11 +41,26 @@ async function invokeInviteUser(email: string, username: string, waitlist_id?: s
   return data as { link: string; email: string; userId?: string };
 }
 
+type CustomLead = {
+  key: string;
+  place_name: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  rating: number | null;
+  google_place_id: string | null;
+  category: string | null;
+  photo_url: string | null;
+  city: string | null;
+  count: number;
+  item_ids: string[];
+};
+
 const Admin = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"waitlist" | "cities" | "businesses" | "bugs">("businesses");
+  const [tab, setTab] = useState<"waitlist" | "cities" | "businesses" | "bugs" | "rankings">("businesses");
   const [bizTab, setBizTab] = useState<"action" | "claims" | "all" | "support">("action");
   const [userTab, setUserTab] = useState<"pending" | "created" | "all">("pending");
 
@@ -144,6 +159,20 @@ const Admin = () => {
   }>>([]);
   const [subcatActionId, setSubcatActionId] = useState<string | null>(null);
 
+  // Rankingi (zestawienia) - moderacja (ukryj/pokaz)
+  const [rankings, setRankings] = useState<Array<{
+    id: string; title: string; city: string | null; user_id: string | null;
+    is_public: boolean; hidden_by_admin: boolean; updated_at: string | null;
+    item_count: number; author: string | null;
+  }>>([]);
+  const [fetchingRankings, setFetchingRankings] = useState(false);
+  const [moderatingId, setModeratingId] = useState<string | null>(null);
+
+  // Custom miejsca spoza bazy (leady do promocji na claimowalna wizytowke)
+  const [customLeads, setCustomLeads] = useState<CustomLead[]>([]);
+  const [fetchingLeads, setFetchingLeads] = useState(false);
+  const [promotingKey, setPromotingKey] = useState<string | null>(null);
+
   useEffect(() => {
     if (loading) return;
     if (!user) { navigate("/auth"); return; }
@@ -165,6 +194,8 @@ const Admin = () => {
         loadPendingReviews();
         loadPendingSubcats();
         loadAllBusinesses();
+        loadRankings();
+        loadCustomLeads();
       });
   }, [user, loading, navigate]);
 
@@ -596,6 +627,118 @@ const Admin = () => {
     }
   };
 
+  // === Rankingi / zestawienia: moderacja ===
+  const loadRankings = async () => {
+    setFetchingRankings(true);
+    const { data, error } = await (supabase as any)
+      .from("discovery_collections")
+      .select("id, title, city, user_id, is_public, hidden_by_admin, updated_at")
+      .eq("kind", "ranking")
+      .not("user_id", "is", null)
+      .order("updated_at", { ascending: false });
+    if (error) { console.error("[Admin] rankings fetch error:", error); setFetchingRankings(false); return; }
+    const cols = (data ?? []) as any[];
+    const ids = cols.map(c => c.id);
+    const counts: Record<string, number> = {};
+    const authors: Record<string, string> = {};
+    if (ids.length) {
+      const { data: items } = await (supabase as any).from("discovery_items").select("collection_id").in("collection_id", ids);
+      (items ?? []).forEach((it: any) => { counts[it.collection_id] = (counts[it.collection_id] ?? 0) + 1; });
+      const userIds = [...new Set(cols.map(c => c.user_id).filter(Boolean))];
+      if (userIds.length) {
+        const { data: profs } = await (supabase as any).from("profiles").select("id, username, first_name").in("id", userIds);
+        (profs ?? []).forEach((p: any) => { authors[p.id] = p.first_name || p.username || null; });
+      }
+    }
+    setRankings(cols.map((c: any) => ({ ...c, item_count: counts[c.id] ?? 0, author: authors[c.user_id] ?? null })));
+    setFetchingRankings(false);
+  };
+
+  const toggleRankingHidden = async (id: string, hidden: boolean) => {
+    setModeratingId(id);
+    const { error } = await (supabase as any).from("discovery_collections").update({ hidden_by_admin: hidden }).eq("id", id);
+    setModeratingId(null);
+    if (error) { toast.error(`Błąd moderacji: ${error.message}`); return; }
+    setRankings(prev => prev.map(r => r.id === id ? { ...r, hidden_by_admin: hidden } : r));
+    toast.success(hidden ? "Zestawienie ukryte" : "Zestawienie przywrócone");
+  };
+
+  // === Custom miejsca spoza bazy -> leady (promocja na claimowalna wizytowke) ===
+  const loadCustomLeads = async () => {
+    setFetchingLeads(true);
+    const { data, error } = await (supabase as any)
+      .from("discovery_items")
+      .select("id, place_name, address, latitude, longitude, rating, google_place_id, category, photo_url, collection_id, discovery_collections(city)")
+      .is("place_id", null);
+    if (error) { console.error("[Admin] custom leads fetch error:", error); setFetchingLeads(false); return; }
+    const rows = (data ?? []) as any[];
+    // To samo miejsce w kilku rankingach = jeden lead. Klucz: google_place_id albo nazwa+adres.
+    const map = new Map<string, CustomLead>();
+    rows.forEach((it: any) => {
+      const k = it.google_place_id || `${(it.place_name || "").toLowerCase()}|${(it.address || "").toLowerCase()}`;
+      const existing = map.get(k);
+      if (existing) {
+        existing.count += 1;
+        existing.item_ids.push(it.id);
+        if (!existing.photo_url && it.photo_url) existing.photo_url = it.photo_url;
+        if (existing.rating == null && it.rating != null) existing.rating = it.rating;
+      } else {
+        map.set(k, {
+          key: k, place_name: it.place_name, address: it.address,
+          latitude: it.latitude, longitude: it.longitude, rating: it.rating,
+          google_place_id: it.google_place_id, category: it.category, photo_url: it.photo_url,
+          city: it.discovery_collections?.city ?? null, count: 1, item_ids: [it.id],
+        });
+      }
+    });
+    setCustomLeads([...map.values()]);
+    setFetchingLeads(false);
+  };
+
+  const promoteLead = async (lead: CustomLead) => {
+    if (!window.confirm(`Promować "${lead.place_name}" do claimowalnej wizytówki (lead biznesowy)?`)) return;
+    setPromotingKey(lead.key);
+    try {
+      const { data: place, error: placeErr } = await (supabase as any)
+        .from("places")
+        .insert({
+          place_name: lead.place_name,
+          city: lead.city || "Warszawa",
+          category: lead.category || "restaurant",
+          address: lead.address,
+          latitude: lead.latitude,
+          longitude: lead.longitude,
+          rating: lead.rating,
+          photo_url: lead.photo_url,
+          google_place_id: lead.google_place_id,
+          is_active: true,
+        })
+        .select("id, place_name")
+        .single();
+      if (placeErr || !place) { toast.error(`Błąd tworzenia miejsca: ${placeErr?.message ?? "nieznany"}`); return; }
+
+      // Ownerless wizytowka -> claimowalna przez wlasciciela lokalu (lead -> claim -> Premium)
+      const { error: bpErr } = await (supabase as any)
+        .from("business_profiles")
+        .insert({
+          place_id: place.id, business_name: lead.place_name, city: lead.city || "Warszawa",
+          street: lead.address, cover_image_url: lead.photo_url,
+          latitude: lead.latitude, longitude: lead.longitude,
+          owner_user_id: null, is_active: true, is_draft: false,
+        });
+      if (bpErr) console.warn("[Admin] promote: business_profiles insert nie powiodl sie:", bpErr.message);
+
+      // Linkuj wszystkie itemy tego leada do nowej wizytowki -> staja sie klikalne w rankingach
+      const { error: linkErr } = await (supabase as any).from("discovery_items").update({ place_id: place.id }).in("id", lead.item_ids);
+      if (linkErr) console.warn("[Admin] promote: relink discovery_items nie powiodl sie:", linkErr.message);
+
+      toast.success(`Promowano: ${place.place_name} (claimowalny lead)`);
+      setCustomLeads(prev => prev.filter(l => l.key !== lead.key));
+    } finally {
+      setPromotingKey(null);
+    }
+  };
+
   if (loading || isAdmin === null) return null;
 
   const pendingClaims = claims.filter(c => c.status === "pending").length;
@@ -605,6 +748,7 @@ const Admin = () => {
     waitlist: "Użytkownicy",
     cities: "Miasta",
     businesses: "Biznesy",
+    rankings: "Zestawienia",
     bugs: "Błędy",
   };
 
@@ -625,9 +769,9 @@ const Admin = () => {
 
       {/* Tabs */}
       <div className="flex border-b border-border/40">
-        {(["cities", "businesses", "bugs"] as const).map(t => {
+        {(["cities", "businesses", "rankings", "bugs"] as const).map(t => {
           const newBugs = bugReports.filter(r => r.status === "new").length;
-          const badge = t === "businesses" ? pendingClaims : t === "waitlist" ? pendingWaitlist : t === "bugs" ? newBugs : 0;
+          const badge = t === "businesses" ? pendingClaims : t === "waitlist" ? pendingWaitlist : t === "bugs" ? newBugs : t === "rankings" ? customLeads.length : 0;
           return (
             <button
               key={t}
@@ -1126,6 +1270,102 @@ const Admin = () => {
           );
         })()}
         {/* ── Bug Reports Tab ── */}
+        {tab === "rankings" && (
+          <div className="space-y-7">
+            {/* SEKCJA 1: Moderacja zestawien uzytkownikow */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-sm font-bold">Zestawienia użytkowników</h2>
+                <span className="text-xs text-muted-foreground">({rankings.length})</span>
+              </div>
+              {fetchingRankings ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+              ) : rankings.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Brak zestawień stworzonych przez użytkowników.</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {rankings.map(r => (
+                    <div key={r.id} className={`rounded-2xl border p-3.5 ${r.hidden_by_admin ? "opacity-60 border-destructive/30 bg-destructive/5" : "border-border/60 bg-card"}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold leading-tight truncate">{r.title}</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            <span className="inline-flex items-center gap-0.5"><MapPin className="h-3 w-3" />{r.city ?? "?"}</span>
+                            <span>·</span>
+                            <span>{r.item_count} {r.item_count === 1 ? "miejsce" : "miejsc"}</span>
+                            {r.author && (<><span>·</span><span>{r.author}</span></>)}
+                            {!r.is_public && (<><span>·</span><span className="text-amber-600">szkic</span></>)}
+                          </p>
+                        </div>
+                        {r.hidden_by_admin && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-destructive/10 text-destructive shrink-0">Ukryte</span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => toggleRankingHidden(r.id, !r.hidden_by_admin)}
+                        disabled={moderatingId === r.id}
+                        className={`mt-2.5 w-full py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 ${r.hidden_by_admin ? "border border-orange-600 text-orange-600 hover:bg-orange-50" : "border border-border/40 text-muted-foreground hover:bg-muted"}`}
+                      >
+                        {moderatingId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : r.hidden_by_admin ? <><Eye className="h-3.5 w-3.5" /> Pokaż</> : <><EyeOff className="h-3.5 w-3.5" /> Ukryj</>}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* SEKCJA 2: Custom miejsca spoza bazy -> leady */}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Store className="h-4 w-4 text-orange-600" />
+                <h2 className="text-sm font-bold">Miejsca spoza bazy (leady)</h2>
+                <span className="text-xs text-muted-foreground">({customLeads.length})</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+                Miejsca dodane przez użytkowników w&nbsp;zestawieniach, których nie&nbsp;ma w&nbsp;bazie. Promuj na&nbsp;claimowalną wizytówkę (lead biznesowy: claim -&gt; Premium).
+              </p>
+              {fetchingLeads ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+              ) : customLeads.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Brak miejsc spoza bazy.</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {customLeads.map(lead => (
+                    <div key={lead.key} className="rounded-2xl border border-border/60 bg-card p-3.5">
+                      <div className="flex items-start gap-3">
+                        {lead.photo_url ? (
+                          <img src={lead.photo_url} alt={lead.place_name} className="h-14 w-14 rounded-xl object-cover shrink-0" loading="lazy" />
+                        ) : (
+                          <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center shrink-0"><MapPin className="h-5 w-5 text-orange-600" /></div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold leading-tight">{lead.place_name}</p>
+                          {lead.rating != null && (
+                            <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1"><Star className="h-3 w-3 fill-amber-400 text-amber-400" />{lead.rating.toFixed(1)}</p>
+                          )}
+                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                            {lead.address ?? (lead.latitude != null ? `${lead.latitude.toFixed(5)}, ${lead.longitude?.toFixed(5)}` : "brak lokalizacji")}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground/60 mt-1">
+                            {lead.city ?? "?"} · użyte w&nbsp;{lead.count} {lead.count === 1 ? "zestawieniu" : "zestawieniach"}{lead.google_place_id ? " · Google" : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => promoteLead(lead)}
+                        disabled={promotingKey === lead.key}
+                        className="mt-2.5 w-full py-2 rounded-xl bg-primary text-white text-xs font-bold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50"
+                      >
+                        {promotingKey === lead.key ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Store className="h-3.5 w-3.5" /> Promuj do wizytówki</>}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {tab === "bugs" && (
           fetchingBugs ? (
             <div className="flex justify-center py-12">
