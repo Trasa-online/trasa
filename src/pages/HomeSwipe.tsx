@@ -78,7 +78,7 @@ const HomeSwipe = () => {
   // wiecej - flaga w localStorage). onLikedPlacesChange z PlaceSwiper raportuje liste polubionych.
   const handleExploreLikesChange = (places: { place_name: string }[]) => {
     setLikedExplore(places);
-    if (places.length >= 4 && !routePromptShownRef.current && !localStorage.getItem(ROUTE_PROMPT_DISMISSED_KEY)) {
+    if (!isGuest && places.length >= 4 && !routePromptShownRef.current && !localStorage.getItem(ROUTE_PROMPT_DISMISSED_KEY)) {
       routePromptShownRef.current = true;
       setShowRoutePrompt(true);
     }
@@ -178,14 +178,16 @@ const HomeSwipe = () => {
               )}
             </button>
           )}
-          <button
-            onClick={() => setLikedOpen(true)}
-            className="h-9 w-9 flex items-center justify-center text-muted-foreground active:scale-90 transition-transform"
-            aria-label="Polubione miejsca"
-            title="Polubione"
-          >
-            <Heart className="h-5 w-5" />
-          </button>
+          {!isGuest && (
+            <button
+              onClick={() => setLikedOpen(true)}
+              className="h-9 w-9 flex items-center justify-center text-muted-foreground active:scale-90 transition-transform"
+              aria-label="Polubione miejsca"
+              title="Polubione"
+            >
+              <Heart className="h-5 w-5" />
+            </button>
+          )}
           {isAdmin && (
             <button
               onClick={() => navigate("/admin")}
