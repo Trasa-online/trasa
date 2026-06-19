@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2 } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight } from "lucide-react";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
@@ -202,15 +202,25 @@ function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose:
             <Tag key={item.id} {...(tappable ? { onClick: () => openPlace(item) } : {})} className={`w-full text-left space-y-2 ${tappable ? "active:opacity-90" : ""}`}>
               <div className="relative rounded-2xl overflow-hidden h-44">
                 <PlacePhoto item={item} placeholderIdx={idx} className="w-full h-full" />
-                <div className="absolute top-2.5 left-2.5 h-7 w-7 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shadow-md">
+                <div className={`absolute top-2.5 left-2.5 h-7 w-7 rounded-full flex items-center justify-center shadow-md ${tappable ? "bg-gradient-to-br from-[#F4A259] to-[#F9662B]" : "bg-foreground/55 backdrop-blur-sm"}`}>
                   <span className="text-white text-[11px] font-black">{idx + 1}</span>
                 </div>
+                {tappable ? (
+                  <div className="absolute bottom-2.5 right-2.5 h-7 pl-2.5 pr-1.5 rounded-full bg-white/90 backdrop-blur-sm flex items-center gap-0.5 shadow-sm">
+                    <span className="text-[10px] font-bold text-foreground">Zobacz</span>
+                    <ChevronRight className="h-3.5 w-3.5 text-foreground" />
+                  </div>
+                ) : (
+                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-foreground/55 backdrop-blur-sm">
+                    <Globe className="h-3 w-3 text-white/90 shrink-0" />
+                    <span className="text-[10px] font-semibold text-white leading-tight">Tego miejsca jeszcze nie&nbsp;ma w&nbsp;Trasie</span>
+                  </div>
+                )}
               </div>
               <div className="px-0.5">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <p className="font-bold text-sm leading-snug">{item.place_name}</p>
                   {item.rating != null && <span className="text-[11px] text-muted-foreground flex items-center gap-0.5"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{item.rating}</span>}
-                  {!tappable && <span className="text-[9px] font-bold text-muted-foreground bg-muted rounded-full px-1.5 py-0.5">spoza bazy</span>}
                 </div>
                 {item.address && <p className="text-[11px] text-muted-foreground mt-0.5">{item.address}</p>}
                 {item.short_desc && <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.short_desc}</p>}
@@ -823,6 +833,8 @@ export default function DiscoveryFeed() {
         .select("id, title, city, description, author_name, author_avatar, user_id")
         .eq("is_public", true)
         .eq("kind", "ranking")
+        .eq("hidden_by_admin", false)
+        .eq("moderation_status", "approved")
         .not("user_id", "is", null)
         .order("updated_at", { ascending: false })
         .limit(20);

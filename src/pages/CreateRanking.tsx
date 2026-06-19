@@ -73,7 +73,7 @@ const CreateRanking = () => {
   const navigate = useNavigate();
   const { id: editId } = useParams();
   const [params] = useSearchParams();
-  const { user } = useAuth();
+  const { user, isAnonymous } = useAuth();
 
   const [title, setTitle] = useState("");
   const [city, setCity] = useState(params.get("city") || "Warszawa");
@@ -147,12 +147,16 @@ const CreateRanking = () => {
     setPublishing(true);
     try {
       let collectionId = editId;
+      // Anonimowi userzy -> tresc czeka na akceptacje admina (App Store Guideline 1.2).
+      // Konta z emailem publikuja od razu.
+      const moderationStatus = isAnonymous ? "pending" : "approved";
       if (editId) {
         await (supabase as any).from("discovery_collections").update({ title: title.trim(), city, updated_at: new Date().toISOString() }).eq("id", editId);
         await (supabase as any).from("discovery_items").delete().eq("collection_id", editId);
       } else {
         const { data: col, error } = await (supabase as any).from("discovery_collections").insert({
           user_id: user.id, author_name: author.name, author_avatar: author.avatar, title: title.trim(), city, kind: "ranking", is_public: true,
+          moderation_status: moderationStatus,
         }).select("id").single();
         if (error || !col) throw new Error(error?.message ?? "insert failed");
         collectionId = col.id;
@@ -164,7 +168,18 @@ const CreateRanking = () => {
       }));
       const { error: itemsErr } = await (supabase as any).from("discovery_items").insert(rows);
       if (itemsErr) throw new Error(itemsErr.message);
-      toast.success(editId ? "Zestawienie zaktualizowane!" : "Zestawienie opublikowane!");
+      // Tresc od anona -> powiadom admina mailem (best-effort, nie blokuj flow).
+      if (!editId && moderationStatus === "pending") {
+        supabase.functions.invoke("notify-admin-content", {
+          body: { type: "ranking", title: title.trim(), city, collection_id: collectionId, author: author.name },
+        }).catch((e) => console.warn("[CreateRanking] notify-admin-content failed:", e));
+      }
+      toast.success(
+        editId ? "Zestawienie zaktualizowane!"
+          : moderationStatus === "pending"
+            ? "Wysłane! Zestawienie pojawi się po akceptacji moderatora."
+            : "Zestawienie opublikowane!"
+      );
       navigate("/eksploruj");
     } catch (e: any) {
       toast.error(`Nie udało się zapisać: ${e?.message ?? "błąd"}`);

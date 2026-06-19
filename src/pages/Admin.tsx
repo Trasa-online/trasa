@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Copy, Check, Loader2, ArrowLeft, Trash2, Eye, EyeOff, Star, MapPin, Store } from "lucide-react";
+import { Copy, Check, Loader2, ArrowLeft, Trash2, Eye, EyeOff, Star, MapPin, Store, X } from "lucide-react";
 import { format } from "date-fns";
 import { forwardGeocode } from "@/lib/googleMaps";
 
@@ -162,7 +162,7 @@ const Admin = () => {
   // Rankingi (zestawienia) - moderacja (ukryj/pokaz)
   const [rankings, setRankings] = useState<Array<{
     id: string; title: string; city: string | null; user_id: string | null;
-    is_public: boolean; hidden_by_admin: boolean; updated_at: string | null;
+    is_public: boolean; hidden_by_admin: boolean; moderation_status: string; updated_at: string | null;
     item_count: number; author: string | null;
   }>>([]);
   const [fetchingRankings, setFetchingRankings] = useState(false);
@@ -232,6 +232,22 @@ const Admin = () => {
         toast.info(`🎉 Nowy user: ${displayName}`, { duration: 8000 });
         loadAllUsers();
         loadWaitlist(); // has_account flag może się odświeżyć dla istniejącego waitlist entry
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isAdmin]);
+
+  // Realtime: nowe zestawienie UGC czekajace na moderacje (anon -> pending).
+  useEffect(() => {
+    if (!isAdmin) return;
+    const channel = supabase
+      .channel("admin-new-rankings")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "discovery_collections" }, (payload) => {
+        const c = payload.new as any;
+        if (c.moderation_status === "pending") {
+          toast.info(`📋 Nowe zestawienie do moderacji: ${c.title || "bez tytułu"}`, { duration: 8000 });
+          loadRankings();
+        }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -632,7 +648,7 @@ const Admin = () => {
     setFetchingRankings(true);
     const { data, error } = await (supabase as any)
       .from("discovery_collections")
-      .select("id, title, city, user_id, is_public, hidden_by_admin, updated_at")
+      .select("id, title, city, user_id, is_public, hidden_by_admin, moderation_status, updated_at")
       .eq("kind", "ranking")
       .not("user_id", "is", null)
       .order("updated_at", { ascending: false });
@@ -650,7 +666,12 @@ const Admin = () => {
         (profs ?? []).forEach((p: any) => { authors[p.id] = p.first_name || p.username || null; });
       }
     }
-    setRankings(cols.map((c: any) => ({ ...c, item_count: counts[c.id] ?? 0, author: authors[c.user_id] ?? null })));
+    const rank = (s: string) => (s === "pending" ? 0 : s === "approved" ? 1 : 2);
+    setRankings(
+      cols
+        .map((c: any) => ({ ...c, item_count: counts[c.id] ?? 0, author: authors[c.user_id] ?? null }))
+        .sort((a: any, b: any) => rank(a.moderation_status) - rank(b.moderation_status))
+    );
     setFetchingRankings(false);
   };
 
@@ -661,6 +682,16 @@ const Admin = () => {
     if (error) { toast.error(`Błąd moderacji: ${error.message}`); return; }
     setRankings(prev => prev.map(r => r.id === id ? { ...r, hidden_by_admin: hidden } : r));
     toast.success(hidden ? "Zestawienie ukryte" : "Zestawienie przywrócone");
+  };
+
+  // Akceptacja / odrzucenie zestawienia czekajacego na moderacje (anon UGC).
+  const setRankingModeration = async (id: string, status: "approved" | "rejected") => {
+    setModeratingId(id);
+    const { error } = await (supabase as any).from("discovery_collections").update({ moderation_status: status }).eq("id", id);
+    setModeratingId(null);
+    if (error) { toast.error(`Błąd: ${error.message}`); return; }
+    setRankings(prev => prev.map(r => r.id === id ? { ...r, moderation_status: status } : r));
+    toast.success(status === "approved" ? "Zaakceptowano" : "Odrzucono");
   };
 
   // === Custom miejsca spoza bazy -> leady (promocja na claimowalna wizytowke) ===
@@ -699,40 +730,50 @@ const Admin = () => {
     if (!window.confirm(`Promować "${lead.place_name}" do claimowalnej wizytówki (lead biznesowy)?`)) return;
     setPromotingKey(lead.key);
     try {
-      const { data: place, error: placeErr } = await (supabase as any)
-        .from("places")
-        .insert({
-          place_name: lead.place_name,
-          city: lead.city || "Warszawa",
-          category: lead.category || "restaurant",
-          address: lead.address,
-          latitude: lead.latitude,
-          longitude: lead.longitude,
-          rating: lead.rating,
-          photo_url: lead.photo_url,
-          google_place_id: lead.google_place_id,
-          is_active: true,
-        })
-        .select("id, place_name")
-        .single();
-      if (placeErr || !place) { toast.error(`Błąd tworzenia miejsca: ${placeErr?.message ?? "nieznany"}`); return; }
+      let placeId: string | null = null;
+      let placeName = lead.place_name;
+      let reused = false;
 
-      // Ownerless wizytowka -> claimowalna przez wlasciciela lokalu (lead -> claim -> Premium)
-      const { error: bpErr } = await (supabase as any)
-        .from("business_profiles")
-        .insert({
-          place_id: place.id, business_name: lead.place_name, city: lead.city || "Warszawa",
-          street: lead.address, cover_image_url: lead.photo_url,
-          latitude: lead.latitude, longitude: lead.longitude,
-          owner_user_id: null, is_active: true, is_draft: false,
-        });
-      if (bpErr) console.warn("[Admin] promote: business_profiles insert nie powiodl sie:", bpErr.message);
+      // Dedup: jesli miejsce o tym google_place_id juz istnieje, reuzyj zamiast tworzyc duplikat
+      // (inaczej analityka dodan/CTR rozjezdza sie na 2 rekordy tego samego lokalu).
+      if (lead.google_place_id) {
+        const { data: existing } = await (supabase as any)
+          .from("places").select("id, place_name").eq("google_place_id", lead.google_place_id).maybeSingle();
+        if (existing) { placeId = existing.id; placeName = existing.place_name; reused = true; }
+      }
 
-      // Linkuj wszystkie itemy tego leada do nowej wizytowki -> staja sie klikalne w rankingach
-      const { error: linkErr } = await (supabase as any).from("discovery_items").update({ place_id: place.id }).in("id", lead.item_ids);
+      if (!placeId) {
+        const { data: place, error: placeErr } = await (supabase as any)
+          .from("places")
+          .insert({
+            place_name: lead.place_name, city: lead.city || "Warszawa", category: lead.category || "restaurant",
+            address: lead.address, latitude: lead.latitude, longitude: lead.longitude,
+            rating: lead.rating, photo_url: lead.photo_url, google_place_id: lead.google_place_id, is_active: true,
+          })
+          .select("id, place_name").single();
+        if (placeErr || !place) { toast.error(`Błąd tworzenia miejsca: ${placeErr?.message ?? "nieznany"}`); return; }
+        placeId = place.id; placeName = place.place_name;
+      }
+
+      // Upewnij sie, ze miejsce ma claimowalna (ownerless) wizytowke - tylko gdy jeszcze nie ma.
+      const { data: bp } = await (supabase as any).from("business_profiles").select("id").eq("place_id", placeId).maybeSingle();
+      if (!bp) {
+        const { error: bpErr } = await (supabase as any)
+          .from("business_profiles")
+          .insert({
+            place_id: placeId, business_name: placeName, city: lead.city || "Warszawa",
+            street: lead.address, cover_image_url: lead.photo_url,
+            latitude: lead.latitude, longitude: lead.longitude,
+            owner_user_id: null, is_active: true, is_draft: false,
+          });
+        if (bpErr) console.warn("[Admin] promote: business_profiles insert nie powiodl sie:", bpErr.message);
+      }
+
+      // Linkuj wszystkie itemy tego leada do wizytowki -> staja sie klikalne w rankingach.
+      const { error: linkErr } = await (supabase as any).from("discovery_items").update({ place_id: placeId }).in("id", lead.item_ids);
       if (linkErr) console.warn("[Admin] promote: relink discovery_items nie powiodl sie:", linkErr.message);
 
-      toast.success(`Promowano: ${place.place_name} (claimowalny lead)`);
+      toast.success(reused ? `Połączono z istniejącą wizytówką: ${placeName}` : `Promowano: ${placeName} (claimowalny lead)`);
       setCustomLeads(prev => prev.filter(l => l.key !== lead.key));
     } finally {
       setPromotingKey(null);
@@ -742,6 +783,7 @@ const Admin = () => {
   if (loading || isAdmin === null) return null;
 
   const pendingClaims = claims.filter(c => c.status === "pending").length;
+  const pendingRankings = rankings.filter(r => r.moderation_status === "pending").length;
   const pendingWaitlist = waitlist.filter(w => !w.notified_at).length;
 
   const tabLabels: Record<string, string> = {
@@ -771,7 +813,7 @@ const Admin = () => {
       <div className="flex border-b border-border/40">
         {(["cities", "businesses", "rankings", "bugs"] as const).map(t => {
           const newBugs = bugReports.filter(r => r.status === "new").length;
-          const badge = t === "businesses" ? pendingClaims : t === "waitlist" ? pendingWaitlist : t === "bugs" ? newBugs : t === "rankings" ? customLeads.length : 0;
+          const badge = t === "businesses" ? pendingClaims : t === "waitlist" ? pendingWaitlist : t === "bugs" ? newBugs : t === "rankings" ? (pendingRankings + customLeads.length) : 0;
           return (
             <button
               key={t}
@@ -1277,6 +1319,9 @@ const Admin = () => {
               <div className="flex items-center gap-2 mb-3">
                 <h2 className="text-sm font-bold">Zestawienia użytkowników</h2>
                 <span className="text-xs text-muted-foreground">({rankings.length})</span>
+                {pendingRankings > 0 && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{pendingRankings} do moderacji</span>
+                )}
               </div>
               {fetchingRankings ? (
                 <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
@@ -1284,8 +1329,11 @@ const Admin = () => {
                 <p className="text-sm text-muted-foreground text-center py-8">Brak zestawień stworzonych przez użytkowników.</p>
               ) : (
                 <div className="space-y-2.5">
-                  {rankings.map(r => (
-                    <div key={r.id} className={`rounded-2xl border p-3.5 ${r.hidden_by_admin ? "opacity-60 border-destructive/30 bg-destructive/5" : "border-border/60 bg-card"}`}>
+                  {rankings.map(r => {
+                    const pending = r.moderation_status === "pending";
+                    const rejected = r.moderation_status === "rejected";
+                    return (
+                    <div key={r.id} className={`rounded-2xl border p-3.5 ${pending ? "border-amber-300 bg-amber-50/60" : (rejected || r.hidden_by_admin) ? "opacity-60 border-destructive/30 bg-destructive/5" : "border-border/60 bg-card"}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold leading-tight truncate">{r.title}</p>
@@ -1294,22 +1342,41 @@ const Admin = () => {
                             <span>·</span>
                             <span>{r.item_count} {r.item_count === 1 ? "miejsce" : "miejsc"}</span>
                             {r.author && (<><span>·</span><span>{r.author}</span></>)}
-                            {!r.is_public && (<><span>·</span><span className="text-amber-600">szkic</span></>)}
                           </p>
                         </div>
-                        {r.hidden_by_admin && (
+                        {pending ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">Oczekuje</span>
+                        ) : rejected ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-destructive/10 text-destructive shrink-0">Odrzucone</span>
+                        ) : r.hidden_by_admin ? (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-destructive/10 text-destructive shrink-0">Ukryte</span>
-                        )}
+                        ) : null}
                       </div>
-                      <button
-                        onClick={() => toggleRankingHidden(r.id, !r.hidden_by_admin)}
-                        disabled={moderatingId === r.id}
-                        className={`mt-2.5 w-full py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 ${r.hidden_by_admin ? "border border-orange-600 text-orange-600 hover:bg-orange-50" : "border border-border/40 text-muted-foreground hover:bg-muted"}`}
-                      >
-                        {moderatingId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : r.hidden_by_admin ? <><Eye className="h-3.5 w-3.5" /> Pokaż</> : <><EyeOff className="h-3.5 w-3.5" /> Ukryj</>}
-                      </button>
+                      {pending ? (
+                        <div className="mt-2.5 flex gap-2">
+                          <button onClick={() => setRankingModeration(r.id, "approved")} disabled={moderatingId === r.id}
+                            className="flex-1 py-1.5 rounded-xl bg-primary text-white text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50">
+                            {moderatingId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Check className="h-3.5 w-3.5" /> Zaakceptuj</>}
+                          </button>
+                          <button onClick={() => setRankingModeration(r.id, "rejected")} disabled={moderatingId === r.id}
+                            className="flex-1 py-1.5 rounded-xl border border-destructive/40 text-destructive text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50">
+                            <X className="h-3.5 w-3.5" /> Odrzuć
+                          </button>
+                        </div>
+                      ) : rejected ? (
+                        <button onClick={() => setRankingModeration(r.id, "approved")} disabled={moderatingId === r.id}
+                          className="mt-2.5 w-full py-1.5 rounded-xl border border-orange-600 text-orange-600 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50">
+                          {moderatingId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Eye className="h-3.5 w-3.5" /> Przywróć</>}
+                        </button>
+                      ) : (
+                        <button onClick={() => toggleRankingHidden(r.id, !r.hidden_by_admin)} disabled={moderatingId === r.id}
+                          className={`mt-2.5 w-full py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 ${r.hidden_by_admin ? "border border-orange-600 text-orange-600 hover:bg-orange-50" : "border border-border/40 text-muted-foreground hover:bg-muted"}`}>
+                          {moderatingId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : r.hidden_by_admin ? <><Eye className="h-3.5 w-3.5" /> Pokaż</> : <><EyeOff className="h-3.5 w-3.5" /> Ukryj</>}
+                        </button>
+                      )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
