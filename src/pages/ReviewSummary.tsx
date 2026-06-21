@@ -17,6 +17,7 @@ import { pl } from "date-fns/locale";
 import { isNative } from "@/lib/platform";
 import { Camera as CapCamera } from "@capacitor/camera";
 import { notify } from "@/lib/notify";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -86,7 +87,7 @@ const ReviewSummary = () => {
   const noteTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: route } = useQuery({
+  const { data: route, isLoading: routeLoading } = useQuery({
     queryKey: ["review-summary-route", routeId],
     queryFn: async () => {
       if (!routeId || !user) return null;
@@ -563,6 +564,33 @@ const ReviewSummary = () => {
 
   if (authLoading) return null;
   if (!user) { navigate("/auth"); return null; }
+
+  // Jawny loading - bez tego render leci na pustych danych (route undefined) podczas
+  // pobierania, co przy zakonczeniu trasy wygladalo jak zawieszka.
+  if (routeLoading) {
+    return (
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-orange-200 border-t-orange-600 animate-spin" />
+      </div>
+    );
+  }
+  // Trasa nie istnieje / brak dostepu (RLS / usunieta) - czytelny stan zamiast crashu.
+  if (!route) {
+    return (
+      <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center gap-4 px-8 text-center">
+        <p className="text-base font-bold">Nie znaleźliśmy tej trasy</p>
+        <p className="text-sm text-muted-foreground max-w-[280px]">
+          Mogła zostać usunięta albo nie&nbsp;masz do&nbsp;niej dostępu.
+        </p>
+        <button
+          onClick={() => navigate("/home")}
+          className="px-6 py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-95 transition-transform"
+        >
+          Wróć do&nbsp;głównej
+        </button>
+      </div>
+    );
+  }
 
   // Hero: zdjecie usera/grupy, a gdy brak - ilustracja placeholder (zamiast emoji
   // mapy). Ciemny gradient overlay zapewnia kontrast tekstu (WCAG).
@@ -1130,4 +1158,12 @@ const ReviewSummary = () => {
   );
 };
 
-export default ReviewSummary;
+// Owijka ErrorBoundary: kazdy throw w renderze podsumowania (np. niespodziewany ksztalt
+// danych przy zakonczeniu trasy) pokazuje ekran "Wroc do glownej" zamiast zawieszki.
+export default function ReviewSummaryPage() {
+  return (
+    <ErrorBoundary>
+      <ReviewSummary />
+    </ErrorBoundary>
+  );
+}
