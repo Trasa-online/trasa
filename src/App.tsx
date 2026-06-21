@@ -71,7 +71,7 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
 // Na WEB chowamy aplikacje B2C za waitlista - userzy nie maja ogladac dema apki webowej.
 // Native (iOS) = pelna apka, bez redirectu. Allowlista (zostaje na web): biznes, auth,
 // set-password, marketing (landing/dla-firm), legal, linki publiczne (shared route / profil /
-// claim lokalu), curated /demo + callbacki auth (?code=/?token_hash=). Reszta -> /waitlist.
+// claim lokalu) + callbacki auth (?code=/?token_hash=). Reszta (w tym /demo) -> /waitlist.
 function WebWaitlistGate({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   if (isNative) return <>{children}</>;
@@ -79,7 +79,7 @@ function WebWaitlistGate({ children }: { children: React.ReactNode }) {
   const p = location.pathname;
   const allowed =
     p === "/waitlist" || p === "/landing" || p === "/auth" ||
-    p === "/terms" || p === "/privacy" || p === "/demo" ||
+    p === "/terms" || p === "/privacy" ||
     p.startsWith("/set-password") || p.startsWith("/biznes") ||
     p.startsWith("/dla-firm") || p.startsWith("/route/") ||
     p.startsWith("/profil/") || p.startsWith("/lokal/");
