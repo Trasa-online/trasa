@@ -8,6 +8,9 @@ import { resizeImage } from "@/lib/imageResize";
 import RouteMap from "@/components/RouteMap";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { resolveStored } from "@/components/PlacePhoto";
+import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 
@@ -74,6 +77,8 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
   const [uploadingPinId, setUploadingPinId] = useState<string | null>(null);
   const [togglingPinId, setTogglingPinId] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<{ url: string; pinId: string; idx: number } | null>(null);
+  const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
+  const [showComplete, setShowComplete] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const currentUploadPinRef = useRef<string | null>(null);
 
@@ -128,6 +133,8 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
     if (togglingPinId) return;
     setTogglingPinId(pin.id);
     const newVisitedAt = pin.visited_at ? null : new Date().toISOString();
+    // Czy po tym oznaczeniu WSZYSTKIE miejsca beda odwiedzone -> trasa zakonczona.
+    const willAllBeVisited = !!newVisitedAt && pins.every((p) => p.id === pin.id || !!p.visited_at);
     console.log("[ActiveTrip] toggle pin", { pinId: pin.id, oldVisitedAt: pin.visited_at, newVisitedAt });
     // Optymistycznie
     queryClient.setQueryData(["active-trip", routeId], (old: any) =>
@@ -144,12 +151,47 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
       if (count === 0) {
         throw new Error("RLS zablokowal update (0 rows). Sprawdz policy 'Users can update pins for their routes'.");
       }
+      // Wszystkie miejsca odhaczone -> trasa 'completed': znika z ekranu glownego (wraca swiper),
+      // zostaje w Dzienniku. User dodaje notki w podsumowaniu.
+      if (willAllBeVisited) {
+        await (supabase as any).from("routes").update({ trip_type: "completed" }).eq("id", routeId);
+        queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+        setShowComplete(true);
+      }
     } catch (err: any) {
       console.error("[ActiveTrip] toggle failed:", err);
       queryClient.invalidateQueries({ queryKey: ["active-trip", routeId] });
       toast.error("Nie udało się zapisać", { description: err?.message ?? "" });
     }
     setTogglingPinId(null);
+  };
+
+  // Tap w karte miejsca -> pelna wizytowka (PlaceSwiperDetail dociaga zdjecia/recenzje z Google po nazwie+miescie).
+  const openDetail = (pin: Pin) => setDetailPlace({
+    id: pin.id || pin.place_name,
+    place_name: pin.place_name,
+    category: "other" as any,
+    city: route?.city ?? "",
+    address: pin.address || "",
+    latitude: pin.latitude ?? 0,
+    longitude: pin.longitude ?? 0,
+    rating: 0,
+    photo_url: resolveStored(pin.photo_url) ?? "",
+    vibe_tags: [],
+    description: pin.description || "",
+  } satisfies MockPlace);
+
+  // Po zakonczeniu trasy: usun query aktywnej trasy -> ekran glowny wraca do swipera.
+  // embedded (na /home) -> bez navigate, HomeSwipe sam przelaczy; standalone -> navigate /home.
+  const handleBackHome = () => {
+    queryClient.removeQueries({ queryKey: ["home-active-route"] });
+    queryClient.invalidateQueries({ queryKey: ["active-routes"] });
+    setShowComplete(false);
+    if (!embedded) navigate("/home");
+  };
+  const handleAddNotes = () => {
+    queryClient.removeQueries({ queryKey: ["home-active-route"] });
+    navigate(`/review-summary?route=${routeId}`);
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -357,8 +399,16 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
                   }
                 </button>
 
-                {/* Pin info */}
-                <div className="flex-1 min-w-0">
+                {/* Zdjecie miejsca + info -> tap otwiera pelna wizytowke */}
+                <button type="button" onClick={() => openDetail(pin)} className="flex items-start gap-2.5 flex-1 min-w-0 text-left">
+                  {resolveStored(pin.photo_url) ? (
+                    <img src={resolveStored(pin.photo_url)!} alt={pin.place_name} loading="lazy" className={cn("shrink-0 h-14 w-14 rounded-xl object-cover bg-muted", visited && "opacity-60")} />
+                  ) : (
+                    <div className={cn("shrink-0 h-14 w-14 rounded-xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center", visited && "opacity-60")}>
+                      <MapPin className="h-5 w-5 text-orange-500" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                     <p className={cn("text-sm font-bold leading-tight flex-1 truncate", visited && "line-through text-muted-foreground")}>
                       {pin.place_name}
@@ -390,7 +440,8 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
                       <span className="truncate">{pin.address}</span>
                     </div>
                   )}
-                </div>
+                  </div>
+                </button>
 
                 {/* Photo upload button */}
                 {canAddPhoto && (
@@ -459,6 +510,40 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
         className="hidden"
         onChange={handlePhotoUpload}
       />
+
+      {/* Wizytowka miejsca (tap w karte) */}
+      {detailPlace && (
+        <PlaceSwiperDetail
+          open={!!detailPlace}
+          onOpenChange={(o) => { if (!o) setDetailPlace(null); }}
+          place={detailPlace}
+          city={route?.city ?? undefined}
+          skipGoogleFetch={false}
+        />
+      )}
+
+      {/* Gratulacje - wszystkie miejsca odwiedzone, trasa -> Dziennik */}
+      {showComplete && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={handleBackHome}>
+          <div className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex flex-col items-center text-center gap-2">
+              <div className="h-16 w-16 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center text-3xl">🎉</div>
+              <p className="text-xl font-black leading-snug">Brawo! Odwiedziłaś wszystkie miejsca</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Trasa trafiła do&nbsp;Dziennika. Dodaj notki o&nbsp;miejscach, póki wrażenia świeże.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button onClick={handleAddNotes} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20">
+                Dodaj notki w&nbsp;Dzienniku →
+              </button>
+              <button onClick={handleBackHome} className="w-full py-3 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform">
+                Wróć na&nbsp;główną
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Photo preview lightbox */}
       {photoPreview && (

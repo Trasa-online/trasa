@@ -2,9 +2,38 @@ import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import posthog from "posthog-js";
 
+type Lang = "pl" | "en";
+const COPY = {
+  pl: {
+    heroA: "Wasz plan", heroB: "na miasto",
+    sub: "Budujemy aplikację do planowania city breaków i wspólnych wyjazdów z przyjaciółmi. Coś, czego sami szukaliśmy.",
+    notify: "Powiadomimy Cię o premierze na iOS i Androidzie.",
+    available: "dostępne w lipcu",
+    emailPlaceholder: "twoj@email.pl",
+    consentPre: "Wyrażam zgodę na przetwarzanie mojego adresu e-mail w celu otrzymywania informacji o premierze aplikacji. Zapoznałem się z ",
+    privacy: "polityką prywatności",
+    submit: "Zapisz się",
+    done: "Dzięki za zapis! Poinformujemy Cię kiedy aplikacja będzie dostępna.",
+    badgeIosTop: "Pobierz w", badgeAndroidTop: "Dostępne w",
+  },
+  en: {
+    heroA: "Your plan", heroB: "for the city",
+    sub: "We're building an app for planning city breaks and trips with friends. Something we were looking for ourselves.",
+    notify: "We'll let you know when it launches on iOS and Android.",
+    available: "available in July",
+    emailPlaceholder: "you@email.com",
+    consentPre: "I agree to the processing of my email address to receive information about the app launch. I have read the ",
+    privacy: "privacy policy",
+    submit: "Sign up",
+    done: "Thanks for signing up! We'll let you know when the app is available.",
+    badgeIosTop: "Download on", badgeAndroidTop: "Get it on",
+  },
+} as const;
+
 // ─── Email Capture ────────────────────────────────────────────────────────────
 
-function EmailCapture({ inputRef }: { inputRef?: React.RefObject<HTMLInputElement> }) {
+function EmailCapture({ inputRef, lang }: { inputRef?: React.RefObject<HTMLInputElement>; lang: Lang }) {
+  const c = COPY[lang];
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
@@ -20,12 +49,12 @@ function EmailCapture({ inputRef }: { inputRef?: React.RefObject<HTMLInputElemen
   };
   if (status === "done") return (
     <div className="px-5 py-4 rounded-2xl bg-orange-50 border border-orange-200">
-      <p className="text-sm font-semibold text-[#0E0E0E]">Dzięki za zapis! Poinformujemy Cię kiedy aplikacja będzie dostępna.</p>
+      <p className="text-sm font-semibold text-[#0E0E0E]">{c.done}</p>
     </div>
   );
   return (
     <form onSubmit={submit} className="flex flex-col gap-3 w-full">
-      <input ref={inputRef} type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="twoj@email.pl"
+      <input ref={inputRef} type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder={c.emailPlaceholder}
         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-[#0E0E0E] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-orange-300" />
 
       <label className="flex items-start gap-2.5 text-left cursor-pointer select-none px-1">
@@ -37,20 +66,20 @@ function EmailCapture({ inputRef }: { inputRef?: React.RefObject<HTMLInputElemen
           className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-orange-600 focus:ring-orange-300 cursor-pointer shrink-0"
         />
         <span className="text-[11px] text-slate-500 leading-snug">
-          {`Wyrażam zgodę na przetwarzanie mojego adresu e-mail w celu otrzymywania informacji o premierze aplikacji. Zapoznałem się z `}
-          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-orange-600 underline hover:text-orange-700">polityką prywatności</a>.
+          {c.consentPre}
+          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-orange-600 underline hover:text-orange-700">{c.privacy}</a>.
         </span>
       </label>
 
       <button type="submit" disabled={status === "loading" || !consent || !email.trim()}
         className="w-full rounded-2xl bg-orange-700 hover:bg-orange-800 text-white font-bold px-5 py-3.5 text-sm whitespace-nowrap shadow-md shadow-orange-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed">
-        {status === "loading" ? "..." : "Zapisz się"}
+        {status === "loading" ? "..." : c.submit}
       </button>
     </form>
   );
 }
 
-function AppStoreBadge({ store }: { store: "ios" | "android" }) {
+function AppStoreBadge({ store, lang }: { store: "ios" | "android"; lang: Lang }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 select-none h-[52px]">
       {store === "ios" ? (
@@ -63,7 +92,7 @@ function AppStoreBadge({ store }: { store: "ios" | "android" }) {
         </svg>
       )}
       <div className="flex-1 min-w-0 text-left">
-        <p className="text-[9px] text-slate-400 uppercase tracking-wider leading-none">{store === "ios" ? "Pobierz w" : "Dostępne w"}</p>
+        <p className="text-[9px] text-slate-400 uppercase tracking-wider leading-none">{store === "ios" ? COPY[lang].badgeIosTop : COPY[lang].badgeAndroidTop}</p>
         <p className="text-[12px] font-semibold text-slate-600 leading-tight whitespace-nowrap">{store === "ios" ? "App Store" : "Google Play"}</p>
       </div>
     </div>
@@ -74,6 +103,8 @@ function AppStoreBadge({ store }: { store: "ios" | "android" }) {
 
 export default function WaitlistPage() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [lang, setLang] = useState<Lang>("pl");
+  const c = COPY[lang];
 
   return (
     <div style={{ background: "#FAFAFA", minHeight: "100dvh" }}>
@@ -85,28 +116,32 @@ export default function WaitlistPage() {
             <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
             <span className="font-black text-base lg:text-lg text-[#0E0E0E] tracking-tight">trasa</span>
           </div>
+          <div className="ml-auto flex items-center rounded-full border border-slate-200 overflow-hidden text-xs font-bold">
+            <button onClick={() => setLang("pl")} className={lang === "pl" ? "px-2.5 py-1 bg-orange-600 text-white" : "px-2.5 py-1 text-slate-500"} aria-label="Polski">PL</button>
+            <button onClick={() => setLang("en")} className={lang === "en" ? "px-2.5 py-1 bg-orange-600 text-white" : "px-2.5 py-1 text-slate-500"} aria-label="English">EN</button>
+          </div>
         </div>
       </header>
 
       {/* ── Hero — single layout for all viewports ── */}
       <div className="flex flex-col items-center justify-center px-5 lg:px-8 pt-16 lg:pt-24 pb-12 max-w-md mx-auto text-center" style={{ minHeight: "calc(100dvh - 3.5rem)" }}>
         <h1 className="text-4xl lg:text-5xl font-black text-[#0E0E0E] leading-[1.05] mb-4">
-          Wasz plan<br />na{" "}miasto
+          {c.heroA}<br />{c.heroB}
         </h1>
         <p className="text-slate-500 text-base leading-relaxed mb-8 max-w-xs">
-          {`Budujemy aplikację do planowania city breaków i wspólnych wyjazdów z przyjaciółmi. Coś, czego sami szukaliśmy.`}
+          {c.sub}
         </p>
 
         <div className="w-full mb-3">
-          <EmailCapture inputRef={inputRef} />
+          <EmailCapture inputRef={inputRef} lang={lang} />
         </div>
-        <p className="text-slate-400 text-xs mb-8">{`Powiadomimy Cię o premierze na iOS i Androidzie.`}</p>
+        <p className="text-slate-400 text-xs mb-8">{c.notify}</p>
 
         <div className="flex flex-row gap-2 w-full">
-          <div className="flex-1 min-w-0"><AppStoreBadge store="ios" /></div>
-          <div className="flex-1 min-w-0"><AppStoreBadge store="android" /></div>
+          <div className="flex-1 min-w-0"><AppStoreBadge store="ios" lang={lang} /></div>
+          <div className="flex-1 min-w-0"><AppStoreBadge store="android" lang={lang} /></div>
         </div>
-        <p className="text-xs text-slate-400 mt-3">{`dostępne w czerwcu`}</p>
+        <p className="text-xs text-slate-400 mt-3">{c.available}</p>
       </div>
     </div>
   );
