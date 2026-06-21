@@ -68,6 +68,25 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Na WEB chowamy aplikacje B2C za waitlista - userzy nie maja ogladac dema apki webowej.
+// Native (iOS) = pelna apka, bez redirectu. Allowlista (zostaje na web): biznes, auth,
+// set-password, marketing (landing/dla-firm), legal, linki publiczne (shared route / profil /
+// claim lokalu), curated /demo + callbacki auth (?code=/?token_hash=). Reszta -> /waitlist.
+function WebWaitlistGate({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  if (isNative) return <>{children}</>;
+  const hasAuthParams = /[?&#](code|token_hash|error|access_token)=/.test(window.location.href);
+  const p = location.pathname;
+  const allowed =
+    p === "/waitlist" || p === "/landing" || p === "/auth" ||
+    p === "/terms" || p === "/privacy" || p === "/demo" ||
+    p.startsWith("/set-password") || p.startsWith("/biznes") ||
+    p.startsWith("/dla-firm") || p.startsWith("/route/") ||
+    p.startsWith("/profil/") || p.startsWith("/lokal/");
+  if (!allowed && !hasAuthParams) return <Navigate to="/waitlist" replace />;
+  return <>{children}</>;
+}
+
 // Module-level cache: pamieta promise dla danego auth-code zeby uniknac
 // double-execution przy React Strict Mode double-mount w dev (uses tej samej
 // promise dla obu mount'ow zamiast dwoch oddzielnych HTTP calls). Bez tego
@@ -621,6 +640,7 @@ const App = () => (
         <CookieBanner />
         <AuthDrawer />
         <MaintenanceGate>
+        <WebWaitlistGate>
         <Suspense fallback={<div className="h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>}>
         <Routes>
           <Route path="/auth" element={<Auth />} />
@@ -663,6 +683,7 @@ const App = () => (
 <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
+        </WebWaitlistGate>
         </MaintenanceGate>
         </AuthDrawerProviderWrapper>
         </AuthProvider>
