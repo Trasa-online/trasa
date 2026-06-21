@@ -63,8 +63,11 @@ interface Pin {
   photo_url: string | null;
 }
 
-const ActiveTrip = () => {
-  const { id: routeId } = useParams<{ id: string }>();
+const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: string; embedded?: boolean } = {}) => {
+  const { id: paramRouteId } = useParams<{ id: string }>();
+  // embedded=true gdy renderowany na /home (w AppLayout z BottomNav): routeId z propa,
+  // brak guzika "Wroc", dolny CTA podniesiony nad BottomNav, wysokosc flex-1 zamiast 100dvh.
+  const routeId = propRouteId ?? paramRouteId;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -225,7 +228,7 @@ const ActiveTrip = () => {
 
   if (isLoading) {
     return (
-      <div className="h-[100dvh] flex items-center justify-center">
+      <div className={`flex items-center justify-center ${embedded ? "h-full flex-1 min-h-0" : "h-[100dvh]"}`}>
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -233,7 +236,7 @@ const ActiveTrip = () => {
 
   if (!route) {
     return (
-      <div className="h-[100dvh] flex flex-col items-center justify-center gap-4 px-8 text-center">
+      <div className={`flex flex-col items-center justify-center gap-4 px-8 text-center ${embedded ? "h-full flex-1 min-h-0" : "h-[100dvh]"}`}>
         <p className="text-lg font-bold">Nie znaleziono trasy</p>
         {queryError && (
           <p className="text-xs text-muted-foreground max-w-[280px]">
@@ -258,16 +261,18 @@ const ActiveTrip = () => {
     : null;
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-background">
+    <div className={`flex flex-col bg-background ${embedded ? "h-full flex-1 min-h-0" : "h-[100dvh]"}`}>
       {/* Header */}
       <div className="shrink-0 flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/30">
-        <button
-          onClick={() => navigate("/home")}
-          className="h-9 w-9 -ml-1 flex items-center justify-center text-foreground"
-          aria-label="Wróć"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
+        {!embedded && (
+          <button
+            onClick={() => navigate("/home")}
+            className="h-9 w-9 -ml-1 flex items-center justify-center text-foreground"
+            aria-label="Wróć"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+        )}
         <div className="flex-1 min-w-0">
           <p className="text-base font-bold leading-tight truncate">{route.city || route.title || "Trasa"}</p>
           {dateLabel && <p className="text-xs text-muted-foreground">{dateLabel}</p>}
@@ -313,7 +318,7 @@ const ActiveTrip = () => {
       )}
 
       {/* Pins list - scroll */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 pb-32 space-y-2.5">
+      <div className={`flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-2.5 ${embedded ? "pb-[calc(8rem+3.5rem)]" : "pb-32"}`}>
         {pins.length === 0 && (
           <div className="py-16 text-center text-sm text-muted-foreground">
             Brak miejsc w tej trasie
@@ -435,7 +440,7 @@ const ActiveTrip = () => {
       </div>
 
       {/* Bottom CTA - Zakoncz trase */}
-      <div className="shrink-0 fixed bottom-0 left-0 right-0 z-20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-gradient-to-t from-background via-background to-transparent">
+      <div className={`shrink-0 fixed left-0 right-0 z-20 px-4 pt-3 bg-gradient-to-t from-background via-background to-transparent ${embedded ? "bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] pb-3" : "bottom-0 pb-[max(16px,env(safe-area-inset-bottom))]"}`}>
         <button
           onClick={() => navigate(`/review-summary?route=${routeId}`)}
           className="w-full py-4 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-primary/25 active:scale-[0.98] transition-transform"

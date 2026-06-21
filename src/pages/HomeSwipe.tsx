@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { MapPin, ChevronDown, Check, Lock, X, Bell, Shield, Heart, Users } from "lucide-react";
 import PlaceSwiper from "@/components/plan-wizard/PlaceSwiper";
+import ActiveTrip from "@/pages/ActiveTrip";
 import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import HomeTour, { useHomeTour } from "@/components/home/HomeTour";
 import ProfileSetup, { useProfileSetup } from "@/components/home/ProfileSetup";
@@ -74,6 +75,26 @@ const HomeSwipe = () => {
   const [likedExplore, setLikedExplore] = useState<{ place_name: string }[]>([]);
   const routePromptShownRef = useRef(false);
   const queryClient = useQueryClient();
+
+  // Aktywna trasa usera -> /home pokazuje ja rozwinieta (zamiast swipera). Najnowsza
+  // planning/ongoing. Gosc/anon nie ma zapisanych tras (enabled:false -> swiper).
+  const { data: activeRouteId } = useQuery({
+    queryKey: ["home-active-route", user?.id],
+    queryFn: async () => {
+      if (!user || isAnonymous) return null;
+      const { data } = await supabase
+        .from("routes")
+        .select("id")
+        .eq("user_id", user.id)
+        .in("trip_type", ["planning", "ongoing"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return ((data as any)?.id ?? null) as string | null;
+    },
+    enabled: !!user && !isAnonymous,
+    staleTime: 30_000,
+  });
 
   // Po polubieniu ~4 miejsc proponujemy stworzenie trasy (raz na sesje; po odrzuceniu nigdy
   // wiecej - flaga w localStorage). onLikedPlacesChange z PlaceSwiper raportuje liste polubionych.
@@ -148,6 +169,23 @@ const HomeSwipe = () => {
       return { ...f, categories: has ? f.categories.filter(c => c !== id) : [...f.categories, id] };
     });
   };
+
+  // Logged-in: dopoki nie wiemy czy jest aktywna trasa - spinner (zamiast mignac swiperem).
+  if (!isGuest && activeRouteId === undefined) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-orange-200 border-t-orange-600 animate-spin" />
+      </div>
+    );
+  }
+  // Ma aktywna trase -> pokaz ja rozwinieta na ekranie glownym (nie swiper, nie kafelek).
+  if (activeRouteId) {
+    return (
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <ActiveTrip routeId={activeRouteId} embedded />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
