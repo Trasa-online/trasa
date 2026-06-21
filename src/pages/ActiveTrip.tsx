@@ -78,7 +78,6 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
   const [togglingPinId, setTogglingPinId] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<{ url: string; pinId: string; idx: number } | null>(null);
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
-  const [showComplete, setShowComplete] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const currentUploadPinRef = useRef<string | null>(null);
 
@@ -151,12 +150,15 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
       if (count === 0) {
         throw new Error("RLS zablokowal update (0 rows). Sprawdz policy 'Users can update pins for their routes'.");
       }
-      // Wszystkie miejsca odhaczone -> trasa 'completed': znika z ekranu glownego (wraca swiper),
-      // zostaje w Dzienniku. User dodaje notki w podsumowaniu.
+      // Wszystkie miejsca odhaczone -> trasa 'completed' (znika z ekranu glownego, wraca swiper #5)
+      // i przenosimy do podsumowania w Dzienniku: sprawdzenie/edycja trasy + galeria/notki = wspomnienie (#4).
       if (willAllBeVisited) {
         await (supabase as any).from("routes").update({ trip_type: "completed" }).eq("id", routeId);
+        queryClient.removeQueries({ queryKey: ["home-active-route"] });
+        queryClient.invalidateQueries({ queryKey: ["active-routes"] });
         queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-        setShowComplete(true);
+        toast.success("Brawo! Wszystkie miejsca odwiedzone 🎉", { description: "Sprawdź trasę i dodaj wspomnienie" });
+        navigate(`/review-summary?route=${routeId}`);
       }
     } catch (err: any) {
       console.error("[ActiveTrip] toggle failed:", err);
@@ -180,19 +182,6 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
     vibe_tags: [],
     description: pin.description || "",
   } satisfies MockPlace);
-
-  // Po zakonczeniu trasy: usun query aktywnej trasy -> ekran glowny wraca do swipera.
-  // embedded (na /home) -> bez navigate, HomeSwipe sam przelaczy; standalone -> navigate /home.
-  const handleBackHome = () => {
-    queryClient.removeQueries({ queryKey: ["home-active-route"] });
-    queryClient.invalidateQueries({ queryKey: ["active-routes"] });
-    setShowComplete(false);
-    if (!embedded) navigate("/home");
-  };
-  const handleAddNotes = () => {
-    queryClient.removeQueries({ queryKey: ["home-active-route"] });
-    navigate(`/review-summary?route=${routeId}`);
-  };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const pinId = currentUploadPinRef.current;
@@ -305,7 +294,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
   return (
     <div className={`flex flex-col bg-background ${embedded ? "h-full flex-1 min-h-0" : "h-[100dvh]"}`}>
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/30">
+      <div className="shrink-0 flex items-center gap-3 px-4 pt-safe pb-2.5 border-b border-border/30">
         {!embedded && (
           <button
             onClick={() => navigate("/home")}
@@ -429,11 +418,6 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
                       </span>
                     </div>
                   )}
-                  {pin.suggested_time && (
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <span>{pin.suggested_time}</span>
-                    </div>
-                  )}
                   {pin.address && (
                     <div className="flex items-center gap-1 mt-0.5 text-[11px] text-muted-foreground">
                       <MapPin className="h-3 w-3 shrink-0" />
@@ -442,49 +426,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
                   )}
                   </div>
                 </button>
-
-                {/* Photo upload button */}
-                {canAddPhoto && (
-                  <button
-                    onClick={() => {
-                      currentUploadPinRef.current = pin.id;
-                      fileInputRef.current?.click();
-                    }}
-                    disabled={uploadingPinId === pin.id}
-                    className="shrink-0 h-9 w-9 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-muted-foreground active:scale-95 transition-transform disabled:opacity-50"
-                    aria-label="Dodaj zdjęcie"
-                  >
-                    {uploadingPinId === pin.id
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
-                      : <Camera className="h-4 w-4" />
-                    }
-                  </button>
-                )}
               </div>
-
-              {/* Photo thumbnails - poziomy scroll */}
-              {photos.length > 0 && (
-                <div className="px-3 pb-3 -mx-1">
-                  <div className="flex gap-2 overflow-x-auto scrollbar-none px-1">
-                    {photos.map((url, photoIdx) => (
-                      <div
-                        key={photoIdx}
-                        className="shrink-0 relative h-20 w-20 rounded-xl overflow-hidden bg-muted group"
-                        onClick={() => setPhotoPreview({ url, pinId: pin.id, idx: photoIdx })}
-                      >
-                        <img src={url} alt="" className="w-full h-full object-cover cursor-pointer" />
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleRemovePhoto(pin, photoIdx); }}
-                          className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 flex items-center justify-center"
-                          aria-label="Usuń zdjęcie"
-                        >
-                          <X className="h-2.5 w-2.5 text-white" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           );
         })}
@@ -494,7 +436,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
       <div className={`shrink-0 fixed left-0 right-0 z-20 px-4 pt-3 bg-gradient-to-t from-background via-background to-transparent ${embedded ? "bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] pb-3" : "bottom-0 pb-[max(16px,env(safe-area-inset-bottom))]"}`}>
         <button
           onClick={() => navigate(`/review-summary?route=${routeId}`)}
-          className="w-full py-4 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-primary/25 active:scale-[0.98] transition-transform"
+          className="mx-auto w-auto px-8 py-2.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform"
         >
           Zakończ trasę
         </button>
@@ -520,29 +462,6 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
           city={route?.city ?? undefined}
           skipGoogleFetch={false}
         />
-      )}
-
-      {/* Gratulacje - wszystkie miejsca odwiedzone, trasa -> Dziennik */}
-      {showComplete && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={handleBackHome}>
-          <div className="w-full max-w-sm bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex flex-col items-center text-center gap-2">
-              <div className="h-16 w-16 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center text-3xl">🎉</div>
-              <p className="text-xl font-black leading-snug">Brawo! Odwiedziłaś wszystkie miejsca</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Trasa trafiła do&nbsp;Dziennika. Dodaj notki o&nbsp;miejscach, póki wrażenia świeże.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <button onClick={handleAddNotes} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20">
-                Dodaj notki w&nbsp;Dzienniku →
-              </button>
-              <button onClick={handleBackHome} className="w-full py-3 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform">
-                Wróć na&nbsp;główną
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Photo preview lightbox */}
