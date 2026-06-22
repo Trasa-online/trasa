@@ -442,7 +442,13 @@ const ReviewSummary = () => {
       await Promise.all(workingPins.map((p: any, idx: number) =>
         supabase.from("pins").update({ pin_order: idx } as any).eq("id", p.id)
       ));
-      if (finalize) await (supabase as any).from("routes").update({ plan_finalized: true }).eq("id", activeRouteId);
+      if (finalize) {
+        // Finalizacja wspomnienia = trasa zakonczona: trip_type='completed' -> znika z ekranu
+        // glownego (filtr planning/ongoing), zostaje w Dzienniku.
+        await (supabase as any).from("routes").update({ plan_finalized: true, trip_type: "completed" }).eq("id", activeRouteId);
+        queryClient.removeQueries({ queryKey: ["home-active-solo"] });
+        queryClient.invalidateQueries({ queryKey: ["active-routes"] });
+      }
       setDraft(null);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["review-all-pins", idsKey] }),

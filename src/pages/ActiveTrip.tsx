@@ -154,7 +154,7 @@ const ActiveTrip = ({ routeId: propRouteId, embedded = false }: { routeId?: stri
       // i przenosimy do podsumowania w Dzienniku: sprawdzenie/edycja trasy + galeria/notki = wspomnienie (#4).
       if (willAllBeVisited) {
         await (supabase as any).from("routes").update({ trip_type: "completed" }).eq("id", routeId);
-        queryClient.removeQueries({ queryKey: ["home-active-route"] });
+        queryClient.removeQueries({ queryKey: ["home-active-solo"] });
         queryClient.invalidateQueries({ queryKey: ["active-routes"] });
         queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
         toast.success("Brawo! Wszystkie miejsca odwiedzone 🎉", { description: "Sprawdź trasę i dodaj wspomnienie" });

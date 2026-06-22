@@ -304,7 +304,7 @@ const RouteSummaryDialog = ({
       // Invalidate query - JournalTab i journal-badge widza nowa trase od razu.
       queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
       queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
-      queryClient.removeQueries({ queryKey: ["home-active-route"] }); // /home pokaze swiezo utworzona trase
+      queryClient.removeQueries({ queryKey: ["home-active-solo"] }); // dashboard /home pokaze swiezo utworzona trase
 
       toast.success("Trasa zapisana! 🎉", { description: plan.city });
       onOpenChange(false);
