@@ -4,19 +4,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
-import { format, parseISO, isValid, formatDistanceToNow } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Globe, Lock, Loader2, Trash2, MapPin, Users, Link2, X, ArrowRight, CheckCircle, CalendarDays, Sparkles, Eye } from "lucide-react";
+import { Globe, Lock, Loader2, Trash2, CalendarDays, Sparkles, Eye } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 interface JournalTabProps {
   userId: string;
-  activeSessions?: any[];
-  sessionRoutes?: any[];
 }
-
-type JournalTabKey = "active" | "postcards";
 
 // Polska liczba mnoga: 1 osoba obejrzala / 2-4 osoby obejrzaly / 5+ osob obejrzalo.
 const viewsLabel = (n: number): string => {
@@ -26,11 +21,10 @@ const viewsLabel = (n: number): string => {
   return `${n} osób obejrzało trasę`;
 };
 
-const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: JournalTabProps) => {
+const JournalTab = ({ userId }: JournalTabProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<JournalTabKey>("active");
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["journal-entries", userId],
@@ -95,7 +89,7 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
   // Grupuj trasy wielodniowe (folder_id) w JEDNA pocztowke (dzien 1 = reprezentant).
   // Granica aktywny/wspomnienie liczona po OSTATNIM dniu trasy (end_date ?? start_date).
   // Trasa jednodniowa = osobny wpis, granica po end_date ?? start_date.
-  const { active, postcards } = useMemo(() => {
+  const { postcards } = useMemo(() => {
     const folderMap = new Map<string, any[]>();
     const collapsed: any[] = [];
     for (const e of entries) {
@@ -143,7 +137,9 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
     return { active, postcards };
   }, [entries]);
 
-  const visibleEntries = activeTab === "active" ? active : postcards;
+  // Dziennik = tylko wspomnienia (minione podroze). Aktywne trasy/sesje zyja teraz
+  // na ekranie glownym (ActiveTripsDashboard), wiec tu pokazujemy wylacznie pocztowki.
+  const visibleEntries = postcards;
 
   const handleDelete = async (e: React.MouseEvent, entry: any) => {
     e.stopPropagation();
@@ -219,108 +215,16 @@ const JournalTab = ({ userId, activeSessions = [], sessionRoutes = [] }: Journal
     );
   }
 
-  const TABS: { id: JournalTabKey; label: string; count: number }[] = [
-    { id: "active", label: "Aktywne", count: active.length },
-    { id: "postcards", label: "Wspomnienia", count: postcards.length },
-  ];
-
   return (
     <div className="space-y-3 pb-2">
-      {/* Tabs - tekstowe (jak "Recent items" / "Saved"); licznik w koleczku, wysrodkowany */}
-      <div className="flex items-center gap-5 px-1">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              "flex items-center gap-1.5 transition-colors",
-              activeTab === tab.id ? "text-foreground" : "text-muted-foreground/40"
-            )}
-          >
-            <span className="text-xl font-extrabold tracking-tight">{tab.label}</span>
-            {tab.count > 0 && (
-              <span className={cn(
-                "flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-[11px] font-bold",
-                activeTab === tab.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground/60"
-              )}>
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Atrakcyjny hero baner CTA - tylko w Aktywne tabie.
-          Tap otwiera menu nad orba "+" (te same opcje: solo / grupa / kod). */}
-      {activeTab === "active" && (
-        <button
-          onClick={() => window.dispatchEvent(new Event("trasa:open-plan-menu"))}
-          className="w-full relative overflow-hidden rounded-2xl active:scale-[0.98] transition-transform shadow-sm"
-          style={{ background: "linear-gradient(135deg, #FDBA74 0%, #FB923C 100%)" }}
-        >
-          <div className="relative px-4 py-3.5 flex items-center gap-3 text-left">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold leading-tight text-white">
-                Zaplanuj nową trasę
-              </p>
-              <p className="text-[11px] text-white/90 mt-0.5 leading-relaxed">
-                Sam, z grupą znajomych, lub po kodzie zaproszenia
-              </p>
-            </div>
-            <ArrowRight className="h-4 w-4 text-white shrink-0" />
-          </div>
-        </button>
-      )}
-
-      {/* Aktywne sesje grupowe - pocztowki (w zakladce Aktywne) */}
-      {activeTab === "active" && activeSessions.length > 0 && (
-        <div className="space-y-3">
-          {activeSessions.map((s: any) => {
-            const tripDateObj = s.trip_date ? parseISO(s.trip_date) : null;
-            const dateLabel = tripDateObj && isValid(tripDateObj) ? format(tripDateObj, "d MMM", { locale: pl }) : null;
-            const createdObj = s.created_at ? parseISO(s.created_at) : null;
-            const agoLabel = createdObj && isValid(createdObj) ? formatDistanceToNow(createdObj, { addSuffix: true, locale: pl }) : null;
-            const hasRoute = sessionRoutes.some((r: any) => r.group_session_id === s.id);
-            const thumb = getRandomPinPlaceholder(s.id);
-            return (
-              <button key={s.id} onClick={() => navigate(`/sesja/${s.join_code}`)}
-                className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform">
-                <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
-                  <img src={thumb} alt="" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1 text-white text-[11px] font-semibold">
-                    <Users className="h-3 w-3" /> Sesja grupowa
-                  </div>
-                  <div className="absolute top-3 right-3">
-                    {hasRoute
-                      ? <div className="bg-emerald-500 rounded-full px-2 py-0.5 text-[10px] font-bold text-white flex items-center gap-1"><CheckCircle className="h-3 w-3" />Trasa gotowa</div>
-                      : <div className="bg-primary rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow">Aktywna</div>
-                    }
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-                    <p className="text-white font-bold text-lg leading-tight drop-shadow-sm truncate">{s.name || s.city}</p>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      {dateLabel && <span className="flex items-center gap-1 text-white/80 text-xs"><CalendarDays className="h-3 w-3" />{dateLabel}</span>}
-                      {agoLabel && !dateLabel && <span className="text-white/70 text-xs">{agoLabel}</span>}
-                      <span className="text-[10px] font-mono bg-white/20 px-1.5 py-0.5 rounded text-white/90">#{s.join_code}</span>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Empty state per tab */}
-      {visibleEntries.length === 0 && !(activeTab === "active" && activeSessions.length > 0) && (
+      {/* Dziennik = wspomnienia (minione podroze). Aktywne trasy/sesje sa na ekranie glownym. */}
+      {visibleEntries.length === 0 && (
         <div className="py-16 text-center text-sm text-muted-foreground">
-          {activeTab === "active" && "Brak aktywnych tras i sesji"}
-          {activeTab === "postcards" && "Brak wspomnień z minionych podróży"}
+          Brak wspomnień z minionych podróży
         </div>
       )}
 
-      {/* Lista tras */}
+      {/* Lista wspomnień */}
       {visibleEntries.map((entry) => {
         const validPhotos = (entry.review_photos ?? []).filter((url: any) => !!url && typeof url === "string" && url.trim() !== "");
         const thumb = validPhotos[0] ?? (coverMap as Record<string, string>)[entry.id] ?? getRandomPinPlaceholder(entry.id);

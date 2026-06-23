@@ -1,13 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { CalendarDays, Users, ArrowRight, CheckCircle, BookOpen } from "lucide-react";
-import { parseISO, isValid, format, formatDistanceToNow, startOfToday } from "date-fns";
-import { pl } from "date-fns/locale";
+import { ArrowRight, BookOpen } from "lucide-react";
 import JournalTab from "@/components/home/JournalTab";
-import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 
 const Journal = () => {
   const { user, isAnonymous } = useAuth();
@@ -15,58 +9,6 @@ const Journal = () => {
   // Anon = traktuj jak gosc (zero zapisanych danych w UI). Dziennik wymaga
   // konta z mailem zeby trasy/pocztówki byly persystowane miedzy urzadzeniami.
   const isGuestView = !user || isAnonymous;
-  const navigate = useNavigate();
-
-  // Active group sessions (for logged-in user only)
-  const { data: allSessions = [] } = useQuery({
-    queryKey: ["journal-active-sessions", user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const { data: memberRows } = await (supabase as any)
-        .from("group_session_members")
-        .select("session_id")
-        .eq("user_id", user.id);
-      if (!memberRows?.length) return [];
-      const sessionIds = memberRows.map((m: any) => m.session_id);
-      const { data: sessions } = await (supabase as any)
-        .from("group_sessions")
-        .select("id, city, join_code, trip_date, created_at, status, name")
-        .in("id", sessionIds)
-        .order("created_at", { ascending: false })
-        .limit(20);
-      return sessions || [];
-    },
-    enabled: !!user,
-    refetchInterval: 30000,
-  });
-
-  const sessionIds = allSessions.map((s: any) => s.id);
-  const { data: sessionRoutes = [] } = useQuery({
-    queryKey: ["journal-session-routes-bulk", sessionIds.join(",")],
-    queryFn: async () => {
-      if (!sessionIds.length) return [];
-      const { data } = await (supabase as any)
-        .from("routes")
-        .select("id, title, city, group_session_id, chat_status")
-        .in("group_session_id", sessionIds)
-        .order("created_at", { ascending: false });
-      const seen = new Set<string>();
-      return (data || []).filter((r: any) => {
-        if (seen.has(r.group_session_id)) return false;
-        seen.add(r.group_session_id);
-        return true;
-      });
-    },
-    enabled: sessionIds.length > 0,
-  });
-
-  const today = startOfToday();
-  const activeSessions = allSessions.filter((s: any) => {
-    const route = sessionRoutes.find((r: any) => r.group_session_id === s.id);
-    if (route?.chat_status === "completed") return false;
-    if (s.trip_date && parseISO(s.trip_date) < today) return false;
-    return true;
-  });
 
   // Guest: pelnoekranowy wycentrowany empty state, bez tytulu strony (TopBar tez ukryty na route /dziennik)
   if (isGuestView) {
@@ -107,7 +49,7 @@ const Journal = () => {
     <div className="flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
       <h1 className="text-xl font-black tracking-tight pt-2 pb-3">Dziennik podróży</h1>
 
-      <JournalTab userId={user.id} activeSessions={activeSessions} sessionRoutes={sessionRoutes} />
+      <JournalTab userId={user.id} />
     </div>
   );
 };

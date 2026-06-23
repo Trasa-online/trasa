@@ -13,8 +13,9 @@ import { pl } from "date-fns/locale";
 const fmtDate = (d?: string | null) =>
   d && isValid(parseISO(d)) ? format(parseISO(d), "d MMMM yyyy", { locale: pl }) : null;
 
-function EmptySection({ icon, title, sub, cta, onCta }: {
-  icon: React.ReactNode; title: string; sub: string; cta?: string; onCta?: () => void;
+function EmptySection({ icon, title, sub, cta, onCta, cta2, onCta2 }: {
+  icon: React.ReactNode; title: string; sub: string;
+  cta?: string; onCta?: () => void; cta2?: string; onCta2?: () => void;
 }) {
   return (
     <div className="rounded-3xl border border-dashed border-border/60 bg-muted/20 flex flex-col items-center text-center gap-2 px-6 py-8">
@@ -23,6 +24,9 @@ function EmptySection({ icon, title, sub, cta, onCta }: {
       <p className="text-xs text-muted-foreground max-w-[240px] leading-relaxed">{sub}</p>
       {cta && onCta && (
         <button onClick={onCta} className="mt-1 px-5 py-2.5 rounded-full bg-primary text-white text-sm font-bold active:scale-95 transition-transform">{cta}</button>
+      )}
+      {cta2 && onCta2 && (
+        <button onClick={onCta2} className="text-sm font-semibold text-orange-600 active:scale-95 transition-transform">{cta2}</button>
       )}
     </div>
   );
@@ -109,9 +113,11 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
           <EmptySection
             icon={<MapPin className="h-6 w-6 text-orange-600" />}
             title="Brak aktywnych tras"
-            sub="Zaplanuj nową trasę guzikiem + na dole."
+            sub="Zaplanuj nową trasę albo po prostu przeglądaj miejsca dla inspiracji."
             cta="Zaplanuj trasę"
             onCta={() => navigate("/plan")}
+            cta2="Przeglądaj miejsca"
+            onCta2={() => navigate("/plan", { state: { exploreMode: true } })}
           />
         )}
       </section>

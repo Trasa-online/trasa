@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MapPin, Users, Link2, Plus, Map } from "lucide-react";
 
 // localStorage (NIE sessionStorage) - onboarding raz na urzadzenie, przetrwa restart apki.
 const GUEST_TOUR_KEY = "trasa_onboarding_done_v1";
@@ -9,180 +9,74 @@ const nbsp = (s: string) => s.replace(/ ([aiouwzAIOUWZ]) /g, (_m, l) => " " + l 
 
 const ORANGE_ORB = "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)";
 
-// Wszystkie animacje czystym CSS (bez bibliotek) - niezawodne na native WebView.
-const STYLES = `
-@keyframes onb-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.07)} }
-@keyframes onb-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-@keyframes onb-rise { 0%{opacity:0;transform:translateY(22px)} 14%,70%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(22px)} }
-@keyframes onb-ripple { 0%{transform:scale(1);opacity:.7} 100%{transform:scale(2.4);opacity:0} }
-@keyframes onb-pop { 0%{opacity:0;transform:scale(0)} 18%{opacity:1;transform:scale(1.15)} 28%,82%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(0)} }
-@keyframes onb-char { 0%,8%{opacity:0} 16%,88%{opacity:1} 100%{opacity:0} }
-@keyframes onb-press { 0%,70%,100%{transform:scale(1)} 80%{transform:scale(.93)} }
-@keyframes onb-slidein { 0%{opacity:0;transform:translateX(38px)} 100%{opacity:1;transform:translateX(0)} }
-@keyframes onb-scroll { 0%,55%{transform:translateY(0)} 80%,100%{transform:translateY(-34px)} }
-@keyframes onb-screenfade { from{opacity:0;transform:translateX(28px)} to{opacity:1;transform:translateX(0)} }
-@keyframes onb-finger { 0%{top:86%;opacity:0} 18%{opacity:1} 45%,100%{top:42%;opacity:0} }
-@keyframes onb-draw { 0%{stroke-dashoffset:400} 55%,100%{stroke-dashoffset:0} }
-@keyframes onb-drop { 0%{opacity:0;transform:translateY(-14px)} 30%,100%{opacity:1;transform:translateY(0)} }
-`;
+// Jedyna animacja: spokojne "oddychanie" orby (jak na waitliscie). Reszta slajdow
+// statyczna - klasyczny step-by-step zamiast animowanego demo (mniej "modalowo").
+const STYLES = `@keyframes onb-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }`;
 
-function Screen({ children }: { children: React.ReactNode }) {
+// 1. Intro - orba + kategorie ktore przegladasz
+function VisualIntro() {
+  const chips = [["☕", "Kawiarnia"], ["🏛️", "Kultura"], ["🌿", "Natura"], ["🍽️", "Jedzenie"], ["🍺", "Bar"]];
   return (
-    <div className="relative w-[230px] h-[330px] rounded-[28px] bg-white border border-slate-200 shadow-xl overflow-hidden">
-      {children}
+    <div className="flex flex-col items-center gap-7">
+      <div className="h-28 w-28 rounded-full shadow-lg" style={{ background: ORANGE_ORB, animation: "onb-pulse 2.8s ease-in-out infinite" }} />
+      <div className="flex flex-wrap items-center justify-center gap-2 max-w-[280px]">
+        {chips.map(([emoji, label]) => (
+          <span key={label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-xs font-semibold text-slate-700">
+            <span>{emoji}</span>{label}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
 
-// 1. Intro - orb + dryfujace kategorie
-function AnimIntro() {
-  const chips: [string, string, number, number][] = [
-    ["☕", "Kawiarnia", -82, -64], ["🍺", "Bar", 74, -82], ["🏛️", "Kultura", -96, 30],
-    ["🌿", "Natura", 86, 34], ["🍽️", "Jedzenie", -6, 104],
+// 2. Planuj sam lub z grupa - opcje spod guzika "+"
+function VisualPlan() {
+  const items = [
+    { icon: <MapPin className="h-4 w-4" />, label: "Zaplanuj solo", cls: "bg-orange-600 text-white" },
+    { icon: <Users className="h-4 w-4" />, label: "Zaplanuj grupowo", cls: "bg-slate-900 text-white" },
+    { icon: <Link2 className="h-4 w-4 text-orange-600" />, label: "Dołącz do sesji", cls: "bg-white border border-slate-200 text-slate-700" },
   ];
   return (
-    <div className="relative w-full h-full flex items-center justify-center">
-      <div className="h-24 w-24 rounded-full shadow-lg" style={{ background: ORANGE_ORB, animation: "onb-pulse 2.6s ease-in-out infinite" }} />
-      {chips.map(([emoji, label, x, y], i) => (
-        <div key={label} className="absolute" style={{ left: "50%", top: "50%", transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))` }}>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-md text-xs font-semibold"
-            style={{ animation: `onb-float ${2.4 + i * 0.25}s ease-in-out ${i * 0.2}s infinite` }}>
-            <span>{emoji}</span><span className="text-slate-700">{label}</span>
-          </div>
+    <div className="flex flex-col items-center gap-3 w-full max-w-[260px]">
+      {items.map((it) => (
+        <div key={it.label} className={`w-full flex items-center justify-center gap-2.5 px-5 py-3 rounded-full text-sm font-semibold shadow-sm ${it.cls}`}>
+          {it.icon}{it.label}
+        </div>
+      ))}
+      <div className="mt-1 h-12 w-12 rounded-full flex items-center justify-center text-white shadow-lg" style={{ background: ORANGE_ORB }}>
+        <Plus className="h-6 w-6" />
+      </div>
+    </div>
+  );
+}
+
+// 3. Gotowa trasa - lista miejsc w dobrej kolejnosci
+function VisualRoute() {
+  const places = [["🏛️", "Tate Liverpool"], ["🍳", "The Egg Cafe"], ["🚶", "Royal Albert Dock"]];
+  return (
+    <div className="w-full max-w-[260px] rounded-3xl bg-white border border-slate-200 shadow-md p-5 flex flex-col gap-3">
+      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 tracking-wide">
+        <Map className="h-3.5 w-3.5 text-orange-600" /> TWOJA TRASA
+      </div>
+      {places.map(([emoji, name], i) => (
+        <div key={name} className="flex items-center gap-2.5">
+          <div className="h-6 w-6 rounded-full bg-orange-600 text-white text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</div>
+          <span className="text-base">{emoji}</span>
+          <span className="text-[13px] font-semibold text-slate-700 truncate">{name}</span>
         </div>
       ))}
     </div>
   );
 }
 
-// 2. Solo - + otwiera menu, "Zaplanuj solo" podswietlone
-function AnimSolo() {
-  const items = [
-    { icon: "🔗", label: "Dołącz do sesji", cls: "bg-white border border-slate-200 text-slate-700" },
-    { icon: "👥", label: "Zaplanuj grupowo", cls: "bg-slate-900 text-white" },
-    { icon: "📍", label: "Zaplanuj solo", cls: "bg-orange-600 text-white", hi: true },
-  ];
-  return (
-    <Screen>
-      <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 pb-16 px-4">
-        {items.map((it, i) => (
-          <div key={it.label} className={`relative flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-semibold shadow ${it.cls}`}
-            style={{ animation: `onb-rise 4s ease-in-out ${0.4 + i * 0.12}s infinite`, opacity: 0 }}>
-            <span>{it.icon}</span>{it.label}
-            {it.hi && <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-orange-400" style={{ animation: "onb-ripple 1.4s ease-out infinite" }} />}
-          </div>
-        ))}
-      </div>
-      <div className="absolute inset-x-0 bottom-0 h-14 bg-white border-t border-slate-100 flex items-center justify-center">
-        <div className="h-11 w-11 rounded-full flex items-center justify-center text-white text-2xl font-light shadow-lg" style={{ background: ORANGE_ORB }}>+</div>
-      </div>
-      <div className="absolute h-6 w-6 rounded-full bg-black/25" style={{ left: "50%", transform: "translateX(-50%)", animation: "onb-finger 4s ease-in-out infinite" }} />
-    </Screen>
-  );
-}
-
-// 3. Grupowo - kod + dolaczajacy znajomi
-function AnimGroup() {
-  const avatars = ["O", "B", "C"];
-  return (
-    <Screen>
-      <div className="absolute inset-0 flex flex-col items-center pt-9 px-4">
-        <div className="text-[11px] font-bold text-slate-400 mb-1">Sesja grupowa</div>
-        <div className="px-4 py-2 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 font-black tracking-widest text-base" style={{ animation: "onb-pulse 2s ease-in-out infinite" }}>#GRUPA7</div>
-        <div className="text-[10px] text-slate-400 mt-1.5 mb-5">Udostępnij kod znajomym</div>
-        <div className="flex -space-x-2">
-          {avatars.map((a, i) => (
-            <div key={a} className="h-10 w-10 rounded-full bg-orange-100 border-2 border-white flex items-center justify-center text-sm font-bold text-orange-700"
-              style={{ animation: `onb-pop 4s ease-in-out ${0.5 + i * 0.4}s infinite`, opacity: 0 }}>{a}</div>
-          ))}
-        </div>
-        <div className="mt-4 text-[11px] font-semibold text-green-600" style={{ animation: "onb-char 4s ease-in-out 1.6s infinite", opacity: 0 }}>3 osoby w sesji ✓</div>
-      </div>
-    </Screen>
-  );
-}
-
-// 4. Dolacz - wpisywanie kodu
-function AnimJoin() {
-  const code = "GRUPA7".split("");
-  return (
-    <Screen>
-      <div className="absolute inset-0 flex flex-col items-center justify-center px-5">
-        <div className="text-xs font-bold text-slate-700 mb-1">Dołącz do sesji</div>
-        <div className="text-[10px] text-slate-400 mb-4 text-center">Wpisz kod od znajomych</div>
-        <div className="flex gap-1.5 mb-5">
-          {code.map((ch, i) => (
-            <div key={i} className="h-9 w-7 rounded-lg border-2 border-slate-200 bg-slate-50 flex items-center justify-center text-sm font-bold text-slate-800">
-              <span style={{ animation: `onb-char 4s steps(1) ${i * 0.32}s infinite`, opacity: 0 }}>{ch}</span>
-            </div>
-          ))}
-        </div>
-        <div className="px-6 py-2.5 rounded-full bg-orange-600 text-white text-xs font-bold shadow" style={{ animation: "onb-press 4s ease-in-out infinite" }}>Dołącz</div>
-      </div>
-    </Screen>
-  );
-}
-
-// 5. Trasa - miejsca ukladaja sie w plan + scroll
-function AnimRoute() {
-  const places = [
-    { n: 1, emoji: "🏛️", name: "Tate Liverpool", time: "11:30" },
-    { n: 2, emoji: "🍳", name: "The Egg Cafe", time: "14:15" },
-    { n: 3, emoji: "🚶", name: "Royal Albert Dock", time: "16:00" },
-    { n: 4, emoji: "📍", name: "Liverpool Cathedral", time: "17:45" },
-  ];
-  return (
-    <Screen>
-      <div className="absolute inset-x-0 top-0 px-4 pt-7 pb-2 bg-white z-10 border-b border-slate-50">
-        <div className="text-[10px] text-slate-400 font-semibold">PLAN DNIA</div>
-        <div className="text-sm font-black text-slate-800">Twoja trasa</div>
-      </div>
-      <div className="absolute inset-x-0 px-4 flex flex-col gap-2 pt-[60px]" style={{ animation: "onb-scroll 5s ease-in-out infinite" }}>
-        {places.map((p, i) => (
-          <div key={p.n} className="flex items-center gap-2.5 bg-white rounded-xl border border-slate-100 shadow-sm px-2.5 py-2"
-            style={{ animation: `onb-slidein 0.5s ease-out ${0.3 + i * 0.5}s both` }}>
-            <div className="h-6 w-6 rounded-full bg-orange-600 text-white text-xs font-bold flex items-center justify-center shrink-0">{p.n}</div>
-            <span className="text-base">{p.emoji}</span>
-            <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-bold text-slate-800 truncate">{p.name}</div>
-              <div className="text-[9px] text-slate-400">🕐 {p.time}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Screen>
-  );
-}
-
-// 6. Mapa - trasa na mapie + podglad
-function AnimMap() {
-  const pins: [number, number][] = [[28, 30], [62, 26], [70, 58], [38, 72]];
-  return (
-    <Screen>
-      <div className="absolute inset-0 bg-slate-50">
-        <div className="absolute inset-0 opacity-50" style={{ backgroundImage: "linear-gradient(#e2e8f0 1px,transparent 1px),linear-gradient(90deg,#e2e8f0 1px,transparent 1px)", backgroundSize: "26px 26px" }} />
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 230 330" preserveAspectRatio="none">
-          <polyline points="64,99 143,86 161,191 87,238" fill="none" stroke="#F9662B" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="400" style={{ animation: "onb-draw 2.6s ease-out infinite" }} />
-        </svg>
-        {pins.map(([x, y], i) => (
-          <div key={i} className="absolute" style={{ left: `${x}%`, top: `${y}%`, transform: "translate(-50%, -100%)" }}>
-            <div className="h-6 w-6 rounded-full bg-orange-600 text-white text-[10px] font-bold flex items-center justify-center shadow-lg ring-2 ring-white"
-              style={{ animation: `onb-drop 2.6s ease-out ${i * 0.35}s infinite`, opacity: 0 }}>{i + 1}</div>
-          </div>
-        ))}
-        <div className="absolute right-2 top-2 h-7 w-7 rounded-lg bg-white shadow flex items-center justify-center text-slate-500 text-xs" style={{ animation: "onb-pulse 2s ease-in-out infinite" }}>⤢</div>
-      </div>
-    </Screen>
-  );
-}
-
-// Skondensowane intro (mniej klikania): tworzenie trasy solo+grupowo+kod = JEDEN
-// ekran, a powstanie trasy + mapa = jeden ekran. Setup profilu (username/awatar/
-// powiadomienia) to osobny etap po zalogowaniu (ProfileSetup).
+// Skondensowane intro (mniej klikania): czym jest Trasa -> jak planujesz solo/grupa ->
+// gotowa trasa. Setup profilu (username/awatar/powiadomienia) to osobny etap po
+// zalogowaniu (ProfileSetup).
 const STEPS = [
-  { title: "Witaj w Trasie!", desc: "Trasa to speed dating z miastem. W kilka minut ułożysz plan dnia: przeglądasz miejsca, dodajesz te które Cię ciekawią i dostajesz gotową trasę.", Anim: AnimIntro },
-  { title: "Planuj sam lub z grupą", desc: "Kliknij + na pasku i wybierz: planuj solo, zaproś grupę kodem albo dołącz do znajomych. Przeglądacie miejsca, a Trasa zbiera Wasze dopasowania.", Anim: AnimSolo },
-  { title: "Gotowa trasa na mapie", desc: "Z dopasowań Trasa układa plan dnia w dobrej kolejności i pokazuje go na mapie. Plan dopracujesz i zapiszesz w dzienniku.", Anim: AnimMap },
+  { title: "Witaj w Trasie!", desc: "Trasa to speed dating z miastem. W kilka minut ułożysz plan dnia: przeglądasz miejsca, dodajesz te które Cię ciekawią i dostajesz gotową trasę.", Visual: VisualIntro },
+  { title: "Planuj sam lub z grupą", desc: "Kliknij + na pasku i wybierz: planuj solo, zaproś grupę kodem albo dołącz do znajomych. Przeglądacie miejsca, a Trasa zbiera Wasze dopasowania.", Visual: VisualPlan },
+  { title: "Gotowa trasa na mapie", desc: "Z dopasowań Trasa układa plan dnia w dobrej kolejności i pokazuje go na mapie. Plan dopracujesz i zapiszesz we wspomnieniach.", Visual: VisualRoute },
 ];
 
 interface HomeTourProps { onDone: () => void; lastLabel?: string; }
@@ -191,7 +85,7 @@ const HomeTour = ({ onDone, lastLabel }: HomeTourProps) => {
   const [step, setStep] = useState(0);
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
-  const Anim = current.Anim;
+  const Visual = current.Visual;
 
   const next = () => { if (isLast) onDone(); else setStep(step + 1); };
   const back = () => { if (step === 0) onDone(); else setStep(step - 1); };
@@ -215,10 +109,10 @@ const HomeTour = ({ onDone, lastLabel }: HomeTourProps) => {
         <button onClick={onDone} className="text-sm font-medium text-muted-foreground px-1">Pomiń</button>
       </div>
 
-      {/* Animacja */}
+      {/* Slajd (statyczny) */}
       <div className="flex-1 min-h-0 flex items-center justify-center px-6 overflow-hidden">
-        <div key={step} className="w-full h-full flex items-center justify-center" style={{ animation: "onb-screenfade 0.32s ease-out" }}>
-          <Anim />
+        <div key={step} className="w-full flex items-center justify-center transition-opacity duration-300">
+          <Visual />
         </div>
       </div>
 

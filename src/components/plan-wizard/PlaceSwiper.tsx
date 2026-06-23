@@ -886,9 +886,51 @@ function matchesDiet(place: MockPlace, diets: string[]): boolean {
   });
 }
 
-// Biznesy z wizytowka (business_profiles) zawsze pierwsze w kolejce swipera,
-// w obrebie kazdej grupy losowa kolejnosc. Wykrywanie po `businessPlan` ktore
-// enrichWithBusinessProfile ustawia tylko gdy nested bp istnieje.
+// Score wazony pojedynczego miejsca: rating Google (null/0 -> 3.5 neutralne) +
+// lekki jitter dla wariancji miedzy sesjami. Liczony RAZ per miejsce (w interleave),
+// zeby sortowanie bylo stabilne.
+function placeBaseScore(p: MockPlace): number {
+  const rating = typeof p.rating === "number" && p.rating > 0 ? p.rating : 3.5;
+  return rating;
+}
+
+// Przeplot kategorii (weighted round-robin): zadne dwie sasiednie karty nie sa z tej
+// samej kategorii (chyba ze zostala juz tylko jedna kategoria), a w obrebie kategorii
+// najlepiej oceniane miejsca pojawiaja sie wczesniej. Rozwiazuje "4-5 restauracji pod rzad".
+// `prevCat` pozwala uniknac powtorki kategorii na styku dwoch grup (biznesy -> reszta).
+function interleaveByCategory(places: MockPlace[], prevCat: string | null = null): MockPlace[] {
+  // Pre-score raz per miejsce (rating + stabilny jitter) -> stabilna kolejnosc w buckecie.
+  const scored = places.map((p) => ({
+    p,
+    cat: p.category || "_",
+    score: placeBaseScore(p) + Math.random() * 0.5,
+  }));
+  const buckets = new Map<string, typeof scored>();
+  for (const s of scored) {
+    if (!buckets.has(s.cat)) buckets.set(s.cat, []);
+    buckets.get(s.cat)!.push(s);
+  }
+  for (const arr of buckets.values()) arr.sort((a, b) => b.score - a.score);
+
+  const result: MockPlace[] = [];
+  let lastCat = prevCat;
+  while (true) {
+    const nonEmpty = [...buckets.values()].filter((a) => a.length > 0);
+    if (nonEmpty.length === 0) break;
+    // Najwyzszy score glowy, ale pomijajac ostatnio uzyta kategorie (jesli jest alternatywa).
+    nonEmpty.sort((a, b) => b[0].score - a[0].score);
+    const pick = nonEmpty.find((a) => a[0].cat !== lastCat) ?? nonEmpty[0];
+    const item = pick.shift()!;
+    result.push(item.p);
+    lastCat = item.cat;
+  }
+  return result;
+}
+
+// Biznesy z wizytowka (business_profiles) zawsze pierwsze w kolejce swipera (priorytet B2B),
+// a w obrebie KAZDEJ grupy (biznesy / reszta) przeplot kategorii + ranking wazony zamiast
+// czystego shuffle. Wykrywanie po `businessPlan` ktore enrichWithBusinessProfile ustawia
+// tylko gdy nested bp istnieje.
 function partitionBusinessFirst(places: MockPlace[]): MockPlace[] {
   const biz: MockPlace[] = [];
   const rest: MockPlace[] = [];
@@ -896,9 +938,10 @@ function partitionBusinessFirst(places: MockPlace[]): MockPlace[] {
     if ((p as any).businessPlan) biz.push(p);
     else rest.push(p);
   }
-  biz.sort(() => Math.random() - 0.5);
-  rest.sort(() => Math.random() - 0.5);
-  return [...biz, ...rest];
+  const bizOrdered = interleaveByCategory(biz);
+  const lastBizCat = bizOrdered.length ? (bizOrdered[bizOrdered.length - 1].category || "_") : null;
+  const restOrdered = interleaveByCategory(rest, lastBizCat);
+  return [...bizOrdered, ...restOrdered];
 }
 
 function enrichWithBusinessProfile(p: any): MockPlace {
