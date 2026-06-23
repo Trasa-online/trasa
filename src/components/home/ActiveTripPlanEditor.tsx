@@ -10,6 +10,9 @@ import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { notify } from "@/lib/notify";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { haversineKm, formatDistance } from "@/lib/distance";
+import { Navigation } from "lucide-react";
 
 // Edytor planu aktywnej trasy osadzony na ekranie glownym. Replika edytora planu z
 // ReviewSummary (widok Dziennika), ale jako self-contained widget na home: laduje wlasne
@@ -38,6 +41,12 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { coords: userCoords } = useGeolocation();
+  // Dystans do miejsca "X od Ciebie" - tylko gdy mamy zgode na lokalizacje + pin ma wspolrzedne.
+  const distFor = (pin: any): string | null =>
+    userCoords && pin?.latitude && pin?.longitude
+      ? formatDistance(haversineKm(userCoords, { lat: pin.latitude, lng: pin.longitude }))
+      : null;
 
   const [planView, setPlanView] = useState<"list" | "cards">("list");
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
@@ -408,7 +417,14 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
               <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" emojiClass="text-lg" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-                <p className="text-[11px] text-muted-foreground truncate">{CATEGORY_LABEL[pin.category] ?? "Miejsce"}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-[11px] text-muted-foreground truncate">{CATEGORY_LABEL[pin.category] ?? "Miejsce"}</p>
+                  {distFor(pin) && (
+                    <span className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold text-orange-700">
+                      <Navigation className="h-2.5 w-2.5" />{distFor(pin)}
+                    </span>
+                  )}
+                </div>
               </div>
             </button>
             <div className="flex flex-col shrink-0">

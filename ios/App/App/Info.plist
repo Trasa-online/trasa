@@ -66,5 +66,7 @@
 	<string>Trasa potrzebuje dostępu do zdjęć, aby ustawić zdjęcie profilowe oraz dodawać zdjęcia do trasy i dziennika podróży.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Trasa potrzebuje dostępu do biblioteki zdjęć, aby zapisać zdjęcie profilowe oraz zdjęcia z dziennika podróży.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Trasa pokazuje, jak blisko jesteś polecanych miejsc i punktów Twojej trasy. Lokalizacja liczona jest na Twoim telefonie i nigdzie jej nie zapisujemy.</string>
 </dict>
 </plist>

@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Star, ArrowRight, ChevronUp, RotateCcw, CheckCircle2 } from "lucide-react";
+import { MapPin, Star, ArrowRight, ChevronUp, RotateCcw, CheckCircle2, Navigation } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
+import { useGeolocation, geoWasPrimed } from "@/hooks/useGeolocation";
+import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
+import LocationPrimer from "@/components/LocationPrimer";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 import { format } from "date-fns";
@@ -336,6 +339,12 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
   const displayRating = place.rating || googleRating;
   const displayAddress = place.address || googleAddress;
   const displayDescription = place.description || googleDescription;
+  // Chip dystansu "X od Ciebie" - tylko gdy mamy zgode na lokalizacje (coords) i miejsce
+  // ma wspolrzedne. Brak zgody/coords => chip ukryty (graceful).
+  const { coords: userCoords } = useGeolocation();
+  const distanceLabel = userCoords && place.latitude && place.longitude
+    ? formatDistance(haversineKmDist(userCoords, { lat: place.latitude, lng: place.longitude }))
+    : null;
   // Priorytet: tagi z business_profiles.tags (ustawione przez wlasciciela) > Google vibe_tags > fallback do typow z proxy
   const displayTags = place.businessTags?.length
     ? place.businessTags
@@ -514,6 +523,12 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             <div className="flex items-center gap-1">
               <MapPin className="h-3 w-3 text-white/50" />
               <span className="text-white/60 text-xs truncate">{displayAddress.split(",")[0]}</span>
+            </div>
+          )}
+          {distanceLabel && (
+            <div className="flex items-center gap-1 bg-white/15 rounded-full px-2 py-0.5 shrink-0">
+              <Navigation className="h-3 w-3 text-white/80" />
+              <span className="text-white/90 text-[11px] font-medium">{distanceLabel} od&nbsp;Ciebie</span>
             </div>
           )}
         </div>
@@ -1047,8 +1062,19 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const [bannerDismissCount, setBannerDismissCount] = useState(0);
   // Track consecutive likes per category group
   const [recentLikedGroups, setRecentLikedGroups] = useState<(Set<string> | null)[]>([]);
+  // Zgoda na lokalizacje "w kontekscie" - primer pokazany raz po zaladowaniu miejsc,
+  // jesli jeszcze nie pytalismy i nie mamy coords. Chip dystansu pojawia sie po zgodzie.
+  const { coords: geoCoords } = useGeolocation();
+  const [locationPrimerOpen, setLocationPrimerOpen] = useState(false);
   const showAddPlace = showAddPlaceProp;
   const setShowAddPlace = (v: boolean) => { if (!v) onAddPlaceClose?.(); };
+
+  // Primer lokalizacji: po zaladowaniu miejsc, raz, jesli nie pytalismy i brak coords.
+  // Nie w trybie rundy grupowej (roundPlaceIds) - tam swiper jest czescia sesji.
+  useEffect(() => {
+    if (loading || roundPlaceIds?.length || geoCoords || geoWasPrimed()) return;
+    setLocationPrimerOpen(true);
+  }, [loading, roundPlaceIds, geoCoords]);
 
   useEffect(() => {
     setLoading(true);
@@ -1660,6 +1686,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     // gdy parent ma flex-1 min-h-0 - tu uzywamy dvh jako stabilny base i odejmujemy
     // env(safe-area) + chrome height jawnie.
     <div className="flex flex-col flex-1 min-h-0">
+
+      {/* Zgoda na lokalizacje "w kontekscie" (chip dystansu) */}
+      <LocationPrimer open={locationPrimerOpen} onClose={() => setLocationPrimerOpen(false)} />
 
       {/* Bingo banner */}
       {showBanner && (

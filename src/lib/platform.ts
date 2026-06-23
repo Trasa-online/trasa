@@ -13,6 +13,7 @@ export const capabilities = {
   webShare: typeof navigator !== "undefined" && "share" in navigator,
   nativeShare: isNative,
   haptics: isNative,
+  geolocation: isNative || (typeof navigator !== "undefined" && "geolocation" in navigator),
   pushNotifications: isNative,
   serviceWorker: isWeb && typeof navigator !== "undefined" && "serviceWorker" in navigator,
   installablePWA: isWeb,

@@ -9,7 +9,9 @@
 // - Maps button w header slot
 
 import { useState, useEffect } from "react";
-import { MapPin } from "lucide-react";
+import { MapPin, Navigation } from "lucide-react";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { haversineKm, formatDistance } from "@/lib/distance";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { getPhotoUrl, isCachedPhotoUrl, ensurePhotoCached } from "@/lib/placePhotos";
@@ -62,6 +64,7 @@ const PlaceSwiperDetail = ({
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [businessPosts, setBusinessPosts] = useState<BusinessPost[]>([]);
+  const { coords: userCoords } = useGeolocation();
 
   useEffect(() => {
     if (!open || !place) {
@@ -160,19 +163,32 @@ const PlaceSwiperDetail = ({
   const mapsUrl = place
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.place_name} ${place.address ?? ""}`)}`
     : "#";
-  const mapsButton = (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        window.open(mapsUrl, "_blank", "noopener,noreferrer");
-      }}
-      className="shrink-0 mt-0.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/60 bg-white text-foreground text-xs font-semibold active:scale-95 transition-transform"
-    >
-      <MapPin className="h-3.5 w-3.5" />
-      Maps
-    </button>
+  // Chip dystansu "X od Ciebie" - tylko gdy mamy zgode na lokalizacje i miejsce ma wspolrzedne.
+  const distanceLabel = userCoords && place?.latitude && place?.longitude
+    ? formatDistance(haversineKm(userCoords, { lat: place.latitude, lng: place.longitude }))
+    : null;
+
+  const headerSlot = (
+    <div className="shrink-0 mt-0.5 flex items-center gap-2">
+      {distanceLabel && (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-orange-50 border border-orange-100 text-orange-700 text-xs font-semibold">
+          <Navigation className="h-3.5 w-3.5" />
+          {distanceLabel} od&nbsp;Ciebie
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          window.open(mapsUrl, "_blank", "noopener,noreferrer");
+        }}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/60 bg-white text-foreground text-xs font-semibold active:scale-95 transition-transform"
+      >
+        <MapPin className="h-3.5 w-3.5" />
+        Maps
+      </button>
+    </div>
   );
 
   if (!place) return null;
@@ -197,7 +213,7 @@ const PlaceSwiperDetail = ({
             detailPhotos={displayPhotos}
             detailLoading={loading}
             onClose={() => onOpenChange(false)}
-            header={mapsButton}
+            header={headerSlot}
             hideReviews
           />
         </div>
