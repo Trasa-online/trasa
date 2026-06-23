@@ -12,11 +12,27 @@
 // =====================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 
 const GOOGLE_BASE = "https://maps.googleapis.com/maps/api";
 const GOOGLE_NEW_API = "https://places.googleapis.com/v1";
 const REFERER = "https://trasa.travel/";
 const BUCKET = "place-photos-cache";
+
+// Dzienny limit wywolan platnego Google API (bezpiecznik kosztowy). Env-configurable.
+const GOOGLE_DAILY_CALL_LIMIT = Number(Deno.env.get("GOOGLE_DAILY_CALL_LIMIT") ?? "2500");
+
+// Atomowo rezerwuje n wywolan Google na dzis. false => limit przekroczony (NIE wolaj Google).
+// Fail-open: gdy RPC niedostepny/blad -> przepuszczamy (nie blokujemy legalnego ruchu).
+async function consumeGoogleQuota(sb: ReturnType<typeof createClient>, n: number): Promise<boolean> {
+  try {
+    const { data, error } = await sb.rpc("try_consume_google_quota", { p_n: n, p_limit: GOOGLE_DAILY_CALL_LIMIT });
+    if (error) return true;
+    return data !== false;
+  } catch {
+    return true;
+  }
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -176,27 +192,34 @@ Deno.serve(async (req) => {
       return `${GOOGLE_BASE}/place/photo?maxwidth=${width}&photoreference=${photoRef}&key=${apiKey}`;
     };
 
-    // 5. Pobierz oba rozmiary równolegle
-    const [res800, res400] = await Promise.all([
-      fetch(buildPhotoUrl(800), { redirect: "follow", headers: { Referer: REFERER } }),
-      fetch(buildPhotoUrl(400), { redirect: "follow", headers: { Referer: REFERER } }),
-    ]);
+    // 5. Quota guard (bezpiecznik kosztowy) + pobierz TYLKO 800px z Google (1 wywolanie).
+    //    400px generujemy lokalnie z 800px (resize) - ZERO dodatkowego kosztu Google.
+    //    Wczesniej pobieralismy 800 i 400 osobno = 2 wywolania Google na miejsce.
+    const allowed = await consumeGoogleQuota(sb, 1);
+    if (!allowed) {
+      return jsonResponse({ photo_url: null, cached: false, reason: "quota_exceeded" });
+    }
 
-    if (!res800.ok || !res400.ok) {
-      return jsonResponse(
-        {
-          error: "Google Photos fetch failed",
-          status_800: res800.status,
-          status_400: res400.status,
-        },
-        502,
-      );
+    const res800 = await fetch(buildPhotoUrl(800), { redirect: "follow", headers: { Referer: REFERER } });
+    if (!res800.ok) {
+      return jsonResponse({ error: "Google Photos fetch failed", status_800: res800.status }, 502);
     }
 
     const contentType800 = res800.headers.get("content-type") || "image/jpeg";
-    const contentType400 = res400.headers.get("content-type") || "image/jpeg";
-    const buf800 = await res800.arrayBuffer();
-    const buf400 = await res400.arrayBuffer();
+    const buf800src = new Uint8Array(await res800.arrayBuffer());
+    const buf800: Uint8Array = buf800src;
+
+    // 400px = lokalny resize 800px. Fallback: te same bajty co 800 (gdy decode/resize zawiedzie).
+    let buf400: Uint8Array = buf800src;
+    let contentType400 = contentType800;
+    try {
+      const img = await Image.decode(buf800src);
+      const resized = img.resize(400, Image.RESIZE_AUTO);
+      buf400 = await resized.encodeJPEG(80);
+      contentType400 = "image/jpeg";
+    } catch (e) {
+      console.warn("[cache-place-photo] resize 400 failed, fallback to 800 bytes:", (e as Error).message);
+    }
 
     // 6. Upload obu wersji do Storage (upsert — overwrite jeśli istnieją)
     const [up800, up400] = await Promise.all([

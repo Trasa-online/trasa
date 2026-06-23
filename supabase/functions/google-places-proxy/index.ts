@@ -4,6 +4,21 @@ const BASE = "https://maps.googleapis.com/maps/api";
 const REFERER = "https://trasa.travel/";
 const CACHE_TTL_HOURS = 168; // 7 days
 
+// Dzienny limit wywolan platnego Google API (bezpiecznik kosztowy). Env-configurable.
+const GOOGLE_DAILY_CALL_LIMIT = Number(Deno.env.get("GOOGLE_DAILY_CALL_LIMIT") ?? "2500");
+
+// Atomowo rezerwuje n wywolan Google na dzis. false => limit przekroczony (NIE wolaj Google).
+// Fail-open: gdy RPC niedostepny/blad -> przepuszczamy (nie blokujemy legalnego ruchu).
+async function consumeGoogleQuota(sb: ReturnType<typeof createClient>, n: number): Promise<boolean> {
+  try {
+    const { data, error } = await sb.rpc("try_consume_google_quota", { p_n: n, p_limit: GOOGLE_DAILY_CALL_LIMIT });
+    if (error) return true;
+    return data !== false;
+  } catch {
+    return true;
+  }
+}
+
 // In-memory caches (live for the duration of the function instance)
 const citysearchCache = new Map<string, { results: any[]; ts: number }>();
 const textsearchCache = new Map<string, { results: any[]; ts: number }>();
@@ -63,6 +78,9 @@ Deno.serve(async (req) => {
       if (cacheHit && Date.now() - cacheHit.ts < TEXTSEARCH_TTL_MS) {
         return new Response(JSON.stringify({ results: cacheHit.results }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" } });
       }
+      if (!(await consumeGoogleQuota(sb, 1))) {
+        return new Response(JSON.stringify({ results: [], quota_exceeded: true }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" } });
+      }
       const res = await fetch(`${BASE}/place/textsearch/json?query=${encodeURIComponent(body.query)}&key=${apiKey}&language=pl`, { headers: { Referer: REFERER } });
       const data = await res.json();
       const results = ((data.results ?? []) as any[]).slice(0, 6).map((r: any) => ({
@@ -98,6 +116,17 @@ Deno.serve(async (req) => {
         });
       }
       // Cache stale — continue to fetch fresh data
+    }
+
+    // Quota guard (bezpiecznik kosztowy): ten path robi kilka platnych wywolan
+    // (Nearby/Text Search + Place Details). Po przekroczeniu dziennego limitu zwracamy
+    // stale cache (jesli jest) albo pusty wynik - NIE wolamy Google.
+    const okQuota = await consumeGoogleQuota(sb, 3);
+    if (!okQuota) {
+      if (cached?.data) {
+        return new Response(JSON.stringify(cached.data), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "STALE-QUOTA" } });
+      }
+      return new Response(JSON.stringify({ result: null, quota_exceeded: true }), { headers: { ...corsHeaders, "Content-Type": "application/json", "X-Quota": "EXCEEDED" } });
     }
 
     // 2. Resolve place_id

@@ -272,6 +272,12 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
     // pojedynczym URL-em z Google - to dropowaloby gallery. Galeria ma cover + extras.
     const hasGallery = (place.galleryPhotos ?? []).length > 0;
 
+    // Oszczednosc kosztu: gdy okladka jest juz scache'owana w Storage i miejsce ma rating
+    // z bazy, NIE wolamy google-places-proxy (Place Details) dla karty - karta pokazuje
+    // tylko okladke/rating/adres/tagi. Recenzje + galeria Google dociagaja sie dopiero
+    // w wizytowce (PlaceSwiperDetail). Bez tego kazda karta = jedno Place Details.
+    if (alreadyCached && (place.rating ?? 0) > 0) return;
+
     supabase.functions
       .invoke("google-places-proxy", {
         body: {
