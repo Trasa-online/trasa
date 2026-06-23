@@ -12,7 +12,8 @@ import { notify } from "@/lib/notify";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { haversineKm, formatDistance } from "@/lib/distance";
-import { Navigation } from "lucide-react";
+import { Navigation, GripVertical } from "lucide-react";
+import { Reorder, useDragControls } from "framer-motion";
 
 // Edytor planu aktywnej trasy osadzony na ekranie glownym. Replika edytora planu z
 // ReviewSummary (widok Dziennika), ale jako self-contained widget na home: laduje wlasne
@@ -36,6 +37,59 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 // Klucz kompozytowy notka per miejsce w danym dniu (route_id + place_name).
 const rkey = (routeId: string, placeName: string) => `${routeId}::${placeName}`;
+
+// Wiersz edytowalnej Listy z przeciaganiem (framer-motion Reorder). Chevrony gora/dol
+// ZOSTAJA, OBOK uchwyt drag (GripVertical) ktory startuje przeciaganie przez useDragControls
+// + dragListener=false (zeby tap w wizytowke i przyciski dzialaly). HTML5 draggable nie
+// dziala w iOS WebView - framer-motion dziala na dotyk.
+function PlanReorderRow({ pin, isFirst, isLast, onTap, onUp, onDown, onRemove, distLabel, noteNode }: {
+  pin: any; isFirst: boolean; isLast: boolean;
+  onTap: () => void; onUp: () => void; onDown: () => void; onRemove: () => void;
+  distLabel: string | null; noteNode: React.ReactNode;
+}) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item
+      as="div"
+      value={pin}
+      dragListener={false}
+      dragControls={controls}
+      whileDrag={{ scale: 0.98, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50 }}
+      className="bg-card border border-border/40 rounded-2xl p-2"
+    >
+      <div className="flex items-center gap-2">
+        <div
+          onPointerDown={(e) => { e.stopPropagation(); controls.start(e); }}
+          className="shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors p-0.5"
+          style={{ touchAction: "none" }}
+          aria-label="Przeciągnij, aby zmienić kolejność"
+        >
+          <GripVertical className="h-4 w-4" />
+        </div>
+        <button onClick={onTap} className="flex items-center gap-2 min-w-0 flex-1 text-left active:opacity-70 transition-opacity">
+          <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" emojiClass="text-lg" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <p className="text-[11px] text-muted-foreground truncate">{CATEGORY_LABEL[pin.category] ?? "Miejsce"}</p>
+              {distLabel && (
+                <span className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold text-orange-700">
+                  <Navigation className="h-2.5 w-2.5" />{distLabel}
+                </span>
+              )}
+            </div>
+          </div>
+        </button>
+        <div className="flex flex-col shrink-0">
+          <button onClick={onUp} disabled={isFirst} aria-label="W górę" className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
+          <button onClick={onDown} disabled={isLast} aria-label="W dół" className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
+        </div>
+        <button onClick={onRemove} aria-label="Usuń miejsce" className="h-8 w-8 shrink-0 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center active:scale-90"><Trash2 className="h-4 w-4" /></button>
+      </div>
+      {noteNode && <div className="px-0.5">{noteNode}</div>}
+    </Reorder.Item>
+  );
+}
 
 const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
   const { user } = useAuth();
@@ -407,36 +461,25 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
     </div>
   );
 
-  // Edytowalna lista planu (reorder strzalkami gora/dol + usuwanie). Klik => wizytowka.
+  // Edytowalna lista planu: chevrony gora/dol + przeciaganie (Reorder) + usuwanie.
+  // Klik w miejsce => wizytowka.
   const renderEditablePlan = (withRating: boolean) => (
-    <div className="space-y-2">
+    <Reorder.Group as="div" axis="y" values={workingPins} onReorder={(next) => setWorking(next as any[])} className="space-y-2">
       {workingPins.map((pin: any, i: number) => (
-        <div key={pin.id} className="bg-card border border-border/40 rounded-2xl p-2">
-          <div className="flex items-center gap-2">
-            <button onClick={() => openDetail(pin)} className="flex items-center gap-2 min-w-0 flex-1 text-left active:opacity-70 transition-opacity">
-              <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" emojiClass="text-lg" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <p className="text-[11px] text-muted-foreground truncate">{CATEGORY_LABEL[pin.category] ?? "Miejsce"}</p>
-                  {distFor(pin) && (
-                    <span className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold text-orange-700">
-                      <Navigation className="h-2.5 w-2.5" />{distFor(pin)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </button>
-            <div className="flex flex-col shrink-0">
-              <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label="W górę" className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
-              <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label="W dół" className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
-            </div>
-            <button onClick={() => removeWorkingPin(pin.id)} aria-label="Usuń miejsce" className="h-8 w-8 shrink-0 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center active:scale-90"><Trash2 className="h-4 w-4" /></button>
-          </div>
-          {withRating && <div className="px-0.5">{renderRatingNote(pin.place_name)}</div>}
-        </div>
+        <PlanReorderRow
+          key={pin.id}
+          pin={pin}
+          isFirst={i === 0}
+          isLast={i === workingPins.length - 1}
+          onTap={() => openDetail(pin)}
+          onUp={() => movePin(i, i - 1)}
+          onDown={() => movePin(i, i + 1)}
+          onRemove={() => removeWorkingPin(pin.id)}
+          distLabel={distFor(pin)}
+          noteNode={withRating ? renderRatingNote(pin.place_name) : null}
+        />
       ))}
-    </div>
+    </Reorder.Group>
   );
 
   // Przycisk dodania miejsca do planu dnia.
