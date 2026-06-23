@@ -1,14 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import TripDayView from "@/components/home/TripDayView";
+import ActiveTripPlanEditor from "@/components/home/ActiveTripPlanEditor";
 import { MapPin, Users, ChevronRight } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 
-// Ekran glowny = dashboard "Aktywne": aktywne trasy solo (re-uzyty TripDayView, jak wpisy
-// w Dzienniku - lista miejsc + mapa + szczegoly na tap, BEZ godzin) + aktywne trasy grupowe.
-// Gdy brak -> puste stany. Swiper jest pod guzikiem "+" (FAB w BottomNav).
+// Ekran glowny = dashboard "Aktywne": aktywne trasy solo (pelny edytor planu jak w Dzienniku
+// - ActiveTripPlanEditor: Lista/Szczegoly, reorder, usuwanie, notki, dodawanie, wizytowka) +
+// aktywne trasy grupowe. Gdy brak -> puste stany. Swiper jest pod guzikiem "+" (FAB w BottomNav).
 
 const fmtDate = (d?: string | null) =>
   d && isValid(parseISO(d)) ? format(parseISO(d), "d MMMM yyyy", { locale: pl }) : null;
@@ -46,7 +46,9 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
         .eq("user_id", userId)
         .in("trip_type", ["planning", "ongoing"])
         .order("created_at", { ascending: false });
-      return ((data as any[]) || []).filter((r) => !r.group_session_id);
+      // Tylko NAJBARDZIEJ AKTUALNA aktywna trasa solo (jedna). Reszta jest dostepna
+      // w "Szczegoly" / historii - home pokazuje to, czym user zyje teraz.
+      return ((data as any[]) || []).filter((r) => !r.group_session_id).slice(0, 1);
     },
     enabled: !!userId,
   });
@@ -97,15 +99,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                     Szczegóły<ChevronRight className="h-3.5 w-3.5" />
                   </span>
                 </button>
-                <TripDayView
-                  pins={((r.pins as any[]) || []).map((p) => ({
-                    id: p.id, place_name: p.place_name, pin_order: p.pin_order,
-                    address: p.address, latitude: p.latitude, longitude: p.longitude,
-                  }))}
-                  dayLabel="Plan trasy"
-                  date={r.start_date ?? null}
-                  onStartReview={() => navigate(`/day-review?route=${r.id}`)}
-                />
+                <ActiveTripPlanEditor routeId={r.id} />
               </div>
             ))}
           </div>
