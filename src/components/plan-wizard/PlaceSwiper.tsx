@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Star, ArrowRight, ChevronUp, RotateCcw, CheckCircle2, Navigation } from "lucide-react";
+import { MapPin, Star, ArrowRight, ChevronUp, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { useGeolocation, geoWasPrimed } from "@/hooks/useGeolocation";
 import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
@@ -374,17 +374,9 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
     pointerStart.current = null;
 
     if (dist < 12 && dt < 350) {
-      // Tap left half → prev photo, right half → next photo
-      if (photoUrls.length > 1) {
-        const cardRect = cardRef.current?.getBoundingClientRect();
-        const tapX = e.clientX;
-        const centerX = cardRect ? cardRect.left + cardRect.width / 2 : window.innerWidth / 2;
-        if (tapX < centerX) {
-          setPhotoIdx(n => Math.max(0, n - 1));
-        } else {
-          setPhotoIdx(n => Math.min(photoUrls.length - 1, n + 1));
-        }
-      }
+      // Tap w karte = otworz wizytowke (nie zmiana zdjecia). Nawigacja zdjec jest
+      // przez wyrazne strzalki (ponizej) - czytelniejsza afordancja niz tap lewo/prawo.
+      onTap();
       return;
     }
     if (dragX > 80) {
@@ -457,9 +449,34 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         {isTop && !place.coverVideoUrl && photoUrls.length > 1 && (
           <div className="absolute top-14 left-4 right-4 flex gap-1 z-10">
             {photoUrls.map((_, i) => (
-              <div key={i} className={cn("flex-1 h-0.5 rounded-full transition-all", i === photoIdx ? "bg-white" : "bg-white/30")} />
+              <div key={i} className={cn("flex-1 h-1 rounded-full transition-all", i === photoIdx ? "bg-white" : "bg-white/35")} />
             ))}
           </div>
+        )}
+
+        {/* Wyrazne strzalki nawigacji zdjec (afordancja zamiast tap lewo/prawo).
+            stopPropagation, zeby tap w karte = wizytowka, a strzalka = zmiana zdjecia. */}
+        {isTop && !place.coverVideoUrl && photoUrls.length > 1 && (
+          <>
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); setPhotoIdx(n => Math.max(0, n - 1)); }}
+              disabled={photoIdx === 0}
+              aria-label="Poprzednie zdjęcie"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform disabled:opacity-0"
+            >
+              <ChevronLeft className="h-5 w-5 text-white" />
+            </button>
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); setPhotoIdx(n => Math.min(photoUrls.length - 1, n + 1)); }}
+              disabled={photoIdx === photoUrls.length - 1}
+              aria-label="Następne zdjęcie"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform disabled:opacity-0"
+            >
+              <ChevronRight className="h-5 w-5 text-white" />
+            </button>
+          </>
         )}
       </div>
 

@@ -18,7 +18,7 @@ import { type ReactNode, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { cn } from "@/lib/utils";
-import { Star, MapPin, Clock, ChevronRight, ChevronLeft, X, Maximize2, Phone, Globe, FileText } from "lucide-react";
+import { Star, MapPin, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText } from "lucide-react";
 import { parseISO, isValid, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import RouteMap from "@/components/RouteMap";
@@ -318,17 +318,30 @@ function CategoriesSection({ data }: SectionProps) {
   );
 }
 
-function RatingSection({ data }: SectionProps) {
+// expandable => ocena klikalna (gwiazdka/liczba) rozwija recenzje Google (progressive
+// disclosure - domyslnie schowane, zeby nie bylo stalej sciany tekstu). Afordancja: "Opinie ⌄".
+function RatingSection({ data, expandable, expanded, onToggle }: SectionProps & { expandable?: boolean; expanded?: boolean; onToggle?: () => void }) {
   if (!data.rating) return null;
-  return (
-    <div className="flex items-center gap-1.5">
+  const inner = (
+    <>
       <Stars rating={data.rating} />
       <span className="text-sm font-bold">{data.rating}</span>
       {data.ratingCount !== undefined && data.ratingCount > 0 && (
         <span className="text-sm text-muted-foreground">({data.ratingCount.toLocaleString("pl")})</span>
       )}
-    </div>
+    </>
   );
+  if (expandable) {
+    return (
+      <button onClick={onToggle} className="flex items-center gap-1.5 active:opacity-70 transition-opacity" aria-expanded={expanded}>
+        {inner}
+        <span className="flex items-center gap-0.5 text-xs font-semibold text-orange-600 ml-0.5">
+          Opinie<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} />
+        </span>
+      </button>
+    );
+  }
+  return <div className="flex items-center gap-1.5">{inner}</div>;
 }
 
 function AddressSection({ data }: SectionProps) {
@@ -684,6 +697,10 @@ const PremiumBusinessCard = ({
   swipeCoverImage,
 }: PremiumBusinessCardProps) => {
   const [fullscreen, setFullscreen] = useState<{ photos: string[]; idx: number } | null>(null);
+  // Recenzje za tapnieciem w ocene (progressive disclosure). Gdy hideReviews=true a sa
+  // recenzje, ocena staje sie klikalna i rozwija "Opinie".
+  const [reviewsOpen, setReviewsOpen] = useState(false);
+  const hasReviews = (data.reviews?.length ?? 0) > 0;
 
   const handleExpand = (photos: string[], idx: number) => setFullscreen({ photos, idx });
 
@@ -709,7 +726,8 @@ const PremiumBusinessCard = ({
                 <h2 className="text-2xl font-black leading-tight">{data.name}</h2>
                 {header}
               </div>
-              <RatingSection data={data} />
+              <RatingSection data={data} expandable={!!hideReviews && hasReviews} expanded={reviewsOpen} onToggle={() => setReviewsOpen((o) => !o)} />
+              {hideReviews && reviewsOpen && <ReviewsSection data={data} />}
               <AddressSection data={data} />
               <CategoriesSection data={data} />
               {!hideHours && <OpeningHoursSection data={data} />}
@@ -848,7 +866,8 @@ const PremiumBusinessCard = ({
             </button>
           )}
           <h2 className="text-xl font-black leading-tight">{data.name}</h2>
-          <RatingSection data={data} />
+          <RatingSection data={data} expandable={!!hideReviews && hasReviews} expanded={reviewsOpen} onToggle={() => setReviewsOpen((o) => !o)} />
+          {hideReviews && reviewsOpen && <ReviewsSection data={data} />}
           <AddressSection data={data} />
           {!hideHours && <OpeningHoursSection data={data} />}
           <DescriptionSection data={data} />
