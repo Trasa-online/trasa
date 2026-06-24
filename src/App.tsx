@@ -583,6 +583,7 @@ const Journal          = lazy(() => import("./pages/Journal"));
 const EditPlan         = lazy(() => import("./pages/EditPlan"));
 const ReviewSummary    = lazy(() => import("./pages/ReviewSummary"));
 const ActiveTrip       = lazy(() => import("./pages/ActiveTrip"));
+const AddPlaceToTrip   = lazy(() => import("./pages/AddPlaceToTrip"));
 const PlanWizard       = lazy(() => import("./pages/PlanWizard"));
 const CreateGroupSession = lazy(() => import("./pages/CreateGroupSession"));
 const GroupSession     = lazy(() => import("./pages/GroupSession"));
@@ -666,6 +667,7 @@ const App = () => (
           <Route path="/moj-profil" element={<AppLayout hideTopBar><TravelerProfile /></AppLayout>} />
           <Route path="/edit-plan" element={<EditPlan />} />
           <Route path="/review-summary" element={<ReviewSummary />} />
+          <Route path="/trasa/:id/dodaj" element={<AddPlaceToTrip />} />
           <Route path="/trasa/:id" element={<ActiveTrip />} />
           <Route path="/plan" element={<PlanWizard />} />
           <Route path="/demo" element={<DemoSession />} />

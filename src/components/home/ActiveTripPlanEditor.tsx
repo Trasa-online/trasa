@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe } from "lucide-react";
-import AddPinSheet from "@/components/route/AddPinSheet";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
@@ -107,7 +106,6 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [draft, setDraft] = useState<{ dayId: string; pins: any[] } | null>(null);
   const [savingPlan, setSavingPlan] = useState(false);
-  const [addingPlace, setAddingPlace] = useState(false);
   const [showSharePrompt, setShowSharePrompt] = useState(false);
 
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -308,34 +306,6 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
     setSavingPlan(false);
   };
 
-  // Dodanie miejsca do planu aktywnego dnia (AddPinSheet zwraca PlanPin).
-  const handleAddPin = async (pin: any) => {
-    if (!activeRouteId || !user) { setAddingPlace(false); return; }
-    const { data: row, error } = await (supabase as any)
-      .from("pins")
-      .insert({
-        route_id: activeRouteId,
-        place_name: pin.place_name,
-        address: pin.address || null,
-        description: pin.description || null,
-        category: pin.category || "other",
-        latitude: pin.latitude || null,
-        longitude: pin.longitude || null,
-        place_id: pin.place_id ?? null,
-        suggested_time: pin.suggested_time || null,
-        photo_url: pin.photoUrl ?? null,
-        pin_order: workingPins.length,
-        original_creator_id: user.id,
-      })
-      .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, latitude, longitude, place_id, photo_url, pin_order")
-      .single();
-    setAddingPlace(false);
-    if (error || !row) { console.error("[ActiveTripPlanEditor] add pin failed:", error?.message); notify.error("Nie udało się dodać miejsca"); return; }
-    if (draft && draft.dayId === activeRouteId) setDraft({ dayId: activeRouteId, pins: [...draft.pins, row] });
-    queryClient.invalidateQueries({ queryKey: ["active-plan-all-pins", idsKey] });
-    notify.success("Dodano miejsce");
-  };
-
   // Autozapis przy unmount: persystuj zmiany planu (kolejnosc + usuniecia) bez finalizacji.
   const autosaveRef = useRef<{ working: any[]; originalIds: string[] } | null>(null);
   useEffect(() => {
@@ -482,10 +452,10 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
     </Reorder.Group>
   );
 
-  // Przycisk dodania miejsca do planu dnia.
+  // Przycisk dodania miejsca do planu dnia - pelnoekranowy widok /trasa/:id/dodaj.
   const renderAddPlaceButton = () => (
     <button
-      onClick={() => setAddingPlace(true)}
+      onClick={() => navigate(`/trasa/${activeRouteId}/dodaj`)}
       className="mt-3 w-full py-3 rounded-2xl border-2 border-dashed border-border/50 text-sm font-semibold text-muted-foreground flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
     >
       <Plus className="h-4 w-4" /> Dodaj miejsce
@@ -563,17 +533,6 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
         place={detailPin}
         city={route?.city}
       />
-
-      {/* ── Dodawanie miejsca do planu dnia ──────────────────────────────── */}
-      {addingPlace && (
-        <AddPinSheet
-          open={addingPlace}
-          onOpenChange={(o) => !o && setAddingPlace(false)}
-          onPinAdd={handleAddPin}
-          cityContext={route?.city ?? ""}
-          existingPinNames={currentPins.map((p: any) => p.place_name)}
-        />
-      )}
 
       {/* ── Popup: udostepnic trase w Eksploruj? (po zatwierdzeniu planu) ──── */}
       {showSharePrompt && (
