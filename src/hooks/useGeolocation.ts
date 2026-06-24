@@ -17,7 +17,9 @@ let currentStatus: GeoStatus = "idle";
 const listeners = new Set<() => void>();
 const notifyAll = () => listeners.forEach((l) => l());
 
-const PRIMED_KEY = "trasa_geo_primed_v1";
+// v2: bump zeby userzy zablokowani na v1 (zamkneli primer "Nie teraz" zanim plugin
+// dzialal) dostali ponowne pytanie raz, juz z dzialajaca geolokalizacja.
+const PRIMED_KEY = "trasa_geo_primed_v2";
 export const geoWasPrimed = (): boolean => {
   try { return !!localStorage.getItem(PRIMED_KEY); } catch { return false; }
 };

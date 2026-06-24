@@ -345,12 +345,16 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
   const displayRating = place.rating || googleRating;
   const displayAddress = place.address || googleAddress;
   const displayDescription = place.description || googleDescription;
-  // Chip dystansu "X od Ciebie" - tylko gdy mamy zgode na lokalizacje (coords) i miejsce
-  // ma wspolrzedne. Brak zgody/coords => chip ukryty (graceful).
-  const { coords: userCoords } = useGeolocation();
-  const distanceLabel = userCoords && place.latitude && place.longitude
+  // Chip dystansu "X od Ciebie" - gdy mamy zgode na lokalizacje (coords) i miejsce ma
+  // wspolrzedne. Gdy brak coords (np. user nie zezwolil), a miejsce MA wspolrzedne i
+  // zgoda nie jest twardo odrzucona - pokazujemy maly przycisk "Pokaz dystans" ktory
+  // bezposrednio prosi o lokalizacje (omija jednorazowy primer).
+  const { coords: userCoords, status: geoStatus, request: requestGeo } = useGeolocation();
+  const placeHasCoords = !!(place.latitude && place.longitude);
+  const distanceLabel = userCoords && placeHasCoords
     ? formatDistance(haversineKmDist(userCoords, { lat: place.latitude, lng: place.longitude }))
     : null;
+  const showEnableDistance = !userCoords && placeHasCoords && geoStatus !== "denied" && geoStatus !== "unavailable";
   // Priorytet: tagi z business_profiles.tags (ustawione przez wlasciciela) > Google vibe_tags > fallback do typow z proxy
   const displayTags = place.businessTags?.length
     ? place.businessTags
@@ -553,6 +557,16 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
               <Navigation className="h-3 w-3 text-white/80" />
               <span className="text-white/90 text-[11px] font-medium">{distanceLabel} od&nbsp;Ciebie</span>
             </div>
+          )}
+          {!distanceLabel && showEnableDistance && isTop && (
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); requestGeo(); }}
+              className="flex items-center gap-1 bg-white/15 rounded-full px-2 py-0.5 shrink-0 active:scale-95 transition-transform"
+            >
+              <Navigation className="h-3 w-3 text-white/80" />
+              <span className="text-white/90 text-[11px] font-medium">Pokaż dystans</span>
+            </button>
           )}
         </div>
 
