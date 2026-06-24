@@ -402,21 +402,21 @@ const AddPlaceToTripInner = () => {
       {step === "category" && (
         <>
           {!subCategoryId ? (
-            <div className="flex-1 overflow-y-auto px-5 pt-4 pb-6 min-h-0">
-              <p className="text-sm text-muted-foreground mb-4">Wybierz kategorię, którą chcesz przeglądać.</p>
-              <div className="flex flex-col gap-5">
+            <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 min-h-0 bg-[#F4F3EF]">
+              <p className="text-sm text-muted-foreground mb-4 px-1">Wybierz kategorię, którą chcesz przeglądać.</p>
+              <div className="flex flex-col gap-4">
                 {MAIN_CATEGORIES.map((cat) => (
-                  <div key={cat.id}>
-                    <div className="flex items-center gap-2 mb-2">
+                  <div key={cat.id} className="rounded-3xl bg-white border border-black/5 shadow-sm p-4">
+                    <div className="flex items-center gap-2 mb-3">
                       <span className="text-lg">{cat.emoji}</span>
-                      <p className="text-sm font-bold">{cat.label}</p>
+                      <p className="text-[15px] font-bold">{cat.label}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {cat.subcategories.map((sub) => (
                         <button
                           key={sub.id}
                           onClick={() => { setMainCategoryId(cat.id); setSubCategoryId(sub.id); }}
-                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-card border border-border/50 text-sm font-semibold active:scale-[0.97] transition-transform"
+                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white border border-border/60 shadow-sm text-sm font-semibold active:scale-[0.97] transition-transform"
                         >
                           <span>{sub.emoji}</span>
                           {sub.label}
