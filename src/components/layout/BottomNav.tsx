@@ -119,9 +119,12 @@ const BottomNav = () => {
 
   return (
     <>
-      {/* Backdrop for + menu */}
+      {/* Backdrop for + menu - przyciemnione + blur, zeby guziki akcji byly czytelne */}
       {showMenu && (
-        <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowMenu(false)}
+        />
       )}
 
       {/* Popup menu above "+" button */}

@@ -495,8 +495,7 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
   // Naglowek "Twój plan" + przelacznik Lista/Szczegoly + (multi-day) przelacznik dni.
   const renderPlanHeader = (showViewToggle = true) => (
     <>
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Twój plan</p>
+      <div className="flex items-center justify-end mb-3">
         {showViewToggle && (
           <div className="flex rounded-full bg-muted p-0.5">
             <button onClick={() => setPlanView("list")} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Lista</button>

@@ -5,6 +5,7 @@ import ActiveTripPlanEditor from "@/components/home/ActiveTripPlanEditor";
 import { MapPin, Users, ChevronRight } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
+import { avatarSrc } from "@/lib/avatar";
 
 // Ekran glowny = dashboard "Aktywne": aktywne trasy solo (pelny edytor planu jak w Dzienniku
 // - ActiveTripPlanEditor: Lista/Szczegoly, reorder, usuwanie, notki, dodawanie, wizytowka) +
@@ -73,6 +74,29 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
     enabled: !!userId,
   });
 
+  // Awatary uczestnikow per sesja grupowa (do stacka awatarow na karcie).
+  const groupIds = groupSessions.map((s: any) => s.id);
+  const { data: memberAvatars = {} } = useQuery({
+    queryKey: ["home-group-members", groupIds.join(",")],
+    queryFn: async () => {
+      if (!groupIds.length) return {} as Record<string, { avatar_url: string | null; name: string }[]>;
+      const { data: members } = await (supabase as any)
+        .from("group_session_members").select("session_id, user_id").in("session_id", groupIds);
+      if (!members?.length) return {};
+      const uids = [...new Set(members.map((m: any) => m.user_id))];
+      const { data: profiles } = await (supabase as any)
+        .from("profiles").select("id, avatar_url, username, first_name").in("id", uids);
+      const pmap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+      const map: Record<string, { avatar_url: string | null; name: string }[]> = {};
+      for (const m of members) {
+        const p: any = pmap.get(m.user_id);
+        (map[m.session_id] ??= []).push({ avatar_url: p?.avatar_url ?? null, name: p?.first_name || p?.username || "?" });
+      }
+      return map;
+    },
+    enabled: groupIds.length > 0,
+  });
+
   return (
     <div className="flex-1 overflow-y-auto px-4 pt-1 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
       {/* Aktywne trasy (solo) */}
@@ -84,21 +108,13 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
           <div className="space-y-3">
             {soloRoutes.map((r) => (
               <div key={r.id} className="rounded-3xl bg-card border border-border/50 overflow-hidden">
-                <button
-                  onClick={() => navigate(`/trasa/${r.id}`)}
-                  className="w-full flex items-center justify-between gap-2 px-4 pt-3.5 pb-2 text-left active:bg-muted/40 transition-colors"
-                >
-                  <div className="min-w-0">
-                    <p className="text-base font-bold leading-tight flex items-center gap-1.5">
-                      <MapPin className="h-4 w-4 text-orange-600 shrink-0" />
-                      {r.city || r.title || "Trasa"}
-                    </p>
-                    {fmtDate(r.start_date) && <p className="text-xs text-muted-foreground mt-0.5 ml-[22px]">{fmtDate(r.start_date)}</p>}
-                  </div>
-                  <span className="text-[11px] font-semibold text-orange-600 flex items-center gap-0.5 shrink-0">
-                    Szczegóły<ChevronRight className="h-3.5 w-3.5" />
-                  </span>
-                </button>
+                <div className="px-4 pt-3.5 pb-2">
+                  <p className="text-base font-bold leading-tight flex items-center gap-1.5">
+                    <MapPin className="h-4 w-4 text-orange-600 shrink-0" />
+                    {r.city || r.title || "Trasa"}
+                  </p>
+                  {fmtDate(r.start_date) && <p className="text-xs text-muted-foreground mt-0.5 ml-[22px]">{fmtDate(r.start_date)}</p>}
+                </div>
                 <ActiveTripPlanEditor routeId={r.id} />
               </div>
             ))}
@@ -129,9 +145,32 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                 onClick={() => navigate(`/sesja/${s.join_code}`)}
                 className="w-full rounded-2xl bg-card border border-border/50 px-4 py-3.5 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
               >
-                <div className="h-10 w-10 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                  <Users className="h-5 w-5 text-orange-600" />
-                </div>
+                {(() => {
+                  const avs = (memberAvatars as Record<string, { avatar_url: string | null; name: string }[]>)[s.id] ?? [];
+                  if (avs.length === 0) {
+                    return (
+                      <div className="h-10 w-10 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                        <Users className="h-5 w-5 text-orange-600" />
+                      </div>
+                    );
+                  }
+                  const shown = avs.slice(0, 3);
+                  const extra = avs.length - shown.length;
+                  return (
+                    <div className="flex -space-x-2.5 shrink-0">
+                      {shown.map((a, i) => (
+                        <div key={i} className="h-9 w-9 rounded-full border-2 border-card overflow-hidden bg-orange-100" style={{ zIndex: 3 - i }}>
+                          <img src={avatarSrc(a.avatar_url)} alt={a.name} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                      {extra > 0 && (
+                        <div className="h-9 w-9 rounded-full border-2 border-card bg-foreground/85 text-background text-[11px] font-bold flex items-center justify-center" style={{ zIndex: 0 }}>
+                          +{extra}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold leading-tight truncate">{s.name || s.city || "Sesja grupowa"}</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
