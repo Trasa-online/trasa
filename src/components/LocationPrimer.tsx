@@ -1,26 +1,55 @@
-import { MapPin } from "lucide-react";
-import { requestLocation, markGeoPrimed } from "@/hooks/useGeolocation";
+import { useState } from "react";
+import { MapPin, Navigation, Map as MapIcon } from "lucide-react";
+import { setGpsReference, setStartReference, markAskedForCity } from "@/lib/distanceReference";
+import StartingLocationPicker from "@/components/plan-wizard/StartingLocationPicker";
 
-// Zgoda na lokalizacje "w kontekscie": nasz ekran "po co", dopiero potem systemowy prompt.
-// Pokazywany raz (flaga w localStorage ustawiana po decyzji). Brak zgody = chip dystansu
-// po prostu sie nie pojawia, reszta dziala normalnie.
+// Wybor punktu odniesienia dla dystansu, kontekstowo wzgledem miasta docelowego.
+// Rozwiazuje problem: user planujacy z wyprzedzeniem (jest w Warszawie, planuje Gdansk)
+// nie chce GPS - chce wskazac, skad zacznie w Gdansku. User na miejscu chce GPS.
+//
+// "Jestes juz w {city}?"  -> Tak = GPS ("od Ciebie") / Nie = punkt startu na mapie
+// miasta docelowego ("od startu") / Pomin. Miasto wyszukiwania = ZAWSZE wybrane miasto;
+// lokalizacja wplywa TYLKO na dystans i kolejnosc.
 interface LocationPrimerProps {
   open: boolean;
+  city: string;
   onClose: () => void;
 }
 
-const LocationPrimer = ({ open, onClose }: LocationPrimerProps) => {
+const LocationPrimer = ({ open, city, onClose }: LocationPrimerProps) => {
+  const [view, setView] = useState<"ask" | "map">("ask");
   if (!open) return null;
 
-  const enable = async () => {
-    markGeoPrimed();
+  const cityLabel = city || "tym mieście";
+
+  const here = async () => {
+    markAskedForCity(city);
     onClose();
-    await requestLocation();
+    await setGpsReference();
   };
   const skip = () => {
-    markGeoPrimed();
+    markAskedForCity(city);
+    setView("ask");
     onClose();
   };
+
+  // Wybor punktu startu na mapie miasta docelowego (planuje z wyprzedzeniem).
+  if (view === "map") {
+    return (
+      <div className="fixed inset-0 z-[80] bg-background flex flex-col">
+        <StartingLocationPicker
+          city={city}
+          onConfirm={(loc) => {
+            setStartReference({ lat: loc.latitude, lng: loc.longitude });
+            markAskedForCity(city);
+            setView("ask");
+            onClose();
+          }}
+          onSkip={() => { markAskedForCity(city); setView("ask"); onClose(); }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -36,24 +65,30 @@ const LocationPrimer = ({ open, onClose }: LocationPrimerProps) => {
             <MapPin className="h-5 w-5 text-orange-600" />
           </div>
           <div className="flex-1">
-            <p className="text-base font-black leading-snug">Pokażemy, jak blisko jesteś</p>
+            <p className="text-base font-black leading-snug">Jesteś już w&nbsp;{cityLabel}?</p>
             <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-              Trasa pokaże dystans do polecanych miejsc i&nbsp;punktów Twojej trasy. Lokalizacja liczona jest na&nbsp;Twoim telefonie i&nbsp;nigdzie jej nie&nbsp;zapisujemy.
+              Pokażemy dystans do&nbsp;miejsc. Szukamy zawsze w&nbsp;{cityLabel} - lokalizacja wpływa tylko na&nbsp;to, jak daleko masz do&nbsp;miejsc, nie na&nbsp;to, czego szukamy.
             </p>
           </div>
         </div>
         <div className="flex flex-col gap-2">
           <button
-            onClick={enable}
-            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+            onClick={here}
+            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20 flex items-center justify-center gap-2"
           >
-            Włącz lokalizację
+            <Navigation className="h-4 w-4" /> Tak, jestem w&nbsp;{cityLabel}
+          </button>
+          <button
+            onClick={() => setView("map")}
+            className="w-full py-3.5 rounded-full border border-orange-600 text-orange-600 font-bold text-sm active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
+          >
+            <MapIcon className="h-4 w-4" /> Nie, wskażę skąd zacznę
           </button>
           <button
             onClick={skip}
-            className="w-full py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
+            className="w-full py-2.5 rounded-full text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform"
           >
-            Nie teraz
+            Pomiń
           </button>
         </div>
       </div>

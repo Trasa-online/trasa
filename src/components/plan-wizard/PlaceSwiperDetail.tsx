@@ -10,7 +10,7 @@
 
 import { useState, useEffect } from "react";
 import { MapPin, Navigation } from "lucide-react";
-import { useGeolocation } from "@/hooks/useGeolocation";
+import { useDistanceReference } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,7 +64,7 @@ const PlaceSwiperDetail = ({
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [businessPosts, setBusinessPosts] = useState<BusinessPost[]>([]);
-  const { coords: userCoords } = useGeolocation();
+  const distanceRef = useDistanceReference();
 
   useEffect(() => {
     if (!open || !place) {
@@ -163,9 +163,9 @@ const PlaceSwiperDetail = ({
   const mapsUrl = place
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.place_name} ${place.address ?? ""}`)}`
     : "#";
-  // Chip dystansu "X od Ciebie" - tylko gdy mamy zgode na lokalizacje i miejsce ma wspolrzedne.
-  const distanceLabel = userCoords && place?.latitude && place?.longitude
-    ? formatDistance(haversineKm(userCoords, { lat: place.latitude, lng: place.longitude }))
+  // Chip dystansu "X od {label}" - od wspolnego punktu odniesienia (GPS / punkt startowy).
+  const distanceLabel = distanceRef && place?.latitude && place?.longitude
+    ? formatDistance(haversineKm(distanceRef.coords, { lat: place.latitude, lng: place.longitude }))
     : null;
 
   const headerSlot = (
@@ -173,7 +173,7 @@ const PlaceSwiperDetail = ({
       {distanceLabel && (
         <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-orange-50 border border-orange-100 text-orange-700 text-xs font-semibold">
           <Navigation className="h-3.5 w-3.5" />
-          {distanceLabel} od&nbsp;Ciebie
+          {distanceLabel} od&nbsp;{distanceRef!.label}
         </span>
       )}
       <button

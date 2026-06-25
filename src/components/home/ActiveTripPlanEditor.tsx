@@ -9,7 +9,7 @@ import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { notify } from "@/lib/notify";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { useGeolocation } from "@/hooks/useGeolocation";
+import { useDistanceReference } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
 import { Navigation, GripVertical } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
@@ -94,11 +94,11 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { coords: userCoords } = useGeolocation();
-  // Dystans do miejsca "X od Ciebie" - tylko gdy mamy zgode na lokalizacje + pin ma wspolrzedne.
+  const distanceRef = useDistanceReference();
+  // Dystans do miejsca od wspolnego punktu odniesienia (GPS / punkt startowy), gdy pin ma wspolrzedne.
   const distFor = (pin: any): string | null =>
-    userCoords && pin?.latitude && pin?.longitude
-      ? formatDistance(haversineKm(userCoords, { lat: pin.latitude, lng: pin.longitude }))
+    distanceRef && pin?.latitude && pin?.longitude
+      ? formatDistance(haversineKm(distanceRef.coords, { lat: pin.latitude, lng: pin.longitude }))
       : null;
 
   const [planView, setPlanView] = useState<"list" | "cards">("list");

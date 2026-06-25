@@ -11,6 +11,7 @@ import PlaceSwiper, { type MockPlace } from "@/components/plan-wizard/PlaceSwipe
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { MAIN_CATEGORIES, getSubcategoryLabel } from "@/lib/categories";
+import { setStartReference, markAskedForCity } from "@/lib/distanceReference";
 import { cn } from "@/lib/utils";
 
 // Steps: 1=CityPicker, 2=FullCalendarPicker, 3=StartingLocationPicker, 4=PlaceSwiper.
@@ -298,11 +299,16 @@ const PlanWizard = () => {
             city={city}
             onConfirm={(location) => {
               setStartingLocation(location);
+              // Punkt startu = wspolny punkt odniesienia (chip "od startu" + sort). Oznacz
+              // miasto jako "zapytane", zeby swiper w kroku 4 nie pytal ponownie.
+              setStartReference({ lat: location.latitude, lng: location.longitude });
+              markAskedForCity(city);
               posthog.capture("plan_starting_location_selected", { city, has_location: !!location });
               setStep(4);
             }}
             onSkip={() => {
               setStartingLocation("");
+              markAskedForCity(city);
               posthog.capture("plan_starting_location_skipped", { city });
               setStep(4);
             }}

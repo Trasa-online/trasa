@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapPin, Star, ArrowRight, ChevronUp, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
-import { useGeolocation, geoWasPrimed } from "@/hooks/useGeolocation";
 import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
+import { useDistanceReference, getReference, ensureCityContext, wasAskedForCity } from "@/lib/distanceReference";
 import LocationPrimer from "@/components/LocationPrimer";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
@@ -236,10 +236,11 @@ interface SwipeCardProps {
   isTop: boolean;
   offset: number; // 0 = top, 1 = second, 2 = third
   skipGoogleFetch?: boolean;
+  onEnableDistance?: () => void; // otwiera wybor punktu odniesienia (Jestes juz w miescie?)
 }
 
 
-export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhotoFetched, isTop, offset, skipGoogleFetch = false }: SwipeCardProps) => {
+export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhotoFetched, isTop, offset, skipGoogleFetch = false, onEnableDistance }: SwipeCardProps) => {
   const [imgFailed, setImgFailed] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<string[]>(
@@ -345,16 +346,16 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
   const displayRating = place.rating || googleRating;
   const displayAddress = place.address || googleAddress;
   const displayDescription = place.description || googleDescription;
-  // Chip dystansu "X od Ciebie" - gdy mamy zgode na lokalizacje (coords) i miejsce ma
-  // wspolrzedne. Gdy brak coords (np. user nie zezwolil), a miejsce MA wspolrzedne i
-  // zgoda nie jest twardo odrzucona - pokazujemy maly przycisk "Pokaz dystans" ktory
-  // bezposrednio prosi o lokalizacje (omija jednorazowy primer).
-  const { coords: userCoords, status: geoStatus, request: requestGeo } = useGeolocation();
+  // Chip dystansu "X od {label}" - od wspolnego punktu odniesienia (GPS "od Ciebie" gdy
+  // jestes na miejscu, albo punkt startowy "od startu" gdy planujesz). Gdy brak ref a
+  // miejsce MA wspolrzedne - maly przycisk "Pokaz dystans" otwiera wybor (Jestes juz w meiscie?).
+  const distanceRef = useDistanceReference();
   const placeHasCoords = !!(place.latitude && place.longitude);
-  const distanceLabel = userCoords && placeHasCoords
-    ? formatDistance(haversineKmDist(userCoords, { lat: place.latitude, lng: place.longitude }))
+  const distanceLabel = distanceRef && placeHasCoords
+    ? formatDistance(haversineKmDist(distanceRef.coords, { lat: place.latitude, lng: place.longitude }))
     : null;
-  const showEnableDistance = !userCoords && placeHasCoords && geoStatus !== "denied" && geoStatus !== "unavailable";
+  const refLabel = distanceRef?.label ?? "Ciebie";
+  const showEnableDistance = !distanceRef && placeHasCoords;
   // Priorytet: tagi z business_profiles.tags (ustawione przez wlasciciela) > Google vibe_tags > fallback do typow z proxy
   const displayTags = place.businessTags?.length
     ? place.businessTags
@@ -555,13 +556,13 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           {distanceLabel && (
             <div className="flex items-center gap-1 bg-white/15 rounded-full px-2 py-0.5 shrink-0">
               <Navigation className="h-3 w-3 text-white/80" />
-              <span className="text-white/90 text-[11px] font-medium">{distanceLabel} od&nbsp;Ciebie</span>
+              <span className="text-white/90 text-[11px] font-medium">{distanceLabel} od&nbsp;{refLabel}</span>
             </div>
           )}
-          {!distanceLabel && showEnableDistance && isTop && (
+          {!distanceLabel && showEnableDistance && isTop && onEnableDistance && (
             <button
               onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); requestGeo(); }}
+              onClick={(e) => { e.stopPropagation(); onEnableDistance(); }}
               className="flex items-center gap-1 bg-white/15 rounded-full px-2 py-0.5 shrink-0 active:scale-95 transition-transform"
             >
               <Navigation className="h-3 w-3 text-white/80" />
@@ -1099,19 +1100,22 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   const [bannerDismissCount, setBannerDismissCount] = useState(0);
   // Track consecutive likes per category group
   const [recentLikedGroups, setRecentLikedGroups] = useState<(Set<string> | null)[]>([]);
-  // Zgoda na lokalizacje "w kontekscie" - primer pokazany raz po zaladowaniu miejsc,
-  // jesli jeszcze nie pytalismy i nie mamy coords. Chip dystansu pojawia sie po zgodzie.
-  const { coords: geoCoords } = useGeolocation();
+  // Wybor punktu odniesienia ("Jestes juz w miescie?") - pokazany raz na miasto po
+  // zaladowaniu miejsc, jesli nie pytalismy i nie ma jeszcze punktu odniesienia.
+  const distanceRef = useDistanceReference();
   const [locationPrimerOpen, setLocationPrimerOpen] = useState(false);
   const showAddPlace = showAddPlaceProp;
   const setShowAddPlace = (v: boolean) => { if (!v) onAddPlaceClose?.(); };
 
-  // Primer lokalizacji: po zaladowaniu miejsc, raz, jesli nie pytalismy i brak coords.
+  // Inne miasto = inny punkt odniesienia: czysci ref przy zmianie miasta.
+  useEffect(() => { ensureCityContext(city); }, [city]);
+
+  // Wybor lokalizacji: po zaladowaniu miejsc, raz na miasto, jesli brak ref.
   // Nie w trybie rundy grupowej (roundPlaceIds) - tam swiper jest czescia sesji.
   useEffect(() => {
-    if (loading || roundPlaceIds?.length || geoCoords || geoWasPrimed()) return;
+    if (loading || roundPlaceIds?.length || distanceRef || wasAskedForCity(city)) return;
     setLocationPrimerOpen(true);
-  }, [loading, roundPlaceIds, geoCoords]);
+  }, [loading, roundPlaceIds, distanceRef, city]);
 
   useEffect(() => {
     setLoading(true);
@@ -1207,11 +1211,13 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         return true;
       });
 
-      // Sort by distance od startingLocation (jesli sortByNearest + startingLocation ma lat/lng).
-      // Override losowy kolejnosci - user chcial 'od najblizszej do najdalszej' = strict distance.
-      const startCoords = typeof startingLocation === "object" && startingLocation
-        ? { lat: startingLocation.latitude, lng: startingLocation.longitude }
-        : null;
+      // Sort "od najblizszego" od wspolnego punktu odniesienia (GPS lub punkt startowy z
+      // mapy). Reference ma priorytet; fallback do startingLocation z kroku 3 (legacy).
+      const refForSort = getReference();
+      const startCoords = refForSort?.coords
+        ?? (typeof startingLocation === "object" && startingLocation
+          ? { lat: startingLocation.latitude, lng: startingLocation.longitude }
+          : null);
       const applyNearestSort = (arr: MockPlace[]) => {
         if (!sortByNearest || !startCoords) return arr;
         return [...arr].sort((a, b) => {
@@ -1725,7 +1731,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
     <div className="flex flex-col flex-1 min-h-0">
 
       {/* Zgoda na lokalizacje "w kontekscie" (chip dystansu) */}
-      <LocationPrimer open={locationPrimerOpen} onClose={() => setLocationPrimerOpen(false)} />
+      <LocationPrimer open={locationPrimerOpen} city={city} onClose={() => setLocationPrimerOpen(false)} />
 
       {/* Bingo banner */}
       {showBanner && (
@@ -1876,6 +1882,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                       onPhotoFetched={(id, url) => { photoUrlOverrides.current[id] = url; }}
                       isTop={offset === 0}
                       offset={offset}
+                      onEnableDistance={() => setLocationPrimerOpen(true)}
                     />
                   );
                 });
