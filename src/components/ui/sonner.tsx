@@ -17,6 +17,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
         [data-sonner-toast]:not(:has([data-description])){align-items:center!important}
         [data-sonner-toast]:not(:has([data-description])) [data-icon]{align-self:center!important}
         [data-sonner-toast]:not(:has([data-description])) [data-content]{flex:1 1 auto;text-align:center}
+        /* Toasty na gorze (np. nad bottom-sheet modalem) - zejdz ponizej notch/dynamic island */
+        [data-sonner-toaster][data-y-position="top"]{top:calc(env(safe-area-inset-top, 0px) + 12px)!important}
       `}</style>
       <Sonner
       theme="light"

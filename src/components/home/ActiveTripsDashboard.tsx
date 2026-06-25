@@ -8,6 +8,7 @@ import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import { avatarSrc } from "@/lib/avatar";
 import { notify } from "@/lib/notify";
+import { cn } from "@/lib/utils";
 
 // Ekran glowny = dashboard "Aktywne": aktywne trasy solo (pelny edytor planu jak w Dzienniku
 // - ActiveTripPlanEditor: Lista/Szczegoly, reorder, usuwanie, notki, dodawanie, wizytowka) +
@@ -16,20 +17,30 @@ import { notify } from "@/lib/notify";
 const fmtDate = (d?: string | null) =>
   d && isValid(parseISO(d)) ? format(parseISO(d), "d MMMM yyyy", { locale: pl }) : null;
 
-function EmptySection({ icon, title, sub, cta, onCta, cta2, onCta2 }: {
-  icon: React.ReactNode; title: string; sub: string;
+// Sekcja w stylu "koncept": ikona w zaokraglonym kwadracie (lewy gorny rog), tekst do
+// lewej, jasno-pomaranczowe tlo. Solo vs grupowe roznia sie odcieniem - solo bardzo jasny
+// orange, grupowe cieplejszy/peachy (oba w rodzinie B2C pomaranczowej).
+function EmptySection({ icon, title, sub, cta, onCta, cta2, onCta2, variant }: {
+  icon: React.ReactNode; title: string; sub: string; variant: "solo" | "group";
   cta?: string; onCta?: () => void; cta2?: string; onCta2?: () => void;
 }) {
+  const tone = variant === "group"
+    ? "bg-[#FFEAD9] border-orange-200/70"   // grupowe - cieplejszy peach
+    : "bg-orange-50 border-orange-100";      // solo - bardzo jasny orange
   return (
-    <div className="rounded-3xl border border-dashed border-border/60 bg-muted/20 flex flex-col items-center text-center gap-2 px-6 py-8">
-      <div className="h-12 w-12 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center">{icon}</div>
-      <p className="text-sm font-bold">{title}</p>
-      <p className="text-xs text-muted-foreground max-w-[240px] leading-relaxed">{sub}</p>
-      {cta && onCta && (
-        <button onClick={onCta} className="mt-1 px-5 py-2.5 rounded-full bg-primary text-white text-sm font-bold active:scale-95 transition-transform">{cta}</button>
-      )}
-      {cta2 && onCta2 && (
-        <button onClick={onCta2} className="text-sm font-semibold text-orange-600 active:scale-95 transition-transform">{cta2}</button>
+    <div className={cn("rounded-3xl border p-5", tone)}>
+      <div className="h-12 w-12 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-3.5">{icon}</div>
+      <p className="text-base font-black leading-tight">{title}</p>
+      <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[300px]">{sub}</p>
+      {(cta || cta2) && (
+        <div className="flex flex-col gap-2 mt-4">
+          {cta && onCta && (
+            <button onClick={onCta} className="px-5 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20">{cta}</button>
+          )}
+          {cta2 && onCta2 && (
+            <button onClick={onCta2} className="px-5 py-2.5 rounded-full bg-white border border-orange-200 text-orange-600 text-sm font-bold active:scale-[0.97] transition-transform">{cta2}</button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -159,6 +170,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
           </div>
         ) : (
           <EmptySection
+            variant="solo"
             icon={<MapPin className="h-6 w-6 text-orange-600" />}
             title="Brak aktywnych tras"
             sub="Zaplanuj nową trasę albo po prostu przeglądaj miejsca dla inspiracji."
@@ -221,6 +233,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
           </div>
         ) : (
           <EmptySection
+            variant="group"
             icon={<Users className="h-6 w-6 text-orange-600" />}
             title="Brak aktywnych tras grupowych"
             sub="Zaplanuj coś wspólnie guzikiem + na dole."

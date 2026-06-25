@@ -301,7 +301,8 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
         queryClient.invalidateQueries({ queryKey: ["active-plan-trip-days", folderId, routeId] }),
         queryClient.invalidateQueries({ queryKey: ["active-plan-route", routeId] }),
       ]);
-      notify.success(finalize ? "Plan dnia zapisany" : "Zapisano zmiany");
+      // finalize: toast nad bottom-sheet (share prompt) zeby sie nie nakladal.
+      notify.success(finalize ? "Plan dnia zapisany" : "Zapisano zmiany", undefined, finalize ? { position: "top-center" } : undefined);
       if (finalize) setShowSharePrompt(true);
     } catch (e: any) {
       console.error("[ActiveTripPlanEditor] savePlan failed:", e?.message ?? e);
