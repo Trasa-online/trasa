@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Search, X, Plus, Minus } from "lucide-react";
+import { Search, X, Plus, Minus, LocateFixed, Loader2 } from "lucide-react";
 import { APIProvider, Map, AdvancedMarker, useMapsLibrary, useMap } from "@vis.gl/react-google-maps";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
 import { getCityCenter } from "@/lib/cities";
+import { getCachedCoords, requestLocation } from "@/hooks/useGeolocation";
 
 const MAX_DISTANCE_KM = 40;
 
@@ -76,6 +77,7 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [markerPos, setMarkerPos] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const places = useMapsLibrary("places");
@@ -196,6 +198,42 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
     reverseGeocode(pos);
   }, [reverseGeocode, isWithinCity, city]);
 
+  // Ustaw pin z pozycji GPS (gdy w obrebie miasta). Wykorzystuje juz pobrana geolokalizacje
+  // zamiast wymagac od usera recznego wskazania punktu na mapie.
+  const applyGpsPos = useCallback((pos: { lat: number; lng: number }, silent: boolean) => {
+    if (!isWithinCity(pos)) {
+      if (!silent) setLocationError(`Jesteś poza ${city}. Wskaż punkt startu w obrębie miasta.`);
+      return;
+    }
+    setLocationError(null);
+    setMarkerPos(pos);
+    // Od razu enable "Dalej" (fallback name); reverseGeocode dopisze nazwe ulicy gdy gotowy.
+    setQuery("Twoja lokalizacja");
+    setSelected({ name: "Twoja lokalizacja", lat: pos.lat, lng: pos.lng });
+    reverseGeocode(pos);
+  }, [isWithinCity, reverseGeocode, city]);
+
+  // Auto-prefill: jesli mamy juz zgode i swiezy GPS w obrebie miasta, ustaw pin od razu.
+  useEffect(() => {
+    const cached = getCachedCoords();
+    if (cached) applyGpsPos({ lat: cached.lat, lng: cached.lng }, true);
+    // tylko raz na montaz pickera dla danego miasta
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reczne "Moja lokalizacja" - pobiera GPS (z promptem jesli trzeba) i ustawia pin.
+  const locateMe = useCallback(async () => {
+    setLocating(true);
+    setLocationError(null);
+    const coords = getCachedCoords() ?? (await requestLocation(true));
+    setLocating(false);
+    if (!coords) {
+      setLocationError("Nie udało się pobrać Twojej lokalizacji.");
+      return;
+    }
+    applyGpsPos({ lat: coords.lat, lng: coords.lng }, false);
+  }, [applyGpsPos]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Header text */}
@@ -227,6 +265,17 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
           <MapPanner pos={markerPos} />
           <ZoomControls />
         </Map>
+
+        {/* Moja lokalizacja - wykorzystaj pobrany GPS jako punkt startu */}
+        <button
+          onClick={locateMe}
+          disabled={locating}
+          className="absolute bottom-4 left-3 z-10 h-11 pl-3 pr-4 bg-white rounded-full shadow-md flex items-center gap-2 text-sm font-semibold text-foreground active:scale-95 transition-transform disabled:opacity-60"
+          aria-label="Użyj mojej lokalizacji"
+        >
+          {locating ? <Loader2 className="h-4 w-4 animate-spin text-orange-600" /> : <LocateFixed className="h-4 w-4 text-orange-600" />}
+          Moja lokalizacja
+        </button>
 
         {/* Search input overlay */}
         <div className="absolute top-3 left-3 right-3 z-10">

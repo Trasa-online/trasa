@@ -288,8 +288,12 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
       ));
       if (finalize) {
         await (supabase as any).from("routes").update({ plan_finalized: true, trip_type: "completed" }).eq("id", activeRouteId);
+        // Trasa zakonczona: znika z home (filtr planning/ongoing) i trafia do Dziennika
+        // jako wspomnienie. Czyscimy home-active-solo + odswiezamy Dziennik przed nawigacja.
         queryClient.removeQueries({ queryKey: ["home-active-solo"] });
         queryClient.invalidateQueries({ queryKey: ["active-routes"] });
+        queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+        queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
       }
       setDraft(null);
       await Promise.all([
@@ -557,13 +561,13 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
             </div>
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => { togglePublic(true); setShowSharePrompt(false); notify.success("Trasa widoczna w Eksploruj"); navigate(`/trasa/${routeId}`); }}
+                onClick={() => { togglePublic(true); setShowSharePrompt(false); notify.success("Trasa widoczna w Eksploruj"); navigate("/dziennik"); }}
                 className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
               >
                 Udostępnij w Eksploruj
               </button>
               <button
-                onClick={() => { togglePublic(false); setShowSharePrompt(false); }}
+                onClick={() => { togglePublic(false); setShowSharePrompt(false); notify.success("Zapisano w Wspomnieniach"); navigate("/dziennik"); }}
                 className="w-full py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
               >
                 Zostaw prywatną
