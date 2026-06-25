@@ -4,7 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Copy, Check, Camera, UserCircle2, ArrowRight } from "lucide-react";
+import { Settings, Copy, Check, Camera, UserCircle2, ArrowRight, ArrowUpRight, Map as MapIcon, Building2, Layers } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -79,19 +80,37 @@ function InviteSlot({ code, slot, usedByName, usedByEmail }: {
 
 // ── StatCard ──────────────────────────────────────────────────────────────────
 
-function StatCard({ value, label }: { value: number | string; label: string }) {
+// ── SectionCard ─────────────────────────────────────────────────────────────
+// Kolorowa, ulozona w stos "sekcja" jak w zalaczniku koncepcyjnym: ikona w bialym
+// zaokraglonym kwadracie (lewy gorny rog), strzalka (prawy gorny), tytul + podtytul
+// na dole-lewej, duza liczba po prawej. Trzy odcienie odrozniaja sekcje od siebie.
+function SectionCard({ icon, title, subtitle, value, bg, onClick }: {
+  icon: React.ReactNode; title: string; subtitle: string; value: number | string;
+  bg: string; onClick?: () => void;
+}) {
   return (
-    <div className="flex-1 bg-card border border-border/40 rounded-2xl py-4 flex flex-col items-center gap-1">
-      <span className="text-2xl font-black text-foreground">{value}</span>
-      <span className="text-xs text-muted-foreground font-medium">{label}</span>
-    </div>
+    <button
+      onClick={onClick}
+      className={cn("w-full text-left rounded-3xl p-5 active:scale-[0.99] transition-transform", bg)}
+    >
+      <div className="flex items-start justify-between">
+        <div className="h-11 w-11 rounded-2xl bg-white shadow-sm flex items-center justify-center">{icon}</div>
+        <ArrowUpRight className="h-5 w-5 text-[#0E0E0E]/55" />
+      </div>
+      <div className="flex items-end justify-between gap-3 mt-7">
+        <div className="min-w-0">
+          <p className="text-xl font-black leading-tight text-[#0E0E0E]">{title}</p>
+          <p className="text-xs font-medium text-[#0E0E0E]/55 mt-0.5">{subtitle}</p>
+        </div>
+        <span className="text-4xl font-black text-[#0E0E0E] leading-none tabular-nums shrink-0">{value}</span>
+      </div>
+    </button>
   );
 }
 
 // ── CompletionRing ────────────────────────────────────────────────────────────
 
-function CompletionRing({ percent, children }: { percent: number; children: React.ReactNode }) {
-  const size = 108;
+function CompletionRing({ percent, children, size = 108 }: { percent: number; children: React.ReactNode; size?: number }) {
   const strokeWidth = 4;
   const r = (size - strokeWidth) / 2;
   const circ = 2 * Math.PI * r;
@@ -242,14 +261,15 @@ const TravelerProfile = () => {
     staleTime: 0,
   });
 
-  const { data: followCounts } = useQuery({
-    queryKey: ["follow-counts", user?.id],
+  // Liczba zestawien (discovery_collections) stworzonych przez uzytkownika.
+  const { data: collectionsCount = 0 } = useQuery({
+    queryKey: ["profile-collections-count", user?.id],
     queryFn: async () => {
-      const [{ count: followers }, { count: following }] = await Promise.all([
-        supabase.from("followers").select("*", { count: "exact", head: true }).eq("following_id", user!.id),
-        supabase.from("followers").select("*", { count: "exact", head: true }).eq("follower_id", user!.id),
-      ]);
-      return { followers: followers ?? 0, following: following ?? 0 };
+      const { count } = await (supabase as any)
+        .from("discovery_collections")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user!.id);
+      return count ?? 0;
     },
     enabled: !!user,
   });
@@ -293,6 +313,10 @@ const TravelerProfile = () => {
   const completionFields = [!!profile?.avatar_url, !!profile?.first_name, !!profile?.username];
   const completionPct = Math.round((completionFields.filter(Boolean).length / completionFields.length) * 100);
 
+  // "Znajomi" = obserwacje wzajemne (ja obserwuje ich I oni obserwuja mnie).
+  const followerIdSet = new Set((followersList ?? []).map((f: any) => f.follower_id));
+  const friendsCount = (followingList ?? []).filter((f: any) => followerIdSet.has(f.following_id)).length;
+
   return (
     <div className="min-h-screen bg-background pb-24">
 
@@ -308,82 +332,91 @@ const TravelerProfile = () => {
         </button>
       </div>
 
-      <div className="px-5 space-y-6 max-w-lg mx-auto">
+      <div className="px-5 space-y-5 max-w-lg mx-auto">
 
-        {/* Avatar + name */}
-        <div className="flex flex-col items-center gap-5 pt-1">
-          <div className="relative">
-            <CompletionRing percent={completionPct}>
-              <Avatar className="h-[88px] w-[88px]">
-                <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
-                <AvatarFallback className="bg-orange-100 text-orange-600 text-3xl font-black">
-                  {displayName.charAt(0).toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-            </CompletionRing>
-            {/* Camera button */}
-            {isNative ? (
-              <button
-                type="button"
-                onClick={handleNativePhotoPick}
-                className="absolute bottom-0 right-0 h-8 w-8 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md"
-                aria-label="Zmień zdjęcie profilowe"
-              >
-                <Camera className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <label className="absolute bottom-0 right-0 h-8 w-8 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md">
-                <Camera className="h-3.5 w-3.5" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }}
-                />
-              </label>
-            )}
-          </div>
-
-          <div className="text-center mt-2">
-            <h2 className="text-2xl font-black leading-tight">
-              {profile?.username || profile?.first_name || "Użytkownik"}
-            </h2>
-            {profile?.username && profile?.first_name && (
-              <p className="text-sm text-muted-foreground mt-0.5">@{profile.username}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="flex gap-3">
-          <StatCard value={stats?.trips ?? 0} label="Tras" />
-          <StatCard value={stats?.cities ?? 0} label="Miast" />
-        </div>
-
-        {/* Followers / following */}
-        <div className="bg-card border border-border/40 rounded-2xl overflow-hidden">
-          <button
-            onClick={() => setFollowSheet("followers")}
-            className="w-full flex items-center justify-between px-4 py-3.5 active:bg-muted transition-colors border-b border-border/30"
-          >
-            <span className="text-sm font-medium text-foreground">Obserwujący</span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold">{followCounts?.followers ?? 0}</span>
-              <span className="text-muted-foreground text-xs">›</span>
+        {/* Header: avatar + username (lewo), znajomi (prawo) */}
+        <div className="flex items-center justify-between gap-4 pt-1">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="relative shrink-0">
+              <CompletionRing percent={completionPct} size={80}>
+                <Avatar className="h-[62px] w-[62px]">
+                  <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
+                  <AvatarFallback className="bg-orange-100 text-orange-600 text-2xl font-black">
+                    {displayName.charAt(0).toUpperCase() || "U"}
+                  </AvatarFallback>
+                </Avatar>
+              </CompletionRing>
+              {/* Camera button */}
+              {isNative ? (
+                <button
+                  type="button"
+                  onClick={handleNativePhotoPick}
+                  className="absolute -bottom-1 -right-1 h-7 w-7 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md"
+                  aria-label="Zmień zdjęcie profilowe"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                </button>
+              ) : (
+                <label className="absolute -bottom-1 -right-1 h-7 w-7 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md">
+                  <Camera className="h-3.5 w-3.5" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }}
+                  />
+                </label>
+              )}
             </div>
-          </button>
+            <div className="min-w-0">
+              <h2 className="text-2xl font-black leading-tight truncate">
+                {profile?.username || profile?.first_name || "Użytkownik"}
+              </h2>
+              {profile?.username && profile?.first_name ? (
+                <p className="text-sm text-muted-foreground mt-0.5 truncate">@{profile.username}</p>
+              ) : completionPct < 100 ? (
+                <p className="text-sm text-muted-foreground mt-0.5">Uzupełnij profil ({completionPct}%)</p>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Znajomi (obserwacje wzajemne) - po prawej */}
           <button
             onClick={() => setFollowSheet("following")}
-            className="w-full flex items-center justify-between px-4 py-3.5 active:bg-muted transition-colors"
+            className="shrink-0 flex flex-col items-center px-2 active:opacity-60 transition-opacity"
           >
-            <span className="text-sm font-medium text-foreground">Obserwuje</span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold">{followCounts?.following ?? 0}</span>
-              <span className="text-muted-foreground text-xs">›</span>
-            </div>
+            <span className="text-2xl font-black leading-none">{friendsCount}</span>
+            <span className="text-xs text-muted-foreground font-medium mt-1">znajomi</span>
           </button>
         </div>
 
+        {/* Trzy sekcje (stacked, kolorowe) - jak w zalaczniku */}
+        <div className="space-y-3">
+          <SectionCard
+            bg="bg-[#C6BFF4]"
+            icon={<MapIcon className="h-5 w-5 text-[#5B4FC4]" />}
+            title="Trasy"
+            subtitle="ukończone podróże"
+            value={stats?.trips ?? 0}
+            onClick={() => navigate("/dziennik")}
+          />
+          <SectionCard
+            bg="bg-[#DDD6C8]"
+            icon={<Building2 className="h-5 w-5 text-[#8A7E63]" />}
+            title="Miasta"
+            subtitle="odwiedzone miejsca"
+            value={stats?.cities ?? 0}
+            onClick={() => navigate("/dziennik")}
+          />
+          <SectionCard
+            bg="bg-[#F4955E]"
+            icon={<Layers className="h-5 w-5 text-[#C2410C]" />}
+            title="Zestawienia"
+            subtitle="Twoje kolekcje miejsc"
+            value={collectionsCount}
+            onClick={() => navigate("/zestawienie/nowe")}
+          />
+        </div>
 
       </div>
 
