@@ -224,6 +224,8 @@ const AddPlaceToTripInner = () => {
       if (error) throw error;
       await queryClient.invalidateQueries({ queryKey: ["active-plan-all-pins"] });
       await queryClient.invalidateQueries({ queryKey: ["home-active-solo"] });
+      // Dziennik/ReviewSummary uzywa innego klucza pinow - odswiez tez jego.
+      await queryClient.invalidateQueries({ queryKey: ["review-all-pins"] });
       notify.success(
         rows.length === 1 ? "Dodano miejsce" : `Dodano ${rows.length} miejsc`,
       );

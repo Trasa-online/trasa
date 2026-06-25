@@ -65,9 +65,9 @@ const LocationPrimer = ({ open, city, onClose }: LocationPrimerProps) => {
             <MapPin className="h-5 w-5 text-orange-600" />
           </div>
           <div className="flex-1">
-            <p className="text-base font-black leading-snug">Jesteś już w&nbsp;{cityLabel}?</p>
+            <p className="text-base font-bold leading-snug">Jesteś już w&nbsp;{cityLabel}?</p>
             <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-              Pokażemy dystans do&nbsp;miejsc. Szukamy zawsze w&nbsp;{cityLabel} - lokalizacja wpływa tylko na&nbsp;to, jak daleko masz do&nbsp;miejsc, nie na&nbsp;to, czego szukamy.
+              Policzymy dystans do&nbsp;miejsc.
             </p>
           </div>
         </div>

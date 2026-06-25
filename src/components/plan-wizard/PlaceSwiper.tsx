@@ -520,6 +520,24 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         );
       })()}
 
+      {/* Chip dystansu - prawy gorny rog, nad paginacja (top-4, badge kategorii po lewej) */}
+      {isTop && distanceLabel && (
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-1 bg-black/45 backdrop-blur-sm rounded-full px-2.5 py-1 shadow-sm">
+          <Navigation className="h-3 w-3 text-white/90" />
+          <span className="text-white text-[11px] font-semibold">{distanceLabel} od&nbsp;{refLabel}</span>
+        </div>
+      )}
+      {isTop && !distanceLabel && showEnableDistance && onEnableDistance && (
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onEnableDistance(); }}
+          className="absolute top-4 right-4 z-10 flex items-center gap-1 bg-black/45 backdrop-blur-sm rounded-full px-2.5 py-1 shadow-sm active:scale-95 transition-transform"
+        >
+          <Navigation className="h-3 w-3 text-white/90" />
+          <span className="text-white text-[11px] font-semibold">Pokaż dystans</span>
+        </button>
+      )}
+
       {/* Content */}
       <div className="absolute bottom-0 left-0 right-0 px-5 pt-5 pb-[76px] space-y-2">
 
@@ -552,22 +570,6 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
               <MapPin className="h-3 w-3 text-white/50" />
               <span className="text-white/60 text-xs truncate">{displayAddress.split(",")[0]}</span>
             </div>
-          )}
-          {distanceLabel && (
-            <div className="flex items-center gap-1 bg-white/15 rounded-full px-2 py-0.5 shrink-0">
-              <Navigation className="h-3 w-3 text-white/80" />
-              <span className="text-white/90 text-[11px] font-medium">{distanceLabel} od&nbsp;{refLabel}</span>
-            </div>
-          )}
-          {!distanceLabel && showEnableDistance && isTop && onEnableDistance && (
-            <button
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); onEnableDistance(); }}
-              className="flex items-center gap-1 bg-white/15 rounded-full px-2 py-0.5 shrink-0 active:scale-95 transition-transform"
-            >
-              <Navigation className="h-3 w-3 text-white/80" />
-              <span className="text-white/90 text-[11px] font-medium">Pokaż dystans</span>
-            </button>
           )}
         </div>
 

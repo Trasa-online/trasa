@@ -787,10 +787,11 @@ const ReviewSummary = () => {
     </div>
   );
 
-  // Przycisk dodania miejsca do planu dnia (wspomnienie - Lista i Szczegoly).
+  // Przycisk dodania miejsca - nowy pelnoekranowy widok (spojny z aktywna trasa na home),
+  // zamiast drawera AddPinSheet.
   const renderAddPlaceButton = () => (
     <button
-      onClick={() => setAddingPlace(true)}
+      onClick={() => activeRouteId && navigate(`/trasa/${activeRouteId}/dodaj`)}
       className="mt-3 w-full py-3 rounded-2xl border-2 border-dashed border-border/50 text-sm font-semibold text-muted-foreground flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
     >
       <Plus className="h-4 w-4" /> Dodaj miejsce
