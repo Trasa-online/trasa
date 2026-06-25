@@ -29,8 +29,10 @@ export const markGeoPrimed = () => {
 
 // Odpala realne zapytanie o lokalizacje (systemowy prompt przy pierwszym razie).
 // Bezpieczne do wielokrotnego wolania - jak juz mamy coords, zwraca je od razu.
-export async function requestLocation(): Promise<LatLng | null> {
-  if (cachedCoords) return cachedCoords;
+// force=true pomija cache i pobiera SWIEZA pozycje (np. do trafnego on-site przy wejsciu
+// w destynacje - user mogl sie przemiescic).
+export async function requestLocation(force = false): Promise<LatLng | null> {
+  if (!force && cachedCoords) return cachedCoords;
   currentStatus = "requesting"; notifyAll();
   try {
     if (isNative) {
@@ -60,6 +62,11 @@ export async function requestLocation(): Promise<LatLng | null> {
   } catch {
     currentStatus = "unavailable"; notifyAll(); return null;
   }
+}
+
+// Aktualne coords z cache (bez promptowania) - null gdy nie mamy jeszcze zgody/pozycji.
+export function getCachedCoords(): LatLng | null {
+  return cachedCoords;
 }
 
 // Hook: zwraca wspoldzielone coords + status + funkcje do realnego zapytania.

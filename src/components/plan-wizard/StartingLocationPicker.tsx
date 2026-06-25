@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Search, X, Plus, Minus } from "lucide-react";
 import { APIProvider, Map, AdvancedMarker, useMapsLibrary, useMap } from "@vis.gl/react-google-maps";
 import { GOOGLE_MAPS_API_KEY } from "@/lib/googleMaps";
+import { getCityCenter } from "@/lib/cities";
 
 const MAX_DISTANCE_KM = 40;
 
@@ -12,18 +13,6 @@ const haversineKm = (a: { lat: number; lng: number }, b: { lat: number; lng: num
   const dLng = (b.lng - a.lng) * Math.PI / 180;
   const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
-};
-
-const CITY_CENTERS: Record<string, { lat: number; lng: number }> = {
-  "Kraków":    { lat: 50.0617, lng: 19.9373 },
-  "Warszawa":  { lat: 52.2297, lng: 21.0122 },
-  "Wrocław":   { lat: 51.1079, lng: 17.0385 },
-  "Poznań":    { lat: 52.4064, lng: 16.9252 },
-  "Zakopane":  { lat: 49.2992, lng: 19.9496 },
-  "Łódź":      { lat: 51.7592, lng: 19.4560 },
-  "Trójmiasto":{ lat: 54.3520, lng: 18.6466 },
-  "Budapeszt": { lat: 47.4979, lng: 19.0402 },
-  "Valletta":  { lat: 35.8997, lng: 14.5147 },
 };
 
 interface Suggestion {
@@ -79,7 +68,7 @@ const MapPanner = ({ pos }: { pos: { lat: number; lng: number } | null }) => {
 };
 
 const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps) => {
-  const center = CITY_CENTERS[city] ?? { lat: 50.0617, lng: 19.9373 };
+  const center = getCityCenter(city) ?? { lat: 52.2297, lng: 21.0122 };
 
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ name: string; lat: number; lng: number } | null>(null);

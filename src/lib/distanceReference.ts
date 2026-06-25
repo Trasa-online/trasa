@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
-import type { LatLng } from "@/lib/distance";
-import { requestLocation } from "@/hooks/useGeolocation";
+import { type LatLng, haversineKm } from "@/lib/distance";
+import { requestLocation, getCachedCoords } from "@/hooks/useGeolocation";
+import { getCityCenter } from "@/lib/cities";
+
+// Prog "jestes na miejscu": GPS w promieniu od centrum miasta docelowego.
+const ONSITE_THRESHOLD_KM = 35;
 
 // Wspolny "punkt odniesienia" dla dystansu i sortowania, niezalezny od tego CZY to GPS
 // (jestes na miejscu) czy punkt startowy z mapy (planujesz z wyprzedzeniem). Jeden wybrany
@@ -49,6 +53,27 @@ export async function setGpsReference(): Promise<boolean> {
 export function clearReference() {
   currentRef = null;
   notifyAll();
+}
+
+// Walidacja "czy user jest w miescie docelowym" przez GPS. NIE promptuje - uzywa GPS tylko
+// gdy mamy juz zgode (coords w cache, np. z onboardingu). Gdy on-site - ustawia GPS jako
+// punkt odniesienia automatycznie. Zwraca:
+//   "onsite"  - mamy GPS i jestesmy blisko centrum miasta (ref ustawiony na "od Ciebie"),
+//   "offsite" - mamy GPS ale daleko (user planuje z innego miejsca),
+//   "no-gps"  - brak zgody/pozycji lub nieznane miasto (pokaz jawny sheet).
+export async function tryResolveOnSite(city: string): Promise<"onsite" | "offsite" | "no-gps"> {
+  const center = getCityCenter(city);
+  if (!center) return "no-gps";
+  if (!getCachedCoords()) return "no-gps"; // brak zgody - nie promptujemy tutaj
+  // Mamy zgode - odswiez pozycje (user mogl sie przemiescic od onboardingu).
+  const coords = (await requestLocation(true)) ?? getCachedCoords();
+  if (!coords) return "no-gps";
+  if (haversineKm(coords, center) <= ONSITE_THRESHOLD_KM) {
+    currentRef = { coords, label: "Ciebie", source: "gps" };
+    notifyAll();
+    return "onsite";
+  }
+  return "offsite";
 }
 
 // Ustaw kontekst miasta; gdy zmienia sie na inne miasto - czysci ref (inny punkt odniesienia).

@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { avatarSrc } from "@/lib/avatar";
-import { ArrowLeft, Check, Plus, Bell, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Plus, Bell, Loader2, MapPin } from "lucide-react";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { isNative } from "@/lib/platform";
 import { requestAndRegisterNativePush } from "@/hooks/useNativePush";
+import { requestLocation } from "@/hooks/useGeolocation";
 import { ORIGIN_COUNTRIES, citiesForCountry } from "@/lib/locations";
 
 // Polskie sieroty: po pojedynczych literach (a i o u w z) twarda spacja.
@@ -15,7 +16,7 @@ const nbsp = (s: string) => s.replace(/ ([aiouwzAIOUWZ]) /g, (_m, l) => " " + l 
 // Setup profilu po pierwszym zalogowaniu: username -> awatar (BEZ bio) -> powiadomienia.
 // Osobny etap od intro-tour (HomeTour). Tlo #FEFEFE + pomaranczowy brand B2C
 // (NIE ciemne/zolte z referencji - to brand innej apki).
-const STEPS = ["username", "avatar", "origin", "notify"] as const;
+const STEPS = ["username", "avatar", "origin", "location", "notify"] as const;
 type Step = typeof STEPS[number];
 
 type UStatus = "idle" | "short" | "checking" | "ok" | "taken" | "invalid";
@@ -45,6 +46,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
   const [savingOrigin, setSavingOrigin] = useState(false);
 
   const [notifLoading, setNotifLoading] = useState(false);
+  const [locLoading, setLocLoading] = useState(false);
   const [finishing, setFinishing] = useState(false);
 
   // Prefill z istniejacego profilu (OAuth nadaje wstepny username + ewentualny avatar).
@@ -196,21 +198,31 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
     }
   };
 
+  // ── Lokalizacja ──
+  const allowLocation = async () => {
+    if (locLoading) return;
+    setLocLoading(true);
+    try { await requestLocation(); } finally { setLocLoading(false); goNext(); }
+  };
+
   // CTA per krok
   const primaryDisabled =
     (stepName === "username" && uStatus !== "ok") ||
     (stepName === "username" && savingU) ||
     (stepName === "origin" && (!homeCity || savingOrigin)) ||
+    (stepName === "location" && locLoading) ||
     (stepName === "notify" && (notifLoading || finishing));
   const primaryLabel =
     stepName === "username" ? "Dalej" :
     stepName === "avatar" ? "Dalej" :
     stepName === "origin" ? "Dalej" :
+    stepName === "location" ? "Włącz lokalizację" :
     "Pozwól na powiadomienia";
   const onPrimary =
     stepName === "username" ? saveUsername :
     stepName === "avatar" ? goNext :
     stepName === "origin" ? saveOrigin :
+    stepName === "location" ? allowLocation :
     allowNotifications;
 
   return (
@@ -326,6 +338,20 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
           </>
         )}
 
+        {stepName === "location" && (
+          <>
+            <div className="pt-6 text-center">
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Dystans do miejsc")}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Pokażemy, jak blisko masz do miejsc, gdy jesteś na miejscu. Lokalizacji nigdzie nie zapisujemy.")}</p>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="h-32 w-32 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}>
+                <MapPin className="h-14 w-14 text-white" strokeWidth={2} />
+              </div>
+            </div>
+          </>
+        )}
+
         {stepName === "notify" && (
           <>
             <div className="pt-6 text-center">
@@ -349,13 +375,16 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
           className="w-full py-4 rounded-full text-white font-bold text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50"
           style={{ background: "linear-gradient(to right, #F4A259, #F9662B)" }}
         >
-          {(savingU || savingOrigin || (stepName === "notify" && (notifLoading || finishing)))
+          {(savingU || savingOrigin || (stepName === "location" && locLoading) || (stepName === "notify" && (notifLoading || finishing)))
             ? <Loader2 className="h-5 w-5 animate-spin mx-auto" />
             : primaryLabel}
         </button>
         {/* sekundarne wyjscie tylko tam, gdzie krok jest opcjonalny */}
         {stepName === "avatar" && (
           <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Pomiń</button>
+        )}
+        {stepName === "location" && (
+          <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Nie teraz</button>
         )}
         {stepName === "origin" && (
           <button onClick={goNext} className="w-full py-3 mt-1 text-sm font-medium text-muted-foreground">Pomiń</button>

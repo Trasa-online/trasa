@@ -11,7 +11,9 @@ import PlaceSwiper, { type MockPlace } from "@/components/plan-wizard/PlaceSwipe
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { MAIN_CATEGORIES, getSubcategoryLabel } from "@/lib/categories";
-import { setStartReference, markAskedForCity } from "@/lib/distanceReference";
+import { setStartReference, markAskedForCity, tryResolveOnSite, getReference } from "@/lib/distanceReference";
+import LocationPrimer from "@/components/LocationPrimer";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Steps: 1=CityPicker, 2=FullCalendarPicker, 3=StartingLocationPicker, 4=PlaceSwiper.
@@ -51,6 +53,9 @@ const PlanWizard = () => {
   // startingLocation moze byc string (tylko nazwa, legacy) lub obiekt (z lat/lng).
   // Nowe StartingLocationPicker zwraca obiekt - pin startu pojawia sie na mapie.
   const [startingLocation, setStartingLocation] = useState<string | { name: string; latitude: number; longitude: number }>("");
+  // Step 3: auto-detect on-site. "resolving" -> loader, "map" -> mapa punktu startu (planujesz),
+  // "sheet" -> jawne pytanie "Jestes juz w miescie?" (brak zgody GPS).
+  const [step3Mode, setStep3Mode] = useState<"resolving" | "map" | "sheet">("resolving");
 
   // Multi-select kategorii (puste = wszystkie)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -86,6 +91,29 @@ const PlanWizard = () => {
       setTimeout(() => searchInputRef.current?.focus(), 50);
     }
   }, [searchOpen]);
+
+  // Step 3 (solo): auto-detect on-site przez GPS. on-site -> "od Ciebie" + pomijamy mape,
+  // idziemy do swipera. offsite (GPS daleko) -> mapa punktu startu. no-gps -> jawne pytanie.
+  useEffect(() => {
+    if (step !== 3 || !city) return;
+    setStep3Mode("resolving");
+    let cancelled = false;
+    (async () => {
+      const res = await tryResolveOnSite(city);
+      if (cancelled) return;
+      if (res === "onsite") {
+        const ref = getReference();
+        if (ref) setStartingLocation({ name: "Twoja lokalizacja", latitude: ref.coords.lat, longitude: ref.coords.lng });
+        markAskedForCity(city);
+        setStep(4);
+      } else if (res === "offsite") {
+        setStep3Mode("map");
+      } else {
+        setStep3Mode("sheet");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [step, city]);
 
   const categoryLabel = useMemo(() => {
     const total = selectedCategories.length + dietFilters.length + (sortMode !== "default" ? 1 : 0);
@@ -294,7 +322,12 @@ const PlanWizard = () => {
             setStep(3);
           }} />
         )}
-        {step === 3 && (
+        {step === 3 && step3Mode === "resolving" && (
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+        {step === 3 && step3Mode === "map" && (
           <StartingLocationPicker
             city={city}
             onConfirm={(location) => {
@@ -313,6 +346,9 @@ const PlanWizard = () => {
               setStep(4);
             }}
           />
+        )}
+        {step === 3 && step3Mode === "sheet" && (
+          <LocationPrimer open city={city} onClose={() => setStep(4)} />
         )}
         {step === 4 && date && (
           <>
