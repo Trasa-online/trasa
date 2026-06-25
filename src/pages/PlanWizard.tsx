@@ -137,7 +137,12 @@ const PlanWizard = () => {
     if (step === 1) navigate("/");
     // Parowanie (step 4): z "Dopasowania" wracaj najpierw do "Eksploruj", nie skacz do step 3.
     else if (step === 4 && step4Tab === "matches") setStep4Tab("swipe");
-    else if (step === 4) setStep(3);    // back to starting location
+    // Step 3 to auto-resolvujacy krok posredni (loader/mapa/sheet) - NIE jest celem cofania.
+    // exploreMode pomija kroki 2/3 (city -> swiper), wiec wracamy do wyboru miasta.
+    // Solo: wracamy do kalendarza, pomijajac mape punktu startu (auto-resolve odpalalby
+    // sie ponownie i albo bouncowal do step 4, albo pokazywal niespodziewana mape).
+    else if (step === 4) setStep(exploreMode ? 1 : 2);
+    else if (step === 3) setStep(2);
     else setStep((s) => (s - 1) as Step);
   };
 

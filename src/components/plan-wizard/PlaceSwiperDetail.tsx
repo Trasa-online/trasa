@@ -34,6 +34,7 @@ interface PlaceDetail {
     open_now?: boolean;
     weekday_text?: string[];
   };
+  geometry?: { location?: { lat?: number; lng?: number } };
   reviews: GoogleReview[];
 }
 
@@ -164,8 +165,12 @@ const PlaceSwiperDetail = ({
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.place_name} ${place.address ?? ""}`)}`
     : "#";
   // Chip dystansu "X od {label}" - od wspolnego punktu odniesienia (GPS / punkt startowy).
-  const distanceLabel = distanceRef && place?.latitude && place?.longitude
-    ? formatDistance(haversineKm(distanceRef.coords, { lat: place.latitude, lng: place.longitude }))
+  // Premium biznesy czesto maja NULL places.latitude/longitude - fallback na geometrie z
+  // Google detail (proxy zwraca geometry), zeby chip dzialal tez dla wizytowek biznesowych.
+  const placeLat = place?.latitude ?? detail?.geometry?.location?.lat ?? null;
+  const placeLng = place?.longitude ?? detail?.geometry?.location?.lng ?? null;
+  const distanceLabel = distanceRef && placeLat != null && placeLng != null
+    ? formatDistance(haversineKm(distanceRef.coords, { lat: placeLat, lng: placeLng }))
     : null;
 
   const headerSlot = (
