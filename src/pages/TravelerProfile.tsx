@@ -108,37 +108,6 @@ function SectionCard({ icon, title, subtitle, value, bg, onClick }: {
   );
 }
 
-// ── CompletionRing ────────────────────────────────────────────────────────────
-
-function CompletionRing({ percent, children, size = 108 }: { percent: number; children: React.ReactNode; size?: number }) {
-  const strokeWidth = 4;
-  const r = (size - strokeWidth) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (percent / 100) * circ;
-
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="absolute inset-0 -rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth={strokeWidth} />
-        <circle
-          cx={size / 2} cy={size / 2} r={r} fill="none"
-          stroke="#EA580C" strokeWidth={strokeWidth}
-          strokeDasharray={circ} strokeDashoffset={offset}
-          strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset 0.6s ease" }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        {children}
-      </div>
-      {/* Percent badge */}
-      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-        {percent}%
-      </div>
-    </div>
-  );
-}
-
 // ── TravelerProfile ───────────────────────────────────────────────────────────
 
 // ── Guest empty state (same visual rytm jak Journal dla goscia) ──────────────
@@ -338,14 +307,12 @@ const TravelerProfile = () => {
         <div className="flex items-center justify-between gap-4 pt-1">
           <div className="flex items-center gap-3.5 min-w-0">
             <div className="relative shrink-0">
-              <CompletionRing percent={completionPct} size={80}>
-                <Avatar className="h-[62px] w-[62px]">
-                  <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
-                  <AvatarFallback className="bg-orange-100 text-orange-600 text-2xl font-black">
-                    {displayName.charAt(0).toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
-              </CompletionRing>
+              <Avatar className="h-[72px] w-[72px]">
+                <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
+                <AvatarFallback className="bg-orange-100 text-orange-600 text-2xl font-black">
+                  {displayName.charAt(0).toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
               {/* Camera button */}
               {isNative ? (
                 <button
@@ -414,7 +381,7 @@ const TravelerProfile = () => {
             title="Zestawienia"
             subtitle="Twoje kolekcje miejsc"
             value={collectionsCount}
-            onClick={() => navigate("/zestawienie/nowe")}
+            onClick={() => navigate("/eksploruj", { state: { myCollections: true } })}
           />
         </div>
 

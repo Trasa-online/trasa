@@ -1,8 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useLocation } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { MapPin, Heart, Trash2, ArrowRight, Plus } from "lucide-react";
+import { MapPin, Heart, Trash2, ArrowRight, Plus, ArrowLeft, Pencil, ListChecks } from "lucide-react";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { pl } from "date-fns/locale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
@@ -199,10 +199,96 @@ export const LikedTab = () => {
   );
 };
 
+// ── MyCollections ───────────────────────────────────────────────────────────
+// Lista zestawien stworzonych przez zalogowanego usera (wejscie z karty "Zestawienia"
+// w profilu). Tap w pozycje -> edycja. Pusty stan -> CTA "Stworz pierwsze".
+const MyCollections = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const { data: collections = [], isLoading } = useQuery({
+    queryKey: ["my-collections", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data: cols } = await (supabase as any)
+        .from("discovery_collections")
+        .select("id, title, city, description, is_public")
+        .eq("user_id", user!.id)
+        .eq("kind", "ranking")
+        .order("updated_at", { ascending: false });
+      if (!cols?.length) return [] as any[];
+      const ids = cols.map((c: any) => c.id);
+      const { data: items } = await (supabase as any)
+        .from("discovery_items")
+        .select("collection_id, photo_url")
+        .in("collection_id", ids);
+      return cols.map((c: any) => {
+        const own = (items ?? []).filter((i: any) => i.collection_id === c.id);
+        return { ...c, count: own.length, cover: own.find((i: any) => i.photo_url)?.photo_url ?? null };
+      });
+    },
+  });
+
+  return (
+    <div className="space-y-3">
+      {isLoading ? (
+        <div className="space-y-3">
+          {[0, 1, 2].map((i) => <div key={i} className="h-20 rounded-3xl bg-muted/40 animate-pulse" />)}
+        </div>
+      ) : collections.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-border/60 bg-orange-50/40 flex flex-col items-center text-center gap-3 px-6 py-10">
+          <div className="h-12 w-12 rounded-2xl bg-white shadow-sm flex items-center justify-center">
+            <ListChecks className="h-6 w-6 text-orange-600" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-base font-black">Brak zestawień</p>
+            <p className="text-sm text-muted-foreground max-w-[260px] leading-relaxed">
+              Stwórz swoją pierwszą kolekcję ulubionych miejsc i&nbsp;podziel się nią z&nbsp;innymi.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate("/zestawienie/nowe")}
+            className="mt-1 px-5 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+          >
+            Stwórz zestawienie
+          </button>
+        </div>
+      ) : (
+        collections.map((col: any) => (
+          <button
+            key={col.id}
+            onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)}
+            className="w-full flex items-center gap-3 rounded-3xl bg-card border border-border/50 p-3 text-left active:scale-[0.99] transition-transform"
+          >
+            {col.cover ? (
+              <img src={col.cover} alt={col.title} className="h-16 w-16 rounded-2xl object-cover shrink-0" loading="lazy" />
+            ) : (
+              <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center shrink-0">
+                <ListChecks className="h-6 w-6 text-orange-600" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm leading-tight truncate">{col.title || "Bez tytułu"}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                {[col.city, `${col.count} ${col.count === 1 ? "miejsce" : col.count < 5 ? "miejsca" : "miejsc"}`].filter(Boolean).join(" · ")}
+                {col.is_public === false ? " · prywatne" : ""}
+              </p>
+            </div>
+            <Pencil className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+          </button>
+        ))
+      )}
+    </div>
+  );
+};
+
 // Polubione przeniesione na /home (ikona serca). Eksploruj = sam feed polecanych.
 const Explore = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Wejscie z profilu (karta "Zestawienia") -> pokaz liste zestawien usera zamiast feedu.
+  const myCollections = (location.state as any)?.myCollections === true;
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
@@ -211,10 +297,26 @@ const Explore = () => {
   return (
     <PullToRefresh onRefresh={handleRefresh} className="flex-1 flex flex-col pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
       <div className="px-4 mb-3 flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-black tracking-tight pt-2">Eksploruj</h1>
-          <p className="text-xs text-muted-foreground mt-1">Polecane miejsca, trasy i&nbsp;zestawienia.</p>
-        </div>
+        {myCollections ? (
+          <div className="flex items-center gap-2.5 pt-2">
+            <button
+              onClick={() => navigate("/eksploruj", { replace: true, state: null })}
+              className="h-9 w-9 -ml-1 flex items-center justify-center text-foreground shrink-0"
+              aria-label="Wróć do eksploracji"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-xl font-black tracking-tight">Twoje zestawienia</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">Kolekcje miejsc, które stworzyłeś.</p>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <h1 className="text-xl font-black tracking-tight pt-2">Eksploruj</h1>
+            <p className="text-xs text-muted-foreground mt-1">Polecane miejsca, trasy i&nbsp;zestawienia.</p>
+          </div>
+        )}
         <button
           onClick={() => navigate("/zestawienie/nowe")}
           className="shrink-0 mt-2 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-white text-xs font-bold active:scale-[0.97] transition-transform shadow-sm shadow-orange-500/20"
@@ -224,7 +326,7 @@ const Explore = () => {
       </div>
 
       <div className="flex-1 px-4">
-        <DiscoveryFeed />
+        {myCollections ? <MyCollections /> : <DiscoveryFeed />}
       </div>
     </PullToRefresh>
   );

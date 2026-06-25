@@ -252,20 +252,18 @@ const BottomNav = () => {
         {/* Web: 3 kolumny (Glowna, Plus, Profil - Eksploruj i Dziennik ukryte).
             Native: 5 kolumn (wszystko). grid-cols-5 na webie powodowal ze 3
             ikonki byly zbite po lewej, 2 puste kolumny po prawej. */}
-        <div className={`grid ${isNative ? "grid-cols-5" : "grid-cols-3"} h-12`}>
+        {/* Same ikony, bez nazw (jak w zalaczniku) - zachowana kolorystyka (orange active). */}
+        <div className={`grid ${isNative ? "grid-cols-5" : "grid-cols-3"} h-14`}>
 
           {/* Główna */}
           <NavLink
             to="/home"
             end
-            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+            className="flex items-center justify-center text-muted-foreground transition-colors"
             activeClassName="text-orange-600"
           >
             {({ isActive }) => (
-              <>
-                <Home className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
-                <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Główna</span>
-              </>
+              <Home className={`h-6 w-6 ${isActive ? "stroke-[2.5px] text-orange-600" : "stroke-2"}`} />
             )}
           </NavLink>
 
@@ -275,14 +273,11 @@ const BottomNav = () => {
             <NavLink
               to="/eksploruj"
               end={false}
-              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+              className="flex items-center justify-center text-muted-foreground transition-colors"
               activeClassName="text-orange-600"
             >
               {({ isActive }) => (
-                <>
-                  <Compass className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
-                  <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Eksploruj</span>
-                </>
+                <Compass className={`h-6 w-6 ${isActive ? "stroke-[2.5px] text-orange-600" : "stroke-2"}`} />
               )}
             </NavLink>
           )}
@@ -293,7 +288,7 @@ const BottomNav = () => {
             className="flex items-center justify-center"
             aria-label="Dodaj trasę"
           >
-            <span className="h-10 w-10 rounded-full bg-primary flex items-center justify-center active:scale-95 transition-transform">
+            <span className="h-11 w-11 rounded-full bg-primary flex items-center justify-center active:scale-95 transition-transform shadow-md shadow-orange-500/25">
               {showMenu
                 ? <X className="h-5 w-5 text-white stroke-[2.5px]" />
                 : <Plus className="h-5 w-5 text-white stroke-[2.5px]" />
@@ -307,19 +302,16 @@ const BottomNav = () => {
             <NavLink
               to="/dziennik"
               end={false}
-              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+              className="flex items-center justify-center text-muted-foreground transition-colors"
               activeClassName="text-orange-600"
             >
               {({ isActive }) => (
-                <>
-                  <div className="relative">
-                    <BookOpen className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
-                    {hasNewJournalEntries && !isActive && (
-                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
-                    )}
-                  </div>
-                  <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Dziennik</span>
-                </>
+                <div className="relative">
+                  <BookOpen className={`h-6 w-6 ${isActive ? "stroke-[2.5px] text-orange-600" : "stroke-2"}`} />
+                  {hasNewJournalEntries && !isActive && (
+                    <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
+                  )}
+                </div>
               )}
             </NavLink>
           )}
@@ -328,14 +320,11 @@ const BottomNav = () => {
           <NavLink
             to="/moj-profil"
             end={false}
-            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+            className="flex items-center justify-center text-muted-foreground transition-colors"
             activeClassName="text-orange-600"
           >
             {({ isActive }) => (
-              <>
-                <User className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`} />
-                <span className={`text-[10px] font-medium ${isActive ? "text-orange-600" : ""}`}>Profil</span>
-              </>
+              <User className={`h-6 w-6 ${isActive ? "stroke-[2.5px] text-orange-600" : "stroke-2"}`} />
             )}
           </NavLink>
 
