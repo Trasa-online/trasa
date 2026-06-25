@@ -50,6 +50,34 @@ export async function setGpsReference(): Promise<boolean> {
   return true;
 }
 
+// Wymus GPS jako odniesienie z konkretnych coords (po potwierdzeniu "na pewno jestem").
+export function forceGpsReference(coords: LatLng) {
+  currentRef = { coords, label: "Ciebie", source: "gps" };
+  notifyAll();
+}
+
+// Walidujacy GPS dla jawnego "Tak, jestem na miejscu" - PROMPTUJE o lokalizacje i sprawdza,
+// czy user faktycznie jest w pobliżu miasta docelowego (double-check przed ustawieniem chipu
+// "od Ciebie"). on-site -> ustawia ref. offsite -> NIE ustawia, zwraca dystans do potwierdzenia.
+export async function resolveGpsForCity(
+  city: string,
+): Promise<{ status: "onsite" | "offsite" | "no-gps"; km?: number; coords?: LatLng }> {
+  const coords = await requestLocation(true);
+  if (!coords) return { status: "no-gps" };
+  const center = getCityCenter(city);
+  if (!center) {
+    // Nieznane centrum miasta - nie mamy jak walidowac, ufamy userowi.
+    forceGpsReference(coords);
+    return { status: "onsite", coords };
+  }
+  const km = haversineKm(coords, center);
+  if (km <= ONSITE_THRESHOLD_KM) {
+    forceGpsReference(coords);
+    return { status: "onsite", km, coords };
+  }
+  return { status: "offsite", km, coords };
+}
+
 export function clearReference() {
   currentRef = null;
   notifyAll();
