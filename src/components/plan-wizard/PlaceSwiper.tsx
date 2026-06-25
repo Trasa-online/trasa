@@ -1882,12 +1882,15 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
           )}
         </div>
       ) : (
-        <div className="flex-1 min-h-0 flex items-start justify-center w-full pt-2">
+        <div className={cn("flex-1 min-h-0 flex justify-center w-full", exploreMode ? "items-center" : "items-start pt-2")}>
         <div
           className="relative aspect-[9/16]"
           style={{
+            // exploreMode (/plan "Przegladaj") NIE ma BottomNav (poza AppLayout) ani proceed CTA -
+            // odejmujemy tylko header (~64px) + env(top)/env(bottom). Wczesniej odejmowalismy
+            // tez 94px nieistniejacej nawigacji -> karta byla mala z duzym gapem na dole.
             width: exploreMode
-              ? "min(420px, calc(100vw - 48px), calc((100dvh - env(safe-area-inset-top, 0px) - 200px) * 9 / 16))"
+              ? "min(460px, calc(100vw - 32px), calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 88px) * 9 / 16))"
               : "min(420px, calc(100vw - 48px), calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 242px) * 9 / 16))",
           }}
         >

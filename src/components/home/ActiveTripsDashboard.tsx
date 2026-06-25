@@ -1,11 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ActiveTripPlanEditor from "@/components/home/ActiveTripPlanEditor";
-import { MapPin, Users, ChevronRight } from "lucide-react";
+import { MapPin, Users, ChevronRight, Trash2, Loader2 } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import { avatarSrc } from "@/lib/avatar";
+import { notify } from "@/lib/notify";
 
 // Ekran glowny = dashboard "Aktywne": aktywne trasy solo (pelny edytor planu jak w Dzienniku
 // - ActiveTripPlanEditor: Lista/Szczegoly, reorder, usuwanie, notki, dodawanie, wizytowka) +
@@ -35,6 +37,32 @@ function EmptySection({ icon, title, sub, cta, onCta, cta2, onCta2 }: {
 
 export default function ActiveTripsDashboard({ userId }: { userId: string | null }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Usuniecie aktywnej trasy z home (z potwierdzeniem). Czysci piny + chat_sessions + route.
+  const handleDelete = async (e: React.MouseEvent, r: any) => {
+    e.stopPropagation();
+    const name = r.city || r.title || "Trasa";
+    if (!confirm(`Usunąć trasę "${name}"? Tego nie można cofnąć.`)) return;
+    setDeletingId(r.id);
+    try {
+      await supabase.from("pins").delete().eq("route_id", r.id);
+      await (supabase as any).from("chat_sessions").delete().eq("route_id", r.id);
+      const { error } = await supabase.from("routes").delete().eq("id", r.id);
+      if (error) throw error;
+      notify.success("Trasa usunięta");
+      queryClient.setQueryData(["home-active-solo", userId], (old: any) =>
+        (old ?? []).filter((x: any) => x.id !== r.id),
+      );
+      queryClient.invalidateQueries({ queryKey: ["home-active-solo"] });
+      queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+    } catch (err: any) {
+      console.error("[ActiveTripsDashboard] delete failed:", err?.message ?? err);
+      notify.error("Nie udało się usunąć trasy");
+    }
+    setDeletingId(null);
+  };
 
   // Aktywne trasy SOLO (wlasne, planning/ongoing, bez grupy).
   const { data: soloRoutes = [], isLoading: soloLoading } = useQuery({
@@ -108,12 +136,22 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
           <div className="space-y-3">
             {soloRoutes.map((r) => (
               <div key={r.id} className="rounded-3xl bg-card border border-border/50 overflow-hidden">
-                <div className="px-4 pt-3.5 pb-2">
-                  <p className="text-base font-bold leading-tight flex items-center gap-1.5">
-                    <MapPin className="h-4 w-4 text-orange-600 shrink-0" />
-                    {r.city || r.title || "Trasa"}
-                  </p>
-                  {fmtDate(r.start_date) && <p className="text-xs text-muted-foreground mt-0.5 ml-[22px]">{fmtDate(r.start_date)}</p>}
+                <div className="px-4 pt-3.5 pb-2 flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-base font-bold leading-tight flex items-center gap-1.5">
+                      <MapPin className="h-4 w-4 text-orange-600 shrink-0" />
+                      {r.city || r.title || "Trasa"}
+                    </p>
+                    {fmtDate(r.start_date) && <p className="text-xs text-muted-foreground mt-0.5 ml-[22px]">{fmtDate(r.start_date)}</p>}
+                  </div>
+                  <button
+                    onClick={(e) => handleDelete(e, r)}
+                    disabled={deletingId === r.id}
+                    aria-label="Usuń trasę"
+                    className="shrink-0 -mr-1 -mt-0.5 h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 disabled:opacity-50"
+                  >
+                    {deletingId === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </button>
                 </div>
                 <ActiveTripPlanEditor routeId={r.id} />
               </div>

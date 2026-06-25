@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Search, X, Plus, Filter, Check, Star, MapPin, ArrowRight } from "lucide-react";
+import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { usePostHog } from "@posthog/react";
@@ -68,10 +68,7 @@ const PlanWizard = () => {
   const allLikedNames: string[] = returnState?.likedPlaceNames ?? [];
   const allSkippedNames: string[] = returnState?.skippedPlaceNames ?? [];
 
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [showAddPlace, setShowAddPlace] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const exploreMode = returnState?.exploreMode ?? false;
 
   // Step 4 tabs: "swipe" (Eksploruj) | "matches" (Dopasowania). Polubione miejsca
@@ -84,13 +81,6 @@ const PlanWizard = () => {
   // Wybor miejsc do trasy - mirror logiki z GroupSession matches tab (deselectedPlaces).
   // User domyslnie ma wszystko zaznaczone, moze odznaczyc miejsca ktorych nie chce w trasie.
   const [deselectedMatches, setDeselectedMatches] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (searchOpen) {
-      setSearchQuery("");
-      setTimeout(() => searchInputRef.current?.focus(), 50);
-    }
-  }, [searchOpen]);
 
   // Step 3 (solo): auto-detect on-site przez GPS. on-site -> "od Ciebie" + pomijamy mape,
   // idziemy do swipera. offsite (GPS daleko) -> mapa punktu startu. no-gps -> jawne pytanie.
@@ -235,25 +225,7 @@ const PlanWizard = () => {
           <ArrowLeft className="h-5 w-5" />
         </button>
 
-        {searchOpen && step === 4 ? (
-          <>
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Szukaj miejsca…"
-              className="flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
-            />
-            <button
-              onClick={() => setSearchOpen(false)}
-              className="h-9 w-9 flex items-center justify-center -mr-1 shrink-0 text-muted-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </>
-        ) : step === 4 ? (
+        {step === 4 ? (
           <>
             {/* Akcje + chip filtru kategorii - chip ostatni (po prawej) */}
             <div className="flex-1" />
@@ -282,13 +254,6 @@ const PlanWizard = () => {
               aria-label="Dodaj miejsce"
             >
               <Plus className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="h-9 w-9 flex items-center justify-center shrink-0 text-foreground"
-              aria-label="Szukaj"
-            >
-              <Search className="h-5 w-5" />
             </button>
             {/* Chip filtru - na prawym koncu */}
             <button
@@ -395,7 +360,6 @@ const PlanWizard = () => {
                 sortByNearest={sortMode === "nearest"}
                 initialLikedPlaceNames={allLikedNames}
                 initialSkippedPlaceNames={allSkippedNames}
-                searchQuery={searchQuery}
                 showAddPlace={showAddPlace}
                 onAddPlaceClose={() => setShowAddPlace(false)}
                 onSuggestPlace={() => setShowAddPlace(true)}

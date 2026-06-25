@@ -101,7 +101,7 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
       ? formatDistance(haversineKm(distanceRef.coords, { lat: pin.latitude, lng: pin.longitude }))
       : null;
 
-  const [planView, setPlanView] = useState<"list" | "cards">("list");
+  const [planView, setPlanView] = useState<"list" | "cards">("cards");
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [draft, setDraft] = useState<{ dayId: string; pins: any[] } | null>(null);
