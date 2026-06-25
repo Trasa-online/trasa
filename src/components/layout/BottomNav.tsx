@@ -132,28 +132,28 @@ const BottomNav = () => {
         <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-stretch w-[248px] pb-2">
           <button
             onClick={handleBrowse}
-            className="w-full flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
+            className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
           >
             <Sparkles className="h-4 w-4 text-orange-600" />
             Przeglądaj miejsca
           </button>
           <button
             onClick={() => { setShowMenu(false); setJoinCode(""); setShowJoinModal(true); }}
-            className="w-full flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
+            className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
           >
             <Link2 className="h-4 w-4 text-orange-600" />
             Dołącz do sesji
           </button>
           <button
             onClick={handleGroupPlan}
-            className="w-full flex items-center gap-2.5 px-5 py-3 rounded-full bg-foreground text-background font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
+            className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-foreground text-background font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
           >
             <Users className="h-4 w-4" />
             Zaplanuj grupowo
           </button>
           <button
             onClick={handleSoloPlan}
-            className="w-full flex items-center gap-2.5 px-5 py-3 rounded-full bg-primary text-white font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
+            className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-primary text-white font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
           >
             <MapPin className="h-4 w-4" />
             Zaplanuj solo
