@@ -9,6 +9,7 @@ import { pl } from "date-fns/locale";
 import { avatarSrc } from "@/lib/avatar";
 import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
+import { useActiveSoloTrips } from "@/hooks/useActiveSoloTrips";
 
 // Ekran glowny = dashboard "Aktywne": aktywne trasy solo (pelny edytor planu jak w Dzienniku
 // - ActiveTripPlanEditor: Lista/Szczegoly, reorder, usuwanie, notki, dodawanie, wizytowka) +
@@ -54,11 +55,10 @@ function EmptySection({ icon, title, sub, cta, onCta, cta2, onCta2, variant }: {
   );
 }
 
-export default function ActiveTripsDashboard({ userId }: { userId: string | null }) {
+export default function ActiveTripsDashboard({ userId, selectedSoloId }: { userId: string | null; selectedSoloId?: string | null }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [selectedSoloId, setSelectedSoloId] = useState<string | null>(null);
 
   // Usuniecie aktywnej trasy z home (z potwierdzeniem). Czysci piny + chat_sessions + route.
   const handleDelete = async (e: React.MouseEvent, r: any) => {
@@ -85,41 +85,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   };
 
   // Aktywne trasy SOLO (wlasne, planning/ongoing, bez grupy).
-  const { data: soloRoutes = [], isLoading: soloLoading } = useQuery({
-    queryKey: ["home-active-solo", userId],
-    queryFn: async () => {
-      if (!userId) return [];
-      const { data } = await (supabase as any)
-        .from("routes")
-        .select("*, pins(*)")
-        .eq("user_id", userId)
-        .in("trip_type", ["planning", "ongoing"])
-        .order("created_at", { ascending: false });
-      // Wszystkie aktywne trasy solo, ale DEDUPE po folderze (trasa wielodniowa = jeden wpis;
-      // ActiveTripPlanEditor sam laduje dni folderu). Reprezentant = najnowsza trasa w grupie.
-      // User moze miec kilka tras dla tego samego miasta/daty -> switcher na home (nie blokujemy
-      // userow jedna trasa).
-      const solo = ((data as any[]) || []).filter((r) => !r.group_session_id);
-      const byTrip = new Map<string, any>();
-      const range = new Map<string, { min: string | null; max: string | null }>();
-      for (const r of solo) {
-        const key = r.folder_id ?? r.id;
-        // Reprezentant = DZIEN 1 (najnizszy day_number) - inaczej home pokazywal dzien 2.
-        const cur = byTrip.get(key);
-        if (!cur || (r.day_number ?? 999) < (cur.day_number ?? 999)) byTrip.set(key, r);
-        // Zakres dat calego folderu (trasa wielodniowa).
-        const rg = range.get(key) ?? { min: null, max: null };
-        if (r.start_date) {
-          if (!rg.min || r.start_date < rg.min) rg.min = r.start_date;
-          if (!rg.max || r.start_date > rg.max) rg.max = r.start_date;
-        }
-        if (r.end_date && (!rg.max || r.end_date > rg.max)) rg.max = r.end_date;
-        range.set(key, rg);
-      }
-      return [...byTrip.entries()].map(([key, r]) => ({ ...r, _dateMin: range.get(key)!.min, _dateMax: range.get(key)!.max }));
-    },
-    enabled: !!userId,
-  });
+  const { data: soloRoutes = [], isLoading: soloLoading } = useActiveSoloTrips(userId);
 
   // Aktywne trasy GRUPOWE (sesje, w ktorych user jest czlonkiem; nie zakonczone, data nie minela).
   const { data: groupSessions = [], isLoading: groupLoading } = useQuery({
@@ -176,27 +142,6 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
             const selected = soloRoutes.find((r) => r.id === selectedSoloId) ?? soloRoutes[0];
             return (
               <>
-                {/* Switcher - gdy user ma kilka aktywnych tras (np. ten sam dzien, warianty). */}
-                {soloRoutes.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 mb-3 pb-0.5">
-                    {soloRoutes.map((r) => {
-                      const active = r.id === selected.id;
-                      return (
-                        <button
-                          key={r.id}
-                          onClick={() => setSelectedSoloId(r.id)}
-                          className={cn(
-                            "shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors active:scale-[0.96]",
-                            active ? "bg-foreground text-background border-foreground" : "bg-card text-muted-foreground border-border/60",
-                          )}
-                        >
-                          {r.city || r.title || "Trasa"}{fmtShort(r.start_date) ? ` · ${fmtShort(r.start_date)}` : ""}
-                          {Array.isArray(r.pins) && r.pins.length > 0 ? ` · ${r.pins.length}` : ""}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
                 <div key={selected.id}>
                   <div className="pb-2.5 flex items-end gap-2">
                     <div className="min-w-0 flex-1">
