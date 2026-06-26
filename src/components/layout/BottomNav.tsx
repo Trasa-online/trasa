@@ -248,12 +248,15 @@ const BottomNav = () => {
           (na mobile w-full bo viewport < max-w-lg, ten sam efekt co left-0 right-0).
           Wczesniej left-0 right-0 rozciagal bg na pelna szerokosc na web ale ikonki
           byly w max-w-lg mx-auto - rozjazd. */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-background border-t border-border/40 z-50 pb-safe">
+      {/* Floating nav: biala karta odklejona od krawedzi + lekki cien (natywny feel).
+          Outer = transparentny kontener (pointer-events-none) z marginesem + safe-area;
+          inner = bialy pill z cieniem (pointer-events-auto). */}
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+10px)] pointer-events-none">
         {/* Web: 3 kolumny (Glowna, Plus, Profil - Eksploruj i Dziennik ukryte).
-            Native: 5 kolumn (wszystko). grid-cols-5 na webie powodowal ze 3
-            ikonki byly zbite po lewej, 2 puste kolumny po prawej. */}
+            Native: 5 kolumn (wszystko). */}
         {/* Same ikony, bez nazw (jak w zalaczniku) - zachowana kolorystyka (orange active). */}
-        <div className={`grid ${isNative ? "grid-cols-5" : "grid-cols-3"} h-14`}>
+        <div className="pointer-events-auto bg-white rounded-[26px] border border-black/[0.04] shadow-[0_8px_28px_-6px_rgba(0,0,0,0.18)]">
+          <div className={`grid ${isNative ? "grid-cols-5" : "grid-cols-3"} h-16`}>
 
           {/* Główna */}
           <NavLink
@@ -328,6 +331,7 @@ const BottomNav = () => {
             )}
           </NavLink>
 
+          </div>
         </div>
       </nav>
     </>
