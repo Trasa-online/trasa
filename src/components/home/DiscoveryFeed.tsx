@@ -4,8 +4,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight } from "lucide-react";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import RouteMap from "@/components/RouteMap";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
@@ -83,14 +84,6 @@ const PLACEHOLDER_GRADIENTS = [
   "from-violet-200 to-purple-300",
 ];
 
-function buildLeafletHtml(items: DiscoveryItem[]) {
-  const pins = items
-    .filter((i) => i.latitude && i.longitude)
-    .map((i, idx) => ({ lat: i.latitude!, lng: i.longitude!, name: i.place_name, index: idx + 1 }));
-  const pinsJson = JSON.stringify(pins);
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script><style>*{margin:0;padding:0;box-sizing:border-box}body{height:100%;overflow:hidden}#map{height:100%;width:100%}.pm{color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:-apple-system,sans-serif;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);background:#ea580c}</style></head><body><div id="map"></div><script>const pins=${pinsJson};const map=L.map('map',{zoomControl:false,attributionControl:false});L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);const coords=pins.map(p=>[p.lat,p.lng]);if(coords.length>1){L.polyline(coords,{color:'#ea580c',weight:2.5,opacity:.55,dashArray:'6 5'}).addTo(map);map.fitBounds(coords,{padding:[36,36]});}else if(coords.length===1){map.setView(coords[0],15);}pins.forEach(p=>{const icon=L.divIcon({className:'',html:'<div class="pm">'+p.index+'</div>',iconSize:[28,28],iconAnchor:[14,14]});L.marker([p.lat,p.lng],{icon}).bindPopup('<b style="font-size:12px">'+p.name+'</b>').addTo(map);});<\/script></body></html>`;
-}
-
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function AuthorChip({ name, avatar }: { name: string; avatar: string | null }) {
@@ -138,8 +131,6 @@ function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose:
   const queryClient = useQueryClient();
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const leafletHtml = buildLeafletHtml(col.items);
-  const hasPins = col.items.some((i) => i.latitude && i.longitude);
   const isOwner = !!user && user.id === col.user_id;
   const isLocal = !!col.author_home_city && !!col.city && col.author_home_city.trim().toLowerCase() === col.city.trim().toLowerCase();
 
@@ -164,12 +155,27 @@ function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose:
     onClose();
   };
 
+  // Piny do mapy-podgladu (RouteMap = Google, dziala natywnie; leaflet w iframe srcDoc
+  // sie nie ladowal w WebView - stad bialy placeholder).
+  const mapPins = col.items
+    .filter((i) => i.latitude && i.longitude)
+    .map((i) => ({ latitude: i.latitude!, longitude: i.longitude!, place_name: i.place_name }));
+
+  // "Uzyj tej trasy" - przejmij miejsca zestawienia do nowej trasy (swiper -> Dopasowania).
+  const adoptRoute = () => {
+    const names = col.items.map((i) => i.place_name).filter(Boolean);
+    onClose();
+    navigate("/plan", { state: { step: 4, city: col.city, date: new Date().toISOString(), likedPlaceNames: names } });
+  };
+  const planOwn = () => { onClose(); navigate("/plan", { state: { step: 2, city: col.city } }); };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex items-start gap-3 px-4 pt-4 pb-3 border-b border-border/20 shrink-0">
+      {/* Header */}
+      <div className="flex items-start gap-3 px-4 pt-4 pb-3 shrink-0">
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-base leading-tight line-clamp-2">{col.title}</p>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
+          <h2 className="font-display font-extrabold text-xl leading-tight line-clamp-2">{col.title}</h2>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <AuthorChip name={col.author_name} avatar={col.author_avatar} />
             {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5">lokals poleca!</span>}
             {col.city && (
@@ -188,50 +194,85 @@ function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose:
         </SheetClose>
       </div>
 
-      {hasPins && (
-        <div className="h-52 shrink-0">
-          <iframe key={col.id} srcDoc={leafletHtml} className="w-full h-full border-0" />
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-        {col.description && (
-          <p className="text-sm text-muted-foreground leading-relaxed">{col.description}</p>
+      <div className="flex-1 overflow-y-auto">
+        {/* Waski podglad mapy z trasa miejsc (statyczny - overlay blokuje interakcje) */}
+        {mapPins.length > 0 && (
+          <div className="relative h-40 mx-4 mb-1 rounded-2xl overflow-hidden border border-border/40">
+            <RouteMap pins={mapPins as any} className="w-full h-full" />
+            <div className="absolute inset-0" />
+          </div>
         )}
-        {col.items.map((item, idx) => {
-          const tappable = !!item.place_id;
-          const Tag: any = tappable ? "button" : "div";
-          return (
-            <Tag key={item.id} {...(tappable ? { onClick: () => openPlace(item) } : {})} className={`w-full text-left space-y-2 ${tappable ? "active:opacity-90" : ""}`}>
-              <div className="relative rounded-2xl overflow-hidden h-44">
-                <PlacePhoto item={item} placeholderIdx={idx} className="w-full h-full" />
-                <div className={`absolute top-2.5 left-2.5 h-7 w-7 rounded-full flex items-center justify-center shadow-md ${tappable ? "bg-gradient-to-br from-[#F4A259] to-[#F9662B]" : "bg-foreground/55 backdrop-blur-sm"}`}>
-                  <span className="text-white text-[11px] font-black">{idx + 1}</span>
-                </div>
-                {tappable ? (
-                  <div className="absolute bottom-2.5 right-2.5 h-7 pl-2.5 pr-1.5 rounded-full bg-white/90 backdrop-blur-sm flex items-center gap-0.5 shadow-sm">
-                    <span className="text-[10px] font-bold text-foreground">Zobacz</span>
-                    <ChevronRight className="h-3.5 w-3.5 text-foreground" />
+
+        {col.description && (
+          <p className="text-sm text-muted-foreground leading-relaxed px-4 pt-3">{col.description}</p>
+        )}
+
+        {/* Timeline: okladki miejsc polaczone liniami + kropkami (jak loading state PlanWizard) */}
+        <div className="px-4 pt-4 pb-4">
+          {col.items.map((item, idx) => {
+            const tappable = !!item.place_id;
+            const Tag: any = tappable ? "button" : "div";
+            const isLast = idx === col.items.length - 1;
+            return (
+              <div key={item.id} className="flex gap-3">
+                {/* Szyna: numerowana kropka + przerywana linia laczaca */}
+                <div className="flex flex-col items-center shrink-0 w-7">
+                  <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shadow-sm ring-4 ring-background z-10">
+                    <span className="text-white text-xs font-black">{idx + 1}</span>
                   </div>
-                ) : (
-                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-foreground/55 backdrop-blur-sm">
-                    <Globe className="h-3 w-3 text-white/90 shrink-0" />
-                    <span className="text-[10px] font-semibold text-white leading-tight">Tego miejsca jeszcze nie&nbsp;ma w&nbsp;Trasie</span>
-                  </div>
-                )}
-              </div>
-              <div className="px-0.5">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="font-bold text-sm leading-snug">{item.place_name}</p>
-                  {item.rating != null && <span className="text-[11px] text-muted-foreground flex items-center gap-0.5"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{item.rating}</span>}
+                  {!isLast && <div className="flex-1 w-0 my-1 border-l-2 border-dotted border-orange-300/70" />}
                 </div>
-                {item.address && <p className="text-[11px] text-muted-foreground mt-0.5">{item.address}</p>}
-                {item.short_desc && <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.short_desc}</p>}
+                {/* Okladka z nazwa + ocena bezposrednio na zdjeciu */}
+                <Tag
+                  {...(tappable ? { onClick: () => openPlace(item) } : {})}
+                  className={`flex-1 min-w-0 mb-4 text-left block ${tappable ? "active:scale-[0.99] transition-transform" : ""}`}
+                >
+                  <div className="relative rounded-2xl overflow-hidden aspect-[16/10]">
+                    <PlacePhoto item={item} placeholderIdx={idx} className="w-full h-full" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                    {item.rating != null && (
+                      <div className="absolute top-2.5 right-2.5 flex items-center gap-0.5 px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
+                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                        <span className="text-[11px] font-bold text-foreground">{item.rating}</span>
+                      </div>
+                    )}
+                    {tappable ? (
+                      <div className="absolute top-2.5 left-2.5 h-7 pl-2.5 pr-1.5 rounded-full bg-white/90 backdrop-blur-sm flex items-center gap-0.5 shadow-sm">
+                        <span className="text-[10px] font-bold text-foreground">Zobacz</span>
+                        <ChevronRight className="h-3.5 w-3.5 text-foreground" />
+                      </div>
+                    ) : (
+                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2 py-1 rounded-full bg-foreground/55 backdrop-blur-sm">
+                        <Globe className="h-3 w-3 text-white/90 shrink-0" />
+                        <span className="text-[9px] font-semibold text-white leading-tight">jeszcze nie&nbsp;ma w&nbsp;Trasie</span>
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                      <p className="text-white font-display font-extrabold text-lg leading-tight drop-shadow-sm">{item.place_name}</p>
+                      {item.address && <p className="text-white/80 text-[11px] mt-0.5 line-clamp-1">{item.address}</p>}
+                    </div>
+                  </div>
+                  {item.short_desc && <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed px-0.5">{item.short_desc}</p>}
+                </Tag>
               </div>
-            </Tag>
-          );
-        })}
-        <div className="h-4" />
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Sticky CTA */}
+      <div className="shrink-0 border-t border-border/20 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-background">
+        <button
+          onClick={adoptRoute}
+          className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+        >
+          Użyj tej trasy <ArrowRight className="h-4 w-4" />
+        </button>
+        {col.city && (
+          <button onClick={planOwn} className="w-full mt-1.5 py-2 text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform">
+            albo zaplanuj własną w&nbsp;{col.city}
+          </button>
+        )}
       </div>
 
       {detailPlace && (
