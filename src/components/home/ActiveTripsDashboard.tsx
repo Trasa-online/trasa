@@ -30,7 +30,7 @@ function EmptySection({ icon, title, sub, cta, onCta, cta2, onCta2, variant }: {
   return (
     <div className={cn("rounded-3xl border p-5", tone)}>
       <div className="h-12 w-12 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-3.5">{icon}</div>
-      <p className="text-base font-black leading-tight">{title}</p>
+      <p className="text-base font-display font-extrabold leading-tight">{title}</p>
       <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[300px]">{sub}</p>
       {(cta || cta2) && (
         <div className="flex flex-col gap-2 mt-4">

@@ -8,8 +8,9 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 95%;
-    --foreground: 0 0% 8%;
+    /* Zlamana biel brandowa #FEFEFE (wczesniej 95% = szare #F2F2F2 - rozjazd z guidelines). */
+    --background: 0 0% 99.6%;
+    --foreground: 0 0% 5.5%;
 
     --card: 0 0% 100%;
     --card-foreground: 0 0% 8%;

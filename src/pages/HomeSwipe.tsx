@@ -65,7 +65,7 @@ const HomeSwipe = () => {
 
       {/* Top bar */}
       <div className="shrink-0 bg-background px-4 pt-3 pb-2.5 flex items-center justify-between gap-2">
-        <h1 className="text-xl font-black tracking-tight">Twoje trasy</h1>
+        <h1 className="text-xl font-display font-extrabold tracking-tight">Twoje trasy</h1>
         <div className="flex items-center gap-1">
           {isGuest ? (
             <button

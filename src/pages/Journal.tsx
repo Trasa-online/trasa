@@ -21,7 +21,7 @@ const Journal = () => {
           <BookOpen className="h-9 w-9 text-orange-600" />
         </div>
         <div className="space-y-2 max-w-[320px]">
-          <p className="text-2xl font-black tracking-tight leading-tight">Twój dziennik podróży</p>
+          <p className="text-2xl font-display font-extrabold tracking-tight leading-tight">Twój dziennik podróży</p>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Załóż konto, żeby zapisywać trasy, dodawać zdjęcia i&nbsp;oceniać miejsca z&nbsp;każdej podróży.
           </p>
@@ -47,7 +47,7 @@ const Journal = () => {
 
   return (
     <div className="flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
-      <h1 className="text-xl font-black tracking-tight pt-2 pb-3">Dziennik podróży</h1>
+      <h1 className="text-xl font-display font-extrabold tracking-tight pt-2 pb-3">Dziennik podróży</h1>
 
       <JournalTab userId={user.id} />
     </div>

@@ -99,7 +99,7 @@ function SectionCard({ icon, title, subtitle, value, bg, onClick }: {
       </div>
       <div className="flex items-end justify-between gap-3 mt-7">
         <div className="min-w-0">
-          <p className="text-xl font-black leading-tight text-[#0E0E0E]">{title}</p>
+          <p className="text-xl font-display font-extrabold leading-tight text-[#0E0E0E]">{title}</p>
           <p className="text-xs font-medium text-[#0E0E0E]/55 mt-0.5">{subtitle}</p>
         </div>
         <span className="text-4xl font-black text-[#0E0E0E] leading-none tabular-nums shrink-0">{value}</span>
@@ -291,7 +291,7 @@ const TravelerProfile = () => {
 
       {/* Header - tytul do lewej, jak strona glowna ("Twoje trasy") */}
       <div className="flex items-center justify-between gap-2 px-5 pt-3 pb-2.5">
-        <h1 className="text-xl font-black tracking-tight">Mój profil</h1>
+        <h1 className="text-xl font-display font-extrabold tracking-tight">Mój profil</h1>
         <button
           onClick={() => navigate("/settings")}
           className="h-9 w-9 flex items-center justify-center rounded-2xl text-muted-foreground hover:bg-muted transition-colors active:scale-90"
@@ -336,7 +336,7 @@ const TravelerProfile = () => {
               )}
             </div>
             <div className="min-w-0">
-              <h2 className="text-2xl font-black leading-tight truncate">
+              <h2 className="text-2xl font-display font-extrabold leading-tight truncate">
                 {profile?.username || profile?.first_name || "Użytkownik"}
               </h2>
               {profile?.username && profile?.first_name ? (
@@ -360,24 +360,24 @@ const TravelerProfile = () => {
         {/* Trzy sekcje (stacked, kolorowe) - jak w zalaczniku */}
         <div className="space-y-3">
           <SectionCard
-            bg="bg-[#C6BFF4]"
-            icon={<MapIcon className="h-5 w-5 text-[#5B4FC4]" />}
+            bg="bg-trasa-violet"
+            icon={<MapIcon className="h-5 w-5 text-trasa-violet-ink" />}
             title="Trasy"
             subtitle="ukończone podróże"
             value={stats?.trips ?? 0}
             onClick={() => navigate("/dziennik")}
           />
           <SectionCard
-            bg="bg-[#DDD6C8]"
-            icon={<Building2 className="h-5 w-5 text-[#8A7E63]" />}
+            bg="bg-trasa-cream"
+            icon={<Building2 className="h-5 w-5 text-trasa-cream-ink" />}
             title="Miasta"
             subtitle="odwiedzone miejsca"
             value={stats?.cities ?? 0}
             onClick={() => navigate("/dziennik")}
           />
           <SectionCard
-            bg="bg-[#F4955E]"
-            icon={<Layers className="h-5 w-5 text-[#C2410C]" />}
+            bg="bg-trasa-orange"
+            icon={<Layers className="h-5 w-5 text-trasa-orange-ink" />}
             title="Zestawienia"
             subtitle="Twoje kolekcje miejsc"
             value={collectionsCount}

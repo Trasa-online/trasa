@@ -55,6 +55,19 @@ export default {
           DEFAULT: "hsl(var(--cta-accent))",
           foreground: "hsl(var(--cta-accent-foreground))",
         },
+        // ── Paleta brandowa B2C: pomarancz (primary) + akcenty z profilu (fiolet,
+        // kremowy) + kolor komplementarny dla pomaranczu = turkus. {DEFAULT} = tlo
+        // pastelowe, {ink} = kolor ikony/tekstu na tym tle.
+        trasa: {
+          orange: { DEFAULT: "#F4955E", ink: "#C2410C" },
+          violet: { DEFAULT: "#C6BFF4", ink: "#5B4FC4" },
+          cream: { DEFAULT: "#DDD6C8", ink: "#8A7E63" },
+          teal: { DEFAULT: "#BFE6DE", ink: "#0F766E" },
+        },
+      },
+      fontFamily: {
+        // Naglowki B2C - Baloo 2 (zaokraglony, brandowy). Body zostaje systemowy (Inter fallback).
+        display: ['"Baloo 2"', "system-ui", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",

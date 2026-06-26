@@ -307,13 +307,13 @@ const Explore = () => {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="text-xl font-black tracking-tight">Twoje zestawienia</h1>
+              <h1 className="text-xl font-display font-extrabold tracking-tight">Twoje zestawienia</h1>
               <p className="text-xs text-muted-foreground mt-0.5">Kolekcje miejsc, które stworzyłeś.</p>
             </div>
           </div>
         ) : (
           <div>
-            <h1 className="text-xl font-black tracking-tight pt-2">Eksploruj</h1>
+            <h1 className="text-xl font-display font-extrabold tracking-tight pt-2">Eksploruj</h1>
             <p className="text-xs text-muted-foreground mt-1">Polecane miejsca, trasy i&nbsp;zestawienia.</p>
           </div>
         )}
