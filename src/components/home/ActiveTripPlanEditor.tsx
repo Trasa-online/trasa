@@ -11,7 +11,7 @@ import { notify } from "@/lib/notify";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useDistanceReference, tryResolveOnSite } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
-import { Navigation, GripVertical, RotateCcw } from "lucide-react";
+import { Navigation, GripVertical, RotateCcw, CalendarDays } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 
 // Edytor planu aktywnej trasy osadzony na ekranie glownym. Replika edytora planu z
@@ -369,6 +369,14 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     }
     return Number.isFinite(minStart) && t.getTime() >= minStart && t.getTime() <= maxEnd;
   }, [sortedDays]);
+  // Ile dni do startu (dla trasy z przyszla data) - do bannera "Zaplanowana".
+  const daysUntilStart = useMemo(() => {
+    let minStart = Infinity;
+    for (const d of sortedDays) if (d.start_date) minStart = Math.min(minStart, new Date(d.start_date).setHours(0, 0, 0, 0));
+    if (!Number.isFinite(minStart)) return null;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return Math.round((minStart - today.getTime()) / 86_400_000);
+  }, [sortedDays]);
   // Pierwszy nieodwiedzony pin (po kolejnosci) = nastepny przystanek (coords opcjonalne -
   // bez nich brak "Nawiguj", ale odhaczanie po kolei dziala).
   const nextStop = useMemo(
@@ -438,8 +446,29 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   // wspomnieniem i (jest dzisiaj LUB jestes fizycznie na miejscu wg GPS). GPS dodaje dystans
   // + auto "jestes na miejscu?"; bez GPS dziala manualne odhaczanie po kolei.
   const renderNextStop = () => {
-    if (isMemory || (!tripIsToday && !onSite)) return null;
+    if (isMemory) return null;
     if (!nextStop && !nearPin) return null;
+
+    // Trasa z PRZYSZLA data (nie dzisiaj) - tryb planowania, BEZ nawigacji/odhaczania
+    // (zeby user sie nie pomylil i nie "szedl" trasa ktora jest na inny dzien).
+    if (!tripIsToday) {
+      const label = daysUntilStart == null ? "wkrótce"
+        : daysUntilStart <= 0 ? "wkrótce"
+        : daysUntilStart === 1 ? "jutro"
+        : `za ${daysUntilStart} ${daysUntilStart < 5 ? "dni" : "dni"}`;
+      return (
+        <div className="mb-4 rounded-3xl bg-muted/50 border border-border/40 p-3.5 flex items-center gap-3">
+          <div className="h-11 w-11 rounded-2xl bg-card shadow-sm flex items-center justify-center shrink-0">
+            <CalendarDays className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Zaplanowana</p>
+            <p className="text-base font-display font-extrabold text-foreground leading-tight">Zaczyna się {label}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Nawigacja włączy się w&nbsp;dniu wyjazdu.</p>
+          </div>
+        </div>
+      );
+    }
 
     // Jestes przy nieodwiedzonym miejscu -> potwierdzenie wizyty.
     if (nearPin) {
@@ -521,7 +550,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     const k = rkey(activeRouteId!, placeName);
     return (
       <div className={`mt-3 pt-1 ${centered ? "text-center" : ""}`}>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notka</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notka od Ciebie</p>
         <div className="relative">
           <textarea
             value={notes[k] ?? ""}
@@ -538,80 +567,70 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     );
   };
 
-  // ── Szczegoly: poziomy swiper kart. editable => move/usun, withRating => Notka. ──
-  const renderSwiper = (editable: boolean, withRating: boolean) => (
-    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
-      {workingPins.map((pin: any, i: number) => (
-        <div key={pin.id} className={`snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm flex flex-col transition-opacity ${pin.visited_at ? "opacity-55" : ""}`}>
-          <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
-            <div className="relative w-full aspect-[4/3] bg-muted">
-              <PlacePhoto pin={pin} className={`w-full h-full object-cover ${pin.visited_at ? "grayscale" : ""}`} emojiClass="text-4xl" />
-              <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
-              {pin.visited_at && (
-                <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/60 backdrop-blur text-white text-[10px] font-bold">
-                  <Check className="h-3 w-3" /> Odwiedzone
-                </div>
-              )}
-              {editable && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); removeWorkingPin(pin.id); }}
-                  aria-label="Usuń miejsce"
-                  className="absolute top-3 right-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white flex items-center justify-center active:scale-90"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-            <div className="px-4 pt-4 pb-3">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
-                <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
-              </span>
-              <p className="text-base font-black leading-tight">{pin.place_name}</p>
-            </div>
-          </button>
+  // ── Wspolna karta miejsca (uzywana w karuzeli "Szczegoly" i pionowej liscie). ──
+  // fullWidth=false -> karta karuzeli (w-[80vw]); true -> pelna szerokosc (lista stacked).
+  const renderPlanCard = (pin: any, i: number, fullWidth: boolean, editable: boolean, withRating: boolean) => (
+    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm flex flex-col transition-opacity ${pin.visited_at ? "opacity-55" : ""}`}>
+      <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
+        <div className="relative w-full aspect-[4/3] bg-muted">
+          <PlacePhoto pin={pin} className={`w-full h-full object-cover ${pin.visited_at ? "grayscale" : ""}`} emojiClass="text-4xl" />
+          <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
           {pin.visited_at && (
-            <button
-              onClick={() => unmarkVisited(pin.id)}
-              className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-border/30 text-xs font-semibold text-muted-foreground active:scale-95 transition-transform"
-            >
-              <RotateCcw className="h-3.5 w-3.5" /> Cofnij odhaczenie
-            </button>
+            <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/60 backdrop-blur text-white text-[10px] font-bold">
+              <Check className="h-3 w-3" /> Odwiedzone
+            </div>
           )}
           {editable && (
-            <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
-              <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
-                <ChevronLeft className="h-4 w-4" />Wcześniej
-              </button>
-              <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
-                Później<ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); removeWorkingPin(pin.id); }}
+              aria-label="Usuń miejsce"
+              className="absolute top-3 right-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white flex items-center justify-center active:scale-90"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           )}
-          {withRating && <div className="px-4 pb-4 pt-1">{renderRatingNote(pin.place_name, true)}</div>}
         </div>
-      ))}
+        <div className="px-4 pt-4 pb-3">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
+            <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+          </span>
+          <p className="text-base font-black leading-tight">{pin.place_name}</p>
+        </div>
+      </button>
+      {pin.visited_at && (
+        <button
+          onClick={() => unmarkVisited(pin.id)}
+          className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-border/30 text-xs font-semibold text-muted-foreground active:scale-95 transition-transform"
+        >
+          <RotateCcw className="h-3.5 w-3.5" /> Cofnij odhaczenie
+        </button>
+      )}
+      {editable && (
+        <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
+          <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
+            <ChevronUp className="h-4 w-4" />Wcześniej
+          </button>
+          <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
+            Później<ChevronDown className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+      {withRating && <div className="px-4 pb-4 pt-1">{renderRatingNote(pin.place_name, true)}</div>}
     </div>
   );
 
-  // Edytowalna lista planu: chevrony gora/dol + przeciaganie (Reorder) + usuwanie.
-  // Klik w miejsce => wizytowka.
+  // ── Szczegoly: poziomy swiper kart. ──
+  const renderSwiper = (editable: boolean, withRating: boolean) => (
+    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
+      {workingPins.map((pin: any, i: number) => renderPlanCard(pin, i, false, editable, withRating))}
+    </div>
+  );
+
+  // ── Lista: te same karty, jedna pod druga (pionowy stos). ──
   const renderEditablePlan = (withRating: boolean) => (
-    <Reorder.Group as="div" axis="y" values={workingPins} onReorder={(next) => setWorking(next as any[])} className="space-y-2">
-      {workingPins.map((pin: any, i: number) => (
-        <PlanReorderRow
-          key={pin.id}
-          pin={pin}
-          isFirst={i === 0}
-          isLast={i === workingPins.length - 1}
-          onTap={() => openDetail(pin)}
-          onUp={() => movePin(i, i - 1)}
-          onDown={() => movePin(i, i + 1)}
-          onRemove={() => removeWorkingPin(pin.id)}
-          distLabel={distFor(pin)}
-          noteNode={withRating ? renderRatingNote(pin.place_name) : null}
-        />
-      ))}
-    </Reorder.Group>
+    <div className="space-y-3">
+      {workingPins.map((pin: any, i: number) => renderPlanCard(pin, i, true, true, withRating))}
+    </div>
   );
 
   // Przycisk dodania miejsca do planu dnia - pelnoekranowy widok /trasa/:id/dodaj.

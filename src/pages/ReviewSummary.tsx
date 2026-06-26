@@ -636,7 +636,7 @@ const ReviewSummary = () => {
     const k = rkey(activeRouteId!, placeName);
     return (
       <div className={`mt-3 pt-1 ${centered ? "text-center" : ""}`}>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notka</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notka od Ciebie</p>
         <div className="relative">
           <textarea
             value={notes[k] ?? ""}
@@ -654,136 +654,80 @@ const ReviewSummary = () => {
   };
 
   // ── Lista (read-only): miejsca grupowane po kategorii. Klik => wizytowka. ──
+  // Wspolna karta miejsca (karuzela + pionowa lista). fullWidth -> pelna szerokosc (stacked).
+  const renderPlanCard = (pin: any, i: number, fullWidth: boolean, editable: boolean, withRating: boolean) => (
+    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm flex flex-col`}>
+      <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
+        <div className="relative w-full aspect-[4/3] bg-muted">
+          <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-4xl" />
+          <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
+          {editable && (
+            <button
+              onClick={(e) => { e.stopPropagation(); removeWorkingPin(pin.id); }}
+              aria-label="Usuń miejsce"
+              className="absolute top-3 right-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white flex items-center justify-center active:scale-90"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <div className="px-4 pt-4 pb-3">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
+            <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+          </span>
+          <p className="text-base font-black leading-tight">{pin.place_name}</p>
+          {(() => {
+            const m = metaFor(pin);
+            const desc = pin.description || m.description;
+            return (
+              <>
+                {desc && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{desc}</p>}
+                {m.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {m.tags.slice(0, 3).map((t: string) => (
+                      <span key={t} className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{t}</span>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      </button>
+      {editable && (
+        <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
+          <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
+            <ChevronUp className="h-4 w-4" />Wcześniej
+          </button>
+          <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
+            Później<ChevronDown className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+      {withRating && <div className="px-4 pb-4 pt-1">{renderRatingNote(pin.place_name, true)}</div>}
+    </div>
+  );
+
+  // Lista (read-only): te same karty, jedna pod druga.
   const renderListReadonly = (withRating: boolean) => (
-    <div className="space-y-4">
-      {(() => {
-        const groups: Record<string, any[]> = {};
-        currentPins.forEach((p: any) => { const kk = p.category || "other"; (groups[kk] ??= []).push(p); });
-        return Object.entries(groups).map(([cat, items]) => (
-          <div key={cat}>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <span>{CATEGORY_EMOJI[cat] ?? "📍"}</span>{CATEGORY_LABEL[cat] ?? "Miejsce"}
-            </p>
-            <div className="space-y-2">
-              {items.map((pin: any) => (
-                <div key={pin.id} className="bg-card border border-border/40 rounded-2xl p-2.5">
-                  <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 text-left active:opacity-70 transition-opacity">
-                    <PlacePhoto pin={pin} className="h-14 w-14 rounded-xl object-cover shrink-0" emojiClass="text-xl" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-                      {pin.address && <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{pin.address}</p>}
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-                  </button>
-                  {(() => {
-                    const m = metaFor(pin);
-                    const desc = pin.description || m.description;
-                    return (desc || m.tags.length > 0) ? (
-                      <div className="mt-2 px-0.5">
-                        {desc && <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{desc}</p>}
-                        {m.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {m.tags.slice(0, 3).map((t: string) => (
-                              <span key={t} className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{t}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : null;
-                  })()}
-                  {withRating && renderRatingNote(pin.place_name)}
-                </div>
-              ))}
-            </div>
-          </div>
-        ));
-      })()}
+    <div className="space-y-3">
+      {currentPins.map((pin: any, i: number) => renderPlanCard(pin, i, true, false, withRating))}
     </div>
   );
 
   // ── Szczegoly: poziomy swiper kart (jak kreator trasy). editable => move/usun,
   // withRating => Ocena + Notka pod karta. Klik w karte => wizytowka. ──
+  // Szczegoly: poziomy swiper kart.
   const renderSwiper = (editable: boolean, withRating: boolean) => (
     <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
-      {workingPins.map((pin: any, i: number) => (
-        <div key={pin.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm flex flex-col">
-          <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
-            <div className="relative w-full aspect-[4/3] bg-muted">
-              <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-4xl" />
-              <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
-              {editable && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); removeWorkingPin(pin.id); }}
-                  aria-label="Usuń miejsce"
-                  className="absolute top-3 right-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white flex items-center justify-center active:scale-90"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-            <div className="px-4 pt-4">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
-                <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
-              </span>
-              <p className="text-base font-black leading-tight">{pin.place_name}</p>
-              {(() => {
-                const m = metaFor(pin);
-                const desc = pin.description || m.description;
-                return (
-                  <>
-                    {desc && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{desc}</p>}
-                    {m.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {m.tags.slice(0, 3).map((t: string) => (
-                          <span key={t} className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{t}</span>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-          </button>
-          {editable && (
-            <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
-              <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
-                <ChevronLeft className="h-4 w-4" />Wcześniej
-              </button>
-              <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
-                Później<ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-          {withRating && <div className="px-4 pb-4 pt-1">{renderRatingNote(pin.place_name, true)}</div>}
-        </div>
-      ))}
+      {workingPins.map((pin: any, i: number) => renderPlanCard(pin, i, false, editable, withRating))}
     </div>
   );
 
-  // Edytowalna lista planu (reorder strzalkami gora/dol + usuwanie). Bez drag&drop
-  // - HTML5 DnD nie dziala w natywnym WebView iOS, strzalki sa niezawodne na dotyku.
-  // Klik w miejsce (zdjecie/nazwa) => wizytowka. withRating => Ocena + Notka pod miejscem.
+  // Lista (edytowalna): te same karty, jedna pod druga (pionowy stos).
   const renderEditablePlan = (withRating: boolean) => (
-    <div className="space-y-2">
-      {workingPins.map((pin: any, i: number) => (
-        <div key={pin.id} className="bg-card border border-border/40 rounded-2xl p-2">
-          <div className="flex items-center gap-2">
-            <button onClick={() => openDetail(pin)} className="flex items-center gap-2 min-w-0 flex-1 text-left active:opacity-70 transition-opacity">
-              <PlacePhoto pin={pin} className="h-12 w-12 rounded-xl object-cover shrink-0" emojiClass="text-lg" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-                <p className="text-[11px] text-muted-foreground truncate">{CATEGORY_LABEL[pin.category] ?? "Miejsce"}</p>
-              </div>
-            </button>
-            <div className="flex flex-col shrink-0">
-              <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label="W górę" className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
-              <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label="W dół" className="p-1 text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
-            </div>
-            <button onClick={() => removeWorkingPin(pin.id)} aria-label="Usuń miejsce" className="h-8 w-8 shrink-0 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center active:scale-90"><Trash2 className="h-4 w-4" /></button>
-          </div>
-          {withRating && <div className="px-0.5">{renderRatingNote(pin.place_name)}</div>}
-        </div>
-      ))}
+    <div className="space-y-3">
+      {workingPins.map((pin: any, i: number) => renderPlanCard(pin, i, true, true, withRating))}
     </div>
   );
 

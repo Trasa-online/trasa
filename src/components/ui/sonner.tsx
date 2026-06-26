@@ -10,13 +10,10 @@ type ToasterProps = React.ComponentProps<typeof Sonner>;
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <>
-      {/* Toast bez opisu (sam tytul + ikona): wysrodkuj zawartosc wzgledem calego
-          toasta. Toasty z opisem zostaja wyrownane do gory (items-start). :has()
-          jest wspierane w nowoczesnym WebKit (iOS WebView Capacitor). */}
+      {/* Tekst zawsze do LEWEJ (nie wysrodkowany), ikona i x wycentrowane pionowo. */}
       <style>{`
-        [data-sonner-toast]:not(:has([data-description])){align-items:center!important}
-        [data-sonner-toast]:not(:has([data-description])) [data-icon]{align-self:center!important}
-        [data-sonner-toast]:not(:has([data-description])) [data-content]{flex:1 1 auto;text-align:center}
+        [data-sonner-toast]{align-items:center!important}
+        [data-sonner-toast] [data-content]{flex:1 1 auto;text-align:left}
         /* Toasty na gorze (np. nad bottom-sheet modalem) - zejdz ponizej notch/dynamic island */
         [data-sonner-toaster][data-y-position="top"]{top:calc(env(safe-area-inset-top, 0px) + 12px)!important}
       `}</style>
@@ -34,17 +31,15 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       toastOptions={{
         classNames: {
+          // Neutralny bialy (bez kolorowych tel kategorii) - kategorie rozroznia sama ikona.
           toast:
-            "group toast group-[.toaster]:w-[calc(100vw-2rem)] group-[.toaster]:max-w-md group-[.toaster]:bg-card group-[.toaster]:text-foreground group-[.toaster]:border group-[.toaster]:border-border/50 group-[.toaster]:shadow-lg group-[.toaster]:shadow-black/5 group-[.toaster]:rounded-2xl group-[.toaster]:p-3.5 group-[.toaster]:gap-3 group-[.toaster]:items-start group-[.toaster]:mb-[calc(4rem+env(safe-area-inset-bottom,0px))]",
+            "group toast group-[.toaster]:w-[calc(100vw-2rem)] group-[.toaster]:max-w-md group-[.toaster]:bg-card group-[.toaster]:text-foreground group-[.toaster]:border group-[.toaster]:border-border/50 group-[.toaster]:shadow-lg group-[.toaster]:shadow-black/5 group-[.toaster]:rounded-2xl group-[.toaster]:py-3.5 group-[.toaster]:pl-3.5 group-[.toaster]:pr-11 group-[.toaster]:gap-3 group-[.toaster]:items-center group-[.toaster]:mb-[calc(4rem+env(safe-area-inset-bottom,0px))]",
           title: "group-[.toast]:text-sm group-[.toast]:font-bold group-[.toast]:text-foreground group-[.toast]:leading-snug",
           description: "group-[.toast]:text-xs group-[.toast]:text-muted-foreground group-[.toast]:mt-0.5 group-[.toast]:leading-relaxed",
-          icon: "group-[.toast]:h-11 group-[.toast]:w-11 group-[.toast]:m-0 group-[.toast]:mr-1 group-[.toast]:rounded-full group-[.toast]:bg-white group-[.toast]:shadow-sm group-[.toast]:shrink-0 group-[.toast]:flex group-[.toast]:items-center group-[.toast]:justify-center group-[.toast]:self-start",
+          icon: "group-[.toast]:h-10 group-[.toast]:w-10 group-[.toast]:m-0 group-[.toast]:mr-1 group-[.toast]:rounded-full group-[.toast]:bg-muted group-[.toast]:shrink-0 group-[.toast]:flex group-[.toast]:items-center group-[.toast]:justify-center group-[.toast]:self-center",
+          // Czarny, wyrazny "x" do zamkniecia (po prawej, wycentrowany pionowo).
           closeButton:
-            "group-[.toast]:!left-auto group-[.toast]:!right-2 group-[.toast]:!top-1/2 group-[.toast]:!-translate-y-1/2 group-[.toast]:!bg-transparent group-[.toast]:!border-0 group-[.toast]:!text-muted-foreground/60",
-          success: "group-[.toaster]:bg-green-50 group-[.toaster]:border-green-100",
-          error: "group-[.toaster]:bg-red-50 group-[.toaster]:border-red-100",
-          warning: "group-[.toaster]:bg-amber-50 group-[.toaster]:border-amber-100",
-          info: "group-[.toaster]:bg-blue-50 group-[.toaster]:border-blue-100",
+            "group-[.toast]:!left-auto group-[.toast]:!right-3 group-[.toast]:!top-1/2 group-[.toast]:!-translate-y-1/2 group-[.toast]:!bg-transparent group-[.toast]:!border-0 group-[.toast]:!text-foreground group-[.toast]:!opacity-100 group-[.toast]:[&_svg]:!h-[18px] group-[.toast]:[&_svg]:!w-[18px] group-[.toast]:[&_svg]:!stroke-[2.4]",
         },
       }}
       {...props}
