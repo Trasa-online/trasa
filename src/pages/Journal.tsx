@@ -47,7 +47,10 @@ const Journal = () => {
 
   return (
     <div className="flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
-      <h1 className="text-xl font-display font-extrabold tracking-tight pt-2 pb-3">Dziennik podróży</h1>
+      <div className="pt-2 pb-3">
+        <h1 className="text-xl font-display font-extrabold tracking-tight">Dziennik podróży</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">Wspomnienia z&nbsp;Twoich przebytych tras.</p>
+      </div>
       <div className="border-b border-border/40 mb-3" />
 
       <JournalTab userId={user.id} />

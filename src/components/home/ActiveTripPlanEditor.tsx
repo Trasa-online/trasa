@@ -11,7 +11,7 @@ import { notify } from "@/lib/notify";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useDistanceReference, tryResolveOnSite } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
-import { Navigation, GripVertical } from "lucide-react";
+import { Navigation, GripVertical, RotateCcw } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 
 // Edytor planu aktywnej trasy osadzony na ekranie glownym. Replika edytora planu z
@@ -403,6 +403,20 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     notify.success("Trasa ukończona! 🎉", "Uzupełnij wspomnienie w Dzienniku");
   };
 
+  // Cofnij odhaczenie (np. omylkowe "Odhacz").
+  const unmarkVisited = async (pinId: string) => {
+    queryClient.setQueryData(["active-plan-all-pins", idsKey], (old: any) =>
+      (old ?? []).map((p: any) => (p.id === pinId ? { ...p, visited_at: null } : p)),
+    );
+    try {
+      await (supabase as any).from("pins").update({ visited_at: null }).eq("id", pinId);
+      notify.success("Cofnięto odhaczenie");
+    } catch (e: any) {
+      console.error("[ActiveTripPlanEditor] unmarkVisited failed:", e?.message ?? e);
+      queryClient.invalidateQueries({ queryKey: ["active-plan-all-pins", idsKey] });
+    }
+  };
+
   const markVisited = async (pinId: string) => {
     setSnoozedPinId(null);
     // Czy to ostatni nieodwiedzony pin w aktywnej trasie?
@@ -555,6 +569,14 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
               <p className="text-base font-black leading-tight">{pin.place_name}</p>
             </div>
           </button>
+          {pin.visited_at && (
+            <button
+              onClick={() => unmarkVisited(pin.id)}
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-border/30 text-xs font-semibold text-muted-foreground active:scale-95 transition-transform"
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Cofnij odhaczenie
+            </button>
+          )}
           {editable && (
             <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
               <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">

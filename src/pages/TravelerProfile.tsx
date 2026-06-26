@@ -91,11 +91,12 @@ function SectionCard({ icon, title, subtitle, value, bg, onClick }: {
   return (
     <button
       onClick={onClick}
-      className={cn("w-full text-left rounded-3xl p-5 active:scale-[0.99] transition-transform", bg)}
+      disabled={!onClick}
+      className={cn("w-full text-left rounded-3xl p-5 transition-transform", bg, onClick && "active:scale-[0.99]")}
     >
       <div className="flex items-start justify-between">
         <div className="h-11 w-11 rounded-2xl bg-white shadow-sm flex items-center justify-center">{icon}</div>
-        <ArrowUpRight className="h-5 w-5 text-[#0E0E0E]/55" />
+        {onClick && <ArrowUpRight className="h-5 w-5 text-[#0E0E0E]/55" />}
       </div>
       <div className="flex items-end justify-between gap-3 mt-7">
         <div className="min-w-0">
@@ -213,12 +214,14 @@ const TravelerProfile = () => {
   const { data: stats } = useQuery({
     queryKey: ["profile-stats", user?.id],
     queryFn: async () => {
-      // Only count solo (non-group-session) completed routes
+      // Ukonczone trasy solo = trip_type 'completed' (ustawiane przy finalizacji/odhaczeniu
+      // ostatniego miejsca). Wczesniej liczylo chat_status='completed' ktory nigdy nie byl
+      // ustawiany -> licznik zawsze 0.
       const { data: routes } = await (supabase as any)
         .from("routes")
-        .select("city, start_date, chat_status, group_session_id")
+        .select("city, start_date, trip_type, group_session_id")
         .eq("user_id", user!.id)
-        .eq("chat_status", "completed")
+        .eq("trip_type", "completed")
         .is("group_session_id", null);
 
       const all = routes ?? [];
@@ -290,8 +293,11 @@ const TravelerProfile = () => {
     <div className="min-h-screen bg-background pb-24">
 
       {/* Header - tytul do lewej, jak strona glowna ("Twoje trasy") */}
-      <div className="relative flex items-center justify-between gap-2 px-5 pt-3 pb-2.5 after:content-[''] after:absolute after:bottom-0 after:left-4 after:right-4 after:h-px after:bg-border/40">
-        <h1 className="text-xl font-display font-extrabold tracking-tight">Mój profil</h1>
+      <div className="relative flex items-start justify-between gap-2 px-5 pt-3 pb-2.5 after:content-[''] after:absolute after:bottom-0 after:left-4 after:right-4 after:h-px after:bg-border/40">
+        <div className="min-w-0">
+          <h1 className="text-xl font-display font-extrabold tracking-tight">Mój profil</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Twoje podróże, znajomi i&nbsp;kolekcje miejsc.</p>
+        </div>
         <button
           onClick={() => navigate("/settings")}
           className="h-9 w-9 flex items-center justify-center rounded-2xl text-muted-foreground hover:bg-muted transition-colors active:scale-90"
@@ -373,7 +379,6 @@ const TravelerProfile = () => {
             title="Miasta"
             subtitle="odwiedzone miejsca"
             value={stats?.cities ?? 0}
-            onClick={() => navigate("/dziennik")}
           />
           <SectionCard
             bg="bg-trasa-orange"
