@@ -293,7 +293,7 @@ const TravelerProfile = () => {
     <div className="min-h-screen bg-background pb-24">
 
       {/* Header - tytul do lewej, jak strona glowna ("Twoje trasy") */}
-      <div className="relative flex items-start justify-between gap-2 px-5 pt-3 pb-2.5 after:content-[''] after:absolute after:bottom-0 after:left-4 after:right-4 after:h-px after:bg-border/40">
+      <div className="relative flex items-start justify-between gap-2 px-4 pt-3 pb-2.5 after:content-[''] after:absolute after:bottom-0 after:left-4 after:right-4 after:h-px after:bg-border/40">
         <div className="min-w-0">
           <h1 className="text-xl font-display font-extrabold tracking-tight">Mój profil</h1>
           <p className="text-xs text-muted-foreground mt-0.5">Twoje podróże, znajomi i&nbsp;kolekcje miejsc.</p>
@@ -307,7 +307,7 @@ const TravelerProfile = () => {
         </button>
       </div>
 
-      <div className="px-5 space-y-5 max-w-lg mx-auto">
+      <div className="px-4 space-y-5 max-w-lg mx-auto">
 
         {/* Header: avatar + username (lewo), znajomi (prawo) */}
         <div className="flex items-center justify-between gap-4 pt-1">

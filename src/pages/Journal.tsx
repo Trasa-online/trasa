@@ -47,7 +47,7 @@ const Journal = () => {
 
   return (
     <div className="flex-1 flex flex-col px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] overflow-y-auto">
-      <div className="pt-2 pb-3">
+      <div className="pt-3 pb-2.5">
         <h1 className="text-xl font-display font-extrabold tracking-tight">Dziennik podróży</h1>
         <p className="text-xs text-muted-foreground mt-0.5">Wspomnienia z&nbsp;Twoich przebytych tras.</p>
       </div>

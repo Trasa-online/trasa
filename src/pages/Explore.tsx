@@ -300,7 +300,7 @@ const Explore = () => {
         {myCollections ? (
           <div className="flex items-center gap-2.5 pt-2">
             <button
-              onClick={() => navigate("/eksploruj", { replace: true, state: null })}
+              onClick={() => { if (window.history.state?.idx > 0) navigate(-1); else navigate("/moj-profil"); }}
               className="h-9 w-9 -ml-1 flex items-center justify-center text-foreground shrink-0"
               aria-label="Wróć do eksploracji"
             >
