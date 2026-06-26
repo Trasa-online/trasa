@@ -64,7 +64,7 @@ const HomeSwipe = () => {
       {showSetup && introSeen && <ProfileSetup onDone={finishSetup} />}
 
       {/* Top bar */}
-      <div className="shrink-0 bg-background px-4 pt-3 pb-2.5 flex items-center justify-between gap-2">
+      <div className="shrink-0 bg-background px-4 pt-3 pb-2.5 flex items-center justify-between gap-2 border-b border-border/40">
         <h1 className="text-xl font-display font-extrabold tracking-tight">Twoje trasy</h1>
         <div className="flex items-center gap-1">
           {isGuest ? (
