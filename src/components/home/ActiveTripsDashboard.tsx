@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 
 const fmtDate = (d?: string | null) =>
   d && isValid(parseISO(d)) ? format(parseISO(d), "d MMMM yyyy", { locale: pl }) : null;
+const fmtShort = (d?: string | null) =>
+  d && isValid(parseISO(d)) ? format(parseISO(d), "d MMM", { locale: pl }) : null;
 
 // Sekcja w stylu "koncept": ikona w zaokraglonym kwadracie (lewy gorny rog), tekst do
 // lewej, jasno-pomaranczowe tlo. Solo vs grupowe roznia sie odcieniem - solo bardzo jasny
@@ -50,6 +52,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedSoloId, setSelectedSoloId] = useState<string | null>(null);
 
   // Usuniecie aktywnej trasy z home (z potwierdzeniem). Czysci piny + chat_sessions + route.
   const handleDelete = async (e: React.MouseEvent, r: any) => {
@@ -86,9 +89,17 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
         .eq("user_id", userId)
         .in("trip_type", ["planning", "ongoing"])
         .order("created_at", { ascending: false });
-      // Tylko NAJBARDZIEJ AKTUALNA aktywna trasa solo (jedna). Reszta jest dostepna
-      // w "Szczegoly" / historii - home pokazuje to, czym user zyje teraz.
-      return ((data as any[]) || []).filter((r) => !r.group_session_id).slice(0, 1);
+      // Wszystkie aktywne trasy solo, ale DEDUPE po folderze (trasa wielodniowa = jeden wpis;
+      // ActiveTripPlanEditor sam laduje dni folderu). Reprezentant = najnowsza trasa w grupie.
+      // User moze miec kilka tras dla tego samego miasta/daty -> switcher na home (nie blokujemy
+      // userow jedna trasa).
+      const solo = ((data as any[]) || []).filter((r) => !r.group_session_id);
+      const byTrip = new Map<string, any>();
+      for (const r of solo) {
+        const key = r.folder_id ?? r.id;
+        if (!byTrip.has(key)) byTrip.set(key, r);
+      }
+      return [...byTrip.values()];
     },
     enabled: !!userId,
   });
@@ -144,27 +155,51 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
         {soloLoading ? (
           <div className="h-32 rounded-3xl bg-muted/40 animate-pulse" />
         ) : soloRoutes.length > 0 ? (
-          <div className="space-y-3">
-            {soloRoutes.map((r) => (
-              <div key={r.id}>
-                <div className="pb-2.5 flex items-end gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-2xl font-display font-extrabold leading-tight truncate">{r.city || r.title || "Trasa"}</p>
-                    {fmtDate(r.start_date) && <p className="text-xs text-muted-foreground mt-0.5">{fmtDate(r.start_date)}</p>}
+          (() => {
+            const selected = soloRoutes.find((r) => r.id === selectedSoloId) ?? soloRoutes[0];
+            return (
+              <>
+                {/* Switcher - gdy user ma kilka aktywnych tras (np. ten sam dzien, warianty). */}
+                {soloRoutes.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 mb-3 pb-0.5">
+                    {soloRoutes.map((r) => {
+                      const active = r.id === selected.id;
+                      return (
+                        <button
+                          key={r.id}
+                          onClick={() => setSelectedSoloId(r.id)}
+                          className={cn(
+                            "shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors active:scale-[0.96]",
+                            active ? "bg-foreground text-background border-foreground" : "bg-card text-muted-foreground border-border/60",
+                          )}
+                        >
+                          {r.city || r.title || "Trasa"}{fmtShort(r.start_date) ? ` · ${fmtShort(r.start_date)}` : ""}
+                          {Array.isArray(r.pins) && r.pins.length > 0 ? ` · ${r.pins.length}` : ""}
+                        </button>
+                      );
+                    })}
                   </div>
-                  <button
-                    onClick={(e) => handleDelete(e, r)}
-                    disabled={deletingId === r.id}
-                    aria-label="Usuń trasę"
-                    className="shrink-0 mb-0.5 h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 disabled:opacity-50"
-                  >
-                    {deletingId === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  </button>
+                )}
+                <div key={selected.id}>
+                  <div className="pb-2.5 flex items-end gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-2xl font-display font-extrabold leading-tight truncate">{selected.city || selected.title || "Trasa"}</p>
+                      {fmtDate(selected.start_date) && <p className="text-xs text-muted-foreground mt-0.5">{fmtDate(selected.start_date)}</p>}
+                    </div>
+                    <button
+                      onClick={(e) => handleDelete(e, selected)}
+                      disabled={deletingId === selected.id}
+                      aria-label="Usuń trasę"
+                      className="shrink-0 mb-0.5 h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 disabled:opacity-50"
+                    >
+                      {deletingId === selected.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <ActiveTripPlanEditor routeId={selected.id} flush />
                 </div>
-                <ActiveTripPlanEditor routeId={r.id} flush />
-              </div>
-            ))}
-          </div>
+              </>
+            );
+          })()
         ) : (
           <EmptySection
             variant="solo"
