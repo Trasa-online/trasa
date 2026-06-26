@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
+import { supabase } from "@/integrations/supabase/client";
 import { usePostHog } from "@posthog/react";
 import CityPicker from "@/components/plan-wizard/CityPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
@@ -79,6 +80,8 @@ const PlanWizard = () => {
 
   const [showAddPlace, setShowAddPlace] = useState(false);
   const exploreMode = returnState?.exploreMode ?? false;
+  // Istniejaca aktywna trasa dla wybranego miasta+daty (hybryda: pytamy kontynuuj/nowa).
+  const [dupTrip, setDupTrip] = useState<{ id: string; city: string; start_date: string } | null>(null);
 
   // Step 4 tabs: "swipe" (Eksploruj) | "matches" (Dopasowania). Polubione miejsca
   // sa lifted z PlaceSwipera przez onLikedPlacesChange callback - PlaceSwiper trzyma
@@ -294,10 +297,26 @@ const PlanWizard = () => {
           }} />
         )}
         {step === 2 && (
-          <FullCalendarPicker onConfirm={(selectedDate, days) => {
+          <FullCalendarPicker onConfirm={async (selectedDate, days) => {
             setDate(selectedDate);
             setNumDays(days);
             posthog.capture("plan_date_selected", { num_days: days });
+            // Hybryda: jesli user ma juz aktywna trase dla tego miasta+daty - zapytaj
+            // (kontynuuj istniejaca / stworz osobna) ZANIM zacznie wybierac miejsca.
+            if (user && !isAnonymous && city) {
+              const pad = (n: number) => String(n).padStart(2, "0");
+              const dateStr = `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth() + 1)}-${pad(selectedDate.getDate())}`;
+              const { data } = await (supabase as any)
+                .from("routes")
+                .select("id, city, start_date")
+                .eq("user_id", user.id)
+                .eq("city", city)
+                .eq("start_date", dateStr)
+                .in("trip_type", ["planning", "ongoing"])
+                .is("group_session_id", null)
+                .limit(1);
+              if (data?.length) { setDupTrip(data[0]); return; }
+            }
             setStep(3);
           }} />
         )}
@@ -665,6 +684,45 @@ const PlanWizard = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Hybryda - masz juz trase dla tego miasta+daty: kontynuuj / nowa */}
+      {dupTrip && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setDupTrip(null)}
+        >
+          <div
+            className="w-full max-w-md bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="h-11 w-11 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                <MapPin className="h-5 w-5 text-orange-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-base font-black leading-snug">Masz już trasę w&nbsp;{dupTrip.city}</p>
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                  Na ten dzień masz już aktywną trasę. Kontynuować ją, czy stworzyć osobną?
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => { setDupTrip(null); navigate("/home"); }}
+                className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+              >
+                Kontynuuj istniejącą
+              </button>
+              <button
+                onClick={() => { setDupTrip(null); setStep(3); }}
+                className="w-full py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform"
+              >
+                Stwórz osobną
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
