@@ -1076,20 +1076,17 @@ async function verifyPin(pin: any, city: string, apiKey: string, likedCoordMap?:
     const place = data.results[0];
     const lat = place.geometry?.location?.lat;
     const lng = place.geometry?.location?.lng;
+    if (lat == null || lng == null) return pin; // brak geometrii -> zostaw AI jako ostatecznosc
 
-    // Sanity check: result must be within 60 km of AI-suggested location
-    if (pin.latitude && pin.longitude && lat && lng) {
-      if (getDistanceKm(pin.latitude, pin.longitude, lat, lng) > 60) {
-        return pin; // Wrong location — keep AI data
-      }
-    }
-
+    // Ufamy REALNEMU wynikowi Google ("nazwa + miasto") zamiast wspolrzednych
+    // ZMYSLONYCH przez AI. Stary bug: gdy halucynacja AI byla >60km od Google, zostawal
+    // wynik AI -> piny w zlych miejscach na mapie. Google = miejsce ugruntowane w danych.
     return {
       ...pin,
       place_name: place.name ?? pin.place_name,
       address: place.formatted_address ?? pin.address,
-      latitude: lat ?? pin.latitude,
-      longitude: lng ?? pin.longitude,
+      latitude: lat,
+      longitude: lng,
       place_id: place.place_id ?? null,
     };
   } catch {
