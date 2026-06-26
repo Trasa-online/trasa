@@ -190,41 +190,55 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
               <button
                 key={s.id}
                 onClick={() => navigate(`/sesja/${s.join_code}`)}
-                className="w-full rounded-3xl bg-card border border-border/50 px-4 py-3.5 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+                className="w-full text-left active:scale-[0.99] transition-transform"
               >
+                {/* Naglowek 1:1 jak solo: duzy tytul Baloo + meta, floating (bez ramki) */}
+                <div className="pb-2 flex items-end gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-2xl font-display font-extrabold leading-tight truncate">{s.name || s.city || "Sesja grupowa"}</p>
+                    {(s.city || fmtDate(s.trip_date)) && (
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {s.city}{fmtDate(s.trip_date) ? ` · ${fmtDate(s.trip_date)}` : ""}
+                      </p>
+                    )}
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/40 shrink-0 mb-1" />
+                </div>
+                {/* Awatary uczestnikow + liczba osob */}
                 {(() => {
                   const avs = (memberAvatars as Record<string, { avatar_url: string | null; name: string }[]>)[s.id] ?? [];
                   if (avs.length === 0) {
                     return (
-                      <div className="h-10 w-10 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                        <Users className="h-5 w-5 text-orange-600" />
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-10 w-10 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                          <Users className="h-5 w-5 text-orange-600" />
+                        </div>
+                        <span className="text-xs text-muted-foreground">Sesja grupowa</span>
                       </div>
                     );
                   }
                   const shown = avs.slice(0, 3);
                   const extra = avs.length - shown.length;
+                  const n = avs.length;
+                  const label = n === 1 ? "osoba" : n < 5 ? "osoby" : "osób";
                   return (
-                    <div className="flex -space-x-2.5 shrink-0">
-                      {shown.map((a, i) => (
-                        <div key={i} className="h-9 w-9 rounded-full border-2 border-card overflow-hidden bg-orange-100" style={{ zIndex: 3 - i }}>
-                          <img src={avatarSrc(a.avatar_url)} alt={a.name} className="w-full h-full object-cover" />
-                        </div>
-                      ))}
-                      {extra > 0 && (
-                        <div className="h-9 w-9 rounded-full border-2 border-card bg-foreground/85 text-background text-[11px] font-bold flex items-center justify-center" style={{ zIndex: 0 }}>
-                          +{extra}
-                        </div>
-                      )}
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex -space-x-2.5 shrink-0">
+                        {shown.map((a, i) => (
+                          <div key={i} className="h-9 w-9 rounded-full border-2 border-background overflow-hidden bg-orange-100" style={{ zIndex: 3 - i }}>
+                            <img src={avatarSrc(a.avatar_url)} alt={a.name} className="w-full h-full object-cover" />
+                          </div>
+                        ))}
+                        {extra > 0 && (
+                          <div className="h-9 w-9 rounded-full border-2 border-background bg-foreground/85 text-background text-[11px] font-bold flex items-center justify-center" style={{ zIndex: 0 }}>
+                            +{extra}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground">{n} {label}</span>
                     </div>
                   );
                 })()}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold leading-tight truncate">{s.name || s.city || "Sesja grupowa"}</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                    {s.city}{fmtDate(s.trip_date) ? ` · ${fmtDate(s.trip_date)}` : ""}
-                  </p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
               </button>
             ))}
           </div>

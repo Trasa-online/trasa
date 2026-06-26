@@ -290,7 +290,7 @@ const TravelerProfile = () => {
     <div className="min-h-screen bg-background pb-24">
 
       {/* Header - tytul do lewej, jak strona glowna ("Twoje trasy") */}
-      <div className="flex items-center justify-between gap-2 px-5 pt-3 pb-2.5 border-b border-border/40">
+      <div className="relative flex items-center justify-between gap-2 px-5 pt-3 pb-2.5 after:content-[''] after:absolute after:bottom-0 after:left-4 after:right-4 after:h-px after:bg-border/40">
         <h1 className="text-xl font-display font-extrabold tracking-tight">Mój profil</h1>
         <button
           onClick={() => navigate("/settings")}

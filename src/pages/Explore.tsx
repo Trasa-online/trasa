@@ -296,7 +296,7 @@ const Explore = () => {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} className="flex-1 flex flex-col pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
-      <div className="px-4 pb-3 mb-3 flex items-start justify-between gap-3 border-b border-border/40">
+      <div className="relative px-4 pb-3 mb-3 flex items-start justify-between gap-3 after:content-[''] after:absolute after:bottom-0 after:left-4 after:right-4 after:h-px after:bg-border/40">
         {myCollections ? (
           <div className="flex items-center gap-2.5 pt-2">
             <button
