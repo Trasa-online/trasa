@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe, List, GalleryHorizontalEnd, Info } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe, List, GalleryHorizontalEnd, Info, Check } from "lucide-react";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
 import { notify } from "@/lib/notify";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { useDistanceReference } from "@/lib/distanceReference";
+import { useDistanceReference, tryResolveOnSite } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
 import { Navigation, GripVertical } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
@@ -167,7 +167,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
       if (!dayRouteIds.length) return [];
       const { data } = await (supabase as any)
         .from("pins")
-        .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, latitude, longitude, place_id, photo_url, pin_order")
+        .select("id, route_id, place_name, address, category, suggested_time, description, image_url, images, latitude, longitude, place_id, photo_url, pin_order, visited_at")
         .in("route_id", dayRouteIds)
         .order("pin_order", { ascending: true });
       return data ?? [];
@@ -341,6 +341,102 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     }
     return Number.isFinite(lastTs) && lastTs < today.getTime();
   }, [sortedDays]);
+
+  // ── "Następny przystanek" (tryb w trakcie trasy) ──────────────────────────────
+  // Kontekst wnioskujemy: trasa nie jest wspomnieniem (isMemory) + jestes na miejscu
+  // (distanceRef z GPS, ustawiany przez tryResolveOnSite ponizej). GPS = darmowy sensor,
+  // nawigacja = deep-link do Maps (tez 0 kosztow). Wizyty oznaczamy recznie ("Tak, bylem")
+  // - foreground, bez sledzenia w tle (bez drenazu baterii i zgody "Always").
+  const [snoozedPinId, setSnoozedPinId] = useState<string | null>(null);
+
+  // Na wejsciu w aktywna trase: jednorazowy odczyt GPS (cache, bez promptu) zeby wykryc
+  // czy user jest w miescie trasy -> ustawia distanceRef. Tylko gdy trasa NIE jest miniona.
+  useEffect(() => {
+    if (isMemory || !route?.city) return;
+    void tryResolveOnSite(route.city);
+  }, [isMemory, route?.city]);
+
+  const onSite = distanceRef?.source === "gps";
+  // Pierwszy nieodwiedzony pin (po kolejnosci) ze wspolrzednymi = nastepny przystanek.
+  const nextStop = useMemo(
+    () => currentPins.find((p: any) => !p.visited_at && p.latitude && p.longitude) ?? null,
+    [currentPins],
+  );
+  // Nieodwiedzony pin w zasiegu ~70 m od usera = "jestes na miejscu?".
+  const nearPin = useMemo(() => {
+    if (!onSite || !distanceRef) return null;
+    const hit = currentPins.find((p: any) =>
+      !p.visited_at && p.latitude && p.longitude &&
+      haversineKm(distanceRef.coords, { lat: p.latitude, lng: p.longitude }) <= 0.07,
+    );
+    return hit && hit.id !== snoozedPinId ? hit : null;
+  }, [currentPins, onSite, distanceRef, snoozedPinId]);
+
+  const markVisited = async (pinId: string) => {
+    setSnoozedPinId(null);
+    queryClient.setQueryData(["active-plan-all-pins", idsKey], (old: any) =>
+      (old ?? []).map((p: any) => (p.id === pinId ? { ...p, visited_at: new Date().toISOString() } : p)),
+    );
+    try {
+      await (supabase as any).from("pins").update({ visited_at: new Date().toISOString() }).eq("id", pinId);
+      notify.success("Odhaczone!");
+    } catch (e: any) {
+      console.error("[ActiveTripPlanEditor] markVisited failed:", e?.message ?? e);
+      queryClient.invalidateQueries({ queryKey: ["active-plan-all-pins", idsKey] });
+    }
+  };
+
+  // Karta kontekstowa nad planem: tylko w trasie (nie wspomnienie) i gdy jestes na miejscu.
+  const renderNextStop = () => {
+    if (isMemory || !onSite) return null;
+    if (!nextStop && !nearPin) return null;
+
+    // Jestes przy nieodwiedzonym miejscu -> potwierdzenie wizyty.
+    if (nearPin) {
+      return (
+        <div className="mb-4 rounded-3xl bg-trasa-teal border border-trasa-teal-ink/15 p-4">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-trasa-teal-ink">Jesteś na miejscu?</p>
+          <p className="text-lg font-display font-extrabold text-[#0E0E0E] mt-1 leading-tight">{nearPin.place_name}</p>
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={() => markVisited(nearPin.id)}
+              className="flex-1 py-2.5 rounded-full bg-[#0E0E0E] text-white text-sm font-bold flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+            >
+              <Check className="h-4 w-4" /> Tak, byłem
+            </button>
+            <button
+              onClick={() => setSnoozedPinId(nearPin.id)}
+              className="px-4 py-2.5 rounded-full bg-white/70 text-[#0E0E0E] text-sm font-semibold active:scale-[0.97] transition-transform"
+            >
+              Jeszcze nie
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Inaczej: nastepny przystanek + nawigacja (deep-link Maps).
+    const dist = distFor(nextStop);
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${nextStop.latitude},${nextStop.longitude}`;
+    return (
+      <div className="mb-4 rounded-3xl bg-trasa-teal border border-trasa-teal-ink/15 p-3.5 flex items-center gap-3">
+        <div className="h-11 w-11 rounded-2xl bg-white shadow-sm flex items-center justify-center shrink-0">
+          <Navigation className="h-5 w-5 text-trasa-teal-ink" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-trasa-teal-ink">Następny przystanek</p>
+          <p className="text-base font-display font-extrabold text-[#0E0E0E] leading-tight truncate">{nextStop.place_name}</p>
+          {dist && <p className="text-xs text-[#0E0E0E]/60 mt-0.5">{dist} od&nbsp;Ciebie</p>}
+        </div>
+        <button
+          onClick={() => window.open(mapsUrl, "_blank", "noopener,noreferrer")}
+          className="shrink-0 h-10 px-4 rounded-full bg-[#0E0E0E] text-white text-sm font-bold flex items-center gap-1.5 active:scale-95 transition-transform"
+        >
+          Nawiguj <Navigation className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  };
 
   // Podglad wizytowki miejsca - ta sama wizytowka co na swiperze (PlaceSwiperDetail).
   const openDetail = (pin: any) => setDetailPin({
@@ -529,6 +625,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
         </>
       ) : (
         <>
+          {renderNextStop()}
           {renderPlanHeader(true)}
           {planView === "list" ? renderEditablePlan(true) : renderSwiper(true, true)}
           {renderAddPlaceButton()}
