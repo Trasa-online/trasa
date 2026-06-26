@@ -137,7 +137,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   });
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 pt-1 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
+    <div className="flex-1 overflow-y-auto px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
       {/* Aktywne trasy (solo) */}
       <section className="mb-6">
         <p className="text-sm font-bold mb-2.5 px-1">Aktywne trasy</p>

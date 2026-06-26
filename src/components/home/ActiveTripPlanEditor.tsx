@@ -666,7 +666,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
           disabled={savingPlan || workingPins.length === 0}
           className="mt-4 w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
         >
-          {savingPlan ? "Zapisywanie…" : showFinalizeBtn ? "Zapisz plan dnia" : "Zapisz zmiany"}
+          {savingPlan ? "Zapisywanie…" : showFinalizeBtn ? "Zatwierdź tę trasę" : "Zapisz zmiany"}
         </button>
       )}
 
