@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe, List, GalleryHorizontalEnd, Info } from "lucide-react";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
@@ -90,7 +90,7 @@ function PlanReorderRow({ pin, isFirst, isLast, onTap, onUp, onDown, onRemove, d
   );
 }
 
-const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
+const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string; flush?: boolean }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -102,6 +102,7 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
       : null;
 
   const [planView, setPlanView] = useState<"list" | "cards">("cards");
+  const [infoOpen, setInfoOpen] = useState(false);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [detailPin, setDetailPin] = useState<any | null>(null);
   const [draft, setDraft] = useState<{ dayId: string; pins: any[] } | null>(null);
@@ -470,14 +471,32 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
   // Naglowek "Twój plan" + przelacznik Lista/Szczegoly + (multi-day) przelacznik dni.
   const renderPlanHeader = (showViewToggle = true) => (
     <>
-      <div className="flex items-center justify-end mb-3">
+      <div className="flex items-center justify-between mb-3">
+        <button
+          onClick={() => setInfoOpen((o) => !o)}
+          className={`h-7 w-7 flex items-center justify-center rounded-full transition-colors active:scale-90 ${infoOpen ? "bg-orange-100 text-orange-700" : "text-muted-foreground"}`}
+          aria-label="Jak edytować plan"
+        >
+          <Info className="h-4 w-4" />
+        </button>
         {showViewToggle && (
           <div className="flex rounded-full bg-muted p-0.5">
-            <button onClick={() => setPlanView("list")} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Lista</button>
-            <button onClick={() => setPlanView("cards")} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Szczegóły</button>
+            <button onClick={() => setPlanView("list")} aria-label="Widok listy" className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+              <List className="h-4 w-4" />
+            </button>
+            <button onClick={() => setPlanView("cards")} aria-label="Widok kart" className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+              <GalleryHorizontalEnd className="h-4 w-4" />
+            </button>
           </div>
         )}
       </div>
+      {infoOpen && (
+        <div className="mb-3 rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+          <p className="text-xs text-orange-800 leading-relaxed">
+            Edytuj plan przed zapisem: kolejność, notki, usuwanie miejsc. Zapis blokuje trasę i&nbsp;pozwala ją&nbsp;udostępnić.
+          </p>
+        </div>
+      )}
       {isMultiDay && (
         <div className="flex gap-2 overflow-x-auto scrollbar-none mb-3 -mx-1 px-1">
           {sortedDays.map((d: any) => (
@@ -502,7 +521,7 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
   const showSaveChangesBtn = !isMemory && draft && draft.dayId === activeRouteId;
 
   return (
-    <div className="px-5 pt-1 pb-4">
+    <div className={`pt-1 pb-4 ${flush ? "px-0" : "px-5"}`}>
       {currentPins.length === 0 ? (
         <>
           <p className="text-center text-sm text-muted-foreground py-8">Brak miejsc w planie tego dnia.</p>
@@ -511,11 +530,6 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
       ) : (
         <>
           {renderPlanHeader(true)}
-          <div className="mb-3 rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5">
-            <p className="text-xs text-orange-800 leading-relaxed">
-              Popraw plan, jeśli coś się zmieniło - usuń miejsca, w&nbsp;których nie&nbsp;byliście, lub zmień kolejność. Oceń miejsca i&nbsp;dodaj notki, a&nbsp;potem zapisz, żeby zablokować plan i&nbsp;udostępnić trasę.
-            </p>
-          </div>
           {planView === "list" ? renderEditablePlan(true) : renderSwiper(true, true)}
           {renderAddPlaceButton()}
         </>
@@ -583,10 +597,10 @@ const ActiveTripPlanEditorInner = ({ routeId }: { routeId: string }) => {
 
 // Owijka ErrorBoundary: throw w renderze edytora planu pokazuje fallback zamiast wywalac
 // caly home.
-export default function ActiveTripPlanEditor({ routeId }: { routeId: string }) {
+export default function ActiveTripPlanEditor({ routeId, flush }: { routeId: string; flush?: boolean }) {
   return (
     <ErrorBoundary>
-      <ActiveTripPlanEditorInner routeId={routeId} />
+      <ActiveTripPlanEditorInner routeId={routeId} flush={flush} />
     </ErrorBoundary>
   );
 }
