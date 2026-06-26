@@ -385,14 +385,35 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     return hit && hit.id !== snoozedPinId ? hit : null;
   }, [currentPins, onSite, distanceRef, snoozedPinId]);
 
+  // Po odhaczeniu OSTATNIEGO miejsca (lub auto-visit przez GPS) - trasa konczy sie i trafia
+  // do Dziennika jako wspomnienie do uzupelnienia. new_for_users -> kropka na zakladce Dziennik
+  // + badge "Nowa trasa!" na wpisie (powiadomienie ze jest cos do uzupelnienia).
+  const finalizeOnComplete = async () => {
+    try {
+      await (supabase as any).from("routes")
+        .update({ plan_finalized: true, trip_type: "completed", new_for_users: user ? [user.id] : null })
+        .eq("id", activeRouteId);
+    } catch (e: any) {
+      console.error("[ActiveTripPlanEditor] finalizeOnComplete failed:", e?.message ?? e);
+    }
+    queryClient.removeQueries({ queryKey: ["home-active-solo"] });
+    queryClient.invalidateQueries({ queryKey: ["active-routes"] });
+    queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+    queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
+    notify.success("Trasa ukończona! 🎉", "Uzupełnij wspomnienie w Dzienniku");
+  };
+
   const markVisited = async (pinId: string) => {
     setSnoozedPinId(null);
+    // Czy to ostatni nieodwiedzony pin w aktywnej trasie?
+    const wasLast = currentPins.length > 0 && currentPins.every((p: any) => p.id === pinId || p.visited_at);
     queryClient.setQueryData(["active-plan-all-pins", idsKey], (old: any) =>
       (old ?? []).map((p: any) => (p.id === pinId ? { ...p, visited_at: new Date().toISOString() } : p)),
     );
     try {
       await (supabase as any).from("pins").update({ visited_at: new Date().toISOString() }).eq("id", pinId);
-      notify.success("Odhaczone!");
+      if (wasLast) await finalizeOnComplete();
+      else notify.success("Odhaczone!");
     } catch (e: any) {
       console.error("[ActiveTripPlanEditor] markVisited failed:", e?.message ?? e);
       queryClient.invalidateQueries({ queryKey: ["active-plan-all-pins", idsKey] });
@@ -507,11 +528,16 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   const renderSwiper = (editable: boolean, withRating: boolean) => (
     <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
       {workingPins.map((pin: any, i: number) => (
-        <div key={pin.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm flex flex-col">
+        <div key={pin.id} className={`snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm flex flex-col transition-opacity ${pin.visited_at ? "opacity-55" : ""}`}>
           <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
             <div className="relative w-full aspect-[4/3] bg-muted">
-              <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-4xl" />
+              <PlacePhoto pin={pin} className={`w-full h-full object-cover ${pin.visited_at ? "grayscale" : ""}`} emojiClass="text-4xl" />
               <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
+              {pin.visited_at && (
+                <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/60 backdrop-blur text-white text-[10px] font-bold">
+                  <Check className="h-3 w-3" /> Odwiedzone
+                </div>
+              )}
               {editable && (
                 <button
                   onClick={(e) => { e.stopPropagation(); removeWorkingPin(pin.id); }}
@@ -522,27 +548,11 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
                 </button>
               )}
             </div>
-            <div className="px-4 pt-4">
+            <div className="px-4 pt-4 pb-3">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
                 <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
               </span>
               <p className="text-base font-black leading-tight">{pin.place_name}</p>
-              {(() => {
-                const m = metaFor(pin);
-                const desc = pin.description || m.description;
-                return (
-                  <>
-                    {desc && <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">{desc}</p>}
-                    {m.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {m.tags.slice(0, 3).map((t: string) => (
-                          <span key={t} className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{t}</span>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
             </div>
           </button>
           {editable && (
