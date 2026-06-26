@@ -386,6 +386,8 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     const e = activeDay.end_date ? new Date(activeDay.end_date).setHours(0, 0, 0, 0) : new Date(activeDay.start_date).setHours(0, 0, 0, 0);
     return e < today.getTime();
   }, [isMemory, tripIsToday, activeDay]);
+  // Czy pokazujemy dolny pasek (nawigacja / zaplanowana / zakonczony) - jedno stale miejsce.
+  const showBottomBar = !isMemory && (tripIsToday || isFutureDay || isPastDay);
   // Nastepny przystanek = pierwszy nieodwiedzony i niepominiety pin (po kolejnosci).
   const nextStop = useMemo(
     () => currentPins.find((p: any) => !p.visited_at && !skippedPinIds.has(p.id)) ?? null,
@@ -456,81 +458,74 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   // Karta kontekstowa nad planem: tryb "w trakcie trasy". Pokazujemy gdy trasa nie jest
   // wspomnieniem i (jest dzisiaj LUB jestes fizycznie na miejscu wg GPS). GPS dodaje dystans
   // + auto "jestes na miejscu?"; bez GPS dziala manualne odhaczanie po kolei.
-  // Inline (nad planem): banner "Zaplanowana" dla trasy z PRZYSZLA data (dzien != dzis).
-  // Nawigacja zablokowana zeby user sie nie pomylil i nie "szedl" trasa na inny dzien.
-  const renderPlannedBanner = () => {
-    if (isMemory || tripIsToday) return null;
-    // Dzien MINIONY (np. dzien 1 wczoraj) - bez "zaczyna sie wkrotce"; miejsca wyszarzone.
-    if (isPastDay) {
-      return (
-        <div className="mb-4 rounded-3xl bg-muted/50 border border-border/40 p-3.5 flex items-center gap-3">
-          <div className="h-11 w-11 rounded-2xl bg-card shadow-sm flex items-center justify-center shrink-0">
-            <CalendarDays className="h-5 w-5 text-muted-foreground" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Dzień zakończony</p>
-            <p className="text-base font-display font-extrabold text-foreground leading-tight">Ten dzień już&nbsp;minął</p>
-          </div>
-        </div>
-      );
-    }
-    if (!isFutureDay || !nextStop) return null;
-    const label = daysUntilStart === 1 ? "jutro" : `za ${daysUntilStart} dni`;
-    return (
-      <div className="mb-4 rounded-3xl bg-muted/50 border border-border/40 p-3.5 flex items-center gap-3">
-        <div className="h-11 w-11 rounded-2xl bg-card shadow-sm flex items-center justify-center shrink-0">
-          <CalendarDays className="h-5 w-5 text-muted-foreground" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Zaplanowana</p>
-          <p className="text-base font-display font-extrabold text-foreground leading-tight">Zaczyna się {label}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Nawigacja włączy się w&nbsp;dniu wyjazdu.</p>
-        </div>
-      </div>
-    );
-  };
-
-  // Przyklejony pasek na dole (nad BottomNav): tryb "w trakcie" - tylko gdy dzien=dzis.
-  // [zielony check = bylem -> nastepny] [nazwa, tap=wizytowka] [Nawiguj]. Pod spodem
-  // "Przejdz do kolejnego" -> double-check "czy byles tutaj?" (bez GPS, bez baterii).
+  // Przyklejony pasek na dole (nad BottomNav) - JEDNO stale miejsce dla statusu dnia (zeby
+  // nic nie skakalo gora/dol): dzis = nawigacja + check, przyszly = "Zaplanowana", miniony =
+  // "Dzien zakonczony".
   const renderBottomBar = () => {
-    if (isMemory || !tripIsToday || !nextStop) return null;
-    const dist = distFor(nextStop);
-    const hasCoords = !!(nextStop.latitude && nextStop.longitude);
-    const mapsUrl = hasCoords ? `https://www.google.com/maps/dir/?api=1&destination=${nextStop.latitude},${nextStop.longitude}` : null;
+    if (!showBottomBar) return null;
+    const navMode = tripIsToday && !!nextStop;
+    const dist = navMode ? distFor(nextStop) : null;
+    const mapsUrl = navMode && nextStop.latitude && nextStop.longitude
+      ? `https://www.google.com/maps/dir/?api=1&destination=${nextStop.latitude},${nextStop.longitude}` : null;
     const remaining = currentPins.filter((p: any) => !p.visited_at && !skippedPinIds.has(p.id)).length;
+    if (!navMode && !isFutureDay && !isPastDay) return null;
     return (
       <div className="fixed left-1/2 -translate-x-1/2 w-full max-w-lg px-4 z-40 bottom-[calc(5.6rem+env(safe-area-inset-bottom,0px))]">
-        <div className="rounded-3xl bg-trasa-teal border border-trasa-teal-ink/20 shadow-xl shadow-black/15 p-2 pl-3.5 flex items-center gap-2">
-          <button onClick={() => openDetail(nextStop)} className="min-w-0 flex-1 text-left">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-trasa-teal-ink leading-none">Następny przystanek</p>
-            <p className="text-sm font-display font-extrabold text-[#0E0E0E] leading-tight truncate mt-0.5">{nextStop.place_name}</p>
-            {dist && <p className="text-[11px] text-[#0E0E0E]/55 leading-none mt-0.5">{dist} od&nbsp;Ciebie</p>}
-          </button>
-          {/* Akcje po prawej: zielony check (bylem) tuz obok Nawiguj - jasne ze to do klikniecia. */}
-          <button
-            onClick={() => markVisited(nextStop.id)}
-            aria-label="Byłem tutaj - odhacz"
-            className="h-11 w-11 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 active:scale-90 transition-transform shadow-sm"
-          >
-            <Check className="h-6 w-6" strokeWidth={2.6} />
-          </button>
-          {mapsUrl && (
-            <button
-              onClick={() => window.open(mapsUrl, "_blank", "noopener,noreferrer")}
-              className="shrink-0 h-11 px-4 rounded-full bg-[#0E0E0E] text-white text-sm font-bold flex items-center gap-1.5 active:scale-95 transition-transform"
-            >
-              <Navigation className="h-4 w-4" /> Nawiguj
-            </button>
-          )}
-        </div>
-        {remaining > 1 && (
-          <button
-            onClick={() => setSkipPromptPin(nextStop)}
-            className="mx-auto mt-1.5 flex items-center gap-1 px-3.5 py-1 text-[11px] font-semibold text-foreground/70 bg-card/90 border border-border/40 rounded-full shadow-sm active:scale-95 transition-transform"
-          >
-            Przejdź do kolejnego punktu z&nbsp;trasy <ChevronRight className="h-3 w-3" />
-          </button>
+        {navMode ? (
+          <>
+            <div className="rounded-3xl bg-trasa-teal border border-trasa-teal-ink/20 shadow-xl shadow-black/15 p-2 pl-3.5 flex items-center gap-2">
+              <button onClick={() => openDetail(nextStop)} className="min-w-0 flex-1 text-left">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-trasa-teal-ink leading-none">Następny przystanek</p>
+                <p className="text-sm font-display font-extrabold text-[#0E0E0E] leading-tight truncate mt-0.5">{nextStop.place_name}</p>
+                {dist && <p className="text-[11px] text-[#0E0E0E]/55 leading-none mt-0.5">{dist} od&nbsp;Ciebie</p>}
+              </button>
+              <button
+                onClick={() => markVisited(nextStop.id)}
+                aria-label="Byłem tutaj - odhacz"
+                className="h-11 w-11 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 active:scale-90 transition-transform shadow-sm"
+              >
+                <Check className="h-6 w-6" strokeWidth={2.6} />
+              </button>
+              {mapsUrl && (
+                <button
+                  onClick={() => window.open(mapsUrl, "_blank", "noopener,noreferrer")}
+                  className="shrink-0 h-11 px-4 rounded-full bg-[#0E0E0E] text-white text-sm font-bold flex items-center gap-1.5 active:scale-95 transition-transform"
+                >
+                  <Navigation className="h-4 w-4" /> Nawiguj
+                </button>
+              )}
+            </div>
+            {remaining > 1 && (
+              <button
+                onClick={() => setSkipPromptPin(nextStop)}
+                className="mx-auto mt-1.5 flex items-center gap-1 px-3.5 py-1 text-[11px] font-semibold text-foreground/70 bg-card/90 border border-border/40 rounded-full shadow-sm active:scale-95 transition-transform"
+              >
+                Przejdź do kolejnego punktu z&nbsp;trasy <ChevronRight className="h-3 w-3" />
+              </button>
+            )}
+          </>
+        ) : (
+          // Przyszly / miniony dzien - info banner w tym samym miejscu (bez skakania).
+          <div className="rounded-3xl bg-card border border-border/50 shadow-xl shadow-black/10 p-3 flex items-center gap-3">
+            <div className="h-11 w-11 rounded-2xl bg-muted flex items-center justify-center shrink-0">
+              <CalendarDays className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div className="min-w-0">
+              {isPastDay ? (
+                <>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Dzień zakończony</p>
+                  <p className="text-base font-display font-extrabold text-foreground leading-tight">Ten dzień już&nbsp;minął</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Zaplanowana</p>
+                  <p className="text-base font-display font-extrabold text-foreground leading-tight">
+                    Zaczyna się {daysUntilStart === 1 ? "jutro" : `za ${daysUntilStart} dni`}
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
         )}
       </div>
     );
@@ -710,12 +705,11 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
         </>
       ) : (
         <>
-          {renderPlannedBanner()}
           {renderPlanHeader(true)}
           {planView === "list" ? renderEditablePlan(true) : renderSwiper(true, true)}
           {renderAddPlaceButton()}
-          {/* Spacer pod przyklejony pasek "Nastepny przystanek" (zeby nie zaslanial tresci). */}
-          {!isMemory && tripIsToday && nextStop && <div className="h-20" />}
+          {/* Spacer pod przyklejony dolny pasek (status dnia), zeby nie zaslanial tresci. */}
+          {showBottomBar && <div className="h-24" />}
         </>
       )}
       {renderBottomBar()}
