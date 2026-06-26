@@ -588,15 +588,17 @@ const PlanWizard = () => {
                       key={diet.id}
                       onClick={() => toggleDiet(diet.id)}
                       className={cn(
-                        "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96] border",
+                        "flex items-center gap-1.5 pl-3 pr-2.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96] border",
                         active
-                          ? "bg-foreground text-background border-foreground"
-                          : "bg-muted text-foreground border-transparent"
+                          ? "bg-orange-50 border-orange-300 text-orange-700"
+                          : "bg-white border-border/60 text-foreground"
                       )}
                     >
                       <span>{diet.emoji}</span>
                       <span>{diet.label}</span>
-                      {active && <Check className="h-3.5 w-3.5 ml-0.5" />}
+                      {active
+                        ? <Check className="h-3.5 w-3.5 ml-0.5 text-orange-600" />
+                        : <Plus className="h-3.5 w-3.5 ml-0.5 text-muted-foreground/50" />}
                     </button>
                   );
                 })}
@@ -618,12 +620,12 @@ const PlanWizard = () => {
               Wszystko
             </button>
 
-            {/* Podkategorie pogrupowane wg MAIN_CATEGORIES - kazda sekcja w osobnym
-                bialym frame na off-white tle (spojne z widokiem dodawania miejsca). */}
-            <div className="rounded-2xl bg-[#F4F3EF] p-3 mb-5 flex flex-col gap-3">
+            {/* Podkategorie wg MAIN_CATEGORIES - "zawieszone" sekcje (bez bialych ramek),
+                rozdzielone spacingiem. Chip: ikona + tekst + plus/check (orange gdy wybrany). */}
+            <div className="flex flex-col gap-6 mb-5">
               {MAIN_CATEGORIES.map((cat) => (
-                <div key={cat.id} className="rounded-2xl bg-white border border-black/5 shadow-sm p-3.5">
-                  <div className="flex items-center gap-2 mb-2.5">
+                <div key={cat.id}>
+                  <div className="flex items-center gap-2 mb-3">
                     <span className="text-base">{cat.emoji}</span>
                     <p className="text-sm font-bold text-foreground">{cat.label}</p>
                   </div>
@@ -635,15 +637,17 @@ const PlanWizard = () => {
                           key={sub.id}
                           onClick={() => toggleCategory(sub.id)}
                           className={cn(
-                            "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96] border",
+                            "flex items-center gap-1.5 pl-3 pr-2.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96] border",
                             active
-                              ? "bg-foreground text-background border-foreground"
-                              : "bg-white text-foreground border-border/60 shadow-sm"
+                              ? "bg-orange-50 border-orange-300 text-orange-700"
+                              : "bg-white text-foreground border-border/60"
                           )}
                         >
                           <span>{sub.emoji}</span>
                           <span>{sub.label}</span>
-                          {active && <Check className="h-3.5 w-3.5 ml-0.5" />}
+                          {active
+                            ? <Check className="h-3.5 w-3.5 ml-0.5 text-orange-600" />
+                            : <Plus className="h-3.5 w-3.5 ml-0.5 text-muted-foreground/50" />}
                         </button>
                       );
                     })}

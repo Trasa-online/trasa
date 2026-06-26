@@ -262,11 +262,14 @@ const BottomNav = () => {
           <NavLink
             to="/home"
             end
-            className="flex items-center justify-center text-muted-foreground transition-colors"
+            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
             activeClassName="text-orange-600"
           >
             {({ isActive }) => (
-              <Home className={`h-6 w-6 ${isActive ? "stroke-2 text-orange-600" : "stroke-2"}`} />
+              <>
+                <Home className="h-6 w-6 stroke-2" />
+                <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
+              </>
             )}
           </NavLink>
 
@@ -276,11 +279,14 @@ const BottomNav = () => {
             <NavLink
               to="/eksploruj"
               end={false}
-              className="flex items-center justify-center text-muted-foreground transition-colors"
+              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
               activeClassName="text-orange-600"
             >
               {({ isActive }) => (
-                <Compass className={`h-6 w-6 ${isActive ? "stroke-2 text-orange-600" : "stroke-2"}`} />
+                <>
+                  <Compass className="h-6 w-6 stroke-2" />
+                  <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
+                </>
               )}
             </NavLink>
           )}
@@ -305,16 +311,19 @@ const BottomNav = () => {
             <NavLink
               to="/dziennik"
               end={false}
-              className="flex items-center justify-center text-muted-foreground transition-colors"
+              className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
               activeClassName="text-orange-600"
             >
               {({ isActive }) => (
-                <div className="relative">
-                  <BookOpen className={`h-6 w-6 ${isActive ? "stroke-2 text-orange-600" : "stroke-2"}`} />
-                  {hasNewJournalEntries && !isActive && (
-                    <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
-                  )}
-                </div>
+                <>
+                  <div className="relative">
+                    <BookOpen className="h-6 w-6 stroke-2" />
+                    {hasNewJournalEntries && !isActive && (
+                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
+                    )}
+                  </div>
+                  <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
+                </>
               )}
             </NavLink>
           )}
@@ -323,11 +332,14 @@ const BottomNav = () => {
           <NavLink
             to="/moj-profil"
             end={false}
-            className="flex items-center justify-center text-muted-foreground transition-colors"
+            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
             activeClassName="text-orange-600"
           >
             {({ isActive }) => (
-              <User className={`h-6 w-6 ${isActive ? "stroke-2 text-orange-600" : "stroke-2"}`} />
+              <>
+                <User className="h-6 w-6 stroke-2" />
+                <span className={`h-0.5 w-5 rounded-full transition-colors ${isActive ? "bg-orange-600" : "bg-transparent"}`} />
+              </>
             )}
           </NavLink>
 
