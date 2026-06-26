@@ -12,6 +12,7 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { MAIN_CATEGORIES, getSubcategoryLabel } from "@/lib/categories";
 import { setStartReference, markAskedForCity, tryResolveOnSite, getReference } from "@/lib/distanceReference";
+import { getTodayLikes } from "@/lib/exploreLikes";
 import LocationPrimer from "@/components/LocationPrimer";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -65,7 +66,15 @@ const PlanWizard = () => {
   // Filtr diety - multi-select: vegan, vegetarian, gluten_free, lactose_free
   const [dietFilters, setDietFilters] = useState<string[]>([]);
 
-  const allLikedNames: string[] = returnState?.likedPlaceNames ?? [];
+  // Polubione do "Dopasowań" = przekazane ze stanu (reuse prompt) + DZISIEJSZE polubienia
+  // z eksploracji DLA WYBRANEGO MIASTA. Wczesniej reuse szedl tylko z BottomNav po zgadnietym
+  // mescie (getActiveHomeCity), wiec po "Przegladaj miejsca" w innym miescie polubione nie
+  // wskakiwaly do Dopasowan. Merge po realnie wybranym miescie naprawia to (pokazuja sie od razu).
+  const allLikedNames: string[] = useMemo(() => {
+    const fromState = returnState?.likedPlaceNames ?? [];
+    const fromExplore = city ? getTodayLikes(city).map((l) => l.place_name) : [];
+    return Array.from(new Set([...fromState, ...fromExplore]));
+  }, [returnState?.likedPlaceNames, city]);
   const allSkippedNames: string[] = returnState?.skippedPlaceNames ?? [];
 
   const [showAddPlace, setShowAddPlace] = useState(false);

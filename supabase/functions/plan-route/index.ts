@@ -999,7 +999,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       const GOOGLE_API_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
       if (GOOGLE_API_KEY) {
         try {
-          plan = await verifyAndGroundPlan(plan, GOOGLE_API_KEY);
+          plan = await verifyAndGroundPlan(plan, GOOGLE_API_KEY, liked_places_data);
         } catch (err) {
           console.error("Places grounding failed, using AI data:", err);
         }
@@ -1042,7 +1042,26 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): 
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-async function verifyPin(pin: any, city: string, apiKey: string): Promise<any> {
+// Normalizacja nazwy do dopasowania pin <-> polubione miejsce.
+function normName(s: string): string {
+  return (s ?? "").toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+async function verifyPin(pin: any, city: string, apiKey: string, likedCoordMap?: Map<string, { lat: number; lng: number; place_id?: string | null }>): Promise<any> {
+  // KROK 0: Uziem pin REALNYMI wspolrzednymi polubionego miejsca (z bazy `places`), jesli
+  // je mamy. To autorytatywne i DARMOWE - omija Google Text Search, ktory bral pierwszy
+  // wynik dla "nazwa + miasto" (czesto inne miejsce o tej samej nazwie -> piny w zlych
+  // miejscach na mapie). Dotyczy gl. trybu restrict_to_liked (user wybral konkretne miejsca).
+  const known = likedCoordMap?.get(normName(pin.place_name));
+  if (known && Number.isFinite(known.lat) && Number.isFinite(known.lng) && (known.lat !== 0 || known.lng !== 0)) {
+    return {
+      ...pin,
+      latitude: known.lat,
+      longitude: known.lng,
+      ...(known.place_id ? { place_id: known.place_id } : {}),
+    };
+  }
+
   try {
     // Search by AI-suggested name + city
     const query = `${pin.place_name} ${city}`;
@@ -1078,12 +1097,19 @@ async function verifyPin(pin: any, city: string, apiKey: string): Promise<any> {
   }
 }
 
-async function verifyAndGroundPlan(plan: any, apiKey: string): Promise<any> {
+async function verifyAndGroundPlan(plan: any, apiKey: string, likedData?: any[]): Promise<any> {
+  // Mapa: znormalizowana nazwa polubionego miejsca -> jego REALNE wspolrzedne (z bazy).
+  const likedCoordMap = new Map<string, { lat: number; lng: number; place_id?: string | null }>();
+  for (const item of (likedData ?? [])) {
+    if (item?.place_name && item.latitude != null && item.longitude != null) {
+      likedCoordMap.set(normName(item.place_name), { lat: Number(item.latitude), lng: Number(item.longitude), place_id: item.place_id ?? null });
+    }
+  }
   const verifiedDays = await Promise.all(
     (plan.days ?? []).map(async (day: any) => ({
       ...day,
       pins: await Promise.all(
-        (day.pins ?? []).map((pin: any) => verifyPin(pin, plan.city ?? "", apiKey))
+        (day.pins ?? []).map((pin: any) => verifyPin(pin, plan.city ?? "", apiKey, likedCoordMap))
       ),
     }))
   );
