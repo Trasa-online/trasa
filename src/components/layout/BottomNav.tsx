@@ -266,7 +266,7 @@ const BottomNav = () => {
             activeClassName="text-orange-600"
           >
             {({ isActive }) => (
-              <Home className={`h-6 w-6 ${isActive ? "stroke-[2.5px] text-orange-600" : "stroke-2"}`} />
+              <Home className={`h-6 w-6 ${isActive ? "stroke-2 text-orange-600" : "stroke-2"}`} />
             )}
           </NavLink>
 
@@ -280,7 +280,7 @@ const BottomNav = () => {
               activeClassName="text-orange-600"
             >
               {({ isActive }) => (
-                <Compass className={`h-6 w-6 ${isActive ? "stroke-[2.5px] text-orange-600" : "stroke-2"}`} />
+                <Compass className={`h-6 w-6 ${isActive ? "stroke-2 text-orange-600" : "stroke-2"}`} />
               )}
             </NavLink>
           )}
@@ -310,7 +310,7 @@ const BottomNav = () => {
             >
               {({ isActive }) => (
                 <div className="relative">
-                  <BookOpen className={`h-6 w-6 ${isActive ? "stroke-[2.5px] text-orange-600" : "stroke-2"}`} />
+                  <BookOpen className={`h-6 w-6 ${isActive ? "stroke-2 text-orange-600" : "stroke-2"}`} />
                   {hasNewJournalEntries && !isActive && (
                     <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-background" />
                   )}
@@ -327,7 +327,7 @@ const BottomNav = () => {
             activeClassName="text-orange-600"
           >
             {({ isActive }) => (
-              <User className={`h-6 w-6 ${isActive ? "stroke-[2.5px] text-orange-600" : "stroke-2"}`} />
+              <User className={`h-6 w-6 ${isActive ? "stroke-2 text-orange-600" : "stroke-2"}`} />
             )}
           </NavLink>
 

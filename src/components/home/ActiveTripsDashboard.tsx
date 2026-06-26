@@ -147,13 +147,13 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
           <div className="space-y-3">
             {soloRoutes.map((r) => (
               <div key={r.id} className="rounded-3xl bg-card border border-border/50 overflow-hidden">
-                <div className="px-4 pt-3.5 pb-2 flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-base font-bold leading-tight flex items-center gap-1.5">
-                      <MapPin className="h-4 w-4 text-orange-600 shrink-0" />
-                      {r.city || r.title || "Trasa"}
-                    </p>
-                    {fmtDate(r.start_date) && <p className="text-xs text-muted-foreground mt-0.5 ml-[22px]">{fmtDate(r.start_date)}</p>}
+                <div className="px-4 pt-3.5 pb-2 flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                    <MapPin className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-bold leading-tight truncate">{r.city || r.title || "Trasa"}</p>
+                    {fmtDate(r.start_date) && <p className="text-xs text-muted-foreground mt-0.5">{fmtDate(r.start_date)}</p>}
                   </div>
                   <button
                     onClick={(e) => handleDelete(e, r)}
@@ -188,18 +188,18 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
         {groupLoading ? (
           <div className="h-20 rounded-3xl bg-muted/40 animate-pulse" />
         ) : groupSessions.length > 0 ? (
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {groupSessions.map((s) => (
               <button
                 key={s.id}
                 onClick={() => navigate(`/sesja/${s.join_code}`)}
-                className="w-full rounded-2xl bg-card border border-border/50 px-4 py-3.5 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+                className="w-full rounded-3xl bg-card border border-border/50 px-4 py-3.5 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
               >
                 {(() => {
                   const avs = (memberAvatars as Record<string, { avatar_url: string | null; name: string }[]>)[s.id] ?? [];
                   if (avs.length === 0) {
                     return (
-                      <div className="h-10 w-10 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                      <div className="h-10 w-10 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
                         <Users className="h-5 w-5 text-orange-600" />
                       </div>
                     );

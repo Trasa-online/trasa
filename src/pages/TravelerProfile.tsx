@@ -289,13 +289,13 @@ const TravelerProfile = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-2 pb-2">
-        <div className="h-9 w-9" />
-        <h1 className="text-base font-black tracking-tight">Mój profil</h1>
+      {/* Header - tytul do lewej, jak strona glowna ("Twoje trasy") */}
+      <div className="flex items-center justify-between gap-2 px-5 pt-3 pb-2.5">
+        <h1 className="text-xl font-black tracking-tight">Mój profil</h1>
         <button
           onClick={() => navigate("/settings")}
-          className="h-9 w-9 flex items-center justify-center rounded-2xl text-muted-foreground hover:bg-muted transition-colors"
+          className="h-9 w-9 flex items-center justify-center rounded-2xl text-muted-foreground hover:bg-muted transition-colors active:scale-90"
+          aria-label="Ustawienia"
         >
           <Settings className="h-5 w-5" />
         </button>

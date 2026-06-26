@@ -249,7 +249,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
               }
               navigate(`/review-summary?route=${entry.id}`);
             }}
-            className="w-full rounded-2xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform cursor-pointer"
+            className="w-full rounded-3xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform cursor-pointer"
           >
             {/* Cover photo */}
             <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
@@ -279,7 +279,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
                   </div>
                 )}
               </div>
-              <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm rounded-full p-1.5">
+              <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm rounded-lg p-1.5">
                 {entry.is_shared === false
                   ? <Lock className="h-3 w-3 text-white/80" />
                   : <Globe className="h-3 w-3 text-white/80" />
