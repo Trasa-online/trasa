@@ -347,7 +347,10 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   // (distanceRef z GPS, ustawiany przez tryResolveOnSite ponizej). GPS = darmowy sensor,
   // nawigacja = deep-link do Maps (tez 0 kosztow). Wizyty oznaczamy recznie ("Tak, bylem")
   // - foreground, bez sledzenia w tle (bez drenazu baterii i zgody "Always").
-  const [snoozedPinId, setSnoozedPinId] = useState<string | null>(null);
+  // Pominiete miejsca (user przeszedl dalej bez odhaczenia, na pytanie "bylem?" -> "jeszcze nie").
+  const [skippedPinIds, setSkippedPinIds] = useState<Set<string>>(new Set());
+  // Pin o ktory pytamy "Czy byles tutaj?" (double-check przy przejsciu do kolejnego bez odhaczenia).
+  const [skipPromptPin, setSkipPromptPin] = useState<any | null>(null);
 
   // Na wejsciu w aktywna trase: jednorazowy odczyt GPS (cache, bez promptu) zeby wykryc
   // czy user jest w miescie trasy -> ustawia distanceRef. Tylko gdy trasa NIE jest miniona.
@@ -356,7 +359,6 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     void tryResolveOnSite(route.city);
   }, [isMemory, route?.city]);
 
-  const onSite = distanceRef?.source === "gps";
   // Trasa "dzisiaj": dzisiejsza data miesci sie w zakresie dni trasy. To GLOWNY sygnal trybu
   // w trakcie (nie wymaga GPS - dziala tez w symulatorze i bez zgody na lokalizacje).
   // "Dzis" liczymy dla AKTYWNEGO DNIA (nie calego folderu) - nawigacja w trasie
@@ -375,21 +377,11 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     const s = new Date(activeDay.start_date).setHours(0, 0, 0, 0);
     return Math.round((s - today.getTime()) / 86_400_000);
   }, [activeDay]);
-  // Pierwszy nieodwiedzony pin (po kolejnosci) = nastepny przystanek (coords opcjonalne -
-  // bez nich brak "Nawiguj", ale odhaczanie po kolei dziala).
+  // Nastepny przystanek = pierwszy nieodwiedzony i niepominiety pin (po kolejnosci).
   const nextStop = useMemo(
-    () => currentPins.find((p: any) => !p.visited_at) ?? null,
-    [currentPins],
+    () => currentPins.find((p: any) => !p.visited_at && !skippedPinIds.has(p.id)) ?? null,
+    [currentPins, skippedPinIds],
   );
-  // Nieodwiedzony pin w zasiegu ~70 m od usera = "jestes na miejscu?".
-  const nearPin = useMemo(() => {
-    if (!onSite || !distanceRef) return null;
-    const hit = currentPins.find((p: any) =>
-      !p.visited_at && p.latitude && p.longitude &&
-      haversineKm(distanceRef.coords, { lat: p.latitude, lng: p.longitude }) <= 0.07,
-    );
-    return hit && hit.id !== snoozedPinId ? hit : null;
-  }, [currentPins, onSite, distanceRef, snoozedPinId]);
 
   // Po odhaczeniu OSTATNIEGO miejsca (lub auto-visit przez GPS) - trasa konczy sie i trafia
   // do Dziennika jako wspomnienie do uzupelnienia. new_for_users -> kropka na zakladce Dziennik
@@ -423,107 +415,99 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     }
   };
 
-  const markVisited = async (pinId: string) => {
-    setSnoozedPinId(null);
-    // Czy to ostatni nieodwiedzony pin w aktywnej trasie?
-    const wasLast = currentPins.length > 0 && currentPins.every((p: any) => p.id === pinId || p.visited_at);
+  // Czy po obsluzeniu (visit/skip) tego pina nie zostaje juz zaden do zrobienia -> finalizuj.
+  const isLastRemaining = (pinId: string) =>
+    currentPins.length > 0 && currentPins.every((p: any) => p.id === pinId || p.visited_at || skippedPinIds.has(p.id));
+
+  const markVisited = async (pinId: string, silent = false) => {
+    const wasLast = isLastRemaining(pinId);
     queryClient.setQueryData(["active-plan-all-pins", idsKey], (old: any) =>
       (old ?? []).map((p: any) => (p.id === pinId ? { ...p, visited_at: new Date().toISOString() } : p)),
     );
     try {
       await (supabase as any).from("pins").update({ visited_at: new Date().toISOString() }).eq("id", pinId);
       if (wasLast) await finalizeOnComplete();
-      else notify.success("Odhaczone!");
+      else if (!silent) notify.success("Odhaczone!");
     } catch (e: any) {
       console.error("[ActiveTripPlanEditor] markVisited failed:", e?.message ?? e);
       queryClient.invalidateQueries({ queryKey: ["active-plan-all-pins", idsKey] });
     }
   };
 
+  // Double-check przy "przejdz do kolejnego" bez odhaczenia: pytamy czy user byl w tym miejscu.
+  const confirmSkipWasThere = () => { const p = skipPromptPin; setSkipPromptPin(null); if (p) void markVisited(p.id); };
+  const confirmSkipNotYet = () => {
+    const p = skipPromptPin; setSkipPromptPin(null);
+    if (!p) return;
+    const wasLast = isLastRemaining(p.id);
+    setSkippedPinIds((prev) => new Set(prev).add(p.id));
+    if (wasLast) void finalizeOnComplete();
+  };
+
   // Karta kontekstowa nad planem: tryb "w trakcie trasy". Pokazujemy gdy trasa nie jest
   // wspomnieniem i (jest dzisiaj LUB jestes fizycznie na miejscu wg GPS). GPS dodaje dystans
   // + auto "jestes na miejscu?"; bez GPS dziala manualne odhaczanie po kolei.
-  const renderNextStop = () => {
-    if (isMemory) return null;
-    if (!nextStop && !nearPin) return null;
-
-    // Trasa z PRZYSZLA data (nie dzisiaj) - tryb planowania, BEZ nawigacji/odhaczania
-    // (zeby user sie nie pomylil i nie "szedl" trasa ktora jest na inny dzien).
-    if (!tripIsToday) {
-      const label = daysUntilStart == null ? "wkrótce"
-        : daysUntilStart <= 0 ? "wkrótce"
-        : daysUntilStart === 1 ? "jutro"
-        : `za ${daysUntilStart} ${daysUntilStart < 5 ? "dni" : "dni"}`;
-      return (
-        <div className="mb-4 rounded-3xl bg-muted/50 border border-border/40 p-3.5 flex items-center gap-3">
-          <div className="h-11 w-11 rounded-2xl bg-card shadow-sm flex items-center justify-center shrink-0">
-            <CalendarDays className="h-5 w-5 text-muted-foreground" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Zaplanowana</p>
-            <p className="text-base font-display font-extrabold text-foreground leading-tight">Zaczyna się {label}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Nawigacja włączy się w&nbsp;dniu wyjazdu.</p>
-          </div>
+  // Inline (nad planem): banner "Zaplanowana" dla trasy z PRZYSZLA data (dzien != dzis).
+  // Nawigacja zablokowana zeby user sie nie pomylil i nie "szedl" trasa na inny dzien.
+  const renderPlannedBanner = () => {
+    if (isMemory || tripIsToday || !nextStop) return null;
+    const label = daysUntilStart == null || daysUntilStart <= 0 ? "wkrótce"
+      : daysUntilStart === 1 ? "jutro" : `za ${daysUntilStart} dni`;
+    return (
+      <div className="mb-4 rounded-3xl bg-muted/50 border border-border/40 p-3.5 flex items-center gap-3">
+        <div className="h-11 w-11 rounded-2xl bg-card shadow-sm flex items-center justify-center shrink-0">
+          <CalendarDays className="h-5 w-5 text-muted-foreground" />
         </div>
-      );
-    }
-
-    // Jestes przy nieodwiedzonym miejscu -> potwierdzenie wizyty.
-    if (nearPin) {
-      return (
-        <div className="mb-4 rounded-3xl bg-trasa-teal border border-trasa-teal-ink/15 p-4">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-trasa-teal-ink">Jesteś na miejscu?</p>
-          <p className="text-lg font-display font-extrabold text-[#0E0E0E] mt-1 leading-tight">{nearPin.place_name}</p>
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={() => markVisited(nearPin.id)}
-              className="flex-1 py-2.5 rounded-full bg-[#0E0E0E] text-white text-sm font-bold flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
-            >
-              <Check className="h-4 w-4" /> Tak, byłem
-            </button>
-            <button
-              onClick={() => setSnoozedPinId(nearPin.id)}
-              className="px-4 py-2.5 rounded-full bg-white/70 text-[#0E0E0E] text-sm font-semibold active:scale-[0.97] transition-transform"
-            >
-              Jeszcze nie
-            </button>
-          </div>
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Zaplanowana</p>
+          <p className="text-base font-display font-extrabold text-foreground leading-tight">Zaczyna się {label}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Nawigacja włączy się w&nbsp;dniu wyjazdu.</p>
         </div>
-      );
-    }
+      </div>
+    );
+  };
 
-    // Inaczej: nastepny przystanek + odhaczanie + (gdy sa coords) nawigacja deep-link Maps.
+  // Przyklejony pasek na dole (nad BottomNav): tryb "w trakcie" - tylko gdy dzien=dzis.
+  // [zielony check = bylem -> nastepny] [nazwa, tap=wizytowka] [Nawiguj]. Pod spodem
+  // "Przejdz do kolejnego" -> double-check "czy byles tutaj?" (bez GPS, bez baterii).
+  const renderBottomBar = () => {
+    if (isMemory || !tripIsToday || !nextStop) return null;
     const dist = distFor(nextStop);
     const hasCoords = !!(nextStop.latitude && nextStop.longitude);
     const mapsUrl = hasCoords ? `https://www.google.com/maps/dir/?api=1&destination=${nextStop.latitude},${nextStop.longitude}` : null;
+    const remaining = currentPins.filter((p: any) => !p.visited_at && !skippedPinIds.has(p.id)).length;
     return (
-      <div className="mb-4 rounded-3xl bg-trasa-teal border border-trasa-teal-ink/15 p-3.5">
-        <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-2xl bg-white shadow-sm flex items-center justify-center shrink-0">
-            <Navigation className="h-5 w-5 text-trasa-teal-ink" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-trasa-teal-ink">Następny przystanek</p>
-            <p className="text-base font-display font-extrabold text-[#0E0E0E] leading-tight truncate">{nextStop.place_name}</p>
-            {dist && <p className="text-xs text-[#0E0E0E]/60 mt-0.5">{dist} od&nbsp;Ciebie</p>}
-          </div>
-        </div>
-        <div className="flex gap-2 mt-3">
+      <div className="fixed left-1/2 -translate-x-1/2 w-full max-w-lg px-4 z-40 bottom-[calc(5.6rem+env(safe-area-inset-bottom,0px))]">
+        <div className="rounded-3xl bg-trasa-teal border border-trasa-teal-ink/20 shadow-xl shadow-black/15 p-2 flex items-center gap-2">
+          <button
+            onClick={() => markVisited(nextStop.id)}
+            aria-label="Byłem tutaj"
+            className="h-12 w-12 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 active:scale-90 transition-transform shadow-sm"
+          >
+            <Check className="h-6 w-6" strokeWidth={2.6} />
+          </button>
+          <button onClick={() => openDetail(nextStop)} className="min-w-0 flex-1 text-left pl-0.5">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-trasa-teal-ink leading-none">Następny przystanek</p>
+            <p className="text-sm font-display font-extrabold text-[#0E0E0E] leading-tight truncate mt-0.5">{nextStop.place_name}</p>
+            {dist && <p className="text-[11px] text-[#0E0E0E]/55 leading-none mt-0.5">{dist} od&nbsp;Ciebie</p>}
+          </button>
           {mapsUrl && (
             <button
               onClick={() => window.open(mapsUrl, "_blank", "noopener,noreferrer")}
-              className="flex-1 py-2.5 rounded-full bg-[#0E0E0E] text-white text-sm font-bold flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+              className="shrink-0 h-12 px-4 rounded-full bg-[#0E0E0E] text-white text-sm font-bold flex items-center gap-1.5 active:scale-95 transition-transform"
             >
               <Navigation className="h-4 w-4" /> Nawiguj
             </button>
           )}
-          <button
-            onClick={() => markVisited(nextStop.id)}
-            className={`${mapsUrl ? "px-5" : "flex-1"} py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform ${mapsUrl ? "bg-white/70 text-[#0E0E0E]" : "bg-[#0E0E0E] text-white"}`}
-          >
-            <Check className="h-4 w-4" /> Odhacz
-          </button>
         </div>
+        {remaining > 1 && (
+          <button
+            onClick={() => setSkipPromptPin(nextStop)}
+            className="mx-auto mt-1.5 flex items-center gap-1 px-3.5 py-1 text-[11px] font-semibold text-foreground/70 bg-card/90 border border-border/40 rounded-full shadow-sm active:scale-95 transition-transform"
+          >
+            Przejdź do kolejnego <ChevronRight className="h-3 w-3" />
+          </button>
+        )}
       </div>
     );
   };
@@ -702,11 +686,45 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
         </>
       ) : (
         <>
-          {renderNextStop()}
+          {renderPlannedBanner()}
           {renderPlanHeader(true)}
           {planView === "list" ? renderEditablePlan(true) : renderSwiper(true, true)}
           {renderAddPlaceButton()}
+          {/* Spacer pod przyklejony pasek "Nastepny przystanek" (zeby nie zaslanial tresci). */}
+          {!isMemory && tripIsToday && nextStop && <div className="h-20" />}
         </>
+      )}
+      {renderBottomBar()}
+
+      {/* Double-check: "przejdz do kolejnego" bez odhaczenia -> czy byles tutaj? */}
+      {skipPromptPin && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setSkipPromptPin(null)}
+        >
+          <div
+            className="w-full max-w-md bg-card rounded-t-3xl px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] flex flex-col gap-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="h-11 w-11 rounded-full bg-trasa-teal flex items-center justify-center shrink-0">
+                <Check className="h-5 w-5 text-trasa-teal-ink" />
+              </div>
+              <div className="flex-1">
+                <p className="text-base font-black leading-snug">Czy byłeś w&nbsp;{skipPromptPin.place_name}?</p>
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">Przechodzisz dalej - oznaczymy to&nbsp;miejsce, jeśli już&nbsp;tam byłeś.</p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button onClick={confirmSkipWasThere} className="w-full py-3.5 rounded-full bg-[#0E0E0E] text-white font-bold text-sm flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform">
+                <Check className="h-4 w-4" /> Tak, byłem
+              </button>
+              <button onClick={confirmSkipNotYet} className="w-full py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97] transition-transform">
+                Nie, pomiń to miejsce
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {(showFinalizeBtn || showSaveChangesBtn) && (
