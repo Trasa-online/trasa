@@ -478,23 +478,24 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     const remaining = currentPins.filter((p: any) => !p.visited_at && !skippedPinIds.has(p.id)).length;
     return (
       <div className="fixed left-1/2 -translate-x-1/2 w-full max-w-lg px-4 z-40 bottom-[calc(5.6rem+env(safe-area-inset-bottom,0px))]">
-        <div className="rounded-3xl bg-trasa-teal border border-trasa-teal-ink/20 shadow-xl shadow-black/15 p-2 flex items-center gap-2">
-          <button
-            onClick={() => markVisited(nextStop.id)}
-            aria-label="Byłem tutaj"
-            className="h-12 w-12 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 active:scale-90 transition-transform shadow-sm"
-          >
-            <Check className="h-6 w-6" strokeWidth={2.6} />
-          </button>
-          <button onClick={() => openDetail(nextStop)} className="min-w-0 flex-1 text-left pl-0.5">
+        <div className="rounded-3xl bg-trasa-teal border border-trasa-teal-ink/20 shadow-xl shadow-black/15 p-2 pl-3.5 flex items-center gap-2">
+          <button onClick={() => openDetail(nextStop)} className="min-w-0 flex-1 text-left">
             <p className="text-[10px] font-bold uppercase tracking-wide text-trasa-teal-ink leading-none">Następny przystanek</p>
             <p className="text-sm font-display font-extrabold text-[#0E0E0E] leading-tight truncate mt-0.5">{nextStop.place_name}</p>
             {dist && <p className="text-[11px] text-[#0E0E0E]/55 leading-none mt-0.5">{dist} od&nbsp;Ciebie</p>}
           </button>
+          {/* Akcje po prawej: zielony check (bylem) tuz obok Nawiguj - jasne ze to do klikniecia. */}
+          <button
+            onClick={() => markVisited(nextStop.id)}
+            aria-label="Byłem tutaj - odhacz"
+            className="h-11 w-11 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 active:scale-90 transition-transform shadow-sm"
+          >
+            <Check className="h-6 w-6" strokeWidth={2.6} />
+          </button>
           {mapsUrl && (
             <button
               onClick={() => window.open(mapsUrl, "_blank", "noopener,noreferrer")}
-              className="shrink-0 h-12 px-4 rounded-full bg-[#0E0E0E] text-white text-sm font-bold flex items-center gap-1.5 active:scale-95 transition-transform"
+              className="shrink-0 h-11 px-4 rounded-full bg-[#0E0E0E] text-white text-sm font-bold flex items-center gap-1.5 active:scale-95 transition-transform"
             >
               <Navigation className="h-4 w-4" /> Nawiguj
             </button>
@@ -505,7 +506,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
             onClick={() => setSkipPromptPin(nextStop)}
             className="mx-auto mt-1.5 flex items-center gap-1 px-3.5 py-1 text-[11px] font-semibold text-foreground/70 bg-card/90 border border-border/40 rounded-full shadow-sm active:scale-95 transition-transform"
           >
-            Przejdź do kolejnego <ChevronRight className="h-3 w-3" />
+            Przejdź do kolejnego punktu z&nbsp;trasy <ChevronRight className="h-3 w-3" />
           </button>
         )}
       </div>
