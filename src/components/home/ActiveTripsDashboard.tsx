@@ -18,6 +18,12 @@ const fmtDate = (d?: string | null) =>
   d && isValid(parseISO(d)) ? format(parseISO(d), "d MMMM yyyy", { locale: pl }) : null;
 const fmtShort = (d?: string | null) =>
   d && isValid(parseISO(d)) ? format(parseISO(d), "d MMM", { locale: pl }) : null;
+// Zakres dat trasy (wielodniowa) - "26 cze – 27 cze 2026"; jednodniowa -> pelna data.
+const fmtRange = (min?: string | null, max?: string | null) => {
+  if (!min || !isValid(parseISO(min))) return null;
+  if (!max || min === max || !isValid(parseISO(max))) return fmtDate(min);
+  return `${format(parseISO(min), "d MMM", { locale: pl })} – ${format(parseISO(max), "d MMM yyyy", { locale: pl })}`;
+};
 
 // Sekcja w stylu "koncept": ikona w zaokraglonym kwadracie (lewy gorny rog), tekst do
 // lewej, jasno-pomaranczowe tlo. Solo vs grupowe roznia sie odcieniem - solo bardzo jasny
@@ -95,11 +101,22 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
       // userow jedna trasa).
       const solo = ((data as any[]) || []).filter((r) => !r.group_session_id);
       const byTrip = new Map<string, any>();
+      const range = new Map<string, { min: string | null; max: string | null }>();
       for (const r of solo) {
         const key = r.folder_id ?? r.id;
-        if (!byTrip.has(key)) byTrip.set(key, r);
+        // Reprezentant = DZIEN 1 (najnizszy day_number) - inaczej home pokazywal dzien 2.
+        const cur = byTrip.get(key);
+        if (!cur || (r.day_number ?? 999) < (cur.day_number ?? 999)) byTrip.set(key, r);
+        // Zakres dat calego folderu (trasa wielodniowa).
+        const rg = range.get(key) ?? { min: null, max: null };
+        if (r.start_date) {
+          if (!rg.min || r.start_date < rg.min) rg.min = r.start_date;
+          if (!rg.max || r.start_date > rg.max) rg.max = r.start_date;
+        }
+        if (r.end_date && (!rg.max || r.end_date > rg.max)) rg.max = r.end_date;
+        range.set(key, rg);
       }
-      return [...byTrip.values()];
+      return [...byTrip.entries()].map(([key, r]) => ({ ...r, _dateMin: range.get(key)!.min, _dateMax: range.get(key)!.max }));
     },
     enabled: !!userId,
   });
@@ -184,7 +201,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                   <div className="pb-2.5 flex items-end gap-2">
                     <div className="min-w-0 flex-1">
                       <p className="text-2xl font-display font-extrabold leading-tight truncate">{selected.city || selected.title || "Trasa"}</p>
-                      {fmtDate(selected.start_date) && <p className="text-xs text-muted-foreground mt-0.5">{fmtDate(selected.start_date)}</p>}
+                      {fmtRange(selected._dateMin, selected._dateMax) && <p className="text-xs text-muted-foreground mt-0.5">{fmtRange(selected._dateMin, selected._dateMax)}</p>}
                     </div>
                     <button
                       onClick={(e) => handleDelete(e, selected)}

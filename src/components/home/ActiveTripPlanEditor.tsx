@@ -359,24 +359,22 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   const onSite = distanceRef?.source === "gps";
   // Trasa "dzisiaj": dzisiejsza data miesci sie w zakresie dni trasy. To GLOWNY sygnal trybu
   // w trakcie (nie wymaga GPS - dziala tez w symulatorze i bez zgody na lokalizacje).
+  // "Dzis" liczymy dla AKTYWNEGO DNIA (nie calego folderu) - nawigacja w trasie
+  // wielodniowej wlacza sie tylko dla dnia ktory jest dzisiaj. Dzien 2 (jutro) = planowanie.
   const tripIsToday = useMemo(() => {
+    if (!activeDay?.start_date) return false;
     const t = new Date(); t.setHours(0, 0, 0, 0);
-    let minStart = Infinity, maxEnd = -Infinity;
-    for (const d of sortedDays) {
-      if (d.start_date) minStart = Math.min(minStart, new Date(d.start_date).setHours(0, 0, 0, 0));
-      const e = d.end_date ?? d.start_date;
-      if (e) maxEnd = Math.max(maxEnd, new Date(e).setHours(0, 0, 0, 0));
-    }
-    return Number.isFinite(minStart) && t.getTime() >= minStart && t.getTime() <= maxEnd;
-  }, [sortedDays]);
-  // Ile dni do startu (dla trasy z przyszla data) - do bannera "Zaplanowana".
+    const s = new Date(activeDay.start_date).setHours(0, 0, 0, 0);
+    const e = activeDay.end_date ? new Date(activeDay.end_date).setHours(0, 0, 0, 0) : s;
+    return t.getTime() >= s && t.getTime() <= e;
+  }, [activeDay]);
+  // Ile dni do startu aktywnego dnia (do bannera "Zaplanowana").
   const daysUntilStart = useMemo(() => {
-    let minStart = Infinity;
-    for (const d of sortedDays) if (d.start_date) minStart = Math.min(minStart, new Date(d.start_date).setHours(0, 0, 0, 0));
-    if (!Number.isFinite(minStart)) return null;
+    if (!activeDay?.start_date) return null;
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    return Math.round((minStart - today.getTime()) / 86_400_000);
-  }, [sortedDays]);
+    const s = new Date(activeDay.start_date).setHours(0, 0, 0, 0);
+    return Math.round((s - today.getTime()) / 86_400_000);
+  }, [activeDay]);
   // Pierwszy nieodwiedzony pin (po kolejnosci) = nastepny przystanek (coords opcjonalne -
   // bez nich brak "Nawiguj", ale odhaczanie po kolei dziala).
   const nextStop = useMemo(
