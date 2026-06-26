@@ -357,9 +357,22 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   }, [isMemory, route?.city]);
 
   const onSite = distanceRef?.source === "gps";
-  // Pierwszy nieodwiedzony pin (po kolejnosci) ze wspolrzednymi = nastepny przystanek.
+  // Trasa "dzisiaj": dzisiejsza data miesci sie w zakresie dni trasy. To GLOWNY sygnal trybu
+  // w trakcie (nie wymaga GPS - dziala tez w symulatorze i bez zgody na lokalizacje).
+  const tripIsToday = useMemo(() => {
+    const t = new Date(); t.setHours(0, 0, 0, 0);
+    let minStart = Infinity, maxEnd = -Infinity;
+    for (const d of sortedDays) {
+      if (d.start_date) minStart = Math.min(minStart, new Date(d.start_date).setHours(0, 0, 0, 0));
+      const e = d.end_date ?? d.start_date;
+      if (e) maxEnd = Math.max(maxEnd, new Date(e).setHours(0, 0, 0, 0));
+    }
+    return Number.isFinite(minStart) && t.getTime() >= minStart && t.getTime() <= maxEnd;
+  }, [sortedDays]);
+  // Pierwszy nieodwiedzony pin (po kolejnosci) = nastepny przystanek (coords opcjonalne -
+  // bez nich brak "Nawiguj", ale odhaczanie po kolei dziala).
   const nextStop = useMemo(
-    () => currentPins.find((p: any) => !p.visited_at && p.latitude && p.longitude) ?? null,
+    () => currentPins.find((p: any) => !p.visited_at) ?? null,
     [currentPins],
   );
   // Nieodwiedzony pin w zasiegu ~70 m od usera = "jestes na miejscu?".
@@ -386,9 +399,11 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     }
   };
 
-  // Karta kontekstowa nad planem: tylko w trasie (nie wspomnienie) i gdy jestes na miejscu.
+  // Karta kontekstowa nad planem: tryb "w trakcie trasy". Pokazujemy gdy trasa nie jest
+  // wspomnieniem i (jest dzisiaj LUB jestes fizycznie na miejscu wg GPS). GPS dodaje dystans
+  // + auto "jestes na miejscu?"; bez GPS dziala manualne odhaczanie po kolei.
   const renderNextStop = () => {
-    if (isMemory || !onSite) return null;
+    if (isMemory || (!tripIsToday && !onSite)) return null;
     if (!nextStop && !nearPin) return null;
 
     // Jestes przy nieodwiedzonym miejscu -> potwierdzenie wizyty.
@@ -415,25 +430,38 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
       );
     }
 
-    // Inaczej: nastepny przystanek + nawigacja (deep-link Maps).
+    // Inaczej: nastepny przystanek + odhaczanie + (gdy sa coords) nawigacja deep-link Maps.
     const dist = distFor(nextStop);
-    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${nextStop.latitude},${nextStop.longitude}`;
+    const hasCoords = !!(nextStop.latitude && nextStop.longitude);
+    const mapsUrl = hasCoords ? `https://www.google.com/maps/dir/?api=1&destination=${nextStop.latitude},${nextStop.longitude}` : null;
     return (
-      <div className="mb-4 rounded-3xl bg-trasa-teal border border-trasa-teal-ink/15 p-3.5 flex items-center gap-3">
-        <div className="h-11 w-11 rounded-2xl bg-white shadow-sm flex items-center justify-center shrink-0">
-          <Navigation className="h-5 w-5 text-trasa-teal-ink" />
+      <div className="mb-4 rounded-3xl bg-trasa-teal border border-trasa-teal-ink/15 p-3.5">
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 rounded-2xl bg-white shadow-sm flex items-center justify-center shrink-0">
+            <Navigation className="h-5 w-5 text-trasa-teal-ink" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-trasa-teal-ink">Następny przystanek</p>
+            <p className="text-base font-display font-extrabold text-[#0E0E0E] leading-tight truncate">{nextStop.place_name}</p>
+            {dist && <p className="text-xs text-[#0E0E0E]/60 mt-0.5">{dist} od&nbsp;Ciebie</p>}
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-trasa-teal-ink">Następny przystanek</p>
-          <p className="text-base font-display font-extrabold text-[#0E0E0E] leading-tight truncate">{nextStop.place_name}</p>
-          {dist && <p className="text-xs text-[#0E0E0E]/60 mt-0.5">{dist} od&nbsp;Ciebie</p>}
+        <div className="flex gap-2 mt-3">
+          {mapsUrl && (
+            <button
+              onClick={() => window.open(mapsUrl, "_blank", "noopener,noreferrer")}
+              className="flex-1 py-2.5 rounded-full bg-[#0E0E0E] text-white text-sm font-bold flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+            >
+              <Navigation className="h-4 w-4" /> Nawiguj
+            </button>
+          )}
+          <button
+            onClick={() => markVisited(nextStop.id)}
+            className={`${mapsUrl ? "px-5" : "flex-1"} py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform ${mapsUrl ? "bg-white/70 text-[#0E0E0E]" : "bg-[#0E0E0E] text-white"}`}
+          >
+            <Check className="h-4 w-4" /> Odhacz
+          </button>
         </div>
-        <button
-          onClick={() => window.open(mapsUrl, "_blank", "noopener,noreferrer")}
-          className="shrink-0 h-10 px-4 rounded-full bg-[#0E0E0E] text-white text-sm font-bold flex items-center gap-1.5 active:scale-95 transition-transform"
-        >
-          Nawiguj <Navigation className="h-4 w-4" />
-        </button>
       </div>
     );
   };
