@@ -354,7 +354,6 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
   const distanceLabel = distanceRef && placeHasCoords
     ? formatDistance(haversineKmDist(distanceRef.coords, { lat: place.latitude, lng: place.longitude }))
     : null;
-  const refLabel = distanceRef?.label ?? "Ciebie";
   const showEnableDistance = !distanceRef && placeHasCoords;
   // Priorytet: tagi z business_profiles.tags (ustawione przez wlasciciela) > Google vibe_tags > fallback do typow z proxy
   const displayTags = place.businessTags?.length
@@ -524,7 +523,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
       {isTop && distanceLabel && (
         <div className="absolute top-4 right-4 z-10 flex items-center gap-1 bg-black/45 backdrop-blur-sm rounded-full px-2.5 py-1 shadow-sm">
           <Navigation className="h-3 w-3 text-white/90" />
-          <span className="text-white text-[11px] font-semibold">{distanceLabel} od&nbsp;{refLabel}</span>
+          <span className="text-white text-[11px] font-semibold">{distanceLabel}</span>
         </div>
       )}
       {isTop && !distanceLabel && showEnableDistance && onEnableDistance && (

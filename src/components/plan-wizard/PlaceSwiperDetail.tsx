@@ -209,7 +209,7 @@ const PlaceSwiperDetail = ({
         {/* Scrollable wrapper - motion.div drag-to-dismiss wyrzucone bo blokowal native scroll
             na iOS WebView. Sheet ma close button (Hero X) + tap-outside-to-close + Esc. */}
         <div
-          className="flex-1 min-h-0 overflow-y-auto"
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
           <PremiumBusinessCard

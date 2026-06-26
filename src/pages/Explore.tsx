@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { MapPin, Heart, Trash2, ArrowRight, Plus, ArrowLeft, Pencil, ListChecks } from "lucide-react";
+import { MapPin, Heart, Trash2, ArrowRight, Plus, ArrowLeft, Pencil, ListChecks, ChevronDown } from "lucide-react";
 import { parseISO, isValid, format, isToday, isYesterday } from "date-fns";
 import { pl } from "date-fns/locale";
 import DiscoveryFeed from "@/components/home/DiscoveryFeed";
@@ -74,6 +74,16 @@ export const LikedTab = () => {
     return getHistoryByCity().sort((a, b) => b.places.length - a.places.length);
   }, [nonce]);
 
+  // Sekcje miast zwiniete domyslnie - user rozwija to, co chce zobaczyc (krotka lista miast,
+  // nie sciana miejsc). Set rozwinietych miast.
+  const [expandedCities, setExpandedCities] = useState<Set<string>>(new Set());
+  const toggleCity = (city: string) =>
+    setExpandedCities((prev) => {
+      const next = new Set(prev);
+      next.has(city) ? next.delete(city) : next.add(city);
+      return next;
+    });
+
   const totalLikes = groups.reduce((sum, g) => sum + g.places.length, 0);
 
   if (totalLikes === 0) {
@@ -112,19 +122,28 @@ export const LikedTab = () => {
 
   return (
     <div className="flex flex-col gap-5">
-      {groups.map((group) => (
+      {groups.map((group) => {
+        const expanded = expandedCities.has(group.city);
+        return (
         <div key={group.city} className="rounded-3xl bg-card border border-border/50 overflow-hidden">
-          {/* Header - miasto */}
-          <div className="flex items-center gap-2 px-4 pt-4 pb-3">
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-base leading-tight flex items-center gap-1.5">
-                <MapPin className="h-4 w-4 text-orange-600 shrink-0" />
-                {group.city}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {group.places.length} {group.places.length === 1 ? "polubione miejsce" : group.places.length < 5 ? "polubione miejsca" : "polubionych miejsc"}
-              </p>
-            </div>
+          {/* Header - miasto (klik = rozwin/zwin) */}
+          <div className="flex items-center gap-2 pr-2">
+            <button
+              onClick={() => toggleCity(group.city)}
+              className="flex-1 min-w-0 flex items-center gap-2 px-4 pt-4 pb-3 text-left active:bg-muted/30 transition-colors"
+              aria-expanded={expanded}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-base leading-tight flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4 text-orange-600 shrink-0" />
+                  {group.city}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {group.places.length} {group.places.length === 1 ? "polubione miejsce" : group.places.length < 5 ? "polubione miejsca" : "polubionych miejsc"}
+                </p>
+              </div>
+              <ChevronDown className={`h-5 w-5 text-muted-foreground/60 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
+            </button>
             <button
               onClick={() => {
                 if (!confirm(`Usunąć wszystkie polubione z ${group.city}?`)) return;
@@ -140,6 +159,7 @@ export const LikedTab = () => {
             </button>
           </div>
 
+          {expanded && (<>
           {/* Places list */}
           <div className="flex flex-col">
             {group.places.map((p) => (
@@ -193,8 +213,10 @@ export const LikedTab = () => {
               </button>
             </div>
           )}
+          </>)}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

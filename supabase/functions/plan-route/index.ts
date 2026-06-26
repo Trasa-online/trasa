@@ -531,7 +531,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
               method: "POST",
               headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
               body: JSON.stringify({
-                model: "google/gemini-2.5-pro-preview-06-05",
+                model: "google/gemini-2.5-flash",
                 messages: [{ role: "user", content: openingPrompt }],
                 max_tokens: 300,
                 temperature: 0.7,
@@ -751,9 +751,11 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       ...userMessages,
     ];
 
-    // Try Gemini 2.5 Pro first, fall back to Flash if unavailable
-    const PRIMARY_MODEL = "google/gemini-2.5-pro-preview-06-05";
-    const FALLBACK_MODEL = "google/gemini-2.5-flash";
+    // Flash = PRIMARY (znacznie szybsze generowanie planu, ~3-5x; jakosc ukladania
+    // wybranych miejsc w dzien jest w pelni wystarczajaca). Pro = fallback na wypadek
+    // bledu Flash (rzadka sciezka). Wczesniej Pro bylo primary -> dlugie ladowanie planu.
+    const PRIMARY_MODEL = "google/gemini-2.5-flash";
+    const FALLBACK_MODEL = "google/gemini-2.5-pro-preview-06-05";
 
     const callAI = async (model: string) =>
       fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

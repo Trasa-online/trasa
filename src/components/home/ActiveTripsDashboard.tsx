@@ -68,7 +68,7 @@ function EmptySection({ icon, title, sub, cta, onCta, cta2, onCta2, variant }: {
     : "bg-orange-50 border-orange-100";      // solo - bardzo jasny orange
   return (
     <div className={cn("rounded-3xl border p-5", tone)}>
-      <div className="h-12 w-12 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-3.5">{icon}</div>
+      <div className="h-12 w-12 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-6">{icon}</div>
       <p className="text-base font-display font-extrabold leading-tight">{title}</p>
       <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[300px]">{sub}</p>
       {(cta || cta2) && (
@@ -162,7 +162,14 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   });
 
   return (
-    <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
+    <div className={cn(
+      "flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4",
+      // Aktywna trasa solo => przyklejony dolny pasek statusu dnia (~4rem nad BottomNav),
+      // wiec wiekszy pb zeby ostatnia sekcja (grupowa) nie chowala sie pod paskiem.
+      soloRoutes.length > 0
+        ? "pb-[calc(9.5rem+env(safe-area-inset-bottom,0px))]"
+        : "pb-[calc(5rem+env(safe-area-inset-bottom,0px))]",
+    )}>
       {/* Aktywne trasy (solo) */}
       <section className="mb-6">
         <p className="text-sm font-bold mb-2.5 px-1">Aktywne trasy</p>

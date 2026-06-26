@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe, List, GalleryHorizontalEnd, Info, Check } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe, List, GalleryHorizontalEnd, Map as MapIcon, Info, Check } from "lucide-react";
+import RouteMap from "@/components/RouteMap";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { PlacePhoto, resolveStored } from "@/components/PlacePhoto";
@@ -101,7 +102,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
       ? formatDistance(haversineKm(distanceRef.coords, { lat: pin.latitude, lng: pin.longitude }))
       : null;
 
-  const [planView, setPlanView] = useState<"list" | "cards">("cards");
+  const [planView, setPlanView] = useState<"list" | "cards" | "map">("cards");
   const [infoOpen, setInfoOpen] = useState(false);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [detailPin, setDetailPin] = useState<any | null>(null);
@@ -399,9 +400,10 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   // + badge "Nowa trasa!" na wpisie (powiadomienie ze jest cos do uzupelnienia).
   const finalizeOnComplete = async () => {
     try {
+      // Wielodniowa trasa = wszystkie dni (folder) konczymy razem; Dziennik dedupuje po folder_id.
       await (supabase as any).from("routes")
         .update({ plan_finalized: true, trip_type: "completed", new_for_users: user ? [user.id] : null })
-        .eq("id", activeRouteId);
+        .in("id", dayRouteIds.length ? dayRouteIds : [activeRouteId]);
     } catch (e: any) {
       console.error("[ActiveTripPlanEditor] finalizeOnComplete failed:", e?.message ?? e);
     }
@@ -427,8 +429,10 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   };
 
   // Czy po obsluzeniu (visit/skip) tego pina nie zostaje juz zaden do zrobienia -> finalizuj.
+  // WAZNE: liczymy po WSZYSTKICH dniach (allPins), nie tylko aktywnym - inaczej domkniecie
+  // dnia 2 z 3 falszywie konczy cala trase ("Trasa ukonczona" mimo ze jest jeszcze dzien 3).
   const isLastRemaining = (pinId: string) =>
-    currentPins.length > 0 && currentPins.every((p: any) => p.id === pinId || p.visited_at || skippedPinIds.has(p.id));
+    allPins.length > 0 && allPins.every((p: any) => p.id === pinId || p.visited_at || skippedPinIds.has(p.id));
 
   const markVisited = async (pinId: string, silent = false) => {
     const wasLast = isLastRemaining(pinId);
@@ -663,6 +667,9 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
             <button onClick={() => setPlanView("cards")} aria-label="Widok kart" className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "cards" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
               <GalleryHorizontalEnd className="h-4 w-4" />
             </button>
+            <button onClick={() => setPlanView("map")} aria-label="Widok mapy" className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "map" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+              <MapIcon className="h-4 w-4" />
+            </button>
           </div>
         )}
       </div>
@@ -706,10 +713,15 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
       ) : (
         <>
           {renderPlanHeader(true)}
-          {planView === "list" ? renderEditablePlan(true) : renderSwiper(true, true)}
+          {planView === "list" ? (
+            renderEditablePlan(true)
+          ) : planView === "map" ? (
+            // Mapa aktywnego dnia (currentPins) - przelacznik dni w naglowku zmienia dzien.
+            <RouteMap pins={currentPins as any} className="h-72 rounded-2xl border border-border/40" />
+          ) : (
+            renderSwiper(true, true)
+          )}
           {renderAddPlaceButton()}
-          {/* Spacer pod przyklejony dolny pasek (status dnia), zeby nie zaslanial tresci. */}
-          {showBottomBar && <div className="h-24" />}
         </>
       )}
       {renderBottomBar()}

@@ -599,8 +599,8 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
     return () => ro.disconnect();
   }, []);
 
-  // Drawer ZABLOKOWANY na full (85%) - nie zwija sie (decyzja produktowa).
-  const sheetHeight = getSnapPx("full", containerH || undefined);
+  // Bez drawera - widok planu wypelnia caly kontener (nie zwija sie, brak uchwytu/luki u gory).
+  const sheetHeight = containerH || getSnapPx("full", containerH || undefined);
 
   // Zamkniecie detalu pinu - przywraca carousel + scroll position.
   const closeDetail = useCallback(() => {
@@ -1243,21 +1243,16 @@ window.addEventListener('message',function(e){
           );
         })()}
 
-        {/* ── Draggable bottom sheet ──────────────────────────────────────── */}
+        {/* ── Panel planu (pelnoekranowy, bez drawera/uchwytu) ─────────────── */}
         <div
-          style={{
-            height: `${sheetHeight}px`,
-            transition: dragH !== null ? "none" : "height 0.3s cubic-bezier(0.32, 0.72, 0, 1)",
-          }}
-          className="absolute bottom-0 left-0 right-0 bg-card border-t border-border/60 rounded-t-3xl flex flex-col overflow-hidden z-10"
+          style={{ height: `${sheetHeight}px` }}
+          className="absolute bottom-0 left-0 right-0 bg-card flex flex-col overflow-hidden z-10"
         >
-          {/* Drag handle */}
-          <div className="flex-shrink-0 relative flex justify-center items-center py-4 select-none">
-            <div className="w-10 h-1 rounded-full bg-muted-foreground/25" />
-            {altRoutes && altRoutes.length > 1 && onSwitchAlt && altIndex !== undefined && (
-              <div className="absolute right-3 flex items-center gap-1" onClick={e => e.stopPropagation()}>
+          {/* Bez uchwytu drawera - widok pelnoekranowy. Pasek alternatyw tylko gdy istnieja. */}
+          {altRoutes && altRoutes.length > 1 && onSwitchAlt && altIndex !== undefined ? (
+            <div className="flex-shrink-0 flex justify-end items-center px-3 pt-3 pb-1 select-none">
+              <div className="flex items-center gap-1">
                 <button
-                  onPointerDown={e => e.stopPropagation()}
                   onClick={() => onSwitchAlt(altIndex > 0 ? altIndex - 1 : altRoutes.length - 1)}
                   className="h-7 w-7 rounded-full border border-border bg-background flex items-center justify-center active:scale-90 transition-transform"
                 >
@@ -1267,15 +1262,16 @@ window.addEventListener('message',function(e){
                   {altIndex + 1}/{altRoutes.length}
                 </span>
                 <button
-                  onPointerDown={e => e.stopPropagation()}
                   onClick={() => onSwitchAlt(altIndex < altRoutes.length - 1 ? altIndex + 1 : 0)}
                   className="h-7 w-7 rounded-full border border-border bg-background flex items-center justify-center active:scale-90 transition-transform"
                 >
                   <ChevronRight className="h-3.5 w-3.5" />
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="flex-shrink-0 h-3" />
+          )}
 
           {/* Peek: summary pills */}
           {snap === "peek" && dragH === null && plan && (
