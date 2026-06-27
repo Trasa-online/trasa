@@ -76,7 +76,7 @@ function VisualRoute() {
 const STEPS = [
   { title: "Witaj w Trasie!", desc: "Trasa to speed dating z miastem. W kilka minut ułożysz plan dnia: przeglądasz miejsca, dodajesz te które Cię ciekawią i dostajesz gotową trasę.", highlight: "", Visual: VisualIntro },
   { title: "Planuj sam lub z grupą", desc: "Kliknij + na pasku i wybierz: planuj solo, zaproś grupę kodem albo dołącz do znajomych. Wy przeglądacie miejsca, a Trasa zbiera Wasze dopasowania.", highlight: "", Visual: VisualPlan },
-  { title: "Gotowa trasa na mapie", desc: "Z dopasowań Trasa układa plan dnia w dobrej kolejności i pokazuje go na mapie. Plan dopracujesz i zapiszesz we wspomnieniach.", highlight: "Nawigujesz od punktu do punktu wprost z aplikacji.", Visual: VisualRoute },
+  { title: "Gotowa trasa na mapie", desc: "Z dopasowań Trasa układa plan dnia w dobrej kolejności i pokazuje go na mapie. Plan dopracujesz i zapiszesz we wspomnieniach.", highlight: "Nawigujesz od punktu do punktu przez Google Maps.", Visual: VisualRoute },
 ];
 
 interface HomeTourProps { onDone: () => void; lastLabel?: string; }
