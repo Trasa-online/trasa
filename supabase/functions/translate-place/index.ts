@@ -26,6 +26,30 @@ serve(async (req) => {
       );
     }
 
+    // ── Auth + ownership: pin musi nalezec do trasy zalogowanego usera ──
+    // Bez tego = IDOR (nadpisanie tlumaczen dowolnego cudzego pina + koszt AI) - wczesniej
+    // brak jakiejkolwiek weryfikacji auth.
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+    if (!token) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const { data: pinRow } = await supabase.from('pins').select('route_id').eq('id', pin_id).maybeSingle();
+    if (!pinRow) {
+      return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const { data: ownRoute } = await supabase.from('routes').select('id').eq('id', pinRow.route_id).eq('user_id', user.id).maybeSingle();
+    if (!ownRoute) {
+      return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     console.log('Translating place:', { pin_id, place_name, address });
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -144,11 +168,7 @@ IMPORTANT: Return ONLY the JSON object, no markdown, no explanation.`
 
     console.log('Extracted translations:', translations);
 
-    // Update pin with translations in database
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
+    // Update pin with translations (ownership zweryfikowany na poczatku funkcji)
     const { error: updateError } = await supabase
       .from('pins')
       .update({ name_translations: translations })

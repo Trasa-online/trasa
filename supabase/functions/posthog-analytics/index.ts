@@ -1,11 +1,19 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const POSTHOG_HOST = "https://eu.posthog.com";
 const PRIVATE_KEY = Deno.env.get("POSTHOG_PRIVATE_KEY") ?? "";
 const PROJECT_ID = Deno.env.get("POSTHOG_PROJECT_ID") ?? "";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// place_id to UUID z tabeli places. Walidacja PRZED interpolacja do HogQL = ochrona
+// przed injection (wczesniej dowolny string szedl prosto do zapytania).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const EVENT_LABEL: Record<string, string> = {
   place_viewed: "view",
@@ -16,12 +24,36 @@ const EVENT_LABEL: Record<string, string> = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   try {
     const { place_id, range_days = 30, include_recent = false } = await req.json();
-    if (!place_id) return new Response(JSON.stringify({ error: "place_id required" }), { status: 400 });
+    if (!place_id) return json({ error: "place_id required" }, 400);
+    // Twarda walidacja UUID - blokuje HogQL injection przez place_id.
+    if (typeof place_id !== "string" || !UUID_RE.test(place_id)) {
+      return json({ error: "invalid place_id" }, 400);
+    }
 
-    const since = new Date(Date.now() - range_days * 86_400_000).toISOString().slice(0, 10);
+    // ── Auth + autoryzacja: admin LUB wlasciciel wizytowki tego place_id ──
+    const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    if (!token) return json({ error: "unauthorized" }, 401);
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+    const { data: userData, error: userErr } = await admin.auth.getUser(token);
+    if (userErr || !userData?.user) return json({ error: "unauthorized" }, 401);
+    const uid = userData.user.id;
+
+    const { data: roleRow } = await admin
+      .from("user_roles").select("role").eq("user_id", uid).eq("role", "admin").maybeSingle();
+    if (!roleRow) {
+      // Nie admin -> musi byc wlascicielem wizytowki powiazanej z tym place_id.
+      const { data: ownRow } = await admin
+        .from("business_profiles").select("id").eq("place_id", place_id).eq("owner_user_id", uid).maybeSingle();
+      if (!ownRow) return json({ error: "forbidden" }, 403);
+    }
+
+    const safeDays = Math.min(Math.max(Number(range_days) || 30, 1), 365);
+    const since = new Date(Date.now() - safeDays * 86_400_000).toISOString().slice(0, 10);
 
     const queries: Promise<any>[] = [
       phQuery(`SELECT count() AS c FROM events WHERE event = 'place_viewed' AND properties.place_id = '${place_id}' AND toDate(timestamp) >= '${since}'`),

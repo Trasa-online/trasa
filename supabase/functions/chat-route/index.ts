@@ -143,17 +143,19 @@ serve(async (req) => {
       });
     }
 
-    // Load route + pins
+    // Ownership: route MUSI nalezec do usera (inaczej IDOR - odczyt/zapis do cudzej trasy
+    // przez service_role). Spojne z RLS routes (user_id = auth.uid()).
     const { data: route } = await supabase
       .from("routes")
-      .select("id, title, day_number, folder_id")
+      .select("id, title, day_number, folder_id, user_id")
       .eq("id", route_id)
-      .single();
+      .eq("user_id", user.id)
+      .maybeSingle();
 
     if (!route) {
       return new Response(
-        JSON.stringify({ error: "Route not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

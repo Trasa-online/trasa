@@ -104,6 +104,16 @@ serve(async (req) => {
       });
     }
 
+    // ── Tylko admin: to narzedzie seedujace (2x 16k tokenow AI + 30 wierszy). Bez tego
+    // dowolny user mogl odpalac drogie generowanie w petli (abuse kosztowy). ──
+    const { data: roleRow } = await supabase
+      .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
+    if (!roleRow) {
+      return new Response(JSON.stringify({ error: "forbidden - admin only" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json().catch(() => ({}));
     const city = body.city ?? "Kraków";
 

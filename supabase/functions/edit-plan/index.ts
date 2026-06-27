@@ -73,12 +73,19 @@ serve(async (req) => {
       });
     }
 
-    // Load route + pins
+    // Ownership: route MUSI nalezec do zalogowanego usera. Bez tego = IDOR (edycja/kasowanie
+    // pinow cudzej trasy przez service_role). Spojne z RLS routes (user_id = auth.uid()).
     const { data: route } = await supabase
       .from("routes")
-      .select("id, title, city, day_number")
+      .select("id, title, city, day_number, user_id")
       .eq("id", route_id)
-      .single();
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!route) {
+      return new Response(JSON.stringify({ error: "forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { data: pins } = await supabase
       .from("pins")
