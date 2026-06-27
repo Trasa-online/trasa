@@ -12,6 +12,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import posthog from "posthog-js";
+import { toast } from "sonner";
+
+// TYMCZASOWO: tworzenie zestawien zablokowane (wyszarzone przyciski). Klik nadal
+// rejestrujemy w PostHog (intent), zeby zmierzyc zainteresowanie przed odblokowaniem.
+const COLLECTIONS_CREATE_ENABLED = false;
+const blockCollectionCreate = (source: string) => {
+  posthog.capture("collection_create_clicked_blocked", { source });
+  toast("Tworzenie zestawień będzie dostępne wkrótce 🙌");
+};
 
 // Usuwa reactions z DB dla zalogowanego usera zeby miejsca wrocily do swipera
 // (PlaceSwiper filtruje queue po user_place_reactions). Bez tego po usunieciu
@@ -206,10 +216,12 @@ export const LikedTab = () => {
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
               <button
-                onClick={() => navigate(`/zestawienie/nowe?from=liked&city=${encodeURIComponent(group.city)}`)}
-                className="w-full py-2.5 rounded-full border border-orange-600 text-orange-600 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+                onClick={() => COLLECTIONS_CREATE_ENABLED
+                  ? navigate(`/zestawienie/nowe?from=liked&city=${encodeURIComponent(group.city)}`)
+                  : blockCollectionCreate("liked_group")}
+                className="w-full py-2.5 rounded-full border border-border/60 bg-muted/40 text-muted-foreground/70 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
               >
-                Stwórz zestawienie z tych miejsc
+                Stwórz zestawienie z tych miejsc <span className="text-[10px] font-semibold opacity-70">(wkrótce)</span>
               </button>
             </div>
           )}
@@ -269,10 +281,10 @@ const MyCollections = () => {
             </p>
           </div>
           <button
-            onClick={() => navigate("/zestawienie/nowe")}
-            className="mt-1 px-5 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
+            onClick={() => COLLECTIONS_CREATE_ENABLED ? navigate("/zestawienie/nowe") : blockCollectionCreate("my_collections_empty")}
+            className="mt-1 px-5 py-3 rounded-full bg-muted text-muted-foreground text-sm font-bold active:scale-[0.99] transition-transform"
           >
-            Stwórz zestawienie
+            Stwórz zestawienie <span className="text-xs font-semibold opacity-70">(wkrótce)</span>
           </button>
         </div>
       ) : (
@@ -340,8 +352,8 @@ const Explore = () => {
           </div>
         )}
         <button
-          onClick={() => navigate("/zestawienie/nowe")}
-          className="shrink-0 mt-2 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-white text-xs font-bold active:scale-[0.97] transition-transform shadow-sm shadow-orange-500/20"
+          onClick={() => COLLECTIONS_CREATE_ENABLED ? navigate("/zestawienie/nowe") : blockCollectionCreate("explore_header")}
+          className="shrink-0 mt-2 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-muted text-muted-foreground text-xs font-bold active:scale-[0.99] transition-transform"
         >
           <Plus className="h-3.5 w-3.5" /> Zestawienie
         </button>

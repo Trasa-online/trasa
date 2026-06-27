@@ -83,6 +83,15 @@ const CreateRanking = () => {
   const [addMode, setAddMode] = useState<null | "search" | "custom">(null);
   const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: "Użytkownik", avatar: null });
 
+  // TYMCZASOWO: tworzenie NOWYCH zestawien zablokowane (deep-link guard; edycja istniejacych dziala).
+  // Wejscia w UI sa wyszarzone (Explore), to chroni bezposrednie wejscie na /zestawienie/nowe.
+  useEffect(() => {
+    if (!editId) {
+      toast("Tworzenie zestawień będzie dostępne wkrótce 🙌");
+      navigate("/eksploruj", { replace: true });
+    }
+  }, [editId, navigate]);
+
   // ── Author + edit/liked prefill ───────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
