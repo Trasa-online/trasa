@@ -34,6 +34,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
   const isLast = step === STEPS.length - 1;
 
   const [username, setUsername] = useState("");
+  const [firstName, setFirstName] = useState("");
   const [uStatus, setUStatus] = useState<UStatus>("idle");
   const [savingU, setSavingU] = useState(false);
 
@@ -53,11 +54,12 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    supabase.from("profiles").select("username, avatar_url").eq("id", user.id).maybeSingle()
+    supabase.from("profiles").select("username, avatar_url, first_name").eq("id", user.id).maybeSingle()
       .then(({ data }) => {
         if (cancelled || !data) return;
         if ((data as any).username) setUsername(sanitizeUsername((data as any).username));
         if ((data as any).avatar_url) setAvatarUrl((data as any).avatar_url);
+        if ((data as any).first_name) setFirstName((data as any).first_name);
       });
     // home_country/home_city osobnym selectem (best-effort) - gdyby kolumn jeszcze nie
     // bylo (przed migracja), nie psuje to prefilla username/avatar.
@@ -109,7 +111,9 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
   const saveUsername = async () => {
     if (!user || uStatus !== "ok" || savingU) return;
     setSavingU(true);
-    const { error } = await supabase.from("profiles").update({ username: username.trim() } as any).eq("id", user.id);
+    const { error } = await supabase.from("profiles")
+      .update({ username: username.trim(), first_name: firstName.trim() || null } as any)
+      .eq("id", user.id);
     setSavingU(false);
     if (error) {
       // unique violation -> zajety
@@ -208,6 +212,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
   // CTA per krok
   const primaryDisabled =
     (stepName === "username" && uStatus !== "ok") ||
+    (stepName === "username" && firstName.trim().length < 2) ||
     (stepName === "username" && savingU) ||
     (stepName === "origin" && (!homeCity || savingOrigin)) ||
     (stepName === "location" && locLoading) ||
@@ -254,29 +259,48 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
         {stepName === "username" && (
           <>
             <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Wybierz nazwę użytkownika")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Twój @username jest unikalny. Później możesz go zmienić.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Jak Cię nazywać?")}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Imię zobaczysz w powiadomieniach, a @username jest unikalny. Później możesz je zmienić.")}</p>
             </div>
-            <div className="mt-8">
-              <div className="flex items-center rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
-                <span className="text-muted-foreground text-lg select-none">@</span>
-                <input
-                  value={username}
-                  onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  inputMode="text"
-                  placeholder="nazwa"
-                  className="flex-1 bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
-                />
-                {uStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                {uStatus === "ok" && <Check className="h-5 w-5 text-green-600" />}
+            <div className="mt-8 space-y-5">
+              {/* Imię - do personalizacji powiadomien */}
+              <div>
+                <label className="block text-sm font-semibold mb-2 px-1">{nbsp("Twoje imię")}</label>
+                <div className="rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
+                  <input
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value.slice(0, 40))}
+                    autoCapitalize="words"
+                    autoCorrect="off"
+                    inputMode="text"
+                    placeholder="Imię"
+                    className="w-full bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
+                  />
+                </div>
               </div>
-              <div className="h-6 mt-2 px-1 text-sm">
-                {uStatus === "ok" && <span className="text-green-600 font-medium">Nazwa dostępna</span>}
-                {uStatus === "taken" && <span className="text-red-600 font-medium">Ta nazwa jest zajęta</span>}
-                {uStatus === "short" && <span className="text-muted-foreground">Minimum 2 znaki</span>}
+              {/* @username - unikalny */}
+              <div>
+                <label className="block text-sm font-semibold mb-2 px-1">{nbsp("Nazwa użytkownika")}</label>
+                <div className="flex items-center rounded-2xl border border-border bg-white px-4 focus-within:ring-2 focus-within:ring-orange-500/60 transition-shadow">
+                  <span className="text-muted-foreground text-lg select-none">@</span>
+                  <input
+                    value={username}
+                    onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    inputMode="text"
+                    placeholder="nazwa"
+                    className="flex-1 bg-transparent py-3.5 px-1 text-lg outline-none text-foreground placeholder:text-muted-foreground/50"
+                  />
+                  {uStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                  {uStatus === "ok" && <Check className="h-5 w-5 text-green-600" />}
+                </div>
+                <div className="h-6 mt-2 px-1 text-sm">
+                  {uStatus === "ok" && <span className="text-green-600 font-medium">Nazwa dostępna</span>}
+                  {uStatus === "taken" && <span className="text-red-600 font-medium">Ta nazwa jest zajęta</span>}
+                  {uStatus === "short" && <span className="text-muted-foreground">Minimum 2 znaki</span>}
+                </div>
               </div>
             </div>
           </>
