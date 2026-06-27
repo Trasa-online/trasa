@@ -259,8 +259,8 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
         {stepName === "username" && (
           <>
             <div className="pt-6 text-center">
-              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Jak Cię nazywać?")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Imię zobaczysz w powiadomieniach, a @username jest unikalny. Później możesz je zmienić.")}</p>
+              <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Jak się nazywasz?")}</h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Później możesz to zmienić.")}</p>
             </div>
             <div className="mt-8 space-y-5">
               {/* Imię - do personalizacji powiadomien */}
@@ -330,7 +330,7 @@ const ProfileSetup = ({ onDone }: ProfileSetupProps) => {
           <>
             <div className="pt-6 text-center">
               <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp("Skąd jesteś?")}</h2>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Dzięki temu pokażemy, że polecasz miejsca jako lokals w swoim mieście.")}</p>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp("Potrzebujemy tej informacji do udostępnionych przez Ciebie tras w przyszłości - jako lokals dla innych podróżnych!")}</p>
             </div>
             <div className="mt-8 space-y-4">
               <div>

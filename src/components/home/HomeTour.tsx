@@ -74,9 +74,9 @@ function VisualRoute() {
 // gotowa trasa. Setup profilu (username/awatar/powiadomienia) to osobny etap po
 // zalogowaniu (ProfileSetup).
 const STEPS = [
-  { title: "Witaj w Trasie!", desc: "Trasa to speed dating z miastem. W kilka minut ułożysz plan dnia: przeglądasz miejsca, dodajesz te które Cię ciekawią i dostajesz gotową trasę.", Visual: VisualIntro },
-  { title: "Planuj sam lub z grupą", desc: "Kliknij + na pasku i wybierz: planuj solo, zaproś grupę kodem albo dołącz do znajomych. Przeglądacie miejsca, a Trasa zbiera Wasze dopasowania.", Visual: VisualPlan },
-  { title: "Gotowa trasa na mapie", desc: "Z dopasowań Trasa układa plan dnia w dobrej kolejności i pokazuje go na mapie. Plan dopracujesz i zapiszesz we wspomnieniach.", Visual: VisualRoute },
+  { title: "Witaj w Trasie!", desc: "Trasa to speed dating z miastem. W kilka minut ułożysz plan dnia: przeglądasz miejsca, dodajesz te które Cię ciekawią i dostajesz gotową trasę.", highlight: "", Visual: VisualIntro },
+  { title: "Planuj sam lub z grupą", desc: "Kliknij + na pasku i wybierz: planuj solo, zaproś grupę kodem albo dołącz do znajomych. Wy przeglądacie miejsca, a Trasa zbiera Wasze dopasowania.", highlight: "", Visual: VisualPlan },
+  { title: "Gotowa trasa na mapie", desc: "Z dopasowań Trasa układa plan dnia w dobrej kolejności i pokazuje go na mapie. Plan dopracujesz i zapiszesz we wspomnieniach.", highlight: "Nawigujesz od punktu do punktu wprost z aplikacji.", Visual: VisualRoute },
 ];
 
 interface HomeTourProps { onDone: () => void; lastLabel?: string; }
@@ -120,6 +120,9 @@ const HomeTour = ({ onDone, lastLabel }: HomeTourProps) => {
       <div className="px-7 pb-2 text-center">
         <h2 className="text-2xl font-black mb-2 leading-tight">{nbsp(current.title)}</h2>
         <p className="text-[15px] text-muted-foreground leading-relaxed">{nbsp(current.desc)}</p>
+        {current.highlight && (
+          <p className="text-[15px] font-bold text-foreground leading-relaxed mt-2">{nbsp(current.highlight)}</p>
+        )}
       </div>
 
       {/* Przycisk */}
