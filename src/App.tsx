@@ -82,7 +82,10 @@ function WebWaitlistGate({ children }: { children: React.ReactNode }) {
     p === "/terms" || p === "/privacy" ||
     p.startsWith("/set-password") || p.startsWith("/biznes") ||
     p.startsWith("/dla-firm") || p.startsWith("/route/") ||
-    p.startsWith("/profil/") || p.startsWith("/lokal/");
+    p.startsWith("/profil/") || p.startsWith("/lokal/") ||
+    // TEST: odblokowane parowanie grupowe na web (sesja grupowa + swipe + tworzenie trasy
+    // z grupy przez PlanChatExperience). Reszta apki B2C nadal za waitlista.
+    p.startsWith("/sesja") || p === "/create" || p.startsWith("/quick-plan-review");
   if (!allowed && !hasAuthParams) return <Navigate to="/waitlist" replace />;
   return <>{children}</>;
 }
