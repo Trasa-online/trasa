@@ -87,10 +87,10 @@ const CreateGroupSession = () => {
   // Wczesniej cities pobieralo sie z places.city co dawalo niespojny wynik (np.
   // brak Poznania/Wroclawa bo nie ma jeszcze placow). Teraz pelna lista, lockowanie
   // przez UNLOCKED_CITIES.
-  const cities = useMemo(() => ["Warszawa", "Kraków", "Łódź", "Poznań", "Trójmiasto", "Wrocław"], []);
+  const cities = useMemo(() => ["Warszawa", "Gdańsk", "Sopot", "Gdynia", "Trójmiasto", "Kraków", "Łódź", "Poznań", "Wrocław"], []);
 
-  // Cities currently unlocked for group sessions (lowercase match)
-  const UNLOCKED_CITIES = ["warszawa"];
+  // Cities currently unlocked for group sessions (lowercase match). Spojne z solo CityPicker.
+  const UNLOCKED_CITIES = ["warszawa", "gdańsk", "sopot", "gdynia"];
   const isCityUnlocked = (city: string) => UNLOCKED_CITIES.includes(city.toLowerCase());
 
   // Warsaw first, then locked cities alphabetically
