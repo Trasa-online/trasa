@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Brain, Plus, ExternalLink, ArrowLeft, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight, Loader2, Maximize2 } from "lucide-react";
+import { Brain, Plus, ExternalLink, ArrowLeft, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight, Loader2, Maximize2, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -249,8 +249,8 @@ function CreatorAvatar({ name, thumbnailUrl, zIndex, size = 7 }: { name: string;
 }
 
 function LargeCarouselCard({
-  pin, index, dayLabel, onClick, onMoveUp, onMoveDown, isFirst, isLast,
-}: { pin: PlanPin; index: number; dayLabel?: string; onClick: () => void; onMoveUp?: () => void; onMoveDown?: () => void; isFirst?: boolean; isLast?: boolean }) {
+  pin, index, dayLabel, onClick, onMoveUp, onMoveDown, isFirst, isLast, onRemove,
+}: { pin: PlanPin; index: number; dayLabel?: string; onClick: () => void; onMoveUp?: () => void; onMoveDown?: () => void; isFirst?: boolean; isLast?: boolean; onRemove?: () => void }) {
   const [imgFailed, setImgFailed] = useState(false);
   const [fetchedPhoto, setFetchedPhoto] = useState<string | null>(pin.photoUrl ?? null);
   const pointerStart = useRef<{ x: number; y: number; t: number } | null>(null);
@@ -333,6 +333,17 @@ function LargeCarouselCard({
               <ChevronRight className="h-3.5 w-3.5 text-white" />
             </button>
           </div>
+        )}
+        {/* Usuniecie punktu z trasy (z walidacja) - prawy dolny rog hero */}
+        {onRemove && (
+          <button
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); onRemove(); }}
+            aria-label="Usuń punkt z trasy"
+            className="absolute bottom-3 right-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur-sm flex items-center justify-center active:bg-red-600 transition-colors"
+          >
+            <Trash2 className="h-4 w-4 text-white" />
+          </button>
         )}
         {/* Creator avatars - below reorder row */}
         {(pin.creators?.length ?? 0) > 0 && (
@@ -1527,6 +1538,7 @@ window.addEventListener('message',function(e){
                                 onMoveDown={idx < day.pins.length - 1 ? () => handleMovePin(day.day_number, idx, "down") : undefined}
                                 isFirst={idx === 0}
                                 isLast={idx === day.pins.length - 1}
+                                onRemove={() => { if (window.confirm(`Usunąć "${pin.place_name}" z trasy?`)) handleRemovePin(day.day_number, idx); }}
                               />
                             ));
                             if (plan.days.length > 1 && dayIdx > 0) {
@@ -1574,7 +1586,7 @@ window.addEventListener('message',function(e){
                       <div className="flex-shrink-0 px-4 pb-4 pt-1 border-t border-border/40 flex gap-2">
                         {!readOnly ? (
                           <button
-                            onClick={() => navigate(-1)}
+                            onClick={() => { if (window.confirm("Wyjść bez zapisania trasy? Stworzony plan przepadnie.")) navigate(-1); }}
                             className="flex items-center gap-1.5 px-3 py-3.5 rounded-xl border border-border/60 text-sm font-medium text-muted-foreground shrink-0 whitespace-nowrap"
                           >
                             <ArrowLeft className="h-4 w-4" />

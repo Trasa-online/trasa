@@ -159,6 +159,10 @@ const CreateRoute = () => {
         <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3">
           <button
             onClick={() => {
+              // Prewencja: cofajac z niezapisanej stworzonej trasy plan przepada -> potwierdz.
+              // readOnly (istniejaca trasa) jest juz zapisana - bez pytania.
+              if (!wizardState?.existingRouteId &&
+                  !window.confirm("Wyjść bez zapisania trasy? Stworzony plan przepadnie.")) return;
               if (wizardState?.backTo) {
                 navigate(wizardState.backTo);
               } else if (currentCity && wizardState?.date) {
