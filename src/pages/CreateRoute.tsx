@@ -125,7 +125,13 @@ const CreateRoute = () => {
     numDays: wizardState?.numDays ?? 1,
     pace: "mixed",
     priorities: [],
-    startDate: wizardDate ? wizardDate.toISOString().slice(0, 10) : null,
+    // Format LOKALNY (Y-M-D), NIE toISOString - inaczej data-only string z grupy
+    // (session.trip_date "2026-06-28" -> parseISO = lokalna polnoc) po toISOString cofa
+    // sie o dzien w strefach UTC+ (PL). Efekt: trasa "dzisiaj" wygladala jak miniona
+    // (isMemory=true) -> tryb wspomnienia zamiast nawigacji jak w solo.
+    startDate: wizardDate
+      ? `${wizardDate.getFullYear()}-${String(wizardDate.getMonth() + 1).padStart(2, "0")}-${String(wizardDate.getDate()).padStart(2, "0")}`
+      : null,
     planningMode: "text",
     city: wizardState?.city ?? "",
     startingLocation: startingLocName,
