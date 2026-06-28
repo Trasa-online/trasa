@@ -12,16 +12,26 @@ export function useActiveSoloTrips(userId: string | null | undefined) {
       if (!userId) return [] as any[];
       const { data } = await (supabase as any)
         .from("routes")
-        .select("*, pins(*), group_sessions(created_by)")
+        .select("*, pins(*)")
         .eq("user_id", userId)
         .in("trip_type", ["planning", "ongoing"])
         .order("created_at", { ascending: false });
-      // Trasy solo + trasy grupowe ALE tylko gdy biezacy user jest HOSTEM sesji
-      // (group_sessions.created_by). Kazdy czlonek ma swoja kopie trasy (RouteSummaryDialog),
-      // wiec bez tego warunku nawigacje widzieliby wszyscy - narazie chcemy tylko hosta.
-      const solo = ((data as any[]) || []).filter(
-        (r) => !r.group_session_id || r.group_sessions?.created_by === userId,
-      );
+      const rows = (data as any[]) || [];
+      // Trasy grupowe pokazujemy TYLKO hostowi (kazdy czlonek ma swoja kopie - RouteSummaryDialog).
+      // Osobne, odporne na RLS zapytanie o sesje ktorych user jest tworca (created_by). Wczesniej
+      // embed group_sessions(created_by) potrafil zwracac null pod RLS i ukrywal CALA sekcje
+      // (takze trasy solo) -> "nie widac nic".
+      const groupSessionIds = [...new Set(rows.filter((r) => r.group_session_id).map((r) => r.group_session_id))];
+      let hostedSet = new Set<string>();
+      if (groupSessionIds.length) {
+        const { data: hosted } = await (supabase as any)
+          .from("group_sessions")
+          .select("id")
+          .eq("created_by", userId)
+          .in("id", groupSessionIds);
+        hostedSet = new Set(((hosted as any[]) || []).map((s) => s.id));
+      }
+      const solo = rows.filter((r) => !r.group_session_id || hostedSet.has(r.group_session_id));
       const byTrip = new Map<string, any>();
       const range = new Map<string, { min: string | null; max: string | null }>();
       for (const r of solo) {
