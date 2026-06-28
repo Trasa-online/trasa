@@ -70,7 +70,5 @@
 	<string>Trasa pokazuje, jak blisko jesteś polecanych miejsc i punktów Twojej trasy. Lokalizacja liczona jest na Twoim telefonie i nigdzie jej nie zapisujemy.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Trasa pokazuje, jak blisko jesteś polecanych miejsc i punktów Twojej trasy. Używamy lokalizacji wyłącznie gdy aplikacja jest otwarta - nie śledzimy Cię w tle. Lokalizacja liczona jest na Twoim telefonie i nigdzie jej nie zapisujemy.</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 </dict>
 </plist>
