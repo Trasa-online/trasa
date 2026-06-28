@@ -4,8 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Copy, Check, Camera, UserCircle2, ArrowRight, ArrowUpRight, Map as MapIcon, Building2, Layers } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Settings, Copy, Check, Camera, UserCircle2, ArrowRight, Map as MapIcon, Building2, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +15,7 @@ import { useShare } from "@/hooks/useShare";
 import { isNative } from "@/lib/platform";
 import { useFriends, useIncomingRequests, acceptFriendRequest, removeFriend } from "@/hooks/useFriends";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
+import SectionCard from "@/components/profile/SectionCard";
 import { UserCheck, Check } from "lucide-react";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 
@@ -78,37 +78,6 @@ function InviteSlot({ code, slot, usedByName, usedByEmail }: {
         </div>
       )}
     </div>
-  );
-}
-
-// ── StatCard ──────────────────────────────────────────────────────────────────
-
-// ── SectionCard ─────────────────────────────────────────────────────────────
-// Kolorowa, ulozona w stos "sekcja" jak w zalaczniku koncepcyjnym: ikona w bialym
-// zaokraglonym kwadracie (lewy gorny rog), strzalka (prawy gorny), tytul + podtytul
-// na dole-lewej, duza liczba po prawej. Trzy odcienie odrozniaja sekcje od siebie.
-function SectionCard({ icon, title, subtitle, value, bg, onClick }: {
-  icon: React.ReactNode; title: string; subtitle: string; value: number | string;
-  bg: string; onClick?: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={!onClick}
-      className={cn("w-full text-left rounded-3xl p-5 transition-transform", bg, onClick && "active:scale-[0.99]")}
-    >
-      <div className="flex items-start justify-between">
-        <div className="h-11 w-11 rounded-2xl bg-white shadow-sm flex items-center justify-center">{icon}</div>
-        {onClick && <ArrowUpRight className="h-5 w-5 text-[#0E0E0E]/55" />}
-      </div>
-      <div className="flex items-end justify-between gap-3 mt-7">
-        <div className="min-w-0">
-          <p className="text-xl font-display font-extrabold leading-tight text-[#0E0E0E]">{title}</p>
-          <p className="text-xs font-medium text-[#0E0E0E]/55 mt-0.5">{subtitle}</p>
-        </div>
-        <span className="text-4xl font-black text-[#0E0E0E] leading-none tabular-nums shrink-0">{value}</span>
-      </div>
-    </button>
   );
 }
 

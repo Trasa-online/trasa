@@ -25,6 +25,7 @@ export default function UserSearch() {
         .select("id, username, first_name, avatar_url")
         .neq("id", user?.id ?? "")
         .not("username", "is", null)
+        .eq("hide_from_search", false)
         .order("username")
         .limit(200);
       return (data ?? []) as Profile[];

@@ -6,7 +6,7 @@ import { useMyInviteCode, inviteLinkFromCode } from "@/hooks/useFriends";
 import { cn } from "@/lib/utils";
 
 // Baner "Zapros znajomych do trasy!" - share linku /dodaj/:code (auto-przyjazn = viral loop).
-// Na home (ActiveTripsDashboard) i na profilu. Tylko dla zalogowanych non-anon.
+// Delikatny (leciutki niebieski + subtelny pulsujacy poblask tla), nie krzykliwy.
 export default function InviteFriendsBanner({ className }: { className?: string }) {
   const { user, isAnonymous } = useAuth();
   const share = useShare();
@@ -28,18 +28,23 @@ export default function InviteFriendsBanner({ className }: { className?: string 
     <button
       onClick={onInvite}
       className={cn(
-        "w-full flex items-center gap-3 rounded-3xl p-4 text-left text-white active:scale-[0.99] transition-transform shadow-md shadow-orange-500/25 bg-gradient-to-r from-[#F4A259] to-[#F9662B]",
+        "relative w-full overflow-hidden flex items-center gap-3 rounded-3xl p-4 text-left active:scale-[0.99] transition-transform border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50/70",
         className,
       )}
     >
-      <div className="h-11 w-11 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
-        <UserPlus className="h-5 w-5" />
+      {/* Delikatny pulsujacy poblask tla */}
+      <span
+        className="pointer-events-none absolute inset-0 animate-pulse"
+        style={{ background: "radial-gradient(150px 90px at 16% 50%, rgba(96,165,250,0.22), transparent 70%)" }}
+      />
+      <div className="relative h-11 w-11 rounded-2xl bg-white/80 flex items-center justify-center shrink-0 shadow-sm">
+        <UserPlus className="h-5 w-5 text-blue-600" />
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="font-display font-extrabold text-base leading-tight">Zaproś znajomych do trasy!</p>
-        <p className="text-xs text-white/85 mt-0.5 leading-snug">Wyślij link - po dołączeniu od&nbsp;razu jesteście znajomymi.</p>
+      <div className="relative min-w-0 flex-1">
+        <p className="font-display font-extrabold text-base leading-tight text-foreground">Zaproś znajomych do trasy!</p>
+        <p className="text-xs text-muted-foreground mt-0.5 leading-snug">Wyślij link - po dołączeniu od&nbsp;razu jesteście znajomymi.</p>
       </div>
-      <ChevronRight className="h-5 w-5 text-white/80 shrink-0" />
+      <ChevronRight className="relative h-5 w-5 text-blue-400 shrink-0" />
     </button>
   );
 }

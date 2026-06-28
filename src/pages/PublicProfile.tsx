@@ -3,18 +3,10 @@ import { avatarSrc } from "@/lib/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { ArrowLeft, MapPin, Map as MapIcon, Building2, Layers } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import FriendButton from "@/components/social/FriendButton";
-
-function StatCard({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="flex-1 bg-card border border-border/40 rounded-2xl py-4 flex flex-col items-center gap-1">
-      <span className="text-2xl font-black">{value}</span>
-      <span className="text-xs text-muted-foreground font-medium">{label}</span>
-    </div>
-  );
-}
+import SectionCard from "@/components/profile/SectionCard";
 
 export default function PublicProfile() {
   const { username } = useParams<{ username: string }>();
@@ -100,16 +92,17 @@ export default function PublicProfile() {
           <FriendButton targetUserId={profile.id} className="h-10 px-5 text-sm" />
         </div>
 
-        {/* Stats */}
-        <div className="flex gap-3">
-          <StatCard value={stats?.trips ?? 0} label="Tras" />
-          <StatCard value={stats?.cities ?? 0} label="Miast" />
+        {/* Sekcje - TEN SAM uklad/kolory co wlasny profil (jeden model mentalny) */}
+        <div className="space-y-3">
+          <SectionCard bg="bg-trasa-violet" icon={<MapIcon className="h-5 w-5 text-trasa-violet-ink" />} title="Trasy" subtitle="ukończone podróże" value={stats?.trips ?? 0} />
+          <SectionCard bg="bg-trasa-cream" icon={<Building2 className="h-5 w-5 text-trasa-cream-ink" />} title="Miasta" subtitle="odwiedzone miejsca" value={stats?.cities ?? 0} />
+          <SectionCard bg="bg-trasa-orange" icon={<Layers className="h-5 w-5 text-trasa-orange-ink" />} title="Zestawienia" subtitle="kolekcje miejsc" value={0} />
         </div>
 
-        {/* Routes */}
+        {/* Udostepnione trasy (lista) */}
         {sharedRoutes.length > 0 && (
           <section className="space-y-3">
-            <p className="text-sm font-bold">Trasy</p>
+            <p className="text-sm font-bold">Udostępnione trasy</p>
             {sharedRoutes.map((route: any) => (
               <button
                 key={route.id}
