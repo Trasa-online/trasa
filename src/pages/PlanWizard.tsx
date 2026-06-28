@@ -529,7 +529,7 @@ const PlanWizard = () => {
 
       {/* Category filter drawer - multi-select grouped by main category */}
       <Sheet open={categoryDrawerOpen} onOpenChange={setCategoryDrawerOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden" style={{ maxHeight: "85vh" }}>
+        <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden flex flex-col" style={{ maxHeight: "85vh" }}>
           {/* X w wrapperze - shadcn [&>button]:hidden ukrywa direct child buttons, wrap broni przed tym */}
           <div>
             <button
@@ -542,7 +542,7 @@ const PlanWizard = () => {
               <X className="h-4 w-4 text-foreground" />
             </button>
           </div>
-          <div className="overflow-y-auto px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]">
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]" style={{ WebkitOverflowScrolling: "touch" }}>
             <div className="flex items-center justify-between gap-3 mb-5 pr-12">
               <div>
                 <p className="text-lg font-black">Filtry</p>
