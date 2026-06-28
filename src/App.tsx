@@ -184,7 +184,15 @@ function GlobalAuthCallback() {
           console.warn("[GlobalAuthCallback] welcome mail check failed:", e);
         }
         toast.success("Witamy w Trasie 🧡");
-        navigate("/home");
+        // Web OAuth wraca na origin/ i tracimy kontekst route. Jesli przed logowaniem
+        // zapisalismy docelowa sciezke (np. /sesja/KOD - dolaczanie do sesji grupowej),
+        // wracamy do niej zamiast na /home (= waitlista na web).
+        let dest = "/home";
+        try {
+          const stored = sessionStorage.getItem("trasa_post_login_redirect");
+          if (stored) { dest = stored; sessionStorage.removeItem("trasa_post_login_redirect"); }
+        } catch { /* sessionStorage unavailable */ }
+        navigate(dest);
         return;
       }
 

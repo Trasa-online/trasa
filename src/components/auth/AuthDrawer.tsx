@@ -54,6 +54,12 @@ const AuthDrawer = () => {
   const handleOAuth = async (provider: "apple" | "google") => {
     setLoading(true);
     try {
+      // Zachowaj sciezke sesji grupowej przed OAuth (web wraca na origin/ -> GlobalAuthCallback).
+      // Bez tego po logowaniu na /sesja/* lapiemy /home = waitlista na web.
+      try {
+        const path = window.location.hash.slice(1);
+        if (path.startsWith("/sesja")) sessionStorage.setItem("trasa_post_login_redirect", path);
+      } catch { /* sessionStorage unavailable */ }
       // Zawsze signInWithOAuth (jak Auth.tsx). Wczesniej dla anonimowych uzywalismy
       // linkIdentity zeby zachowac anon data (sesje grupowe, polubione miejsca),
       // ale to silently failuje gdy Google email juz ma konto w Trasie - user wraca

@@ -297,6 +297,12 @@ const Auth = () => {
   const handleOAuth = async (provider: "apple" | "google") => {
     setLoading(true);
     try {
+      // Zachowaj ?return= przed OAuth (web wraca na origin/ -> GlobalAuthCallback go odczyta).
+      // Dzieki temu dolaczanie do sesji grupowej (/auth?return=/sesja/KOD) wraca do sesji.
+      try {
+        const returnTo = searchParams.get("return");
+        if (returnTo) sessionStorage.setItem("trasa_post_login_redirect", returnTo);
+      } catch { /* sessionStorage unavailable */ }
       const redirectTo = isNative
         ? "travel.trasa.app://auth/callback"
         : `${window.location.origin}/`;
