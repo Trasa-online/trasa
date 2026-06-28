@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import FollowButton from "@/components/social/FollowButton";
+import FriendButton from "@/components/social/FriendButton";
 
 function StatCard({ value, label }: { value: number; label: string }) {
   return (
@@ -48,20 +48,6 @@ export default function PublicProfile() {
     enabled: !!profile?.id,
   });
 
-  const { data: isFollowing = false } = useQuery({
-    queryKey: ["is-following", user?.id, profile?.id],
-    queryFn: async () => {
-      if (!user || !profile) return false;
-      const { data } = await supabase
-        .from("followers")
-        .select("follower_id")
-        .eq("follower_id", user.id)
-        .eq("following_id", profile.id)
-        .maybeSingle();
-      return !!data;
-    },
-    enabled: !!user && !!profile?.id,
-  });
 
   const { data: sharedRoutes = [] } = useQuery({
     queryKey: ["public-routes", profile?.id],
@@ -111,7 +97,7 @@ export default function PublicProfile() {
             <h2 className="text-2xl font-black">{displayName}</h2>
             <p className="text-sm text-muted-foreground">@{profile.username}</p>
           </div>
-          <FollowButton targetUserId={profile.id} initialIsFollowing={isFollowing} />
+          <FriendButton targetUserId={profile.id} className="h-10 px-5 text-sm" />
         </div>
 
         {/* Stats */}

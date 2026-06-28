@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import FollowButton from "@/components/social/FollowButton";
+import FriendButton from "@/components/social/FriendButton";
+import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 
 type Profile = { id: string; username: string; first_name: string | null; avatar_url: string | null };
 
@@ -29,18 +30,6 @@ export default function UserSearch() {
       return (data ?? []) as Profile[];
     },
     enabled: !!user,
-  });
-
-  const { data: followingIds = [] } = useQuery({
-    queryKey: ["following-ids", user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const { data } = await supabase.from("followers").select("following_id").eq("follower_id", user.id);
-      return (data ?? []).map(r => r.following_id as string);
-    },
-    enabled: !!user,
-    staleTime: 0,
-    refetchOnMount: "always",
   });
 
   // Client-side filter - no network call
@@ -80,6 +69,12 @@ export default function UserSearch() {
 
       {/* List */}
       <div className="flex-1 overflow-y-auto pb-8">
+        {!trimmed && (
+          <div className="px-4 pt-4">
+            <InviteFriendsBanner />
+            <p className="text-sm font-bold mt-5 mb-1 px-1">Osoby, które możesz znać</p>
+          </div>
+        )}
         {isLoading ? (
           <p className="text-sm text-muted-foreground text-center py-12">Ładowanie...</p>
         ) : visible.length === 0 ? (
@@ -105,10 +100,7 @@ export default function UserSearch() {
                     <p className="text-sm font-semibold leading-tight">{displayName}</p>
                     <p className="text-xs text-muted-foreground">@{profile.username}</p>
                   </div>
-                  <FollowButton
-                    targetUserId={profile.id}
-                    initialIsFollowing={followingIds.includes(profile.id)}
-                  />
+                  <FriendButton targetUserId={profile.id} />
                 </div>
               );
             })}

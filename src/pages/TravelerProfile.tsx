@@ -14,6 +14,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
 import { isNative } from "@/lib/platform";
+import { useFriends, useIncomingRequests, acceptFriendRequest, removeFriend } from "@/hooks/useFriends";
+import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
+import { UserCheck, Check } from "lucide-react";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 
 // ── InviteSlot ────────────────────────────────────────────────────────────────
@@ -152,6 +155,13 @@ const TravelerProfile = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [followSheet, setFollowSheet] = useState<"followers" | "following" | null>(null);
+  const [friendsSheet, setFriendsSheet] = useState(false);
+  const { data: realFriends = [] } = useFriends(user?.id);
+  const { data: incomingReqs = [] } = useIncomingRequests(user?.id);
+  const refreshFriends = () => {
+    queryClient.invalidateQueries({ queryKey: ["friends", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["friend-requests-in", user?.id] });
+  };
 
   const handleAvatarUpload = async (file: File) => {
     if (!user) return;
@@ -285,10 +295,6 @@ const TravelerProfile = () => {
   const completionFields = [!!profile?.avatar_url, !!profile?.first_name, !!profile?.username];
   const completionPct = Math.round((completionFields.filter(Boolean).length / completionFields.length) * 100);
 
-  // "Znajomi" = obserwacje wzajemne (ja obserwuje ich I oni obserwuja mnie).
-  const followerIdSet = new Set((followersList ?? []).map((f: any) => f.follower_id));
-  const friendsCount = (followingList ?? []).filter((f: any) => followerIdSet.has(f.following_id)).length;
-
   return (
     <div className="min-h-screen bg-background pb-24">
 
@@ -353,15 +359,23 @@ const TravelerProfile = () => {
             </div>
           </div>
 
-          {/* Znajomi (obserwacje wzajemne) - po prawej */}
+          {/* Znajomi (realne friendships) - po prawej, z badge zaproszen */}
           <button
-            onClick={() => setFollowSheet("following")}
-            className="shrink-0 flex flex-col items-center px-2 active:opacity-60 transition-opacity"
+            onClick={() => setFriendsSheet(true)}
+            className="relative shrink-0 flex flex-col items-center px-2 active:opacity-60 transition-opacity"
           >
-            <span className="text-2xl font-black leading-none">{friendsCount}</span>
+            <span className="text-2xl font-black leading-none">{realFriends.length}</span>
             <span className="text-xs text-muted-foreground font-medium mt-1">znajomi</span>
+            {incomingReqs.length > 0 && (
+              <span className="absolute -top-1 right-0 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-background">
+                {incomingReqs.length}
+              </span>
+            )}
           </button>
         </div>
+
+        {/* Viral: zaproszenie znajomych */}
+        <InviteFriendsBanner />
 
         {/* Trzy sekcje (stacked, kolorowe) - jak w zalaczniku */}
         <div className="space-y-3">
@@ -419,6 +433,73 @@ const TravelerProfile = () => {
                 })}
               </div>
             )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Znajomi - realne friendships + zaproszenia */}
+      <Sheet open={friendsSheet} onOpenChange={setFriendsSheet}>
+        <SheetContent side="bottom" className="h-[72dvh] flex flex-col rounded-t-2xl">
+          <SheetHeader className="pb-3 border-b border-border/20">
+            <SheetTitle>Znajomi</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto py-3 space-y-5">
+            {incomingReqs.length > 0 && (
+              <div>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">Zaproszenia ({incomingReqs.length})</p>
+                <div className="space-y-2">
+                  {incomingReqs.map((p) => (
+                    <div key={p.id} className="flex items-center gap-3 px-1">
+                      <button onClick={() => { setFriendsSheet(false); navigate(`/profil/${p.username}`); }} className="shrink-0">
+                        <Avatar className="h-10 w-10"><AvatarImage src={avatarSrc(p.avatar_url)} className="object-cover bg-orange-100" /><AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-sm">{(p.first_name || p.username || "?").charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{p.first_name || p.username}</p>
+                        {p.username && <p className="text-xs text-muted-foreground">@{p.username}</p>}
+                      </div>
+                      <button
+                        onClick={async () => { const { error } = await acceptFriendRequest(p.id); if (!error) { toast("Dodano znajomego!"); refreshFriends(); } }}
+                        className="shrink-0 h-9 px-3.5 rounded-full bg-primary text-white text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform"
+                      >
+                        <Check className="h-3.5 w-3.5" /> Akceptuj
+                      </button>
+                      <button
+                        onClick={async () => { const { error } = await removeFriend(p.id); if (!error) refreshFriends(); }}
+                        className="shrink-0 h-9 px-3 rounded-full bg-muted text-muted-foreground text-xs font-semibold active:scale-95 transition-transform"
+                      >
+                        Odrzuć
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {realFriends.length === 0 && incomingReqs.length === 0 ? (
+              <div className="px-1 space-y-4 pt-2">
+                <p className="text-sm text-muted-foreground text-center">Nie masz jeszcze znajomych. Zaproś kogoś linkiem albo znajdź po nazwie.</p>
+                <InviteFriendsBanner />
+                <button onClick={() => { setFriendsSheet(false); navigate("/search"); }} className="w-full py-3 rounded-full border border-orange-600 text-orange-600 font-bold text-sm active:scale-[0.97] transition-transform">
+                  Znajdź znajomych
+                </button>
+              </div>
+            ) : realFriends.length > 0 ? (
+              <div>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">Twoi znajomi ({realFriends.length})</p>
+                <div className="space-y-1">
+                  {realFriends.map((f) => (
+                    <button key={f.id} onClick={() => { setFriendsSheet(false); navigate(`/profil/${f.username}`); }} className="w-full flex items-center gap-3 px-1 py-2 active:bg-muted/40 rounded-xl transition-colors text-left">
+                      <Avatar className="h-10 w-10"><AvatarImage src={avatarSrc(f.avatar_url)} className="object-cover bg-orange-100" /><AvatarFallback className="bg-orange-100 text-orange-600 font-bold text-sm">{(f.first_name || f.username || "?").charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{f.first_name || f.username}</p>
+                        {f.username && <p className="text-xs text-muted-foreground">@{f.username}</p>}
+                      </div>
+                      <UserCheck className="h-4 w-4 text-green-600 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         </SheetContent>
       </Sheet>

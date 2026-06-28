@@ -85,7 +85,9 @@ function WebWaitlistGate({ children }: { children: React.ReactNode }) {
     p.startsWith("/profil/") || p.startsWith("/lokal/") ||
     // TEST: odblokowane parowanie grupowe na web (sesja grupowa + swipe + tworzenie trasy
     // z grupy przez PlanChatExperience). Reszta apki B2C nadal za waitlista.
-    p.startsWith("/sesja") || p === "/create" || p.startsWith("/quick-plan-review");
+    p.startsWith("/sesja") || p === "/create" || p.startsWith("/quick-plan-review") ||
+    // Link zaproszeniowy znajomych (viral) - musi byc publiczny na web
+    p.startsWith("/dodaj");
   if (!allowed && !hasAuthParams) return <Navigate to="/waitlist" replace />;
   return <>{children}</>;
 }
@@ -598,6 +600,7 @@ const AddPlaceToTrip   = lazy(() => import("./pages/AddPlaceToTrip"));
 const PlanWizard       = lazy(() => import("./pages/PlanWizard"));
 const CreateGroupSession = lazy(() => import("./pages/CreateGroupSession"));
 const GroupSession     = lazy(() => import("./pages/GroupSession"));
+const AddFriend        = lazy(() => import("./pages/AddFriend"));
 const QuickPlanReview  = lazy(() => import("./pages/QuickPlanReview"));
 const UserSearch       = lazy(() => import("./pages/UserSearch"));
 const SharedRoute      = lazy(() => import("./pages/SharedRoute"));
@@ -684,6 +687,7 @@ const App = () => (
           <Route path="/demo" element={<DemoSession />} />
           <Route path="/sesja/nowa" element={<CreateGroupSession />} />
           <Route path="/sesja/:joinCode" element={<GroupSession />} />
+          <Route path="/dodaj/:code" element={<AddFriend />} />
           <Route path="/search" element={<UserSearch />} />
           <Route path="/route/:id" element={<SharedRoute />} />
           <Route path="/lokal/:placeId" element={<ClaimPlace />} />

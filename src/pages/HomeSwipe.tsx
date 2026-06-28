@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Heart, Shield } from "lucide-react";
+import { Bell, Heart, Shield, Search } from "lucide-react";
 import NotificationsDrawer from "@/components/layout/NotificationsDrawer";
 import HomeTour, { useHomeTour } from "@/components/home/HomeTour";
 import ProfileSetup, { useProfileSetup } from "@/components/home/ProfileSetup";
@@ -90,6 +90,16 @@ const HomeSwipe = () => {
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
+            </button>
+          )}
+          {!isGuest && (
+            <button
+              onClick={() => navigate("/search")}
+              className="h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground active:scale-90 transition-transform"
+              aria-label="Szukaj znajomych"
+              title="Szukaj znajomych"
+            >
+              <Search className="h-[18px] w-[18px]" />
             </button>
           )}
           {!isGuest && (

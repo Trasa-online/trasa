@@ -13,6 +13,7 @@ import { useActiveSoloTrips } from "@/hooks/useActiveSoloTrips";
 import { resolveStored } from "@/components/PlacePhoto";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Compass } from "lucide-react";
+import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 
 // Wizualny kafelek trasy: do 3 mini-zdjec miejsc (+N), miasto, zakres dat. Zastepuje chipy.
 function TripCard({ trip, active, onSelect }: { trip: any; active: boolean; onSelect: () => void }) {
@@ -359,6 +360,9 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
           </div>
         )}
       </section>
+
+      {/* Viral: zaproszenie znajomych (link = auto-przyjazn) */}
+      <InviteFriendsBanner className="mb-6" />
 
       {/* Wybor: solo vs grupowe (z empty state "Zaplanuj trasę") */}
       <Sheet open={planChoiceOpen} onOpenChange={setPlanChoiceOpen}>
