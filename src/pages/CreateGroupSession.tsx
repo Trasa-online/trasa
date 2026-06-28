@@ -41,6 +41,7 @@ const CreateGroupSession = () => {
   const [selectedCity, setSelectedCity] = useState("");
   const [tripDate, setTripDate] = useState<Date | undefined>(undefined);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [numDays, setNumDays] = useState(1);
   const [loading, setLoading] = useState(false);
   const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
@@ -176,6 +177,7 @@ const CreateGroupSession = () => {
           expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
           ...(sessionName.trim() ? { name: sessionName.trim() } : {}),
           ...(tripDate ? { trip_date: format(tripDate, "yyyy-MM-dd") } : {}),
+          num_days: numDays,
         })
         .select()
         .single();
@@ -401,6 +403,27 @@ const CreateGroupSession = () => {
                   />
                 </div>
               )}
+            </div>
+
+            {/* Liczba dni - trasa wielodniowa (jak solo) */}
+            <div>
+              <p className="text-sm font-semibold mb-3">Na ile dni?</p>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setNumDays(n)}
+                    className={`flex-1 py-2.5 rounded-2xl border text-sm font-bold transition-colors ${
+                      numDays === n ? "border-orange-500 text-orange-600 bg-primary/5" : "border-border/60 bg-card text-muted-foreground"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {numDays === 1 ? "Trasa jednodniowa" : `Trasa na ${numDays} dni - Trasa ułoży plan na każdy dzień`}
+              </p>
             </div>
 
             {/* City picker */}

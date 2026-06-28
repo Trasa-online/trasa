@@ -113,7 +113,7 @@ const GroupSession = () => {
         .select("*")
         .eq("join_code", joinCode)
         .maybeSingle();
-      return data as { id: string; city: string; created_by: string; join_code: string; trip_date: string | null; status: string | null; categories: string[]; current_category_index: number } | null;
+      return data as { id: string; city: string; created_by: string; join_code: string; trip_date: string | null; num_days: number | null; status: string | null; categories: string[]; current_category_index: number } | null;
     },
     enabled: !!joinCode,
     refetchInterval: 5000,
@@ -1338,6 +1338,7 @@ const GroupSession = () => {
                     const routeState = {
                       city: session?.city ?? "",
                       date: session?.trip_date ?? undefined,
+                      numDays: session?.num_days ?? 1,
                       likedPlacesData: selectedMatches.map(m => ({
                         place_name: m.place_name,
                         category: m.category,
