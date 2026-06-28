@@ -148,7 +148,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   }, [soloRoutes, userId, queryClient]);
 
   // Aktywne trasy GRUPOWE (sesje, w ktorych user jest czlonkiem; nie zakonczone, data nie minela).
-  const { data: groupSessions = [], isLoading: groupLoading } = useQuery({
+  const { data: groupSessions = [] } = useQuery({
     queryKey: ["home-group-sessions", userId],
     queryFn: async () => {
       if (!userId) return [];
@@ -285,7 +285,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
               </>
             );
           })()
-        ) : (
+        ) : groupSessions.length === 0 ? (
           <EmptySection
             variant="solo"
             icon={<MapPin className="h-6 w-6 text-orange-600" />}
@@ -296,16 +296,11 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
             cta2="Przeglądaj miejsca"
             onCta2={() => navigate("/plan", { state: { exploreMode: true } })}
           />
-        )}
-      </section>
+        ) : null}
 
-      {/* Aktywne trasy grupowe */}
-      <section>
-        <p className="text-sm font-bold mb-2.5 px-1">Aktywne trasy grupowe</p>
-        {groupLoading ? (
-          <div className="h-20 rounded-3xl bg-muted/40 animate-pulse" />
-        ) : groupSessions.length > 0 ? (
-          <div className="space-y-3">
+        {/* Sesje grupowe w toku (parowanie) - ta sama sekcja "Aktywne trasy", bez osobnego naglowka */}
+        {groupSessions.length > 0 && (
+          <div className={soloRoutes.length > 0 ? "mt-7 space-y-3" : "space-y-3"}>
             {groupSessions.map((s) => (
               <button
                 key={s.id}
@@ -333,7 +328,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                         <div className="h-10 w-10 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
                           <Users className="h-5 w-5 text-orange-600" />
                         </div>
-                        <span className="text-xs text-muted-foreground">Sesja grupowa</span>
+                        <span className="text-xs text-orange-600 font-semibold">Parowanie w toku</span>
                       </div>
                     );
                   }
@@ -355,20 +350,13 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                           </div>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground">{n} {label}</span>
+                      <span className="text-xs text-muted-foreground">{n} {label} · <span className="text-orange-600 font-semibold">parowanie w toku</span></span>
                     </div>
                   );
                 })()}
               </button>
             ))}
           </div>
-        ) : (
-          <EmptySection
-            variant="group"
-            icon={<Users className="h-6 w-6 text-orange-600" />}
-            title="Brak aktywnych tras grupowych"
-            sub="Zaplanuj coś wspólnie guzikiem + na dole."
-          />
         )}
       </section>
 
