@@ -25,7 +25,6 @@ export default function UserSearch() {
         .select("id, username, first_name, avatar_url")
         .neq("id", user?.id ?? "")
         .not("username", "is", null)
-        .eq("hide_from_search", false)
         .order("username")
         .limit(200);
       return (data ?? []) as Profile[];
@@ -33,14 +32,25 @@ export default function UserSearch() {
     enabled: !!user,
   });
 
-  // Client-side filter - no network call
+  // Konta biznesowe (wlasciciele business_profiles) NIE pokazuja sie w wyszukiwarce userow.
+  const { data: businessOwnerIds = [] } = useQuery({
+    queryKey: ["business-owner-ids"],
+    queryFn: async () => {
+      const { data } = await supabase.from("business_profiles").select("owner_user_id");
+      return (data ?? []).map((b: any) => b.owner_user_id).filter(Boolean) as string[];
+    },
+  });
+
+  // Client-side filter - no network call. Wyklucz konta biznesowe.
+  const bizSet = new Set(businessOwnerIds);
+  const base = allProfiles.filter(p => !bizSet.has(p.id));
   const trimmed = query.trim().replace(/^@/, "").toLowerCase();
   const visible = trimmed
-    ? allProfiles.filter(p =>
+    ? base.filter(p =>
         p.username?.toLowerCase().includes(trimmed) ||
         p.first_name?.toLowerCase().includes(trimmed)
       )
-    : allProfiles;
+    : base;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

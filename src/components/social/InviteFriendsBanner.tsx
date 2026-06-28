@@ -7,11 +7,18 @@ import { cn } from "@/lib/utils";
 
 // Baner "Zapros znajomych do trasy!" - share linku /dodaj/:code (auto-przyjazn = viral loop).
 // Delikatny (leciutki niebieski + subtelny pulsujacy poblask tla), nie krzykliwy.
+//
+// WYLACZONY do czasu wejscia apki do App Store: link zaproszeniowy ma docelowo prowadzic
+// do profilu w App Store (pobranie apki), a apki tam jeszcze nie ma. Caly koncept (baner +
+// link /dodaj + auto-przyjazn) zostaje w kodzie - na NASTEPNY build flip flagi na true.
+const INVITE_LINK_ENABLED = false;
+
 export default function InviteFriendsBanner({ className }: { className?: string }) {
   const { user, isAnonymous } = useAuth();
   const share = useShare();
   const { data: code } = useMyInviteCode(isAnonymous ? null : user?.id);
 
+  if (!INVITE_LINK_ENABLED) return null;
   if (!user || isAnonymous || !code) return null;
   const link = inviteLinkFromCode(code);
 
