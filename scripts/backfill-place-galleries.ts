@@ -197,6 +197,7 @@ interface Place {
   place_name: string;
   city: string;
   gallery_urls: string[] | null;
+  google_place_id: string | null;
 }
 
 async function main() {
@@ -204,7 +205,7 @@ async function main() {
 
   let query = sb
     .from("places")
-    .select("id, place_name, city, gallery_urls")
+    .select("id, place_name, city, gallery_urls, google_place_id")
     .ilike("city", CITY)
     .eq("is_active", true)
     .order("place_name", { ascending: true });
@@ -239,16 +240,24 @@ async function main() {
     process.stdout.write(`${prefix} ${p.place_name}... `);
 
     try {
-      const gp = await searchPlace(p.place_name, p.city);
-      if (!gp) {
-        console.log("⏭️  brak w Google");
-        skipped++;
-        await sleep(DELAY_MS);
-        continue;
+      // Jesli mamy zapisany google_place_id -> idziemy prosto do Place Details
+      // (taniej + zero ryzyka mis-matchu). Text Search tylko jako fallback gdy brak id.
+      let placeId = p.google_place_id ?? null;
+      let fallbackPhotos: GooglePhoto[] = [];
+      if (!placeId) {
+        const gp = await searchPlace(p.place_name, p.city);
+        if (!gp) {
+          console.log("⏭️  brak w Google");
+          skipped++;
+          await sleep(DELAY_MS);
+          continue;
+        }
+        placeId = gp.place_id;
+        fallbackPhotos = gp.photos ?? [];
       }
-      // Place Details daje pełną listę zdjęć (do ~10). Text Search zwraca często tylko 1.
-      const detailedPhotos = await fetchPlaceDetails(gp.place_id);
-      const allPhotos = detailedPhotos?.length ? detailedPhotos : (gp.photos ?? []);
+      // Place Details daje pełną listę zdjęć (do ~10).
+      const detailedPhotos = await fetchPlaceDetails(placeId);
+      const allPhotos = detailedPhotos?.length ? detailedPhotos : fallbackPhotos;
       if (allPhotos.length === 0) {
         console.log("⏭️  brak zdjęć");
         skipped++;

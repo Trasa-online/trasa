@@ -61,6 +61,10 @@ const GroupSession = () => {
 
   const [tab, setTab] = useState<"swipe" | "matches">("swipe");
   const [joining, setJoining] = useState(false);
+  // Auto-gosc: zaproszony bez konta dostaje anon sesje zamiast sciany logowania (omija
+  // OAuth-w-Messengerze, ktory gubi redirect). Fallback (recznego logowania) gdy padnie.
+  const [guestSigningIn, setGuestSigningIn] = useState(false);
+  const [guestSignInFailed, setGuestSignInFailed] = useState(false);
   const [bannerData, setBannerData] = useState<BannerData | null>(null);
   const [deselectedPlaces, setDeselectedPlaces] = useState<Set<string>>(new Set());
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
@@ -191,6 +195,26 @@ const GroupSession = () => {
   useEffect(() => {
     if (session?.status === "completed") setTab("matches");
   }, [session?.status]);
+
+  // Auto-gosc: gdy zaproszony bez konta otwiera istniejaca sesje (np. z Messengera),
+  // tworzymy anon sesje zamiast sciany logowania. handleJoin obsluguje juz anona
+  // (ensure_current_user_profile + join). OAuth-w-in-app-browserze gubil redirect powrotu.
+  useEffect(() => {
+    if (authLoading || sessionLoading) return;
+    if (user || !session || guestSigningIn || guestSignInFailed) return;
+    let cancelled = false;
+    setGuestSigningIn(true);
+    (async () => {
+      const { error } = await supabase.auth.signInAnonymously();
+      if (cancelled) return;
+      if (error) {
+        console.error("[group-session] anon sign-in failed:", error.message);
+        setGuestSignInFailed(true);
+      }
+      setGuestSigningIn(false);
+    })();
+    return () => { cancelled = true; };
+  }, [authLoading, sessionLoading, user, session, guestSigningIn, guestSignInFailed]);
 
   // ── Computed ────────────────────────────────────────────────────────────────
 
@@ -706,16 +730,30 @@ const GroupSession = () => {
   }
 
   if (!user) {
+    // Fallback: auto-gosc padl (np. blokada storage w in-app browserze) -> reczne logowanie.
+    if (guestSignInFailed) {
+      return (
+        <div className="flex h-screen flex-col items-center justify-center px-8 gap-4 bg-background text-center max-w-sm mx-auto">
+          <p className="text-4xl">👋</p>
+          <p className="font-bold text-lg">Zaloguj się, żeby dołączyć</p>
+          <p className="text-sm text-muted-foreground">
+            Twój znajomy zaprasza Cię do wspólnego parowania miejsc w <strong>{session.city}</strong>.
+          </p>
+          <button onClick={() => navigate(`/auth?return=/sesja/${joinCode}`)} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base">
+            Zaloguj się
+          </button>
+        </div>
+      );
+    }
+    // Tworzymy anon sesje (auto-gosc) - krotki stan zamiast promptu logowania.
     return (
       <div className="flex h-screen flex-col items-center justify-center px-8 gap-4 bg-background text-center max-w-sm mx-auto">
-        <p className="text-4xl">👋</p>
-        <p className="font-bold text-lg">Zaloguj się, żeby dołączyć</p>
-        <p className="text-sm text-muted-foreground">
-          Twój znajomy zaprasza Cię do wspólnego parowania miejsc w <strong>{session.city}</strong>.
-        </p>
-        <button onClick={() => navigate(`/auth?return=/sesja/${joinCode}`)} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base">
-          Zaloguj się
-        </button>
+        <div className="flex gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+          ))}
+        </div>
+        <p className="text-sm text-muted-foreground">Przygotowujemy sesję…</p>
       </div>
     );
   }

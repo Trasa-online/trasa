@@ -56,18 +56,21 @@ const AuthDrawer = () => {
     try {
       // Zachowaj sciezke sesji grupowej przed OAuth (web wraca na origin/ -> GlobalAuthCallback).
       // Bez tego po logowaniu na /sesja/* lapiemy /home = waitlista na web.
+      const path = window.location.hash.slice(1);
+      const returnTo = path.startsWith("/sesja") ? path : null;
       try {
-        const path = window.location.hash.slice(1);
-        if (path.startsWith("/sesja")) sessionStorage.setItem("trasa_post_login_redirect", path);
+        if (returnTo) sessionStorage.setItem("trasa_post_login_redirect", returnTo);
       } catch { /* sessionStorage unavailable */ }
       // Zawsze signInWithOAuth (jak Auth.tsx). Wczesniej dla anonimowych uzywalismy
       // linkIdentity zeby zachowac anon data (sesje grupowe, polubione miejsca),
       // ale to silently failuje gdy Google email juz ma konto w Trasie - user wraca
       // jako gosc bez widocznego bledu. Tradeoff: anon data nie przenosi sie przy
       // OAuth, ale flow dziala niezawodnie dla wszystkich przypadkow.
+      // Cel powrotu doklejamy TEZ jako ?next= - przezywa round-trip OAuth gdy
+      // sessionStorage gubi sie (in-app browser, np. Messenger).
       const redirectTo = isNative
         ? "travel.trasa.app://auth/callback"
-        : `${window.location.origin}/`;
+        : `${window.location.origin}/${returnTo ? `?next=${encodeURIComponent(returnTo)}` : ""}`;
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: { redirectTo, skipBrowserRedirect: isNative },

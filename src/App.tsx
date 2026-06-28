@@ -133,6 +133,10 @@ function GlobalAuthCallback() {
     const code = params.get("code");
     const tokenHash = params.get("token_hash");
     const type = params.get("type");
+    // ?next= doklejony do redirectTo przed OAuth - przezywa round-trip nawet gdy
+    // sessionStorage gubi sie (in-app browser, np. Messenger). Lapiemy go TERAZ,
+    // bo cleanUrl() ponizej zdejmie search z URL.
+    const nextDest = params.get("next");
     if (!code && !tokenHash) return;
     processed.current = true;
 
@@ -189,11 +193,13 @@ function GlobalAuthCallback() {
         // Web OAuth wraca na origin/ i tracimy kontekst route. Jesli przed logowaniem
         // zapisalismy docelowa sciezke (np. /sesja/KOD - dolaczanie do sesji grupowej),
         // wracamy do niej zamiast na /home (= waitlista na web).
+        // Priorytet: ?next= z URL (odporny na in-app browser) > sessionStorage > /home.
         let dest = "/home";
         try {
           const stored = sessionStorage.getItem("trasa_post_login_redirect");
           if (stored) { dest = stored; sessionStorage.removeItem("trasa_post_login_redirect"); }
         } catch { /* sessionStorage unavailable */ }
+        if (nextDest) dest = nextDest;
         navigate(dest);
         return;
       }

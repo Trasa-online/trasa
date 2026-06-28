@@ -41,9 +41,12 @@ export default function UserSearch() {
     },
   });
 
-  // Client-side filter - no network call. Wyklucz konta biznesowe.
+  // Client-side filter - no network call. Wyklucz konta biznesowe + konta-gosci (anon).
+  // Goscie (ensure_current_user_profile) dostaja username user_xxxxxxxx (8 hex) - nie
+  // pokazujemy ich w wyszukiwarce, zeby nie zasmiecali wynikow.
   const bizSet = new Set(businessOwnerIds);
-  const base = allProfiles.filter(p => !bizSet.has(p.id));
+  const isGuestUsername = (u: string | null) => !!u && /^user_[0-9a-f]{8}$/.test(u);
+  const base = allProfiles.filter(p => !bizSet.has(p.id) && !isGuestUsername(p.username));
   const trimmed = query.trim().replace(/^@/, "").toLowerCase();
   const visible = trimmed
     ? base.filter(p =>

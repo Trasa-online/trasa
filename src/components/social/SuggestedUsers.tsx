@@ -16,13 +16,15 @@ export default function SuggestedUsers({ currentUserId, onProfileTap }: Suggeste
       const { data } = await (supabase as any).rpc("suggested_users_by_city", {
         p_user_id: currentUserId,
       });
-      return (data ?? []) as Array<{
+      const rows = (data ?? []) as Array<{
         id: string;
         username: string;
         first_name: string | null;
         avatar_url: string | null;
         shared_city: string;
       }>;
+      // Wyklucz konta-gosci (anon): username user_xxxxxxxx (8 hex).
+      return rows.filter(u => !/^user_[0-9a-f]{8}$/.test(u.username ?? ""));
     },
   });
 

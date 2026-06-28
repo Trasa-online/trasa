@@ -299,13 +299,15 @@ const Auth = () => {
     try {
       // Zachowaj ?return= przed OAuth (web wraca na origin/ -> GlobalAuthCallback go odczyta).
       // Dzieki temu dolaczanie do sesji grupowej (/auth?return=/sesja/KOD) wraca do sesji.
+      const returnTo = searchParams.get("return");
       try {
-        const returnTo = searchParams.get("return");
         if (returnTo) sessionStorage.setItem("trasa_post_login_redirect", returnTo);
       } catch { /* sessionStorage unavailable */ }
+      // Cel powrotu doklejamy TEZ do redirectTo jako ?next= - przezywa round-trip OAuth
+      // nawet gdy sessionStorage gubi sie (in-app browser, np. Messenger).
       const redirectTo = isNative
         ? "travel.trasa.app://auth/callback"
-        : `${window.location.origin}/`;
+        : `${window.location.origin}/${returnTo ? `?next=${encodeURIComponent(returnTo)}` : ""}`;
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: { redirectTo, skipBrowserRedirect: isNative },
