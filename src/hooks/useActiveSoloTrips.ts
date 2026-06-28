@@ -12,11 +12,16 @@ export function useActiveSoloTrips(userId: string | null | undefined) {
       if (!userId) return [] as any[];
       const { data } = await (supabase as any)
         .from("routes")
-        .select("*, pins(*)")
+        .select("*, pins(*), group_sessions(created_by)")
         .eq("user_id", userId)
         .in("trip_type", ["planning", "ongoing"])
         .order("created_at", { ascending: false });
-      const solo = ((data as any[]) || []).filter((r) => !r.group_session_id);
+      // Trasy solo + trasy grupowe ALE tylko gdy biezacy user jest HOSTEM sesji
+      // (group_sessions.created_by). Kazdy czlonek ma swoja kopie trasy (RouteSummaryDialog),
+      // wiec bez tego warunku nawigacje widzieliby wszyscy - narazie chcemy tylko hosta.
+      const solo = ((data as any[]) || []).filter(
+        (r) => !r.group_session_id || r.group_sessions?.created_by === userId,
+      );
       const byTrip = new Map<string, any>();
       const range = new Map<string, { min: string | null; max: string | null }>();
       for (const r of solo) {
