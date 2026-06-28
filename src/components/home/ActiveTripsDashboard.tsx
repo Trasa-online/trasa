@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,8 @@ import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import { useActiveSoloTrips } from "@/hooks/useActiveSoloTrips";
 import { resolveStored } from "@/components/PlacePhoto";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Compass } from "lucide-react";
 
 // Wizualny kafelek trasy: do 3 mini-zdjec miejsc (+N), miasto, zakres dat. Zastepuje chipy.
 function TripCard({ trip, active, onSelect }: { trip: any; active: boolean; onSelect: () => void }) {
@@ -90,6 +92,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedSoloId, setSelectedSoloId] = useState<string | null>(null);
+  const [planChoiceOpen, setPlanChoiceOpen] = useState(false);
 
   // Usuniecie aktywnej trasy z home (z potwierdzeniem). Czysci piny + chat_sessions + route.
   const handleDelete = async (e: React.MouseEvent, r: any) => {
@@ -187,6 +190,34 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
     enabled: groupIds.length > 0,
   });
 
+  // Awatary uczestnikow dla AKTYWNYCH TRAS (host trasy grupowej) - rozroznienie solo vs grupowa.
+  const soloGroupSessionIds = useMemo(
+    () => [...new Set((soloRoutes as any[]).map((r) => r.group_session_id).filter(Boolean))] as string[],
+    [soloRoutes],
+  );
+  const { data: tripMemberAvatars = {} } = useQuery({
+    queryKey: ["home-active-trip-members", soloGroupSessionIds.join(",")],
+    enabled: soloGroupSessionIds.length > 0,
+    queryFn: async () => {
+      const { data: members } = await (supabase as any)
+        .from("group_session_members").select("session_id, user_id").in("session_id", soloGroupSessionIds);
+      if (!members?.length) return {} as Record<string, { avatar_url: string | null; name: string }[]>;
+      const uids = [...new Set(members.map((m: any) => m.user_id))];
+      const { data: profs } = await (supabase as any)
+        .from("profiles").select("id, avatar_url, username, first_name").in("id", uids);
+      const pmap: Record<string, any> = {};
+      for (const p of profs ?? []) pmap[p.id] = p;
+      const out: Record<string, { avatar_url: string | null; name: string }[]> = {};
+      for (const m of members) {
+        (out[m.session_id] ??= []).push({
+          avatar_url: pmap[m.user_id]?.avatar_url ?? null,
+          name: pmap[m.user_id]?.first_name ?? pmap[m.user_id]?.username ?? "?",
+        });
+      }
+      return out;
+    },
+  });
+
   return (
     <div className={cn(
       "flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4",
@@ -219,6 +250,26 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                     <div className="min-w-0 flex-1">
                       <p className="text-2xl font-display font-extrabold leading-tight truncate">{selected.city || selected.title || "Trasa"}</p>
                       {fmtRange(selected._dateMin, selected._dateMax) && <p className="text-xs text-muted-foreground mt-0.5">{fmtRange(selected._dateMin, selected._dateMax)}</p>}
+                      {/* Rozroznienie: trasa grupowa = awatary uczestnikow + etykieta */}
+                      {selected.group_session_id && (() => {
+                        const avs = (tripMemberAvatars as Record<string, { avatar_url: string | null; name: string }[]>)[selected.group_session_id] ?? [];
+                        return (
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            {avs.length > 0 && (
+                              <div className="flex -space-x-2 shrink-0">
+                                {avs.slice(0, 3).map((a, i) => (
+                                  <div key={i} className="h-6 w-6 rounded-full border-2 border-background overflow-hidden bg-orange-100" style={{ zIndex: 3 - i }}>
+                                    <img src={avatarSrc(a.avatar_url)} alt={a.name} className="w-full h-full object-cover" />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600">
+                              <Users className="h-3 w-3" /> Trasa grupowa
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <button
                       onClick={(e) => handleDelete(e, selected)}
@@ -241,7 +292,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
             title="Brak aktywnych tras"
             sub="Zaplanuj nową trasę albo po prostu przeglądaj miejsca dla inspiracji."
             cta="Zaplanuj trasę"
-            onCta={() => navigate("/plan")}
+            onCta={() => setPlanChoiceOpen(true)}
             cta2="Przeglądaj miejsca"
             onCta2={() => navigate("/plan", { state: { exploreMode: true } })}
           />
@@ -320,6 +371,46 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
           />
         )}
       </section>
+
+      {/* Wybor: solo vs grupowe (z empty state "Zaplanuj trasę") */}
+      <Sheet open={planChoiceOpen} onOpenChange={setPlanChoiceOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl px-5 pt-6 pb-[max(24px,env(safe-area-inset-bottom))] [&>button]:hidden">
+          <p className="text-lg font-black mb-1">Jak chcesz zaplanować?</p>
+          <p className="text-sm text-muted-foreground mb-5">Sam albo wspólnie ze znajomymi - Trasa ułoży plan z&nbsp;Waszych dopasowań.</p>
+          <div className="flex flex-col gap-2.5">
+            <button
+              onClick={() => { setPlanChoiceOpen(false); navigate("/plan"); }}
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-border/60 bg-card active:scale-[0.98] transition-transform text-left"
+            >
+              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><MapPin className="h-5 w-5 text-orange-600" /></div>
+              <div className="min-w-0">
+                <p className="font-bold text-sm">Zaplanuj solo</p>
+                <p className="text-xs text-muted-foreground">Sam przeglądasz miejsca i&nbsp;tworzysz trasę</p>
+              </div>
+            </button>
+            <button
+              onClick={() => { setPlanChoiceOpen(false); navigate("/sesja/nowa"); }}
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-border/60 bg-card active:scale-[0.98] transition-transform text-left"
+            >
+              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><Users className="h-5 w-5 text-orange-600" /></div>
+              <div className="min-w-0">
+                <p className="font-bold text-sm">Zaplanuj grupowo</p>
+                <p className="text-xs text-muted-foreground">Zaproś znajomych i&nbsp;parujcie miejsca razem</p>
+              </div>
+            </button>
+            <button
+              onClick={() => { setPlanChoiceOpen(false); navigate("/plan", { state: { exploreMode: true } }); }}
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-border/60 bg-card active:scale-[0.98] transition-transform text-left"
+            >
+              <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0"><Compass className="h-5 w-5 text-orange-600" /></div>
+              <div className="min-w-0">
+                <p className="font-bold text-sm">Tylko przeglądaj</p>
+                <p className="text-xs text-muted-foreground">Zobacz miejsca bez tworzenia trasy</p>
+              </div>
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

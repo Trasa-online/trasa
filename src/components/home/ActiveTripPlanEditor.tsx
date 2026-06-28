@@ -260,7 +260,16 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
 
   // ── Edycja planu dnia ──
   const finalized = !!activeDay?.plan_finalized;
-  const workingPins = draft && draft.dayId === activeRouteId ? draft.pins : currentPins;
+  // Draft = overlay kolejnosci/usuniec. Scalamy ZYWE visited_at z currentPins, inaczej
+  // odhaczenie miejsca nie wyszarza karty gdy istnieje draft (snapshot ma stare visited_at).
+  const workingPins = useMemo(() => {
+    if (!(draft && draft.dayId === activeRouteId)) return currentPins;
+    const liveById = new Map(currentPins.map((p: any) => [p.id, p]));
+    return draft.pins.map((p: any) => {
+      const live = liveById.get(p.id);
+      return live ? { ...p, visited_at: live.visited_at } : p;
+    });
+  }, [draft, activeRouteId, currentPins]);
 
   const setWorking = (next: any[]) => { if (activeRouteId) setDraft({ dayId: activeRouteId, pins: next }); };
   const movePin = (from: number, to: number) => {
@@ -391,8 +400,9 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   const showBottomBar = !isMemory && (tripIsToday || isFutureDay || isPastDay);
   // Nastepny przystanek = pierwszy nieodwiedzony i niepominiety pin (po kolejnosci).
   const nextStop = useMemo(
-    () => currentPins.find((p: any) => !p.visited_at && !skippedPinIds.has(p.id)) ?? null,
-    [currentPins, skippedPinIds],
+    // workingPins (nie currentPins) -> usuniecie pina koszem od razu znika z nawigacji.
+    () => workingPins.find((p: any) => !p.visited_at && !skippedPinIds.has(p.id)) ?? null,
+    [workingPins, skippedPinIds],
   );
 
   // Po odhaczeniu OSTATNIEGO miejsca (lub auto-visit przez GPS) - trasa konczy sie i trafia
@@ -471,7 +481,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     const dist = navMode ? distFor(nextStop) : null;
     const mapsUrl = navMode && nextStop.latitude && nextStop.longitude
       ? `https://www.google.com/maps/dir/?api=1&destination=${nextStop.latitude},${nextStop.longitude}` : null;
-    const remaining = currentPins.filter((p: any) => !p.visited_at && !skippedPinIds.has(p.id)).length;
+    const remaining = workingPins.filter((p: any) => !p.visited_at && !skippedPinIds.has(p.id)).length;
     if (!navMode && !isFutureDay && !isPastDay) return null;
     return (
       <div className="fixed left-1/2 -translate-x-1/2 w-full max-w-lg px-4 z-40 bottom-[calc(5.6rem+env(safe-area-inset-bottom,0px))]">
@@ -575,16 +585,20 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   // ── Wspolna karta miejsca (uzywana w karuzeli "Szczegoly" i pionowej liscie). ──
   // fullWidth=false -> karta karuzeli (w-[80vw]); true -> pelna szerokosc (lista stacked).
   const renderPlanCard = (pin: any, i: number, fullWidth: boolean, editable: boolean, withRating: boolean) => (
-    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm flex flex-col transition-opacity ${pin.visited_at || isPastDay ? "opacity-55" : ""}`}>
+    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm flex flex-col transition-opacity ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "opacity-55" : ""}`}>
       <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
         <div className="relative w-full aspect-[4/3] bg-muted">
-          <PlacePhoto pin={pin} className={`w-full h-full object-cover ${pin.visited_at || isPastDay ? "grayscale" : ""}`} emojiClass="text-4xl" />
+          <PlacePhoto pin={pin} className={`w-full h-full object-cover ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "grayscale" : ""}`} emojiClass="text-4xl" />
           <div className="absolute top-3 left-3 h-8 w-8 rounded-full bg-black/55 backdrop-blur text-white text-sm font-bold flex items-center justify-center">{i + 1}</div>
-          {pin.visited_at && (
+          {pin.visited_at ? (
             <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/60 backdrop-blur text-white text-[10px] font-bold">
               <Check className="h-3 w-3" /> Odwiedzone
             </div>
-          )}
+          ) : skippedPinIds.has(pin.id) ? (
+            <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold">
+              <ChevronRight className="h-3 w-3" /> Pominięte
+            </div>
+          ) : null}
           {editable && (
             <button
               onClick={(e) => { e.stopPropagation(); removeWorkingPin(pin.id); }}
