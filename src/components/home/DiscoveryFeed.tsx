@@ -866,10 +866,10 @@ export default function DiscoveryFeed() {
 
   const bothEmpty = !motywyLoading && !polecaneLoading && motywy.length === 0 && polecane.length === 0;
 
-  // Polecajki tworzone przez uzytkownikow (user_id != null) - feed user-generated
-  // content w odroznieniu od admin curated motywow. Zawsze enabled (nie tylko gdy
-  // bothEmpty), pokazuje top 10 najnowszych. Empty state = brak sekcji.
-  // Zestawienia/rankingi miejsc tworzone przez userow (kind='ranking').
+  // Zestawienia/rankingi miejsc (kind='ranking') widoczne w Eksploruj. Pokazujemy
+  // zarowno tworzone przez userow (user_id != null) JAK I kuratorowane/seedowane
+  // (user_id = null) - inaczej admin-owe zestawienia nie maja gdzie sie pokazac
+  // (osobne query "motywy" jest enabled:false). Top 20 najnowszych. Empty = brak sekcji.
   const { data: userPolecajki = [] } = useQuery({
     queryKey: ["explore-rankings"],
     enabled: true,
@@ -881,7 +881,6 @@ export default function DiscoveryFeed() {
         .eq("kind", "ranking")
         .eq("hidden_by_admin", false)
         .eq("moderation_status", "approved")
-        .not("user_id", "is", null)
         .order("updated_at", { ascending: false })
         .limit(20);
       if (error || !cols?.length) return [] as DiscoveryCollection[];
@@ -1011,7 +1010,7 @@ export default function DiscoveryFeed() {
             </div>
           )}
 
-          {newest.length === 0 && warszawa.length === 0 && (
+          {newest.length === 0 && warszawa.length === 0 && userPolecajki.length === 0 && (
             <div className="py-16 text-center px-8">
               <div className="text-5xl mb-3">🗺️</div>
               <p className="text-base font-bold">Brak tras w Eksploruj</p>
