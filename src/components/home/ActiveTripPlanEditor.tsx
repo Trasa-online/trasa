@@ -106,6 +106,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   const [infoOpen, setInfoOpen] = useState(false);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [detailPin, setDetailPin] = useState<any | null>(null);
+  const [highlightPinId, setHighlightPinId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ dayId: string; pins: any[] } | null>(null);
   const [savingPlan, setSavingPlan] = useState(false);
   const [showSharePrompt, setShowSharePrompt] = useState(false);
@@ -488,7 +489,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
         {navMode ? (
           <>
             <div className="rounded-3xl bg-trasa-teal border border-trasa-teal-ink/20 shadow-xl shadow-black/15 p-2 pl-3.5 flex items-center gap-2">
-              <button onClick={() => openDetail(nextStop)} className="min-w-0 flex-1 text-left">
+              <button onClick={() => showCard(nextStop)} className="min-w-0 flex-1 text-left">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-trasa-teal-ink leading-none">Następny przystanek</p>
                 <p className="text-sm font-display font-extrabold text-[#0E0E0E] leading-tight truncate mt-0.5">{nextStop.place_name}</p>
                 {dist && <p className="text-[11px] text-[#0E0E0E]/55 leading-none mt-0.5">{dist} od&nbsp;Ciebie</p>}
@@ -545,6 +546,17 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     );
   };
 
+  // Klik "Nastepny przystanek" -> POKAZ karte miejsca na homepage (przewin + podswietl),
+  // NIE otwieraj szczegolow (wizytowki). Szczegoly otwiera dopiero tap w sama karte.
+  const showCard = (pin: any) => {
+    if (planView === "map") setPlanView("cards");
+    setHighlightPinId(pin.id);
+    setTimeout(() => setHighlightPinId((cur) => (cur === pin.id ? null : cur)), 1800);
+    setTimeout(() => {
+      document.getElementById(`active-pin-${pin.id}`)?.scrollIntoView({ behavior: "smooth", inline: "center", block: "center" });
+    }, 60);
+  };
+
   // Podglad wizytowki miejsca - ta sama wizytowka co na swiperze (PlaceSwiperDetail).
   const openDetail = (pin: any) => setDetailPin({
     id: pin.place_id || pin.id || pin.place_name,
@@ -585,7 +597,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   // ── Wspolna karta miejsca (uzywana w karuzeli "Szczegoly" i pionowej liscie). ──
   // fullWidth=false -> karta karuzeli (w-[80vw]); true -> pelna szerokosc (lista stacked).
   const renderPlanCard = (pin: any, i: number, fullWidth: boolean, editable: boolean, withRating: boolean) => (
-    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm flex flex-col transition-opacity ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "opacity-55" : ""}`}>
+    <div key={pin.id} id={`active-pin-${pin.id}`} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-card border overflow-hidden shadow-sm flex flex-col transition-all ${highlightPinId === pin.id ? "border-trasa-teal-ink ring-2 ring-trasa-teal-ink/50" : "border-border/40"} ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "opacity-55" : ""}`}>
       <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
         <div className="relative w-full aspect-[4/3] bg-muted">
           <PlacePhoto pin={pin} className={`w-full h-full object-cover ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "grayscale" : ""}`} emojiClass="text-4xl" />
