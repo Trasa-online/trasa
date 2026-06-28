@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -117,6 +117,32 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
 
   // Aktywne trasy SOLO (wlasne, planning/ongoing, bez grupy).
   const { data: soloRoutes = [], isLoading: soloLoading } = useActiveSoloTrips(userId);
+
+  // Auto-archiwizacja: trasy ktorych OSTATNI dzien juz minal (data < dzis) nie sa "aktywne".
+  // Przenosimy je do Dziennika (trip_type=completed) - znikaja z "Aktywne trasy", laduja jako
+  // wspomnienia. Inaczej stara niedokonczona trasa (np. minionym 'ongoing') wisi w aktywnych.
+  const archivingPast = useRef(false);
+  useEffect(() => {
+    if (!userId || archivingPast.current || !soloRoutes.length) return;
+    const t = new Date();
+    const todayStr = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+    const past = (soloRoutes as any[]).filter((r) => r._dateMax && r._dateMax < todayStr);
+    if (!past.length) return;
+    archivingPast.current = true;
+    void (async () => {
+      try {
+        for (const r of past) {
+          const upd = (supabase as any).from("routes").update({ trip_type: "completed", plan_finalized: true });
+          await (r.folder_id ? upd.eq("folder_id", r.folder_id) : upd.eq("id", r.id));
+        }
+        queryClient.removeQueries({ queryKey: ["home-active-solo", userId] });
+        queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+        queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
+      } finally {
+        archivingPast.current = false;
+      }
+    })();
+  }, [soloRoutes, userId, queryClient]);
 
   // Aktywne trasy GRUPOWE (sesje, w ktorych user jest czlonkiem; nie zakonczone, data nie minela).
   const { data: groupSessions = [], isLoading: groupLoading } = useQuery({
