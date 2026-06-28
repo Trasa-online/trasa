@@ -396,6 +396,11 @@ const GroupSession = () => {
     if (!session) return;
     setJoining(true);
     try {
+      // Upewnij sie ze profile row istnieje przed insertem czlonka. Anon + swiezy OAuth
+      // user nie maja go (handle_new_user pomija anon) -> bez tego join_group_session lamie
+      // FK group_session_members.user_id -> profiles(id). Idempotentne.
+      const { error: profileErr } = await (supabase as any).rpc("ensure_current_user_profile");
+      if (profileErr) throw profileErr;
       const { error } = await supabase.rpc("join_group_session" as any, { p_session_id: session.id });
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["group-session-members", session.id] });
