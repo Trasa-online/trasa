@@ -16,22 +16,11 @@ export function useActiveSoloTrips(userId: string | null | undefined) {
         .eq("user_id", userId)
         .in("trip_type", ["planning", "ongoing"])
         .order("created_at", { ascending: false });
-      const rows = (data as any[]) || [];
-      // Trasy grupowe pokazujemy TYLKO hostowi (kazdy czlonek ma swoja kopie - RouteSummaryDialog).
-      // Osobne, odporne na RLS zapytanie o sesje ktorych user jest tworca (created_by). Wczesniej
-      // embed group_sessions(created_by) potrafil zwracac null pod RLS i ukrywal CALA sekcje
-      // (takze trasy solo) -> "nie widac nic".
-      const groupSessionIds = [...new Set(rows.filter((r) => r.group_session_id).map((r) => r.group_session_id))];
-      let hostedSet = new Set<string>();
-      if (groupSessionIds.length) {
-        const { data: hosted } = await (supabase as any)
-          .from("group_sessions")
-          .select("id")
-          .eq("created_by", userId)
-          .in("id", groupSessionIds);
-        hostedSet = new Set(((hosted as any[]) || []).map((s) => s.id));
-      }
-      const solo = rows.filter((r) => !r.group_session_id || hostedSet.has(r.group_session_id));
+      // Query filtruje user_id=userId, wiec KAZDY zwrocony wiersz nalezy do usera -
+      // pokazujemy wszystkie jego aktywne trasy (solo I wlasne kopie grupowe). Wczesniej
+      // dodatkowy filtr "tylko host" wycinal partycypantom ICH WLASNA kopie trasy grupowej
+      // -> po sesji widzieli tylko "wybieranie w toku", nigdy gotowej trasy. To byl bug.
+      const solo = rows;
       const byTrip = new Map<string, any>();
       const range = new Map<string, { min: string | null; max: string | null }>();
       for (const r of solo) {

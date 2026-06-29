@@ -218,39 +218,18 @@ const RouteSummaryDialog = ({
           completed_at: new Date().toISOString(),
         }]);
 
-        // Save the same route for all other group session participants.
-        // Per-day (routePayload jest per-dzien): czlonkowie grupy dostaja KOMPLETNA
-        // trase wielodniowa (folder_id wspoldzielony) - nie tylko dzien 1.
-        if (groupSession?.otherMemberIds?.length) {
-          for (const memberId of groupSession.otherMemberIds) {
-            const { data: memberRoute } = await supabase
-              .from("routes")
-              .insert({ user_id: memberId, ...routePayload })
-              .select("id")
-              .single();
-            if (memberRoute && (day.pins?.length ?? 0) > 0) {
-              await supabase.from("pins").insert(
-                (day.pins ?? []).map((pin, idx) => ({
-                  route_id: memberRoute.id,
-                  place_name: pin.place_name,
-                  address: pin.address,
-                  description: pin.description,
-                  pin_order: idx,
-                  latitude: pin.latitude,
-                  longitude: pin.longitude,
-                  suggested_time: pin.suggested_time,
-                  category: pin.category,
-                  original_creator_id: user.id,
-                  place_id: pin.place_id ?? null,
-                  photo_url: (pin as any).photoUrl ?? null,
-                }))
-              );
-              // Cache-place-photo zostanie odpalone z pierwszej iteracji
-              // (insertedPins powyżej) - tutaj pomijamy, bo Storage będzie już zapełnione
-              // gdy ten kod się wykonuje (kluczem jest place_id lub hash, identyczne pliki)
-            }
-          }
-        }
+      }
+
+      // Kopie trasy dla pozostalych czlonkow grupy robimy server-side jednym RPC
+      // (SECURITY DEFINER) PO zapisaniu wszystkich dni hosta. Wczesniej klient wstawial
+      // trasy z cudzym user_id, co bylo blokowane przez RLS i cicho padalo (czlonkowie
+      // nie dostawali trasy). RPC omija RLS, jest atomowe i idempotentne. Czlonkow bierze
+      // z group_session_members (nie z przekazanego otherMemberIds - odporne na utrate stanu).
+      if (groupSession?.sessionId) {
+        const { error: copyErr } = await (supabase as any).rpc("copy_group_session_routes", {
+          p_session_id: groupSession.sessionId,
+        });
+        if (copyErr) console.error("[RouteSummaryDialog] copy_group_session_routes failed:", copyErr.message);
       }
 
       // Submit to route_examples as candidate (silent)
