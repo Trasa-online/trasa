@@ -20,6 +20,7 @@ export function useActiveSoloTrips(userId: string | null | undefined) {
       // pokazujemy wszystkie jego aktywne trasy (solo I wlasne kopie grupowe). Wczesniej
       // dodatkowy filtr "tylko host" wycinal partycypantom ICH WLASNA kopie trasy grupowej
       // -> po sesji widzieli tylko "wybieranie w toku", nigdy gotowej trasy. To byl bug.
+      const rows = (data as any[]) || [];
       const solo = rows;
       const byTrip = new Map<string, any>();
       const range = new Map<string, { min: string | null; max: string | null }>();
