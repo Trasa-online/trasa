@@ -224,7 +224,7 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading }: He
       {onClose && (
         <button
           onClick={onClose}
-          className="absolute top-3 left-3 z-30 h-9 w-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:bg-black/60"
+          className="absolute top-3 right-3 z-40 h-9 w-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:bg-black/60"
           aria-label="Zamknij"
         >
           <X className="h-4 w-4 text-white" />
@@ -241,29 +241,37 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading }: He
           </button>
           <button
             onClick={() => onExpand(activeIdx)}
-            className="absolute bottom-3 right-3 z-20 h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:bg-black/60"
+            className="absolute bottom-3 right-3 z-30 h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:bg-black/60"
             aria-label="Pełny ekran"
           >
             <Maximize2 className="h-3.5 w-3.5 text-white" />
           </button>
           {photos.length > 1 && (
             <>
-              <button
-                onClick={(e) => { e.stopPropagation(); setActiveIdx(Math.max(0, activeIdx - 1)); }}
-                disabled={activeIdx === 0}
-                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center active:scale-90 disabled:opacity-30"
-                aria-label="Poprzednie"
-              >
-                <ChevronLeft className="h-5 w-5 text-foreground" />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setActiveIdx(Math.min(photos.length - 1, activeIdx + 1)); }}
-                disabled={activeIdx === photos.length - 1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center active:scale-90 disabled:opacity-30"
-                aria-label="Następne"
-              >
-                <ChevronRight className="h-5 w-5 text-foreground" />
-              </button>
+              {/* Tap-zona: CALA lewa polowa zdjecia = poprzednie (duzy obszar kliknicia). */}
+              {activeIdx > 0 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setActiveIdx(Math.max(0, activeIdx - 1)); }}
+                  className="absolute left-0 top-0 bottom-0 w-1/2 z-20 flex items-center justify-start pl-3"
+                  aria-label="Poprzednie"
+                >
+                  <span className="h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90">
+                    <ChevronLeft className="h-5 w-5 text-foreground" />
+                  </span>
+                </button>
+              )}
+              {/* Tap-zona: CALA prawa polowa zdjecia = nastepne. */}
+              {activeIdx < photos.length - 1 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setActiveIdx(Math.min(photos.length - 1, activeIdx + 1)); }}
+                  className="absolute right-0 top-0 bottom-0 w-1/2 z-20 flex items-center justify-end pr-3"
+                  aria-label="Następne"
+                >
+                  <span className="h-9 w-9 rounded-full bg-white/85 backdrop-blur-sm flex items-center justify-center shadow active:scale-90">
+                    <ChevronRight className="h-5 w-5 text-foreground" />
+                  </span>
+                </button>
+              )}
             </>
           )}
           {photos.length > 1 && (

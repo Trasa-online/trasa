@@ -204,7 +204,8 @@ const PlaceSwiperDetail = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-[96dvh] rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden bg-[#F6F5F1]"
+        className="rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden bg-[#F6F5F1]"
+        style={{ height: "min(96dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 0.5rem))" }}
       >
         {/* Scrollable wrapper - motion.div drag-to-dismiss wyrzucone bo blokowal native scroll
             na iOS WebView. Sheet ma close button (Hero X) + tap-outside-to-close + Esc. */}

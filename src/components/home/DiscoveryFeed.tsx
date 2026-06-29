@@ -675,6 +675,10 @@ function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => v
 
 // ── Main export ────────────────────────────────────────────────────────────────
 
+// Sekcja "Zestawienia miejsc" w Eksploruj - WYLACZONA (feature na TODO, nie w MVP).
+// Flip na true gdy zestawienia wracaja do aplikacji.
+const SHOW_ZESTAWIENIA = false;
+
 export default function DiscoveryFeed() {
   const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
   const [activeCreator, setActiveCreator] = useState<PolecaneCreatorPlan | null>(null);
@@ -866,13 +870,12 @@ export default function DiscoveryFeed() {
 
   const bothEmpty = !motywyLoading && !polecaneLoading && motywy.length === 0 && polecane.length === 0;
 
-  // Zestawienia/rankingi miejsc (kind='ranking') widoczne w Eksploruj. Pokazujemy
-  // zarowno tworzone przez userow (user_id != null) JAK I kuratorowane/seedowane
-  // (user_id = null) - inaczej admin-owe zestawienia nie maja gdzie sie pokazac
-  // (osobne query "motywy" jest enabled:false). Top 20 najnowszych. Empty = brak sekcji.
+  // Zestawienia/rankingi miejsc (kind='ranking'). TYMCZASOWO WYLACZONE w Eksploruj
+  // (feature jeszcze nie w MVP - na TODO). Flaga ponizej -> latwy powrot. Kod + query
+  // zostaja w gotowosci. enabled=SHOW_ZESTAWIENIA zeby nie strzelac niepotrzebnie do DB.
   const { data: userPolecajki = [] } = useQuery({
     queryKey: ["explore-rankings"],
-    enabled: true,
+    enabled: SHOW_ZESTAWIENIA,
     queryFn: async () => {
       const { data: cols, error } = await (supabase as any)
         .from("discovery_collections")
@@ -991,8 +994,8 @@ export default function DiscoveryFeed() {
             </div>
           )}
 
-          {/* Zestawienia/rankingi miejsc tworzone przez userow */}
-          {userPolecajki.length > 0 && (
+          {/* Zestawienia miejsc - WYLACZONE (TODO, nie w MVP). Flaga SHOW_ZESTAWIENIA. */}
+          {SHOW_ZESTAWIENIA && userPolecajki.length > 0 && (
             <UserPolecajkiRow collections={userPolecajki} onOpen={setActiveCol} />
           )}
 
