@@ -478,49 +478,14 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   // "Dzien zakonczony".
   const renderBottomBar = () => {
     if (!showBottomBar) return null;
-    const navMode = tripIsToday && !!nextStop;
-    const dist = navMode ? distFor(nextStop) : null;
-    const mapsUrl = navMode && nextStop.latitude && nextStop.longitude
-      ? `https://www.google.com/maps/dir/?api=1&destination=${nextStop.latitude},${nextStop.longitude}` : null;
-    const remaining = workingPins.filter((p: any) => !p.visited_at && !skippedPinIds.has(p.id)).length;
-    if (!navMode && !isFutureDay && !isPastDay) return null;
+    // Pasek "Nastepny przystanek" USUNIETY - odhaczenie + nawigacja sa teraz na KAZDEJ karcie
+    // (redukcja przeciazenia poznawczego na home). Zostaje tylko info-banner przyszly/miniony dzien.
+    if (tripIsToday && !!nextStop) return null;
+    if (!isFutureDay && !isPastDay) return null;
     return (
       <div className="fixed left-1/2 -translate-x-1/2 w-full max-w-lg px-4 z-40 bottom-[calc(5.6rem+env(safe-area-inset-bottom,0px))]">
-        {navMode ? (
-          <>
-            <div className="rounded-3xl bg-trasa-teal border border-trasa-teal-ink/20 shadow-xl shadow-black/15 p-2 pl-3.5 flex items-center gap-2">
-              <button onClick={() => showCard(nextStop)} className="min-w-0 flex-1 text-left">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-trasa-teal-ink leading-none">Następny przystanek</p>
-                <p className="text-sm font-display font-extrabold text-[#0E0E0E] leading-tight truncate mt-0.5">{nextStop.place_name}</p>
-                {dist && <p className="text-[11px] text-[#0E0E0E]/55 leading-none mt-0.5">{dist} od&nbsp;Ciebie</p>}
-              </button>
-              <button
-                onClick={() => markVisited(nextStop.id)}
-                aria-label="Byłem tutaj - odhacz"
-                className="h-11 w-11 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 active:scale-90 transition-transform shadow-sm"
-              >
-                <Check className="h-6 w-6" strokeWidth={2.6} />
-              </button>
-              {mapsUrl && (
-                <button
-                  onClick={() => window.open(mapsUrl, "_blank", "noopener,noreferrer")}
-                  className="shrink-0 h-11 px-4 rounded-full bg-[#0E0E0E] text-white text-sm font-bold flex items-center gap-1.5 active:scale-95 transition-transform"
-                >
-                  <Navigation className="h-4 w-4" /> Nawiguj
-                </button>
-              )}
-            </div>
-            {remaining > 1 && (
-              <button
-                onClick={() => setSkipPromptPin(nextStop)}
-                className="mx-auto mt-1.5 flex items-center gap-1 px-3.5 py-1 text-[11px] font-semibold text-foreground/70 bg-card/90 border border-border/40 rounded-full shadow-sm active:scale-95 transition-transform"
-              >
-                Przejdź do kolejnego punktu z&nbsp;trasy <ChevronRight className="h-3 w-3" />
-              </button>
-            )}
-          </>
-        ) : (
-          // Przyszly / miniony dzien - info banner w tym samym miejscu (bez skakania).
+        {(
+          // Przyszly / miniony dzien - info banner.
           <div className="rounded-3xl bg-card border border-border/50 shadow-xl shadow-black/10 p-3 flex items-center gap-3">
             <div className="h-11 w-11 rounded-2xl bg-muted flex items-center justify-center shrink-0">
               <CalendarDays className="h-5 w-5 text-muted-foreground" />
@@ -628,14 +593,32 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
           <p className="text-base font-black leading-tight">{pin.place_name}</p>
         </div>
       </button>
-      {pin.visited_at && (
+      {pin.visited_at ? (
         <button
           onClick={() => unmarkVisited(pin.id)}
           className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-border/30 text-xs font-semibold text-muted-foreground active:scale-95 transition-transform"
         >
           <RotateCcw className="h-3.5 w-3.5" /> Cofnij odhaczenie
         </button>
-      )}
+      ) : !skippedPinIds.has(pin.id) && !isPastDay ? (
+        // Odhacz + Nawiguj bezposrednio na karcie (redukcja przeciazenia - bez osobnego paska).
+        <div className="flex items-stretch border-t border-border/30 divide-x divide-border/30">
+          <button
+            onClick={() => markVisited(pin.id)}
+            className="flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-bold text-green-600 active:scale-[0.97] transition-transform"
+          >
+            <Check className="h-4 w-4" strokeWidth={2.6} /> Odhacz
+          </button>
+          {pin.latitude && pin.longitude && (
+            <button
+              onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${pin.latitude},${pin.longitude}`, "_blank", "noopener,noreferrer")}
+              className="flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-bold text-foreground active:scale-[0.97] transition-transform"
+            >
+              <Navigation className="h-4 w-4" /> Nawiguj
+            </button>
+          )}
+        </div>
+      ) : null}
       {editable && (
         <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
           <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
@@ -646,7 +629,8 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
           </button>
         </div>
       )}
-      {withRating && <div className="px-4 pb-4 pt-1">{renderRatingNote(pin.place_name, true)}</div>}
+      {/* Notatka USUNIETA z home (redukcja przeciazenia) - notki uzupelnia sie w Dzienniku. */}
+      {void withRating}
     </div>
   );
 

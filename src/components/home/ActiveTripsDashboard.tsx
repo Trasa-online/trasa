@@ -232,7 +232,20 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
       <section className="mb-6">
         <p className="text-sm font-bold mb-2.5 px-1">Aktywne trasy</p>
         {soloLoading ? (
-          <div className="h-32 rounded-3xl bg-muted/40 animate-pulse" />
+          // Skeleton w ksztalcie realnej karty aktywnej trasy: tytul+data, potem karta z obrazem.
+          <div className="space-y-3">
+            <div className="space-y-2 pb-0.5">
+              <div className="h-6 w-40 rounded-lg bg-muted/50 animate-pulse" />
+              <div className="h-3 w-28 rounded bg-muted/40 animate-pulse" />
+            </div>
+            <div className="rounded-3xl border border-border/40 overflow-hidden bg-card">
+              <div className="h-40 bg-muted/50 animate-pulse" />
+              <div className="p-4 space-y-2.5">
+                <div className="h-4 w-24 rounded-full bg-muted/40 animate-pulse" />
+                <div className="h-5 w-36 rounded bg-muted/50 animate-pulse" />
+              </div>
+            </div>
+          </div>
         ) : soloRoutes.length > 0 ? (
           (() => {
             const selected = soloRoutes.find((r) => r.id === selectedSoloId) ?? soloRoutes[0];
