@@ -455,6 +455,9 @@ const Auth = () => {
     <div className={`min-h-screen flex flex-col ${businessMode ? "bg-blue-950" : "bg-background"}`}>
       {/* Hero - B2C: logo+tagline u gory, guziki na dole (mt-auto). B2B: wycentrowane. */}
       <div className={`flex-1 flex flex-col items-center px-6 pt-12 pb-6 ${businessMode ? "justify-center" : ""}`}>
+        {/* Logo + naglowek + body. B2C: wycentrowane w pionie wzgledem strony (flex-1).
+            B2B: czesc wycentrowanej sekcji (hero ma justify-center). */}
+        <div className={`flex flex-col items-center ${businessMode ? "" : "flex-1 justify-center"}`}>
         {/* Logo mark - B2C: realne logo Trasy (orba). B2B: niebieska orba (branding biznesowy). */}
         {businessMode ? (
           <div
@@ -482,8 +485,9 @@ const Auth = () => {
             </p>
           </>
         )}
+        </div>
 
-        <div className={`w-full max-w-sm ${businessMode ? "" : "mt-auto"}`}>
+        <div className="w-full max-w-sm">
           {businessMode ? (
             <>
               <button
@@ -658,16 +662,18 @@ const Auth = () => {
             Konto zakładasz automatycznie przy pierwszym logowaniu. Miałeś&nbsp;już konto z&nbsp;hasłem? Użyj Google lub Apple z&nbsp;tym samym adresem - połączymy je&nbsp;automatycznie.
           </p>
 
-          {/* Business link - subtle, at the bottom */}
-          <p className="text-xs text-muted-foreground text-center mt-6">
-            Jesteś właścicielem lokalu?{" "}
-            <button
-              onClick={() => setBusinessMode(true)}
-              className="underline text-foreground font-medium"
-            >
-              Zaloguj się do panelu
-            </button>
-          </p>
+          {/* Business link - tylko web (na natywnej apce panel biznesowy nie ma sensu) */}
+          {!isNative && (
+            <p className="text-xs text-muted-foreground text-center mt-6">
+              Jesteś właścicielem lokalu?{" "}
+              <button
+                onClick={() => setBusinessMode(true)}
+                className="underline text-foreground font-medium"
+              >
+                Zaloguj się do panelu
+              </button>
+            </p>
+          )}
           </>
           )}
         </div>
