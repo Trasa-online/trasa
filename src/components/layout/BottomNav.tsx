@@ -29,6 +29,10 @@ const BottomNav = () => {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [reusePrompt, setReusePrompt] = useState<{ city: string; likes: ExploreLike[] } | null>(null);
+  // Menu "+" ma 2 kroki: krok 1 = [Zaplanuj | Przegladaj miejsca]; po "Zaplanuj" ->
+  // krok 2 = [Solo | Grupowo | Dolacz do sesji]. Reset przy zamknieciu/otwarciu.
+  const [planStep, setPlanStep] = useState(false);
+  useEffect(() => { if (!showMenu) setPlanStep(false); }, [showMenu]);
 
   // Inne ekrany (np. baner "Zaplanuj nową trasę" w dzienniku) moga otworzyc to
   // samo menu nad orba "+" zamiast wlasnego drawera.
@@ -128,34 +132,57 @@ const BottomNav = () => {
       {/* Popup menu above "+" button */}
       {showMenu && (
         <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-stretch w-[248px] pb-2">
-          <button
-            onClick={handleBrowse}
-            className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
-          >
-            <Sparkles className="h-4 w-4 text-orange-600" />
-            Przeglądaj miejsca
-          </button>
-          <button
-            onClick={() => { setShowMenu(false); setJoinCode(""); setShowJoinModal(true); }}
-            className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
-          >
-            <Link2 className="h-4 w-4 text-orange-600" />
-            Dołącz do sesji
-          </button>
-          <button
-            onClick={handleGroupPlan}
-            className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-foreground text-background font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
-          >
-            <Users className="h-4 w-4" />
-            Zaplanuj grupowo
-          </button>
-          <button
-            onClick={handleSoloPlan}
-            className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-primary text-white font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
-          >
-            <MapPin className="h-4 w-4" />
-            Zaplanuj solo
-          </button>
+          {!planStep ? (
+            <>
+              {/* Krok 1: Zaplanuj | Przegladaj miejsca */}
+              <button
+                onClick={handleBrowse}
+                className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
+              >
+                <Sparkles className="h-4 w-4 text-orange-600" />
+                Przeglądaj miejsca
+              </button>
+              <button
+                onClick={() => setPlanStep(true)}
+                className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-primary text-white font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
+              >
+                <MapPin className="h-4 w-4" />
+                Zaplanuj
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Krok 2: Solo | Grupowo | Dolacz do sesji */}
+              <button
+                onClick={() => setPlanStep(false)}
+                className="w-full justify-center flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-card/80 border border-border/60 text-muted-foreground font-semibold text-xs shadow-lg active:scale-95 transition-transform whitespace-nowrap"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Wróć
+              </button>
+              <button
+                onClick={handleSoloPlan}
+                className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-primary text-white font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
+              >
+                <MapPin className="h-4 w-4" />
+                Zaplanuj solo
+              </button>
+              <button
+                onClick={handleGroupPlan}
+                className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-foreground text-background font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
+              >
+                <Users className="h-4 w-4" />
+                Zaplanuj grupowo
+              </button>
+              <button
+                onClick={() => { setShowMenu(false); setJoinCode(""); setShowJoinModal(true); }}
+                className="w-full justify-center flex items-center gap-2.5 px-5 py-3 rounded-full bg-card border border-border text-foreground font-semibold text-sm shadow-xl active:scale-95 transition-transform whitespace-nowrap"
+              >
+                <Link2 className="h-4 w-4 text-orange-600" />
+                Dołącz do sesji
+              </button>
+            </>
+          )}
         </div>
       )}
 

@@ -397,9 +397,6 @@ const RouteSummaryDialog = ({
                               {pin.description && (
                                 <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{pin.description}</p>
                               )}
-                              {pin.walking_time_from_prev && (
-                                <p className="text-[11px] text-muted-foreground/60 mt-1">🚶 {pin.walking_time_from_prev}</p>
-                              )}
                             </div>
                           </div>
                         </div>

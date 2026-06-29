@@ -468,23 +468,30 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             stopPropagation, zeby tap w karte = wizytowka, a strzalka = zmiana zdjecia. */}
         {isTop && !place.coverVideoUrl && photoUrls.length > 1 && (
           <>
+            {/* Strzalki = duza tap-zona (pelna wysokosc, ~64px szer. przy krawedzi). Tylko
+                gorna 60% wysokosci, zeby dolne CTA/swipe nie kolidowaly. disabled = brak
+                pointer-events (nie blokuje swipe gdy 1. / ostatnie zdjecie). */}
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => { e.stopPropagation(); setPhotoIdx(n => Math.max(0, n - 1)); }}
               disabled={photoIdx === 0}
               aria-label="Poprzednie zdjęcie"
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform disabled:opacity-0"
+              className="absolute left-0 top-0 h-[60%] w-16 z-20 flex items-center justify-start pl-2.5 active:scale-95 transition-transform disabled:opacity-0 disabled:pointer-events-none"
             >
-              <ChevronLeft className="h-5 w-5 text-white" />
+              <span className="h-9 w-9 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
+                <ChevronLeft className="h-5 w-5 text-white" />
+              </span>
             </button>
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => { e.stopPropagation(); setPhotoIdx(n => Math.min(photoUrls.length - 1, n + 1)); }}
               disabled={photoIdx === photoUrls.length - 1}
               aria-label="Następne zdjęcie"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform disabled:opacity-0"
+              className="absolute right-0 top-0 h-[60%] w-16 z-20 flex items-center justify-end pr-2.5 active:scale-95 transition-transform disabled:opacity-0 disabled:pointer-events-none"
             >
-              <ChevronRight className="h-5 w-5 text-white" />
+              <span className="h-9 w-9 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
+                <ChevronRight className="h-5 w-5 text-white" />
+              </span>
             </button>
           </>
         )}
@@ -1283,7 +1290,9 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       }
     };
     fetchPlaces().finally(() => clearTimeout(safetyTimeout));
-  }, [city, user, roundPlaceIds, categoryFilterKey, dietFilterKey, sortByNearest, refreshNonce]);
+    // UWAGA: sortByNearest CELOWO nie jest w deps - zmiana sortu nie przebudowuje queue
+    // (inaczej ocenione miejsca wracaly = reset swipe). Sort stosowany reaktywnie nizej.
+  }, [city, user, roundPlaceIds, categoryFilterKey, dietFilterKey, refreshNonce]);
 
   // Reorder queue when a category group has been liked too many times consecutively
   const rebalanceQueue = (newRecentGroups: (Set<string> | null)[]) => {
@@ -1316,9 +1325,25 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
   };
 
   const isSearching = searchQuery.trim().length >= 2;
-  const displayQueue = isSearching
+  const baseQueue = isSearching
     ? allPlaces.filter(p => p.place_name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
     : queue;
+  // Sort "od najblizszego" REAKTYWNIE - re-sortuje POZOSTALE karty bez przebudowy queue
+  // (queue nie zawiera juz ocenionych). Wczesniej sortByNearest byl w deps efektu -> toggle
+  // resetowal swipe (ocenione wracaly do kolejki).
+  const displayQueue = useMemo(() => {
+    if (!sortByNearest) return baseQueue;
+    const ref = getReference();
+    const coords = ref?.coords ?? (typeof startingLocation === "object" && startingLocation
+      ? { lat: (startingLocation as any).latitude, lng: (startingLocation as any).longitude } : null);
+    if (!coords) return baseQueue;
+    return [...baseQueue].sort((a, b) => {
+      const da = a.latitude && a.longitude ? haversineKm(coords, { lat: a.latitude, lng: a.longitude }) : Infinity;
+      const db = b.latitude && b.longitude ? haversineKm(coords, { lat: b.latitude, lng: b.longitude }) : Infinity;
+      return da - db;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseQueue, sortByNearest]);
 
   const photoUrlOverrides = useRef<Record<string, string>>({});
 

@@ -1574,7 +1574,7 @@ window.addEventListener('message',function(e){
                         if (miniPins.length === 0) return null;
                         return (
                           <div className="flex-shrink-0 px-4 pb-2">
-                            <div className="relative h-28 rounded-2xl overflow-hidden border border-border/40 bg-muted">
+                            <div className="relative h-48 rounded-2xl overflow-hidden border border-border/40 bg-muted">
                               <iframe ref={miniMapRef} onLoad={() => setTimeout(focusMiniToActiveCard, 300)} srcDoc={buildMiniLeaflet(miniPins)} className="absolute inset-0 w-full h-full border-0" title="Podgląd mapy" />
                               <button onClick={() => setShowMap(true)} aria-label="Rozwiń mapę" className="absolute right-2 bottom-2 h-8 w-8 rounded-lg bg-white shadow-md flex items-center justify-center active:scale-95 transition-transform">
                                 <Maximize2 className="h-4 w-4 text-foreground" />
