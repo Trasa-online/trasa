@@ -148,6 +148,9 @@ const CreateGroupSession = () => {
 
   const handleCreate = async () => {
     if (loading) return; // Prevent double-submit even if button disabled state hasn't flushed
+    // Data wyjazdu jest WYMAGANA - bez niej trasa nie jest poprawnie traktowana jako
+    // aktywna (zakres dat napedza "Aktywne trasy" na home + auto-archiwizacje minionych).
+    if (!tripDate) { toast.error("Wybierz datę wyjazdu"); return; }
     // Web: grupowe wymaga rejestracji (drives signups + nie zasmieca profiles
     // anon user_xxx rows widocznymi potem w Admin panel).
     // Native: anon OK (drives downloads + low-friction onboarding ze share-link
@@ -373,7 +376,7 @@ const CreateGroupSession = () => {
 
             {/* Trip date */}
             <div>
-              <p className="text-sm font-semibold mb-3">Data wyjazdu <span className="font-normal text-muted-foreground">(opcjonalnie)</span></p>
+              <p className="text-sm font-semibold mb-3">Data wyjazdu <span className="font-normal text-orange-600">(wymagane)</span></p>
               <button
                 onClick={() => setDatePickerOpen(o => !o)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-medium transition-colors w-full ${
@@ -473,7 +476,7 @@ const CreateGroupSession = () => {
 
             <button
               onClick={handleCreate}
-              disabled={loading || !selectedCity}
+              disabled={loading || !selectedCity || !tripDate}
               className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
             >
               {loading ? (fromJournal ? "Tworzę trasę…" : "Tworzę sesję…") : (fromJournal ? "Stwórz trasę" : "Stwórz sesję grupową")}
