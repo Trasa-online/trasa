@@ -8,6 +8,8 @@ import { usePostHog } from "@posthog/react";
 import { toast } from "sonner";
 import CityPicker from "@/components/plan-wizard/CityPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
+import { Calendar } from "@/components/ui/calendar";
+import { pl } from "date-fns/locale";
 import StartingLocationPicker from "@/components/plan-wizard/StartingLocationPicker";
 import PlaceSwiper, { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -88,6 +90,8 @@ const PlanWizard = () => {
   const exploreMode = returnState?.exploreMode ?? false;
   // Istniejaca aktywna trasa dla wybranego miasta+daty (hybryda: pytamy kontynuuj/nowa).
   const [dupTrip, setDupTrip] = useState<{ id: string; city: string; start_date: string } | null>(null);
+  // Edycja daty z poziomu swipera (klik w "miasto · DD MMM") - sheet z kalendarzem.
+  const [editDateOpen, setEditDateOpen] = useState(false);
 
   // Step 4 tabs: "swipe" (Eksploruj) | "matches" (Dopasowania). Polubione miejsca
   // sa lifted z PlaceSwipera przez onLikedPlacesChange callback - PlaceSwiper trzyma
@@ -438,6 +442,7 @@ const PlanWizard = () => {
                 exploreMode={exploreMode}
                 onLikedPlacesChange={setLikedSnapshot}
                 onSwitchToMatches={() => setStep4Tab("matches")}
+                onEditDate={() => setEditDateOpen(true)}
               />
             </div>
 
@@ -716,6 +721,25 @@ const PlanWizard = () => {
             >
               Pokaż miejsca
             </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Edycja daty z poziomu swipera (klik w "miasto · DD MMM") */}
+      <Sheet open={editDateOpen} onOpenChange={setEditDateOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl p-0 [&>button]:hidden" style={{ maxHeight: "85vh" }}>
+          <div className="px-5 pt-5 pb-3">
+            <p className="text-lg font-black">Zmień datę wyjazdu</p>
+          </div>
+          <div className="flex justify-center pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
+            <Calendar
+              mode="single"
+              selected={date ?? undefined}
+              onSelect={(d) => { if (d) { setDate(d); setEditDateOpen(false); } }}
+              disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
+              locale={pl}
+              className="rounded-2xl"
+            />
           </div>
         </SheetContent>
       </Sheet>

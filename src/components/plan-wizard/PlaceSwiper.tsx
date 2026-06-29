@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Star, ArrowRight, ChevronUp, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X } from "lucide-react";
+import { MapPin, Star, ArrowRight, ChevronUp, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
 import { haversineKm as haversineKmDist, formatDistance } from "@/lib/distance";
 import { useDistanceReference, getReference, ensureCityContext, wasAskedForCity, markAskedForCity, tryResolveOnSite } from "@/lib/distanceReference";
@@ -896,6 +896,8 @@ interface PlaceSwiperProps {
    *  do /create. PlanWizard przelacza wtedy tabke na "matches" gdzie user wybiera
    *  miejsca do trasy. Bez tej props CTA wciaz wywoluje handleProceed (legacy). */
   onSwitchToMatches?: () => void;
+  /** Klik w date "miasto · DD MMM" w naglowku swipera -> edycja daty (PlanWizard otwiera kalendarz). */
+  onEditDate?: () => void;
 }
 
 // Category groups for diversity balancing
@@ -1063,7 +1065,7 @@ function enrichWithBusinessProfile(p: any): MockPlace {
   } as MockPlace;
 }
 
-const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace, onLikedPlacesChange, onSwitchToMatches }: PlaceSwiperProps) => {
+const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryFilter, dietFilters, sortByNearest, initialLikedPlaceNames = [], initialSkippedPlaceNames = [], searchQuery = "", showAddPlace: showAddPlaceProp = false, onAddPlaceClose, onBatchComplete, exploreMode = false, groupSessionId, onGroupFinished, roundPlaceIds, onRoundComplete, onSuggestPlace, onLikedPlacesChange, onSwitchToMatches, onEditDate }: PlaceSwiperProps) => {
   // Normalize categoryFilter to a stable array (single id, multiple ids, or none).
   const categoryFilters: string[] = Array.isArray(categoryFilter)
     ? categoryFilter.filter(Boolean)
@@ -1815,11 +1817,16 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       {/* Progress. Hidden in exploreMode (HomeSwipe) - miasto juz jest w chip filter,
           a wybranych count nie ma sensu bez bottom CTA. */}
       <div className={cn("flex items-center justify-between px-5 pt-1 pb-3 shrink-0", exploreMode && "hidden")}>
-        <span className="text-xs text-muted-foreground">
-          {roundPlaceIds?.length
-            ? `Miejsce ${roundPlaceIds.length - queue.length}/${roundPlaceIds.length}`
-            : `${city} · ${format(date, "d MMM")}`}
-        </span>
+        {roundPlaceIds?.length ? (
+          <span className="text-xs text-muted-foreground">Miejsce {roundPlaceIds.length - queue.length}/{roundPlaceIds.length}</span>
+        ) : onEditDate ? (
+          <button onClick={onEditDate} className="text-xs text-muted-foreground inline-flex items-center gap-1 active:opacity-60" aria-label="Zmień datę">
+            {city} · {format(date, "d MMM")}
+            <CalendarDays className="h-3 w-3 opacity-60" />
+          </button>
+        ) : (
+          <span className="text-xs text-muted-foreground">{city} · {format(date, "d MMM")}</span>
+        )}
         <span className="text-xs text-muted-foreground">
           {(likedPlaces.length + superLikedPlaces.length) > 0 ? `${likedPlaces.length + superLikedPlaces.length} wybranych` : ""}
         </span>
