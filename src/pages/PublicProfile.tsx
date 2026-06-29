@@ -4,9 +4,13 @@ import { avatarSrc } from "@/lib/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, MapPin, Map as MapIcon, Building2, Layers } from "lucide-react";
+import { parseISO, isValid, format } from "date-fns";
+import { pl } from "date-fns/locale";
+import { ArrowLeft, Map as MapIcon, Building2, Layers, CalendarDays } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
+import { resolveStored } from "@/components/PlacePhoto";
 import FriendButton from "@/components/social/FriendButton";
 import SectionCard from "@/components/profile/SectionCard";
 
@@ -44,18 +48,61 @@ export default function PublicProfile() {
   });
 
 
-  const { data: sharedRoutes = [] } = useQuery({
-    queryKey: ["public-routes", profile?.id],
+  // Dziennik usera (read-only): pocztowki jak we wlasnym Dzienniku. Trasy wielodniowe
+  // zwiniete po folderze (dzien 1 = reprezentant), okladka z review_photos lub pierwszego
+  // pina ze zdjeciem. RLS zwraca trasy widoczne dla ogladajacego (udostepnione).
+  const { data: postcards = [], isLoading: postcardsLoading } = useQuery({
+    queryKey: ["public-journal", profile?.id],
+    enabled: !!profile?.id && routesOpen,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: routes } = await supabase
         .from("routes")
-        .select("id, city, start_date, ai_summary")
+        .select("id, city, title, day_number, start_date, end_date, folder_id, ai_summary, review_photos")
         .eq("user_id", profile!.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      return data ?? [];
+        .order("created_at", { ascending: false });
+      const rows = (routes ?? []) as any[];
+      // Okladki: pierwszy pin ze zdjeciem (wg pin_order) per trasa.
+      const ids = rows.map((r) => r.id);
+      const coverMap: Record<string, string> = {};
+      if (ids.length) {
+        const { data: pins } = await (supabase as any)
+          .from("pins").select("route_id, photo_url, image_url, pin_order")
+          .in("route_id", ids).order("pin_order", { ascending: true });
+        for (const p of pins ?? []) {
+          if (coverMap[p.route_id]) continue;
+          const u = resolveStored(p.photo_url || p.image_url);
+          if (u) coverMap[p.route_id] = u;
+        }
+      }
+      // Zwin trasy wielodniowe (folder_id) w jedna pocztowke.
+      const folderMap = new Map<string, any[]>();
+      const out: any[] = [];
+      for (const e of rows) {
+        if (e.folder_id) {
+          if (!folderMap.has(e.folder_id)) folderMap.set(e.folder_id, []);
+          folderMap.get(e.folder_id)!.push(e);
+        } else {
+          out.push({ ...e, _numDays: 1, _cover: coverMap[e.id] });
+        }
+      }
+      for (const days of folderMap.values()) {
+        const sorted = [...days].sort((a, b) => (a.day_number ?? 0) - (b.day_number ?? 0));
+        const rep = sorted[0];
+        out.push({
+          ...rep,
+          title: sorted.length > 1 ? null : rep.title,
+          _numDays: sorted.length,
+          review_photos: sorted.flatMap((d) => d.review_photos ?? []),
+          _cover: sorted.map((d) => coverMap[d.id]).find(Boolean),
+        });
+      }
+      out.sort((a, b) => {
+        const ad = a.start_date ? parseISO(a.start_date).getTime() : 0;
+        const bd = b.start_date ? parseISO(b.start_date).getTime() : 0;
+        return bd - ad;
+      });
+      return out;
     },
-    enabled: !!profile?.id,
   });
 
   if (isLoading) return null;
@@ -104,14 +151,16 @@ export default function PublicProfile() {
         </div>
       </div>
 
-      {/* Sheet: trasy usera (dziennik). Tap karty -> szczegoly trasy. */}
+      {/* Sheet: dziennik usera (pocztowki, read-only). Tap karty -> szczegoly trasy. */}
       <Sheet open={routesOpen} onOpenChange={setRoutesOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl p-0" style={{ maxHeight: "85dvh", height: "85dvh" }}>
           <SheetHeader className="px-5 pt-5 pb-3 text-left">
-            <SheetTitle>Trasy {displayName}</SheetTitle>
+            <SheetTitle>Dziennik {displayName}</SheetTitle>
           </SheetHeader>
-          <div className="flex-1 overflow-y-auto px-5 pb-8 space-y-3">
-            {sharedRoutes.length === 0 ? (
+          <div className="flex-1 overflow-y-auto px-5 pb-8 space-y-4">
+            {postcardsLoading ? (
+              <p className="text-sm text-muted-foreground text-center py-12">Ładowanie…</p>
+            ) : postcards.length === 0 ? (
               <div className="py-16 text-center">
                 <div className="text-4xl mb-3">🗺️</div>
                 <p className="text-sm font-bold">Brak tras do pokazania</p>
@@ -120,21 +169,43 @@ export default function PublicProfile() {
                 </p>
               </div>
             ) : (
-              sharedRoutes.map((route: any) => (
-                <button
-                  key={route.id}
-                  onClick={() => { setRoutesOpen(false); navigate(`/route/${route.id}`); }}
-                  className="w-full text-left bg-card border border-border/50 rounded-2xl p-4 active:scale-[0.98] transition-transform"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <MapPin className="h-4 w-4 text-orange-600 shrink-0" />
-                    <span className="font-bold text-sm">{route.city}</span>
-                  </div>
-                  {route.ai_summary && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{route.ai_summary}</p>
-                  )}
-                </button>
-              ))
+              postcards.map((e: any) => {
+                const validPhotos = (e.review_photos ?? []).filter((u: any) => !!u && typeof u === "string" && u.trim() !== "");
+                const thumb = validPhotos[0] ?? e._cover ?? getRandomPinPlaceholder(e.id);
+                const d = e.start_date ? parseISO(e.start_date) : null;
+                const dateLabel = d && isValid(d) ? format(d, "d MMMM yyyy", { locale: pl }) : "";
+                return (
+                  <button
+                    key={e.id}
+                    onClick={() => { setRoutesOpen(false); navigate(`/route/${e.id}`); }}
+                    className="w-full rounded-3xl bg-card border border-border/50 overflow-hidden text-left active:scale-[0.98] transition-transform"
+                  >
+                    <div className="relative w-full aspect-[16/9] overflow-hidden bg-muted">
+                      <img
+                        src={thumb}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={(ev) => { (ev.target as HTMLImageElement).src = getRandomPinPlaceholder(e.id + "_fb"); }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+                        <p className="text-white font-bold text-lg leading-tight drop-shadow-sm">{e.title || e.city || "Podróż"}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {dateLabel && <p className="text-white/70 text-xs">{dateLabel}</p>}
+                          {e._numDays > 1 && (
+                            <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                              <CalendarDays className="h-2.5 w-2.5" />{e._numDays} dni
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {e.ai_summary && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed px-4 py-3">{e.ai_summary}</p>
+                    )}
+                  </button>
+                );
+              })
             )}
           </div>
         </SheetContent>
