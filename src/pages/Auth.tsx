@@ -453,8 +453,8 @@ const Auth = () => {
 
   return (
     <div className={`min-h-screen flex flex-col ${businessMode ? "bg-blue-950" : "bg-background"}`}>
-      {/* Hero */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-6">
+      {/* Hero - B2C: logo+tagline u gory, guziki na dole (mt-auto). B2B: wycentrowane. */}
+      <div className={`flex-1 flex flex-col items-center px-6 pt-12 pb-6 ${businessMode ? "justify-center" : ""}`}>
         {/* Logo mark - B2C: realne logo Trasy (orba). B2B: niebieska orba (branding biznesowy). */}
         {businessMode ? (
           <div
@@ -464,7 +464,7 @@ const Auth = () => {
         ) : (
           <img src="/Icon_Trasa.png" alt="Trasa" className="w-20 h-20 mb-4 object-contain" draggable={false} />
         )}
-        <h1 className={`text-4xl font-black tracking-tight mb-1.5 ${businessMode ? "text-white" : ""}`}>TRASA</h1>
+        {businessMode && <h1 className="text-4xl font-black tracking-tight mb-1.5 text-white">TRASA</h1>}
         {businessMode ? (
           <>
             <span className="mb-3 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold tracking-wide uppercase">
@@ -483,7 +483,7 @@ const Auth = () => {
           </>
         )}
 
-        <div className="w-full max-w-sm">
+        <div className={`w-full max-w-sm ${businessMode ? "" : "mt-auto"}`}>
           {businessMode ? (
             <>
               <button
@@ -624,7 +624,7 @@ const Auth = () => {
           )}
 
           {/* OAuth - Apple + Google */}
-          <div className="flex flex-col gap-6 mb-5">
+          <div className="flex flex-col gap-2 mb-5">
             <button
               type="button"
               onClick={() => handleOAuth("apple")}
