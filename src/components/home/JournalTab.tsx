@@ -32,7 +32,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
       // Own routes (all statuses)
       const { data: ownRoutes } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, is_shared, overall_rating, views, new_for_users, chat_status")
+        .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, is_shared, overall_rating, views, new_for_users, chat_status, trip_type, plan_finalized")
         .eq("user_id", userId)
         .order("updated_at", { ascending: false });
 
@@ -47,7 +47,7 @@ const JournalTab = ({ userId }: JournalTabProps) => {
         const sessionIds = memberRows.map((m: any) => m.session_id);
         const { data } = await (supabase as any)
           .from("routes")
-          .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, new_for_users, chat_status, group_session_id")
+          .select("id, title, city, day_number, start_date, end_date, folder_id, ai_summary, ai_highlight, review_photos, new_for_users, chat_status, group_session_id, trip_type, plan_finalized")
           .in("group_session_id", sessionIds)
           .neq("user_id", userId)
           .order("updated_at", { ascending: false });
@@ -121,7 +121,12 @@ const JournalTab = ({ userId }: JournalTabProps) => {
     for (const e of collapsed) {
       const lastDate = e._lastDate ? parseISO(e._lastDate) : null;
       const isPast = lastDate && isValid(lastDate) && lastDate < today;
-      if (isPast) postcards.push(e);
+      // Wspomnienie (pocztowka w Dzienniku) = trasa UKONCZONA (trip_type=completed /
+      // plan_finalized) ALBO miniona (data < dzis). Wczesniej liczyla sie TYLKO data ->
+      // trasa ukonczona DZIS znikala z aktywnych (trip_type!=planning), a do Dziennika
+      // nie trafiala (data nie minela) = "nie zapisala sie nigdzie". To byl bug.
+      const isDone = e.trip_type === "completed" || e.plan_finalized === true;
+      if (isPast || isDone) postcards.push(e);
       else active.push(e);
     }
     active.sort((a, b) => {
