@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { X, Bell, Heart, MessageCircle, UserPlus, MapPin, Route, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
+import { avatarSrc } from "@/lib/avatar";
 
 interface Notification {
   id: string;
@@ -202,8 +203,17 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                     key={n.id}
                     className={`flex items-start gap-3 px-4 py-3.5 transition-colors ${!n.read ? "bg-primary/5" : ""}`}
                   >
-                    <div className={`flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center ${cfg.color}`}>
-                      <Icon className="h-4 w-4" />
+                    {/* Awatar usera + maly badge typu powiadomienia w rogu */}
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={avatarSrc(n.actor?.avatar_url)}
+                        alt={username}
+                        className="h-10 w-10 rounded-full object-cover bg-orange-100"
+                        loading="lazy"
+                      />
+                      <div className={`absolute -bottom-0.5 -right-0.5 h-5 w-5 rounded-full flex items-center justify-center ring-2 ring-card ${cfg.color}`}>
+                        <Icon className="h-3 w-3" />
+                      </div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm leading-snug text-foreground/80">{labelText}</p>

@@ -455,15 +455,15 @@ const Auth = () => {
     <div className={`min-h-screen flex flex-col ${businessMode ? "bg-blue-950" : "bg-background"}`}>
       {/* Hero */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-6">
-        {/* Logo mark */}
-        <div
-          className="w-14 h-14 rounded-full mb-4"
-          style={{
-            background: businessMode
-              ? "radial-gradient(circle at 35% 35%, #60a5fa, #2563eb 60%, #1d4ed8)"
-              : "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)",
-          }}
-        />
+        {/* Logo mark - B2C: realne logo Trasy (orba). B2B: niebieska orba (branding biznesowy). */}
+        {businessMode ? (
+          <div
+            className="w-14 h-14 rounded-full mb-4"
+            style={{ background: "radial-gradient(circle at 35% 35%, #60a5fa, #2563eb 60%, #1d4ed8)" }}
+          />
+        ) : (
+          <img src="/Icon_Trasa.png" alt="Trasa" className="w-20 h-20 mb-4 object-contain" draggable={false} />
+        )}
         <h1 className={`text-4xl font-black tracking-tight mb-1.5 ${businessMode ? "text-white" : ""}`}>TRASA</h1>
         {businessMode ? (
           <>
@@ -474,7 +474,14 @@ const Auth = () => {
               Zaloguj się kontem powiązanym z Twoim lokalem.
             </p>
           </>
-        ) : null}
+        ) : (
+          <>
+            <p className="text-foreground/70 text-center text-base font-bold mb-3">Odkrywaj i&nbsp;zwiedzaj</p>
+            <p className="text-muted-foreground text-center text-sm max-w-[320px] leading-relaxed mb-7">
+              Lokalne atrakcje - solo lub z&nbsp;grupą. Nie martwisz się planowaniem: gotowy plan dnia masz w&nbsp;kilka sekund, a&nbsp;wspomnienia zapisujesz, żeby dzielić się nimi z&nbsp;innymi.
+            </p>
+          </>
+        )}
 
         <div className="w-full max-w-sm">
           {businessMode ? (
