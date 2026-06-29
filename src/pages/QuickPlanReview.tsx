@@ -206,7 +206,7 @@ const QuickPlanReview = () => {
                   </p>
                 )}
                 {pin.hasSuperLike && (
-                  <span className="text-[10px] font-semibold text-amber-500">⭐ Super match</span>
+                  <span className="text-[10px] font-semibold text-amber-500">⭐ Wybór całej grupy</span>
                 )}
                 {pin.liked_by && pin.liked_by > 1 && !pin.hasSuperLike && (
                   <span className="text-[10px] text-muted-foreground">❤️ {pin.liked_by} osoby</span>

@@ -270,7 +270,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                     </p>
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       {isGroupMode
-                        ? "Wróć do parowania, żeby wraz z grupą wybrać więcej miejsc."
+                        ? "Wróć do wybierania, żeby wraz z grupą wybrać więcej miejsc."
                         : "Wróć do przeglądania, żeby polubić więcej miejsc do trasy."}
                     </p>
                   </div>
@@ -316,7 +316,7 @@ const AddPinSheet = ({ open, onOpenChange, onPinAdd, cityContext, likedPlaces = 
                     className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-white font-semibold text-sm active:scale-[0.97] transition-transform"
                   >
                     <ArrowLeft className="h-4 w-4" />
-                    {isGroupMode ? "Wróć do parowania" : "Polub więcej miejsc"}
+                    {isGroupMode ? "Wróć do wybierania" : "Polub więcej miejsc"}
                   </button>
                 </div>
               ) : (

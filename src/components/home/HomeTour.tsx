@@ -53,7 +53,7 @@ function VisualPlan() {
 
 // 3. Gotowa trasa - lista miejsc w dobrej kolejnosci
 function VisualRoute() {
-  const places = [["🏛️", "Tate Liverpool"], ["🍳", "The Egg Cafe"], ["🚶", "Royal Albert Dock"]];
+  const places = [["🏛️", "Muzeum Narodowe"], ["🥟", "Bar Mleczny Prasowy"], ["🌳", "Łazienki Królewskie"]];
   return (
     <div className="w-full max-w-[260px] rounded-3xl bg-white border border-slate-200 shadow-md p-5 flex flex-col gap-3">
       <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 tracking-wide">
@@ -70,11 +70,34 @@ function VisualRoute() {
   );
 }
 
-// Skondensowane intro (mniej klikania): czym jest Trasa -> jak planujesz solo/grupa ->
-// gotowa trasa. Setup profilu (username/awatar/powiadomienia) to osobny etap po
-// zalogowaniu (ProfileSetup).
+// 4. Dostepne miasta - na start Polska, wkrotce Europa
+function VisualCities() {
+  const cities: [string, boolean][] = [
+    ["Warszawa", true], ["Gdańsk", true], ["Kraków", false], ["Wrocław", false],
+  ];
+  return (
+    <div className="w-full max-w-[260px] rounded-3xl bg-white border border-slate-200 shadow-md p-5 flex flex-col gap-3">
+      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 tracking-wide">
+        <Map className="h-3.5 w-3.5 text-orange-600" /> DOSTĘPNE MIASTA
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {cities.map(([name, on]) => (
+          <span key={name} className={`px-3 py-1.5 rounded-full text-[13px] font-semibold ${on ? "bg-orange-600 text-white" : "bg-slate-100 text-slate-400"}`}>
+            {on ? "📍 " : "🔒 "}{name}
+          </span>
+        ))}
+      </div>
+      <p className="text-[12px] text-slate-500 leading-snug">i&nbsp;kolejne polskie miasta, a&nbsp;wkrótce cała Europa 🇪🇺</p>
+    </div>
+  );
+}
+
+// Skondensowane intro (mniej klikania): czym jest Trasa -> dostepne miasta -> jak
+// planujesz solo/grupa -> gotowa trasa. Setup profilu (username/awatar/powiadomienia)
+// to osobny etap po zalogowaniu (ProfileSetup).
 const STEPS = [
   { title: "Witaj w Trasie!", desc: "Trasa to speed dating z miastem. W kilka minut ułożysz plan dnia: przeglądasz miejsca, dodajesz te które Cię ciekawią i dostajesz gotową trasę.", highlight: "", Visual: VisualIntro },
+  { title: "Na start: polskie miasta", desc: "Zaczynamy od Warszawy i Gdańska, a kolejne miasta dochodzą na bieżąco. Trasa cały czas rośnie - wkrótce zaplanujesz podróż po całej Europie.", highlight: "", Visual: VisualCities },
   { title: "Planuj sam lub z grupą", desc: "Kliknij + na pasku i wybierz: planuj solo, zaproś grupę kodem albo dołącz do znajomych. Wy przeglądacie miejsca, a Trasa zbiera Wasze dopasowania.", highlight: "", Visual: VisualPlan },
   { title: "Gotowa trasa na mapie", desc: "Z dopasowań Trasa układa plan dnia w dobrej kolejności i pokazuje go na mapie. Plan dopracujesz i zapiszesz we wspomnieniach.", highlight: "Nawigujesz od punktu do punktu przez Google Maps.", Visual: VisualRoute },
 ];

@@ -23,7 +23,7 @@ const Journal = () => {
         <div className="space-y-2 max-w-[320px]">
           <p className="text-2xl font-display font-extrabold tracking-tight leading-tight">Twój dziennik podróży</p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Załóż konto, żeby zapisywać trasy, dodawać zdjęcia i&nbsp;oceniać miejsca z&nbsp;każdej podróży.
+            Załóż konto, żeby zapisywać trasy, dodawać zdjęcia i&nbsp;notatki z&nbsp;każdej podróży.
           </p>
         </div>
         <div className="flex flex-col items-center gap-3 w-full max-w-[280px]">

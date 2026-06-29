@@ -629,7 +629,7 @@ const GroupSession = () => {
         user_id: profile.id,
         type: "group_session_invite",
         data: { session_id: session.id, join_code: joinCode, city: session.city },
-        message: `Zaproszenie do sesji parowania w ${session.city}`,
+        message: `Zaproszenie do wspólnego wybierania miejsc w ${session.city}`,
       });
       setWaitingInvitedIds((prev) => new Set(prev).add(profile.id));
       // Push notification - jednolita tresc przez helper
@@ -659,7 +659,7 @@ const GroupSession = () => {
             user_id: friendId,
             type: "group_session_invite",
             data: { session_id: session.id, join_code: joinCode, city: session.city },
-            message: `Zaproszenie do sesji parowania w ${session.city}`,
+            message: `Zaproszenie do wspólnego wybierania miejsc w ${session.city}`,
           })
         )
       );
@@ -737,7 +737,7 @@ const GroupSession = () => {
           <p className="text-4xl">👋</p>
           <p className="font-bold text-lg">Zaloguj się, żeby dołączyć</p>
           <p className="text-sm text-muted-foreground">
-            Twój znajomy zaprasza Cię do wspólnego parowania miejsc w <strong>{session.city}</strong>.
+            Twój znajomy zaprasza Cię do wspólnego wybierania miejsc w <strong>{session.city}</strong>.
           </p>
           <button onClick={() => navigate(`/auth?return=/sesja/${joinCode}`)} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base">
             Zaloguj się
@@ -774,7 +774,7 @@ const GroupSession = () => {
             <Users className="h-10 w-10 text-orange-600" />
           </div>
           <div>
-            <p className="text-xl font-black mb-1">Grupowe parowanie</p>
+            <p className="text-xl font-black mb-1">Wybieracie miejsca razem</p>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Eksplorujcie miejsca w <strong>{session.city}</strong> niezależnie i sprawdźcie, co Was łączy!
             </p>
@@ -935,7 +935,7 @@ const GroupSession = () => {
                   <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-3xl mb-3">⏳</div>
                   <p className="text-lg font-black mb-1">Czekamy na kogoś jeszcze</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Parowanie zacznie się gdy co najmniej jedna osoba dołączy do sesji.
+                    Wybieranie zacznie się gdy co najmniej jedna osoba dołączy do sesji.
                   </p>
                 </div>
 
@@ -1060,7 +1060,7 @@ const GroupSession = () => {
                       <span className="text-xl">✅</span>
                       <div>
                         <p className="text-sm font-bold text-emerald-700">Runda zakończona!</p>
-                        <p className="text-xs text-emerald-600/70">Wybierz kolejną kategorię lub zakończ parowanie.</p>
+                        <p className="text-xs text-emerald-600/70">Wybierz kolejną kategorię lub zakończ wybieranie.</p>
                       </div>
                     </div>
                   )}
@@ -1102,7 +1102,7 @@ const GroupSession = () => {
                       disabled={savingCategory || !pendingCategory}
                       className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-40"
                     >
-                      {savingCategory ? "Startuję…" : isFirst ? "Rozpocznij parowanie" : "Następna runda →"}
+                      {savingCategory ? "Startuję…" : isFirst ? "Zacznij wybieranie" : "Następna runda →"}
                     </button>
                     {!isFirst && (
                       <button
@@ -1436,7 +1436,7 @@ const GroupSession = () => {
                   }}
                   className={`w-full py-3 rounded-full font-semibold text-sm active:scale-[0.97] transition-transform ${matches.length > 0 ? "border border-border/50 text-muted-foreground bg-card" : "bg-primary text-white"}`}
                 >
-                  Zakończ parowanie
+                  Zakończ wybieranie
                 </button>
               )}
             </div>

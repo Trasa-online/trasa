@@ -219,8 +219,12 @@ const JournalTab = ({ userId }: JournalTabProps) => {
     <div className="space-y-3 pb-2">
       {/* Dziennik = wspomnienia (minione podroze). Aktywne trasy/sesje sa na ekranie glownym. */}
       {visibleEntries.length === 0 && (
-        <div className="py-16 text-center text-sm text-muted-foreground">
-          Brak wspomnień z minionych podróży
+        <div className="py-16 text-center px-8">
+          <div className="text-4xl mb-3">📸</div>
+          <p className="text-base font-bold">Tu pojawią się Twoje wspomnienia</p>
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-[260px] mx-auto">
+            Gdy ukończysz trasę, zapiszemy ją jako pocztówkę z&nbsp;podróży - ze&nbsp;zdjęciami i&nbsp;notatkami.
+          </p>
         </div>
       )}
 

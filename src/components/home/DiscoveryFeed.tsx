@@ -1013,8 +1013,8 @@ export default function DiscoveryFeed() {
           {newest.length === 0 && warszawa.length === 0 && userPolecajki.length === 0 && (
             <div className="py-16 text-center px-8">
               <div className="text-5xl mb-3">🗺️</div>
-              <p className="text-base font-bold">Brak tras w Eksploruj</p>
-              <p className="text-sm text-muted-foreground mt-1">Udostępnij swoją trasę, żeby pojawiła się tutaj i&nbsp;pomogła innym zaplanować podróż.</p>
+              <p className="text-base font-bold">Trasy społeczności już wkrótce</p>
+              <p className="text-sm text-muted-foreground mt-1">Stwórz swoją pierwszą trasę i&nbsp;udostępnij ją, żeby pomóc innym zaplanować podróż.</p>
             </div>
           )}
         </div>

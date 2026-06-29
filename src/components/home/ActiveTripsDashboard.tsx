@@ -329,7 +329,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                         <div className="h-10 w-10 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
                           <Users className="h-5 w-5 text-orange-600" />
                         </div>
-                        <span className="text-xs text-orange-600 font-semibold">Parowanie w toku</span>
+                        <span className="text-xs text-orange-600 font-semibold">Wybieranie w toku</span>
                       </div>
                     );
                   }
@@ -351,7 +351,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                           </div>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground">{n} {label} · <span className="text-orange-600 font-semibold">parowanie w toku</span></span>
+                      <span className="text-xs text-muted-foreground">{n} {label} · <span className="text-orange-600 font-semibold">wybieranie w toku</span></span>
                     </div>
                   );
                 })()}

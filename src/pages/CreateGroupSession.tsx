@@ -331,7 +331,7 @@ const CreateGroupSession = () => {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <span className="font-bold text-base">{fromJournal ? "Nowa trasa" : "Grupowe parowanie"}</span>
+        <span className="font-bold text-base">{fromJournal ? "Nowa trasa" : "Wybieracie miejsca razem"}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto flex flex-col px-4 py-6 gap-6">
@@ -678,7 +678,7 @@ const CreateGroupSession = () => {
               disabled={sendingInvites}
               className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-60"
             >
-              {sendingInvites ? "Wysyłam zaproszenia…" : selectedFriends.size > 0 ? `Zaproś (${selectedFriends.size}) i zacznij parowanie` : "Zacznij parowanie"}
+              {sendingInvites ? "Wysyłam zaproszenia…" : selectedFriends.size > 0 ? `Zaproś (${selectedFriends.size}) i zacznij wybieranie` : "Zacznij wybieranie"}
             </button>
           </>
         )}

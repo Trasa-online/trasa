@@ -25,8 +25,8 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   route_updated:  { icon: Route,         color: "text-amber-500 bg-amber-100",    label: u => `${u} zaktualizował(a) trasę` },
   mention:        { icon: MessageCircle, color: "text-orange-500 bg-orange-100",  label: u => `${u} wspomniał(a) o Tobie` },
   pin_visit:      { icon: MapPin,        color: "text-teal-500 bg-teal-100",      label: u => `${u} odwiedził(a) Twoje miejsce` },
-  group_match:    { icon: Users,         color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} też polubił(a) ${meta?.place_name ?? "to samo miejsce"}! Match 🎉` },
-  group_invite:       { icon: Users,  color: "text-violet-500 bg-violet-100",  label: (u, meta) => `${u} zaprasza Cię do wspólnego parowania w ${meta?.city ?? "sesji grupowej"}` },
+  group_match:    { icon: Users,         color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} też polubił(a) ${meta?.place_name ?? "to samo miejsce"}! 🎉` },
+  group_invite:       { icon: Users,  color: "text-violet-500 bg-violet-100",  label: (u, meta) => `${u} zaprasza Cię do wspólnego wybierania miejsc w ${meta?.city ?? "sesji grupowej"}` },
   group_route_ready:  { icon: Route, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} stworzył(a) trasę${meta?.city ? ` w ${meta.city}` : ""} - sprawdź!` },
 };
 
