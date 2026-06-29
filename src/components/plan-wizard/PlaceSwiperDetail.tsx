@@ -221,6 +221,7 @@ const PlaceSwiperDetail = ({
             onClose={() => onOpenChange(false)}
             header={headerSlot}
             hideReviews
+            startingLocation={distanceRef ? { name: distanceRef.label, latitude: distanceRef.coords.lat, longitude: distanceRef.coords.lng } : undefined}
           />
         </div>
 

@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight } from "lucide-react";
+import { ArrowLeft, X, Plus, Filter, Check, Star, MapPin, ArrowRight, Heart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { usePostHog } from "@posthog/react";
+import { toast } from "sonner";
 import CityPicker from "@/components/plan-wizard/CityPicker";
 import FullCalendarPicker from "@/components/plan-wizard/FullCalendarPicker";
 import StartingLocationPicker from "@/components/plan-wizard/StartingLocationPicker";
@@ -71,11 +72,16 @@ const PlanWizard = () => {
   // z eksploracji DLA WYBRANEGO MIASTA. Wczesniej reuse szedl tylko z BottomNav po zgadnietym
   // mescie (getActiveHomeCity), wiec po "Przegladaj miejsca" w innym miescie polubione nie
   // wskakiwaly do Dopasowan. Merge po realnie wybranym miescie naprawia to (pokazuja sie od razu).
+  // Polubione z dzisiejszej eksploracji DLA WYBRANEGO MIASTA wlaczamy do "Dopasowan"
+  // dopiero po POTWIERDZENIU w popupie przy swiperze (krok 4). Wczesniej merge byl
+  // automatyczny, a popup wyskakiwal przedwczesnie z menu "+" (przed wyborem miasta/daty).
+  const todayLikesForCity = useMemo(() => (city ? getTodayLikes(city) : []), [city]);
+  const [reuseDecision, setReuseDecision] = useState<"pending" | "accepted" | "declined">("pending");
   const allLikedNames: string[] = useMemo(() => {
     const fromState = returnState?.likedPlaceNames ?? [];
-    const fromExplore = city ? getTodayLikes(city).map((l) => l.place_name) : [];
+    const fromExplore = reuseDecision === "accepted" ? todayLikesForCity.map((l) => l.place_name) : [];
     return Array.from(new Set([...fromState, ...fromExplore]));
-  }, [returnState?.likedPlaceNames, city]);
+  }, [returnState?.likedPlaceNames, reuseDecision, todayLikesForCity]);
   const allSkippedNames: string[] = returnState?.skippedPlaceNames ?? [];
 
   const [showAddPlace, setShowAddPlace] = useState(false);
@@ -232,6 +238,39 @@ const PlanWizard = () => {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
+      {/* Popup "wykorzystać polubione z dziś" - DOPIERO przy swiperze (krok 4), po wyborze
+          miasta i daty, bazujac na polubieniach w wybranym miescie. Wczesniej wyskakiwal
+          przedwczesnie z menu "+". */}
+      {step === 4 && !exploreMode && reuseDecision === "pending" && todayLikesForCity.length > 0 && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 backdrop-blur-sm p-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
+          <div className="w-full max-w-sm rounded-3xl bg-card p-5 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                <Heart className="h-5 w-5 text-orange-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-black text-base">Wykorzystać polubione z&nbsp;dziś?</p>
+                <p className="text-sm text-muted-foreground mt-0.5 leading-snug">
+                  Masz <strong>{todayLikesForCity.length}</strong> {todayLikesForCity.length === 1 ? "polubione miejsce" : todayLikesForCity.length < 5 ? "polubione miejsca" : "polubionych miejsc"} z&nbsp;{city}. Dodam je do&nbsp;Dopasowań.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setReuseDecision("accepted")}
+              className="mt-4 w-full py-3 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
+            >
+              Tak, wykorzystaj polubione →
+            </button>
+            <button
+              onClick={() => setReuseDecision("declined")}
+              className="mt-2 w-full py-3 rounded-full border border-border/60 bg-card text-foreground font-bold text-sm active:scale-[0.97] transition-transform"
+            >
+              Nie, zacznij na nowo
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
         <button
@@ -601,23 +640,19 @@ const PlanWizard = () => {
                   { id: "gluten_free", label: "Bez glutenu", emoji: "🌾" },
                   { id: "lactose_free", label: "Bez laktozy", emoji: "🥛" },
                 ].map((diet) => {
-                  const active = dietFilters.includes(diet.id);
+                  // TYMCZASOWO wyszarzone - filtry diety jeszcze niedostepne (toast na klik).
                   return (
                     <button
                       key={diet.id}
-                      onClick={() => toggleDiet(diet.id)}
-                      className={cn(
-                        "flex items-center gap-1.5 pl-3 pr-2.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96] border",
-                        active
-                          ? "bg-orange-50 border-orange-300 text-orange-700"
-                          : "bg-white border-border/60 text-foreground"
-                      )}
+                      onClick={() => {
+                        posthog?.capture?.("plan_diet_clicked_blocked", { diet: diet.id });
+                        toast("Filtry diety będą dostępne wkrótce 🙌");
+                      }}
+                      className="flex items-center gap-1.5 pl-3 pr-2.5 py-2 rounded-full text-sm font-semibold border bg-muted/40 border-border/40 text-muted-foreground/60 active:scale-[0.96]"
                     >
-                      <span>{diet.emoji}</span>
+                      <span className="opacity-50">{diet.emoji}</span>
                       <span>{diet.label}</span>
-                      {active
-                        ? <Check className="h-3.5 w-3.5 ml-0.5 text-orange-600" />
-                        : <Plus className="h-3.5 w-3.5 ml-0.5 text-muted-foreground/50" />}
+                      <span className="text-[10px] font-semibold opacity-70 ml-0.5">wkrótce</span>
                     </button>
                   );
                 })}

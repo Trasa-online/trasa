@@ -553,13 +553,14 @@ function MenuSection({ data, onPhotoExpand }: SectionProps & { onPhotoExpand: (p
   );
 }
 
-function MapSection({ data }: SectionProps) {
+function MapSection({ data, startingLocation }: SectionProps & { startingLocation?: { name: string; latitude: number; longitude: number } }) {
   if (!data.latitude || !data.longitude) return null;
   return (
     <div className="space-y-3 pt-2">
       <h3 className="text-lg font-black tracking-tight">Na mapie</h3>
       <RouteMap
         pins={[{ latitude: data.latitude, longitude: data.longitude, place_name: data.name, address: data.address }]}
+        startingLocation={startingLocation}
         className="h-44 rounded-2xl border-2 border-primary/25"
       />
     </div>
@@ -685,6 +686,8 @@ export interface PremiumBusinessCardProps {
   onClose?: () => void;
   // mode='swipe' tylko - cover image jako tlo
   swipeCoverImage?: string;
+  // Punkt startowy (GPS / lokalizacja startu) - marker na mapie "Na mapie" do oszacowania dystansu
+  startingLocation?: { name: string; latitude: number; longitude: number };
 }
 
 const PremiumBusinessCard = ({
@@ -703,6 +706,7 @@ const PremiumBusinessCard = ({
   detailLoading = false,
   onClose,
   swipeCoverImage,
+  startingLocation,
 }: PremiumBusinessCardProps) => {
   const [fullscreen, setFullscreen] = useState<{ photos: string[]; idx: number } | null>(null);
   // Recenzje za tapnieciem w ocene (progressive disclosure). Gdy hideReviews=true a sa
@@ -730,9 +734,10 @@ const PremiumBusinessCard = ({
 
             {/* Tozsamosc lokalu - jedna zwarta grupa */}
             <div className="space-y-2.5">
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="text-2xl font-black leading-tight">{data.name}</h2>
-                {header}
+              <div className="flex items-center justify-between gap-3">
+                {/* Nazwa zawsze w JEDNEJ linii (truncate) - dlugie nazwy nie lamia ukladu. */}
+                <h2 className="text-2xl font-black leading-tight truncate min-w-0">{data.name}</h2>
+                <div className="shrink-0">{header}</div>
               </div>
               <RatingSection data={data} expandable={!!hideReviews && hasReviews} expanded={reviewsOpen} onToggle={() => setReviewsOpen((o) => !o)} />
               {hideReviews && reviewsOpen && <ReviewsSection data={data} />}
@@ -754,7 +759,7 @@ const PremiumBusinessCard = ({
             {/* Sekcje z naglowkami - osobne 'common regions' oddzielone duzym spacingiem */}
             {!hidePosts && <PostsSection data={data} onPhotoExpand={handleExpand} />}
             {!hideMenu && <MenuSection data={data} onPhotoExpand={handleExpand} />}
-            <MapSection data={data} />
+            <MapSection data={data} startingLocation={startingLocation} />
             {!hideReviews && <ReviewsSection data={data} />}
             {footer}
           </div>

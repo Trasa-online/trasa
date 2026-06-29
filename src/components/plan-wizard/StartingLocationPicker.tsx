@@ -236,8 +236,8 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header text */}
-      <div className="px-5 pt-6 pb-4 space-y-1">
+      {/* Header text - pt z safe-area zeby nie wchodzic pod status bar iOS (czas/wifi/bateria) */}
+      <div className="px-5 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)] pb-4 space-y-1">
         <p className="text-3xl font-black leading-tight">
           Skąd chcesz<br />zacząć?
         </p>

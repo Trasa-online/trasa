@@ -78,12 +78,10 @@ const BottomNav = () => {
 
   const handleSoloPlan = () => {
     setShowMenu(false);
-    const city = getActiveHomeCity();
-    const todayLikes = getTodayLikes(city);
-    if (todayLikes.length > 0) {
-      setReusePrompt({ city, likes: todayLikes });
-      return;
-    }
+    // Popup "wykorzystac polubione z dzis" przeniesiony do PlanWizard (krok swipera, PO
+    // wyborze miasta+daty, bazujac na polubieniach w wybranym miescie). Tutaj tylko
+    // wchodzimy w kreator - bez przedwczesnego pytania na menu "+".
+    void getActiveHomeCity; void getTodayLikes; // helpery zostaja (reuse modal dormant)
     navigate("/plan");
   };
 
