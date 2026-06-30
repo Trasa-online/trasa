@@ -313,9 +313,10 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
         queryClient.invalidateQueries({ queryKey: ["active-plan-trip-days", folderId, routeId] }),
         queryClient.invalidateQueries({ queryKey: ["active-plan-route", routeId] }),
       ]);
-      // finalize: toast nad bottom-sheet (share prompt) zeby sie nie nakladal.
       notify.success(finalize ? "Plan dnia zapisany" : "Zapisano zmiany", undefined, finalize ? { position: "top-center" } : undefined);
-      if (finalize) setShowSharePrompt(true);
+      // Zatwierdzenie trasy: przenies do wpisu w Dzienniku (uzupelnienie wspomnienia +
+      // udostepnianie w kroku Zdjecia). Wczesniej pokazywal sie tu osobny share prompt.
+      if (finalize) navigate(`/review-summary?route=${routeId}`);
     } catch (e: any) {
       console.error("[ActiveTripPlanEditor] savePlan failed:", e?.message ?? e);
       notify.error("Nie udało się zapisać planu");
@@ -423,6 +424,8 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
     queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
     notify.success("Trasa ukończona! 🎉", "Uzupełnij wspomnienie w Dzienniku");
+    // Przenies od razu do wpisu w Dzienniku (uzupelnienie: trasa -> notki -> zdjecia).
+    navigate(`/review-summary?route=${routeId}`);
   };
 
   // Cofnij odhaczenie (np. omylkowe "Odhacz").
