@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Brain, Plus, ExternalLink, ArrowLeft, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight, Loader2, Maximize2, Trash2 } from "lucide-react";
+import { Sparkles, Plus, ExternalLink, ArrowLeft, ChevronDown, Map as MapIcon, ChevronLeft, ChevronRight, Loader2, Maximize2, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -27,6 +28,7 @@ interface DayMetrics {
 
 interface RoutePlan {
   city: string;
+  route_reasoning?: string;
   days: {
     day_number: number;
     day_metrics?: DayMetrics;
@@ -495,7 +497,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(!hasExistingPlan);
   const [preparingPlan, setPreparingPlan] = useState(false);
-  const [memoryUsed, setMemoryUsed] = useState(false);
+  const [reasoningOpen, setReasoningOpen] = useState(false);
   const [detailPin, setDetailPin] = useState<{
     pin: PlanPin; dayNumber: number; pinIndex: number;
   } | null>(null);
@@ -790,7 +792,6 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
         if (!response.error) {
           const data = response.data;
           const { cleanMessage } = parseSuggestions(data?.message ?? "");
-          if (data?.memory_used) setMemoryUsed(true);
 
           // If user came via orb overlay, show their message first in the chat
           const userMsgEntry: TextMessage[] =
@@ -869,7 +870,6 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
       const data = response.data;
 
       const { cleanMessage: parsedMsg } = parseSuggestions(data.message ?? "");
-      if (data.memory_used) setMemoryUsed(true);
 
       if (parsedMsg) {
         setMessages(prev => [...prev, { role: "assistant", content: parsedMsg }]);
@@ -890,7 +890,6 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
             body: { preferences, messages: apiMessages2, current_plan: plan, force_plan: true, liked_places: likedPlaces, skipped_places: skippedPlaces?.length ? skippedPlaces : undefined, super_liked_places: superLikedPlaces?.length ? superLikedPlaces : undefined, ...getCurrentTimeContext() },
           });
           if (!planResponse.error && planResponse.data?.plan) {
-            if (planResponse.data.memory_used) setMemoryUsed(true);
             const { cleanMessage: cm } = parseSuggestions(planResponse.data.message ?? "");
             if (cm) setMessages(prev => [...prev, { role: "assistant", content: cm }]);
             enrichPlanWithPhotos(planResponse.data.plan, supabase).then(enriched => setPlan(enriched));
@@ -1463,11 +1462,15 @@ window.addEventListener('message',function(e){
                       ))}
                     </div>
                   )}
-                  {memoryUsed && (
-                    <div className="flex items-center gap-2 px-4 py-2 border-b border-border/40 flex-shrink-0">
-                      <Brain className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="text-[12px] text-muted-foreground">Plan uwzględnia Twoje wcześniejsze preferencje</span>
-                    </div>
+                  {plan.route_reasoning && (
+                    <button
+                      onClick={() => setReasoningOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2 border-b border-border/40 flex-shrink-0 w-full text-left active:bg-muted/50 transition-colors"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-orange-600 shrink-0" />
+                      <span className="text-[12px] font-semibold text-foreground">Dlaczego taka trasa?</span>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0" />
+                    </button>
                   )}
                   {preparingPlan && plan && (
                     <div className="flex items-center gap-2 px-4 py-2 border-b border-border/40 flex-shrink-0">
@@ -1647,6 +1650,21 @@ window.addEventListener('message',function(e){
           }}
         />
       )}
+
+      {/* ── Reasoning sheet: "Dlaczego taka trasa?" ───────────────────────── */}
+      <Sheet open={reasoningOpen} onOpenChange={setReasoningOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl bg-background pb-safe-6">
+          <SheetHeader className="text-left">
+            <SheetTitle className="flex items-center gap-2 font-display font-extrabold text-lg">
+              <Sparkles className="h-5 w-5 text-orange-600 shrink-0" />
+              Dlaczego taka trasa?
+            </SheetTitle>
+          </SheetHeader>
+          <p className="mt-3 text-[15px] leading-relaxed text-foreground whitespace-pre-line">
+            {plan?.route_reasoning}
+          </p>
+        </SheetContent>
+      </Sheet>
 
     </div>
   );

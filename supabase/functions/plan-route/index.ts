@@ -276,6 +276,7 @@ Napisz JEDNO krótkie zdanie komentarza (opcjonalnie), a PO NIM blok planu:
 <route_plan>
 {
   "city": "Nazwa miasta",
+  "route_reasoning": "1-3 zdania: na jakiej podstawie ułożyłaś tę trasę",
   "days": [
     {
       "day_number": 1,
@@ -316,6 +317,7 @@ Napisz JEDNO krótkie zdanie komentarza (opcjonalnie), a PO NIM blok planu:
 </route_plan>
 
 ZASADY FORMATU:
+- route_reasoning: 1-3 krótkie zdania wyjaśniające NA JAKIEJ PODSTAWIE dobrałaś i ułożyłaś tę konkretną trasę. Ciepły ton, druga osoba (np. "Ułożyłam dzień wokół miejsc, które polubiłaś..."). Odnieś się do polubionych miejsc usera ORAZ kluczowych heurystyk które zadziałały w TYM planie (bliskość/klastry geograficzne, godziny otwarcia, energia dnia, kolacja blisko ostatniego punktu). Konkret o tym planie, bez generycznego lania wody i bez wymyślania faktów. NIE używaj długiego myślnika (—), używaj zwykłego (-) lub dwukropka. Pamiętaj o polskich sierotach: po pojedynczych literach a, i, o, u, w, z wstaw twardą spację (NBSP, U+00A0) zamiast zwykłej spacji.
 - day_metrics.total_walking_km: szacunkowa łączna odległość pieszego (suma distance_from_prev + wizyty) w km
 - day_metrics.crowd_level: "low" | "medium" | "high" — na podstawie dat, popularności i heurystyk H13
 - day_metrics.energy_cost: "low" | "medium" | "high" — na podstawie liczby punktów i długości dnia
