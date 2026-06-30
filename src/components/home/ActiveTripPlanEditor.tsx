@@ -419,13 +419,14 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     } catch (e: any) {
       console.error("[ActiveTripPlanEditor] finalizeOnComplete failed:", e?.message ?? e);
     }
+    // Przenies od razu do wpisu w Dzienniku (uzupelnienie: trasa -> notki -> zdjecia).
+    // Nawigacja NAJPIERW - zanim removeQueries odmontuje ten komponent (znika z home).
+    notify.success("Trasa ukończona! 🎉", "Uzupełnij wspomnienie w Dzienniku");
+    navigate(`/review-summary?route=${routeId}`);
     queryClient.removeQueries({ queryKey: ["home-active-solo"] });
     queryClient.invalidateQueries({ queryKey: ["active-routes"] });
     queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
     queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
-    notify.success("Trasa ukończona! 🎉", "Uzupełnij wspomnienie w Dzienniku");
-    // Przenies od razu do wpisu w Dzienniku (uzupelnienie: trasa -> notki -> zdjecia).
-    navigate(`/review-summary?route=${routeId}`);
   };
 
   // Cofnij odhaczenie (np. omylkowe "Odhacz").
@@ -442,20 +443,30 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     }
   };
 
-  // Czy po obsluzeniu (visit/skip) tego pina nie zostaje juz zaden do zrobienia -> finalizuj.
-  // WAZNE: liczymy po WSZYSTKICH dniach (allPins), nie tylko aktywnym - inaczej domkniecie
-  // dnia 2 z 3 falszywie konczy cala trase ("Trasa ukonczona" mimo ze jest jeszcze dzien 3).
-  const isLastRemaining = (pinId: string) =>
-    allPins.length > 0 && allPins.every((p: any) => p.id === pinId || p.visited_at || skippedPinIds.has(p.id));
+  // Czy po obsluzeniu (visit/skip) wszystkich pinow nie zostaje juz zaden do zrobienia -> finalizuj.
+  // Liczymy ze SWIEZEGO cache (getQueryData) PO optymistycznym update, a nie ze stale closure
+  // `allPins` (ktore przy odhaczaniu po kolei bywalo nieaktualne -> finalize nie odpalalo sie).
+  // Po WSZYSTKICH dniach (allPins/cache obejmuje caly folder) - dzien 2 z 3 nie konczy calej trasy.
+  const allHandled = (skipped: Set<string>) => {
+    const latest = (queryClient.getQueryData(["active-plan-all-pins", idsKey]) ?? []) as any[];
+    // Piny usuniete w drafcie aktywnego dnia (jeszcze niepersystowane) NIE blokuja ukonczenia.
+    const removedIds = new Set<string>();
+    if (draft && draft.dayId === activeRouteId) {
+      const keep = new Set(draft.pins.map((p: any) => p.id));
+      for (const p of latest) if (p.route_id === activeRouteId && !keep.has(p.id)) removedIds.add(p.id);
+    }
+    const relevant = latest.filter((p: any) => !removedIds.has(p.id));
+    return relevant.length > 0 && relevant.every((p: any) => !!p.visited_at || skipped.has(p.id));
+  };
 
   const markVisited = async (pinId: string, silent = false) => {
-    const wasLast = isLastRemaining(pinId);
     queryClient.setQueryData(["active-plan-all-pins", idsKey], (old: any) =>
       (old ?? []).map((p: any) => (p.id === pinId ? { ...p, visited_at: new Date().toISOString() } : p)),
     );
+    const done = allHandled(skippedPinIds); // czyta cache JUZ po update powyzej
     try {
       await (supabase as any).from("pins").update({ visited_at: new Date().toISOString() }).eq("id", pinId);
-      if (wasLast) await finalizeOnComplete();
+      if (done) await finalizeOnComplete();
       else if (!silent) notify.success("Odhaczone!");
     } catch (e: any) {
       console.error("[ActiveTripPlanEditor] markVisited failed:", e?.message ?? e);
@@ -468,9 +479,9 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   const confirmSkipNotYet = () => {
     const p = skipPromptPin; setSkipPromptPin(null);
     if (!p) return;
-    const wasLast = isLastRemaining(p.id);
-    setSkippedPinIds((prev) => new Set(prev).add(p.id));
-    if (wasLast) void finalizeOnComplete();
+    const newSkipped = new Set(skippedPinIds).add(p.id);
+    setSkippedPinIds(newSkipped);
+    if (allHandled(newSkipped)) void finalizeOnComplete();
   };
 
   // Karta kontekstowa nad planem: tryb "w trakcie trasy". Pokazujemy gdy trasa nie jest
