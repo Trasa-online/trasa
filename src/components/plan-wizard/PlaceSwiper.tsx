@@ -50,6 +50,7 @@ export interface MockPlace {
   businessOpeningHours?: Record<string, { open: string; close: string } | { closed: true }>;
   coverVideoUrl?: string; // business cover video (premium)
   businessHasOwnPhoto?: boolean; // true when business uploaded cover image/video or gallery - skip Google photos
+  businessHasOwnAddress?: boolean; // true when business set own street/address - use it (NIE adres z Google, ktory moze trafic w zly lokal)
   businessEventDescription?: string;
   businessDescription?: string;
   businessIsVerified?: boolean;
@@ -1027,6 +1028,13 @@ function enrichWithBusinessProfile(p: any): MockPlace {
   // jako fallback zeby wizytowka miala chociaz placeholder.
   const hasBizPhotos = !!(bp.cover_image_url || bp.cover_video_url || bizGallery.length > 0);
   const mergedGallery = hasBizPhotos ? bizGallery : placeGallery;
+  // Adres z profilu biznesu (street + postal + miasto). Biznes wpisuje wlasny adres w dashboardzie -
+  // to autorytatywne zrodlo. Inaczej adres bralby sie z Google (detail.formatted_address), ktory dla
+  // lokalu o popularnej nazwie potrafi trafic w zupelnie inny lokal -> losowy adres na wizytowce.
+  const bizAddress = bp.street
+    ? [bp.street, [bp.postal_code, p.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")
+    : (bp.address || null);
+  const hasOwnAddress = !!(bp.street || bp.address);
   return {
     ...p,
     businessPlan: plan,
@@ -1034,6 +1042,9 @@ function enrichWithBusinessProfile(p: any): MockPlace {
     // na mapie trasy bralby stare/NULL places.latitude/longitude i ladowal w zlym miejscu.
     latitude: bp.latitude ?? p.latitude,
     longitude: bp.longitude ?? p.longitude,
+    // Override adresu adresem biznesu (gdy ustawiony) - zrodlo prawdy zamiast Google.
+    address: bizAddress ?? p.address,
+    businessHasOwnAddress: hasOwnAddress,
     // Override photo z biz cover gdy biznes ma swoje zdjecie
     photo_url: bp.cover_image_url || p.photo_url,
     // Show business section (logo, events, CTA) dla wszystkich biz
@@ -1152,7 +1163,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       if (roundPlaceIds?.length) {
         const { data, error } = await (supabase as any)
           .from("places")
-          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude)")
+          .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address)")
           .in("id", roundPlaceIds);
 
         if (error) console.error("[PlaceSwiper] round fetch error:", error);
@@ -1174,7 +1185,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // ── Normal mode ──────────────────────────────────────────────────────
       const { data, error: placesError } = await (supabase as any)
         .from("places")
-        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude)")
+        .select("*, business_profiles(plan, logo_url, cover_image_url, cover_video_url, event_title, event_description, gallery_urls, phone, website, main_category, subcategories, tags, description, is_verified, color_badge, color_card_bg, color_button, color_promo, menu_image_urls, opening_hours, latitude, longitude, street, postal_code, address)")
         .in("city", expandCity(city))
         .eq("is_active", true);
 
