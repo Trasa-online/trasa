@@ -31,8 +31,6 @@ interface RoutePlan {
 
 interface TripPreferences {
   numDays: number;
-  pace: string;
-  priorities: string[];
   startDate: string | null;
   planningMode: string;
   startingLocation?: string;
@@ -147,8 +145,6 @@ const RouteSummaryDialog = ({
           day_number: day.day_number,
           start_date: dayDate,
           end_date: days.length === 1 && endDate ? format(endDate, "yyyy-MM-dd") : dayDate,
-          pace: preferences.pace,
-          priorities: preferences.priorities,
           is_shared: false,
           // new_for_users = [user.id] dla solo zeby badge kropka w BottomNav Dziennik
           // pojawila sie po stworzeniu trasy (analogicznie do group memberow). Po
@@ -232,17 +228,9 @@ const RouteSummaryDialog = ({
         if (copyErr) console.error("[RouteSummaryDialog] copy_group_session_routes failed:", copyErr.message);
       }
 
-      // Submit to route_examples as candidate (silent)
-      const inferPersonality = (priorities: string[], pace: string) => {
-        if (priorities.includes("museums") || priorities.includes("art")) return "kulturalny";
-        if (priorities.includes("history")) return "historyczny";
-        if (priorities.includes("cafes") || priorities.includes("coffee")) return "kawiarniany";
-        if (priorities.includes("nightlife") || priorities.includes("bars")) return "nocny";
-        if (priorities.includes("active") || pace === "active") return "aktywny";
-        if (priorities.includes("shopping")) return "zakupowy";
-        return "mix";
-      };
-      const personalityType = inferPersonality(preferences.priorities ?? [], preferences.pace ?? "mixed");
+      // Submit to route_examples as candidate (silent). Personality bazowal na deklarowanych
+      // preferencjach (pace/priorities), ktore usunelismy - bez nich zawsze "mix".
+      const personalityType = "mix";
       const examplePins = (days[0]?.pins ?? []).map(p => ({
         place_name: p.place_name,
         category: p.category,

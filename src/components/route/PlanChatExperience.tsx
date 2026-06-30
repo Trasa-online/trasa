@@ -38,8 +38,6 @@ interface RoutePlan {
 
 interface TripPreferences {
   numDays: number;
-  pace: string;
-  priorities: string[];
   startDate: string | null;
   planningMode: string;
   city: string;

@@ -5,8 +5,6 @@ const ALLOWED_ORIGINS = ["https://trasa.travel", "https://trasa.lovable.app", "h
 
 interface TripPreferences {
   numDays: number;
-  pace: string;
-  priorities: string[];
   startDate: string | null;
   planningMode: string;
   city?: string;
@@ -50,17 +48,6 @@ const INTERESTS_LABEL: Record<string, string> = {
   luxury: "lubi luksusowe miejsca",
 };
 
-const PRIORITY_LABEL_PL: Record<string, string> = {
-  good_food: "dobre jedzenie",
-  nice_views: "ładne widoki",
-  long_walks: "długie spacery",
-  museums: "muzea i kultura",
-  nightlife: "życie nocne",
-  shopping: "zakupy",
-  local_vibes: "lokalne klimaty",
-  photography: "fotografia",
-};
-
 function buildPreviousDaysBlock(routes: { day_number: number; ai_summary: string | null; ai_highlight: string | null; ai_tip: string | null }[]): string {
   if (!routes.length) return "";
   const lines = routes.map(r => {
@@ -73,15 +60,11 @@ function buildPreviousDaysBlock(routes: { day_number: number; ai_summary: string
   return lines.join("\n\n");
 }
 
-function inferPersonalityType(preferences: TripPreferences, userProfile?: UserProfile): string {
-  const priorities = preferences.priorities ?? [];
+function inferPersonalityType(userProfile?: UserProfile): string {
   const interests = userProfile?.travel_interests ?? [];
-  if (priorities.includes("nightlife") || interests.includes("nightlife")) return "nocny";
-  if (priorities.includes("museums") || interests.includes("history") || interests.includes("art")) return "kulturalny";
-  if (priorities.includes("good_food") || interests.includes("coffee")) return "kawiarniany";
-  if (priorities.includes("shopping")) return "zakupowy";
-  if (preferences.pace === "active") return "aktywny";
-  if (priorities.includes("long_walks") || priorities.includes("nice_views")) return "aktywny";
+  if (interests.includes("nightlife")) return "nocny";
+  if (interests.includes("history") || interests.includes("art")) return "kulturalny";
+  if (interests.includes("coffee")) return "kawiarniany";
   return "mix";
 }
 
@@ -507,10 +490,6 @@ serve(async (req) => {
     if (userMessages.length === 0 && preferences.city?.trim()) {
       const cityName = preferences.city.trim();
       const nDays = Number(preferences.numDays) || 1;
-      const paceLabel = preferences.pace === "active" ? "aktywnym" : preferences.pace === "calm" ? "spokojnym" : "mieszanym";
-      const prioritiesPL = Array.isArray(preferences.priorities) && preferences.priorities.length > 0
-        ? (preferences.priorities as string[]).map(p => PRIORITY_LABEL_PL[p] ?? p).join(", ")
-        : null;
 
       // Day 2+ with AAR: AI generates a personalized opening with suggestions
       if (previousDaysContext) {
@@ -564,7 +543,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       const daysLabel = nDays === 1 ? "1 dzień" : `${nDays} dni`;
       const messageParts = [
         `Świetny wybór — **${cityName}**! 🗺️`,
-        `Planujesz **${daysLabel}**, tempo ${paceLabel}${prioritiesPL ? `, z fokusem na **${prioritiesPL}**` : ""}. Chętnie przygotuję plan! 🎯`,
+        `Planujesz **${daysLabel}**. Chętnie przygotuję plan! 🎯`,
         nDays > 1
           ? `Czy masz już jakieś plany lub są miejsca, które koniecznie chcesz odwiedzić? 📍\n\nOd której do której godziny mam zaplanować **pierwszy dzień**?\n\nI jeszcze — w której części miasta masz **nocleg**? To pomoże mi dobrze zaplanować końce kolejnych dni.`
           : `Czy masz już jakieś plany lub są miejsca, które koniecznie chcesz odwiedzić? 📍\n\nOd której do której godziny mam zaplanować Twój dzień? ⏰`,
@@ -593,7 +572,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY");
     if (OPENAI_KEY && preferences.city?.trim()) {
       try {
-        const queryText = [ideal_day ?? "", preferences.city.trim(), (preferences.priorities ?? []).join(" ")].filter(Boolean).join(". ");
+        const queryText = [ideal_day ?? "", preferences.city.trim()].filter(Boolean).join(". ");
         const embedRes = await fetch("https://api.openai.com/v1/embeddings", {
           method: "POST",
           headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
@@ -628,11 +607,10 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     const LOVABLE_API_KEY_FOR_EMBED = Deno.env.get("LOVABLE_API_KEY");
     if (LOVABLE_API_KEY_FOR_EMBED) {
       try {
-        // Build query text from current trip preferences
+        // Build query text from current trip context (city). Memory matching opiera się
+        // o embedding podsumowań poprzednich tras + RPC match_memories.
         const queryText = [
           preferences.city?.trim() ?? "",
-          preferences.priorities?.join(" ") ?? "",
-          preferences.pace ?? "",
         ].filter(Boolean).join(" ");
 
         // Get embedding for the query
@@ -700,7 +678,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     let routeExamplesContext = "";
     if (preferences.city?.trim()) {
       try {
-        const personalityType = inferPersonalityType(preferences, profileData ?? undefined);
+        const personalityType = inferPersonalityType(profileData ?? undefined);
         // Fetch up to 3 approved examples: prefer matching personality, fallback to any
         const { data: exactMatch } = await supabase
           .from("route_examples")

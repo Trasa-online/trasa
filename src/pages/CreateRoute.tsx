@@ -10,8 +10,6 @@ import RouteSummaryDialog from "@/components/route/RouteSummaryDialog";
 
 interface TripPreferences {
   numDays: number;
-  pace: "active" | "calm" | "mixed";
-  priorities: string[];
   startDate: string | null;
   planningMode: "voice" | "text";
   city: string;
@@ -123,8 +121,6 @@ const CreateRoute = () => {
   const startingLocLng = typeof startingLocRaw === "object" && startingLocRaw ? startingLocRaw.longitude : undefined;
   const [preferences] = useState<TripPreferences>({
     numDays: wizardState?.numDays ?? 1,
-    pace: "mixed",
-    priorities: [],
     // Format LOKALNY (Y-M-D), NIE toISOString - inaczej data-only string z grupy
     // (session.trip_date "2026-06-28" -> parseISO = lokalna polnoc) po toISOString cofa
     // sie o dzien w strefach UTC+ (PL). Efekt: trasa "dzisiaj" wygladala jak miniona
