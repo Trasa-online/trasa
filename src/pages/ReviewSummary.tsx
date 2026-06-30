@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share2, List, GalleryHorizontalEnd } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share2, List, GalleryHorizontalEnd, Info } from "lucide-react";
 import { useShare } from "@/hooks/useShare";
 import AddPinSheet from "@/components/route/AddPinSheet";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -54,7 +54,8 @@ const ReviewSummary = () => {
   const [savingName, setSavingName] = useState(false);
   const [planView, setPlanView] = useState<"list" | "cards">("list");
   // Pod-zakladki w widoku wspomnienia: galeria zdjec / plan dnia.
-  const [memoryTab, setMemoryTab] = useState<"galeria" | "plan">("galeria");
+  // Wpis dziennika (wlasciciel): 3-etapowy stepper. 1 Trasa (edycja) -> 2 Notki -> 3 Zdjecia.
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   // Wybrany dzien (trasa wielodniowa). Domyslnie dzien z URL.
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   // Fullscreen podglad zdjecia z galerii.
@@ -412,8 +413,6 @@ const ReviewSummary = () => {
   };
 
   // ── Edycja planu dnia (#4/#5) ──
-  // Plan zamrozony (read-only + mozna udostepnic) gdy plan_finalized=true dla dnia.
-  const finalized = !!activeDay?.plan_finalized;
   const workingPins = draft && draft.dayId === activeRouteId ? draft.pins : currentPins;
 
   const setWorking = (next: any[]) => { if (activeRouteId) setDraft({ dayId: activeRouteId, pins: next }); };
@@ -556,8 +555,11 @@ const ReviewSummary = () => {
     return format(fd, "d MMMM yyyy", { locale: pl });
   }, [sortedDays, isMultiDay, route?.end_date, route?.start_date]);
 
-  // Aktywny wpis vs wspomnienie: wspomnienie gdy minal OSTATNI dzien trasy.
+  // Aktywny wpis vs wspomnienie: wspomnienie gdy trasa UKOŃCZONA (plan_finalized - np. user
+  // odhaczył wszystkie miejsca i trafił tu z home) LUB minął OSTATNI dzień trasy. Bez warunku
+  // plan_finalized trasa zakończona dzisiaj nie pokazywałaby steppera wpisu (zła gałąź).
   const isMemory = useMemo(() => {
+    if (sortedDays.some((d: any) => d?.plan_finalized)) return true;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     let lastTs = -Infinity;
@@ -708,10 +710,35 @@ const ReviewSummary = () => {
     </div>
   );
 
-  // Lista (read-only): te same karty, jedna pod druga.
-  const renderListReadonly = (withRating: boolean) => (
-    <div className="space-y-3">
-      {currentPins.map((pin: any, i: number) => renderPlanCard(pin, i, true, false, withRating))}
+  // ── Kompaktowy wiersz listy: miniaturka + nazwa + chip kategorii (+ reorder/usuń gdy edycja). ──
+  const renderPlanRow = (pin: any, i: number, editable: boolean) => (
+    <div key={pin.id} className="flex items-center gap-3 rounded-2xl bg-card border border-border/40 p-2.5">
+      <button onClick={() => openDetail(pin)} className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
+        <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-2xl" />
+        <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
+      </button>
+      <button onClick={() => openDetail(pin)} className="min-w-0 flex-1 text-left">
+        <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
+        <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">
+          <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+        </span>
+      </button>
+      {editable && (
+        <div className="flex items-center gap-1 shrink-0">
+          <div className="flex flex-col">
+            <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label="Wcześniej" className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
+            <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label="Później" className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
+          </div>
+          <button onClick={() => removeWorkingPin(pin.id)} aria-label="Usuń miejsce" className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90"><Trash2 className="h-4 w-4" /></button>
+        </div>
+      )}
+    </div>
+  );
+
+  // Lista (read-only): kompaktowe wiersze.
+  const renderListReadonly = (_withRating: boolean) => (
+    <div className="space-y-2">
+      {currentPins.map((pin: any, i: number) => renderPlanRow(pin, i, false))}
     </div>
   );
 
@@ -724,10 +751,10 @@ const ReviewSummary = () => {
     </div>
   );
 
-  // Lista (edytowalna): te same karty, jedna pod druga (pionowy stos).
-  const renderEditablePlan = (withRating: boolean) => (
-    <div className="space-y-3">
-      {workingPins.map((pin: any, i: number) => renderPlanCard(pin, i, true, true, withRating))}
+  // Lista (edytowalna): kompaktowe wiersze (miniatura + nazwa + chip + reorder/usuń).
+  const renderEditablePlan = (_withRating: boolean) => (
+    <div className="space-y-2">
+      {workingPins.map((pin: any, i: number) => renderPlanRow(pin, i, true))}
     </div>
   );
 
@@ -740,6 +767,93 @@ const ReviewSummary = () => {
     >
       <Plus className="h-4 w-4" /> Dodaj miejsce
     </button>
+  );
+
+  // ── Galeria zdjęć (grid 3-kol, jak instagram). editable -> przycisk dodawania. ──
+  const renderGallery = (editable: boolean) => (
+    <div className="px-1 pt-1">
+      <div className="grid grid-cols-3 gap-0.5">
+        {editable && photos.length < MAX_PHOTOS && (
+          <button onClick={triggerPhotoPick} disabled={uploading}
+            className="aspect-square flex flex-col items-center justify-center gap-1 bg-muted/40 text-muted-foreground active:bg-muted/60 transition-colors">
+            <Camera className="h-6 w-6" />
+            <span className="text-[10px] font-medium">{uploading ? "…" : "Dodaj"}</span>
+          </button>
+        )}
+        {galleryPhotos.map((item, idx) => (
+          <button key={`${item.url}-${idx}`} onClick={() => setViewerUrl(item.url)}
+            className="relative aspect-square overflow-hidden bg-muted active:opacity-90">
+            <img src={item.url} alt="" className="w-full h-full object-cover" />
+            {!item.mine && (
+              <span className="absolute bottom-1 left-1 bg-black/55 backdrop-blur-sm rounded px-1.5 py-0.5 text-[9px] font-medium text-white max-w-[90%] truncate">{item.username}</span>
+            )}
+          </button>
+        ))}
+      </div>
+      {galleryPhotos.length > 0 && (
+        <p className="text-center text-[11px] text-muted-foreground/70 px-6 pt-3">Dotknij zdjęcia, żeby zobaczyć je w&nbsp;pełni i&nbsp;ustawić okładkę wpisu.</p>
+      )}
+      {galleryPhotos.length === 0 && (
+        <p className="text-center text-sm text-muted-foreground py-10 px-6">{editable ? "Brak zdjęć z tej podróży. Dodaj pierwsze wspomnienia." : "Brak zdjęć z tej podróży."}</p>
+      )}
+    </div>
+  );
+
+  // ── Udostępnianie wpisu (toggle public + link). ──
+  const renderSharing = () => (
+    <div className="px-5">
+      <div className="mt-6 pt-5 border-t border-border/30 flex items-center gap-3">
+        {isPublic ? <Globe className="h-4 w-4 text-orange-600 flex-shrink-0" /> : <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold">{isPublic ? "Udostępnione" : "Prywatne"}</p>
+          <p className="text-xs text-muted-foreground">{isPublic ? "Widoczne w zakładce Eksploruj" : "Tylko dla Ciebie"}</p>
+        </div>
+        <button onClick={() => togglePublic(!isPublic)}
+          className={`flex-shrink-0 relative w-11 h-6 rounded-full transition-colors duration-200 ${isPublic ? "bg-primary" : "bg-muted-foreground/30"}`}>
+          <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${isPublic ? "translate-x-5" : "translate-x-0"}`} />
+        </button>
+      </div>
+      {isPublic && (
+        <button onClick={shareLink}
+          className="mt-3 w-full py-3 rounded-full border-2 border-orange-600 text-orange-600 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+          <Share2 className="h-4 w-4" /> Udostępnij link do trasy
+        </button>
+      )}
+    </div>
+  );
+
+  // ── Nagłówek steppera: 3 kroki, klikalne (powrót/przejście), pasek postępu. ──
+  const renderStepper = () => {
+    const steps = [{ n: 1, label: "Trasa" }, { n: 2, label: "Notki" }, { n: 3, label: "Zdjęcia" }] as const;
+    return (
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/30 px-5 pt-3 pb-2.5">
+        <div className="flex items-center">
+          {steps.map((s, idx) => (
+            <div key={s.n} className={`flex items-center ${idx < steps.length - 1 ? "flex-1" : ""}`}>
+              <button onClick={() => setStep(s.n)} className="flex items-center gap-1.5 shrink-0 active:scale-95 transition-transform">
+                <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${step === s.n ? "bg-primary text-white" : step > s.n ? "bg-orange-100 text-orange-700" : "bg-muted text-muted-foreground"}`}>
+                  {step > s.n ? <Check className="h-3.5 w-3.5" strokeWidth={2.6} /> : s.n}
+                </span>
+                <span className={`text-xs font-semibold ${step === s.n ? "text-foreground" : "text-muted-foreground"}`}>{s.label}</span>
+              </button>
+              {idx < steps.length - 1 && <div className="flex-1 h-px bg-border/50 mx-2" />}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const STEP_INFO: Record<1 | 2 | 3, string> = {
+    1: "Popraw trasę zgodnie z tym jak było - usuń miejsca, w których nie byliście, albo zmień kolejność.",
+    2: "Dodaj notki dla innych podróżnych: co wybrać, co zamówić, pro-tip. Notki zapisują się same.",
+    3: "Dodaj zdjęcia do wpisu. To opcjonalne - możesz wrócić do tego później.",
+  };
+  const renderStepInfo = () => (
+    <div className="mb-3 flex items-start gap-2 rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5">
+      <Info className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
+      <p className="text-xs text-orange-800 leading-relaxed">{STEP_INFO[step]}</p>
+    </div>
   );
 
   // Naglowek "Twój plan" + przelacznik Lista/Szczegoly + (multi-day) przelacznik dni.
@@ -780,7 +894,7 @@ const ReviewSummary = () => {
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       {/* We wpisie dziennika (isMemory) okladka jest NIZSZA - zdjecie nie jest kluczowe,
           wazniejsza jest galeria/plan ponizej. Aktywny przeglad trasy zostaje wyzszy. */}
-      <div className={`relative w-full ${hasRealPhoto && !isMemory ? "aspect-[4/5]" : "aspect-[16/10]"} flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500`}>
+      <div className={`relative w-full ${isMemory ? "aspect-[2/1]" : (hasRealPhoto ? "aspect-[4/5]" : "aspect-[16/10]")} flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500`}>
         <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
         {/* Ciemny gradient overlay - dla placeholdera mocniejszy (kontrast tekstu, WCAG) */}
         <div className={`absolute inset-0 bg-gradient-to-b ${hasRealPhoto ? "from-black/40 via-transparent to-black/75" : "from-black/35 via-black/25 to-black/80"}`} />
@@ -850,111 +964,65 @@ const ReviewSummary = () => {
       <div className="flex-1 overflow-y-auto pb-32">
 
         {isMemory ? (
-          /* ══ WSPOMNIENIE: pod-zakladki Galeria / Plan dnia ══ */
-          <>
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/30 px-5 pt-3 pb-2">
-              <div className="flex rounded-full bg-muted p-0.5">
-                <button onClick={() => setMemoryTab("galeria")}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-sm font-semibold transition-colors ${memoryTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                  <ImageIcon className="h-4 w-4" /> Galeria
-                </button>
-                <button onClick={() => setMemoryTab("plan")}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-sm font-semibold transition-colors ${memoryTab === "plan" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                  <MapIcon className="h-4 w-4" /> Plan dnia
-                </button>
-              </div>
-            </div>
+          isOwner ? (
+            /* ══ WSPOMNIENIE (właściciel): stepper 1 Trasa → 2 Notki → 3 Zdjęcia ══ */
+            <>
+              {renderStepper()}
+              <div className="px-5 pt-4">{renderStepInfo()}</div>
 
-            {memoryTab === "galeria" ? (
-              /* ── Galeria: grid 3-kol (jak instagram) ── */
-              <div className="px-1 pt-1">
-                <div className="grid grid-cols-3 gap-0.5">
-                  {photos.length < MAX_PHOTOS && (
-                    <button
-                      onClick={triggerPhotoPick}
-                      disabled={uploading}
-                      className="aspect-square flex flex-col items-center justify-center gap-1 bg-muted/40 text-muted-foreground active:bg-muted/60 transition-colors"
-                    >
-                      <Camera className="h-6 w-6" />
-                      <span className="text-[10px] font-medium">{uploading ? "…" : "Dodaj"}</span>
-                    </button>
+              {step === 1 && (
+                <div className="px-5 pb-5">
+                  {currentPins.length === 0 ? (
+                    <>
+                      <p className="text-center text-sm text-muted-foreground py-8">Brak miejsc w planie tego dnia.</p>
+                      {renderAddPlaceButton()}
+                    </>
+                  ) : (
+                    <>
+                      {renderPlanHeader(true)}
+                      {planView === "list" ? renderEditablePlan(false) : renderSwiper(true, false)}
+                      {renderAddPlaceButton()}
+                    </>
                   )}
-                  {galleryPhotos.map((item, idx) => (
-                    <button
-                      key={`${item.url}-${idx}`}
-                      onClick={() => setViewerUrl(item.url)}
-                      className="relative aspect-square overflow-hidden bg-muted active:opacity-90"
-                    >
-                      <img src={item.url} alt="" className="w-full h-full object-cover" />
-                      {!item.mine && (
-                        <span className="absolute bottom-1 left-1 bg-black/55 backdrop-blur-sm rounded px-1.5 py-0.5 text-[9px] font-medium text-white max-w-[90%] truncate">{item.username}</span>
-                      )}
-                    </button>
-                  ))}
                 </div>
-                {galleryPhotos.length > 0 && (
-                  <p className="text-center text-[11px] text-muted-foreground/70 px-6 pt-3">Dotknij zdjęcia, żeby zobaczyć je w&nbsp;pełni i&nbsp;ustawić okładkę wpisu.</p>
-                )}
-                {galleryPhotos.length === 0 && (
-                  <p className="text-center text-sm text-muted-foreground py-10 px-6">Brak zdjęć z tej podróży. Dodaj pierwsze wspomnienia.</p>
-                )}
-              </div>
-            ) : (
-              /* ── Plan dnia ── */
-              <div className="px-5 pt-5 pb-5">
-                {currentPins.length === 0 ? (
-                  <>
-                    <p className="text-center text-sm text-muted-foreground py-8">Brak miejsc w planie tego dnia.</p>
-                    {renderAddPlaceButton()}
-                  </>
-                ) : !finalized ? (
-                  /* Tryb edycji: popraw plan (reorder strzalkami / usun) i zapisz.
-                     Lista = edytowalna, Szczegoly = podglad kart. */
-                  <>
-                    {renderPlanHeader(true)}
-                    <div className="mb-3 rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5">
-                      <p className="text-xs text-orange-800 leading-relaxed">
-                        Popraw plan, jeśli coś się zmieniło - usuń miejsca, w&nbsp;których nie&nbsp;byliście, lub zmień kolejność. Oceń miejsca i&nbsp;dodaj notki, a&nbsp;potem zapisz, żeby zablokować plan i&nbsp;udostępnić trasę.
-                      </p>
-                    </div>
-                    {planView === "list" ? renderEditablePlan(true) : renderSwiper(true, true)}
-                    {renderAddPlaceButton()}
-                  </>
-                ) : (
-                  /* Plan zamrozony: read-only + ocena + notka + udostepnianie */
-                  <>
-                    <div className="mb-3 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-                      <Lock className="h-3 w-3" /> Plan dnia zapisany
-                    </div>
-                    {renderPlanHeader()}
-                    {planView === "list" ? renderListReadonly(true) : renderSwiper(false, true)}
-                    {renderAddPlaceButton()}
+              )}
 
-                    {/* Udostepnianie (odblokowane po zapisaniu planu) */}
-                    <div className="mt-6 pt-5 border-t border-border/30 flex items-center gap-3">
-                      {isPublic ? <Globe className="h-4 w-4 text-orange-600 flex-shrink-0" /> : <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold">{isPublic ? "Udostępnione" : "Prywatne"}</p>
-                        <p className="text-xs text-muted-foreground">{isPublic ? "Widoczne w zakładce Eksploruj" : "Tylko dla Ciebie"}</p>
-                      </div>
-                      <button onClick={() => togglePublic(!isPublic)}
-                        className={`flex-shrink-0 relative w-11 h-6 rounded-full transition-colors duration-200 ${isPublic ? "bg-primary" : "bg-muted-foreground/30"}`}>
-                        <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${isPublic ? "translate-x-5" : "translate-x-0"}`} />
-                      </button>
+              {step === 2 && (
+                <div className="px-5 pb-5">
+                  {currentPins.length === 0 ? (
+                    <p className="text-center text-sm text-muted-foreground py-8">Brak miejsc do oznaczenia notką.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {currentPins.map((pin: any) => (
+                        <div key={pin.id} className="rounded-2xl bg-card border border-border/40 p-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-11 w-11 shrink-0 rounded-xl overflow-hidden bg-muted">
+                              <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-xl" />
+                            </div>
+                            <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
+                          </div>
+                          {renderRatingNote(pin.place_name)}
+                        </div>
+                      ))}
                     </div>
-                    {isPublic && (
-                      <button
-                        onClick={shareLink}
-                        className="mt-3 w-full py-3 rounded-full border-2 border-orange-600 text-orange-600 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                      >
-                        <Share2 className="h-4 w-4" /> Udostępnij link do trasy
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-          </>
+                  )}
+                </div>
+              )}
+
+              {step === 3 && (
+                <div className="pb-5">
+                  {renderGallery(true)}
+                  {renderSharing()}
+                </div>
+              )}
+            </>
+          ) : (
+            /* ══ WSPOMNIENIE (gość): read-only galeria + plan ══ */
+            <div className="pt-2 pb-5">
+              {renderGallery(false)}
+              {currentPins.length > 0 && <div className="px-5 mt-5">{renderListReadonly(false)}</div>}
+            </div>
+          )
         ) : (
           /* ══ AKTYWNY WPIS: edytowalny plan (Lista + Szczegoly), bez oceny/wspomnien ══ */
           <>
@@ -962,13 +1030,6 @@ const ReviewSummary = () => {
               <div className="px-5 pt-5 pb-5 border-b border-border/30">
                 {renderPlanHeader(true)}
                 {planView === "list" ? renderEditablePlan(false) : renderSwiper(true, false)}
-                {/* Wejscie do pelnego kreatora trasy (AI chat + karuzela + mapa) dla tego dnia */}
-                <button
-                  onClick={() => navigate("/create", { state: { existingRouteId: activeRouteId, city: route?.city } })}
-                  className="mt-4 w-full py-3 rounded-full border-2 border-orange-600 text-orange-600 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                >
-                  <MapIcon className="h-4 w-4" /> Otwórz w kreatorze trasy
-                </button>
               </div>
             )}
 
@@ -1087,14 +1148,35 @@ const ReviewSummary = () => {
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
-        {isMemory && memoryTab === "plan" && !finalized && currentPins.length > 0 ? (
-          <button
-            onClick={() => savePlan(true)}
-            disabled={savingPlan || workingPins.length === 0}
-            className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
-          >
-            {savingPlan ? "Zapisywanie…" : "Zapisz plan dnia"}
-          </button>
+        {isMemory && isOwner ? (
+          /* Stepper wpisu: Wstecz + Dalej/Gotowe. Edycje persystują (autosave on unmount +
+             savePlan(false) na Gotowe); notki i zdjęcia zapisują się na bieżąco. */
+          <div className="flex gap-2">
+            {step > 1 && (
+              <button
+                onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
+                className="px-5 py-4 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform shrink-0"
+              >
+                Wstecz
+              </button>
+            )}
+            {step < 3 ? (
+              <button
+                onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
+                className="flex-1 py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
+              >
+                Dalej
+              </button>
+            ) : (
+              <button
+                onClick={async () => { if (draft && draft.dayId === activeRouteId) await savePlan(false); navigate("/dziennik"); }}
+                disabled={savingPlan}
+                className="flex-1 py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
+              >
+                {savingPlan ? "Zapisywanie…" : "Gotowe"}
+              </button>
+            )}
+          </div>
         ) : !isMemory && draft && draft.dayId === activeRouteId ? (
           <button
             onClick={() => savePlan(false)}

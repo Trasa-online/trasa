@@ -644,10 +644,47 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     </div>
   );
 
-  // ── Lista: te same karty, jedna pod druga (pionowy stos). ──
+  // ── Kompaktowy wiersz listy: miniaturka + nazwa + chip kategorii + akcje. ──
+  // Lekka alternatywa dla dużych kart (widok "kafelki"). Tap miniatury/nazwy -> wizytówka.
+  const renderPlanRow = (pin: any, i: number) => {
+    const dimmed = pin.visited_at || isPastDay || skippedPinIds.has(pin.id);
+    return (
+      <div
+        key={pin.id}
+        id={`active-pin-${pin.id}`}
+        className={`flex items-center gap-3 rounded-2xl bg-card border p-2.5 transition-all ${highlightPinId === pin.id ? "border-trasa-teal-ink ring-2 ring-trasa-teal-ink/50" : "border-border/40"} ${dimmed ? "opacity-55" : ""}`}
+      >
+        <button onClick={() => openDetail(pin)} className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
+          <PlacePhoto pin={pin} className={`w-full h-full object-cover ${pin.visited_at ? "grayscale" : ""}`} emojiClass="text-2xl" />
+          <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
+        </button>
+        <button onClick={() => openDetail(pin)} className="min-w-0 flex-1 text-left">
+          <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
+          <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">
+            <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+          </span>
+        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          <div className="flex flex-col">
+            <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label="Wcześniej" className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
+            <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label="Później" className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
+          </div>
+          {!isPastDay && (pin.visited_at ? (
+            <button onClick={() => unmarkVisited(pin.id)} aria-label="Cofnij odhaczenie" className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground active:scale-90"><RotateCcw className="h-4 w-4" /></button>
+          ) : !skippedPinIds.has(pin.id) ? (
+            <button onClick={() => markVisited(pin.id)} aria-label="Odhacz" className="h-9 w-9 rounded-full border-2 border-green-500/60 text-green-600 flex items-center justify-center active:scale-90"><Check className="h-4 w-4" strokeWidth={2.6} /></button>
+          ) : null)}
+          <button onClick={() => removeWorkingPin(pin.id)} aria-label="Usuń miejsce" className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90"><Trash2 className="h-4 w-4" /></button>
+        </div>
+      </div>
+    );
+  };
+
+  // ── Lista: kompaktowe wiersze (miniatura + nazwa + chip), jedna pod druga. ──
   const renderEditablePlan = (withRating: boolean) => (
-    <div className="space-y-3">
-      {workingPins.map((pin: any, i: number) => renderPlanCard(pin, i, true, true, withRating))}
+    <div className="space-y-2">
+      {void withRating}
+      {workingPins.map((pin: any, i: number) => renderPlanRow(pin, i))}
     </div>
   );
 
