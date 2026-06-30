@@ -15,7 +15,7 @@ import PlaceSwiper, { type MockPlace } from "@/components/plan-wizard/PlaceSwipe
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { MAIN_CATEGORIES, getSubcategoryLabel } from "@/lib/categories";
-import { setStartReference, markAskedForCity, tryResolveOnSite, getReference } from "@/lib/distanceReference";
+import { setStartReference, markAskedForCity, tryResolveOnSite, getReference, useDistanceReference } from "@/lib/distanceReference";
 import { getTodayLikes } from "@/lib/exploreLikes";
 import LocationPrimer from "@/components/LocationPrimer";
 import { Loader2 } from "lucide-react";
@@ -65,8 +65,14 @@ const PlanWizard = () => {
   // Multi-select kategorii (puste = wszystkie)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
-  // Sortowanie: "default" lub "nearest" (od startingLocation - tylko gdy ustawione)
+  // Sortowanie: "default" lub "nearest" (od punktu odniesienia - tylko gdy ustawiony)
   const [sortMode, setSortMode] = useState<"default" | "nearest">("default");
+  // Punkt odniesienia do sortowania "od najbliższego". To samo źródło prawdy którego
+  // używa swiper (getReference). Ustawiany przez OBIE ścieżki kroku 3: StartingLocationPicker
+  // (mapa) ORAZ LocationPrimer (sheet bez GPS). startingLocation (lokalny stan) ustawia tylko
+  // ta pierwsza, więc gate'owanie przycisku na nim psuło sort w ścieżce LocationPrimer.
+  const distanceRef = useDistanceReference();
+  const hasStartRef = !!distanceRef;
   // Filtr diety - multi-select: vegan, vegetarian, gluten_free, lactose_free
   const [dietFilters, setDietFilters] = useState<string[]>([]);
 
@@ -619,15 +625,15 @@ const PlanWizard = () => {
                 </button>
                 <button
                   onClick={() => setSortMode("nearest")}
-                  disabled={typeof startingLocation === "string" || !startingLocation}
+                  disabled={!hasStartRef}
                   className={cn(
                     "px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:scale-[0.96] border",
                     sortMode === "nearest"
                       ? "bg-foreground text-background border-foreground"
                       : "bg-muted text-foreground border-transparent",
-                    (typeof startingLocation === "string" || !startingLocation) && "opacity-40"
+                    !hasStartRef && "opacity-40"
                   )}
-                  title={(typeof startingLocation === "string" || !startingLocation) ? "Wybierz punkt startowy w kroku 3 aby aktywować" : ""}
+                  title={!hasStartRef ? "Wybierz punkt startowy w kroku 3 aby aktywować" : ""}
                 >
                   Od najbliższego
                   {sortMode === "nearest" && <Check className="inline h-3.5 w-3.5 ml-1" />}
