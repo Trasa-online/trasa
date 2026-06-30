@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share2, List, GalleryHorizontalEnd, Info } from "lucide-react";
+import { ArrowLeft, Camera, X, Globe, Lock, Pencil, Check, Image as ImageIcon, Map as MapIcon, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Share2, List, GalleryHorizontalEnd, Info, MoreVertical } from "lucide-react";
 import { useShare } from "@/hooks/useShare";
 import AddPinSheet from "@/components/route/AddPinSheet";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
@@ -60,6 +60,7 @@ const ReviewSummary = () => {
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   // Fullscreen podglad zdjecia z galerii.
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
   // Podglad wizytowki miejsca po kliknieciu w pin.
   const [detailPin, setDetailPin] = useState<any | null>(null);
   // Edycja planu dnia (po minieciu daty, przed "Zapisz plan dnia").
@@ -781,7 +782,7 @@ const ReviewSummary = () => {
           </button>
         )}
         {galleryPhotos.map((item, idx) => (
-          <button key={`${item.url}-${idx}`} onClick={() => setViewerUrl(item.url)}
+          <button key={`${item.url}-${idx}`} onClick={() => { setViewerUrl(item.url); setViewerMenuOpen(false); }}
             className="relative aspect-square overflow-hidden bg-muted active:opacity-90">
             <img src={item.url} alt="" className="w-full h-full object-cover" />
             {!item.mine && (
@@ -845,9 +846,9 @@ const ReviewSummary = () => {
   };
 
   const STEP_INFO: Record<1 | 2 | 3, string> = {
-    1: "Popraw trasę zgodnie z tym jak było - usuń miejsca, w których nie byliście, albo zmień kolejność.",
-    2: "Dodaj notki dla innych podróżnych: co wybrać, co zamówić, pro-tip. Notki zapisują się same.",
-    3: "Dodaj zdjęcia do wpisu. To opcjonalne - możesz wrócić do tego później.",
+    1: "Popraw trasę tak, jak było naprawdę: usuń miejsca, w których nie byliście, lub zmień kolejność.",
+    2: "Notka o miejscu: wspomnienie dla siebie i rada dla innych (co zamówić, pro-tip). Zapisuje się sama.",
+    3: "Dodaj zdjęcia do wspomnienia. To opcjonalne, możesz wrócić do tego później.",
   };
   const renderStepInfo = () => (
     <div className="mb-3 flex items-start gap-2 rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5">
@@ -901,9 +902,13 @@ const ReviewSummary = () => {
 
         <div className="absolute left-0 right-0 flex items-center justify-between px-4"
           style={{ top: "max(16px, env(safe-area-inset-top, 16px))" }}>
-          <button onClick={() => navigate("/dziennik")} className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
-            <ArrowLeft className="h-5 w-5 text-white" />
-          </button>
+          {/* W stepperze wpisu (isMemory) nawigacja jest przez "Gotowe"/"Wstecz" - strzałka
+              cofania zbędna i nachodziła na tytuł, więc pokazujemy ją tylko w aktywnym widoku. */}
+          {!isMemory ? (
+            <button onClick={() => navigate("/dziennik")} className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+              <ArrowLeft className="h-5 w-5 text-white" />
+            </button>
+          ) : <span />}
           {saving && (
             <span className="text-xs text-white/70 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5">Zapisywanie...</span>
           )}
@@ -1112,35 +1117,51 @@ const ReviewSummary = () => {
 
       {/* ── Fullscreen photo viewer ──────────────────────────────────────── */}
       {viewerUrl && (
-        <div className="fixed inset-0 z-[70] bg-black flex items-center justify-center" onClick={() => setViewerUrl(null)}>
+        <div className="fixed inset-0 z-[70] bg-black flex items-center justify-center" onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }}>
           <img src={viewerUrl} alt="" className="max-w-full max-h-full object-contain" />
-          <button
-            onClick={() => setViewerUrl(null)}
-            className="absolute h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center"
-            style={{ top: "max(16px, env(safe-area-inset-top, 16px))", right: "16px" }}
-          >
-            <X className="h-5 w-5 text-white" />
-          </button>
+          {/* Górne akcje: wielokropek (ustaw okładkę / usuń) + zamknięcie. */}
           <div
-            className="absolute left-0 right-0 flex items-center justify-center gap-2 px-4"
-            style={{ bottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}
+            className="absolute flex items-center gap-2"
+            style={{ top: "max(16px, env(safe-area-inset-top, 16px))", right: "16px" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              onClick={() => { if (viewerUrl !== heroPhoto) setCover(viewerUrl); }}
-              disabled={viewerUrl === heroPhoto}
-              className="px-4 py-2 rounded-full bg-white/15 backdrop-blur-sm text-white text-sm font-semibold active:scale-95 transition-transform disabled:opacity-60"
-            >
-              {viewerUrl === heroPhoto ? "Okładka ✓" : "Ustaw jako okładkę"}
-            </button>
-            {myPhotos.some((p) => p.url === viewerUrl) && (
+            <div className="relative">
               <button
-                onClick={() => { const owner = myPhotos.find((p) => p.url === viewerUrl)?.owner ?? routeId!; removePhoto(viewerUrl, owner); }}
-                className="px-4 py-2 rounded-full bg-red-500/90 text-white text-sm font-semibold active:scale-95 transition-transform"
+                onClick={() => setViewerMenuOpen((o) => !o)}
+                aria-label="Więcej opcji"
+                className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform"
               >
-                Usuń zdjęcie
+                <MoreVertical className="h-5 w-5 text-white" />
               </button>
-            )}
+              {viewerMenuOpen && (
+                <div className="absolute right-0 top-12 w-56 rounded-2xl bg-card shadow-xl overflow-hidden py-1">
+                  <button
+                    onClick={() => { if (viewerUrl !== heroPhoto) setCover(viewerUrl); setViewerMenuOpen(false); }}
+                    disabled={viewerUrl === heroPhoto}
+                    className="w-full px-4 py-3 text-left text-sm font-medium text-foreground flex items-center gap-2.5 active:bg-muted disabled:opacity-50"
+                  >
+                    <ImageIcon className="h-4 w-4 shrink-0" />
+                    {viewerUrl === heroPhoto ? "Okładka wpisu" : "Ustaw jako okładkę"}
+                    {viewerUrl === heroPhoto && <Check className="h-4 w-4 text-green-600 ml-auto" />}
+                  </button>
+                  {myPhotos.some((p) => p.url === viewerUrl) && (
+                    <button
+                      onClick={() => { const owner = myPhotos.find((p) => p.url === viewerUrl)?.owner ?? routeId!; removePhoto(viewerUrl, owner); setViewerMenuOpen(false); }}
+                      className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 flex items-center gap-2.5 active:bg-muted border-t border-border/40"
+                    >
+                      <Trash2 className="h-4 w-4 shrink-0" /> Usuń zdjęcie
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => { setViewerUrl(null); setViewerMenuOpen(false); }}
+              aria-label="Zamknij"
+              className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform"
+            >
+              <X className="h-5 w-5 text-white" />
+            </button>
           </div>
         </div>
       )}
