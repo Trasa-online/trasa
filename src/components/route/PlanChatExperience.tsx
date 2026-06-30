@@ -997,6 +997,36 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
     if (plan) onPlanReady(plan, messages);
   };
 
+  // Powrót do swipera BEZ kasowania trasy. Zapisuje bieżący plan do trasa_continue_route -
+  // PlanWizard po dolajkowaniu odczyta go, zmerguje polubienia i wróci z continuationMode
+  // (extend_mode), więc plan zostaje rozszerzony zamiast generowany od zera. Group mode ->
+  // navigate(-1) (powrót do sesji parowania zachowuje stan). Wzorzec 1:1 z "Polub więcej
+  // miejsc" w AddPinSheet - back NIE jest destrukcyjny.
+  const handleBackToSwiper = () => {
+    if (groupSession) { navigate(-1); return; }
+    if (plan) {
+      try {
+        localStorage.setItem("trasa_continue_route", JSON.stringify({
+          currentPlan: plan,
+          previousLikedNames: likedPlaces,
+          city: preferences.city,
+          date: preferences.startDate,
+          numDays: preferences.numDays,
+          startingLocation: preferences.startingLocation,
+          savedAt: Date.now(),
+        }));
+      } catch { /* localStorage unavailable */ }
+    }
+    navigate("/plan", {
+      state: {
+        step: 4,
+        city: preferences.city,
+        date: preferences.startDate ?? new Date().toISOString(),
+        likedPlaceNames: likedPlaces,
+      },
+    });
+  };
+
   if (initializing) {
     // Total loop: 3.6s - lines draw in sequentially, dots pop in, brief hold, then resets
     const LOOP = 3.6;
@@ -1587,7 +1617,7 @@ window.addEventListener('message',function(e){
                       <div className="flex-shrink-0 px-4 pb-4 pt-1 border-t border-border/40 flex gap-2">
                         {!readOnly ? (
                           <button
-                            onClick={() => { if (window.confirm("Wyjść bez zapisania trasy? Stworzony plan przepadnie.")) navigate(-1); }}
+                            onClick={handleBackToSwiper}
                             className="flex items-center gap-1.5 px-3 py-3.5 rounded-xl border border-border/60 text-sm font-medium text-muted-foreground shrink-0 whitespace-nowrap"
                           >
                             <ArrowLeft className="h-4 w-4" />
