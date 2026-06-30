@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
-import { BookOpen, Compass, Home, Plus, X, MapPin, Users, Link2, User, Heart, Sparkles } from "lucide-react";
+import { BookOpen, Compass, Home, Plus, X, MapPin, Users, Link2, User, Heart, Sparkles, ArrowLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
