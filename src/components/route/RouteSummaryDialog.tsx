@@ -12,6 +12,7 @@ import { format, addDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import posthog from "posthog-js";
 import { API_BASE } from "@/lib/platform";
+import { removeDraft } from "@/lib/draftRoutes";
 import type { PlanPin } from "./DayPinList";
 const buildStaticMapUrl = (pins: { latitude: number; longitude: number }[]) => {
   if (pins.length === 0) return null;
@@ -101,6 +102,7 @@ const RouteSummaryDialog = ({
     if (!user || isAnonymous) { setShowGuestAuth(true); return; }
     if (saving) return;
     if (existingRouteId) {
+      removeDraft(plan.city);
       toast.success("Trasa jest już zapisana!");
       onOpenChange(false);
       navigate("/home");
@@ -273,6 +275,7 @@ const RouteSummaryDialog = ({
       queryClient.invalidateQueries({ queryKey: ["journal-badge"] });
       queryClient.removeQueries({ queryKey: ["home-active-solo"] }); // dashboard /home pokaze swiezo utworzona trase
 
+      removeDraft(plan.city); // trasa stworzona -> usun trase robocza dla tego miasta
       toast.success("Trasa zapisana! 🎉", { description: plan.city });
       onOpenChange(false);
       navigate("/home");

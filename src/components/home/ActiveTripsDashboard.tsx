@@ -10,6 +10,7 @@ import { avatarSrc } from "@/lib/avatar";
 import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import { useActiveSoloTrips } from "@/hooks/useActiveSoloTrips";
+import { getDrafts, removeDraft, type DraftRoute } from "@/lib/draftRoutes";
 import { resolveStored } from "@/components/PlacePhoto";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Compass } from "lucide-react";
@@ -118,6 +119,10 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
     }
     setDeletingId(null);
   };
+
+  // Trasy robocze (drafty z localStorage) - niedokonczone planowanie do dokonczenia.
+  const [drafts, setDrafts] = useState<DraftRoute[]>([]);
+  useEffect(() => { setDrafts(getDrafts()); }, []);
 
   // Aktywne trasy SOLO (wlasne, planning/ongoing, bez grupy).
   const { data: soloRoutes = [], isLoading: soloLoading } = useActiveSoloTrips(userId);
@@ -373,6 +378,44 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
           </div>
         )}
       </section>
+
+      {/* Trasy robocze (drafty) - niedokonczone planowanie, klik = dokoncz od swipera */}
+      {drafts.length > 0 && (
+        <section className="mb-6">
+          <p className="text-sm font-bold mb-2.5 px-1">Trasy robocze</p>
+          <div className="space-y-2.5">
+            {drafts.map((d) => {
+              const dateLabel = d.date && isValid(parseISO(d.date)) ? format(parseISO(d.date), "d MMM", { locale: pl }) : null;
+              const n = d.likedPlaceNames.length;
+              const placesLabel = `${n} ${n === 1 ? "miejsce" : n < 5 ? "miejsca" : "miejsc"}`;
+              return (
+                <button
+                  key={d.city}
+                  onClick={() => navigate("/plan", { state: { step: 4, city: d.city, date: d.date ?? undefined, numDays: d.numDays, startingLocation: d.startingLocation, likedPlaceNames: d.likedPlaceNames } })}
+                  className="w-full flex items-center gap-3 rounded-2xl border border-orange-200 bg-orange-50/50 p-3 text-left active:scale-[0.98] transition-transform"
+                >
+                  <div className="h-10 w-10 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
+                    <Compass className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display font-extrabold text-sm leading-tight truncate">Dokończ trasę w&nbsp;{d.city}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{[dateLabel, placesLabel].filter(Boolean).join(" · ")}</p>
+                  </div>
+                  <span
+                    role="button"
+                    aria-label="Usuń trasę roboczą"
+                    onClick={(e) => { e.stopPropagation(); removeDraft(d.city); setDrafts(getDrafts()); }}
+                    className="shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/50 active:scale-90 transition-transform"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </span>
+                  <ChevronRight className="h-5 w-5 text-orange-600/50 shrink-0" />
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Viral: zaproszenie znajomych (link = auto-przyjazn) */}
       <InviteFriendsBanner className="mb-6" />

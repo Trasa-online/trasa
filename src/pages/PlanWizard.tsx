@@ -17,6 +17,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { MAIN_CATEGORIES, getSubcategoryLabel } from "@/lib/categories";
 import { setStartReference, markAskedForCity, tryResolveOnSite, getReference, useDistanceReference } from "@/lib/distanceReference";
 import { getTodayLikes } from "@/lib/exploreLikes";
+import { saveDraft } from "@/lib/draftRoutes";
 import LocationPrimer from "@/components/LocationPrimer";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -43,7 +44,7 @@ const PlanWizard = () => {
   const { user, isAnonymous } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
   const posthog = usePostHog();
-  const returnState = location.state as { step?: number; city?: string; date?: string; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; exploreMode?: boolean } | null;
+  const returnState = location.state as { step?: number; city?: string; date?: string; numDays?: number; startingLocation?: string | { name: string; latitude: number; longitude: number }; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; exploreMode?: boolean } | null;
 
   const initialStep: Step = (() => {
     const s = returnState?.step;
@@ -54,10 +55,10 @@ const PlanWizard = () => {
   const [step, setStep] = useState<Step>(initialStep);
   const [city, setCity] = useState(returnState?.city ?? "");
   const [date, setDate] = useState<Date | null>(returnState?.date ? new Date(returnState.date) : null);
-  const [numDays, setNumDays] = useState(1);
+  const [numDays, setNumDays] = useState(returnState?.numDays ?? 1);
   // startingLocation moze byc string (tylko nazwa, legacy) lub obiekt (z lat/lng).
   // Nowe StartingLocationPicker zwraca obiekt - pin startu pojawia sie na mapie.
-  const [startingLocation, setStartingLocation] = useState<string | { name: string; latitude: number; longitude: number }>("");
+  const [startingLocation, setStartingLocation] = useState<string | { name: string; latitude: number; longitude: number }>(returnState?.startingLocation ?? "");
   // Step 3: auto-detect on-site. "resolving" -> loader, "map" -> mapa punktu startu (planujesz),
   // "sheet" -> jawne pytanie "Jestes juz w miescie?" (brak zgody GPS).
   const [step3Mode, setStep3Mode] = useState<"resolving" | "map" | "sheet">("resolving");
@@ -106,6 +107,23 @@ const PlanWizard = () => {
   const [likedSnapshot, setLikedSnapshot] = useState<MockPlace[]>([]);
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  // Trasa robocza: auto-zapis gdy user ma miasto + datę + ≥1 polubienie, ale jeszcze nie
+  // wygenerował trasy. Debounce 800ms. Wraca jako karta "Dokończ trasę" na home (ActiveTripsDashboard).
+  // Nie w exploreMode (HomeSwipe bez intencji trasy). Usuwany po stworzeniu trasy (RouteSummaryDialog).
+  useEffect(() => {
+    if (exploreMode || !city || !date || likedSnapshot.length === 0) return;
+    const t = setTimeout(() => {
+      saveDraft({
+        city,
+        date: date.toISOString(),
+        numDays,
+        startingLocation: startingLocation || undefined,
+        likedPlaceNames: likedSnapshot.map((p) => p.place_name),
+      });
+    }, 800);
+    return () => clearTimeout(t);
+  }, [exploreMode, city, date, numDays, startingLocation, likedSnapshot]);
   // Wybor miejsc do trasy - mirror logiki z GroupSession matches tab (deselectedPlaces).
   // User domyslnie ma wszystko zaznaczone, moze odznaczyc miejsca ktorych nie chce w trasie.
   const [deselectedMatches, setDeselectedMatches] = useState<Set<string>>(new Set());
