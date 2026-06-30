@@ -17,6 +17,20 @@ let currentStatus: GeoStatus = "idle";
 const listeners = new Set<() => void>();
 const notifyAll = () => listeners.forEach((l) => l());
 
+// Persystencja coords w localStorage - przetrwa restart natywki, zeby nie pytac ponownie o GPS
+// (apka "rozumie raz" gdzie user jest). force=true i tak odswiezy swieza pozycje gdy trzeba.
+const COORDS_KEY = "trasa_geo_coords_v1";
+try {
+  const raw = localStorage.getItem(COORDS_KEY);
+  if (raw) {
+    const p = JSON.parse(raw);
+    if (p && Number.isFinite(p.lat) && Number.isFinite(p.lng)) cachedCoords = p;
+  }
+} catch { /* ignore */ }
+function persistCoords() {
+  try { if (cachedCoords) localStorage.setItem(COORDS_KEY, JSON.stringify(cachedCoords)); } catch { /* ignore */ }
+}
+
 // v2: bump zeby userzy zablokowani na v1 (zamkneli primer "Nie teraz" zanim plugin
 // dzialal) dostali ponowne pytanie raz, juz z dzialajaca geolokalizacja.
 const PRIMED_KEY = "trasa_geo_primed_v2";
@@ -43,7 +57,7 @@ export async function requestLocation(force = false): Promise<LatLng | null> {
       }
       const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000 });
       cachedCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      currentStatus = "granted"; notifyAll();
+      currentStatus = "granted"; notifyAll(); persistCoords();
       return cachedCoords;
     }
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -53,7 +67,7 @@ export async function requestLocation(force = false): Promise<LatLng | null> {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           cachedCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          currentStatus = "granted"; notifyAll(); resolve(cachedCoords);
+          currentStatus = "granted"; notifyAll(); persistCoords(); resolve(cachedCoords);
         },
         () => { currentStatus = "denied"; notifyAll(); resolve(null); },
         { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },

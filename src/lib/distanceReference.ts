@@ -21,15 +21,43 @@ let currentCity: string | null = null;
 const listeners = new Set<() => void>();
 const notifyAll = () => listeners.forEach((l) => l());
 
-// "Czy juz pytalismy dla tego miasta" - sessionStorage (nie permanentne; nowa sesja =
-// pytamy znowu, bo user moze byc juz na miejscu).
-const askedKey = (city: string) => `trasa_loc_asked_${(city || "").toLowerCase()}`;
-export const wasAskedForCity = (city: string): boolean => {
-  try { return sessionStorage.getItem(askedKey(city)) === "1"; } catch { return false; }
+// "Czy juz pytalismy o lokalizacje" - GLOBALNIE i TRWALE (localStorage). Raz ustalona lokalizacja
+// wystarcza dla kazdego miasta - user nie chce byc pytany w kolko przy kazdym przegladaniu
+// (Warszawa/Gdansk/Gdynia) ani po restarcie natywki. Param `city` zostawiony dla zgodnosci API,
+// ale flaga jest globalna (nie per-miasto). User moze pozniej wlaczyc dystans recznie.
+const ASKED_KEY = "trasa_loc_asked_global_v1";
+export const wasAskedForCity = (_city?: string): boolean => {
+  try { return localStorage.getItem(ASKED_KEY) === "1"; } catch { return false; }
 };
-export const markAskedForCity = (city: string) => {
-  try { sessionStorage.setItem(askedKey(city), "1"); } catch { /* ignore */ }
+export const markAskedForCity = (_city?: string) => {
+  try { localStorage.setItem(ASKED_KEY, "1"); } catch { /* ignore */ }
 };
+
+// Persystencja refu GPS (fizyczna lokalizacja usera) w localStorage - przetrwa restart natywki,
+// zeby apka "zrozumiala raz" gdzie user jest. Refy "start" (punkt z mapy, per-miasto) NIE sa
+// persystowane (sa efemeryczne i zwiazane z konkretnym miastem).
+const REF_KEY = "trasa_distance_ref_v1";
+function persistGpsRef() {
+  try {
+    if (currentRef?.source === "gps") {
+      localStorage.setItem(REF_KEY, JSON.stringify({ coords: currentRef.coords, label: currentRef.label }));
+    }
+  } catch { /* ignore */ }
+}
+function clearPersistedRef() {
+  try { localStorage.removeItem(REF_KEY); } catch { /* ignore */ }
+}
+// Rehydracja przy starcie modulu (tylko ref GPS) - dzieki temu po restarcie apka pamieta
+// lokalizacje usera i nie pyta ponownie.
+try {
+  const raw = localStorage.getItem(REF_KEY);
+  if (raw) {
+    const p = JSON.parse(raw);
+    if (p?.coords && Number.isFinite(p.coords.lat) && Number.isFinite(p.coords.lng)) {
+      currentRef = { coords: p.coords, label: p.label ?? "Ciebie", source: "gps" };
+    }
+  }
+} catch { /* ignore */ }
 
 export function getReference(): DistanceRef {
   return currentRef;
@@ -47,6 +75,7 @@ export async function setGpsReference(): Promise<boolean> {
   if (!coords) return false;
   currentRef = { coords, label: "Ciebie", source: "gps" };
   notifyAll();
+  persistGpsRef();
   return true;
 }
 
@@ -54,6 +83,7 @@ export async function setGpsReference(): Promise<boolean> {
 export function forceGpsReference(coords: LatLng) {
   currentRef = { coords, label: "Ciebie", source: "gps" };
   notifyAll();
+  persistGpsRef();
 }
 
 // Walidujacy GPS dla jawnego "Tak, jestem na miejscu" - PROMPTUJE o lokalizacje i sprawdza,
@@ -81,6 +111,7 @@ export async function resolveGpsForCity(
 export function clearReference() {
   currentRef = null;
   notifyAll();
+  clearPersistedRef();
 }
 
 // Walidacja "czy user jest w miescie docelowym" przez GPS. NIE promptuje - uzywa GPS tylko
@@ -99,17 +130,22 @@ export async function tryResolveOnSite(city: string): Promise<"onsite" | "offsit
   if (haversineKm(coords, center) <= ONSITE_THRESHOLD_KM) {
     currentRef = { coords, label: "Ciebie", source: "gps" };
     notifyAll();
+    persistGpsRef();
     return "onsite";
   }
   return "offsite";
 }
 
-// Ustaw kontekst miasta; gdy zmienia sie na inne miasto - czysci ref (inny punkt odniesienia).
+// Ustaw kontekst miasta. Gdy zmienia sie na inne miasto - czysci TYLKO ref "start" (punkt z mapy,
+// zwiazany z konkretnym miastem). Ref GPS to fizyczna lokalizacja usera - wazna dla kazdego miasta,
+// NIE czyscimy (inaczej apka pytalaby o lokalizacje przy kazdej zmianie Warszawa/Gdansk/Gdynia).
 export function ensureCityContext(city: string) {
   if (!city) return;
   if (currentCity && city.toLowerCase() !== currentCity.toLowerCase()) {
-    currentRef = null;
-    notifyAll();
+    if (currentRef?.source === "start") {
+      currentRef = null;
+      notifyAll();
+    }
   }
   currentCity = city;
 }
