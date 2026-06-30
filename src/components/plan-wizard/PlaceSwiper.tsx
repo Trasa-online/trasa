@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapPin, Star, ArrowRight, ChevronUp, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, Navigation, X, CalendarDays } from "lucide-react";
 import AddCustomPlacePanel from "./AddCustomPlacePanel";
