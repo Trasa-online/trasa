@@ -16,7 +16,7 @@ import { isNative } from "@/lib/platform";
 import { useFriends, useIncomingRequests, acceptFriendRequest, removeFriend } from "@/hooks/useFriends";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 import SectionCard from "@/components/profile/SectionCard";
-import { UserCheck, Check } from "lucide-react";
+import { UserCheck } from "lucide-react";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 
 // ── InviteSlot ────────────────────────────────────────────────────────────────
@@ -267,8 +267,11 @@ const TravelerProfile = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
 
-      {/* Header - wyśrodkowany @handle + ustawienia (spójny z profilem innego usera) */}
-      <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/40">
+      {/* Header - wyśrodkowany @handle + ustawienia (spójny z profilem innego usera).
+          AppLayout (hideTopBar) juz dodaje pt-safe (env(top)+0.75rem) do <main>, wiec
+          tu tylko +0.25rem (pt-1) => env(top)+1rem, dokladnie jak PublicProfile (pt-safe-4).
+          NIE uzywac pt-safe* tutaj - podwajaloby safe-area (ogromny padding od gory). */}
+      <div className="flex items-center gap-3 px-4 pt-1 pb-3 border-b border-border/40">
         <div className="w-9" />
         <h1 className="flex-1 text-base font-bold text-center truncate">@{profile?.username || profile?.first_name || "profil"}</h1>
         <button

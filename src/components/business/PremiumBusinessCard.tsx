@@ -18,7 +18,7 @@ import { type ReactNode, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MAIN_CATEGORIES } from "@/lib/categories";
 import { cn } from "@/lib/utils";
-import { Star, MapPin, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText } from "lucide-react";
+import { Star, Clock, ChevronRight, ChevronLeft, ChevronDown, X, Maximize2, Phone, Globe, FileText } from "lucide-react";
 import { parseISO, isValid, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import RouteMap from "@/components/RouteMap";
@@ -345,7 +345,7 @@ function RatingSection({ data, expandable, expanded, onToggle }: SectionProps & 
     return (
       <button onClick={onToggle} className="flex items-center gap-1.5 active:opacity-70 transition-opacity" aria-expanded={expanded}>
         {inner}
-        <span className="flex items-center gap-0.5 text-xs font-semibold text-orange-600 ml-0.5">
+        <span className="flex items-center gap-0.5 text-xs font-semibold bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full ml-1">
           Opinie<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} />
         </span>
       </button>
@@ -355,19 +355,12 @@ function RatingSection({ data, expandable, expanded, onToggle }: SectionProps & 
 }
 
 function AddressSection({ data }: SectionProps) {
-  if (!data.address && !data.city) return null;
+  // Chip z miastem usuniety - user wybiera miasto przy planowaniu, wiec wie ktorego dotyczy miejsce.
   const shortAddress = data.address?.split(",").slice(0, 2).join(",").trim();
+  if (!shortAddress) return null;
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      {data.city && (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-border/60 bg-card text-xs font-semibold text-foreground">
-          <MapPin className="h-3 w-3 text-muted-foreground" />
-          {data.city}
-        </span>
-      )}
-      {shortAddress && (
-        <span className="text-xs text-muted-foreground">{shortAddress}</span>
-      )}
+      <span className="text-xs text-muted-foreground">{shortAddress}</span>
     </div>
   );
 }
@@ -441,7 +434,7 @@ function OpeningHoursSection({ data }: SectionProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-border/40 bg-card overflow-hidden">
+    <div className="rounded-2xl bg-secondary overflow-hidden">
       <button
         type="button"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded((v) => !v); }}

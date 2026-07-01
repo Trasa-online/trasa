@@ -314,7 +314,7 @@ export default function SharedRoute() {
                         {m.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mt-1.5">
                             {m.tags.slice(0, 3).map((t: string) => (
-                              <span key={t} className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{t}</span>
+                              <span key={t} className="text-[10px] text-muted-foreground bg-white px-2 py-0.5 rounded-full">{t}</span>
                             ))}
                           </div>
                         )}
@@ -354,7 +354,7 @@ export default function SharedRoute() {
                     {m.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         {m.tags.slice(0, 3).map((t: string) => (
-                          <span key={t} className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{t}</span>
+                          <span key={t} className="text-[10px] text-muted-foreground bg-white px-2 py-0.5 rounded-full">{t}</span>
                         ))}
                       </div>
                     )}
