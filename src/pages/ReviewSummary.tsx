@@ -939,7 +939,7 @@ const ReviewSummary = () => {
         <div className={`absolute inset-0 bg-gradient-to-b ${hasRealPhoto ? "from-black/40 via-transparent to-black/75" : "from-black/35 via-black/25 to-black/80"}`} />
 
         <div className="absolute left-0 right-0 flex items-center justify-between px-4"
-          style={{ top: "max(16px, env(safe-area-inset-top, 16px))" }}>
+          style={{ top: "calc(max(16px, env(safe-area-inset-top, 16px)) + 6px)" }}>
           {/* Strzałkę cofania chowamy TYLKO w stepperze właściciela (tam nawigacja to
               "Gotowe"/"Wstecz"). W podsumowaniu, u gościa i w aktywnym widoku - pokazujemy. */}
           {!(isMemory && isOwner && (!reviewed || editingStepper)) ? (
@@ -1242,6 +1242,8 @@ const ReviewSummary = () => {
       )}
 
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
+      {/* W PODSUMOWANIU (wpis zrecenzowany) nie ma dolnego CTA - wyjscie przez strzalke cofania. */}
+      {!(isMemory && isOwner && reviewed && !editingStepper) && (
       <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
         {isMemory && isOwner && (!reviewed || editingStepper) ? (
@@ -1283,11 +1285,6 @@ const ReviewSummary = () => {
               </button>
             )}
           </div>
-        ) : isMemory && isOwner ? (
-          /* Podsumowanie: prosty przycisk wyjścia do Dziennika. */
-          <button onClick={() => navigate("/dziennik")} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
-            Gotowe
-          </button>
         ) : !isMemory && draft && draft.dayId === activeRouteId ? (
           <button
             onClick={() => savePlan(false)}
@@ -1302,6 +1299,7 @@ const ReviewSummary = () => {
           </button>
         )}
       </div>
+      )}
     </div>
   );
 };

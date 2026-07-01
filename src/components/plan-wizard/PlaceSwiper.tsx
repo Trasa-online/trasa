@@ -254,7 +254,6 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
   const [googleRating, setGoogleRating] = useState<number | null>(null);
   const [googleRatingCount, setGoogleRatingCount] = useState<number | null>(null);
   const [googleAddress, setGoogleAddress] = useState<string | null>(null);
-  const [googleDescription, setGoogleDescription] = useState<string | null>(null);
   const [googleTags, setGoogleTags] = useState<string[] | null>(null);
   const pointerStart = useRef<{ x: number; y: number; t: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -322,10 +321,6 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         if (!place.rating && data?.result?.rating) setGoogleRating(data.result.rating);
         if (data?.result?.user_ratings_total) setGoogleRatingCount(data.result.user_ratings_total);
         if (!place.address && data?.result?.formatted_address) setGoogleAddress(data.result.formatted_address);
-        if (!place.description) {
-          const summary = data?.result?.editorial_summary?.overview;
-          if (summary) setGoogleDescription(summary);
-        }
         if (!place.vibe_tags?.length) {
           const TYPES_MAP: Record<string, string> = {
             bakery: "piekarnia", cafe: "kawa", bar: "bar", restaurant: "restauracja",
@@ -346,7 +341,6 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
 
   const displayRating = place.rating || googleRating;
   const displayAddress = place.address || googleAddress;
-  const displayDescription = place.description || googleDescription;
   // Chip dystansu "X od {label}" - od wspolnego punktu odniesienia (GPS "od Ciebie" gdy
   // jestes na miejscu, albo punkt startowy "od startu" gdy planujesz). Gdy brak ref a
   // miejsce MA wspolrzedne - maly przycisk "Pokaz dystans" otwiera wybor (Jestes juz w meiscie?).
@@ -580,8 +574,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
           )}
         </div>
 
-        {/* Description */}
-        {displayDescription && <p className="text-white/75 text-sm leading-snug">{displayDescription}</p>}
+        {/* Opis USUNIETY z karty swipera (zabieral za duzo miejsca) - pelny opis jest w wizytowce. */}
 
         {/* Business event pill - 1:1 z BusinessCardPreview na dashboardzie */}
         {place.businessEventTitle && (
