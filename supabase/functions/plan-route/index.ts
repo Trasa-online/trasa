@@ -259,7 +259,7 @@ Napisz JEDNO krótkie zdanie komentarza (opcjonalnie), a PO NIM blok planu:
 <route_plan>
 {
   "city": "Nazwa miasta",
-  "route_reasoning": "1-3 zdania: na jakiej podstawie ułożyłaś tę trasę",
+  "route_reasoning": "2-4 zdania cytujące KONKRETY tego planu: nazwy miejsc, ich kolejność i DLACZEGO (godziny, dystanse, energia dnia)",
   "days": [
     {
       "day_number": 1,
@@ -300,7 +300,12 @@ Napisz JEDNO krótkie zdanie komentarza (opcjonalnie), a PO NIM blok planu:
 </route_plan>
 
 ZASADY FORMATU:
-- route_reasoning: 1-3 krótkie zdania wyjaśniające NA JAKIEJ PODSTAWIE dobrałaś i ułożyłaś tę konkretną trasę. Ciepły ton, druga osoba (np. "Ułożyłam dzień wokół miejsc, które polubiłaś..."). Odnieś się do polubionych miejsc usera ORAZ kluczowych heurystyk które zadziałały w TYM planie (bliskość/klastry geograficzne, godziny otwarcia, energia dnia, kolacja blisko ostatniego punktu). Konkret o tym planie, bez generycznego lania wody i bez wymyślania faktów. NIE używaj długiego myślnika (—), używaj zwykłego (-) lub dwukropka. Pamiętaj o polskich sierotach: po pojedynczych literach a, i, o, u, w, z wstaw twardą spację (NBSP, U+00A0) zamiast zwykłej spacji.
+- route_reasoning: 2-4 zdania wyjaśniające DLACZEGO ułożyłaś trasę WŁAŚNIE tak, CYTUJĄC KONKRETY z tego planu. OBOWIĄZKOWO odnieś się do:
+  * konkretnych NAZW 2-3 miejsc z tego planu i ich KOLEJNOŚCI (dlaczego dane miejsce jest pierwsze/ostatnie),
+  * REALNYCH sygnałów planu: godziny (suggested_time / godziny otwarcia), bliskość i klaster (walking_time_from_prev, distance_from_prev), łuk dnia (day_metrics: total_walking_km, crowd_level, energy_cost), kolacja/ostatni punkt blisko końca lub noclegu.
+  Przykład DOBREGO tonu: "Zaczynasz od Muzeum X - otwiera o 10:00 i leży w centrum, więc masz tylko 8 min pieszo do Kawiarni Y. Dzień domykasz Restauracją Z wieczorem, tuż obok poprzedniego punktu, żeby nie wracać przez pół miasta (łącznie ~4 km pieszo)."
+  ⛔ ZAKAZ generycznych ogólników bez konkretów ("ułożyłam wokół Twoich polubień", "idealna/dopasowana trasa", "świetny dzień"). Musisz cytować REALNE nazwy miejsc i liczby z pól planu (place_name, suggested_time, walking_time_from_prev, day_metrics). NIE wymyślaj faktów - jeśli czegoś nie wiesz (np. dokładnej godziny), oprzyj się na kolejności/bliskości.
+  Ton ciepły, druga osoba. Bez długiego myślnika (— ani –), używaj "-" lub ":". Polskie sieroty: po pojedynczych literach a, i, o, u, w, z wstaw twardą spację (NBSP, U+00A0).
 - day_metrics.total_walking_km: szacunkowa łączna odległość pieszego (suma distance_from_prev + wizyty) w km
 - day_metrics.crowd_level: "low" | "medium" | "high" — na podstawie dat, popularności i heurystyk H13
 - day_metrics.energy_cost: "low" | "medium" | "high" — na podstawie liczby punktów i długości dnia
