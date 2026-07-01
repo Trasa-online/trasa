@@ -77,7 +77,7 @@ export default function AddFriend() {
             )}
             <button
               onClick={() => navigate("/home")}
-              className="w-full px-6 py-3 rounded-full bg-white border-2 border-orange-600 text-orange-600 font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
+              className="w-full px-6 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
             >
               Przejdź do aplikacji <ArrowRight className="h-4 w-4" />
             </button>

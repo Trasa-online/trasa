@@ -628,7 +628,7 @@ const CreateGroupSession = () => {
                   if (!result.ok) return;
                   toast.success(result.method === "clipboard" ? "Link skopiowany" : "Udostępniono");
                 }}
-                className="w-full py-2.5 rounded-full bg-white border border-orange-600 text-orange-600 text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                className="w-full py-2.5 rounded-full bg-secondary text-secondary-foreground text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
               >
                 <Share2 className="h-4 w-4" />
                 Udostępnij link

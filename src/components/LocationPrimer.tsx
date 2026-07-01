@@ -159,7 +159,7 @@ const LocationPrimer = ({ open, city, onClose }: LocationPrimerProps) => {
           <button
             onClick={() => setView("map")}
             disabled={checking}
-            className="w-full py-3.5 rounded-full border border-orange-600 text-orange-600 font-bold text-sm active:scale-[0.97] transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3.5 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.97] transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <MapIcon className="h-4 w-4" /> Nie, wskażę skąd zacznę
           </button>

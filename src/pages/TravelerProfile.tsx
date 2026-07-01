@@ -110,7 +110,7 @@ function GuestProfile() {
         </button>
         <button
           onClick={() => open({ mode: "login" })}
-          className="w-full px-8 py-3.5 rounded-full bg-white border-2 border-orange-600 text-orange-600 font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
+          className="w-full px-8 py-3.5 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           Zaloguj się
         </button>
@@ -448,7 +448,7 @@ const TravelerProfile = () => {
               <div className="px-1 space-y-4 pt-2">
                 <p className="text-sm text-muted-foreground text-center">Nie masz jeszcze znajomych. Zaproś kogoś linkiem albo znajdź po nazwie.</p>
                 <InviteFriendsBanner />
-                <button onClick={() => { setFriendsSheet(false); navigate("/search"); }} className="w-full py-3 rounded-full border border-orange-600 text-orange-600 font-bold text-sm active:scale-[0.97] transition-transform">
+                <button onClick={() => { setFriendsSheet(false); navigate("/search"); }} className="w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm active:scale-[0.97] transition-transform">
                   Znajdź znajomych
                 </button>
               </div>

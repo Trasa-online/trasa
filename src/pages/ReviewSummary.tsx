@@ -762,7 +762,7 @@ const ReviewSummary = () => {
   const renderListReadonly = (withRating: boolean) => (
     <div className="space-y-2.5">
       {currentPins.map((pin: any, i: number) => (
-        <div key={pin.id} className="rounded-2xl bg-white border border-black/5 shadow-sm p-3">
+        <div key={pin.id} className="rounded-2xl bg-secondary border border-black/5 shadow-sm p-3">
           <button onClick={() => openDetail(pin)} className="flex items-center gap-3 w-full text-left active:opacity-90">
             <div className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted">
               <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-2xl" />
@@ -854,7 +854,7 @@ const ReviewSummary = () => {
       </div>
       {isPublic && (
         <button onClick={shareLink}
-          className="mt-3 w-full py-3 rounded-full border-2 border-orange-600 text-orange-600 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+          className="mt-3 w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
           <Share2 className="h-4 w-4" /> Udostępnij link do trasy
         </button>
       )}

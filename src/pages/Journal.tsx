@@ -36,7 +36,7 @@ const Journal = () => {
           </button>
           <button
             onClick={() => open({ mode: "login", hint: "journal" })}
-            className="w-full px-8 py-3.5 rounded-full bg-white border-2 border-orange-600 text-orange-600 font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
+            className="w-full px-8 py-3.5 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
           >
             Zaloguj się
           </button>

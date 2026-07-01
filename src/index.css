@@ -23,8 +23,9 @@ All colors MUST be HSL.
     --primary-foreground: 0 0% 100%;
 
     /* ── Secondary — light gray ── */
-    --secondary: 0 0% 95%;
-    --secondary-foreground: 0 0% 9%;
+    /* Secondary = wyrazny jasny szary (styl YouTube) dla guzikow akcji secondary + paper. */
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 10%;
 
     /* ── Neutrals ── */
     --muted: 0 0% 92%;

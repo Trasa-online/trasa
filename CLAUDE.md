@@ -32,7 +32,7 @@ Typografia tertiary:  #CFCFCF (niedostępne/placeholder)
 
 W Tailwind odpowiedniki klas:
 - Primary fill = `bg-orange-600` lub `bg-gradient-to-r from-[#F4A259] to-[#F9662B]`
-- Primary stroke (secondary button) = `border-orange-600 text-orange-600 bg-white`
+- Secondary (guziki akcji) = **szary fill** `bg-secondary text-secondary-foreground` (styl YouTube), NIE biały+pomarańczowy stroke
 - Tekst główny = `text-foreground` (mapuje na #0E0E0E)
 - Tekst secondary = `text-muted-foreground`
 
@@ -69,7 +69,7 @@ Oficjalny tagline aplikacji: **"speed dating z miastem"** (wszystkie litery mał
 ### Przyciski
 
 - **Primary:** fill pomarańczowy (gradient), zaokrąglone — `rounded-2xl` lub `rounded-full`
-- **Secondary:** białe tło + pomarańczowy stroke + pomarańczowy tekst
+- **Secondary:** **szary fill** `bg-secondary text-secondary-foreground` (styl YouTube - jasny szary, ciemny tekst). NIE biały+pomarańczowy stroke. Dotyczy wszystkich guzików akcji secondary oraz komponentów "paper" (karty sugerujące klik, np. karty miejsc we wpisie dziennika = `bg-secondary`).
 - **Destrukcyjne:** `bg-destructive` (czerwony), tylko dla nieodwracalnych akcji
 - Wszystkie przyciski obłe, `rounded-2xl` minimum
 - NIE używaj prostokątnych buttonów bez zaokrągleń
@@ -180,6 +180,8 @@ Dwa konteksty, dwie proporcje:
 ### ⛔ BusinessDashboard — główny dashboard firm ZAMROŻONY (src/pages/BusinessDashboard.tsx)
 
 **NIE wprowadzaj żadnych zmian** w głównym dashboardzie biznesowym (`/biznes/:id`) bez wyraźnej zgody użytkownika. Dotyczy to zarówno layoutu, logiki, jak i stylów. Każda zmiana wymaga explicit "możesz zmienić X w dashboardzie".
+
+**Personalizacja wizytówki biznesu (2026-07-01):** biznes może personalizować WYŁĄCZNIE **kolor guzika akcji "Dodaj"** (`color_button` / `businessColorButton`). Kategorie (badge), tło/overlay i promo są **jednolite w całej aplikacji** (nie personalizowane). Kolumny `color_badge`/`color_card_bg` zostają w DB ale są ignorowane w UI. Nie przywracaj ich stosowania bez wyraźnej prośby.
 
 ---
 
