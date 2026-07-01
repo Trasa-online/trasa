@@ -267,12 +267,10 @@ const TravelerProfile = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
 
-      {/* Header - tytul do lewej, jak strona glowna ("Twoje trasy") */}
-      <div className="relative flex items-start justify-between gap-2 px-4 pt-3 pb-2.5 after:content-[''] after:absolute after:bottom-0 after:left-4 after:right-4 after:h-px after:bg-border/40">
-        <div className="min-w-0">
-          <h1 className="text-xl font-display font-extrabold tracking-tight">Mój profil</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Twoje podróże, znajomi i&nbsp;kolekcje miejsc.</p>
-        </div>
+      {/* Header - wyśrodkowany @handle + ustawienia (spójny z profilem innego usera) */}
+      <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3 border-b border-border/40">
+        <div className="w-9" />
+        <h1 className="flex-1 text-base font-bold text-center truncate">@{profile?.username || profile?.first_name || "profil"}</h1>
         <button
           onClick={() => navigate("/settings")}
           className="h-9 w-9 flex items-center justify-center rounded-2xl text-muted-foreground hover:bg-muted transition-colors active:scale-90"
@@ -282,61 +280,58 @@ const TravelerProfile = () => {
         </button>
       </div>
 
-      <div className="px-4 space-y-5 max-w-lg mx-auto">
+      <div className="px-4 space-y-6 max-w-lg mx-auto pt-6">
 
-        {/* Header: avatar + username (lewo), znajomi (prawo) */}
-        <div className="flex items-center justify-between gap-4 pt-1">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="relative shrink-0">
-              <Avatar className="h-[72px] w-[72px]">
-                <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
-                <AvatarFallback className="bg-orange-100 text-orange-600 text-2xl font-black">
-                  {displayName.charAt(0).toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-              {/* Camera button */}
-              {isNative ? (
-                <button
-                  type="button"
-                  onClick={handleNativePhotoPick}
-                  className="absolute -bottom-1 -right-1 h-7 w-7 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md"
-                  aria-label="Zmień zdjęcie profilowe"
-                >
-                  <Camera className="h-3.5 w-3.5" />
-                </button>
-              ) : (
-                <label className="absolute -bottom-1 -right-1 h-7 w-7 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md">
-                  <Camera className="h-3.5 w-3.5" />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }}
-                  />
-                </label>
-              )}
-            </div>
-            <div className="min-w-0">
-              <h2 className="text-2xl font-display font-extrabold leading-tight truncate">
-                {profile?.username || profile?.first_name || "Użytkownik"}
-              </h2>
-              {profile?.username && profile?.first_name ? (
-                <p className="text-sm text-muted-foreground mt-0.5 truncate">@{profile.username}</p>
-              ) : completionPct < 100 ? (
-                <p className="text-sm text-muted-foreground mt-0.5">Uzupełnij profil ({completionPct}%)</p>
-              ) : null}
-            </div>
+        {/* Avatar + nazwa + znajomi - WYŚRODKOWANE (jak profil innego usera) */}
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <Avatar className="h-24 w-24">
+              <AvatarImage src={avatarSrc(profile?.avatar_url)} className="object-cover bg-orange-100" />
+              <AvatarFallback className="bg-orange-100 text-orange-600 text-4xl font-black">
+                {displayName.charAt(0).toUpperCase() || "U"}
+              </AvatarFallback>
+            </Avatar>
+            {/* Camera button (własna funkcja - upload awatara) */}
+            {isNative ? (
+              <button
+                type="button"
+                onClick={handleNativePhotoPick}
+                className="absolute bottom-0 right-0 h-8 w-8 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md"
+                aria-label="Zmień zdjęcie profilowe"
+              >
+                <Camera className="h-4 w-4" />
+              </button>
+            ) : (
+              <label className="absolute bottom-0 right-0 h-8 w-8 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer shadow-md">
+                <Camera className="h-4 w-4" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }}
+                />
+              </label>
+            )}
           </div>
-
-          {/* Znajomi (realne friendships) - po prawej, z badge zaproszen */}
+          <div className="text-center">
+            <h2 className="text-2xl font-display font-extrabold leading-tight">
+              {profile?.username || profile?.first_name || "Użytkownik"}
+            </h2>
+            {profile?.username && profile?.first_name ? (
+              <p className="text-sm text-muted-foreground mt-0.5">@{profile.username}</p>
+            ) : completionPct < 100 ? (
+              <p className="text-sm text-muted-foreground mt-0.5">Uzupełnij profil ({completionPct}%)</p>
+            ) : null}
+          </div>
+          {/* Znajomi - pill secondary z badge zaproszeń (własna funkcja: sheet znajomych) */}
           <button
             onClick={() => setFriendsSheet(true)}
-            className="relative shrink-0 flex flex-col items-center px-2 active:opacity-60 transition-opacity"
+            className="relative h-10 px-5 rounded-full bg-secondary text-secondary-foreground text-sm font-semibold flex items-center gap-2 active:scale-95 transition-transform"
           >
-            <span className="text-2xl font-black leading-none">{realFriends.length}</span>
-            <span className="text-xs text-muted-foreground font-medium mt-1">znajomi</span>
+            <UserCheck className="h-4 w-4" /> Znajomi
+            <span className="text-muted-foreground">· {realFriends.length}</span>
             {incomingReqs.length > 0 && (
-              <span className="absolute -top-1 right-0 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-background">
+              <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-background">
                 {incomingReqs.length}
               </span>
             )}
