@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { type PlanPin } from "./DayPinList";
 import AddPinSheet from "./AddPinSheet";
 import { getPhotoUrl } from "@/lib/placePhotos";
+import { isOpenAt, weekdayKeyFromDate, type OpeningHours } from "@/lib/openingHours";
 import PremiumBusinessCard from "@/components/business/PremiumBusinessCard";
 import { fromPin, type BusinessProfileForPreview } from "@/components/business/premiumBusinessAdapters";
 import type { BusinessPost, GoogleReview } from "@/components/business/premiumBusiness.types";
@@ -996,6 +997,60 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
   const handleConfirm = () => {
     if (plan) onPlanReady(plan, messages);
   };
+
+  // Double-walidacja godzin otwarcia: po wygenerowaniu planu sprawdzamy czy któreś miejsce
+  // NIE jest zamknięte o zaplanowanej godzinie (suggested_time) w dniu trasy. v1: tylko biznesy
+  // (business_profiles.opening_hours - strukturalne, pewne). Miejsca bez godzin pomijamy.
+  // Ostrzegamy toastem (NIE blokujemy - user może mimo to zapisać).
+  const hoursCheckedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!plan || !preferences.startDate) return;
+    const planKey = plan.days.flatMap((d) => d.pins.map((p) => `${p.place_name}@${p.suggested_time ?? ""}`)).join("|");
+    if (!planKey || hoursCheckedRef.current === planKey) return;
+    hoursCheckedRef.current = planKey;
+    let cancelled = false;
+    (async () => {
+      const names = [...new Set(plan.days.flatMap((d) => d.pins.map((p) => p.place_name)).filter(Boolean))];
+      if (!names.length) return;
+      const { data } = await (supabase as any)
+        .from("places")
+        .select("place_name, business_profiles(opening_hours)")
+        .ilike("city", `${preferences.city}%`)
+        .in("place_name", names);
+      if (cancelled) return;
+      const hoursMap = new Map<string, OpeningHours>();
+      for (const row of (data ?? [])) {
+        const bp = Array.isArray(row.business_profiles) ? row.business_profiles[0] : row.business_profiles;
+        const oh = bp?.opening_hours;
+        if (oh && typeof oh === "object" && Object.keys(oh).length) hoursMap.set(String(row.place_name).toLowerCase(), oh);
+      }
+      if (!hoursMap.size) return;
+      const base = new Date(preferences.startDate);
+      const closed: string[] = [];
+      for (const day of plan.days) {
+        const dayDate = new Date(base);
+        dayDate.setDate(base.getDate() + (Math.max(1, day.day_number) - 1));
+        const wk = weekdayKeyFromDate(dayDate);
+        for (const pin of day.pins) {
+          const oh = hoursMap.get((pin.place_name ?? "").toLowerCase());
+          if (!oh) continue;
+          const chk = isOpenAt(oh, wk, pin.suggested_time);
+          if (chk && !chk.open) {
+            closed.push(chk.closedAllDay
+              ? `${pin.place_name} zamknięte w ten dzień`
+              : `${pin.place_name} zamknięte o ${pin.suggested_time}${chk.closes ? ` (czynne do ${chk.closes})` : ""}`);
+          }
+        }
+      }
+      if (!cancelled && closed.length) {
+        toast.warning("Uwaga: część miejsc może być zamknięta o tej porze", {
+          description: closed.slice(0, 3).join("; ") + (closed.length > 3 ? `; +${closed.length - 3} więcej` : ""),
+          duration: 8000,
+        });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [plan, preferences.startDate, preferences.city]);
 
   // Powrót do swipera BEZ kasowania trasy. Zapisuje bieżący plan do trasa_continue_route -
   // PlanWizard po dolajkowaniu odczyta go, zmerguje polubienia i wróci z continuationMode
