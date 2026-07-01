@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe, List, GalleryHorizontalEnd, Map as MapIcon, Info, Check } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe, List, GalleryHorizontalEnd, Map as MapIcon, Info, Check, Pencil } from "lucide-react";
 import RouteMap from "@/components/RouteMap";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -103,6 +103,9 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
       : null;
 
   const [planView, setPlanView] = useState<"list" | "cards" | "map">("cards");
+  // Tryb edycji planu (za ikona olowka). Default OFF: karty pokazuja tylko odhacz/nawiguj +
+  // tap w wizytowke. ON: reorder (wczesniej/pozniej), usuwanie i "Dodaj miejsce".
+  const [editMode, setEditMode] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [detailPin, setDetailPin] = useState<any | null>(null);
@@ -603,7 +606,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
           )}
         </div>
         <div className="px-4 pt-4 pb-3">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground mb-2">
             <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
           </span>
           <p className="text-base font-black leading-tight">{pin.place_name}</p>
@@ -638,10 +641,10 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
       {editable && (
         <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
           <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
-            <ChevronUp className="h-4 w-4" />Wcześniej
+            <ChevronLeft className="h-4 w-4" />Wcześniej
           </button>
           <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
-            Później<ChevronDown className="h-4 w-4" />
+            Później<ChevronRight className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -659,7 +662,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
 
   // ── Kompaktowy wiersz listy: miniaturka + nazwa + chip kategorii + akcje. ──
   // Lekka alternatywa dla dużych kart (widok "kafelki"). Tap miniatury/nazwy -> wizytówka.
-  const renderPlanRow = (pin: any, i: number) => {
+  const renderPlanRow = (pin: any, i: number, editable: boolean) => {
     const dimmed = pin.visited_at || isPastDay || skippedPinIds.has(pin.id);
     return (
       <div
@@ -673,21 +676,25 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
         </button>
         <button onClick={() => openDetail(pin)} className="min-w-0 flex-1 text-left">
           <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-          <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">
+          <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-muted-foreground">
             <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
           </span>
         </button>
         <div className="flex items-center gap-1 shrink-0">
-          <div className="flex flex-col">
-            <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label="Wcześniej" className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
-            <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label="Później" className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
-          </div>
+          {editable && (
+            <div className="flex flex-col">
+              <button onClick={() => movePin(i, i - 1)} disabled={i === 0} aria-label="Wcześniej" className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronUp className="h-4 w-4" /></button>
+              <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} aria-label="Później" className="h-6 w-6 flex items-center justify-center text-muted-foreground disabled:opacity-25 active:scale-90"><ChevronDown className="h-4 w-4" /></button>
+            </div>
+          )}
           {!isPastDay && (pin.visited_at ? (
             <button onClick={() => unmarkVisited(pin.id)} aria-label="Cofnij odhaczenie" className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground active:scale-90"><RotateCcw className="h-4 w-4" /></button>
           ) : !skippedPinIds.has(pin.id) ? (
             <button onClick={() => markVisited(pin.id)} aria-label="Odhacz" className="h-9 w-9 rounded-full border-2 border-green-500/60 text-green-600 flex items-center justify-center active:scale-90"><Check className="h-4 w-4" strokeWidth={2.6} /></button>
           ) : null)}
-          <button onClick={() => removeWorkingPin(pin.id)} aria-label="Usuń miejsce" className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90"><Trash2 className="h-4 w-4" /></button>
+          {editable && (
+            <button onClick={() => removeWorkingPin(pin.id)} aria-label="Usuń miejsce" className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/60 active:scale-90"><Trash2 className="h-4 w-4" /></button>
+          )}
         </div>
       </div>
     );
@@ -697,7 +704,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   const renderEditablePlan = (withRating: boolean) => (
     <div className="space-y-2">
       {void withRating}
-      {workingPins.map((pin: any, i: number) => renderPlanRow(pin, i))}
+      {workingPins.map((pin: any, i: number) => renderPlanRow(pin, i, editMode))}
     </div>
   );
 
@@ -715,13 +722,22 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   const renderPlanHeader = (showViewToggle = true) => (
     <>
       <div className="flex items-center justify-between mb-3">
-        <button
-          onClick={() => setInfoOpen((o) => !o)}
-          className={`h-7 w-7 flex items-center justify-center rounded-full transition-colors active:scale-90 ${infoOpen ? "bg-orange-100 text-orange-700" : "text-muted-foreground"}`}
-          aria-label="Jak edytować plan"
-        >
-          <Info className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setInfoOpen((o) => !o)}
+            className={`h-7 w-7 flex items-center justify-center rounded-full transition-colors active:scale-90 ${infoOpen ? "bg-orange-100 text-orange-700" : "text-muted-foreground"}`}
+            aria-label="Jak edytować plan"
+          >
+            <Info className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setEditMode((o) => !o)}
+            className={`h-7 w-7 flex items-center justify-center rounded-full transition-colors active:scale-90 ${editMode ? "bg-orange-100 text-orange-700" : "text-muted-foreground"}`}
+            aria-label="Edytuj plan"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        </div>
         {showViewToggle && (
           <div className="flex rounded-full bg-muted p-0.5">
             <button onClick={() => setPlanView("list")} aria-label="Widok listy" className={`px-2.5 py-1.5 rounded-full transition-colors ${planView === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
@@ -739,7 +755,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
       {infoOpen && (
         <div className="mb-3 rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
           <p className="text-xs text-orange-800 leading-relaxed">
-            Edytuj plan przed zapisem: kolejność, notki, usuwanie miejsc. Zapis blokuje trasę i&nbsp;pozwala ją&nbsp;udostępnić.
+            Kliknij ołówek, aby edytować plan: zmień kolejność, usuń lub dodaj miejsca. Zapis blokuje trasę i&nbsp;pozwala ją&nbsp;udostępnić.
           </p>
         </div>
       )}
@@ -782,9 +798,9 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
             // Mapa aktywnego dnia (currentPins) - przelacznik dni w naglowku zmienia dzien.
             <RouteMap pins={currentPins as any} className="h-72 rounded-2xl border border-border/40" />
           ) : (
-            renderSwiper(true, true)
+            renderSwiper(editMode, true)
           )}
-          {renderAddPlaceButton()}
+          {editMode && renderAddPlaceButton()}
         </>
       )}
       {renderBottomBar()}
