@@ -299,7 +299,9 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
         supabase.from("pins").update({ pin_order: idx } as any).eq("id", p.id)
       ));
       if (finalize) {
-        await (supabase as any).from("routes").update({ plan_finalized: true, trip_type: "completed" }).eq("id", activeRouteId);
+        // trip_type=completed: trasa zakonczona (znika z home, wchodzi do Dziennika jako wpis).
+        // NIE ustawiamy plan_finalized - to robi dopiero stepper wpisu ("Gotowe") = zrecenzowane.
+        await (supabase as any).from("routes").update({ trip_type: "completed" }).eq("id", activeRouteId);
         // Trasa zakonczona: znika z home (filtr planning/ongoing) i trafia do Dziennika
         // jako wspomnienie. Czyscimy home-active-solo + odswiezamy Dziennik przed nawigacja.
         queryClient.removeQueries({ queryKey: ["home-active-solo"] });
@@ -414,7 +416,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     try {
       // Wielodniowa trasa = wszystkie dni (folder) konczymy razem; Dziennik dedupuje po folder_id.
       await (supabase as any).from("routes")
-        .update({ plan_finalized: true, trip_type: "completed", new_for_users: user ? [user.id] : null })
+        .update({ trip_type: "completed", new_for_users: user ? [user.id] : null })
         .in("id", dayRouteIds.length ? dayRouteIds : [activeRouteId]);
     } catch (e: any) {
       console.error("[ActiveTripPlanEditor] finalizeOnComplete failed:", e?.message ?? e);

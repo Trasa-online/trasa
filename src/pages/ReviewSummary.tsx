@@ -56,6 +56,12 @@ const ReviewSummary = () => {
   // Pod-zakladki w widoku wspomnienia: galeria zdjec / plan dnia.
   // Wpis dziennika (wlasciciel): 3-etapowy stepper. 1 Trasa (edycja) -> 2 Notki -> 3 Zdjecia.
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  // Po ukonczeniu steppera ("Gotowe") wpis przechodzi w tryb PODSUMOWANIA (read-only:
+  // Miejsca+notki | Zdjecia). Edycja (olowek) wraca do steppera. localReviewed = optymistyczne
+  // przejscie do podsumowania zanim refetch route zaktualizuje plan_finalized.
+  const [summaryTab, setSummaryTab] = useState<"plan" | "galeria">("plan");
+  const [editingStepper, setEditingStepper] = useState(false);
+  const [localReviewed, setLocalReviewed] = useState(false);
   // Wybrany dzien (trasa wielodniowa). Domyslnie dzien z URL.
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   // Fullscreen podglad zdjecia z galerii.
@@ -95,7 +101,7 @@ const ReviewSummary = () => {
       if (!routeId || !user) return null;
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, plan_finalized, ai_summary, ai_highlight, review_photos, is_shared, group_session_id")
+        .select("id, title, user_id, city, day_number, start_date, end_date, folder_id, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos, is_shared, group_session_id")
         .eq("id", routeId)
         .single();
       return data as any;
@@ -115,7 +121,7 @@ const ReviewSummary = () => {
       if (!folderId) return [route];
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, day_number, start_date, end_date, plan_finalized, ai_summary, ai_highlight, review_photos")
+        .select("id, title, city, day_number, start_date, end_date, plan_finalized, trip_type, ai_summary, ai_highlight, review_photos")
         .eq("folder_id", folderId)
         .eq("user_id", route.user_id)
         .order("day_number", { ascending: true });
@@ -556,11 +562,11 @@ const ReviewSummary = () => {
     return format(fd, "d MMMM yyyy", { locale: pl });
   }, [sortedDays, isMultiDay, route?.end_date, route?.start_date]);
 
-  // Aktywny wpis vs wspomnienie: wspomnienie gdy trasa UKOŃCZONA (plan_finalized - np. user
-  // odhaczył wszystkie miejsca i trafił tu z home) LUB minął OSTATNI dzień trasy. Bez warunku
-  // plan_finalized trasa zakończona dzisiaj nie pokazywałaby steppera wpisu (zła gałąź).
+  // Aktywny wpis vs wspomnienie: wspomnienie gdy trasa UKOŃCZONA (trip_type=completed - user
+  // odhaczył wszystkie miejsca / zatwierdził) LUB zrecenzowana (plan_finalized) LUB minął OSTATNI
+  // dzień. trip_type ustawiane od razu przy ukończeniu, plan_finalized dopiero po stepperze.
   const isMemory = useMemo(() => {
-    if (sortedDays.some((d: any) => d?.plan_finalized)) return true;
+    if (sortedDays.some((d: any) => d?.trip_type === "completed" || d?.plan_finalized)) return true;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     let lastTs = -Infinity;
@@ -570,6 +576,10 @@ const ReviewSummary = () => {
     }
     return Number.isFinite(lastTs) && lastTs < today.getTime();
   }, [sortedDays]);
+
+  // Wpis zrecenzowany = user skończył stepper (plan_finalized). Wtedy pokazujemy PODSUMOWANIE
+  // zamiast steppera. localReviewed = optymistyczne po "Gotowe" (przed refetchem route).
+  const reviewed = localReviewed || sortedDays.some((d: any) => d?.plan_finalized);
 
   if (authLoading) return null;
   if (!user) { navigate("/auth"); return null; }
@@ -635,14 +645,25 @@ const ReviewSummary = () => {
   // centered => gwiazdki + etykiety wysrodkowane (widok Szczegoly / swiper).
   // Oceny gwiazdkowe USUNIETE - bazujemy wylacznie na wartosciowych notkach userow.
   // (patrz CLAUDE.md "Brak ocen miejsc"). Zostaje tylko pole notki.
-  const renderRatingNote = (placeName: string, centered = false) => {
+  const renderRatingNote = (placeName: string, centered = false, readOnly = false) => {
     const k = rkey(activeRouteId!, placeName);
+    const val = notes[k] ?? "";
+    // Read-only (podsumowanie): pokaz notke jako tekst; ukryj gdy pusta.
+    if (readOnly) {
+      if (!val.trim()) return null;
+      return (
+        <div className={`mt-2 ${centered ? "text-center" : ""}`}>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Notka</p>
+          <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{val}</p>
+        </div>
+      );
+    }
     return (
       <div className={`mt-3 pt-1 ${centered ? "text-center" : ""}`}>
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Notka od Ciebie</p>
         <div className="relative">
           <textarea
-            value={notes[k] ?? ""}
+            value={val}
             onChange={(e) => handleNoteChange(placeName, e.target.value)}
             placeholder="Twoja rada lub notka o tym miejscu…"
             rows={2}
@@ -707,7 +728,7 @@ const ReviewSummary = () => {
           </button>
         </div>
       )}
-      {withRating && <div className="px-4 pb-4 pt-1">{renderRatingNote(pin.place_name, true)}</div>}
+      {withRating && <div className="px-4 pb-4 pt-1">{renderRatingNote(pin.place_name, true, !editable)}</div>}
     </div>
   );
 
@@ -736,10 +757,15 @@ const ReviewSummary = () => {
     </div>
   );
 
-  // Lista (read-only): kompaktowe wiersze.
-  const renderListReadonly = (_withRating: boolean) => (
+  // Lista (read-only): kompaktowe wiersze + notka pod spodem (gdy withRating).
+  const renderListReadonly = (withRating: boolean) => (
     <div className="space-y-2">
-      {currentPins.map((pin: any, i: number) => renderPlanRow(pin, i, false))}
+      {currentPins.map((pin: any, i: number) => (
+        <div key={pin.id}>
+          {renderPlanRow(pin, i, false)}
+          {withRating && <div className="px-1">{renderRatingNote(pin.place_name, false, true)}</div>}
+        </div>
+      ))}
     </div>
   );
 
@@ -970,7 +996,8 @@ const ReviewSummary = () => {
 
         {isMemory ? (
           isOwner ? (
-            /* ══ WSPOMNIENIE (właściciel): stepper 1 Trasa → 2 Notki → 3 Zdjęcia ══ */
+            (!reviewed || editingStepper) ? (
+            /* ══ WSPOMNIENIE (właściciel) - EDYCJA: stepper 1 Trasa → 2 Notki → 3 Zdjęcia ══ */
             <>
               {renderStepper()}
               <div className="px-5 pt-4">{renderStepInfo()}</div>
@@ -1021,6 +1048,42 @@ const ReviewSummary = () => {
                 </div>
               )}
             </>
+            ) : (
+            /* ══ WSPOMNIENIE (właściciel) - PODSUMOWANIE: Miejsca+notki | Zdjęcia + edycja ══ */
+            <>
+              <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/30 px-5 pt-3 pb-2.5 flex items-center gap-2">
+                <div className="flex-1 flex rounded-full bg-muted p-0.5">
+                  <button onClick={() => setSummaryTab("plan")}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-sm font-semibold transition-colors ${summaryTab === "plan" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                    <MapIcon className="h-4 w-4" /> Miejsca
+                  </button>
+                  <button onClick={() => setSummaryTab("galeria")}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-sm font-semibold transition-colors ${summaryTab === "galeria" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                    <ImageIcon className="h-4 w-4" /> Zdjęcia
+                  </button>
+                </div>
+                <button onClick={() => { setEditingStepper(true); setStep(1); }} aria-label="Edytuj wpis"
+                  className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 active:scale-95 transition-transform">
+                  <Pencil className="h-4 w-4 text-foreground" />
+                </button>
+              </div>
+
+              {summaryTab === "plan" ? (
+                <div className="px-5 pt-4 pb-5">
+                  {currentPins.length === 0 ? (
+                    <p className="text-center text-sm text-muted-foreground py-8">Brak miejsc w planie.</p>
+                  ) : (
+                    <>
+                      {renderPlanHeader(true)}
+                      {planView === "list" ? renderListReadonly(true) : renderSwiper(false, true)}
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="pt-2 pb-5">{renderGallery(true)}</div>
+              )}
+            </>
+            )
           ) : (
             /* ══ WSPOMNIENIE (gość): read-only galeria + plan ══ */
             <div className="pt-2 pb-5">
@@ -1169,14 +1232,15 @@ const ReviewSummary = () => {
       {/* ── Fixed bottom CTA ────────────────────────────────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 px-5 pt-3 bg-background/80 backdrop-blur-md border-t border-border/30"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
-        {isMemory && isOwner ? (
+        {isMemory && isOwner && (!reviewed || editingStepper) ? (
           /* Stepper wpisu: Wstecz + Dalej/Gotowe. Edycje persystują (autosave on unmount +
-             savePlan(false) na Gotowe); notki i zdjęcia zapisują się na bieżąco. */
+             savePlan(false)); "Gotowe" oznacza wpis jako zrecenzowany (plan_finalized) i
+             przechodzi do PODSUMOWANIA (nie wychodzi do Dziennika). */
           <div className="flex gap-2">
             {step > 1 && (
               <button
                 onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
-                className="px-5 py-4 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform shrink-0"
+                className="px-5 py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform shrink-0"
               >
                 Wstecz
               </button>
@@ -1184,30 +1248,44 @@ const ReviewSummary = () => {
             {step < 3 ? (
               <button
                 onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
-                className="flex-1 py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
+                className="flex-1 py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
               >
                 Dalej
               </button>
             ) : (
               <button
-                onClick={async () => { if (draft && draft.dayId === activeRouteId) await savePlan(false); navigate("/dziennik"); }}
+                onClick={async () => {
+                  if (draft && draft.dayId === activeRouteId) await savePlan(false);
+                  try {
+                    await (supabase as any).from("routes").update({ plan_finalized: true }).in("id", dayRouteIds.length ? dayRouteIds : [activeRouteId]);
+                  } catch (e: any) { console.error("[ReviewSummary] mark reviewed failed:", e?.message ?? e); }
+                  setLocalReviewed(true); setEditingStepper(false); setSummaryTab("plan");
+                  queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
+                  queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
+                  queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+                }}
                 disabled={savingPlan}
-                className="flex-1 py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
+                className="flex-1 py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
               >
                 {savingPlan ? "Zapisywanie…" : "Gotowe"}
               </button>
             )}
           </div>
+        ) : isMemory && isOwner ? (
+          /* Podsumowanie: prosty przycisk wyjścia do Dziennika. */
+          <button onClick={() => navigate("/dziennik")} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
+            Gotowe
+          </button>
         ) : !isMemory && draft && draft.dayId === activeRouteId ? (
           <button
             onClick={() => savePlan(false)}
             disabled={savingPlan || workingPins.length === 0}
-            className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
+            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
           >
             {savingPlan ? "Zapisywanie…" : "Zapisz zmiany"}
           </button>
         ) : (
-          <button onClick={() => navigate("/dziennik")} className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
+          <button onClick={() => navigate("/dziennik")} className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform">
             Gotowe
           </button>
         )}
