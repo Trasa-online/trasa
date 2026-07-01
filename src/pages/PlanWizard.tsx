@@ -17,7 +17,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { MAIN_CATEGORIES, getSubcategoryLabel } from "@/lib/categories";
 import { setStartReference, markAskedForCity, tryResolveOnSite, getReference, useDistanceReference } from "@/lib/distanceReference";
 import { getTodayLikes } from "@/lib/exploreLikes";
-import { saveDraft } from "@/lib/draftRoutes";
+import { saveDraft, removeDraft } from "@/lib/draftRoutes";
 import LocationPrimer from "@/components/LocationPrimer";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -44,7 +44,7 @@ const PlanWizard = () => {
   const { user, isAnonymous } = useAuth();
   const { open: openAuthDrawer } = useAuthDrawer();
   const posthog = usePostHog();
-  const returnState = location.state as { step?: number; city?: string; date?: string; numDays?: number; startingLocation?: string | { name: string; latitude: number; longitude: number }; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; exploreMode?: boolean } | null;
+  const returnState = location.state as { step?: number; city?: string; date?: string; numDays?: number; startingLocation?: string | { name: string; latitude: number; longitude: number }; likedPlaceNames?: string[]; skippedPlaceNames?: string[]; exploreMode?: boolean; fromRoute?: boolean } | null;
 
   const initialStep: Step = (() => {
     const s = returnState?.step;
@@ -112,7 +112,9 @@ const PlanWizard = () => {
   // wygenerował trasy. Debounce 800ms. Wraca jako karta "Dokończ trasę" na home (ActiveTripsDashboard).
   // Nie w exploreMode (HomeSwipe bez intencji trasy). Usuwany po stworzeniu trasy (RouteSummaryDialog).
   useEffect(() => {
-    if (exploreMode || !city || !date || likedSnapshot.length === 0) return;
+    if (exploreMode || !city || !date) return;
+    // Pusta trasa (0 polubien) nie ma sensu jako robocza - usun ew. istniejacy draft dla miasta.
+    if (likedSnapshot.length === 0) { removeDraft(city); return; }
     const t = setTimeout(() => {
       saveDraft({
         city,
@@ -269,7 +271,7 @@ const PlanWizard = () => {
       {/* Popup "wykorzystać polubione z dziś" - DOPIERO przy swiperze (krok 4), po wyborze
           miasta i daty, bazujac na polubieniach w wybranym miescie. Wczesniej wyskakiwal
           przedwczesnie z menu "+". */}
-      {step === 4 && !exploreMode && reuseDecision === "pending" && todayLikesForCity.length > 0 && (
+      {step === 4 && !exploreMode && !returnState?.fromRoute && reuseDecision === "pending" && todayLikesForCity.length > 0 && (
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 backdrop-blur-sm p-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
           <div className="w-full max-w-sm rounded-3xl bg-card p-5 shadow-2xl">
             <div className="flex items-start gap-3">

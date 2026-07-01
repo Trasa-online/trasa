@@ -161,20 +161,20 @@ const CreateRoute = () => {
         <div className="flex items-center gap-3 px-4 pt-safe-4 pb-3">
           <button
             onClick={() => {
-              // Prewencja: cofajac z niezapisanej stworzonej trasy plan przepada -> potwierdz.
-              // readOnly (istniejaca trasa) jest juz zapisana - bez pytania.
-              if (!wizardState?.existingRouteId &&
-                  !window.confirm("Wyjść bez zapisania trasy? Stworzony plan przepadnie.")) return;
+              // Back NIEDESTRUKCYJNY: trasa nie przepada - polubienia wracaja do swipera (step 4)
+              // + draft na home ("Dokoncz trase"). fromRoute wylacza popup polubionych (juz je ma).
+              // Dokladny wygenerowany plan zachowuje osobno "Cofnij do dopasowan" (trasa_continue_route).
               if (wizardState?.backTo) {
                 navigate(wizardState.backTo);
               } else if (currentCity && wizardState?.date) {
                 navigate("/plan", {
                   state: {
-                    step: 3,
+                    step: 4,
                     city: currentCity,
                     date: wizardState?.date,
                     likedPlaceNames: wizardLikedPlaces,
                     skippedPlaceNames: wizardSkippedPlaces,
+                    fromRoute: true,
                   },
                 });
               } else {

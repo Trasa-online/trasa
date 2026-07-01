@@ -1023,6 +1023,7 @@ const PlanChatExperience = ({ preferences, onPlanReady, likedPlaces, likedPlaces
         city: preferences.city,
         date: preferences.startDate ?? new Date().toISOString(),
         likedPlaceNames: likedPlaces,
+        fromRoute: true,
       },
     });
   };
