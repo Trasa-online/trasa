@@ -394,7 +394,7 @@ function CustomSheet({ city, onClose, onAdd }: { city: string; onClose: () => vo
             {preview.rating != null && <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"><Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />{preview.rating}</p>}
             {preview.address && <p className="text-xs text-muted-foreground mt-0.5">{preview.address}</p>}
             <div className="flex gap-2 mt-3">
-              <button onClick={() => setPreview(null)} className="flex-1 py-2.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.97]">Odrzuć</button>
+              <button onClick={() => setPreview(null)} className="flex-1 py-2.5 rounded-full bg-secondary text-secondary-foreground text-sm font-semibold active:scale-[0.97]">Odrzuć</button>
               <button onClick={() => onAdd(preview)} className="flex-1 py-2.5 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97]">Dodaj</button>
             </div>
           </div>

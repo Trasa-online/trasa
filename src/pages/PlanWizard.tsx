@@ -520,7 +520,7 @@ const PlanWizard = () => {
                                         key={place.id}
                                         onClick={() => { setDetailPlace(place); setDetailOpen(true); }}
                                         className={cn(
-                                          "w-full flex items-center gap-3 rounded-2xl border bg-card p-3 text-left transition-all active:scale-[0.98]",
+                                          "w-full flex items-center gap-3 rounded-2xl border bg-secondary p-3 text-left transition-all active:scale-[0.98]",
                                           isSelected ? "border-border/40" : "border-border/20 opacity-50"
                                         )}
                                       >

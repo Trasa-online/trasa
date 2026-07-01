@@ -204,7 +204,7 @@ const PlaceSwiperDetail = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden bg-[#F6F5F1]"
+        className="rounded-t-3xl p-0 overflow-hidden flex flex-col [&>button]:hidden bg-[#FEFEFE]"
         style={{ height: "min(96dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 0.5rem))" }}
       >
         {/* Scrollable wrapper - motion.div drag-to-dismiss wyrzucone bo blokowal native scroll
@@ -227,11 +227,11 @@ const PlaceSwiperDetail = ({
 
         {/* Like / Skip CTA - fixed bottom poza PremiumBusinessCard */}
         {(onLike || onSkip) && (
-          <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-black/5 bg-[#F6F5F1]">
+          <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-black/5 bg-[#FEFEFE]">
             <div className="flex gap-3">
               <button
                 onClick={handleSkip}
-                className="flex-1 py-3 rounded-full bg-white text-foreground font-bold text-sm shadow-xl border border-border/40 active:scale-[0.97] transition-transform"
+                className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm shadow-sm active:scale-[0.97] transition-transform"
               >
                 Odrzuć
               </button>

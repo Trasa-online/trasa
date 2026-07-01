@@ -296,7 +296,7 @@ export default function SharedRoute() {
             </p>
             <div className="space-y-2">
               {items.map((pin: any) => (
-                <div key={pin.id} className="bg-card border border-border/40 rounded-2xl p-2.5">
+                <div key={pin.id} className="bg-secondary border border-border/40 rounded-2xl p-2.5">
                   <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 text-left active:opacity-70 transition-opacity">
                     <PlacePhoto pin={pin} className="h-14 w-14 rounded-xl object-cover shrink-0" emojiClass="text-xl" />
                     <div className="min-w-0 flex-1">
@@ -334,7 +334,7 @@ export default function SharedRoute() {
   const renderSwiper = () => (
     <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-5 px-5 pb-2">
       {pins.map((pin: any, i: number) => (
-        <div key={pin.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm flex flex-col">
+        <div key={pin.id} className="snap-center shrink-0 w-[80vw] max-w-[320px] rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col">
           <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
             <div className="relative w-full aspect-[4/3] bg-muted">
               <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-4xl" />

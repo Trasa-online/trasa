@@ -680,7 +680,7 @@ const ReviewSummary = () => {
   // ── Lista (read-only): miejsca grupowane po kategorii. Klik => wizytowka. ──
   // Wspolna karta miejsca (karuzela + pionowa lista). fullWidth -> pelna szerokosc (stacked).
   const renderPlanCard = (pin: any, i: number, fullWidth: boolean, editable: boolean, withRating: boolean) => (
-    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-card border border-border/40 overflow-hidden shadow-sm flex flex-col`}>
+    <div key={pin.id} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-secondary border border-border/40 overflow-hidden shadow-sm flex flex-col`}>
       <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
         <div className="relative w-full aspect-[4/3] bg-muted">
           <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-4xl" />
@@ -734,7 +734,7 @@ const ReviewSummary = () => {
 
   // ── Kompaktowy wiersz listy: miniaturka + nazwa + chip kategorii (+ reorder/usuń gdy edycja). ──
   const renderPlanRow = (pin: any, i: number, editable: boolean) => (
-    <div key={pin.id} className="flex items-center gap-3 rounded-2xl bg-card border border-border/40 p-2.5">
+    <div key={pin.id} className="flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 p-2.5">
       <button onClick={() => openDetail(pin)} className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
         <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-2xl" />
         <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>

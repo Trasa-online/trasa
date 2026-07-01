@@ -55,7 +55,7 @@ function PlanReorderRow({ pin, isFirst, isLast, onTap, onUp, onDown, onRemove, d
       dragListener={false}
       dragControls={controls}
       whileDrag={{ scale: 0.98, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50 }}
-      className="bg-card border border-border/40 rounded-2xl p-2"
+      className="bg-secondary border border-border/40 rounded-2xl p-2"
     >
       <div className="flex items-center gap-2">
         <div
@@ -578,7 +578,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
   // ── Wspolna karta miejsca (uzywana w karuzeli "Szczegoly" i pionowej liscie). ──
   // fullWidth=false -> karta karuzeli (w-[80vw]); true -> pelna szerokosc (lista stacked).
   const renderPlanCard = (pin: any, i: number, fullWidth: boolean, editable: boolean, withRating: boolean) => (
-    <div key={pin.id} id={`active-pin-${pin.id}`} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-card border overflow-hidden shadow-sm flex flex-col transition-all ${highlightPinId === pin.id ? "border-trasa-teal-ink ring-2 ring-trasa-teal-ink/50" : "border-border/40"} ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "opacity-55" : ""}`}>
+    <div key={pin.id} id={`active-pin-${pin.id}`} className={`${fullWidth ? "w-full" : "snap-center shrink-0 w-[80vw] max-w-[320px]"} rounded-2xl bg-secondary border overflow-hidden shadow-sm flex flex-col transition-all ${highlightPinId === pin.id ? "border-trasa-teal-ink ring-2 ring-trasa-teal-ink/50" : "border-border/40"} ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "opacity-55" : ""}`}>
       <button onClick={() => openDetail(pin)} className="block w-full text-left active:opacity-90 transition-opacity">
         <div className="relative w-full aspect-[4/3] bg-muted">
           <PlacePhoto pin={pin} className={`w-full h-full object-cover ${pin.visited_at || isPastDay || skippedPinIds.has(pin.id) ? "grayscale" : ""}`} emojiClass="text-4xl" />
@@ -665,7 +665,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
       <div
         key={pin.id}
         id={`active-pin-${pin.id}`}
-        className={`flex items-center gap-3 rounded-2xl bg-card border p-2.5 transition-all ${highlightPinId === pin.id ? "border-trasa-teal-ink ring-2 ring-trasa-teal-ink/50" : "border-border/40"} ${dimmed ? "opacity-55" : ""}`}
+        className={`flex items-center gap-3 rounded-2xl bg-secondary border p-2.5 transition-all ${highlightPinId === pin.id ? "border-trasa-teal-ink ring-2 ring-trasa-teal-ink/50" : "border-border/40"} ${dimmed ? "opacity-55" : ""}`}
       >
         <button onClick={() => openDetail(pin)} className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
           <PlacePhoto pin={pin} className={`w-full h-full object-cover ${pin.visited_at ? "grayscale" : ""}`} emojiClass="text-2xl" />

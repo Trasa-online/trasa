@@ -1442,7 +1442,7 @@ window.addEventListener('message',function(e){
                           {(likedPlaces?.length ?? 0) > 0 && (
                             <button
                               onClick={() => setShowSwapOptions(true)}
-                              className="flex-1 py-3 rounded-xl border border-border text-foreground text-sm font-medium"
+                              className="flex-1 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium"
                             >
                               Zamień
                             </button>

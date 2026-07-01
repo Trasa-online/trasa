@@ -722,7 +722,7 @@ const PremiumBusinessCard = ({
   if (mode === "detail") {
     return (
       <>
-        <div className={cn("flex flex-col bg-[#F6F5F1]", className)}>
+        <div className={cn("flex flex-col bg-[#FEFEFE]", className)}>
           <HeroPhotoCarousel
             photos={detailPhotos}
             placeName={data.name}
