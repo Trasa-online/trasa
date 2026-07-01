@@ -757,13 +757,25 @@ const ReviewSummary = () => {
     </div>
   );
 
-  // Lista (read-only): kompaktowe wiersze + notka pod spodem (gdy withRating).
+  // Lista (read-only / podsumowanie): każde miejsce = biała sekcja (miniatura + nazwa + chip
+  // + notka) na białym tle z delikatnym cieniem 1px. Tap -> wizytówka.
   const renderListReadonly = (withRating: boolean) => (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {currentPins.map((pin: any, i: number) => (
-        <div key={pin.id}>
-          {renderPlanRow(pin, i, false)}
-          {withRating && <div className="px-1">{renderRatingNote(pin.place_name, false, true)}</div>}
+        <div key={pin.id} className="rounded-2xl bg-white border border-black/5 shadow-sm p-3">
+          <button onClick={() => openDetail(pin)} className="flex items-center gap-3 w-full text-left active:opacity-90">
+            <div className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted">
+              <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-2xl" />
+              <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
+              <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">
+                <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+              </span>
+            </div>
+          </button>
+          {withRating && renderRatingNote(pin.place_name, false, true)}
         </div>
       ))}
     </div>
@@ -928,10 +940,10 @@ const ReviewSummary = () => {
 
         <div className="absolute left-0 right-0 flex items-center justify-between px-4"
           style={{ top: "max(16px, env(safe-area-inset-top, 16px))" }}>
-          {/* W stepperze wpisu (isMemory) nawigacja jest przez "Gotowe"/"Wstecz" - strzałka
-              cofania zbędna i nachodziła na tytuł, więc pokazujemy ją tylko w aktywnym widoku. */}
-          {!isMemory ? (
-            <button onClick={() => navigate("/dziennik")} className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+          {/* Strzałkę cofania chowamy TYLKO w stepperze właściciela (tam nawigacja to
+              "Gotowe"/"Wstecz"). W podsumowaniu, u gościa i w aktywnym widoku - pokazujemy. */}
+          {!(isMemory && isOwner && (!reviewed || editingStepper)) ? (
+            <button onClick={() => navigate("/dziennik")} aria-label="Wróć do dziennika" className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
           ) : <span />}

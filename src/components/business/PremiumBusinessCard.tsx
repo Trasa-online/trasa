@@ -197,9 +197,10 @@ interface HeroPhotoCarouselProps {
   onExpand: (idx: number) => void;
   onClose?: () => void;
   loading?: boolean;
+  topLeftSlot?: ReactNode; // chipy dystansu + Maps na gorze hero (obok X)
 }
 
-function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading }: HeroPhotoCarouselProps) {
+function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading, topLeftSlot }: HeroPhotoCarouselProps) {
   const [activeIdx, setActiveIdx] = useState(0);
   const swipeStartX = useRef<number | null>(null);
   const hasPhoto = photos.length > 0;
@@ -229,6 +230,9 @@ function HeroPhotoCarousel({ photos, placeName, onExpand, onClose, loading }: He
         >
           <X className="h-4 w-4 text-white" />
         </button>
+      )}
+      {topLeftSlot && (
+        <div className="absolute top-3 left-3 z-40 flex items-center gap-2">{topLeftSlot}</div>
       )}
       {hasPhoto ? (
         <>
@@ -727,6 +731,7 @@ const PremiumBusinessCard = ({
             onExpand={(idx) => handleExpand(detailPhotos, idx)}
             onClose={onClose}
             loading={detailLoading}
+            topLeftSlot={header}
           />
           {/* space-y-6 = duzy odstep MIEDZY sekcjami (prawo bliskosci / common region).
               Wewnatrz kazdej grupy ciasny spacing - powiazane elementy trzymaja sie razem. */}
@@ -734,11 +739,9 @@ const PremiumBusinessCard = ({
 
             {/* Tozsamosc lokalu - jedna zwarta grupa */}
             <div className="space-y-2.5">
-              <div className="flex items-center justify-between gap-3">
-                {/* Nazwa zawsze w JEDNEJ linii (truncate) - dlugie nazwy nie lamia ukladu. */}
-                <h2 className="text-2xl font-black leading-tight truncate min-w-0">{data.name}</h2>
-                <div className="shrink-0">{header}</div>
-              </div>
+              {/* Nazwa = pelna szerokosc, moze sie zawinac (bez truncate) - nazwa jest wazna.
+                  Chipy dystansu + Maps przeniesione na gore hero (obok X), zeby nie skracac nazwy. */}
+              <h2 className="text-2xl font-black leading-tight">{data.name}</h2>
               <RatingSection data={data} expandable={!!hideReviews && hasReviews} expanded={reviewsOpen} onToggle={() => setReviewsOpen((o) => !o)} />
               {hideReviews && reviewsOpen && <ReviewsSection data={data} />}
               <AddressSection data={data} />

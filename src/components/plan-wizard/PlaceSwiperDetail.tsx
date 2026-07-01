@@ -174,9 +174,9 @@ const PlaceSwiperDetail = ({
     : null;
 
   const headerSlot = (
-    <div className="shrink-0 mt-0.5 flex items-center gap-2">
+    <div className="flex items-center gap-2">
       {distanceLabel && (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-orange-50 border border-orange-100 text-orange-700 text-xs font-semibold">
+        <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-orange-50 border border-orange-100 text-orange-700 text-xs font-semibold shadow-sm">
           <Navigation className="h-3.5 w-3.5" />
           {distanceLabel} od&nbsp;{distanceRef!.label}
         </span>
@@ -188,7 +188,7 @@ const PlaceSwiperDetail = ({
           e.stopPropagation();
           window.open(mapsUrl, "_blank", "noopener,noreferrer");
         }}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/60 bg-white text-foreground text-xs font-semibold active:scale-95 transition-transform"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/60 bg-white text-foreground text-xs font-semibold shadow-sm active:scale-95 transition-transform"
       >
         <MapPin className="h-3.5 w-3.5" />
         Maps
