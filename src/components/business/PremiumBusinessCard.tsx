@@ -314,9 +314,7 @@ function CategoriesSection({ data }: SectionProps) {
       {mainLabel && (
         <span
           className="px-3 py-1 rounded-full text-xs font-semibold"
-          style={data.colorBadge
-            ? { background: data.colorBadge, color: getHexContrast(data.colorBadge) }
-            : { background: "#f4a259", color: "#fff" }}
+          style={{ background: "#f4a259", color: "#fff" }}
         >
           {mainLabel}
         </span>
@@ -787,7 +785,6 @@ const PremiumBusinessCard = ({
     return (
       <div
         className={cn("relative w-full aspect-[9/16] rounded-3xl overflow-hidden", className)}
-        style={data.colorCardBg ? { background: data.colorCardBg } : undefined}
       >
         {/* Cover image lub video */}
         {data.coverVideoUrl ? (
@@ -811,9 +808,7 @@ const PremiumBusinessCard = ({
           <div className="absolute top-3 left-3 z-10">
             <span
               className="px-3 py-1 rounded-full text-xs font-semibold"
-              style={data.colorBadge
-                ? { background: data.colorBadge, color: getHexContrast(data.colorBadge) }
-                : { background: "#f4a259", color: "#fff" }}
+              style={{ background: "#f4a259", color: "#fff" }}
             >
               {mainLabel}
             </span>

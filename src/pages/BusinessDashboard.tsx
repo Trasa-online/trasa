@@ -1980,25 +1980,8 @@ const BusinessDashboard = () => {
                   <p className="text-xs text-muted-foreground mt-0.5">Kolory widoczne na wizytowce w aplikacji</p>
                 </div>
                 <div className="space-y-3">
-                  {/* Badge kategorii */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Kolor badge kategorii</p>
-                      <p className="text-xs text-muted-foreground">Chip z nazwa kategorii na gorze wizytowki</p>
-                    </div>
-                    <input type="color" value={colorBadge} onChange={e => { setColorBadge(e.target.value); setIsDirty(true); }}
-                      className="h-9 w-14 rounded-lg cursor-pointer border border-slate-200 p-0.5" />
-                  </div>
-                  {/* Tlo sekcji szczegolów */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Kolor overlay karty</p>
-                      <p className="text-xs text-muted-foreground">Gradient tla nad zdjeciem z nazwa i opisem</p>
-                    </div>
-                    <input type="color" value={colorCardBg} onChange={e => { setColorCardBg(e.target.value); setIsDirty(true); }}
-                      className="h-9 w-14 rounded-lg cursor-pointer border border-slate-200 p-0.5" />
-                  </div>
-                  {/* Kolor guzika */}
+                  {/* Personalizacja ograniczona do koloru guzika akcji - kategorie/tlo sa jednolite
+                      w calej aplikacji (badge kategorii i overlay nie sa juz personalizowane). */}
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium">Kolor guzika &quot;Dodaj&quot;</p>
@@ -2008,9 +1991,9 @@ const BusinessDashboard = () => {
                       className="h-9 w-14 rounded-lg cursor-pointer border border-slate-200 p-0.5" />
                   </div>
                 </div>
-                {/* Live preview strip. Badge promocji jest ZAWSZE pomaranczowy (nie personalizowany). */}
+                {/* Live preview strip. Badge kategorii i promocji ZAWSZE pomaranczowe (jednolite). */}
                 <div className="flex items-center gap-3 pt-1">
-                  <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0" style={{ background: colorBadge, color: getContrastColor(colorBadge) }}>Jedzenie &amp; Napoje</span>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "#f4a259" }}>Jedzenie &amp; Napoje</span>
                   <span className="px-3 py-1 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "linear-gradient(to right,#F4A259,#F9662B)" }}>Promocja</span>
                   <button className="flex-1 py-2 rounded-full text-xs font-bold" style={{ background: colorButton, color: getContrastColor(colorButton) }}>Dodaj</button>
                 </div>

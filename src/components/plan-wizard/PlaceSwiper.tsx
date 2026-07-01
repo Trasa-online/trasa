@@ -443,12 +443,8 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
             draggable={false}
           />
         )}
-        {/* Gradient overlay - biz custom kolor lub default czarny */}
-        {place.businessColorCardBg ? (
-          <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${place.businessColorCardBg}ee, ${place.businessColorCardBg}66 40%, transparent)` }} />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
-        )}
+        {/* Gradient overlay - zawsze domyslny czarny (personalizacja tla wylaczona, jednolicie wszedzie). */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
         {/* Photo progress bar - przeniesione pod badge kategorii (top-4 zajete przez badge).
             Instagram-style cienki bar pelnej szerokosci na top-14 (pod badge ktore ma top-4 + ~32px). */}
         {isTop && !place.coverVideoUrl && photoUrls.length > 1 && (
@@ -504,16 +500,7 @@ export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo,
         const subLabel = CATEGORY_LABELS[place.category];
         const label = bizMainLabel ?? subLabel;
         if (!label) return null;
-        if (place.businessColorBadge) {
-          return (
-            <span
-              className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold shadow-sm z-10"
-              style={{ background: place.businessColorBadge, color: getHexContrast(place.businessColorBadge) }}
-            >
-              {label}
-            </span>
-          );
-        }
+        // Badge kategorii ZAWSZE jednolity per-kategoria (getCategoryColor) - bez personalizacji biznesu.
         return (
           <span className={cn("absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold shadow-sm z-10", getCategoryColor(place.category))}>
             {label}
