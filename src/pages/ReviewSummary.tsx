@@ -377,17 +377,29 @@ const ReviewSummary = () => {
   };
 
   const removePhoto = async (url: string, owner: string) => {
+    // Walidacja: potwierdzenie przed nieodwracalnym usunieciem.
+    if (!confirm("Usunąć to zdjęcie z wpisu? Tej operacji nie można cofnąć.")) return;
     if (owner === routeId) {
       const updated = photos.filter((p) => p !== url);
       setPhotos(updated);
+      // Real-time: myPhotos scala `photos` z `sortedDays[].review_photos`, wiec optymistycznie
+      // aktualizujemy tez cache route + dni. Bez tego usuniete zdjecie wracaloby do galerii az
+      // do pelnego refetchu (dla trasy jednodniowej sortedDays[0] = stale `route`).
+      queryClient.setQueryData(["review-summary-route", routeId], (old: any) =>
+        old ? { ...old, review_photos: updated } : old);
+      queryClient.setQueryData(["review-trip-days", folderId, routeId], (old: any) =>
+        (old ?? []).map((d: any) => (d.id === routeId ? { ...d, review_photos: updated } : d)));
       await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
     } else {
       const dr = sortedDays.find((d: any) => d.id === owner);
       const updated = (dr?.review_photos ?? []).filter((p: string) => p !== url);
+      queryClient.setQueryData(["review-trip-days", folderId, routeId], (old: any) =>
+        (old ?? []).map((d: any) => (d.id === owner ? { ...d, review_photos: updated } : d)));
       await supabase.from("routes").update({ review_photos: updated } as any).eq("id", owner);
     }
     setViewerUrl(null);
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
+    notify.success("Zdjęcie usunięte");
   };
 
   // Wyjscie z trybu edycji (stepper) do read-only PODSUMOWANIA - ta sama logika co "Gotowe",
@@ -957,7 +969,7 @@ const ReviewSummary = () => {
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       {/* We wpisie dziennika (isMemory) okladka jest NIZSZA - zdjecie nie jest kluczowe,
           wazniejsza jest galeria/plan ponizej. Aktywny przeglad trasy zostaje wyzszy. */}
-      <div className={`relative w-full ${isMemory ? "aspect-[2/1]" : (hasRealPhoto ? "aspect-[4/5]" : "aspect-[16/10]")} flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500`}>
+      <div className={`relative w-full ${isMemory ? "aspect-[16/9]" : (hasRealPhoto ? "aspect-[4/5]" : "aspect-[16/10]")} flex-shrink-0 overflow-hidden bg-gradient-to-br from-orange-400 via-rose-400 to-purple-500`}>
         <img src={heroPhoto} alt="" className="absolute inset-0 w-full h-full object-cover" />
         {/* Ciemny gradient overlay - dla placeholdera mocniejszy (kontrast tekstu, WCAG) */}
         <div className={`absolute inset-0 bg-gradient-to-b ${hasRealPhoto ? "from-black/40 via-transparent to-black/75" : "from-black/35 via-black/25 to-black/80"}`} />
