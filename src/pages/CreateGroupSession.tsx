@@ -310,7 +310,15 @@ const CreateGroupSession = () => {
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            // Ekran zaproszenia (createdCode) powstaje jako zmiana STANU, nie wpis w historii -
+            // navigate(-1) by go pominal i wyszedl z calego flow. Cofamy recznie do formularza.
+            // Formularz: cofnij w historii, a gdy jej brak (natywne iOS bez stosu = navigate(-1)
+            // jest no-op -> "cofanie nie dziala") wracamy na home.
+            if (createdCode) { setCreatedCode(null); return; }
+            if (window.history.state?.idx > 0) navigate(-1);
+            else navigate("/");
+          }}
           className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground"
         >
           <ArrowLeft className="h-5 w-5" />
