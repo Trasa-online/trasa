@@ -2,9 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Heart, Zap, Check, Castle, GlassWater, Palette, TreePine, Pizza, Star, MapPin, Menu, X, Sparkles, User, Landmark } from "lucide-react";
+import { Users, Zap, Check, Menu, X, User, Compass } from "lucide-react";
 import TrialModal from "@/components/trial/TrialModal";
 import posthog from "posthog-js";
+
+// Store product URLs — uzupelnic po publikacji w sklepach
+const APP_STORE_URL = "#";
+const PLAY_STORE_URL = "#";
 
 // ─── Scroll reveal hook ───────────────────────────────────────────────────────
 
@@ -24,181 +28,77 @@ function useFadeIn() {
   return { ref, visible };
 }
 
-// ─── Step 1: animated city drum picker ───────────────────────────────────────
+// ─── Logo (znak Trasy) ────────────────────────────────────────────────────────
 
-const CITIES = ["Kraków", "Gdańsk", "Warszawa", "Wrocław", "Zakopane", "Poznań"];
+function Logo({ className = "h-7 w-auto" }: { className?: string }) {
+  return <img src="/Icon_Trasa.png" alt="Trasa" className={className} draggable={false} />;
+}
 
-function CityAnim() {
-  const [idx, setIdx] = useState(0);
-  const [out, setOut] = useState(false);
-  useEffect(() => {
-    const t = setInterval(() => {
-      setOut(true);
-      setTimeout(() => { setIdx(i => (i + 1) % CITIES.length); setOut(false); }, 230);
-    }, 1900);
-    return () => clearInterval(t);
-  }, []);
+// ─── Store badges (App Store + Google Play) ───────────────────────────────────
+
+function StoreBadges({ center = false }: { center?: boolean }) {
   return (
-    <div className="bg-white rounded-2xl shadow-lg shadow-orange-100/60 border border-slate-100 p-5 w-52 mx-auto">
-      <p className="text-[10px] font-semibold text-muted-foreground text-center mb-3 tracking-wide">
-        Wybierz miasto
-      </p>
-      <div className="h-10 overflow-hidden flex items-center justify-center">
-        <p
-          className="text-2xl font-black text-foreground"
-          style={{
-            transition: "transform 0.22s ease, opacity 0.22s ease",
-            transform: out ? "translateY(-14px)" : "translateY(0)",
-            opacity: out ? 0 : 1,
-          }}
-        >
-          {CITIES[idx]}
-        </p>
-      </div>
-      <div className="mt-4 h-1.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B]" />
-      <div className="mt-2.5 flex justify-center gap-1">
-        {CITIES.map((_, i) => (
-          <div
-            key={i}
-            className="h-1 rounded-full transition-all duration-300"
-            style={{ width: i === idx ? 14 : 4, background: i === idx ? "#ea580c" : "#e5e7eb" }}
-          />
-        ))}
+    <div className={`flex flex-wrap items-center gap-3 ${center ? "justify-center" : "justify-center md:justify-start"}`}>
+      <a
+        href={APP_STORE_URL}
+        onClick={(e) => { if (APP_STORE_URL === "#") e.preventDefault(); posthog.capture("landing_store_click", { store: "app_store" }); }}
+        className="transition-transform hover:scale-[1.03] active:scale-95"
+        aria-label="Pobierz z App Store"
+      >
+        <img src="/Pobierz-z-App-Store.png" alt="Pobierz z App Store" className="h-12 w-auto" draggable={false} />
+      </a>
+      <a
+        href={PLAY_STORE_URL}
+        onClick={(e) => { if (PLAY_STORE_URL === "#") e.preventDefault(); posthog.capture("landing_store_click", { store: "play_store" }); }}
+        className="transition-transform hover:scale-[1.03] active:scale-95"
+        aria-label="Pobierz z Google Play"
+      >
+        <img src="/google-play-badge.png" alt="Pobierz z Google Play" className="h-12 w-auto" draggable={false} />
+      </a>
+    </div>
+  );
+}
+
+// ─── Phone frame (shell + screen) ─────────────────────────────────────────────
+
+function PhoneFrame({ children, width = 240, className = "" }: { children: React.ReactNode; width?: number; className?: string }) {
+  return (
+    <div className={`relative mx-auto ${className}`} style={{ width }}>
+      <div className="relative bg-[#0E0E0E] rounded-[40px] p-2 shadow-2xl shadow-orange-950/25" style={{ aspectRatio: "9/19.5" }}>
+        {/* Dynamic Island */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-full z-10" />
+        {/* Screen */}
+        <div className="w-full h-full bg-[#FEFEFE] rounded-[32px] overflow-hidden">
+          {children}
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Step 2: swiping place cards ─────────────────────────────────────────────
-
-const PLACES = [
-  { name: "Wawel", Icon: Castle, cat: "Zabytek", color: "from-amber-50 to-orange-100" },
-  { name: "Kazimierz", Icon: GlassWater, cat: "Dzielnica", color: "from-violet-50 to-purple-100" },
-  { name: "MOCAK", Icon: Palette, cat: "Muzeum", color: "from-sky-50 to-blue-100" },
-  { name: "Planty", Icon: TreePine, cat: "Park", color: "from-green-50 to-emerald-100" },
-  { name: "Nolio", Icon: Pizza, cat: "Restauracja", color: "from-red-50 to-rose-100" },
-];
-
-function SwipeAnim() {
-  const [idx, setIdx] = useState(0);
-  const [action, setAction] = useState<"like" | "skip" | null>(null);
-  useEffect(() => {
-    const tick = () => {
-      setAction(Math.random() > 0.3 ? "like" : "skip");
-      setTimeout(() => { setAction(null); setIdx(i => (i + 1) % PLACES.length); }, 700);
-    };
-    const t = setInterval(tick, 2400);
-    return () => clearInterval(t);
-  }, []);
-  const p = PLACES[idx];
-  const PlaceIcon = p.Icon;
+// Hero: real app animation (demo.mp4). Status bar z nagrania przyciety gora/dol.
+function HeroPhone() {
   return (
-    <div className="relative w-52 h-40 mx-auto">
-      <div className="absolute inset-x-3 inset-y-3 bg-white rounded-2xl shadow-sm border border-slate-100 opacity-50 scale-95" />
-      <div
-        className="absolute inset-0 bg-white rounded-2xl shadow-lg shadow-orange-100/50 border border-slate-100 flex flex-col overflow-hidden"
-        style={{
-          transition: "transform 0.5s ease, opacity 0.5s ease",
-          transform: action === "like" ? "translateX(56px) rotate(7deg)" : action === "skip" ? "translateX(-56px) rotate(-7deg)" : "none",
-          opacity: action ? 0 : 1,
-        }}
-      >
-        <div className={`flex-1 bg-gradient-to-br ${p.color} flex items-center justify-center`}>
-          <PlaceIcon className="h-9 w-9 text-orange-500/70" strokeWidth={1.5} />
-        </div>
-        <div className="px-3 py-2 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold">{p.name}</p>
-            <p className="text-[10px] text-muted-foreground">{p.cat}</p>
-          </div>
-          <div className="flex gap-1.5">
-            <div className="h-7 w-7 rounded-full border-2 border-slate-200 flex items-center justify-center text-muted-foreground">
-              <span className="text-[10px] font-bold">✕</span>
-            </div>
-            <div className="h-7 w-7 rounded-full border-2 border-emerald-200 flex items-center justify-center">
-              <Heart className="h-3.5 w-3.5 text-emerald-500" />
-            </div>
-          </div>
-        </div>
+    <PhoneFrame width={260}>
+      <div className="w-full h-full overflow-hidden">
+        <video
+          src="/demo.mp4"
+          poster="/landing/hero-poster.png"
+          autoPlay muted loop playsInline preload="metadata"
+          className="w-full object-cover"
+          style={{ height: "112%", marginTop: "-6%" }}
+        />
       </div>
-      {action === "like" && (
-        <div className="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full -rotate-12 animate-in zoom-in duration-150 shadow flex items-center gap-1">
-          LUBIĘ <Heart className="h-2.5 w-2.5 fill-white" />
-        </div>
-      )}
-      {action === "skip" && (
-        <div className="absolute top-2 right-2 bg-slate-400 text-white text-[10px] font-black px-2 py-0.5 rounded-full rotate-12 animate-in zoom-in duration-150 shadow">
-          POMIŃ
-        </div>
-      )}
-    </div>
+    </PhoneFrame>
   );
 }
 
-// ─── Step 3: route pins dropping one by one ───────────────────────────────────
-
-const PINS = [
-  { x: 38, y: 70 }, { x: 90, y: 38 }, { x: 142, y: 62 }, { x: 175, y: 28 },
-];
-
-function RouteAnim() {
-  const [n, setN] = useState(0);
-  useEffect(() => {
-    const run = () => {
-      setN(0);
-      PINS.forEach((_, i) => setTimeout(() => setN(i + 1), 400 + i * 500));
-      setTimeout(run, 400 + PINS.length * 500 + 1400);
-    };
-    const t = setTimeout(run, 300);
-    return () => clearTimeout(t);
-  }, []);
+// Krok: prawdziwy screenshot apki w ramce telefonu
+function StepPhone({ src }: { src: string }) {
   return (
-    <div className="w-52 h-40 mx-auto bg-white rounded-2xl shadow-lg shadow-orange-100/50 border border-slate-100 overflow-hidden relative">
-      <div
-        className="absolute inset-0 opacity-[0.07]"
-        style={{
-          backgroundImage: "linear-gradient(#94a3b8 1px, transparent 1px), linear-gradient(90deg, #94a3b8 1px, transparent 1px)",
-          backgroundSize: "18px 18px",
-        }}
-      />
-      <div className="absolute bottom-6 left-5 right-10 h-2 rounded-full bg-slate-100" />
-      <div className="absolute top-10 left-10 right-12 h-1.5 rounded-full bg-slate-100" />
-      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 208 160" fill="none">
-        {PINS.slice(1).map((pin, i) => (
-          <line
-            key={i}
-            x1={PINS[i].x} y1={PINS[i].y}
-            x2={pin.x} y2={pin.y}
-            stroke="#ea580c" strokeWidth="2.5" strokeDasharray="5 3"
-            style={{ opacity: n > i + 1 ? 0.65 : 0, transition: "opacity 0.35s ease" }}
-          />
-        ))}
-        {PINS.map((pin, i) => (
-          <g
-            key={i}
-            style={{
-              transformOrigin: `${pin.x}px ${pin.y}px`,
-              transform: n > i ? "scale(1) translateY(0)" : "scale(0.3) translateY(-16px)",
-              opacity: n > i ? 1 : 0,
-              transition: "transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s",
-            }}
-          >
-            <circle cx={pin.x} cy={pin.y} r="11" fill="#ea580c" />
-            <text x={pin.x} y={pin.y + 4} textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">{i + 1}</text>
-          </g>
-        ))}
-      </svg>
-      <div
-        className="absolute bottom-3 right-3 bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 shadow"
-        style={{
-          opacity: n >= PINS.length ? 1 : 0,
-          transform: n >= PINS.length ? "scale(1)" : "scale(0.5)",
-          transition: "all 0.4s cubic-bezier(0.34,1.56,0.64,1)",
-        }}
-      >
-        <Check className="h-3 w-3" /> Gotowe!
-      </div>
-    </div>
+    <PhoneFrame width={182}>
+      <img src={src} alt="" className="w-full h-full object-cover object-top" draggable={false} />
+    </PhoneFrame>
   );
 }
 
@@ -259,70 +159,6 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
   );
 }
 
-// ─── Phone mockup ─────────────────────────────────────────────────────────────
-
-function PhoneMockup() {
-  return (
-    <div className="relative mx-auto" style={{ width: 240 }}>
-      {/* Phone shell */}
-      <div className="relative bg-[#0E0E0E] rounded-[40px] p-2 shadow-2xl shadow-orange-950/25" style={{ aspectRatio: "9/19.5" }}>
-        {/* Dynamic Island */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-full z-10" />
-        {/* Screen */}
-        <div className="w-full h-full bg-[#FEFEFE] rounded-[32px] overflow-hidden flex flex-col">
-          {/* Status bar */}
-          <div className="flex items-center justify-between px-5 pt-8 pb-2 text-[9px] font-semibold text-foreground shrink-0">
-            <span>9:41</span>
-            <div className="flex items-center gap-1">
-              <span>●●●●</span>
-            </div>
-          </div>
-          {/* App header */}
-          <div className="px-4 pb-2 shrink-0">
-            <p className="text-[10px] text-muted-foreground">Kraków · dziś</p>
-            <p className="text-sm font-bold leading-tight">Wybierz miejsca</p>
-          </div>
-          {/* Swiper card */}
-          <div className="flex-1 px-3 pb-3 flex flex-col gap-2">
-            <div className="flex-1 rounded-2xl bg-gradient-to-b from-orange-100 to-orange-50 border border-orange-200/60 flex flex-col justify-between p-3 shadow-sm">
-              <div className="flex items-center gap-1.5">
-                <div className="h-5 w-5 rounded-full bg-orange-500/20 flex items-center justify-center">
-                  <Landmark className="h-3 w-3 text-orange-600" strokeWidth={2} />
-                </div>
-                <span className="text-[9px] font-semibold text-orange-700">Muzeum</span>
-              </div>
-              <div>
-                <p className="text-xs font-bold leading-tight">MOCAK</p>
-                <p className="text-[9px] text-muted-foreground mt-0.5">Muzeum Sztuki Współczesnej</p>
-              </div>
-            </div>
-            {/* Action buttons */}
-            <div className="flex gap-2 shrink-0">
-              <div className="flex-1 h-7 rounded-full border border-border/50 flex items-center justify-center">
-                <span className="text-[10px] text-muted-foreground">Pomiń</span>
-              </div>
-              <div className="flex-1 h-7 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] flex items-center justify-center">
-                <Heart className="h-3 w-3 text-white" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Notification bubbles */}
-      <style>{`@keyframes landingFloat { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-7px) } }`}</style>
-      <div className="absolute -left-28 top-20 hidden sm:flex bg-white rounded-2xl shadow-lg shadow-orange-900/10 px-3 py-2 items-center gap-1.5" style={{ animation: "landingFloat 4.5s ease-in-out infinite" }}>
-        <Heart className="h-3.5 w-3.5 text-red-400 fill-red-400" />
-        <p className="text-xs font-bold whitespace-nowrap">Marta lubi to!</p>
-      </div>
-      <div className="absolute -right-24 top-44 hidden sm:flex bg-white rounded-2xl shadow-lg shadow-orange-900/10 px-3 py-2 items-center gap-1.5" style={{ animation: "landingFloat 4.5s ease-in-out 1.6s infinite" }}>
-        <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-        <p className="text-xs font-bold whitespace-nowrap">Piotr: must-see</p>
-      </div>
-    </div>
-  );
-}
-
 // ─── FAQ accordion ────────────────────────────────────────────────────────────
 
 function FaqAccordion({ items }: { items: { q: string; a: string }[] }) {
@@ -359,15 +195,15 @@ const LandingPage = () => {
   if (loading) return null;
 
   const STEPS = [
-    { num: "01", title: "Wybierz miasto i datę", desc: "Kraków, Gdańsk, Warszawa - wybierz gdzie i kiedy. Reszta sama się ułoży.", anim: <CityAnim /> },
-    { num: "02", title: "Przeglądajcie miejsca razem", desc: "Każdy z grupy klika co go kręci. Restauracje, muzea, bary - bez kompromisów w messengerze.", anim: <SwipeAnim /> },
-    { num: "03", title: "Trasa gotowa w minutę", desc: "Na podstawie wspólnych wyborów trasa układa gotowy plan z kolejnością, mapą i godzinami.", anim: <RouteAnim /> },
+    { num: "01", title: "Wybierz miasto", desc: "Kraków, Gdańsk, Warszawa i więcej. Zacznij od miejsca, w które się wybierasz.", img: "/landing/step-city.png" },
+    { num: "02", title: "Przeglądaj lokalne miejsca", desc: "Kawiarnie, muzea, bary, widoki. Dodawaj to co Cię kręci - sam albo ze znajomymi.", img: "/landing/step-browse.png" },
+    { num: "03", title: "Trasa gotowa w minutę", desc: "Trasa układa gotowy plan dnia z kolejnością, mapą i godzinami. Ty tylko ruszasz w miasto.", img: "/landing/step-route.png" },
   ];
 
   const FOR_WHOM = [
-    { icon: <Users className="h-7 w-7 text-orange-600" />, title: "Grupy przyjaciół", desc: "Każdy chce coś innego? Trasa pogodzi wszystkich bez godzin negocjacji w grupce." },
-    { icon: <Heart className="h-6 w-6 text-orange-600" />, title: "Pary", desc: "Weekendowy wypad we dwoje - znajdźcie miejsca które kręcą was oboje." },
-    { icon: <Zap className="h-6 w-6 text-orange-600" />, title: "Spontaniczne wypady", desc: "Piątek wieczór, sobota wolna. Za 5 minut macie plan na cały dzień." },
+    { icon: <Compass className="h-7 w-7 text-orange-600" />, title: "Solo odkrywanie", desc: "Poznawaj swoje miasto na nowo. Odkrywaj lokalne miejsca we własnym tempie i twórz własne trasy." },
+    { icon: <Users className="h-6 w-6 text-orange-600" />, title: "Ze znajomymi", desc: "Planujcie wspólnie - każdy dodaje co lubi, a trasa godzi wszystkich w jeden plan." },
+    { icon: <Zap className="h-6 w-6 text-orange-600" />, title: "Spontaniczne wypady", desc: "Wolny wieczór? W minutę masz gotowy plan na odkrywanie okolicy." },
   ];
 
   return (
@@ -379,8 +215,8 @@ const LandingPage = () => {
         <div className="bg-white/80 backdrop-blur-xl border border-black/5 rounded-full px-5 h-14 flex items-center gap-3 shadow-lg shadow-orange-900/5">
           {/* Left: logo + section links */}
           <div className="flex items-center gap-4 shrink-0">
-            <button onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setMenuOpen(false); }} className="flex items-center">
-              <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            <button onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setMenuOpen(false); }} className="flex items-center" aria-label="Trasa">
+              <Logo className="h-6 w-auto shrink-0" />
             </button>
             <button onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })} className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
               Jak to działa
@@ -404,16 +240,8 @@ const LandingPage = () => {
             >
               Zaloguj się
             </button>
-            {/* Orange pill - mobile only, directly left of hamburger */}
-            <button
-              onClick={() => navigate("/home")}
-              className="sm:hidden px-4 h-9 rounded-full text-white text-sm font-bold active:scale-95 transition-all whitespace-nowrap"
-              style={{ background: "linear-gradient(135deg, #F4A259, #F9662B)" }}
-            >
-              Przejdź do aplikacji
-            </button>
             {/* Hamburger - mobile only */}
-            <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-black/5 hover:bg-black/10 transition-colors">
+            <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-black/5 hover:bg-black/10 transition-colors" aria-label="Menu">
               {menuOpen ? <X className="h-4 w-4 text-foreground" /> : <Menu className="h-4 w-4 text-foreground" />}
             </button>
           </div>
@@ -442,7 +270,7 @@ const LandingPage = () => {
               </div>
               <div className="px-5 pb-4">
                 <button onClick={() => { document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="w-full text-sm font-bold px-4 py-2.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white hover:opacity-95 active:scale-95 transition-all">
-                  Dołącz
+                  Pobierz aplikację
                 </button>
               </div>
             </div>
@@ -459,7 +287,7 @@ const LandingPage = () => {
             <div className="text-center md:text-left">
               <div className="hidden sm:inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 text-xs font-bold mb-8">
                 <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
-                Dołącz do trasy
+                Odkrywaj lokalne miejsca
               </div>
               <h1
                 className="font-display text-5xl sm:text-6xl md:text-7xl font-extrabold text-foreground leading-[1.05] mb-6"
@@ -469,28 +297,17 @@ const LandingPage = () => {
                 <span className="bg-gradient-to-r from-[#F4A259] to-[#F9662B] bg-clip-text text-transparent">z&nbsp;miastem</span>
               </h1>
               <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-[48ch] mx-auto md:mx-0">
-                Wyjazd z&nbsp;grupą kojarzy Ci się ze&nbsp;stresem i&nbsp;wiecznymi kłótniami na messengerze? Z&nbsp;trasą całą organizację macie z&nbsp;głowy.
+                Odkrywaj najlepsze miejsca w&nbsp;swoim mieście i&nbsp;układaj trasy zwiedzania - solo albo ze&nbsp;znajomymi. Kawiarnie, muzea, bary, widoki: wszystko w&nbsp;jednej aplikacji.
               </p>
               <div id="cta-hero" className="flex flex-col items-center md:items-start gap-4">
-                <button
-                  onClick={() => navigate("/auth")}
-                  className="rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold px-7 py-4 text-base shadow-md shadow-orange-200 hover:shadow-lg hover:shadow-orange-200/70 hover:opacity-95 active:scale-[0.98] active:translate-y-px transition-all"
-                >
-                  Dołącz do trasy →
-                </button>
-                <button
-                  onClick={() => navigate("/home")}
-                  className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors"
-                >
-                  Przejdź do aplikacji bez konta
-                </button>
+                <StoreBadges />
               </div>
             </div>
 
-            {/* Right: phone mockup */}
+            {/* Right: phone mockup (real app animation) */}
             <div className="flex justify-center md:justify-end mt-8 md:mt-0">
               <div className="relative">
-                <PhoneMockup />
+                <HeroPhone />
               </div>
             </div>
           </div>
@@ -506,7 +323,7 @@ const LandingPage = () => {
               className="font-display text-3xl sm:text-4xl font-extrabold text-foreground"
               style={{ textWrap: "balance" } as React.CSSProperties}
             >
-              Od pomysłu do trasy w 3 krokach
+              Od pomysłu do trasy w 3 krokach
             </h2>
           </FadeIn>
           <div className="flex flex-col gap-20">
@@ -514,9 +331,9 @@ const LandingPage = () => {
               <FadeIn key={i} delay={i * 80}>
                 <div className={`grid grid-cols-1 md:grid-cols-2 gap-12 items-center`}>
                   <div className={`flex justify-center ${i % 2 === 1 ? "md:order-2" : ""}`}>
-                    {step.anim}
+                    <StepPhone src={step.img} />
                   </div>
-                  <div className={`${i % 2 === 1 ? "md:order-1" : ""}`}>
+                  <div className={`text-center md:text-left ${i % 2 === 1 ? "md:order-1" : ""}`}>
                     <p className="text-[10px] font-black text-orange-400 tracking-widest mb-2">{step.num}</p>
                     <h3
                       className="font-display text-2xl font-extrabold text-foreground mb-3"
@@ -524,7 +341,7 @@ const LandingPage = () => {
                     >
                       {step.title}
                     </h3>
-                    <p className="text-base text-muted-foreground leading-relaxed max-w-[40ch]">{step.desc}</p>
+                    <p className="text-base text-muted-foreground leading-relaxed max-w-[40ch] mx-auto md:mx-0">{step.desc}</p>
                   </div>
                 </div>
               </FadeIn>
@@ -585,7 +402,7 @@ const LandingPage = () => {
               className="font-display text-3xl sm:text-4xl font-extrabold text-foreground"
               style={{ textWrap: "balance" } as React.CSSProperties}
             >
-              Cześć, jesteśmy Bart i Nat
+              Cześć, jesteśmy Bart i Nat
             </h2>
           </FadeIn>
           <FadeIn>
@@ -600,11 +417,11 @@ const LandingPage = () => {
               </div>
               <div className="text-center sm:text-left">
                 <p className="text-base text-foreground leading-relaxed mb-3">
-                  Jesteśmy małżeństwem, które uwielbia podróżować i robić krótkie wypady po Polsce i Europie.
+                  Jesteśmy małżeństwem, które uwielbia podróżować i&nbsp;odkrywać nowe miejsca po Polsce i&nbsp;Europie.
                 </p>
                 <p className="text-base text-foreground leading-relaxed">
-                  Rozumiemy, że czasami ciężko jest ustalić co chcecie robić podczas szybkiego tripu -
-                  dlatego <span className="font-bold text-orange-600">Trasa pomaga, żeby wyjazd wyszedł poza messengera.</span>
+                  Zbudowaliśmy Trasę, żeby każdy mógł łatwo odkryć swoje miasto na nowo -
+                  <span className="font-bold text-orange-600"> lokalne miejsca, dobre trasy, zero planowania w&nbsp;głowie.</span>
                 </p>
               </div>
             </div>
@@ -625,22 +442,22 @@ const LandingPage = () => {
             <FaqAccordion items={[
               {
                 q: "Czy trasa jest darmowa?",
-                a: "Tak, konto jest darmowe. Podstawowe planowanie - solo i w grupie - zawsze będzie bezpłatne. Płatne funkcje mogą pojawić się w przyszłości, ale z wyprzedzeniem damy Ci znać.",
+                a: "Tak, konto jest darmowe. Podstawowe planowanie - solo i w grupie - zawsze będzie bezpłatne. Płatne funkcje mogą pojawić się w przyszłości, ale z wyprzedzeniem damy Ci znać.",
+              },
+              {
+                q: "Do czego służy trasa?",
+                a: "Trasa pomaga odkrywać lokalne miejsca w Twoim mieście - kawiarnie, muzea, bary, parki, widoki - i układa z nich gotową trasę zwiedzania z kolejnością, mapą i godzinami. Sam albo ze znajomymi.",
               },
               {
                 q: "W jakich miastach działa trasa?",
-                a: "Aktualnie wspieramy Kraków, Gdańsk (Trójmiasto), Warszawę, Wrocław, Poznań i Zakopane. Sukcesywnie dodajemy nowe miasta - jeśli nie widzisz swojego, daj nam znać!",
+                a: "Aktualnie wspieramy Kraków, Gdańsk (Trójmiasto), Warszawę, Wrocław, Poznań i Zakopane. Sukcesywnie dodajemy nowe miasta - jeśli nie widzisz swojego, daj nam znać!",
               },
               {
                 q: "Czy mogę planować solo, bez grupy?",
-                a: "Tak! trasa działa świetnie zarówno solo jak i w grupie. Przeglądaj miejsca samodzielnie i buduj własny plan dnia we własnym tempie.",
+                a: "Tak! trasa działa świetnie zarówno solo jak i w grupie. Przeglądaj miejsca samodzielnie i buduj własny plan dnia we własnym tempie.",
               },
               {
-                q: "Kiedy aplikacja będzie dostępna?",
-                a: "Jesteśmy w fazie early access. Dołącz do listy oczekujących - napiszemy do Ciebie gdy będziemy gotowi na kolejną rundę użytkowników.",
-              },
-              {
-                q: "Jak wygląda planowanie grupowe w praktyce?",
+                q: "Jak wygląda planowanie ze znajomymi?",
                 a: "Tworzysz sesję i zapraszasz znajomych jednym linkiem. Każdy przegląda miejsca osobno na swoim telefonie. trasa zbiera wasze wybory i pokazuje miejsca które spodobały się wszystkim - na tej podstawie układa gotową trasę.",
               },
             ]} />
@@ -662,23 +479,16 @@ const LandingPage = () => {
         />
         <FadeIn className="max-w-xl mx-auto relative">
           <div className="flex justify-center mb-6">
-            <div className="h-16 w-16 rounded-full shadow-xl shadow-orange-300/30" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            <Logo className="h-14 w-auto drop-shadow-[0_8px_24px_rgba(234,88,12,0.25)]" />
           </div>
           <h2
             className="font-display text-3xl sm:text-4xl font-extrabold text-foreground mb-4"
             style={{ textWrap: "balance" } as React.CSSProperties}
           >
-            Następny trip bez chaosu na grupce
+            Zacznij odkrywać swoje miasto
           </h2>
-          <p className="text-base text-muted-foreground mb-8 max-w-[40ch] mx-auto">Stwórz konto i zaplanuj trasę już dziś.</p>
-          <div className="flex justify-center">
-            <button
-              onClick={() => navigate("/auth")}
-              className="rounded-2xl bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white font-bold px-9 py-4 text-base shadow-md shadow-orange-200 hover:shadow-lg hover:shadow-orange-200/70 hover:opacity-95 active:scale-[0.98] active:translate-y-px transition-all"
-            >
-              Dołączam! →
-            </button>
-          </div>
+          <p className="text-base text-muted-foreground mb-8 max-w-[40ch] mx-auto">Pobierz Trasę i&nbsp;zaplanuj pierwszą trasę już dziś.</p>
+          <StoreBadges center />
         </FadeIn>
       </section>
 
@@ -686,7 +496,7 @@ const LandingPage = () => {
       <footer className="bg-slate-50 border-t border-border/50 py-10 px-5">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
+            <Logo className="h-5 w-auto shrink-0" />
             <span className="font-black text-foreground">trasa.travel</span>
           </div>
           <p className="text-xs text-muted-foreground text-center">© {new Date().getFullYear()} Trasa · Stworzone z&nbsp;❤ w&nbsp;Polsce</p>
