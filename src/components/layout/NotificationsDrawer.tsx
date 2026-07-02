@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Bell, UserPlus, UserCheck, MapPin, Route, Users } from "lucide-react";
+import { X, Bell, UserPlus, UserCheck, MapPin, Route, Users, Bookmark } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { avatarSrc } from "@/lib/avatar";
@@ -24,6 +24,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   follower:       { icon: UserPlus,      color: "text-violet-500 bg-violet-100",  label: u => `${u} zaczął(a) Cię obserwować` },
   new_route:      { icon: Route,         color: "text-emerald-500 bg-emerald-100",label: u => `${u} dodał(a) nową trasę` },
   route_updated:  { icon: Route,         color: "text-amber-500 bg-amber-100",    label: u => `${u} zaktualizował(a) trasę` },
+  route_used:     { icon: Bookmark,      color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} zapisał(a) Twoją trasę${meta?.city ? ` po ${meta.city}` : ""}` },
   pin_visit:      { icon: MapPin,        color: "text-teal-500 bg-teal-100",      label: u => `${u} odwiedził(a) Twoje miejsce` },
   friend_request: { icon: UserPlus,      color: "text-violet-500 bg-violet-100",  label: u => `${u} chce dodać Cię do znajomych` },
   friend_accept:  { icon: UserCheck,     color: "text-emerald-500 bg-emerald-100",label: u => `${u} przyjął(a) Twoje zaproszenie do znajomych` },

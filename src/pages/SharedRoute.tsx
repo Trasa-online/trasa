@@ -142,6 +142,11 @@ export default function SharedRoute() {
         }))
       );
       notify.success("Trasa zapisana w Twoim dzienniku");
+      // Powiadom autora oryginalnej trasy, ze ktos jej uzyl (best-effort; SECURITY DEFINER RPC -
+      // klient nie moze insertowac notyfikacji dla innego usera). Push leci triggerem notify_push.
+      if (route.user_id && route.user_id !== user.id) {
+        void (supabase as any).rpc("notify_route_used", { p_route_id: id });
+      }
       navigate(`/review-summary?route=${newRoute.id}`);
     } catch (e: any) {
       console.error("[SharedRoute] save failed:", e?.message ?? e);

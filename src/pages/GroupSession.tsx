@@ -14,7 +14,6 @@ import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { sendGroupInvitePush, getCurrentHostName } from "@/lib/sendGroupInvitePush";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
 
@@ -625,23 +624,15 @@ const GroupSession = () => {
     if (!session) return;
     setWaitingInviting(profile.id);
     try {
-      // In-app notification przez RPC send_group_invite (poprawny typ 'group_invite' + actor_id
-      // + metadata; push leci triggerem trigger_group_invite_push). Wczesniej byl tu reczny
-      // insert z nieistniejacym typem "group_session_invite" i kolumnami data/message ->
-      // insert cicho sie wywalal, wiec zaproszony nie dostawal zadnego powiadomienia.
+      // In-app notyfikacja + push JEDNYM kanalem: RPC send_group_invite wstawia notyfikacje
+      // (poprawny typ 'group_invite' + actor_id + metadata), a trigger notify_push wysyla push.
+      // Wczesniej: reczny insert z nieistniejacym typem "group_session_invite" (cicho sie wywalal)
+      // + osobny kliencki push (podwojny). Teraz jeden kanal.
       await (supabase as any).rpc("send_group_invite", {
         p_target_user_id: profile.id,
         p_session_id: session.id,
       });
       setWaitingInvitedIds((prev) => new Set(prev).add(profile.id));
-      // Push notification - jednolita tresc przez helper
-      const hostName = await getCurrentHostName();
-      void sendGroupInvitePush({
-        targetUserId: profile.id,
-        hostName,
-        city: session.city,
-        joinCode,
-      });
     } catch {
       toast.error("Nie udało się wysłać zaproszenia");
     } finally {
@@ -654,26 +645,13 @@ const GroupSession = () => {
     setSendingInvites(true);
     try {
       const friendIds = Array.from(selectedFriends);
-      // 1) In-app notifications przez RPC send_group_invite (poprawny typ 'group_invite' +
-      // actor_id + metadata). Wczesniej reczny insert z blednym typem "group_session_invite"
-      // i kolumnami data/message wywalal sie po cichu -> brak powiadomienia u zaproszonych.
+      // In-app notyfikacja + push JEDNYM kanalem: RPC send_group_invite wstawia notyfikacje,
+      // trigger notify_push wysyla push (pg_net -> send-push). Bez osobnego klienckiego pusha.
       await Promise.all(
         friendIds.map((friendId) =>
           (supabase as any).rpc("send_group_invite", {
             p_target_user_id: friendId,
             p_session_id: session.id,
-          })
-        )
-      );
-      // 2) Push notifications przez helper - jednolita tresc, hostName pobrany raz
-      const hostName = await getCurrentHostName();
-      await Promise.allSettled(
-        friendIds.map((friendId) =>
-          sendGroupInvitePush({
-            targetUserId: friendId,
-            hostName,
-            city: session.city,
-            joinCode,
           })
         )
       );

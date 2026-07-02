@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { isWeb } from "@/lib/platform";
-import { sendGroupInvitePush } from "@/lib/sendGroupInvitePush";
 import { usePostHog } from "@posthog/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -287,33 +286,16 @@ const CreateGroupSession = () => {
       setSendingInvites(true);
       const ids = Array.from(selectedFriends);
 
-      // Pobierz imie hosta dla pretty push body (uzywane w title kazdego pusha).
-      const { data: { user } } = await supabase.auth.getUser();
-      let hostName = "Ktoś";
-      if (user?.id) {
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("first_name, username")
-          .eq("id", user.id)
-          .single();
-        hostName = (prof as any)?.first_name ?? (prof as any)?.username ?? "Ktoś";
-      }
-
+      // In-app notyfikacja + push JEDNYM kanalem: RPC send_group_invite wstawia notyfikacje,
+      // a trigger notify_push wysyla push (pg_net -> send-push). Bez osobnego klienckiego pusha
+      // (wczesniej byl podwojny: trigger DB + helper sendGroupInvitePush).
       await Promise.allSettled(
-        ids.map(async (id) => {
-          // 1) In-app notification w NotificationsDrawer (RPC: insert do notifications)
-          await (supabase as any).rpc("send_group_invite", {
+        ids.map((id) =>
+          (supabase as any).rpc("send_group_invite", {
             p_target_user_id: id,
             p_session_id: createdSessionId,
-          });
-          // 2) Push (web+iOS) przez helper - jednolita tresc we wszystkich miejscach
-          await sendGroupInvitePush({
-            targetUserId: id,
-            hostName,
-            city: selectedCity,
-            joinCode: createdCode,
-          });
-        })
+          })
+        )
       );
       setSendingInvites(false);
       posthog.capture("group_invites_sent", { invite_count: ids.length, city: selectedCity });
