@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Bell, Heart, MessageCircle, UserPlus, MapPin, Route, Users } from "lucide-react";
+import { X, Bell, UserPlus, UserCheck, MapPin, Route, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { avatarSrc } from "@/lib/avatar";
@@ -18,14 +18,15 @@ interface Notification {
   actor?: { username: string | null; avatar_url: string | null };
 }
 
+// Tylko typy AKTUALNIE uzywane w aplikacji. Like/comment/mention usuniete (tych funkcji juz
+// nie ma). Zapytanie ponizej dodatkowo odfiltrowuje je z feedu na wypadek starych rekordow.
 const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; label: (username: string, metadata?: Record<string, string> | null) => string }> = {
-  like:           { icon: Heart,         color: "text-rose-500 bg-rose-100",      label: u => `${u} polubił(a) Twoją trasę` },
-  comment:        { icon: MessageCircle, color: "text-blue-500 bg-blue-100",      label: u => `${u} skomentował(a) Twoją trasę` },
   follower:       { icon: UserPlus,      color: "text-violet-500 bg-violet-100",  label: u => `${u} zaczął(a) Cię obserwować` },
   new_route:      { icon: Route,         color: "text-emerald-500 bg-emerald-100",label: u => `${u} dodał(a) nową trasę` },
   route_updated:  { icon: Route,         color: "text-amber-500 bg-amber-100",    label: u => `${u} zaktualizował(a) trasę` },
-  mention:        { icon: MessageCircle, color: "text-orange-500 bg-orange-100",  label: u => `${u} wspomniał(a) o Tobie` },
   pin_visit:      { icon: MapPin,        color: "text-teal-500 bg-teal-100",      label: u => `${u} odwiedził(a) Twoje miejsce` },
+  friend_request: { icon: UserPlus,      color: "text-violet-500 bg-violet-100",  label: u => `${u} chce dodać Cię do znajomych` },
+  friend_accept:  { icon: UserCheck,     color: "text-emerald-500 bg-emerald-100",label: u => `${u} przyjął(a) Twoje zaproszenie do znajomych` },
   group_match:    { icon: Users,         color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} też polubił(a) ${meta?.place_name ?? "to samo miejsce"}! 🎉` },
   group_invite:       { icon: Users,  color: "text-violet-500 bg-violet-100",  label: (u, meta) => `${u} zaprasza Cię do wspólnego wybierania miejsc w ${meta?.city ?? "sesji grupowej"}` },
   group_route_ready:  { icon: Route, color: "text-orange-600 bg-orange-100",  label: (u, meta) => `${u} stworzył(a) trasę${meta?.city ? ` w ${meta.city}` : ""} - sprawdź!` },
@@ -48,7 +49,8 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
         .from("notifications")
         .select("id, type, actor_id, route_id, created_at, read, metadata")
         .eq("user_id", userId)
-        .neq("type", "group_match")
+        // group_match idzie tylko jako push; like/comment/mention to nieistniejace juz funkcje.
+        .not("type", "in", "(group_match,like,comment,mention)")
         .order("created_at", { ascending: false })
         .limit(50);
 
@@ -238,6 +240,14 @@ export default function NotificationsDrawer({ open, onClose, userId }: Props) {
                           className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
                         >
                           Zobacz trasę →
+                        </button>
+                      )}
+                      {(n.type === "friend_request" || n.type === "friend_accept") && (
+                        <button
+                          onClick={() => { onClose(); navigate("/moj-profil"); }}
+                          className="mt-2 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
+                        >
+                          {n.type === "friend_request" ? "Zobacz zaproszenie →" : "Zobacz znajomych →"}
                         </button>
                       )}
                     </div>

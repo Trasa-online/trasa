@@ -625,11 +625,13 @@ const GroupSession = () => {
     if (!session) return;
     setWaitingInviting(profile.id);
     try {
-      await (supabase as any).from("notifications").insert({
-        user_id: profile.id,
-        type: "group_session_invite",
-        data: { session_id: session.id, join_code: joinCode, city: session.city },
-        message: `Zaproszenie do wspólnego wybierania miejsc w ${session.city}`,
+      // In-app notification przez RPC send_group_invite (poprawny typ 'group_invite' + actor_id
+      // + metadata; push leci triggerem trigger_group_invite_push). Wczesniej byl tu reczny
+      // insert z nieistniejacym typem "group_session_invite" i kolumnami data/message ->
+      // insert cicho sie wywalal, wiec zaproszony nie dostawal zadnego powiadomienia.
+      await (supabase as any).rpc("send_group_invite", {
+        p_target_user_id: profile.id,
+        p_session_id: session.id,
       });
       setWaitingInvitedIds((prev) => new Set(prev).add(profile.id));
       // Push notification - jednolita tresc przez helper
@@ -652,14 +654,14 @@ const GroupSession = () => {
     setSendingInvites(true);
     try {
       const friendIds = Array.from(selectedFriends);
-      // 1) In-app notifications (insert do notifications)
+      // 1) In-app notifications przez RPC send_group_invite (poprawny typ 'group_invite' +
+      // actor_id + metadata). Wczesniej reczny insert z blednym typem "group_session_invite"
+      // i kolumnami data/message wywalal sie po cichu -> brak powiadomienia u zaproszonych.
       await Promise.all(
         friendIds.map((friendId) =>
-          (supabase as any).from("notifications").insert({
-            user_id: friendId,
-            type: "group_session_invite",
-            data: { session_id: session.id, join_code: joinCode, city: session.city },
-            message: `Zaproszenie do wspólnego wybierania miejsc w ${session.city}`,
+          (supabase as any).rpc("send_group_invite", {
+            p_target_user_id: friendId,
+            p_session_id: session.id,
           })
         )
       );
