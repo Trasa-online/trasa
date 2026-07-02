@@ -732,7 +732,7 @@ const PremiumBusinessCard = ({
             <div className="space-y-2.5">
               {/* Nazwa = pelna szerokosc, moze sie zawinac (bez truncate) - nazwa jest wazna.
                   Chipy dystansu + Maps przeniesione na gore hero (obok X), zeby nie skracac nazwy. */}
-              <h2 className="text-2xl font-black leading-tight">{data.name}</h2>
+              <h2 className="text-2xl font-bold leading-tight">{data.name}</h2>
               <RatingSection data={data} expandable={!!hideReviews && hasReviews} expanded={reviewsOpen} onToggle={() => setReviewsOpen((o) => !o)} />
               {hideReviews && reviewsOpen && <ReviewsSection data={data} />}
               <AddressSection data={data} />
@@ -870,7 +870,7 @@ const PremiumBusinessCard = ({
               <img src={data.heroPhoto ?? data.gallery![0]} alt={data.name} className="w-full h-full object-cover" />
             </button>
           )}
-          <h2 className="text-xl font-black leading-tight">{data.name}</h2>
+          <h2 className="text-xl font-bold leading-tight">{data.name}</h2>
           <RatingSection data={data} expandable={!!hideReviews && hasReviews} expanded={reviewsOpen} onToggle={() => setReviewsOpen((o) => !o)} />
           {hideReviews && reviewsOpen && <ReviewsSection data={data} />}
           <AddressSection data={data} />

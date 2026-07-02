@@ -626,7 +626,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
               <span
                 role="button"
                 tabIndex={0}
-                onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/dir/?api=1&destination=${pin.latitude},${pin.longitude}`, "_blank", "noopener,noreferrer"); }}
+                onClick={(e) => { e.stopPropagation(); const q = encodeURIComponent([pin.place_name, pin.address || route?.city].filter(Boolean).join(", ")); window.open(`https://www.google.com/maps/dir/?api=1&destination=${q}`, "_blank", "noopener,noreferrer"); }}
                 aria-label="Nawiguj"
                 className="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground shadow-sm active:scale-95"
               >
@@ -634,7 +634,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
               </span>
             )}
           </div>
-          <p className="text-base font-black leading-tight">{pin.place_name}</p>
+          <p className="text-base font-bold leading-tight">{pin.place_name}</p>
         </div>
       </button>
       {pin.visited_at && (
