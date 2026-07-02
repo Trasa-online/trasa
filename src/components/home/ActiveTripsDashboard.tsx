@@ -8,6 +8,7 @@ import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import { avatarSrc } from "@/lib/avatar";
 import { notify } from "@/lib/notify";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useActiveSoloTrips } from "@/hooks/useActiveSoloTrips";
 import { getDrafts, removeDraft, type DraftRoute } from "@/lib/draftRoutes";
@@ -126,16 +127,26 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   // Usuniecie grupowej sesji "w toku" z home. Optymistycznie chowamy lokalnie (zawsze znika
   // z widoku), a delete jest best-effort (RLS group_sessions: usuwa tworca; uczestnik zostaje
   // ukryty lokalnie). Invalidacja odswieza liste.
-  const handleDeleteSession = async (e: React.MouseEvent, s: any) => {
+  const handleDeleteSession = (e: React.MouseEvent, s: any) => {
     e.stopPropagation();
-    if (!confirm("Usunąć tę sesję grupową?")) return;
+    // Ukryj natychmiast; faktyczny delete ODROCZONY o okno "Cofnij" (undo w stylu Gmaila).
+    // Klik "Cofnij" anuluje timer i przywraca sesje - nic nie ginie przez 5s.
     setHiddenSessionIds((prev) => new Set(prev).add(s.id));
-    try {
-      await (supabase as any).from("group_sessions").delete().eq("id", s.id);
-    } catch (err: any) {
-      console.error("[ActiveTripsDashboard] delete session failed:", err?.message ?? err);
-    }
-    queryClient.invalidateQueries({ queryKey: ["home-group-sessions"] });
+    const timer = setTimeout(async () => {
+      try { await (supabase as any).from("group_sessions").delete().eq("id", s.id); }
+      catch (err: any) { console.error("[ActiveTripsDashboard] delete session failed:", err?.message ?? err); }
+      queryClient.invalidateQueries({ queryKey: ["home-group-sessions"] });
+    }, 5000);
+    toast("Sesja usunięta", {
+      duration: 5000,
+      action: {
+        label: "Cofnij",
+        onClick: () => {
+          clearTimeout(timer);
+          setHiddenSessionIds((prev) => { const n = new Set(prev); n.delete(s.id); return n; });
+        },
+      },
+    });
   };
 
   // Trasy robocze (drafty z localStorage) - niedokonczone planowanie do dokonczenia.
@@ -287,8 +298,11 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                 <div key={selected.id}>
                   <div className="pb-2.5 flex items-end gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="text-2xl font-display font-extrabold leading-tight truncate">{selected.city || selected.title || "Trasa"}</p>
-                      {fmtRange(selected._dateMin, selected._dateMax) && <p className="text-xs text-muted-foreground mt-0.5">{fmtRange(selected._dateMin, selected._dateMax)}</p>}
+                      {/* Data obok nazwy miasta (inline, na baseline). */}
+                      <div className="flex items-baseline gap-2 min-w-0">
+                        <p className="text-2xl font-display font-extrabold leading-tight truncate">{selected.city || selected.title || "Trasa"}</p>
+                        {fmtRange(selected._dateMin, selected._dateMax) && <p className="text-xs text-muted-foreground shrink-0">{fmtRange(selected._dateMin, selected._dateMax)}</p>}
+                      </div>
                       {/* Rozroznienie: trasa grupowa = awatary uczestnikow + etykieta */}
                       {selected.group_session_id && (() => {
                         const avs = (tripMemberAvatars as Record<string, { avatar_url: string | null; name: string }[]>)[selected.group_session_id] ?? [];

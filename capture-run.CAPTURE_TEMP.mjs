@@ -27,6 +27,7 @@ async function captureOne(browser, s) {
   const seed = {
     trasa_cookie_consent_v2: "granted",
     trasa_guest_welcome_dismissed_v1: "1",
+    trasa_onboarding_done_v1: "1", // dismiss HomeTour welcome overlay
     ...(s.extraLS || {}),
   };
   if (s.needsAuth && CFG.session) {

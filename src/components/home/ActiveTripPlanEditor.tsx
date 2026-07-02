@@ -803,6 +803,10 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
 
   return (
     <div className={`pt-1 pb-4 ${flush ? "px-0" : "px-5"}`}>
+      {/* Naglowek (z tabami dni) renderujemy ZAWSZE - takze gdy dzien jest pusty. Wczesniej
+          pusty dzien pomijal naglowek => znikaly taby dni i nie dalo sie wrocic do innego dnia
+          (trasa wielodniowa wygladala na "zgubiona"). View toggle chowamy tylko gdy pusto. */}
+      {renderPlanHeader(currentPins.length > 0)}
       {currentPins.length === 0 ? (
         <>
           <p className="text-center text-sm text-muted-foreground py-8">Brak miejsc w planie tego dnia.</p>
@@ -810,7 +814,6 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
         </>
       ) : (
         <>
-          {renderPlanHeader(true)}
           {planView === "list" ? (
             renderEditablePlan(true)
           ) : planView === "map" ? (
