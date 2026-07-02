@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Zap, Check, Menu, X, User, Compass } from "lucide-react";
+import { Zap, Check, Menu, X, User, Compass } from "lucide-react";
 import TrialModal from "@/components/trial/TrialModal";
 import posthog from "posthog-js";
 
@@ -34,18 +34,44 @@ function Logo({ className = "h-7 w-auto" }: { className?: string }) {
   return <img src="/Icon_Trasa.png" alt="Trasa" className={className} draggable={false} />;
 }
 
+// ─── Avatar stack (jak trasy grupowe w appce) ─────────────────────────────────
+
+function AvatarStack() {
+  const avatars = [
+    { grad: "linear-gradient(135deg,#F4A259,#F9662B)", initials: "M" },
+    { grad: "linear-gradient(135deg,#C6BFF4,#5B4FC4)", initials: "K" },
+    { grad: "linear-gradient(135deg,#BFE6DE,#0F766E)", initials: "P" },
+  ];
+  return (
+    <div className="flex items-center -space-x-3">
+      {avatars.map((a, i) => (
+        <div
+          key={i}
+          className="h-11 w-11 rounded-full border-[3px] border-white flex items-center justify-center text-white text-sm font-bold shadow-sm"
+          style={{ background: a.grad, zIndex: avatars.length - i }}
+        >
+          {a.initials}
+        </div>
+      ))}
+      <div className="h-11 w-11 rounded-full border-[3px] border-white bg-secondary flex items-center justify-center text-xs font-bold text-muted-foreground shadow-sm">
+        +4
+      </div>
+    </div>
+  );
+}
+
 // ─── Store badges (App Store + Google Play) ───────────────────────────────────
 
 function StoreBadges({ center = false }: { center?: boolean }) {
   return (
-    <div className={`flex flex-wrap items-center gap-3 ${center ? "justify-center" : "justify-center md:justify-start"}`}>
+    <div className={`flex flex-col sm:flex-row gap-3 items-center ${center ? "sm:justify-center" : "sm:justify-start"}`}>
       <a
         href={APP_STORE_URL}
         onClick={(e) => { if (APP_STORE_URL === "#") e.preventDefault(); posthog.capture("landing_store_click", { store: "app_store" }); }}
         className="transition-transform hover:scale-[1.03] active:scale-95"
         aria-label="Pobierz z App Store"
       >
-        <img src="/Pobierz-z-App-Store.png" alt="Pobierz z App Store" className="h-12 w-auto" draggable={false} />
+        <img src="/Pobierz-z-App-Store.png" alt="Pobierz z App Store" className="h-[54px] w-auto" draggable={false} />
       </a>
       <a
         href={PLAY_STORE_URL}
@@ -53,7 +79,7 @@ function StoreBadges({ center = false }: { center?: boolean }) {
         className="transition-transform hover:scale-[1.03] active:scale-95"
         aria-label="Pobierz z Google Play"
       >
-        <img src="/google-play-badge.png" alt="Pobierz z Google Play" className="h-12 w-auto" draggable={false} />
+        <img src="/google-play-badge.png" alt="Pobierz z Google Play" className="h-[54px] w-auto" draggable={false} />
       </a>
     </div>
   );
@@ -80,13 +106,13 @@ function PhoneFrame({ children, width = 240, className = "" }: { children: React
 function HeroPhone() {
   return (
     <PhoneFrame width={260}>
-      <div className="w-full h-full overflow-hidden">
+      <div className="relative w-full h-full overflow-hidden">
         <video
           src="/demo.mp4"
           poster="/landing/hero-poster.png"
           autoPlay muted loop playsInline preload="metadata"
-          className="w-full object-cover"
-          style={{ height: "112%", marginTop: "-6%" }}
+          className="absolute left-0 w-full object-cover object-top"
+          style={{ top: "-5.5%", height: "105.5%" }}
         />
       </div>
     </PhoneFrame>
@@ -202,12 +228,12 @@ const LandingPage = () => {
 
   const FOR_WHOM = [
     { icon: <Compass className="h-7 w-7 text-orange-600" />, title: "Solo odkrywanie", desc: "Poznawaj swoje miasto na nowo. Odkrywaj lokalne miejsca we własnym tempie i twórz własne trasy." },
-    { icon: <Users className="h-6 w-6 text-orange-600" />, title: "Ze znajomymi", desc: "Planujcie wspólnie - każdy dodaje co lubi, a trasa godzi wszystkich w jeden plan." },
+    { avatars: true, title: "Ze znajomymi", desc: "Planujcie wspólnie - każdy dodaje co lubi, a trasa godzi wszystkich w jeden plan." },
     { icon: <Zap className="h-6 w-6 text-orange-600" />, title: "Spontaniczne wypady", desc: "Wolny wieczór? W minutę masz gotowy plan na odkrywanie okolicy." },
   ];
 
   return (
-    <div className="min-h-[100dvh] bg-[#FEFEFE] overflow-x-hidden">
+    <div className="min-h-[100dvh] bg-[#F1F1F3] overflow-x-hidden">
 
       {/* ── Nav ── */}
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl">
@@ -315,7 +341,7 @@ const LandingPage = () => {
       </section>
 
       {/* ── Jak to działa ── */}
-      <section id="how-it-works" className="bg-slate-50 py-24 px-5">
+      <section id="how-it-works" className="bg-white py-24 px-5">
         <div className="max-w-5xl mx-auto">
           <FadeIn className="text-center mb-16">
             <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">Jak to działa</p>
@@ -379,9 +405,13 @@ const LandingPage = () => {
             {FOR_WHOM.slice(1).map((item, i) => (
               <FadeIn key={i} delay={(i + 1) * 100}>
                 <div className="flex gap-4 p-6 rounded-3xl bg-card border border-border/40 shadow-sm h-full items-start transition-shadow hover:shadow-md hover:shadow-orange-100/40">
-                  <div className="h-12 w-12 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0">
-                    {item.icon}
-                  </div>
+                  {"avatars" in item ? (
+                    <div className="shrink-0 pt-0.5"><AvatarStack /></div>
+                  ) : (
+                    <div className="h-12 w-12 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0">
+                      {item.icon}
+                    </div>
+                  )}
                   <div>
                     <h3 className="font-display font-extrabold text-base text-foreground mb-1">{item.title}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
@@ -394,7 +424,7 @@ const LandingPage = () => {
       </section>
 
       {/* ── Founders ── */}
-      <section className="bg-slate-50 py-24 px-5">
+      <section className="bg-white py-24 px-5">
         <div className="max-w-3xl mx-auto">
           <FadeIn className="text-center mb-12">
             <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">O twórcach</p>
@@ -430,7 +460,7 @@ const LandingPage = () => {
       </section>
 
       {/* ── FAQ ── */}
-      <section className="py-24 px-5 bg-slate-50">
+      <section className="py-24 px-5 bg-white">
         <div className="max-w-2xl mx-auto">
           <FadeIn className="text-center mb-12">
             <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">FAQ</p>
@@ -493,7 +523,7 @@ const LandingPage = () => {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="bg-slate-50 border-t border-border/50 py-10 px-5">
+      <footer className="bg-white border-t border-border/60 py-10 px-5">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Logo className="h-5 w-auto shrink-0" />
@@ -510,7 +540,6 @@ const LandingPage = () => {
               @trasa.travel
             </a>
             <button onClick={() => navigate("/terms")} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Regulamin</button>
-            <button onClick={() => navigate("/auth")} className="text-xs font-bold text-foreground hover:text-orange-600 transition-colors">Zaloguj się →</button>
           </div>
         </div>
       </footer>
