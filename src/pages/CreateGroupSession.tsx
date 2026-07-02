@@ -15,6 +15,7 @@ import type { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
+import { sendGroupInvitePush, getCurrentHostName } from "@/lib/sendGroupInvitePush";
 
 function generateJoinCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -298,16 +299,15 @@ const CreateGroupSession = () => {
       setSendingInvites(true);
       const ids = Array.from(selectedFriends);
 
-      // In-app notyfikacja + push JEDNYM kanalem: RPC send_group_invite wstawia notyfikacje,
-      // a trigger notify_push wysyla push (pg_net -> send-push). Bez osobnego klienckiego pusha
-      // (wczesniej byl podwojny: trigger DB + helper sendGroupInvitePush).
+      // 1) In-app notyfikacja: RPC send_group_invite wstawia wpis do notifications.
+      // 2) Push: MUSI isc z klienta (functions.invoke doklada JWT usera). Trigger DB (pg_net,
+      //    anon key) dostaje z send-push 401, wiec sam nie dostarcza pusha.
+      const hostName = await getCurrentHostName();
       await Promise.allSettled(
-        ids.map((id) =>
-          (supabase as any).rpc("send_group_invite", {
-            p_target_user_id: id,
-            p_session_id: createdSessionId,
-          })
-        )
+        ids.map(async (id) => {
+          await (supabase as any).rpc("send_group_invite", { p_target_user_id: id, p_session_id: createdSessionId });
+          await sendGroupInvitePush({ targetUserId: id, hostName, city: selectedCity, joinCode: createdCode });
+        })
       );
       setSendingInvites(false);
       posthog.capture("group_invites_sent", { invite_count: ids.length, city: selectedCity });

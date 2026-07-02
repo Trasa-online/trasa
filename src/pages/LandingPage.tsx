@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Heart, Zap, Check, Castle, GlassWater, Palette, TreePine, Pizza, Star, MapPin, Menu, X, Sparkles, User } from "lucide-react";
+import { Users, Heart, Zap, Check, Castle, GlassWater, Palette, TreePine, Pizza, Star, MapPin, Menu, X, Sparkles, User, Landmark } from "lucide-react";
 import TrialModal from "@/components/trial/TrialModal";
 import posthog from "posthog-js";
 
@@ -265,7 +265,7 @@ function PhoneMockup() {
   return (
     <div className="relative mx-auto" style={{ width: 240 }}>
       {/* Phone shell */}
-      <div className="relative bg-[#0E0E0E] rounded-[40px] p-2 shadow-2xl" style={{ aspectRatio: "9/19.5" }}>
+      <div className="relative bg-[#0E0E0E] rounded-[40px] p-2 shadow-2xl shadow-orange-950/25" style={{ aspectRatio: "9/19.5" }}>
         {/* Dynamic Island */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-full z-10" />
         {/* Screen */}
@@ -287,7 +287,7 @@ function PhoneMockup() {
             <div className="flex-1 rounded-2xl bg-gradient-to-b from-orange-100 to-orange-50 border border-orange-200/60 flex flex-col justify-between p-3 shadow-sm">
               <div className="flex items-center gap-1.5">
                 <div className="h-5 w-5 rounded-full bg-orange-500/20 flex items-center justify-center">
-                  <span className="text-[8px]">🏛️</span>
+                  <Landmark className="h-3 w-3 text-orange-600" strokeWidth={2} />
                 </div>
                 <span className="text-[9px] font-semibold text-orange-700">Muzeum</span>
               </div>
@@ -310,11 +310,12 @@ function PhoneMockup() {
       </div>
 
       {/* Notification bubbles */}
-      <div className="absolute -left-28 top-20 hidden sm:flex bg-white rounded-2xl shadow-lg px-3 py-2 items-center gap-1.5 animate-bounce" style={{ animationDuration: "3s" }}>
+      <style>{`@keyframes landingFloat { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-7px) } }`}</style>
+      <div className="absolute -left-28 top-20 hidden sm:flex bg-white rounded-2xl shadow-lg shadow-orange-900/10 px-3 py-2 items-center gap-1.5" style={{ animation: "landingFloat 4.5s ease-in-out infinite" }}>
         <Heart className="h-3.5 w-3.5 text-red-400 fill-red-400" />
         <p className="text-xs font-bold whitespace-nowrap">Marta lubi to!</p>
       </div>
-      <div className="absolute -right-24 top-44 hidden sm:flex bg-white rounded-2xl shadow-lg px-3 py-2 items-center gap-1.5" style={{ animation: "bounce 3s 1.5s infinite" }}>
+      <div className="absolute -right-24 top-44 hidden sm:flex bg-white rounded-2xl shadow-lg shadow-orange-900/10 px-3 py-2 items-center gap-1.5" style={{ animation: "landingFloat 4.5s ease-in-out 1.6s infinite" }}>
         <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
         <p className="text-xs font-bold whitespace-nowrap">Piotr: must-see</p>
       </div>
@@ -358,15 +359,15 @@ const LandingPage = () => {
   if (loading) return null;
 
   const STEPS = [
-    { num: "01", title: "Wybierz miasto i datę", desc: "Kraków, Gdańsk, Warszawa - wybierz gdzie i kiedy. Reszta sama się ułoży.", anim: <CityAnim /> },
-    { num: "02", title: "Przeglądajcie miejsca razem", desc: "Każdy z grupy klika co go kręci. Restauracje, muzea, bary - bez kompromisów w messengerze.", anim: <SwipeAnim /> },
-    { num: "03", title: "Trasa gotowa w minutę", desc: "Na podstawie wspólnych wyborów trasa układa gotowy plan z kolejnością, mapą i godzinami.", anim: <RouteAnim /> },
+    { num: "01", title: "Wybierz miasto i datę", desc: "Kraków, Gdańsk, Warszawa - wybierz gdzie i kiedy. Reszta sama się ułoży.", anim: <CityAnim /> },
+    { num: "02", title: "Przeglądajcie miejsca razem", desc: "Każdy z grupy klika co go kręci. Restauracje, muzea, bary - bez kompromisów w messengerze.", anim: <SwipeAnim /> },
+    { num: "03", title: "Trasa gotowa w minutę", desc: "Na podstawie wspólnych wyborów trasa układa gotowy plan z kolejnością, mapą i godzinami.", anim: <RouteAnim /> },
   ];
 
   const FOR_WHOM = [
-    { icon: <Users className="h-7 w-7 text-orange-600" />, title: "Grupy przyjaciół", desc: "Każdy chce coś innego? Trasa pogodzi wszystkich bez godzin negocjacji w grupce." },
+    { icon: <Users className="h-7 w-7 text-orange-600" />, title: "Grupy przyjaciół", desc: "Każdy chce coś innego? Trasa pogodzi wszystkich bez godzin negocjacji w grupce." },
     { icon: <Heart className="h-6 w-6 text-orange-600" />, title: "Pary", desc: "Weekendowy wypad we dwoje - znajdźcie miejsca które kręcą was oboje." },
-    { icon: <Zap className="h-6 w-6 text-orange-600" />, title: "Spontaniczne wypady", desc: "Piątek wieczór, sobota wolna. Za 5 minut macie plan na cały dzień." },
+    { icon: <Zap className="h-6 w-6 text-orange-600" />, title: "Spontaniczne wypady", desc: "Piątek wieczór, sobota wolna. Za 5 minut macie plan na cały dzień." },
   ];
 
   return (
@@ -375,16 +376,16 @@ const LandingPage = () => {
       {/* ── Nav ── */}
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl">
         {/* Pill bar */}
-        <div className="bg-[#1a1a1a] rounded-full px-5 h-14 flex items-center gap-3 shadow-xl">
+        <div className="bg-white/80 backdrop-blur-xl border border-black/5 rounded-full px-5 h-14 flex items-center gap-3 shadow-lg shadow-orange-900/5">
           {/* Left: logo + section links */}
           <div className="flex items-center gap-4 shrink-0">
             <button onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setMenuOpen(false); }} className="flex items-center">
               <div className="h-7 w-7 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
             </button>
-            <button onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })} className="hidden sm:block text-sm text-white/60 hover:text-white/90 transition-colors whitespace-nowrap">
+            <button onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })} className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
               Jak to działa
             </button>
-            <button onClick={() => document.getElementById("for-whom")?.scrollIntoView({ behavior: "smooth" })} className="hidden sm:block text-sm text-white/60 hover:text-white/90 transition-colors whitespace-nowrap">
+            <button onClick={() => document.getElementById("for-whom")?.scrollIntoView({ behavior: "smooth" })} className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
               Dla kogo
             </button>
           </div>
@@ -393,13 +394,13 @@ const LandingPage = () => {
 
           {/* Right: desktop links + mobile buttons */}
           <div className="flex items-center gap-2 shrink-0">
-            <a href="/dla-firm" className="hidden md:flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-all border border-blue-500/30 whitespace-nowrap">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
+            <a href="/dla-firm" className="hidden md:flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all border border-blue-200 whitespace-nowrap">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
               Dla firm
             </a>
             <button
               onClick={() => navigate("/auth")}
-              className="hidden sm:flex items-center text-sm font-semibold px-4 py-2 rounded-full border border-white/25 text-white/80 hover:border-white/50 hover:text-white active:scale-95 transition-all whitespace-nowrap"
+              className="hidden sm:flex items-center text-sm font-semibold px-4 py-2 rounded-full border border-black/10 text-foreground/80 hover:border-black/25 hover:text-foreground active:scale-95 transition-all whitespace-nowrap"
             >
               Zaloguj się
             </button>
@@ -412,36 +413,36 @@ const LandingPage = () => {
               Przejdź do aplikacji
             </button>
             {/* Hamburger - mobile only */}
-            <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
-              {menuOpen ? <X className="h-4 w-4 text-white" /> : <Menu className="h-4 w-4 text-white" />}
+            <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-black/5 hover:bg-black/10 transition-colors">
+              {menuOpen ? <X className="h-4 w-4 text-foreground" /> : <Menu className="h-4 w-4 text-foreground" />}
             </button>
           </div>
         </div>
 
         {/* Mobile dropdown */}
         {menuOpen && (
-          <div className="sm:hidden mt-2 bg-[#1a1a1a] rounded-2xl shadow-xl overflow-hidden">
+          <div className="sm:hidden mt-2 bg-white border border-black/5 rounded-2xl shadow-lg shadow-orange-900/5 overflow-hidden">
             <div className="flex flex-col py-2">
-              <button onClick={() => { document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="px-5 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 text-left transition-colors">
+              <button onClick={() => { document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="px-5 py-3 text-sm text-foreground/70 hover:text-foreground hover:bg-slate-50 text-left transition-colors">
                 Jak to działa
               </button>
-              <button onClick={() => { document.getElementById("for-whom")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="px-5 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 text-left transition-colors">
+              <button onClick={() => { document.getElementById("for-whom")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="px-5 py-3 text-sm text-foreground/70 hover:text-foreground hover:bg-slate-50 text-left transition-colors">
                 Dla kogo
               </button>
-              <a href="/dla-firm" className="px-5 py-3 text-sm font-bold text-blue-300 hover:text-blue-200 hover:bg-white/5 flex items-center gap-2 transition-colors">
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
+              <a href="/dla-firm" className="px-5 py-3 text-sm font-bold text-blue-700 hover:text-blue-800 hover:bg-slate-50 flex items-center gap-2 transition-colors">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
                 Dla firm
               </a>
-              <div className="mx-5 my-1 border-t border-white/10" />
+              <div className="mx-5 my-1 border-t border-black/5" />
               <div className="px-5 pt-1 pb-2">
-                <button onClick={() => { navigate("/auth"); setMenuOpen(false); }} className="w-full flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-full border border-white/25 text-white/80 hover:border-white/50 hover:text-white active:scale-95 transition-all">
+                <button onClick={() => { navigate("/auth"); setMenuOpen(false); }} className="w-full flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-full border border-black/10 text-foreground/80 hover:border-black/25 hover:text-foreground active:scale-95 transition-all">
                   <User className="h-4 w-4" />
                   Zaloguj się
                 </button>
               </div>
               <div className="px-5 pb-4">
-                <button onClick={() => { document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="w-full text-sm font-bold px-4 py-2.5 rounded-full bg-white text-[#1a1a1a] hover:bg-white/90 active:scale-95 transition-all">
-                  Dołącz →
+                <button onClick={() => { document.getElementById("cta-hero")?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="w-full text-sm font-bold px-4 py-2.5 rounded-full bg-gradient-to-r from-[#F4A259] to-[#F9662B] text-white hover:opacity-95 active:scale-95 transition-all">
+                  Dołącz
                 </button>
               </div>
             </div>
@@ -461,14 +462,14 @@ const LandingPage = () => {
                 Dołącz do trasy
               </div>
               <h1
-                className="text-5xl sm:text-6xl md:text-7xl font-black text-foreground leading-[1.05] mb-6"
+                className="font-display text-5xl sm:text-6xl md:text-7xl font-extrabold text-foreground leading-[1.05] mb-6"
                 style={{ letterSpacing: "-0.02em", textWrap: "balance" } as React.CSSProperties}
               >
                 Speed dating<br />
                 <span className="bg-gradient-to-r from-[#F4A259] to-[#F9662B] bg-clip-text text-transparent">z&nbsp;miastem</span>
               </h1>
               <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-[48ch] mx-auto md:mx-0">
-                Wyjazd z grupą kojarzy Ci się ze stresem i wiecznymi kłótniami na messengerze? Z trasą całą organizację macie z głowy.
+                Wyjazd z&nbsp;grupą kojarzy Ci się ze&nbsp;stresem i&nbsp;wiecznymi kłótniami na messengerze? Z&nbsp;trasą całą organizację macie z&nbsp;głowy.
               </p>
               <div id="cta-hero" className="flex flex-col items-center md:items-start gap-4">
                 <button
@@ -502,10 +503,10 @@ const LandingPage = () => {
           <FadeIn className="text-center mb-16">
             <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">Jak to działa</p>
             <h2
-              className="text-3xl sm:text-4xl font-black text-foreground"
+              className="font-display text-3xl sm:text-4xl font-extrabold text-foreground"
               style={{ textWrap: "balance" } as React.CSSProperties}
             >
-              Od pomysłu do trasy w 3 krokach
+              Od pomysłu do trasy w 3 krokach
             </h2>
           </FadeIn>
           <div className="flex flex-col gap-20">
@@ -518,7 +519,7 @@ const LandingPage = () => {
                   <div className={`${i % 2 === 1 ? "md:order-1" : ""}`}>
                     <p className="text-[10px] font-black text-orange-400 tracking-widest mb-2">{step.num}</p>
                     <h3
-                      className="text-2xl font-black text-foreground mb-3"
+                      className="font-display text-2xl font-extrabold text-foreground mb-3"
                       style={{ textWrap: "balance" } as React.CSSProperties}
                     >
                       {step.title}
@@ -538,7 +539,7 @@ const LandingPage = () => {
           <FadeIn className="text-center mb-12">
             <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">Dla kogo</p>
             <h2
-              className="text-3xl sm:text-4xl font-black text-foreground"
+              className="font-display text-3xl sm:text-4xl font-extrabold text-foreground"
               style={{ textWrap: "balance" } as React.CSSProperties}
             >
               Trasa działa dla każdego tripu
@@ -552,7 +553,7 @@ const LandingPage = () => {
                   {FOR_WHOM[0].icon}
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-black text-xl text-foreground mb-2">{FOR_WHOM[0].title}</h3>
+                  <h3 className="font-display font-extrabold text-xl text-foreground mb-2">{FOR_WHOM[0].title}</h3>
                   <p className="text-base text-muted-foreground leading-relaxed max-w-[36ch]">{FOR_WHOM[0].desc}</p>
                 </div>
               </div>
@@ -565,7 +566,7 @@ const LandingPage = () => {
                     {item.icon}
                   </div>
                   <div>
-                    <h3 className="font-black text-base text-foreground mb-1">{item.title}</h3>
+                    <h3 className="font-display font-extrabold text-base text-foreground mb-1">{item.title}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
@@ -581,10 +582,10 @@ const LandingPage = () => {
           <FadeIn className="text-center mb-12">
             <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">O twórcach</p>
             <h2
-              className="text-3xl sm:text-4xl font-black text-foreground"
+              className="font-display text-3xl sm:text-4xl font-extrabold text-foreground"
               style={{ textWrap: "balance" } as React.CSSProperties}
             >
-              Cześć, jesteśmy Bart i Nat
+              Cześć, jesteśmy Bart i Nat
             </h2>
           </FadeIn>
           <FadeIn>
@@ -599,7 +600,7 @@ const LandingPage = () => {
               </div>
               <div className="text-center sm:text-left">
                 <p className="text-base text-foreground leading-relaxed mb-3">
-                  Jesteśmy małżeństwem, które uwielbia podróżować i robić krótkie wypady po Polsce i Europie.
+                  Jesteśmy małżeństwem, które uwielbia podróżować i robić krótkie wypady po Polsce i Europie.
                 </p>
                 <p className="text-base text-foreground leading-relaxed">
                   Rozumiemy, że czasami ciężko jest ustalić co chcecie robić podczas szybkiego tripu -
@@ -616,7 +617,7 @@ const LandingPage = () => {
         <div className="max-w-2xl mx-auto">
           <FadeIn className="text-center mb-12">
             <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">FAQ</p>
-            <h2 className="text-3xl sm:text-4xl font-black text-foreground" style={{ textWrap: "balance" } as React.CSSProperties}>
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-foreground" style={{ textWrap: "balance" } as React.CSSProperties}>
               Najczęściej zadawane pytania
             </h2>
           </FadeIn>
@@ -624,15 +625,15 @@ const LandingPage = () => {
             <FaqAccordion items={[
               {
                 q: "Czy trasa jest darmowa?",
-                a: "Tak, konto jest darmowe. Podstawowe planowanie - solo i w grupie - zawsze będzie bezpłatne. Płatne funkcje mogą pojawić się w przyszłości, ale z wyprzedzeniem damy Ci znać.",
+                a: "Tak, konto jest darmowe. Podstawowe planowanie - solo i w grupie - zawsze będzie bezpłatne. Płatne funkcje mogą pojawić się w przyszłości, ale z wyprzedzeniem damy Ci znać.",
               },
               {
                 q: "W jakich miastach działa trasa?",
-                a: "Aktualnie wspieramy Kraków, Gdańsk (Trójmiasto), Warszawę, Wrocław, Poznań i Zakopane. Sukcesywnie dodajemy nowe miasta - jeśli nie widzisz swojego, daj nam znać!",
+                a: "Aktualnie wspieramy Kraków, Gdańsk (Trójmiasto), Warszawę, Wrocław, Poznań i Zakopane. Sukcesywnie dodajemy nowe miasta - jeśli nie widzisz swojego, daj nam znać!",
               },
               {
                 q: "Czy mogę planować solo, bez grupy?",
-                a: "Tak! trasa działa świetnie zarówno solo jak i w grupie. Przeglądaj miejsca samodzielnie i buduj własny plan dnia we własnym tempie.",
+                a: "Tak! trasa działa świetnie zarówno solo jak i w grupie. Przeglądaj miejsca samodzielnie i buduj własny plan dnia we własnym tempie.",
               },
               {
                 q: "Kiedy aplikacja będzie dostępna?",
@@ -664,12 +665,12 @@ const LandingPage = () => {
             <div className="h-16 w-16 rounded-full shadow-xl shadow-orange-300/30" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
           </div>
           <h2
-            className="text-3xl sm:text-4xl font-black text-foreground mb-4"
+            className="font-display text-3xl sm:text-4xl font-extrabold text-foreground mb-4"
             style={{ textWrap: "balance" } as React.CSSProperties}
           >
             Następny trip bez chaosu na grupce
           </h2>
-          <p className="text-base text-muted-foreground mb-8 max-w-[40ch] mx-auto">Stwórz konto i zaplanuj trasę już dziś.</p>
+          <p className="text-base text-muted-foreground mb-8 max-w-[40ch] mx-auto">Stwórz konto i zaplanuj trasę już dziś.</p>
           <div className="flex justify-center">
             <button
               onClick={() => navigate("/auth")}
@@ -682,15 +683,15 @@ const LandingPage = () => {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="bg-foreground py-10 px-5">
+      <footer className="bg-slate-50 border-t border-border/50 py-10 px-5">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="h-6 w-6 rounded-full shrink-0" style={{ background: "radial-gradient(circle at 35% 35%, #fb923c, #ea580c 60%, #c2410c)" }} />
-            <span className="font-black text-white">trasa.travel</span>
+            <span className="font-black text-foreground">trasa.travel</span>
           </div>
-          <p className="text-xs text-white/40 text-center">© {new Date().getFullYear()} Trasa · Stworzone z ❤ w Polsce</p>
+          <p className="text-xs text-muted-foreground text-center">© {new Date().getFullYear()} Trasa · Stworzone z&nbsp;❤ w&nbsp;Polsce</p>
           <div className="flex items-center gap-4">
-            <a href="https://instagram.com/trasa.travel" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/80 transition-colors">
+            <a href="https://instagram.com/trasa.travel" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
                 <circle cx="12" cy="12" r="4" />
@@ -698,8 +699,8 @@ const LandingPage = () => {
               </svg>
               @trasa.travel
             </a>
-            <button onClick={() => navigate("/terms")} className="text-xs text-white/50 hover:text-white/80 transition-colors">Regulamin</button>
-            <button onClick={() => navigate("/auth")} className="text-xs font-bold text-white hover:text-orange-300 transition-colors">Zaloguj się →</button>
+            <button onClick={() => navigate("/terms")} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Regulamin</button>
+            <button onClick={() => navigate("/auth")} className="text-xs font-bold text-foreground hover:text-orange-600 transition-colors">Zaloguj się →</button>
           </div>
         </div>
       </footer>

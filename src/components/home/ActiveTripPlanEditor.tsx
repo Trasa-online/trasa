@@ -12,7 +12,7 @@ import { notify } from "@/lib/notify";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useDistanceReference, tryResolveOnSite } from "@/lib/distanceReference";
 import { haversineKm, formatDistance } from "@/lib/distance";
-import { Navigation, GripVertical, RotateCcw, CalendarDays } from "lucide-react";
+import { Navigation, GripVertical, RotateCcw, CalendarDays, Loader2 } from "lucide-react";
 import { Reorder, useDragControls } from "framer-motion";
 
 // Edytor planu aktywnej trasy osadzony na ekranie glownym. Replika edytora planu z
@@ -91,7 +91,7 @@ function PlanReorderRow({ pin, isFirst, isLast, onTap, onUp, onDown, onRemove, d
   );
 }
 
-const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string; flush?: boolean }) => {
+const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting }: { routeId: string; flush?: boolean; onDelete?: (e: React.MouseEvent) => void; deleting?: boolean }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -595,7 +595,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
               <ChevronRight className="h-3 w-3" /> Pominięte
             </div>
           ) : null}
-          {editable && (
+          {editable ? (
             <button
               onClick={(e) => { e.stopPropagation(); removeWorkingPin(pin.id); }}
               aria-label="Usuń miejsce"
@@ -603,41 +603,48 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
             >
               <Trash2 className="h-4 w-4" />
             </button>
-          )}
+          ) : (!pin.visited_at && !skippedPinIds.has(pin.id) && !isPastDay) ? (
+            // Odhacz jako zielone kolko na zdjeciu (prawy gorny rog).
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); markVisited(pin.id); }}
+              aria-label="Odhacz"
+              className="absolute top-3 right-3 h-10 w-10 rounded-full bg-green-600 text-white flex items-center justify-center shadow-lg shadow-black/25 active:scale-90"
+            >
+              <Check className="h-5 w-5" strokeWidth={2.6} />
+            </span>
+          ) : null}
         </div>
         <div className="px-4 pt-4 pb-3">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground mb-2">
-            <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
-          </span>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground">
+              <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
+            </span>
+            {/* Nawiguj jako maly bialy pill obok badge kategorii. */}
+            {pin.latitude && pin.longitude && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/dir/?api=1&destination=${pin.latitude},${pin.longitude}`, "_blank", "noopener,noreferrer"); }}
+                aria-label="Nawiguj"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground shadow-sm active:scale-95"
+              >
+                <Navigation className="h-3.5 w-3.5" /> Nawiguj
+              </span>
+            )}
+          </div>
           <p className="text-base font-black leading-tight">{pin.place_name}</p>
         </div>
       </button>
-      {pin.visited_at ? (
+      {pin.visited_at && (
         <button
           onClick={() => unmarkVisited(pin.id)}
           className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-border/30 text-xs font-semibold text-muted-foreground active:scale-95 transition-transform"
         >
           <RotateCcw className="h-3.5 w-3.5" /> Cofnij odhaczenie
         </button>
-      ) : !skippedPinIds.has(pin.id) && !isPastDay ? (
-        // Odhacz + Nawiguj bezposrednio na karcie (redukcja przeciazenia - bez osobnego paska).
-        <div className="flex items-stretch border-t border-border/30 divide-x divide-border/30">
-          <button
-            onClick={() => markVisited(pin.id)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-bold text-green-600 active:scale-[0.97] transition-transform"
-          >
-            <Check className="h-4 w-4" strokeWidth={2.6} /> Odhacz
-          </button>
-          {pin.latitude && pin.longitude && (
-            <button
-              onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${pin.latitude},${pin.longitude}`, "_blank", "noopener,noreferrer")}
-              className="flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-bold text-foreground active:scale-[0.97] transition-transform"
-            >
-              <Navigation className="h-4 w-4" /> Nawiguj
-            </button>
-          )}
-        </div>
-      ) : null}
+      )}
       {editable && (
         <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
           <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
@@ -723,20 +730,32 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
     <>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
+          {/* Ikony w kolkach (bg-secondary) - czytelna afordancja klikalnosci. */}
           <button
             onClick={() => setInfoOpen((o) => !o)}
-            className={`h-7 w-7 flex items-center justify-center rounded-full transition-colors active:scale-90 ${infoOpen ? "bg-orange-100 text-orange-700" : "text-muted-foreground"}`}
+            className={`h-8 w-8 flex items-center justify-center rounded-full transition-colors active:scale-90 ${infoOpen ? "bg-orange-100 text-orange-700" : "bg-secondary text-muted-foreground"}`}
             aria-label="Jak edytować plan"
           >
             <Info className="h-4 w-4" />
           </button>
           <button
             onClick={() => setEditMode((o) => !o)}
-            className={`h-7 w-7 flex items-center justify-center rounded-full transition-colors active:scale-90 ${editMode ? "bg-orange-100 text-orange-700" : "text-muted-foreground"}`}
+            className={`h-8 w-8 flex items-center justify-center rounded-full transition-colors active:scale-90 ${editMode ? "bg-orange-100 text-orange-700" : "bg-secondary text-muted-foreground"}`}
             aria-label="Edytuj plan"
           >
             <Pencil className="h-4 w-4" />
           </button>
+          {/* Usuwanie trasy obok edycji (przeniesione z naglowka dashboardu). */}
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              disabled={deleting}
+              aria-label="Usuń trasę"
+              className="h-8 w-8 flex items-center justify-center rounded-full bg-secondary text-muted-foreground hover:text-destructive transition-colors active:scale-90 disabled:opacity-50"
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            </button>
+          )}
         </div>
         {showViewToggle && (
           <div className="flex rounded-full bg-muted p-0.5">
@@ -898,10 +917,10 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
 
 // Owijka ErrorBoundary: throw w renderze edytora planu pokazuje fallback zamiast wywalac
 // caly home.
-export default function ActiveTripPlanEditor({ routeId, flush }: { routeId: string; flush?: boolean }) {
+export default function ActiveTripPlanEditor({ routeId, flush, onDelete, deleting }: { routeId: string; flush?: boolean; onDelete?: (e: React.MouseEvent) => void; deleting?: boolean }) {
   return (
     <ErrorBoundary>
-      <ActiveTripPlanEditorInner routeId={routeId} flush={flush} />
+      <ActiveTripPlanEditorInner routeId={routeId} flush={flush} onDelete={onDelete} deleting={deleting} />
     </ErrorBoundary>
   );
 }

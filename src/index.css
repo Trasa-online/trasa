@@ -134,13 +134,12 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  /* iOS safe area padding utilities */
-  .pt-safe   { padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem); }
-  .pt-safe-4 { padding-top: calc(env(safe-area-inset-top, 0px) + 1rem); }
-  /* For containers with a fixed inner height (adds only the inset, no base) */
-  .safe-top  { padding-top: env(safe-area-inset-top, 0px); }
-  .pb-safe   { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem); }
-  .pb-safe-4 { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem); }
+  /* CAPTURE_TEMP: sztywne safe-area (notch 59px, home indicator 34px) do capture Figma. Cofnac po sesji. */
+  .pt-safe   { padding-top: calc(59px + 0.75rem); }
+  .pt-safe-4 { padding-top: calc(59px + 1rem); }
+  .safe-top  { padding-top: 59px; }
+  .pb-safe   { padding-bottom: calc(34px + 0.75rem); }
+  .pb-safe-4 { padding-bottom: calc(34px + 1rem); }
 
   .scrollbar-hide {
     -ms-overflow-style: none;

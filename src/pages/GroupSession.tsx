@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
+import { sendGroupInvitePush, getCurrentHostName } from "@/lib/sendGroupInvitePush";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -625,15 +626,16 @@ const GroupSession = () => {
     if (!session) return;
     setWaitingInviting(profile.id);
     try {
-      // In-app notyfikacja + push JEDNYM kanalem: RPC send_group_invite wstawia notyfikacje
-      // (poprawny typ 'group_invite' + actor_id + metadata), a trigger notify_push wysyla push.
-      // Wczesniej: reczny insert z nieistniejacym typem "group_session_invite" (cicho sie wywalal)
-      // + osobny kliencki push (podwojny). Teraz jeden kanal.
+      // 1) In-app notyfikacja: RPC send_group_invite. 2) Push: Z KLIENTA (functions.invoke
+      // doklada JWT usera). Trigger DB (pg_net, anon key) dostaje z send-push 401, wiec nie
+      // dostarcza pusha samodzielnie - dlatego push wolamy tutaj.
       await (supabase as any).rpc("send_group_invite", {
         p_target_user_id: profile.id,
         p_session_id: session.id,
       });
       setWaitingInvitedIds((prev) => new Set(prev).add(profile.id));
+      const hostName = await getCurrentHostName();
+      void sendGroupInvitePush({ targetUserId: profile.id, hostName, city: session.city, joinCode });
     } catch {
       toast.error("Nie udało się wysłać zaproszenia");
     } finally {
@@ -646,15 +648,13 @@ const GroupSession = () => {
     setSendingInvites(true);
     try {
       const friendIds = Array.from(selectedFriends);
-      // In-app notyfikacja + push JEDNYM kanalem: RPC send_group_invite wstawia notyfikacje,
-      // trigger notify_push wysyla push (pg_net -> send-push). Bez osobnego klienckiego pusha.
+      // In-app (RPC) + push Z KLIENTA (send-push wymaga JWT usera; trigger DB z anon key = 401).
+      const hostName = await getCurrentHostName();
       await Promise.all(
-        friendIds.map((friendId) =>
-          (supabase as any).rpc("send_group_invite", {
-            p_target_user_id: friendId,
-            p_session_id: session.id,
-          })
-        )
+        friendIds.map(async (friendId) => {
+          await (supabase as any).rpc("send_group_invite", { p_target_user_id: friendId, p_session_id: session.id });
+          await sendGroupInvitePush({ targetUserId: friendId, hostName, city: session.city, joinCode });
+        })
       );
       toast.success(`Zaproszenia wysłane (${selectedFriends.size})`);
       setInviteOpen(false);

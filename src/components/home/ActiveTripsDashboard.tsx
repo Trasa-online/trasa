@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ActiveTripPlanEditor from "@/components/home/ActiveTripPlanEditor";
-import { MapPin, Users, ChevronRight, Trash2, Loader2 } from "lucide-react";
+import { MapPin, Users, ChevronRight, ChevronDown, Trash2, Loader2, X } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import { avatarSrc } from "@/lib/avatar";
@@ -95,6 +95,9 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedSoloId, setSelectedSoloId] = useState<string | null>(null);
   const [planChoiceOpen, setPlanChoiceOpen] = useState(false);
+  // Sekcja grupowych sesji "w toku": accordion (chowanie) + usuwanie pojedynczych sesji.
+  const [groupOpen, setGroupOpen] = useState(true);
+  const [hiddenSessionIds, setHiddenSessionIds] = useState<Set<string>>(new Set());
 
   // Usuniecie aktywnej trasy z home (z potwierdzeniem). Czysci piny + chat_sessions + route.
   const handleDelete = async (e: React.MouseEvent, r: any) => {
@@ -118,6 +121,21 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
       notify.error("Nie udało się usunąć trasy");
     }
     setDeletingId(null);
+  };
+
+  // Usuniecie grupowej sesji "w toku" z home. Optymistycznie chowamy lokalnie (zawsze znika
+  // z widoku), a delete jest best-effort (RLS group_sessions: usuwa tworca; uczestnik zostaje
+  // ukryty lokalnie). Invalidacja odswieza liste.
+  const handleDeleteSession = async (e: React.MouseEvent, s: any) => {
+    e.stopPropagation();
+    if (!confirm("Usunąć tę sesję grupową?")) return;
+    setHiddenSessionIds((prev) => new Set(prev).add(s.id));
+    try {
+      await (supabase as any).from("group_sessions").delete().eq("id", s.id);
+    } catch (err: any) {
+      console.error("[ActiveTripsDashboard] delete session failed:", err?.message ?? err);
+    }
+    queryClient.invalidateQueries({ queryKey: ["home-group-sessions"] });
   };
 
   // Trasy robocze (drafty z localStorage) - niedokonczone planowanie do dokonczenia.
@@ -175,6 +193,8 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
 
   // Awatary uczestnikow per sesja grupowa (do stacka awatarow na karcie).
   const groupIds = groupSessions.map((s: any) => s.id);
+  // Sesje widoczne (bez lokalnie ukrytych/usunietych).
+  const visibleGroupSessions = groupSessions.filter((s: any) => !hiddenSessionIds.has(s.id));
   const { data: memberAvatars = {} } = useQuery({
     queryKey: ["home-group-members", groupIds.join(",")],
     queryFn: async () => {
@@ -290,16 +310,13 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                         );
                       })()}
                     </div>
-                    <button
-                      onClick={(e) => handleDelete(e, selected)}
-                      disabled={deletingId === selected.id}
-                      aria-label="Usuń trasę"
-                      className="shrink-0 mb-0.5 h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-90 disabled:opacity-50"
-                    >
-                      {deletingId === selected.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                    </button>
                   </div>
-                  <ActiveTripPlanEditor routeId={selected.id} flush />
+                  <ActiveTripPlanEditor
+                    routeId={selected.id}
+                    flush
+                    onDelete={(e) => handleDelete(e, selected)}
+                    deleting={deletingId === selected.id}
+                  />
                 </div>
               </>
             );
@@ -317,10 +334,17 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
           />
         ) : null}
 
-        {/* Sesje grupowe w toku (parowanie) - ta sama sekcja "Aktywne trasy", bez osobnego naglowka */}
-        {groupSessions.length > 0 && (
+        {/* Sesje grupowe w toku (parowanie): accordion (chowanie) + usuwanie pojedynczych. */}
+        {visibleGroupSessions.length > 0 && (
           <div className={soloRoutes.length > 0 ? "mt-7 space-y-3" : "space-y-3"}>
-            {groupSessions.map((s) => (
+            <button
+              onClick={() => setGroupOpen((o) => !o)}
+              className="w-full flex items-center justify-between px-1 py-1 active:opacity-70 transition-opacity"
+            >
+              <p className="text-sm font-bold">Sesje grupowe ({visibleGroupSessions.length})</p>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${groupOpen ? "" : "-rotate-90"}`} />
+            </button>
+            {groupOpen && visibleGroupSessions.map((s) => (
               <button
                 key={s.id}
                 onClick={() => navigate(`/sesja/${s.join_code}`)}
@@ -328,7 +352,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
               >
                 {/* Karta sesji grupowej (secondary) - spojna z pozostalymi kartami. */}
                 <div className="rounded-2xl bg-secondary border border-border/40 shadow-sm p-4">
-                <div className="pb-3 flex items-end gap-2">
+                <div className="pb-3 flex items-start gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="text-xl font-display font-extrabold leading-tight truncate">{s.name || s.city || "Sesja grupowa"}</p>
                     {(s.city || fmtDate(s.trip_date)) && (
@@ -337,7 +361,16 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                       </p>
                     )}
                   </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/40 shrink-0 mb-1" />
+                  {/* Usuniecie sesji z home (chowa lokalnie + best-effort delete). */}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => handleDeleteSession(e, s)}
+                    aria-label="Usuń sesję"
+                    className="shrink-0 h-7 w-7 -mr-1 -mt-1 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-destructive active:scale-90"
+                  >
+                    <X className="h-4 w-4" />
+                  </span>
                 </div>
                 {/* Awatary uczestnikow + liczba osob */}
                 {(() => {
