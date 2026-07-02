@@ -1,10 +1,8 @@
 import { Capacitor } from "@capacitor/core";
 
-// CAPTURE_TEMP: wymuszenie natywnego wariantu do capture Figma. Cofnac po sesji.
-const FORCE_NATIVE_CAPTURE = true;
-export const isNative = FORCE_NATIVE_CAPTURE || Capacitor.isNativePlatform();
+export const isNative = Capacitor.isNativePlatform();
 export const isWeb = !isNative;
-export const platform = (FORCE_NATIVE_CAPTURE ? "ios" : Capacitor.getPlatform()) as "ios" | "android" | "web";
+export const platform = Capacitor.getPlatform() as "ios" | "android" | "web";
 
 // Na native (Capacitor) relative URLs resolwuja sie do capacitor://localhost,
 // gdzie nasze Vercel Edge Functions nie istnieja. Trzeba uzyc absolute URL.

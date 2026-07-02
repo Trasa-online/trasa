@@ -104,6 +104,4 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // CAPTURE_TEMP: nie skanuj ios/DerivedData przy capture Figma. Cofnac po sesji.
-  optimizeDeps: { entries: ["index.html"] },
 }));
