@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { buildShareUrl } from "@/lib/shareUrl";
+import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 
 // Model przyjaciol (symetryczny). Patrz pamiec: project_friends_model.
 // Wszystkie mutacje idą przez SECURITY DEFINER RPC (send_friend_request / accept /
@@ -91,11 +92,38 @@ export function useMyInviteCode(userId: string | null | undefined) {
 export const inviteLinkFromCode = (code: string) => buildShareUrl(`/dodaj/${code}`);
 
 // ── Akcje (wrappery RPC) ──
-export const sendFriendRequest = (addresseeId: string) =>
-  (supabase as any).rpc("send_friend_request", { p_addressee: addresseeId });
-export const acceptFriendRequest = (requesterId: string) =>
-  (supabase as any).rpc("accept_friend_request", { p_requester: requesterId });
+// Po RPC odpalamy KLIENCKI push (functions.invoke z JWT usera). Trigger DB (pg_net, anon key)
+// dostaje z send-push 401, wiec sam nie dostarcza pusha - dlatego robimy to tutaj.
+export const sendFriendRequest = async (addresseeId: string) => {
+  const res = await (supabase as any).rpc("send_friend_request", { p_addressee: addresseeId });
+  const status = res?.data as string | undefined;
+  if (!res?.error && (status === "requested" || status === "accepted")) {
+    const me = await getCurrentUserName();
+    if (status === "requested") {
+      void sendClientPush({ userId: addresseeId, title: "Nowe zaproszenie do znajomych 👋", body: `${me} chce dodać Cię do znajomych`, url: "/moj-profil" });
+    } else {
+      // Byl juz rewers - RPC od razu zaakceptowal -> powiadom druga strone o nowym znajomym.
+      void sendClientPush({ userId: addresseeId, title: "Masz nowego znajomego 🎉", body: `${me} przyjął(a) Twoje zaproszenie`, url: "/moj-profil" });
+    }
+  }
+  return res;
+};
+export const acceptFriendRequest = async (requesterId: string) => {
+  const res = await (supabase as any).rpc("accept_friend_request", { p_requester: requesterId });
+  if (!res?.error && res?.data === true) {
+    const me = await getCurrentUserName();
+    void sendClientPush({ userId: requesterId, title: "Masz nowego znajomego 🎉", body: `${me} przyjął(a) Twoje zaproszenie`, url: "/moj-profil" });
+  }
+  return res;
+};
 export const removeFriend = (otherId: string) =>
   (supabase as any).rpc("remove_friend", { p_other: otherId });
-export const befriendViaInvite = (code: string) =>
-  (supabase as any).rpc("befriend_via_invite", { p_code: code });
+export const befriendViaInvite = async (code: string) => {
+  const res = await (supabase as any).rpc("befriend_via_invite", { p_code: code });
+  const data = res?.data as { ok?: boolean; inviter?: string; already?: boolean } | undefined;
+  if (!res?.error && data?.ok && data.inviter && !data.already) {
+    const me = await getCurrentUserName();
+    void sendClientPush({ userId: data.inviter, title: "Masz nowego znajomego 🎉", body: `${me} dołączył(a) do Ciebie przez link`, url: "/moj-profil" });
+  }
+  return res;
+};

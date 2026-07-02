@@ -42,12 +42,11 @@ async function captureOne(browser, s) {
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e).slice(0, 200)));
   try {
-    await page.goto(`${BASE}/#${s.route}`, { waitUntil: "networkidle", timeout: 45000 });
+    await page.goto(`${BASE}/#${s.route}`, { waitUntil: "domcontentloaded", timeout: 25000 });
   } catch (e) {
-    // networkidle can time out on pages with long-poll; fall back to domcontentloaded wait
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(2000);
   }
-  await page.waitForTimeout(s.delayMs ?? 3500);
+  await page.waitForTimeout(s.delayMs ?? 4000);
 
   // Hide background swiper cards so text doesn't bleed through captured DOM
   await page.evaluate(() => {
@@ -70,19 +69,24 @@ async function captureOne(browser, s) {
   await page.waitForTimeout(600);
 
   const endpoint = `https://mcp.figma.com/mcp/capture/${s.id}/submit`;
-  // Kick off capture, then WAIT for the submit POST to finish (200) before closing
+  // Kick off capture, then WAIT for the submit POST to finish before closing.
+  // captureForDesign rewrites the DOM/context, so the evaluate itself often throws
+  // "Execution context destroyed" - that is expected; rely on the network response.
   const respPromise = page.waitForResponse(
     (resp) => resp.url().includes(`/mcp/capture/${s.id}/`),
-    { timeout: 90000 }
+    { timeout: 120000 }
   );
   await page.evaluate(({ id, endpoint }) => {
-    return window.figma.captureForDesign({ captureId: id, endpoint, selector: "body" });
-  }, { id: s.id, endpoint });
+    // fire-and-forget; do not return the promise (context may be torn down)
+    try { window.figma.captureForDesign({ captureId: id, endpoint, selector: "body" }); } catch (e) {}
+  }, { id: s.id, endpoint }).catch(() => {});
 
   let status = "unknown";
   try {
     const resp = await respPromise;
     status = resp.status();
+    // give the submit a moment to flush server-side before closing context
+    await page.waitForTimeout(1500).catch(() => {});
   } catch (e) {
     status = "no-response:" + String(e).slice(0, 80);
   }

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { notify } from "@/lib/notify";
+import { sendClientPush, getCurrentUserName } from "@/lib/clientPush";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { MapPin, ArrowLeft, Sparkles, ChevronRight, ChevronLeft, Bookmark } from "lucide-react";
@@ -146,6 +147,9 @@ export default function SharedRoute() {
       // klient nie moze insertowac notyfikacji dla innego usera). Push leci triggerem notify_push.
       if (route.user_id && route.user_id !== user.id) {
         void (supabase as any).rpc("notify_route_used", { p_route_id: id });
+        // Push Z KLIENTA (trigger DB dostaje z send-push 401). Odbiorca = autor oryginalnej trasy.
+        const me = await getCurrentUserName();
+        void sendClientPush({ userId: route.user_id, title: "Ktoś korzysta z Twojej trasy 🧭", body: `${me} zapisał(a) Twoją trasę${route.city ? ` po ${route.city}` : ""}`, url: "/dziennik" });
       }
       navigate(`/review-summary?route=${newRoute.id}`);
     } catch (e: any) {
