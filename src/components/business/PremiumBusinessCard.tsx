@@ -737,7 +737,6 @@ const PremiumBusinessCard = ({
               {hideReviews && reviewsOpen && <ReviewsSection data={data} />}
               <AddressSection data={data} />
               <CategoriesSection data={data} />
-              {!hideHours && <OpeningHoursSection data={data} />}
             </div>
 
             {/* Opis + promo + tagi - zwarta grupa */}
@@ -754,6 +753,8 @@ const PremiumBusinessCard = ({
             {!hidePosts && <PostsSection data={data} onPhotoExpand={handleExpand} />}
             {!hideMenu && <MenuSection data={data} onPhotoExpand={handleExpand} />}
             <MapSection data={data} startingLocation={startingLocation} />
+            {/* Godziny otwarcia POD mapa (przeniesione z grupy tozsamosci nad opisem). */}
+            {!hideHours && <OpeningHoursSection data={data} />}
             {!hideReviews && <ReviewsSection data={data} />}
             {footer}
           </div>
