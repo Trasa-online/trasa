@@ -9,8 +9,9 @@ import { isWeb } from "@/lib/platform";
 import { usePostHog } from "@posthog/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { format, parseISO, startOfToday } from "date-fns";
+import { format, parseISO, startOfToday, differenceInCalendarDays, addDays } from "date-fns";
 import { pl } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
@@ -38,9 +39,21 @@ const CreateGroupSession = () => {
   const queryClient = useQueryClient();
   const [sessionName, setSessionName] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
-  const [tripDate, setTripDate] = useState<Date | undefined>(undefined);
+  // Data wyjazdu jako ZAKRES od-do (jak solo), max 3 dni. tripDate/numDays wyliczane z zakresu.
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [numDays, setNumDays] = useState(1);
+  const MAX_GROUP_DAYS = 3;
+  const tripDate = dateRange?.from;
+  const numDays = dateRange?.from && dateRange?.to ? differenceInCalendarDays(dateRange.to, dateRange.from) + 1 : 1;
+  const handleRangeSelect = (newRange: DateRange | undefined) => {
+    if (newRange?.from && newRange?.to) {
+      const days = differenceInCalendarDays(newRange.to, newRange.from) + 1;
+      setDateRange(days > MAX_GROUP_DAYS ? { from: newRange.from, to: addDays(newRange.from, MAX_GROUP_DAYS - 1) } : newRange);
+      setDatePickerOpen(false);
+      return;
+    }
+    setDateRange(newRange);
+  };
   const [loading, setLoading] = useState(false);
   const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
@@ -329,39 +342,6 @@ const CreateGroupSession = () => {
       <div className="flex-1 overflow-y-auto flex flex-col px-4 py-6 gap-6">
         {!createdCode ? (
           <>
-            {!fromJournal && (
-              <>
-                {/* Join by code - TOP */}
-                <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
-                  <p className="text-sm font-semibold">Dołącz do sesji</p>
-                  <p className="text-xs text-muted-foreground">Masz kod od znajomego? Wpisz go poniżej.</p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={joinCode}
-                      onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
-                      placeholder="np. AB3X9K"
-                      className="min-w-0 flex-1 h-11 rounded-2xl border border-border/60 bg-background px-3 text-base font-mono font-bold tracking-widest uppercase outline-none focus:border-orange-500 transition-colors placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground"
-                      onKeyDown={(e) => e.key === "Enter" && handleJoinByCode()}
-                    />
-                    <button
-                      onClick={handleJoinByCode}
-                      disabled={joining || joinCode.trim().length < 4}
-                      className="shrink-0 h-11 px-4 rounded-full bg-primary text-white font-semibold text-sm flex items-center gap-1.5 active:scale-95 transition-transform disabled:opacity-40"
-                    >
-                      {joining ? "…" : <><span>Dołącz</span><ArrowRight className="h-4 w-4" /></>}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-border/40" />
-                  <span className="text-xs text-muted-foreground">lub stwórz nową</span>
-                  <div className="flex-1 h-px bg-border/40" />
-                </div>
-              </>
-            )}
 
             {/* Trip date */}
             <div>
@@ -374,11 +354,15 @@ const CreateGroupSession = () => {
               >
                 <CalendarDays className="h-4 w-4 shrink-0" />
                 <span className="flex-1 text-left">
-                  {tripDate ? format(tripDate, "d MMMM yyyy", { locale: pl }) : "Kiedy planujecie wyjazd?"}
+                  {tripDate
+                    ? (dateRange?.to && numDays > 1
+                        ? `${format(dateRange.from!, "d MMM", { locale: pl })} - ${format(dateRange.to, "d MMM yyyy", { locale: pl })} · ${numDays} dni`
+                        : `${format(tripDate, "d MMMM yyyy", { locale: pl })} · kliknij drugi dzień dla zakresu`)
+                    : "Kiedy planujecie wyjazd? (max 3 dni)"}
                 </span>
                 {tripDate && (
                   <span
-                    onClick={(e) => { e.stopPropagation(); setTripDate(undefined); }}
+                    onClick={(e) => { e.stopPropagation(); setDateRange(undefined); }}
                     className="text-xs text-muted-foreground hover:text-foreground px-1"
                   >✕</span>
                 )}
@@ -386,36 +370,18 @@ const CreateGroupSession = () => {
               {datePickerOpen && (
                 <div className="mt-2 rounded-2xl border border-border/40 bg-card overflow-hidden flex justify-center">
                   <Calendar
-                    mode="single"
-                    selected={tripDate}
-                    onSelect={(d) => { setTripDate(d); setDatePickerOpen(false); }}
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={handleRangeSelect}
                     disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))}
                     locale={pl}
                     className="rounded-2xl"
                   />
                 </div>
               )}
-            </div>
-
-            {/* Liczba dni - trasa wielodniowa (jak solo) */}
-            <div>
-              <p className="text-sm font-semibold mb-3">Na ile dni?</p>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setNumDays(n)}
-                    className={`flex-1 py-2.5 rounded-2xl border text-sm font-bold transition-colors ${
-                      numDays === n ? "border-border bg-secondary text-foreground" : "border-border/60 bg-card text-muted-foreground"
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {numDays === 1 ? "Trasa jednodniowa" : `Trasa na ${numDays} dni - Trasa ułoży plan na każdy dzień`}
-              </p>
+              {numDays > 1 && (
+                <p className="text-xs text-muted-foreground mt-2">Trasa na {numDays} dni - ułożymy plan na każdy dzień.</p>
+              )}
             </div>
 
             {/* City picker */}
