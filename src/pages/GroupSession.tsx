@@ -34,6 +34,11 @@ const CATEGORY_LABELS: Record<string, string> = {
   Kultura: "Kultura", Natura: "Natura", Rozrywka: "Rozrywka", Zakupy: "Zakupy",
 };
 
+// Wolna eksploracja: runda z 10 LOSOWYCH miejsc (bez filtra kategorii). Sentinel trzymany
+// w polu categories sesji jak zwykla kategoria - query wykrywa go i pomija filtr .in(category).
+const FREE_CATEGORY = "__wolna__";
+const FREE_LABEL = "Wolna eksploracja";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface MatchItem {
@@ -42,11 +47,6 @@ interface MatchItem {
   photo_url: string | null;
   liked_by: number;
   hasSuperLike: boolean;
-}
-
-interface BannerData {
-  placeName: string;
-  otherName: string;
 }
 
 // ─── GroupSession ─────────────────────────────────────────────────────────────
@@ -64,7 +64,6 @@ const GroupSession = () => {
   // OAuth-w-Messengerze, ktory gubi redirect). Fallback (recznego logowania) gdy padnie.
   const [guestSigningIn, setGuestSigningIn] = useState(false);
   const [guestSignInFailed, setGuestSignInFailed] = useState(false);
-  const [bannerData, setBannerData] = useState<BannerData | null>(null);
   const [deselectedPlaces, setDeselectedPlaces] = useState<Set<string>>(new Set());
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -306,14 +305,17 @@ const GroupSession = () => {
     queryKey: ["category-places", session?.id, currentCategory],
     queryFn: async () => {
       if (!currentCategory || !session?.city || !session?.id) return [];
-      const { data, error } = await (supabase as any)
+      const isFree = currentCategory === FREE_CATEGORY;
+      let q = (supabase as any)
         .from("places")
         .select("id, business_profiles!left(id)")
         .ilike("city", session.city)
-        .in("category", dbCategoryValues)
-        .eq("is_active", true)
+        .eq("is_active", true);
+      // Wolna eksploracja: bez filtra kategorii (losowe z calego miasta), wiekszy pool przed shuffle.
+      if (!isFree) q = q.in("category", dbCategoryValues);
+      const { data, error } = await q
         .order("id", { ascending: true })
-        .limit(40);
+        .limit(isFree ? 120 : 40);
       if (error) { console.error("Places query error:", error); return []; }
       if (!data?.length) { console.warn("No places found for", dbCategoryValues, "in", session.city); return []; }
       // Seed = sessionId + category → same result for every user in this session
@@ -351,9 +353,8 @@ const GroupSession = () => {
       const otherReaction = reactions.find(r => r.place_name === match.place_name && r.user_id !== user?.id);
       const otherMember = members.find((m: any) => m.user_id === otherReaction?.user_id);
       const otherName = otherMember?.profile?.first_name || otherMember?.profile?.username || "Znajomy";
-      setBannerData({ placeName: match.place_name, otherName });
-      const t = setTimeout(() => setBannerData(null), 4000);
-      return () => clearTimeout(t);
+      // Toast w jednolitym nowym UI (bialy, ikona w kole, x) zamiast custom czarnego bannera.
+      toast.success("Nowe dopasowanie!", { description: `${otherName} też polubił(a) ${match.place_name}` });
     }
   }, [matches]);
 
@@ -801,7 +802,7 @@ const GroupSession = () => {
             <p className="font-bold text-base leading-tight">{(session as any).name || session.city}</p>
             {currentCategory && !needsCategoryPick && (
               <span className="text-sm font-semibold text-orange-600">
-                {CATEGORY_EMOJI[currentCategory] ?? ""} {CATEGORY_LABELS[currentCategory] ?? currentCategory}
+                {currentCategory === FREE_CATEGORY ? `🎲 ${FREE_LABEL}` : `${CATEGORY_EMOJI[currentCategory] ?? ""} ${CATEGORY_LABELS[currentCategory] ?? currentCategory}`}
               </span>
             )}
           </div>
@@ -891,17 +892,6 @@ const GroupSession = () => {
 
       {/* Content */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
-
-        {/* ── Match banner (floats above both tabs) ── */}
-        {bannerData && (
-          <div className="absolute top-2 left-4 right-4 z-50 bg-foreground text-background rounded-2xl px-4 py-3 flex items-center gap-3 shadow-xl animate-in slide-in-from-top-4 fade-in duration-300">
-            <span className="text-2xl shrink-0">🎉</span>
-            <div className="min-w-0">
-              <p className="text-sm font-bold leading-tight">Nowe dopasowanie!</p>
-              <p className="text-xs opacity-70 truncate">{bannerData.otherName} też polubiła <strong>{bannerData.placeName}</strong></p>
-            </div>
-          </div>
-        )}
 
         {/* ── Swipe tab ── */}
         <div className={cn("flex-1 flex flex-col overflow-hidden", tab !== "swipe" && "hidden")}>
@@ -1050,9 +1040,21 @@ const GroupSession = () => {
                       {isFirst ? "Wybierz pierwszą kategorię" : "Wybierz następną kategorię"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Wszyscy będą swipe'ować 10 miejsc z wybranej kategorii
+                      Każda runda to 10 miejsc - wybierzcie kategorię albo wolną eksplorację (losowe miejsca).
                     </p>
                   </div>
+                  {/* Wolna eksploracja - 10 losowych miejsc z calego miasta (obok wyboru kategorii) */}
+                  <button
+                    onClick={() => setPendingCategory(p => p === FREE_CATEGORY ? null : FREE_CATEGORY)}
+                    className={`w-full px-4 py-3 rounded-2xl text-sm font-semibold border transition-colors flex items-center justify-center gap-2 ${
+                      pendingCategory === FREE_CATEGORY
+                        ? "bg-primary text-white border-orange-600"
+                        : "bg-card text-foreground border-border/60"
+                    }`}
+                  >
+                    <span>🎲</span>
+                    <span>Wolna eksploracja - 10 losowych miejsc</span>
+                  </button>
                   <div className="flex flex-wrap gap-2">
                     {AVAILABLE_CATEGORIES.map((cat) => {
                       const count = categoryCounts[cat.id] ?? 0;
@@ -1394,12 +1396,22 @@ const GroupSession = () => {
                   </p>
                 </div>
               )}
-              {existingRoute && (
+              {/* Host: moze otworzyc trase w kreatorze. Uczestnik: trasa zapisala sie u niego
+                  jako aktywna - wraca TYLKO na ekran glowny (bez wchodzenia do PlanWizard/kreatora). */}
+              {existingRoute && isCreator && (
                 <button
                   onClick={() => navigate("/create", { state: { city: existingRoute.city, existingRouteId: existingRoute.id } })}
                   className="w-full py-3.5 rounded-full bg-foreground text-background font-bold text-sm active:scale-[0.97] transition-transform"
                 >
                   Otwórz zapisaną trasę →
+                </button>
+              )}
+              {existingRoute && !isCreator && (
+                <button
+                  onClick={() => navigate("/")}
+                  className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm active:scale-[0.97] transition-transform"
+                >
+                  {`Trasa gotowa - zobacz ją na ekranie głównym →`}
                 </button>
               )}
               {matches.length > 0 && (
