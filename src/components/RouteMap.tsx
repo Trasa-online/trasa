@@ -28,6 +28,10 @@ interface RouteMapProps {
   // Punkt startowy (hotel/nocleg) wybrany w StartingLocationPicker - osobny marker
   // 'Start' w kolorze zielonym + jest brany pod uwage przy centrowaniu mapy.
   startingLocation?: { name: string; latitude: number; longitude: number };
+  // Tryb pojedynczego miejsca (mapa "Na mapie" w wizytowce): czysty marker miejsca
+  // (kropka bez numeru) + punkt startowy usera bez napisu "START" - numeracja nie ma
+  // sensu dla jednego pinu.
+  singlePlace?: boolean;
 }
 
 // Draws dashed polylines per day using Google Maps Polyline overlay
@@ -89,7 +93,7 @@ function DayPolylines({ validPins }: { validPins: Pin[] }) {
   return null;
 }
 
-const MapContent = ({ validPins, onPinClick, startingLocation }: { validPins: Pin[]; onPinClick?: (pin: Pin) => void; startingLocation?: { name: string; latitude: number; longitude: number } }) => {
+const MapContent = ({ validPins, onPinClick, startingLocation, singlePlace = false }: { validPins: Pin[]; onPinClick?: (pin: Pin) => void; startingLocation?: { name: string; latitude: number; longitude: number }; singlePlace?: boolean }) => {
   const map = useMap();
   const [selectedPin, setSelectedPin] = useState<number | null>(null);
   const [startSelected, setStartSelected] = useState(false);
@@ -149,8 +153,8 @@ const MapContent = ({ validPins, onPinClick, startingLocation }: { validPins: Pi
           onClick={() => setStartSelected(true)}
         >
           <div style={{
-            width: '32px',
-            height: '32px',
+            width: singlePlace ? '20px' : '32px',
+            height: singlePlace ? '20px' : '32px',
             background: '#10b981',
             border: '2px solid white',
             borderRadius: '50%',
@@ -164,7 +168,7 @@ const MapContent = ({ validPins, onPinClick, startingLocation }: { validPins: Pi
             cursor: 'pointer',
             letterSpacing: '0.5px',
           }}>
-            START
+            {singlePlace ? '' : 'START'}
           </div>
         </AdvancedMarker>
       )}
@@ -206,7 +210,7 @@ const MapContent = ({ validPins, onPinClick, startingLocation }: { validPins: Pi
               boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
               cursor: 'pointer',
             }}>
-              {label}
+              {singlePlace ? '' : label}
             </div>
           </AdvancedMarker>
         );
@@ -243,6 +247,7 @@ const RouteMap = memo(function RouteMap({
   showExpandButton = false,
   onPinClick,
   startingLocation,
+  singlePlace = false,
 }: RouteMapProps) {
   const validPins = useMemo(() =>
     pins.filter(pin => pin.latitude && pin.longitude),
@@ -290,7 +295,7 @@ const RouteMap = memo(function RouteMap({
             zoomControl
             mapId="roadmap"
           >
-            <MapContent validPins={validPins} onPinClick={onPinClick} startingLocation={startingLocation} />
+            <MapContent validPins={validPins} onPinClick={onPinClick} startingLocation={startingLocation} singlePlace={singlePlace} />
           </GoogleMap>
         </APIProvider>
       </div>

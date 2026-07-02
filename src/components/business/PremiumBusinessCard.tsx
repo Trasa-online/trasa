@@ -556,6 +556,7 @@ function MapSection({ data, startingLocation }: SectionProps & { startingLocatio
       <RouteMap
         pins={[{ latitude: data.latitude, longitude: data.longitude, place_name: data.name, address: data.address }]}
         startingLocation={startingLocation}
+        singlePlace
         className="h-44 rounded-2xl border-2 border-primary/25"
       />
     </div>

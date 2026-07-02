@@ -101,6 +101,12 @@ const PlaceSwiperDetail = ({
             latitude: place.latitude,
             longitude: place.longitude,
             city: city ?? place.city,
+            // Authorytatywny place_id z bazy - inaczej proxy rozwiazuje miejsce przez
+            // luzne dopasowanie nazwy (nearbysearch/textsearch) i dla lokalu o popularnej
+            // nazwie (np. "Wanderlust coffee place") potrafi trafic w INNY pobliski lokal
+            // -> zly adres/mapa/recenzje. Karta swipe juz przekazuje ten id; detal musi tez.
+            googlePlaceId: (place as { google_place_id?: string }).google_place_id ?? null,
+            placeDbId: place.id,
           },
         })
         .then(({ data }) => {

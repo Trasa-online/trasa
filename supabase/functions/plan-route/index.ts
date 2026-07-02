@@ -714,9 +714,9 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     const isToday = current_date && preferences.startDate && preferences.startDate === current_date;
     const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined, super_liked_places ?? undefined, previousDayPlaces.length > 0 ? previousDayPlaces : undefined, Object.keys(previousDayCategoryCounts).length > 0 ? previousDayCategoryCounts : undefined, restrict_to_liked ?? false, extend_mode ?? false);
 
-    // Call AI
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    // Call AI - Claude (Anthropic). Klucz w sekretach edge function (ANTHROPIC_API_KEY).
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) {
       return new Response(
         JSON.stringify({ error: "AI API key not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -731,22 +731,28 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       ? "\n\nWYGENERUJ TERAZ PLAN w bloku <route_plan>...</route_plan>. Napisz 1 krótkie zdanie komentarza i natychmiast wygeneruj plan zgodnie ze wszystkimi heurystykami H1–H13. WAŻNE: Dobierz miejsca ściśle pod PROFIL UŻYTKOWNIKA i jego priorytety — każdy plan powinien być inny, unikaj powtarzania tych samych zestawów atrakcji."
       : "";
 
-    const aiMessages = [
-      { role: "system", content: systemPrompt + finishInstruction },
-      ...userMessages,
-    ];
+    // Anthropic rozdziela system od wiadomosci: system osobno, reszta jako messages (user/assistant).
+    const claudeSystem = systemPrompt + finishInstruction;
+    const claudeMessages = userMessages;
 
     // Flash = PRIMARY (znacznie szybsze generowanie planu, ~3-5x; jakosc ukladania
     // wybranych miejsc w dzien jest w pelni wystarczajaca). Pro = fallback na wypadek
     // bledu Flash (rzadka sciezka). Wczesniej Pro bylo primary -> dlugie ladowanie planu.
-    const PRIMARY_MODEL = "google/gemini-2.5-flash";
-    const FALLBACK_MODEL = "google/gemini-2.5-pro-preview-06-05";
+    // Opus 4.8 = najmadrzejszy model Claude (wyrazny skok jakosci route_reasoning "Dlaczego taka
+    // trasa" vs Gemini Flash). Sonnet 4.6 jako fallback. UWAGA: Opus 4.8/Sonnet 4.6 ODRZUCAJA
+    // temperature/top_p (400) - nie wysylamy ich.
+    const PRIMARY_MODEL = "claude-opus-4-8";
+    const FALLBACK_MODEL = "claude-sonnet-4-6";
 
     const callAI = async (model: string) =>
-      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
-        body: JSON.stringify({ model, messages: aiMessages, max_tokens: 8000, temperature: 0.7 }),
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({ model, max_tokens: 8000, system: claudeSystem, messages: claudeMessages }),
       });
 
     let aiResponse = await callAI(PRIMARY_MODEL);
@@ -765,7 +771,10 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     }
 
     const aiData = await aiResponse.json();
-    const assistantText = aiData.choices?.[0]?.message?.content ?? "";
+    // Anthropic Messages API: content to tablica blokow - bierzemy pierwszy blok tekstowy.
+    const assistantText = Array.isArray(aiData.content)
+      ? ((aiData.content.find((b: { type?: string }) => b.type === "text") as { text?: string } | undefined)?.text ?? "")
+      : "";
 
     if (!assistantText) {
       return new Response(

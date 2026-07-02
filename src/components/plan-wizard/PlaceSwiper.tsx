@@ -244,8 +244,10 @@ interface SwipeCardProps {
 export const SwipeCard = ({ place, city, onLike, onSkip, onTap, onUndo, canUndo, onPhotoFetched, isTop, offset, skipGoogleFetch = false, onEnableDistance }: SwipeCardProps) => {
   const [imgFailed, setImgFailed] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
+  // Widok glowny (karta swipe) = TYLKO jedno zdjecie (cover). Galeria (extra zdjecia)
+  // pokazuje sie dopiero w wizytowce (PlaceSwiperDetail). Bez karuzeli na karcie.
   const [photoUrls, setPhotoUrls] = useState<string[]>(
-    [place.photo_url, ...(place.galleryPhotos ?? [])]
+    [place.photo_url || (place.galleryPhotos ?? [])[0]]
       .filter((u): u is string => !!u && (u.startsWith("http") || u.startsWith("/api/")) && !u.includes("picsum") && !u.includes("lorem"))
   );
   const [photoIdx, setPhotoIdx] = useState(0);

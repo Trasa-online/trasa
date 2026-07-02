@@ -17,31 +17,31 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Compass } from "lucide-react";
 import InviteFriendsBanner from "@/components/social/InviteFriendsBanner";
 
-// Wizualny kafelek trasy: do 3 mini-zdjec miejsc (+N), miasto, zakres dat. Zastepuje chipy.
+// Niski chip trasy: nazwa miasta + male okragle miniaturki miejsc obok (overlap +N).
+// Tylko kolor secondary (bez pomaranczu); aktywny = subtelny ciemny border, nieaktywny = przezroczysty.
 function TripCard({ trip, active, onSelect }: { trip: any; active: boolean; onSelect: () => void }) {
   const pins = Array.isArray(trip.pins) ? trip.pins : [];
-  const photos = pins.map((p: any) => resolveStored(p.photo_url)).filter(Boolean).slice(0, 3) as string[];
-  const extra = Math.max(0, pins.length - 3);
+  const photos = pins.map((p: any) => resolveStored(p.photo_url)).filter(Boolean).slice(0, 4) as string[];
+  const extra = Math.max(0, pins.length - photos.length);
   return (
     <button
       onClick={onSelect}
       className={cn(
-        "shrink-0 w-40 rounded-2xl border p-2 text-left transition-colors active:scale-[0.98]",
-        active ? "border-orange-400 bg-orange-50/60" : "border-border/50 bg-card",
+        "shrink-0 flex items-center gap-2.5 rounded-full bg-secondary border-2 px-3 py-1.5 transition-colors active:scale-[0.97]",
+        active ? "border-foreground/30" : "border-transparent",
       )}
     >
-      <div className="flex gap-1 mb-2">
+      <span className="text-sm font-display font-extrabold leading-none truncate max-w-[120px]">{trip.city || trip.title || "Trasa"}</span>
+      <div className="flex -space-x-2 shrink-0">
         {photos.length > 0 ? photos.map((url, i) => (
-          <img key={i} src={url} alt="" className="h-11 flex-1 min-w-0 rounded-lg object-cover bg-muted" loading="lazy" />
+          <img key={i} src={url} alt="" className="h-6 w-6 rounded-full object-cover bg-muted border-2 border-secondary" style={{ zIndex: photos.length - i }} loading="lazy" />
         )) : (
-          <div className="h-11 w-full rounded-lg bg-muted flex items-center justify-center"><MapPin className="h-4 w-4 text-muted-foreground" /></div>
+          <div className="h-6 w-6 rounded-full bg-muted border-2 border-secondary flex items-center justify-center"><MapPin className="h-3 w-3 text-muted-foreground" /></div>
         )}
         {extra > 0 && (
-          <div className="h-11 flex-1 min-w-0 rounded-lg bg-foreground/85 text-background text-[11px] font-bold flex items-center justify-center">+{extra}</div>
+          <div className="h-6 w-6 rounded-full bg-foreground/80 text-background text-[9px] font-bold flex items-center justify-center border-2 border-secondary" style={{ zIndex: 0 }}>+{extra}</div>
         )}
       </div>
-      <p className="text-sm font-display font-extrabold leading-tight truncate px-0.5">{trip.city || trip.title || "Trasa"}</p>
-      {fmtRange(trip._dateMin, trip._dateMax) && <p className="text-[11px] text-muted-foreground mt-0.5 truncate px-0.5">{fmtRange(trip._dateMin, trip._dateMax)}</p>}
     </button>
   );
 }
