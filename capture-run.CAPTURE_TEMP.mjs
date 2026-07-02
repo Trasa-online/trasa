@@ -4,8 +4,12 @@
 // Each screen: id=captureId (from generate_figma_design), route=hash route e.g. "/auth",
 //   needsAuth=bool (inject supabase session), blockMaps=bool, delayMs=extra wait, prep=optional string of extra localStorage json
 import { chromium } from "playwright";
+import fs from "fs";
 
 const CFG = JSON.parse(process.argv[2]);
+if (!CFG.session && CFG.sessionFile) {
+  try { CFG.session = JSON.parse(fs.readFileSync(CFG.sessionFile, "utf8")); } catch (e) {}
+}
 const BASE = "http://localhost:8080";
 const CAPTURE_JS = "https://mcp.figma.com/mcp/html-to-design/capture.js";
 const AUTH_KEY = "sb-api-auth-token"; // Supabase session localStorage key

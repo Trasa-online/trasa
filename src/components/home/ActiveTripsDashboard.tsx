@@ -8,7 +8,7 @@ import { format, parseISO, isValid } from "date-fns";
 import { pl } from "date-fns/locale";
 import { avatarSrc } from "@/lib/avatar";
 import { notify } from "@/lib/notify";
-import { toast } from "sonner";
+import { deferDelete } from "@/lib/deferDelete";
 import { cn } from "@/lib/utils";
 import { useActiveSoloTrips } from "@/hooks/useActiveSoloTrips";
 import { getDrafts, removeDraft, type DraftRoute } from "@/lib/draftRoutes";
@@ -100,28 +100,33 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   const [groupOpen, setGroupOpen] = useState(true);
   const [hiddenSessionIds, setHiddenSessionIds] = useState<Set<string>>(new Set());
 
-  // Usuniecie aktywnej trasy z home (z potwierdzeniem). Czysci piny + chat_sessions + route.
-  const handleDelete = async (e: React.MouseEvent, r: any) => {
+  // Usuniecie aktywnej trasy z home: optymistycznie znika z listy, faktyczny delete
+  // (piny + chat_sessions + route) ODROCZONY o okno "Cofnij" (5s). Undo przywraca liste.
+  const handleDelete = (e: React.MouseEvent, r: any) => {
     e.stopPropagation();
     const name = r.city || r.title || "Trasa";
-    if (!confirm(`Usunąć trasę "${name}"? Tego nie można cofnąć.`)) return;
-    setDeletingId(r.id);
-    try {
-      await supabase.from("pins").delete().eq("route_id", r.id);
-      await (supabase as any).from("chat_sessions").delete().eq("route_id", r.id);
-      const { error } = await supabase.from("routes").delete().eq("id", r.id);
-      if (error) throw error;
-      notify.success("Trasa usunięta");
-      queryClient.setQueryData(["home-active-solo", userId], (old: any) =>
-        (old ?? []).filter((x: any) => x.id !== r.id),
-      );
-      queryClient.invalidateQueries({ queryKey: ["home-active-solo"] });
-      queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-    } catch (err: any) {
-      console.error("[ActiveTripsDashboard] delete failed:", err?.message ?? err);
-      notify.error("Nie udało się usunąć trasy");
-    }
-    setDeletingId(null);
+    const prev = queryClient.getQueryData(["home-active-solo", userId]);
+    queryClient.setQueryData(["home-active-solo", userId], (old: any) =>
+      (old ?? []).filter((x: any) => x.id !== r.id),
+    );
+    deferDelete({
+      message: `Trasa „${name}" usunięta`,
+      onUndo: () => queryClient.setQueryData(["home-active-solo", userId], prev),
+      commit: async () => {
+        try {
+          await supabase.from("pins").delete().eq("route_id", r.id);
+          await (supabase as any).from("chat_sessions").delete().eq("route_id", r.id);
+          const { error } = await supabase.from("routes").delete().eq("id", r.id);
+          if (error) throw error;
+          queryClient.invalidateQueries({ queryKey: ["home-active-solo"] });
+          queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+        } catch (err: any) {
+          console.error("[ActiveTripsDashboard] delete failed:", err?.message ?? err);
+          notify.error("Nie udało się usunąć trasy");
+          queryClient.invalidateQueries({ queryKey: ["home-active-solo"] });
+        }
+      },
+    });
   };
 
   // Usuniecie grupowej sesji "w toku" z home. Optymistycznie chowamy lokalnie (zawsze znika
@@ -129,22 +134,15 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   // ukryty lokalnie). Invalidacja odswieza liste.
   const handleDeleteSession = (e: React.MouseEvent, s: any) => {
     e.stopPropagation();
-    // Ukryj natychmiast; faktyczny delete ODROCZONY o okno "Cofnij" (undo w stylu Gmaila).
-    // Klik "Cofnij" anuluje timer i przywraca sesje - nic nie ginie przez 5s.
+    // Optymistycznie ukryj; commit (DB delete) odroczony o okno "Cofnij".
     setHiddenSessionIds((prev) => new Set(prev).add(s.id));
-    const timer = setTimeout(async () => {
-      try { await (supabase as any).from("group_sessions").delete().eq("id", s.id); }
-      catch (err: any) { console.error("[ActiveTripsDashboard] delete session failed:", err?.message ?? err); }
-      queryClient.invalidateQueries({ queryKey: ["home-group-sessions"] });
-    }, 5000);
-    toast("Sesja usunięta", {
-      duration: 5000,
-      action: {
-        label: "Cofnij",
-        onClick: () => {
-          clearTimeout(timer);
-          setHiddenSessionIds((prev) => { const n = new Set(prev); n.delete(s.id); return n; });
-        },
+    deferDelete({
+      message: "Sesja usunięta",
+      onUndo: () => setHiddenSessionIds((prev) => { const n = new Set(prev); n.delete(s.id); return n; }),
+      commit: async () => {
+        try { await (supabase as any).from("group_sessions").delete().eq("id", s.id); }
+        catch (err: any) { console.error("[ActiveTripsDashboard] delete session failed:", err?.message ?? err); }
+        queryClient.invalidateQueries({ queryKey: ["home-group-sessions"] });
       },
     });
   };

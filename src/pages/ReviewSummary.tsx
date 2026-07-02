@@ -17,6 +17,7 @@ import { pl } from "date-fns/locale";
 import { isNative } from "@/lib/platform";
 import { Camera as CapCamera } from "@capacitor/camera";
 import { notify } from "@/lib/notify";
+import { deferDelete } from "@/lib/deferDelete";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -376,30 +377,40 @@ const ReviewSummary = () => {
     notify.success("Ustawiono okładkę");
   };
 
-  const removePhoto = async (url: string, owner: string) => {
-    // Walidacja: potwierdzenie przed nieodwracalnym usunieciem.
-    if (!confirm("Usunąć to zdjęcie z wpisu? Tej operacji nie można cofnąć.")) return;
-    if (owner === routeId) {
-      const updated = photos.filter((p) => p !== url);
-      setPhotos(updated);
+  // Usuwanie zdjecia: optymistycznie znika z galerii, faktyczny DB update ODROCZONY o okno
+  // "Cofnij" (5s). Undo przywraca zdjecie (DB niezmieniona -> refetch je wraca).
+  const removePhoto = (url: string, owner: string) => {
+    const isPrimary = owner === routeId;
+    const prevPhotos = photos;
+    let commitUpdated: string[];
+    if (isPrimary) {
+      commitUpdated = photos.filter((p) => p !== url);
+      setPhotos(commitUpdated);
       // Real-time: myPhotos scala `photos` z `sortedDays[].review_photos`, wiec optymistycznie
-      // aktualizujemy tez cache route + dni. Bez tego usuniete zdjecie wracaloby do galerii az
-      // do pelnego refetchu (dla trasy jednodniowej sortedDays[0] = stale `route`).
+      // aktualizujemy tez cache route + dni (inaczej zdjecie wracaloby do galerii przed commitem).
       queryClient.setQueryData(["review-summary-route", routeId], (old: any) =>
-        old ? { ...old, review_photos: updated } : old);
+        old ? { ...old, review_photos: commitUpdated } : old);
       queryClient.setQueryData(["review-trip-days", folderId, routeId], (old: any) =>
-        (old ?? []).map((d: any) => (d.id === routeId ? { ...d, review_photos: updated } : d)));
-      await supabase.from("routes").update({ review_photos: updated } as any).eq("id", routeId);
+        (old ?? []).map((d: any) => (d.id === routeId ? { ...d, review_photos: commitUpdated } : d)));
     } else {
       const dr = sortedDays.find((d: any) => d.id === owner);
-      const updated = (dr?.review_photos ?? []).filter((p: string) => p !== url);
+      commitUpdated = (dr?.review_photos ?? []).filter((p: string) => p !== url);
       queryClient.setQueryData(["review-trip-days", folderId, routeId], (old: any) =>
-        (old ?? []).map((d: any) => (d.id === owner ? { ...d, review_photos: updated } : d)));
-      await supabase.from("routes").update({ review_photos: updated } as any).eq("id", owner);
+        (old ?? []).map((d: any) => (d.id === owner ? { ...d, review_photos: commitUpdated } : d)));
     }
     setViewerUrl(null);
-    queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
-    notify.success("Zdjęcie usunięte");
+    deferDelete({
+      message: "Zdjęcie usunięte",
+      onUndo: () => {
+        if (isPrimary) setPhotos(prevPhotos);
+        queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
+        queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
+      },
+      commit: async () => {
+        await supabase.from("routes").update({ review_photos: commitUpdated } as any).eq("id", isPrimary ? routeId : owner);
+        queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
+      },
+    });
   };
 
   // Wyjscie z trybu edycji (stepper) do read-only PODSUMOWANIA - ta sama logika co "Gotowe",
