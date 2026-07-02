@@ -1178,6 +1178,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       // każdy nowy dzień zaczyna z czystą talia. Reactions w DB persyst dla taste profile,
       // ale UI filter polega tylko na today (gte start of today UTC).
       let ratedPlaceIds = new Set<string>();
+      const groupRatedIds = new Set<string>();
       if (user) {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
@@ -1190,7 +1191,8 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         if (reactions?.length) {
           ratedPlaceIds = new Set(reactions.map((r: { place_id: string }) => r.place_id));
         }
-        // Also filter out places already swiped in the group session
+        // Miejsca juz przeswipeowane W TEJ SESJI grupowej - OSOBNY set. Nie mieszamy z solo-reakcjami,
+        // bo past solo-reakcje NIE moga filtrowac miejsc rundy grupowej (patrz filtr `remaining`).
         if (groupSessionId) {
           const { data: groupReactions } = await (supabase as any)
             .from("group_session_reactions")
@@ -1198,7 +1200,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
             .eq("session_id", groupSessionId)
             .eq("user_id", user.id);
           if (groupReactions?.length) {
-            for (const r of groupReactions) ratedPlaceIds.add(r.place_id);
+            for (const r of groupReactions) groupRatedIds.add(r.place_id);
           }
         }
       }
@@ -1218,6 +1220,11 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         // For category-filtered batch mode (user explicitly picked a category) — show all matching
         // places regardless of past ratings. Otherwise, hide already-rated on the first batch.
         if (hasCategoryFilter) return true;
+        // Runda grupowa (roundPlaceIds - kategoria LUB wolna eksploracja): wszyscy uczestnicy widza
+        // TE SAME miejsca rundy (dla dopasowan), pomijajac tylko te przeswipeowane w TEJ sesji.
+        // Past solo-reakcje NIE filtruja rundy - inaczej uczestnik, ktory wczesniej ocenial te losowe
+        // miejsca, dostawal pusta kolejke -> instant "Gotowe" (wolna eksploracja "nie dzialala").
+        if (roundPlaceIds?.length) return !groupRatedIds.has(p.id);
         if (!hasReturnState && ratedPlaceIds.has(p.id)) return false;
         return true;
       });

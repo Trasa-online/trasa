@@ -621,14 +621,14 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground">
               <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
             </span>
-            {/* Nawiguj jako maly bialy pill obok badge kategorii. */}
+            {/* Nawiguj jako maly bialy pill dosuniety do PRAWEJ krawedzi (ml-auto). */}
             {pin.latitude && pin.longitude && (
               <span
                 role="button"
                 tabIndex={0}
                 onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/dir/?api=1&destination=${pin.latitude},${pin.longitude}`, "_blank", "noopener,noreferrer"); }}
                 aria-label="Nawiguj"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground shadow-sm active:scale-95"
+                className="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground shadow-sm active:scale-95"
               >
                 <Navigation className="h-3.5 w-3.5" /> Nawiguj
               </span>

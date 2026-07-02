@@ -3,7 +3,7 @@ import { avatarSrc } from "@/lib/avatar";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, MapPin, Star, Check, UserPlus, CalendarDays, Copy, Share2, Search, X, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { format, parseISO, isValid } from "date-fns";
+import { format, parseISO, isValid, addDays } from "date-fns";
 import { pl } from "date-fns/locale";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,7 +38,11 @@ const CATEGORY_LABELS: Record<string, string> = {
 // Wolna eksploracja: runda z 10 LOSOWYCH miejsc (bez filtra kategorii). Sentinel trzymany
 // w polu categories sesji jak zwykla kategoria - query wykrywa go i pomija filtr .in(category).
 const FREE_CATEGORY = "__wolna__";
-const FREE_LABEL = "Wolna eksploracja";
+const FREE_LABEL = "Wszystko";
+
+// Etykieta kategorii (obsluguje sentinel wolnej eksploracji -> "Wszystko", zamiast raw "__wolna__").
+const catLabelOf = (cat: string | null | undefined): string =>
+  cat === FREE_CATEGORY ? FREE_LABEL : (CATEGORY_LABELS[cat ?? ""] ?? cat ?? "");
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -488,7 +492,7 @@ const GroupSession = () => {
               body: {
                 user_id: id,
                 title: `${myName} skończył${myName.endsWith("a") ? "a" : ""}`,
-                body: `Czeka tylko Twój głos w "${currentCategory}"`,
+                body: `Czeka tylko Twój głos w "${catLabelOf(currentCategory)}"`,
                 url,
               },
             })
@@ -797,27 +801,24 @@ const GroupSession = () => {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
+        {/* TopBar: tylko nazwa/miasto + data (zakres gdy num_days > 1). Bez kategorii, liczby osob,
+            kodu i rundy - te info sa dostepne gdzie indziej (awatary w rogu, kod w "Zapros"). */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="font-bold text-base leading-tight">{(session as any).name || session.city}</p>
-            {currentCategory && !needsCategoryPick && (
-              <span className="text-sm font-semibold text-orange-600">
-                {currentCategory === FREE_CATEGORY ? `🎲 ${FREE_LABEL}` : `${CATEGORY_EMOJI[currentCategory] ?? ""} ${CATEGORY_LABELS[currentCategory] ?? currentCategory}`}
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {members.length} {members.length === 1 ? "osoba" : "osoby"} · #{joinCode}
-            {sessionCategories.length > 0 && (
-              <span className="ml-1.5">· runda {currentCategoryIndex + 1}</span>
-            )}
-            {session.trip_date && (
-              <span className="ml-1.5 inline-flex items-center gap-0.5">
-                · <CalendarDays className="h-3 w-3 inline mx-0.5" />
-                {(() => { const d = parseISO(session.trip_date!); return isValid(d) ? format(d, "d MMM", { locale: pl }) : null; })()}
-              </span>
-            )}
-          </p>
+          <p className="font-bold text-base leading-tight truncate">{(session as any).name || session.city}</p>
+          {session.trip_date && (() => {
+            const start = parseISO(session.trip_date!);
+            if (!isValid(start)) return null;
+            const days = (session as any).num_days ?? 1;
+            const end = days > 1 ? addDays(start, days - 1) : null;
+            return (
+              <p className="text-xs text-muted-foreground inline-flex items-center gap-1 mt-0.5">
+                <CalendarDays className="h-3 w-3 shrink-0" />
+                {end
+                  ? `${format(start, "d MMM", { locale: pl })} - ${format(end, "d MMM yyyy", { locale: pl })}`
+                  : format(start, "d MMM yyyy", { locale: pl })}
+              </p>
+            );
+          })()}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex -space-x-2">
@@ -1053,7 +1054,7 @@ const GroupSession = () => {
                     }`}
                   >
                     <span>🎲</span>
-                    <span>Wolna eksploracja - 10 losowych miejsc</span>
+                    <span>Wszystko - 10 losowych miejsc</span>
                   </button>
                   <div className="flex flex-wrap gap-2">
                     {AVAILABLE_CATEGORIES.map((cat) => {
@@ -1136,8 +1137,8 @@ const GroupSession = () => {
 
           // ── I finished this category, waiting for others ─────────────────
           if (iMyCategoryDone && !allMembersDoneCategory) {
-            const catEmoji = CATEGORY_EMOJI[currentCategory!] ?? "";
-            const catLabel = CATEGORY_LABELS[currentCategory!] ?? currentCategory;
+            const catEmoji = currentCategory === FREE_CATEGORY ? "🎲" : (CATEGORY_EMOJI[currentCategory!] ?? "");
+            const catLabel = catLabelOf(currentCategory);
             const doneCount = members.filter((m: any) => (m.categories_done ?? []).includes(currentCategory)).length;
             return (
               <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6 text-center">
@@ -1240,7 +1241,7 @@ const GroupSession = () => {
               <p className="font-bold">Brak miejsc w tej kategorii</p>
               <p className="text-sm text-muted-foreground">
                 Nie mamy jeszcze miejsc z kategorii{" "}
-                <strong>{CATEGORY_LABELS[currentCategory!] ?? currentCategory}</strong> dla {session.city}.
+                <strong>{catLabelOf(currentCategory)}</strong> dla {session.city}.
               </p>
               {isCreator && (
                 <button
