@@ -722,7 +722,7 @@ const ReviewSummary = () => {
           )}
         </div>
         <div className="px-4 pt-4 pb-3">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-semibold text-foreground mb-2">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground mb-2">
             <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
           </span>
           <p className="text-base font-black leading-tight">{pin.place_name}</p>
@@ -767,7 +767,7 @@ const ReviewSummary = () => {
       </button>
       <button onClick={() => openDetail(pin)} className="min-w-0 flex-1 text-left">
         <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-        <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">
+        <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
           <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
         </span>
       </button>
@@ -796,7 +796,7 @@ const ReviewSummary = () => {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold leading-tight truncate">{pin.place_name}</p>
-              <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">
+              <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-semibold text-foreground">
                 <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
               </span>
             </div>

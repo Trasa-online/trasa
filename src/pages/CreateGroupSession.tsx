@@ -45,7 +45,6 @@ const CreateGroupSession = () => {
   const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [confirmActionId, setConfirmActionId] = useState<string | null>(null);
@@ -358,11 +357,11 @@ const CreateGroupSession = () => {
 
             {/* Trip date */}
             <div>
-              <p className="text-sm font-semibold mb-3">Data wyjazdu <span className="font-normal text-orange-600">(wymagane)</span></p>
+              <p className="text-sm font-semibold mb-3">Data wyjazdu <span className="font-normal text-muted-foreground">(wymagane)</span></p>
               <button
                 onClick={() => setDatePickerOpen(o => !o)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-medium transition-colors w-full ${
-                  tripDate ? "border-orange-500 text-orange-600 bg-primary/5" : "border-border/60 bg-card text-muted-foreground"
+                  tripDate ? "border-border bg-secondary text-foreground" : "border-border/60 bg-card text-muted-foreground"
                 }`}
               >
                 <CalendarDays className="h-4 w-4 shrink-0" />
@@ -399,7 +398,7 @@ const CreateGroupSession = () => {
                     key={n}
                     onClick={() => setNumDays(n)}
                     className={`flex-1 py-2.5 rounded-2xl border text-sm font-bold transition-colors ${
-                      numDays === n ? "border-orange-500 text-orange-600 bg-primary/5" : "border-border/60 bg-card text-muted-foreground"
+                      numDays === n ? "border-border bg-secondary text-foreground" : "border-border/60 bg-card text-muted-foreground"
                     }`}
                   >
                     {n}
@@ -428,7 +427,7 @@ const CreateGroupSession = () => {
                       disabled={!unlocked && !isSelected}
                       className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors flex items-center gap-1.5 ${
                         isSelected
-                          ? "bg-primary text-white border-orange-600"
+                          ? "bg-secondary text-foreground border-foreground/25"
                           : unlocked
                           ? "bg-card text-foreground border-border/60"
                           : "bg-muted/40 text-muted-foreground border-border/30"
@@ -617,11 +616,11 @@ const CreateGroupSession = () => {
               </button>
             </div>
 
-            {/* Share code - SECONDARY */}
-            <div className="rounded-2xl border border-border/40 bg-card p-4 space-y-3">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Lub udostępnij kod</p>
-              <p className="text-3xl font-black tracking-widest text-center py-1">{createdCode}</p>
-              <div className="flex gap-2">
+            {/* Share code - kod + ikona kopiowania (secondary) bezposrednio obok */}
+            <div className="rounded-2xl border border-border/40 bg-card p-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Lub udostępnij kod</p>
+              <div className="flex items-center justify-center gap-3">
+                <p className="text-3xl font-black tracking-widest">{createdCode}</p>
                 <button
                   onClick={async () => {
                     await navigator.clipboard.writeText(createdCode!);
@@ -629,31 +628,10 @@ const CreateGroupSession = () => {
                     setTimeout(() => setCodeCopied(false), 2000);
                     toast.success("Skopiowano kod!");
                   }}
-                  className="flex-1 py-2.5 rounded-full bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  aria-label="Kopiuj kod"
+                  className="h-9 w-9 shrink-0 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center active:scale-90 transition-transform"
                 >
                   {codeCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {codeCopied ? "Skopiowano!" : "Kopiuj kod"}
-                </button>
-                <button
-                  onClick={async () => {
-                    const result = await share({
-                      title: "Dołącz do sesji w Trasa",
-                      text: createdCode ? `Kod sesji: ${createdCode}` : undefined,
-                      url: shareUrl,
-                    });
-                    if (!result.ok) return;
-                    if (result.method === "clipboard") {
-                      setLinkCopied(true);
-                      setTimeout(() => setLinkCopied(false), 2000);
-                      toast.success("Skopiowano link!");
-                    } else {
-                      toast.success("Udostępniono");
-                    }
-                  }}
-                  className="flex-1 py-2.5 rounded-full border border-border/60 bg-background text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
-                >
-                  {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {linkCopied ? "Skopiowano!" : "Kopiuj link"}
                 </button>
               </div>
             </div>
@@ -661,7 +639,7 @@ const CreateGroupSession = () => {
             <button
               onClick={handleStartWithInvites}
               disabled={sendingInvites}
-              className="w-full py-4 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-60"
+              className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.97] transition-transform disabled:opacity-60"
             >
               {sendingInvites ? "Wysyłam zaproszenia…" : selectedFriends.size > 0 ? `Zaproś (${selectedFriends.size}) i zacznij wybieranie` : "Zacznij wybieranie"}
             </button>
