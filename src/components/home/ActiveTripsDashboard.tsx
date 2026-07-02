@@ -296,26 +296,26 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                 <div key={selected.id}>
                   <div className="pb-2.5 flex items-end gap-2">
                     <div className="min-w-0 flex-1">
-                      {/* Miasto + data + awatary uczestnikow (trasa grupowa) w jednym rzedzie.
-                          Bez etykiety "Trasa grupowa" - awatary same to komunikuja. */}
+                      {/* Miasto + data (bez etykiety "Trasa grupowa"). Awatary sa po PRAWEJ. */}
                       <div className="flex items-baseline gap-2 min-w-0">
                         <p className="text-2xl font-display font-extrabold leading-tight truncate">{selected.city || selected.title || "Trasa"}</p>
                         {fmtRange(selected._dateMin, selected._dateMax) && <p className="text-xs text-muted-foreground shrink-0">{fmtRange(selected._dateMin, selected._dateMax)}</p>}
-                        {selected.group_session_id && (() => {
-                          const avs = (tripMemberAvatars as Record<string, { avatar_url: string | null; name: string }[]>)[selected.group_session_id] ?? [];
-                          if (avs.length === 0) return null;
-                          return (
-                            <div className="flex -space-x-2 shrink-0 self-center">
-                              {avs.slice(0, 3).map((a, i) => (
-                                <div key={i} className="h-6 w-6 rounded-full border-2 border-background overflow-hidden bg-orange-100" style={{ zIndex: 3 - i }}>
-                                  <img src={avatarSrc(a.avatar_url)} alt={a.name} className="w-full h-full object-cover" />
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })()}
                       </div>
                     </div>
+                    {/* Awatary uczestnikow (trasa grupowa) - dosuniete do PRAWEJ strony naglowka. */}
+                    {selected.group_session_id && (() => {
+                      const avs = (tripMemberAvatars as Record<string, { avatar_url: string | null; name: string }[]>)[selected.group_session_id] ?? [];
+                      if (avs.length === 0) return null;
+                      return (
+                        <div className="flex -space-x-2 shrink-0 mb-0.5">
+                          {avs.slice(0, 3).map((a, i) => (
+                            <div key={i} className="h-7 w-7 rounded-full border-2 border-background overflow-hidden bg-orange-100" style={{ zIndex: 3 - i }}>
+                              <img src={avatarSrc(a.avatar_url)} alt={a.name} className="w-full h-full object-cover" />
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <ActiveTripPlanEditor
                     routeId={selected.id}
