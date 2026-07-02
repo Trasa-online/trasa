@@ -668,7 +668,7 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false }: { routeId: string
       <div
         key={pin.id}
         id={`active-pin-${pin.id}`}
-        className={`flex items-center gap-3 rounded-2xl bg-secondary border p-2.5 transition-all ${highlightPinId === pin.id ? "border-trasa-teal-ink ring-2 ring-trasa-teal-ink/50" : "border-border/40"} ${dimmed ? "opacity-55" : ""}`}
+        className={`flex items-center gap-3 rounded-2xl bg-secondary border shadow-sm p-2.5 transition-all ${highlightPinId === pin.id ? "border-trasa-teal-ink ring-2 ring-trasa-teal-ink/50" : "border-border/40"} ${dimmed ? "opacity-55" : ""}`}
       >
         <button onClick={() => openDetail(pin)} className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
           <PlacePhoto pin={pin} className={`w-full h-full object-cover ${pin.visited_at ? "grayscale" : ""}`} emojiClass="text-2xl" />

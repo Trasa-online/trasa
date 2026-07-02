@@ -390,6 +390,20 @@ const ReviewSummary = () => {
     queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
   };
 
+  // Wyjscie z trybu edycji (stepper) do read-only PODSUMOWANIA - ta sama logika co "Gotowe",
+  // ale dostepna na kazdym kroku. Zapisuje draft planu, oznacza wpis jako zrecenzowany
+  // (plan_finalized) i pokazuje podsumowanie zamiast steppera.
+  const finishEditing = async () => {
+    if (draft && draft.dayId === activeRouteId) await savePlan(false);
+    try {
+      await (supabase as any).from("routes").update({ plan_finalized: true }).in("id", dayRouteIds.length ? dayRouteIds : [activeRouteId]);
+    } catch (e: any) { console.error("[ReviewSummary] finishEditing failed:", e?.message ?? e); }
+    setLocalReviewed(true); setEditingStepper(false); setSummaryTab("plan");
+    queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
+    queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
+    queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+  };
+
   const ratePinHandler = async (placeName: string, rating: number) => {
     if (!activeRouteId || !user) return;
     setPinRatings((prev) => ({ ...prev, [rkey(activeRouteId, placeName)]: rating }));
@@ -721,10 +735,10 @@ const ReviewSummary = () => {
       {editable && (
         <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
           <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
-            <ChevronUp className="h-4 w-4" />Wcześniej
+            <ChevronLeft className="h-4 w-4" />Wcześniej
           </button>
           <button onClick={() => movePin(i, i + 1)} disabled={i === workingPins.length - 1} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">
-            Później<ChevronDown className="h-4 w-4" />
+            Później<ChevronRight className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -734,7 +748,7 @@ const ReviewSummary = () => {
 
   // ── Kompaktowy wiersz listy: miniaturka + nazwa + chip kategorii (+ reorder/usuń gdy edycja). ──
   const renderPlanRow = (pin: any, i: number, editable: boolean) => (
-    <div key={pin.id} className="flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 p-2.5">
+    <div key={pin.id} className="flex items-center gap-3 rounded-2xl bg-secondary border border-border/40 shadow-sm p-2.5">
       <button onClick={() => openDetail(pin)} className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-muted active:opacity-90">
         <PlacePhoto pin={pin} className="w-full h-full object-cover" emojiClass="text-2xl" />
         <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-black/55 backdrop-blur text-white text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
@@ -825,6 +839,16 @@ const ReviewSummary = () => {
             <img src={item.url} alt="" className="w-full h-full object-cover" />
             {!item.mine && (
               <span className="absolute bottom-1 left-1 bg-black/55 backdrop-blur-sm rounded px-1.5 py-0.5 text-[9px] font-medium text-white max-w-[90%] truncate">{item.username}</span>
+            )}
+            {editable && item.mine && (
+              <span
+                role="button"
+                aria-label="Usuń zdjęcie"
+                onClick={(e) => { e.stopPropagation(); removePhoto(item.url, item.owner); }}
+                className="absolute top-1 right-1 h-7 w-7 rounded-full bg-black/55 backdrop-blur-sm text-white flex items-center justify-center active:scale-90"
+              >
+                <X className="h-4 w-4" />
+              </span>
             )}
           </button>
         ))}
@@ -1250,40 +1274,41 @@ const ReviewSummary = () => {
           /* Stepper wpisu: Wstecz + Dalej/Gotowe. Edycje persystują (autosave on unmount +
              savePlan(false)); "Gotowe" oznacza wpis jako zrecenzowany (plan_finalized) i
              przechodzi do PODSUMOWANIA (nie wychodzi do Dziennika). */
-          <div className="flex gap-2">
-            {step > 1 && (
-              <button
-                onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
-                className="px-5 py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform shrink-0"
-              >
-                Wstecz
-              </button>
-            )}
-            {step < 3 ? (
-              <button
-                onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
-                className="flex-1 py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
-              >
-                Dalej
-              </button>
-            ) : (
-              <button
-                onClick={async () => {
-                  if (draft && draft.dayId === activeRouteId) await savePlan(false);
-                  try {
-                    await (supabase as any).from("routes").update({ plan_finalized: true }).in("id", dayRouteIds.length ? dayRouteIds : [activeRouteId]);
-                  } catch (e: any) { console.error("[ReviewSummary] mark reviewed failed:", e?.message ?? e); }
-                  setLocalReviewed(true); setEditingStepper(false); setSummaryTab("plan");
-                  queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
-                  queryClient.invalidateQueries({ queryKey: ["review-trip-days", folderId, routeId] });
-                  queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
-                }}
-                disabled={savingPlan}
-                className="flex-1 py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
-              >
-                {savingPlan ? "Zapisywanie…" : "Gotowe"}
-              </button>
-            )}
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              {step > 1 && (
+                <button
+                  onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
+                  className="px-5 py-3.5 rounded-full border border-border text-sm font-semibold text-foreground active:scale-[0.98] transition-transform shrink-0"
+                >
+                  Wstecz
+                </button>
+              )}
+              {step < 3 ? (
+                <button
+                  onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
+                  className="flex-1 py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform"
+                >
+                  Dalej
+                </button>
+              ) : (
+                <button
+                  onClick={finishEditing}
+                  disabled={savingPlan}
+                  className="flex-1 py-3.5 rounded-full bg-primary text-white font-bold text-base active:scale-[0.98] transition-transform disabled:opacity-40"
+                >
+                  {savingPlan ? "Zapisywanie…" : "Gotowe"}
+                </button>
+              )}
+            </div>
+            {/* Wyjscie z trybu edycji dostepne na kazdym kroku (nie tylko po "Gotowe"). */}
+            <button
+              onClick={finishEditing}
+              disabled={savingPlan}
+              className="w-full py-3 rounded-full bg-secondary text-secondary-foreground text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-40"
+            >
+              Zamknij tryb edycji
+            </button>
           </div>
         ) : !isMemory && draft && draft.dayId === activeRouteId ? (
           <button

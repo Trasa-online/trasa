@@ -331,8 +331,7 @@ const TravelerProfile = () => {
             onClick={() => setFriendsSheet(true)}
             className="relative h-10 px-5 rounded-full bg-secondary text-secondary-foreground text-sm font-semibold flex items-center gap-2 active:scale-95 transition-transform"
           >
-            <UserCheck className="h-4 w-4" /> Znajomi
-            <span className="text-muted-foreground">· {realFriends.length}</span>
+            Znajomi: {realFriends.length}
             {incomingReqs.length > 0 && (
               <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-background">
                 {incomingReqs.length}

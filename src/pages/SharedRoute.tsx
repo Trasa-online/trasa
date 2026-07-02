@@ -296,7 +296,7 @@ export default function SharedRoute() {
             </p>
             <div className="space-y-2">
               {items.map((pin: any) => (
-                <div key={pin.id} className="bg-secondary border border-border/40 rounded-2xl p-2.5">
+                <div key={pin.id} className="bg-secondary border border-border/40 shadow-sm rounded-2xl p-2.5">
                   <button onClick={() => openDetail(pin)} className="w-full flex items-center gap-3 text-left active:opacity-70 transition-opacity">
                     <PlacePhoto pin={pin} className="h-14 w-14 rounded-xl object-cover shrink-0" emojiClass="text-xl" />
                     <div className="min-w-0 flex-1">

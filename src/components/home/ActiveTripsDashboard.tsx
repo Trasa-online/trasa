@@ -324,12 +324,13 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
               <button
                 key={s.id}
                 onClick={() => navigate(`/sesja/${s.join_code}`)}
-                className="w-full text-left active:scale-[0.99] transition-transform"
+                className="w-full text-left active:scale-[0.98] transition-transform"
               >
-                {/* Naglowek 1:1 jak solo: duzy tytul Baloo + meta, floating (bez ramki) */}
-                <div className="pb-2 flex items-end gap-2">
+                {/* Karta sesji grupowej (secondary) - spojna z pozostalymi kartami. */}
+                <div className="rounded-2xl bg-secondary border border-border/40 shadow-sm p-4">
+                <div className="pb-3 flex items-end gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-2xl font-display font-extrabold leading-tight truncate">{s.name || s.city || "Sesja grupowa"}</p>
+                    <p className="text-xl font-display font-extrabold leading-tight truncate">{s.name || s.city || "Sesja grupowa"}</p>
                     {(s.city || fmtDate(s.trip_date)) && (
                       <p className="text-xs text-muted-foreground mt-0.5 truncate">
                         {s.city}{fmtDate(s.trip_date) ? ` · ${fmtDate(s.trip_date)}` : ""}
@@ -373,6 +374,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                     </div>
                   );
                 })()}
+                </div>
               </button>
             ))}
           </div>
@@ -392,7 +394,7 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                 <button
                   key={d.city}
                   onClick={() => navigate("/plan", { state: { step: 4, city: d.city, date: d.date ?? undefined, numDays: d.numDays, startingLocation: d.startingLocation, likedPlaceNames: d.likedPlaceNames } })}
-                  className="w-full flex items-center gap-3 rounded-2xl border border-orange-200 bg-orange-50/50 p-3 text-left active:scale-[0.98] transition-transform"
+                  className="w-full flex items-center gap-3 rounded-2xl border border-border/40 bg-secondary shadow-sm p-3 text-left active:scale-[0.98] transition-transform"
                 >
                   <div className="h-10 w-10 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
                     <Compass className="h-5 w-5 text-orange-600" />
