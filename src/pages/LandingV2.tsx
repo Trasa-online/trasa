@@ -162,25 +162,20 @@ function Faq({ items }: { items: { q: string; a: string }[] }) {
 // ─── Jak to działa (animowane: telefon gra demo apki, kroki podswietlaja sie w rytm) ─
 
 const STEPS = [
-  { num: "01", kicker: "Krok pierwszy", title: "Wybierz miasto", desc: "Kraków, Gdańsk, Warszawa i więcej. Zacznij od miejsca, w które się wybierasz." },
-  { num: "02", kicker: "Krok drugi", title: "Przeglądaj lokalne miejsca", desc: "Kawiarnie, muzea, bary, widoki. Dodawaj to co Cię kręci: sam albo ze znajomymi." },
-  { num: "03", kicker: "Krok trzeci", title: "Trasa gotowa w minutę", desc: "Trasa układa gotowy plan dnia z kolejnością, mapą i godzinami. Ty tylko ruszasz w miasto." },
+  { num: "01", kicker: "Krok pierwszy", title: "Wybierz miasto", desc: "Na start Warszawa i Trójmiasto (Gdańsk, Sopot, Gdynia). Kolejne miasta dodajemy na bieżąco.", img: "/landing/flow-city.png" },
+  { num: "02", kicker: "Krok drugi", title: "Przeglądaj lokalne miejsca", desc: "Kawiarnie, muzea, bary, widoki. Dodawaj to co Cię kręci: sam albo ze znajomymi.", img: "/landing/flow-browse.jpg" },
+  { num: "03", kicker: "Krok trzeci", title: "Trasa gotowa w minutę", desc: "Trasa układa gotowy plan dnia z kolejnością, mapą i godzinami. Ty tylko ruszasz w miasto.", img: "/landing/flow-route.jpg" },
 ];
 
 function HowItWorks() {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
-  const vidRef = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     if (paused) return;
     const t = setInterval(() => setActive(a => (a + 1) % STEPS.length), 3400);
     return () => clearInterval(t);
   }, [paused]);
-  const jump = (i: number) => {
-    setActive(i);
-    const v = vidRef.current;
-    if (v && v.duration) { try { v.currentTime = (i / STEPS.length) * v.duration + 0.15; } catch { /* noop */ } }
-  };
+  const jump = (i: number) => setActive(i);
   return (
     <section id="how" className="relative px-5 py-28 sm:py-36">
       <div className="mx-auto max-w-6xl">
@@ -191,8 +186,16 @@ function HowItWorks() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
           <Reveal className="flex justify-center md:order-1">
             <Phone width={278} float>
-              <video ref={vidRef} src="/demo.mp4" poster="/landing/hero-poster.png" autoPlay muted loop playsInline preload="metadata"
-                className="absolute left-0 w-full object-cover" style={{ top: "-12%", height: "112%" }} />
+              {STEPS.map((s, i) => (
+                <img
+                  key={s.img}
+                  src={s.img}
+                  alt={s.title}
+                  draggable={false}
+                  className="absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-[900ms]"
+                  style={{ transitionTimingFunction: EASE, opacity: active === i ? 1 : 0 }}
+                />
+              ))}
             </Phone>
           </Reveal>
           <Reveal delay={140} className="md:order-2">
@@ -405,7 +408,7 @@ const LandingV2 = () => {
             <Faq items={[
               { q: "Czy trasa jest darmowa?", a: "Tak, konto jest darmowe. Podstawowe planowanie - solo i w grupie - zawsze będzie bezpłatne. Płatne funkcje mogą pojawić się w przyszłości, ale z wyprzedzeniem damy Ci znać." },
               { q: "Do czego służy trasa?", a: "Trasa pomaga odkrywać lokalne miejsca w Twoim mieście - kawiarnie, muzea, bary, parki, widoki - i układa z nich gotową trasę zwiedzania z kolejnością, mapą i godzinami. Sam albo ze znajomymi." },
-              { q: "W jakich miastach działa trasa?", a: "Aktualnie wspieramy Kraków, Gdańsk (Trójmiasto), Warszawę, Wrocław, Poznań i Zakopane. Sukcesywnie dodajemy nowe miasta - jeśli nie widzisz swojego, daj nam znać." },
+              { q: "W jakich miastach działa trasa?", a: "Aktualnie działamy w Warszawie i Trójmieście (Gdańsk, Sopot, Gdynia). Kolejne miasta dodajemy sukcesywnie - jeśli nie widzisz swojego, daj nam znać." },
               { q: "Czy mogę planować solo, bez grupy?", a: "Tak! Trasa działa świetnie zarówno solo jak i w grupie. Przeglądaj miejsca samodzielnie i buduj własny plan dnia we własnym tempie." },
               { q: "Jak wygląda planowanie ze znajomymi?", a: "Tworzysz sesję i zapraszasz znajomych jednym linkiem. Każdy przegląda miejsca osobno na swoim telefonie. Trasa zbiera wasze wybory i pokazuje miejsca które spodobały się wszystkim - na tej podstawie układa gotową trasę." },
             ]} />
