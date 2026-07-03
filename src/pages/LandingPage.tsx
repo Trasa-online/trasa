@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Zap, Check, Menu, X, User, Compass } from "lucide-react";
+import { Check, Menu, X, User, Compass } from "lucide-react";
 import TrialModal from "@/components/trial/TrialModal";
 import posthog from "posthog-js";
 
@@ -34,30 +34,36 @@ function Logo({ className = "h-7 w-auto" }: { className?: string }) {
   return <img src="/Icon_Trasa.png" alt="Trasa" className={className} draggable={false} />;
 }
 
-// ─── Avatar stack (jak trasy grupowe w appce) ─────────────────────────────────
+// ─── Avatar / place stacks (jak trasy grupowe w appce) ────────────────────────
 
-function AvatarStack() {
-  const avatars = [
-    { grad: "linear-gradient(135deg,#F4A259,#F9662B)", initials: "M" },
-    { grad: "linear-gradient(135deg,#C6BFF4,#5B4FC4)", initials: "K" },
-    { grad: "linear-gradient(135deg,#BFE6DE,#0F766E)", initials: "P" },
-  ];
+function CircleStack({ srcs, extra }: { srcs: string[]; extra?: string }) {
   return (
     <div className="flex items-center -space-x-3">
-      {avatars.map((a, i) => (
-        <div
-          key={i}
-          className="h-11 w-11 rounded-full border-[3px] border-white flex items-center justify-center text-white text-sm font-bold shadow-sm"
-          style={{ background: a.grad, zIndex: avatars.length - i }}
-        >
-          {a.initials}
-        </div>
+      {srcs.map((src, i) => (
+        <img
+          key={src}
+          src={src}
+          alt=""
+          className="h-11 w-11 rounded-full border-[3px] border-white object-cover bg-secondary shadow-sm"
+          style={{ zIndex: srcs.length + 1 - i }}
+          draggable={false}
+        />
       ))}
-      <div className="h-11 w-11 rounded-full border-[3px] border-white bg-secondary flex items-center justify-center text-xs font-bold text-muted-foreground shadow-sm">
-        +4
-      </div>
+      {extra && (
+        <div className="h-11 w-11 rounded-full border-[3px] border-white bg-secondary flex items-center justify-center text-xs font-bold text-muted-foreground shadow-sm">
+          {extra}
+        </div>
+      )}
     </div>
   );
+}
+
+function AvatarStack() {
+  return <CircleStack srcs={["Marta", "Kuba", "Piotr", "Ola"].map(n => `/landing/avatars/${n}.png`)} extra="+3" />;
+}
+
+function PlaceStack() {
+  return <CircleStack srcs={["park", "restaurant", "bar"].map(n => `/landing/places/${n}.jpg`)} />;
 }
 
 // ─── Store badges (App Store + Google Play) ───────────────────────────────────
@@ -68,69 +74,55 @@ function StoreBadges({ center = false }: { center?: boolean }) {
       <a
         href={APP_STORE_URL}
         onClick={(e) => { if (APP_STORE_URL === "#") e.preventDefault(); posthog.capture("landing_store_click", { store: "app_store" }); }}
-        className="transition-transform hover:scale-[1.03] active:scale-95"
+        className="flex items-center justify-center h-[52px] w-[176px] transition-transform hover:scale-[1.03] active:scale-95"
         aria-label="Pobierz z App Store"
       >
-        <img src="/Pobierz-z-App-Store.png" alt="Pobierz z App Store" className="h-[54px] w-auto" draggable={false} />
+        <img src="/Pobierz-z-App-Store.png" alt="Pobierz z App Store" className="max-h-full max-w-full object-contain" draggable={false} />
       </a>
       <a
         href={PLAY_STORE_URL}
         onClick={(e) => { if (PLAY_STORE_URL === "#") e.preventDefault(); posthog.capture("landing_store_click", { store: "play_store" }); }}
-        className="transition-transform hover:scale-[1.03] active:scale-95"
+        className="flex items-center justify-center h-[52px] w-[176px] transition-transform hover:scale-[1.03] active:scale-95"
         aria-label="Pobierz z Google Play"
       >
-        <img src="/google-play-badge.png" alt="Pobierz z Google Play" className="h-[54px] w-auto" draggable={false} />
+        <img src="/google-play-badge.png" alt="Pobierz z Google Play" className="max-h-full max-w-full object-contain" draggable={false} />
       </a>
     </div>
   );
 }
 
-// ─── Phone frame (shell + screen) ─────────────────────────────────────────────
+// ─── Phone mockup ─────────────────────────────────────────────────────────────
+// Wyzszy gorny bezel (forehead) miesci wyspe PONAD ekranem - dzieki temu wyspa
+// i tresc apki nigdy sie nie nakladaja, a nawigacja apki ma oddech od gory.
 
-function PhoneFrame({ children, width = 240, className = "" }: { children: React.ReactNode; width?: number; className?: string }) {
+// Hero: prawdziwa animacja apki (demo.mp4). Status bar z nagrania przyciety.
+function HeroPhone() {
   return (
-    <div className={`relative mx-auto ${className}`} style={{ width }}>
-      <div className="relative bg-[#0E0E0E] rounded-[40px] p-2 shadow-2xl shadow-orange-950/25" style={{ aspectRatio: "9/19.5" }}>
-        {/* Dynamic Island */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-full z-10" />
-        {/* Screen */}
-        <div className="w-full h-full bg-[#FEFEFE] rounded-[32px] overflow-hidden">
-          {children}
+    <div className="relative mx-auto" style={{ width: 262 }}>
+      <div className="relative bg-[#0E0E0E] rounded-[42px] shadow-2xl shadow-orange-950/25" style={{ paddingLeft: 12, paddingRight: 12, paddingBottom: 12, paddingTop: 22 }}>
+        <div className="absolute left-1/2 -translate-x-1/2 bg-black rounded-full z-10" style={{ top: 6, width: 78, height: 18 }} />
+        <div className="relative overflow-hidden rounded-[30px] bg-[#F4F4F5]" style={{ aspectRatio: "430 / 872" }}>
+          <video
+            src="/demo.mp4"
+            poster="/landing/hero-poster.png"
+            autoPlay muted loop playsInline preload="metadata"
+            className="absolute left-0 w-full object-cover"
+            style={{ top: "-5.5%", height: "105.5%" }}
+          />
         </div>
       </div>
     </div>
   );
 }
 
-// Hero: real app animation (demo.mp4). Status bar z nagrania przyciety gora/dol.
-function HeroPhone() {
+// Krok: prawdziwy ekran apki. Ekran ma aspect screenshotu (bez przyciecia bokow).
+function StepPhone({ src, ar = "430 / 872" }: { src: string; ar?: string }) {
   return (
-    <PhoneFrame width={260}>
-      <div className="relative w-full h-full overflow-hidden">
-        <video
-          src="/demo.mp4"
-          poster="/landing/hero-poster.png"
-          autoPlay muted loop playsInline preload="metadata"
-          className="absolute left-0 w-full object-cover object-top"
-          style={{ top: "-5.5%", height: "105.5%" }}
-        />
-      </div>
-    </PhoneFrame>
-  );
-}
-
-// Krok: prawdziwy screenshot apki w ramce telefonu.
-// Ekran ma aspect screenshotu (430:872) - dzieki temu object-cover NIE przycina
-// bokow i padding aplikacji zostaje zachowany. Plus wyrazny bezel.
-function StepPhone({ src }: { src: string }) {
-  return (
-    <div className="relative mx-auto" style={{ width: 184 }}>
-      <div className="relative bg-[#0E0E0E] rounded-[30px] p-[9px] shadow-2xl shadow-orange-950/25">
-        {/* Dynamic Island */}
-        <div className="absolute top-[10px] left-1/2 -translate-x-1/2 w-[54px] h-[13px] bg-black rounded-full z-10" />
-        {/* Screen */}
-        <div className="relative overflow-hidden rounded-[22px]" style={{ aspectRatio: "430 / 872" }}>
-          <img src={src} alt="" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+    <div className="relative mx-auto" style={{ width: 188 }}>
+      <div className="relative bg-[#0E0E0E] rounded-[32px] shadow-2xl shadow-orange-950/25" style={{ paddingLeft: 9, paddingRight: 9, paddingBottom: 9, paddingTop: 17 }}>
+        <div className="absolute left-1/2 -translate-x-1/2 bg-black rounded-full z-10" style={{ top: 4, width: 54, height: 13 }} />
+        <div className="relative overflow-hidden rounded-[23px] bg-[#F4F4F5]" style={{ aspectRatio: ar }}>
+          <img src={src} alt="" className="absolute inset-0 w-full h-full object-cover object-top" draggable={false} />
         </div>
       </div>
     </div>
@@ -230,15 +222,15 @@ const LandingPage = () => {
   if (loading) return null;
 
   const STEPS = [
-    { num: "01", title: "Wybierz miasto", desc: "Kraków, Gdańsk, Warszawa i więcej. Zacznij od miejsca, w które się wybierasz.", img: "/landing/step-city.png" },
-    { num: "02", title: "Przeglądaj lokalne miejsca", desc: "Kawiarnie, muzea, bary, widoki. Dodawaj to co Cię kręci - sam albo ze znajomymi.", img: "/landing/step-browse.png" },
-    { num: "03", title: "Trasa gotowa w minutę", desc: "Trasa układa gotowy plan dnia z kolejnością, mapą i godzinami. Ty tylko ruszasz w miasto.", img: "/landing/step-route.png" },
+    { num: "01", title: "Wybierz miasto", desc: "Kraków, Gdańsk, Warszawa i więcej. Zacznij od miejsca, w które się wybierasz.", img: "/landing/step-city.png", ar: "430 / 872" },
+    { num: "02", title: "Przeglądaj lokalne miejsca", desc: "Kawiarnie, muzea, bary, widoki. Dodawaj to co Cię kręci - sam albo ze znajomymi.", img: "/landing/step-browse-swipe.png", ar: "608 / 1340" },
+    { num: "03", title: "Trasa gotowa w minutę", desc: "Trasa układa gotowy plan dnia z kolejnością, mapą i godzinami. Ty tylko ruszasz w miasto.", img: "/landing/step-route.png", ar: "430 / 872" },
   ];
 
   const FOR_WHOM = [
     { icon: <Compass className="h-7 w-7 text-orange-600" />, title: "Solo odkrywanie", desc: "Poznawaj swoje miasto na nowo. Odkrywaj lokalne miejsca we własnym tempie i twórz własne trasy." },
     { avatars: true, title: "Ze znajomymi", desc: "Planujcie wspólnie - każdy dodaje co lubi, a trasa godzi wszystkich w jeden plan." },
-    { icon: <Zap className="h-6 w-6 text-orange-600" />, title: "Spontaniczne wypady", desc: "Wolny wieczór? W minutę masz gotowy plan na odkrywanie okolicy." },
+    { places: true, title: "Spontaniczne wypady", desc: "Wolny wieczór? W minutę masz gotowy plan na odkrywanie okolicy." },
   ];
 
   return (
@@ -366,7 +358,7 @@ const LandingPage = () => {
               <FadeIn key={i} delay={i * 80}>
                 <div className={`grid grid-cols-1 md:grid-cols-2 gap-12 items-center`}>
                   <div className={`flex justify-center ${i % 2 === 1 ? "md:order-2" : ""}`}>
-                    <StepPhone src={step.img} />
+                    <StepPhone src={step.img} ar={step.ar} />
                   </div>
                   <div className={`text-center md:text-left ${i % 2 === 1 ? "md:order-1" : ""}`}>
                     <p className="text-[10px] font-black text-orange-400 tracking-widest mb-2">{step.num}</p>
@@ -416,6 +408,8 @@ const LandingPage = () => {
                 <div className="flex gap-4 p-6 rounded-3xl bg-card border border-border/40 shadow-sm h-full items-start transition-shadow hover:shadow-md hover:shadow-orange-100/40">
                   {"avatars" in item ? (
                     <div className="shrink-0 pt-0.5"><AvatarStack /></div>
+                  ) : "places" in item ? (
+                    <div className="shrink-0 pt-0.5"><PlaceStack /></div>
                   ) : (
                     <div className="h-12 w-12 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0">
                       {item.icon}
