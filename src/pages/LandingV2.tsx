@@ -309,7 +309,7 @@ const LandingV2 = () => {
                 <div aria-hidden className="absolute -inset-6 -z-10 rounded-full opacity-70" style={{ background: "radial-gradient(58% 48% at 50% 56%, rgba(249,102,43,0.16), transparent 74%)", filter: "blur(34px)" }} />
                 <video
                   ref={el => { if (!el) return; el.muted = true; el.play().catch(() => {}); }}
-                  src="/Animacja_landing_dla_firm_mini.mp4"
+                  src="/landing/hero-anim.mp4"
                   autoPlay muted loop playsInline preload="auto"
                   className="block h-auto"
                   style={{ width: "clamp(270px,40vw,320px)", mixBlendMode: "multiply", transform: "translateZ(0)" }}
