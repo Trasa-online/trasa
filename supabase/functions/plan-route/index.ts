@@ -79,7 +79,7 @@ function buildRouteExamplesContext(examples: any[]): string {
   return `## 🏆 WZORCOWE TRASY (zatwierdzone przez redakcję TRASA)\nPoniższe trasy zostały ocenione jako idealne dla Krakowa. Planuj w podobnym rytmie, logice geograficznej i strukturze dnia:\n\n${lines.join("\n\n")}`;
 }
 
-function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, _userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string, superLikedPlaces?: string[], previousDayPlaces?: string[], previousDayCategoryCounts?: Record<string, number>, restrictToLiked?: boolean, extendMode?: boolean): string {
+function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, _userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string, superLikedPlaces?: string[], previousDayPlaces?: string[], previousDayCategoryCounts?: Record<string, number>, restrictToLiked?: boolean, extendMode?: boolean, likedPlacesGeo?: string): string {
   const timeInfo = currentTime ? `- Aktualna godzina: ${currentTime} — planuj miejsca dostępne od tej pory, nie zaczynaj od miejsc które są już zamknięte lub których opening hours zaczyna się wcześniej` : "";
   const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}${currentTime ? " (dziś)" : ""}` : "";
   const cityInfo = preferences.city?.trim() ? `- Destynacja: ${preferences.city.trim()}` : "";
@@ -139,7 +139,7 @@ User właśnie wrócił z swipera z dodatkowymi polubionymi miejscami i chce, ż
 
 2. **DODAJ wszystkie nowe polubione miejsca do planu - TO JEST CEL EXTEND:**
    - Najpierw wypełnij puste dni (\`pins: []\`).
-   - Jeśli NIE MA pustych dni LUB zostały nierozdzielone polubienia - DOPISZ je do istniejących dni (zwykle na końcu dnia, z późniejszym \`suggested_time\`), z zachowaniem heurystyk H1, H4-H6, H8 (klaster dzielnicowy, godziny otwarcia, logika przejść). Przelicz godziny i kolejność tak, żeby dzień był spójny.
+   - Jeśli NIE MA pustych dni LUB zostały nierozdzielone polubienia - DOPISZ je do istniejących dni (zwykle na końcu dnia, z późniejszym \`suggested_time\`), z zachowaniem heurystyk H1-H5 (rytm dnia, klaster/minimalizacja dystansu, kolacja blisko, logika przejść, godziny otwarcia). Przelicz godziny i kolejność tak, żeby dzień był spójny.
 
 3. **Używaj WYŁĄCZNIE polubionych miejsc** (lista poniżej "🔒 TYLKO TE MIEJSCA" lub "🎯 MIEJSCA DO UWZGLĘDNIENIA"). Nie wymyślaj nowych nazw, nie dodawaj generycznych haseł.
 
@@ -193,36 +193,38 @@ Jeśli masz wszystko — przejdź bezpośrednio do generowania planu.
 
 ## HEURYSTYKI PLANOWANIA — OBOWIĄZKOWE
 
-### H1. STRUKTURA ENERGETYCZNA DNIA
-Każdy dzień powinien mieć naturalny rytm:
+### H1. RYTM DNIA (wzorzec, NIE sztywny szablon)
+Dzień powinien mieć naturalny łuk energii, ale DOSTOSUJ go do typu dnia i profilu usera - nie wpychaj na siłę każdej fazy.
 
-Faza START: Landmark / spacer / zabytek
-Faza LUNCH: Restauracja
-Faza ODKRYWANIE: Dzielnica / kultura / park
-Faza RESET: Kawiarnia / chill / odpoczynek
-Faza KULMINACJA: Kolacja + widok / wieczorny spacer
+Typowy łuk (punkt wyjścia, nie obowiązek):
+- Rozgrzewka: landmark / spacer / zabytek
+- Posiłek w środku dnia: restauracja / lunch
+- Odkrywanie: dzielnica / kultura / park
+- Reset: kawiarnia / chill / odpoczynek
+- Kulminacja wieczorem: kolacja + widok / wieczorny spacer
 
-Ramy czasowe dopasuj do tego co user podał (godziny aktywności) — bez sztywnych przedziałów.
+WAŻNE: dzień foodie może mieć 3 knajpy zamiast 1 landmarka; dzień muzealny - 2-3 muzea z kawą między nimi; dzień relaksu - park + kawiarnie bez „atrakcji". Kieruj się tym CO user polubił i jego priorytetami, nie sztywnym schematem. Ramy czasowe z godzin aktywności usera - bez sztywnych przedziałów.
 
-### H4. KLASTER DZIELNICOWY
+### H2. KLASTER I MINIMALIZACJA DYSTANSU (masz REALNE współrzędne — użyj ich!)
 - Grupuj miejsca w promieniu 1–1.5 km od siebie
 - Max 1 większy przeskok (>2 km) dziennie — tylko jeśli jest logiczne uzasadnienie
-- ZŁY przykład: Wawel → Nowa Huta → Kazimierz → Podgórze (skakanie po mapie)
-- DOBRY przykład: Wawel → Kazimierz → Podgórze (naturalna ciągłość)
+- Kolejność pinów w dniu MINIMALIZUJE łączny dystans pieszy: z każdego punktu idź do NAJBLIŻSZEGO sensownego następnego (nearest-neighbor). NIE skacz tam i z powrotem po mapie.
+- Policz odległości z podanych niżej współrzędnych [lat, lng] - masz je dokładne, więc nie ma wymówki na „za daleko".
+- ZŁY przykład: A → (5 km) → B → (wracasz obok A) → C. DOBRY: A → B → C w jednym kierunku, ciągłość geograficzna.${likedPlacesGeo ? `\n\n**Realne współrzędne miejsc (użyj do układania kolejności ORAZ wpisz DOKŁADNIE te wartości w latitude/longitude każdego pinu — nie zmieniaj ich):**\n${likedPlacesGeo}` : ""}
 
-### H5. KOLACJA BLISKO OSTATNIEJ ATRAKCJI
+### H3. KOLACJA BLISKO OSTATNIEJ ATRAKCJI
 - Restauracja na kolację: max 800 m od poprzedniego punktu dnia
 - Kolacja nie może wymagać 25-minutowego marszu przez miasto
 
-### H6. LOGIKA PRZEJŚĆ
+### H4. LOGIKA PRZEJŚĆ
 - Każde przejście między punktami: < 20 min pieszo (ok. 1.4 km)
 - Wyjątek: max 1 dłuższe przejście dziennie (transport, wyjazd z centrum)
 - Przejścia muszą mieć sens geograficzny — nie skaczemy po mapie
 
-### H8. GODZINY OTWARCIA
+### H5. GODZINY OTWARCIA
 - Muzea: zwykle 10:00–18:00; nie planuj wizyty po 16:00 jeśli trwa 2h+
 - Poniedziałki: wiele muzeów zamkniętych — sprawdź przed wstawieniem
-${preferences.numDays > 1 ? `### H14. MULTI-DAY — ZASADY CAŁEJ PODRÓŻY (OBOWIĄZKOWE)
+${preferences.numDays > 1 ? `### H8. MULTI-DAY — ZASADY CAŁEJ PODRÓŻY (OBOWIĄZKOWE)
 
 **Koniec dnia blisko noclegu/transportu:**
 - Ostatnie 1-2 miejsca każdego dnia (oprócz ostatniego dnia) powinny być geograficznie blisko noclegu lub dworca/przystanku
@@ -240,12 +242,12 @@ ${preferences.numDays > 1 ? `### H14. MULTI-DAY — ZASADY CAŁEJ PODRÓŻY (OBO
 **Poinformuj usera o strukturze:**
 Gdy generujesz pierwszy plan dla całej podróży, dodaj PRZED blokiem planu JEDEN krótki akapit (2-3 zdania) jak rozłożyłeś poszczególne dni (np. "Dzień 1 — Stare Miasto, Dzień 2 — Kazimierz i Podgórze, Dzień 3 — Nowa Huta").
 
-` : ""}### H12. ADAPTACJA POGODOWA
+` : ""}### H6. ADAPTACJA POGODOWA
 Jeśli user wspomni o pogodzie lub możesz wnioskować z daty/miejsca:
 - Deszcz: zamień spacery outdoor → muzeum / galeria / kryty market
 - Upał: więcej miejsc z cieniem/klimatyzacją, spacer późnym popołudniem (po 17:00)
 
-### H13. WEEKENDOWA LOGIKA TŁUMÓW
+### H7. WEEKENDOWA LOGIKA TŁUMÓW
 Jeśli data to sobota lub niedziela:
 - Główne atrakcje (Rynek, Wawel, Stare Miasto itp.): planuj na 10:00–11:30 lub po 16:00
 - Unikaj flagowych turystycznych miejsc między 12:00–15:00 — zaproponuj alternatywę
@@ -307,7 +309,7 @@ ZASADY FORMATU:
   ⛔ ZAKAZ generycznych ogólników bez konkretów ("ułożyłam wokół Twoich polubień", "idealna/dopasowana trasa", "świetny dzień"). Musisz cytować REALNE nazwy miejsc i liczby z pól planu (place_name, suggested_time, walking_time_from_prev, day_metrics). NIE wymyślaj faktów - jeśli czegoś nie wiesz (np. dokładnej godziny), oprzyj się na kolejności/bliskości.
   Ton ciepły, druga osoba. Bez długiego myślnika (— ani –), używaj "-" lub ":". Polskie sieroty: po pojedynczych literach a, i, o, u, w, z wstaw twardą spację (NBSP, U+00A0).
 - day_metrics.total_walking_km: szacunkowa łączna odległość pieszego (suma distance_from_prev + wizyty) w km
-- day_metrics.crowd_level: "low" | "medium" | "high" — na podstawie dat, popularności i heurystyk H13
+- day_metrics.crowd_level: "low" | "medium" | "high" — na podstawie dat, popularności i heurystyki H7 (weekendowa logika tłumów)
 - day_metrics.energy_cost: "low" | "medium" | "high" — na podstawie liczby punktów i długości dnia
 - Pierwszy pin każdego dnia: walking_time_from_prev = null, distance_from_prev = null
 - Każdy kolejny pin: szacuj walking_time_from_prev i distance_from_prev na podstawie znajomości miasta (tempo piesze ~75 m/min = ~1.2 km w 15 min)
@@ -712,7 +714,13 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     }
 
     const isToday = current_date && preferences.startDate && preferences.startDate === current_date;
-    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined, super_liked_places ?? undefined, previousDayPlaces.length > 0 ? previousDayPlaces : undefined, Object.keys(previousDayCategoryCounts).length > 0 ? previousDayCategoryCounts : undefined, restrict_to_liked ?? false, extend_mode ?? false);
+    // Realne wspolrzedne polubionych miejsc (z bazy) do promptu - model klastruje po prawdziwej
+    // geografii zamiast zgadywac z nazw (bylo: piny za daleko od siebie, user musial poprawiac uklad).
+    const likedGeoStr = (liked_places_data ?? [])
+      .filter((p: { place_name?: string; latitude?: number; longitude?: number }) => p?.place_name && p.latitude != null && p.longitude != null)
+      .map((p: { place_name: string; latitude: number; longitude: number; address?: string }) => `- ${p.place_name}: [${Number(p.latitude).toFixed(4)}, ${Number(p.longitude).toFixed(4)}]${p.address ? ` (${p.address})` : ""}`)
+      .join("\n");
+    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined, super_liked_places ?? undefined, previousDayPlaces.length > 0 ? previousDayPlaces : undefined, Object.keys(previousDayCategoryCounts).length > 0 ? previousDayCategoryCounts : undefined, restrict_to_liked ?? false, extend_mode ?? false, likedGeoStr || undefined);
 
     // Call AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -981,16 +989,20 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       }
     }
 
-    // Ground plan with real Google Places data (skip on force_plan for faster initial load)
-    if (plan && !force_plan) {
+    // Uziem piny realnymi wspolrzednymi. Na force_plan tylko z bazy (freeOnly - zero platnego
+    // Google, szybki initial load); poza tym pelne gruntowanie (Google Text Search dla miejsc
+    // spoza polubionych). Potem przelicz REALNE odleglosci pieszo (haversine) - koniec z
+    // liczbami zmyslonymi przez model i planami gdzie punkty sa za daleko od siebie.
+    if (plan) {
       const GOOGLE_API_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
       if (GOOGLE_API_KEY) {
         try {
-          plan = await verifyAndGroundPlan(plan, GOOGLE_API_KEY, liked_places_data);
+          plan = await verifyAndGroundPlan(plan, GOOGLE_API_KEY, liked_places_data, force_plan === true);
         } catch (err) {
           console.error("Places grounding failed, using AI data:", err);
         }
       }
+      plan = recomputeDistances(plan);
     }
 
     // Detect when AI is about to prepare a plan but hasn't generated one yet
@@ -1034,7 +1046,7 @@ function normName(s: string): string {
   return (s ?? "").toLowerCase().trim().replace(/\s+/g, " ");
 }
 
-async function verifyPin(pin: any, city: string, apiKey: string, likedCoordMap?: Map<string, { lat: number; lng: number; place_id?: string | null }>): Promise<any> {
+async function verifyPin(pin: any, city: string, apiKey: string, likedCoordMap?: Map<string, { lat: number; lng: number; place_id?: string | null }>, freeOnly = false): Promise<any> {
   // KROK 0: Uziem pin REALNYMI wspolrzednymi polubionego miejsca (z bazy `places`), jesli
   // je mamy. To autorytatywne i DARMOWE - omija Google Text Search, ktory bral pierwszy
   // wynik dla "nazwa + miasto" (czesto inne miejsce o tej samej nazwie -> piny w zlych
@@ -1048,6 +1060,10 @@ async function verifyPin(pin: any, city: string, apiKey: string, likedCoordMap?:
       ...(known.place_id ? { place_id: known.place_id } : {}),
     };
   }
+
+  // freeOnly: uziemiamy tylko z bazy (polubione) - bez platnego Google Text Search.
+  // Uzywane na force_plan (szybki initial load) - piny spoza polubionych zostaja z coordami AI.
+  if (freeOnly) return pin;
 
   try {
     // Search by AI-suggested name + city
@@ -1081,7 +1097,7 @@ async function verifyPin(pin: any, city: string, apiKey: string, likedCoordMap?:
   }
 }
 
-async function verifyAndGroundPlan(plan: any, apiKey: string, likedData?: any[]): Promise<any> {
+async function verifyAndGroundPlan(plan: any, apiKey: string, likedData?: any[], freeOnly = false): Promise<any> {
   // Mapa: znormalizowana nazwa polubionego miejsca -> jego REALNE wspolrzedne (z bazy).
   const likedCoordMap = new Map<string, { lat: number; lng: number; place_id?: string | null }>();
   for (const item of (likedData ?? [])) {
@@ -1093,9 +1109,44 @@ async function verifyAndGroundPlan(plan: any, apiKey: string, likedData?: any[])
     (plan.days ?? []).map(async (day: any) => ({
       ...day,
       pins: await Promise.all(
-        (day.pins ?? []).map((pin: any) => verifyPin(pin, plan.city ?? "", apiKey, likedCoordMap))
+        (day.pins ?? []).map((pin: any) => verifyPin(pin, plan.city ?? "", apiKey, likedCoordMap, freeOnly))
       ),
     }))
   );
   return { ...plan, days: verifiedDays };
+}
+
+// Przelicza REALNE odleglosci pieszo (haversine) miedzy kolejnymi pinami z ich wspolrzednych,
+// zamiast liczb zmyslonych przez model. Tempo pieszo ~75 m/min. Aktualizuje tez
+// day_metrics.total_walking_km. Wolane PO ugruntowaniu (coordy sa juz realne).
+function recomputeDistances(plan: any): any {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const havKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }): number => {
+    const R = 6371;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
+  };
+  for (const day of plan?.days ?? []) {
+    let prev: { lat: number; lng: number } | null = null;
+    let totalKm = 0;
+    for (const pin of day?.pins ?? []) {
+      const lat = Number(pin.latitude);
+      const lng = Number(pin.longitude);
+      const valid = Number.isFinite(lat) && Number.isFinite(lng);
+      if (prev && valid) {
+        const km = havKm(prev, { lat, lng });
+        pin.distance_from_prev = km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+        pin.walking_time_from_prev = `${Math.max(1, Math.round((km * 1000) / 75))} min`;
+        totalKm += km;
+      } else {
+        pin.walking_time_from_prev = null;
+        pin.distance_from_prev = null;
+      }
+      if (valid) prev = { lat, lng };
+    }
+    if (day.day_metrics) day.day_metrics.total_walking_km = Math.round(totalKm * 10) / 10;
+  }
+  return plan;
 }
