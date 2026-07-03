@@ -169,43 +169,46 @@ const LandingV2 = () => {
   return (
     <div className="relative min-h-[100dvh] overflow-x-hidden bg-[#FEFEFE] text-foreground">
       <Ambient />
+      {/* delikatny radialny gradient przy stopce (1:1 jak /dla-firm, wersja ciepla) */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 -z-[1] h-[1200px]"
+        style={{ background: "radial-gradient(ellipse 72% 55% at 50% 100%, #FFE6CC 0%, #FFF3E9 42%, transparent 78%)" }} />
 
       {/* ── Nav ── */}
       <nav className="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl">
-        <div className="flex items-center gap-3 rounded-full bg-white/70 backdrop-blur-xl px-4 h-14 ring-1 ring-black/5 shadow-[0_10px_40px_-12px_rgba(120,50,10,0.25)]">
+        <div className="flex items-center gap-3 rounded-full bg-[#0E0E0E]/95 backdrop-blur-xl px-4 h-14 ring-1 ring-white/10 shadow-[0_14px_44px_-12px_rgba(0,0,0,0.5)]">
           <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center pl-1" aria-label="Trasa">
             <img src="/Icon_Trasa.png" alt="Trasa" className="h-6 w-auto" draggable={false} />
           </button>
           <div className="hidden sm:flex items-center gap-1 ml-1">
             {links.map(l => (
-              <button key={l.id} onClick={() => document.getElementById(l.id)?.scrollIntoView({ behavior: "smooth" })} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground rounded-full hover:bg-black/[0.04] transition-colors whitespace-nowrap">{l.label}</button>
+              <button key={l.id} onClick={() => document.getElementById(l.id)?.scrollIntoView({ behavior: "smooth" })} className="px-3 py-2 text-sm text-white/60 hover:text-white rounded-full hover:bg-white/10 transition-colors whitespace-nowrap">{l.label}</button>
             ))}
           </div>
           <div className="flex-1" />
-          <a href="/dla-firm" className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors whitespace-nowrap">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> Dla firm
+          <a href="/dla-firm" className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full bg-blue-500/15 text-blue-300 ring-1 ring-blue-400/20 hover:bg-blue-500/25 transition-colors whitespace-nowrap">
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-400" /> Dla firm
           </a>
-          <button onClick={() => navigate("/auth")} className="group hidden sm:inline-flex items-center gap-2 text-sm font-semibold pl-4 pr-1.5 py-1.5 rounded-full bg-foreground text-white transition-transform duration-500 hover:-translate-y-0.5 active:scale-[0.98]" style={{ transitionTimingFunction: EASE }}>
+          <button onClick={() => navigate("/auth")} className="group hidden sm:inline-flex items-center gap-2 text-sm font-semibold pl-4 pr-1.5 py-1.5 rounded-full bg-white text-[#0E0E0E] transition-transform duration-500 hover:-translate-y-0.5 active:scale-[0.98]" style={{ transitionTimingFunction: EASE }}>
             Zaloguj się
-            <span className="flex items-center justify-center h-8 w-8 rounded-full bg-white/15 transition-transform duration-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" style={{ transitionTimingFunction: EASE }}>
+            <span className="flex items-center justify-center h-8 w-8 rounded-full bg-black/[0.06] transition-transform duration-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" style={{ transitionTimingFunction: EASE }}>
               <ArrowUpRight className="h-4 w-4" strokeWidth={1.75} />
             </span>
           </button>
-          <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-9 w-9 rounded-full bg-black/[0.05] hover:bg-black/10 transition-colors" aria-label="Menu">
+          <button onClick={() => setMenuOpen(o => !o)} className="sm:hidden flex items-center justify-center h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 transition-colors" aria-label="Menu">
             <div className="relative h-4 w-4">
-              <span className="absolute left-0 top-1/2 h-[2px] w-4 bg-foreground rounded-full transition-all duration-500" style={{ transform: menuOpen ? "translateY(-50%) rotate(45deg)" : "translateY(-4px)", transitionTimingFunction: EASE }} />
-              <span className="absolute left-0 top-1/2 h-[2px] w-4 bg-foreground rounded-full transition-all duration-500" style={{ transform: menuOpen ? "translateY(-50%) rotate(-45deg)" : "translateY(3px)", transitionTimingFunction: EASE }} />
+              <span className="absolute left-0 top-1/2 h-[2px] w-4 bg-white rounded-full transition-all duration-500" style={{ transform: menuOpen ? "translateY(-50%) rotate(45deg)" : "translateY(-4px)", transitionTimingFunction: EASE }} />
+              <span className="absolute left-0 top-1/2 h-[2px] w-4 bg-white rounded-full transition-all duration-500" style={{ transform: menuOpen ? "translateY(-50%) rotate(-45deg)" : "translateY(3px)", transitionTimingFunction: EASE }} />
             </div>
           </button>
         </div>
         {menuOpen && (
-          <div className="sm:hidden mt-2 rounded-3xl bg-white/90 backdrop-blur-xl ring-1 ring-black/5 shadow-xl overflow-hidden">
+          <div className="sm:hidden mt-2 rounded-3xl bg-[#0E0E0E]/95 backdrop-blur-xl ring-1 ring-white/10 shadow-xl overflow-hidden">
             <div className="flex flex-col p-2">
               {links.map((l, i) => (
-                <button key={l.id} onClick={() => { document.getElementById(l.id)?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="px-4 py-3 text-sm text-foreground/80 hover:bg-black/[0.04] rounded-2xl text-left transition-colors" style={{ animation: `fadeUp 0.5s ${EASE} ${i * 60}ms both` }}>{l.label}</button>
+                <button key={l.id} onClick={() => { document.getElementById(l.id)?.scrollIntoView({ behavior: "smooth" }); setMenuOpen(false); }} className="px-4 py-3 text-sm text-white/70 hover:bg-white/10 rounded-2xl text-left transition-colors" style={{ animation: `fadeUp 0.5s ${EASE} ${i * 60}ms both` }}>{l.label}</button>
               ))}
-              <a href="/dla-firm" className="px-4 py-3 text-sm font-bold text-blue-700 hover:bg-black/[0.04] rounded-2xl flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> Dla firm</a>
-              <button onClick={() => { navigate("/auth"); setMenuOpen(false); }} className="mt-1 mx-1 mb-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-foreground text-white text-sm font-semibold"><User className="h-4 w-4" strokeWidth={1.75} /> Zaloguj się</button>
+              <a href="/dla-firm" className="px-4 py-3 text-sm font-bold text-blue-300 hover:bg-white/10 rounded-2xl flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-blue-400" /> Dla firm</a>
+              <button onClick={() => { navigate("/auth"); setMenuOpen(false); }} className="mt-1 mx-1 mb-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white text-[#0E0E0E] text-sm font-semibold"><User className="h-4 w-4" strokeWidth={1.75} /> Zaloguj się</button>
             </div>
           </div>
         )}
@@ -253,29 +256,24 @@ const LandingV2 = () => {
             <Eyebrow>Jak to działa</Eyebrow>
             <h2 className="font-display font-extrabold text-foreground text-[clamp(2rem,5vw,3.25rem)] tracking-[-0.02em] leading-tight max-w-[16ch]">Od pomysłu do trasy w&nbsp;trzech krokach</h2>
           </Reveal>
-          <div className="flex flex-col gap-24 sm:gap-32">
-            {STEPS.map((s, i) => {
-              const flip = i % 2 === 1;
-              return (
-                <Reveal key={i}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
-                    <div className={`flex justify-center ${flip ? "md:order-2" : ""}`}>
-                      <Phone width={210} ar={s.ar} float rotate={flip ? 2.5 : -2.5}>
-                        <img src={s.img} alt="" className="absolute inset-0 w-full h-full object-cover object-top" draggable={false} />
-                      </Phone>
-                    </div>
-                    <div className={`text-center md:text-left ${flip ? "md:order-1" : ""}`}>
-                      <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-orange-500">
-                        <span className="font-display text-2xl font-extrabold text-transparent bg-gradient-to-br from-[#F4A259] to-[#F9662B] bg-clip-text">{s.num}</span>
-                        {s.kicker}
-                      </span>
-                      <h3 className="mt-3 font-display font-extrabold text-foreground text-[clamp(1.6rem,3vw,2.25rem)] tracking-[-0.02em] leading-tight max-w-[16ch] mx-auto md:mx-0">{s.title}</h3>
-                      <p className="mt-4 text-base text-muted-foreground leading-relaxed max-w-[40ch] mx-auto md:mx-0">{s.desc}</p>
-                    </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {STEPS.map((s, i) => (
+              <Reveal key={i} delay={i * 110}>
+                <div className="group h-full rounded-[2rem] bg-white/50 p-1.5 ring-1 ring-black/5 backdrop-blur-sm transition-transform duration-500 hover:-translate-y-1.5" style={{ transitionTimingFunction: EASE, boxShadow: "0 34px 64px -34px rgba(120,50,10,0.28)" }}>
+                  <div className="h-full rounded-[calc(2rem-0.375rem)] bg-white/80 px-6 pt-9 pb-9 flex flex-col items-center text-center">
+                    <Phone width={188} ar={s.ar} float rotate={i === 0 ? -2.5 : i === 2 ? 2.5 : 0}>
+                      <img src={s.img} alt="" className="absolute inset-0 w-full h-full object-cover object-top" draggable={false} />
+                    </Phone>
+                    <span className="mt-9 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-orange-500">
+                      <span className="font-display text-xl font-extrabold text-transparent bg-gradient-to-br from-[#F4A259] to-[#F9662B] bg-clip-text">{s.num}</span>
+                      {s.kicker}
+                    </span>
+                    <h3 className="mt-2.5 font-display font-extrabold text-foreground text-[clamp(1.4rem,2.4vw,1.8rem)] tracking-[-0.02em] leading-tight">{s.title}</h3>
+                    <p className="mt-3 text-[15px] text-muted-foreground leading-relaxed max-w-[32ch]">{s.desc}</p>
                   </div>
-                </Reveal>
-              );
-            })}
+                </div>
+              </Reveal>
+            ))}
           </div>
         </div>
       </section>
