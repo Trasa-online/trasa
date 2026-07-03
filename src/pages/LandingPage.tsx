@@ -119,12 +119,21 @@ function HeroPhone() {
   );
 }
 
-// Krok: prawdziwy screenshot apki w ramce telefonu
+// Krok: prawdziwy screenshot apki w ramce telefonu.
+// Ekran ma aspect screenshotu (430:872) - dzieki temu object-cover NIE przycina
+// bokow i padding aplikacji zostaje zachowany. Plus wyrazny bezel.
 function StepPhone({ src }: { src: string }) {
   return (
-    <PhoneFrame width={182}>
-      <img src={src} alt="" className="w-full h-full object-cover object-top" draggable={false} />
-    </PhoneFrame>
+    <div className="relative mx-auto" style={{ width: 184 }}>
+      <div className="relative bg-[#0E0E0E] rounded-[30px] p-[9px] shadow-2xl shadow-orange-950/25">
+        {/* Dynamic Island */}
+        <div className="absolute top-[10px] left-1/2 -translate-x-1/2 w-[54px] h-[13px] bg-black rounded-full z-10" />
+        {/* Screen */}
+        <div className="relative overflow-hidden rounded-[22px]" style={{ aspectRatio: "430 / 872" }}>
+          <img src={src} alt="" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+        </div>
+      </div>
+    </div>
   );
 }
 
