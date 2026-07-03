@@ -304,9 +304,17 @@ const LandingV2 = () => {
               </Reveal>
             </div>
             <Reveal delay={200} className="flex justify-center md:justify-end">
-              <Phone width={272} float>
-                <video src="/demo.mp4" poster="/landing/hero-poster.png" autoPlay muted loop playsInline preload="metadata" className="absolute left-0 w-full object-cover" style={{ top: "-5.5%", height: "105.5%" }} />
-              </Phone>
+              {/* Ta sama animacja co na /dla-firm/landing: wideo z mixBlendMode multiply (biale tlo znika, animacja "plywa" bez sztywnej ramki) */}
+              <div className="relative select-none" style={{ animation: "floatY 7s ease-in-out infinite" }}>
+                <div aria-hidden className="absolute -inset-6 -z-10 rounded-full opacity-70" style={{ background: "radial-gradient(58% 48% at 50% 56%, rgba(249,102,43,0.16), transparent 74%)", filter: "blur(34px)" }} />
+                <video
+                  ref={el => { if (!el) return; el.muted = true; el.play().catch(() => {}); }}
+                  src="/Animacja_landing_dla_firm_mini.mp4"
+                  autoPlay muted loop playsInline preload="auto"
+                  className="block h-auto"
+                  style={{ width: "clamp(270px,40vw,320px)", mixBlendMode: "multiply", transform: "translateZ(0)" }}
+                />
+              </div>
             </Reveal>
           </div>
         </div>
