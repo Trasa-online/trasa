@@ -77,23 +77,23 @@ function Phone({ width = 260, ar = "430 / 872", float = false, rotate = 0, child
       <div className="relative bg-[#0E0E0E]" style={{ padding: b, borderRadius: Math.round(width * 0.155), boxShadow: "0 40px 90px -30px rgba(120,50,10,0.35), 0 12px 30px -12px rgba(120,50,10,0.18)" }}>
         <div className="relative flex flex-col overflow-hidden bg-[#F4F4F5]" style={{ aspectRatio: ar, borderRadius: Math.round(width * 0.125) }}>
           {/* status bar */}
-          <div className="relative z-10 flex shrink-0 items-center justify-between" style={{ paddingLeft: width * 0.075, paddingRight: width * 0.06, paddingTop: width * 0.042, paddingBottom: width * 0.012 }}>
-            <span className="font-semibold" style={{ color: dark, fontSize: width * 0.05, lineHeight: 1 }}>9:41</span>
-            <div className="flex items-center" style={{ gap: width * 0.018 }}>
-              <svg width={width * 0.075} viewBox="0 0 20 13" fill={dark}><rect x="0" y="9" width="3.2" height="4" rx="1" /><rect x="5.6" y="6" width="3.2" height="7" rx="1" /><rect x="11.2" y="3" width="3.2" height="10" rx="1" /><rect x="16.8" y="0" width="3.2" height="13" rx="1" /></svg>
-              <svg width={width * 0.07} viewBox="0 0 18 13" fill={dark}><path d="M9 2.2c2.9 0 5.6 1.1 7.6 3l-1.5 1.5A8.6 8.6 0 0 0 9 5.2 8.6 8.6 0 0 0 2.9 6.7L1.4 5.2A10.8 10.8 0 0 1 9 2.2Z" /><path d="M9 6.7c1.7 0 3.3.7 4.5 1.8l-1.6 1.6A4 4 0 0 0 9 9a4 4 0 0 0-2.9 1.1L4.5 8.5A6.4 6.4 0 0 1 9 6.7Z" /><circle cx="9" cy="11.3" r="1.4" /></svg>
-              <div className="flex items-center" style={{ gap: width * 0.004 }}>
-                <div className="flex items-center rounded-[3px]" style={{ width: width * 0.11, height: width * 0.055, padding: width * 0.008, border: `1.3px solid ${dark}80` }}>
-                  <div className="h-full rounded-[1.5px]" style={{ width: "65%", background: dark }} />
+          <div className="relative z-10 flex shrink-0 items-center justify-between" style={{ paddingLeft: width * 0.07, paddingRight: width * 0.055, paddingTop: width * 0.032, paddingBottom: width * 0.014 }}>
+            <span className="font-semibold" style={{ color: dark, fontSize: width * 0.04, lineHeight: 1 }}>9:41</span>
+            <div className="flex items-center" style={{ gap: width * 0.012 }}>
+              <svg width={width * 0.048} viewBox="0 0 20 13" fill={dark}><rect x="0" y="9" width="3.2" height="4" rx="1" /><rect x="5.6" y="6" width="3.2" height="7" rx="1" /><rect x="11.2" y="3" width="3.2" height="10" rx="1" /><rect x="16.8" y="0" width="3.2" height="13" rx="1" /></svg>
+              <svg width={width * 0.044} viewBox="0 0 18 13" fill={dark}><path d="M9 2.2c2.9 0 5.6 1.1 7.6 3l-1.5 1.5A8.6 8.6 0 0 0 9 5.2 8.6 8.6 0 0 0 2.9 6.7L1.4 5.2A10.8 10.8 0 0 1 9 2.2Z" /><path d="M9 6.7c1.7 0 3.3.7 4.5 1.8l-1.6 1.6A4 4 0 0 0 9 9a4 4 0 0 0-2.9 1.1L4.5 8.5A6.4 6.4 0 0 1 9 6.7Z" /><circle cx="9" cy="11.3" r="1.4" /></svg>
+              <div className="flex items-center" style={{ gap: width * 0.003 }}>
+                <div className="flex items-center rounded-[2px]" style={{ width: width * 0.07, height: width * 0.036, padding: width * 0.005, border: `1px solid ${dark}80` }}>
+                  <div className="h-full rounded-[1px]" style={{ width: "65%", background: dark }} />
                 </div>
-                <div className="rounded-full" style={{ width: width * 0.008, height: width * 0.022, background: `${dark}66` }} />
+                <div className="rounded-full" style={{ width: width * 0.006, height: width * 0.015, background: `${dark}66` }} />
               </div>
             </div>
           </div>
           {/* app content */}
           <div className="relative flex-1">{children}</div>
           {/* dynamic island */}
-          <div className="absolute left-1/2 -translate-x-1/2 z-20 rounded-full bg-black" style={{ top: width * 0.02, width: width * 0.28, height: width * 0.062 }} />
+          <div className="absolute left-1/2 -translate-x-1/2 z-20 rounded-full bg-black" style={{ top: width * 0.022, width: width * 0.24, height: width * 0.052 }} />
         </div>
       </div>
     </div>
