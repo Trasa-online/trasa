@@ -151,6 +151,33 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
   const [drafts, setDrafts] = useState<DraftRoute[]>([]);
   useEffect(() => { setDrafts(getDrafts()); }, []);
 
+  // Miniaturka miasta dla draftu: reprezentacyjne zdjecie miejsca z tego miasta (priorytet
+  // landmarki - monument/viewpoint/muzeum), zamiast generycznej ikony kompasu.
+  const draftCities = useMemo(() => [...new Set(drafts.map((d) => d.city).filter(Boolean))], [drafts]);
+  const { data: draftCityPhotos = {} } = useQuery({
+    queryKey: ["draft-city-photos", draftCities.join(",")],
+    enabled: draftCities.length > 0,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("places")
+        .select("city, photo_url, category")
+        .in("city", draftCities)
+        .eq("is_active", true)
+        .not("photo_url", "is", null);
+      const PRIO = ["monument", "viewpoint", "museum", "park", "gallery"];
+      const rank = (c: string) => { const i = PRIO.indexOf(c); return i === -1 ? 99 : i; };
+      const byCity: Record<string, string> = {};
+      for (const city of draftCities) {
+        const rows = ((data as any[]) ?? []).filter((r) => r.city === city && r.photo_url);
+        if (!rows.length) continue;
+        rows.sort((a, b) => rank(a.category) - rank(b.category));
+        const url = resolveStored(rows[0].photo_url);
+        if (url) byCity[city] = url;
+      }
+      return byCity as Record<string, string>;
+    },
+  });
+
   // Aktywne trasy SOLO (wlasne, planning/ongoing, bez grupy).
   const { data: soloRoutes = [], isLoading: soloLoading } = useActiveSoloTrips(userId);
 
@@ -435,9 +462,15 @@ export default function ActiveTripsDashboard({ userId }: { userId: string | null
                   onClick={() => navigate("/plan", { state: { step: 4, city: d.city, date: d.date ?? undefined, numDays: d.numDays, startingLocation: d.startingLocation, likedPlaceNames: d.likedPlaceNames } })}
                   className="w-full flex items-center gap-3 rounded-2xl border border-border/40 bg-secondary shadow-sm p-3 text-left active:scale-[0.98] transition-transform"
                 >
-                  <div className="h-10 w-10 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-                    <Compass className="h-5 w-5 text-orange-600" />
-                  </div>
+                  {draftCityPhotos[d.city] ? (
+                    <div className="h-10 w-10 rounded-xl overflow-hidden shrink-0 bg-muted">
+                      <img src={draftCityPhotos[d.city]} alt={d.city} className="w-full h-full object-cover" loading="lazy" />
+                    </div>
+                  ) : (
+                    <div className="h-10 w-10 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
+                      <Compass className="h-5 w-5 text-orange-600" />
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="font-display font-extrabold text-sm leading-tight truncate">Dokończ trasę w&nbsp;{d.city}</p>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">{[dateLabel, placesLabel].filter(Boolean).join(" · ")}</p>

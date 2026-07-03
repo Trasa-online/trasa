@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe, List, GalleryHorizontalEnd, Map as MapIcon, Info, Check, Pencil } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Trash2, Plus, Globe, List, GalleryHorizontalEnd, Map as MapIcon, Info, Check, Pencil, RotateCcw } from "lucide-react";
 import RouteMap from "@/components/RouteMap";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import type { MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -603,8 +603,20 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
             >
               <Trash2 className="h-4 w-4" />
             </button>
-          ) : (!pin.visited_at && !skippedPinIds.has(pin.id) && !isPastDay) ? (
-            // Odhacz jako zielone kolko na zdjeciu (prawy gorny rog).
+          ) : pin.visited_at ? (
+            // Po odhaczeniu: kolko z ikona cofniecia (undo) w tym samym rogu - klik cofa odhaczenie.
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); unmarkVisited(pin.id); }}
+              aria-label="Cofnij odhaczenie"
+              className="absolute top-3 right-3 h-10 w-10 rounded-full bg-black/55 backdrop-blur text-white flex items-center justify-center shadow-lg shadow-black/25 active:scale-90"
+            >
+              <RotateCcw className="h-5 w-5" strokeWidth={2.4} />
+            </span>
+          ) : (!skippedPinIds.has(pin.id) && !isPastDay && !isFutureDay) ? (
+            // Odhacz jako zielone kolko na zdjeciu (prawy gorny rog). Ukryte na przyszly dzien
+            // (trasa jeszcze sie nie zaczela - nie ma czego odhaczac).
             <span
               role="button"
               tabIndex={0}
@@ -621,8 +633,9 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white text-xs font-semibold text-foreground">
               <span>{CATEGORY_EMOJI[pin.category] ?? "📍"}</span>{CATEGORY_LABEL[pin.category] ?? "Miejsce"}
             </span>
-            {/* Nawiguj jako maly bialy pill dosuniety do PRAWEJ krawedzi (ml-auto). */}
-            {pin.latitude && pin.longitude && (
+            {/* Nawiguj jako maly bialy pill dosuniety do PRAWEJ krawedzi (ml-auto).
+                Ukryte na przyszly dzien - trasa jeszcze sie nie zaczela, nie ma dokad nawigowac. */}
+            {pin.latitude && pin.longitude && !isFutureDay && (
               <span
                 role="button"
                 tabIndex={0}
@@ -637,14 +650,6 @@ const ActiveTripPlanEditorInner = ({ routeId, flush = false, onDelete, deleting 
           <p className="text-base font-bold leading-tight">{pin.place_name}</p>
         </div>
       </button>
-      {pin.visited_at && (
-        <button
-          onClick={() => unmarkVisited(pin.id)}
-          className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-border/30 text-xs font-semibold text-muted-foreground active:scale-95 transition-transform"
-        >
-          <RotateCcw className="h-3.5 w-3.5" /> Cofnij odhaczenie
-        </button>
-      )}
       {editable && (
         <div className="flex items-center justify-between px-4 py-3 mt-auto border-t border-border/30">
           <button onClick={() => movePin(i, i - 1)} disabled={i === 0} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground disabled:opacity-25 active:scale-95">

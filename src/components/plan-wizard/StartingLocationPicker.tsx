@@ -235,19 +235,17 @@ const MapWithSearch = ({ city, onConfirm, onSkip }: StartingLocationPickerProps)
   }, [applyGpsPos]);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header text - pt z safe-area zeby nie wchodzic pod status bar iOS (czas/wifi/bateria) */}
-      <div className="px-5 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)] pb-4 space-y-1">
-        <p className="text-3xl font-black leading-tight">
-          Skąd chcesz<br />zacząć?
-        </p>
+    <div className="flex flex-col h-full min-h-0">
+      {/* Header kompaktowy (1 linia) - zeby mapa dostala jak najwiecej wysokosci. Spojne w kazdym miescie. */}
+      <div className="px-5 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 space-y-0.5 shrink-0">
+        <p className="text-2xl font-black leading-tight">Skąd chcesz zacząć?</p>
         <p className="text-sm text-muted-foreground">
           Dobierzemy miejsca blisko Twojej okolicy.
         </p>
       </div>
 
-      {/* Map + search overlay */}
-      <div className="flex-1 relative mx-4 rounded-2xl overflow-hidden">
+      {/* Map + search overlay - flex-1 min-h-0 zeby wypelnic cala dostepna wysokosc (full-height) */}
+      <div className="flex-1 min-h-0 relative mx-4 mb-2 rounded-2xl overflow-hidden">
         <Map
           defaultCenter={center}
           defaultZoom={13}
