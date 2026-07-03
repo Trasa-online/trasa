@@ -146,6 +146,75 @@ function Faq({ items }: { items: { q: string; a: string }[] }) {
   );
 }
 
+// ─── Jak to działa (animowane: telefon gra demo apki, kroki podswietlaja sie w rytm) ─
+
+const STEPS = [
+  { num: "01", kicker: "Krok pierwszy", title: "Wybierz miasto", desc: "Kraków, Gdańsk, Warszawa i więcej. Zacznij od miejsca, w które się wybierasz." },
+  { num: "02", kicker: "Krok drugi", title: "Przeglądaj lokalne miejsca", desc: "Kawiarnie, muzea, bary, widoki. Dodawaj to co Cię kręci: sam albo ze znajomymi." },
+  { num: "03", kicker: "Krok trzeci", title: "Trasa gotowa w minutę", desc: "Trasa układa gotowy plan dnia z kolejnością, mapą i godzinami. Ty tylko ruszasz w miasto." },
+];
+
+function HowItWorks() {
+  const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const vidRef = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    if (paused) return;
+    const t = setInterval(() => setActive(a => (a + 1) % STEPS.length), 3400);
+    return () => clearInterval(t);
+  }, [paused]);
+  const jump = (i: number) => {
+    setActive(i);
+    const v = vidRef.current;
+    if (v && v.duration) { try { v.currentTime = (i / STEPS.length) * v.duration + 0.15; } catch { /* noop */ } }
+  };
+  return (
+    <section id="how" className="relative px-5 py-28 sm:py-36">
+      <div className="mx-auto max-w-6xl">
+        <Reveal className="text-center mb-16 flex flex-col items-center gap-4">
+          <Eyebrow>Jak to działa</Eyebrow>
+          <h2 className="font-display font-extrabold text-foreground text-[clamp(2rem,5vw,3.25rem)] tracking-[-0.02em] leading-tight max-w-[16ch]">Od pomysłu do trasy w&nbsp;trzech krokach</h2>
+        </Reveal>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
+          <Reveal className="flex justify-center md:order-1">
+            <Phone width={278} float>
+              <video ref={vidRef} src="/demo.mp4" poster="/landing/hero-poster.png" autoPlay muted loop playsInline preload="metadata"
+                className="absolute left-0 w-full object-cover" style={{ top: "-5.5%", height: "105.5%" }} />
+            </Phone>
+          </Reveal>
+          <Reveal delay={140} className="md:order-2">
+            <div className="flex flex-col gap-3" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+              {STEPS.map((s, i) => {
+                const on = active === i;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => jump(i)}
+                    className={`group relative text-left rounded-[1.75rem] p-1.5 transition-all duration-700 ${on ? "bg-white/60 ring-1 ring-black/5" : "ring-1 ring-transparent"}`}
+                    style={{ transitionTimingFunction: EASE, boxShadow: on ? "0 22px 50px -32px rgba(120,50,10,0.3)" : "none" }}
+                  >
+                    <div className={`relative overflow-hidden rounded-[1.4rem] px-6 py-5 transition-colors duration-700 ${on ? "bg-white" : ""}`} style={{ transitionTimingFunction: EASE }}>
+                      {on && <span className="absolute left-0 top-4 bottom-4 w-1 rounded-full bg-gradient-to-b from-[#F4A259] to-[#F9662B]" />}
+                      <div className="flex items-center gap-3">
+                        <span className={`flex h-9 w-9 items-center justify-center rounded-full font-display text-sm font-extrabold transition-all duration-700 ${on ? "bg-gradient-to-br from-[#F4A259] to-[#F9662B] text-white shadow-md shadow-orange-200" : "bg-orange-50 text-orange-500"}`} style={{ transitionTimingFunction: EASE }}>{s.num}</span>
+                        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-500">{s.kicker}</span>
+                      </div>
+                      <h3 className={`mt-2.5 font-display font-extrabold tracking-[-0.02em] transition-all duration-700 ${on ? "text-foreground text-2xl" : "text-foreground/55 text-xl"}`} style={{ transitionTimingFunction: EASE }}>{s.title}</h3>
+                      <div className="grid transition-all duration-700" style={{ gridTemplateRows: on ? "1fr" : "0fr", transitionTimingFunction: EASE }}>
+                        <div className="overflow-hidden"><p className="pt-2 text-[15px] text-muted-foreground leading-relaxed max-w-[42ch]">{s.desc}</p></div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── Landing V2 ────────────────────────────────────────────────────────────────
 
 const LandingV2 = () => {
@@ -153,12 +222,6 @@ const LandingV2 = () => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   if (loading) return null;
-
-  const STEPS = [
-    { num: "01", kicker: "Krok pierwszy", title: "Wybierz miasto", desc: "Kraków, Gdańsk, Warszawa i więcej. Zacznij od miejsca, w które się wybierasz.", img: "/landing/step-city.png", ar: "430 / 872" },
-    { num: "02", kicker: "Krok drugi", title: "Przeglądaj lokalne miejsca", desc: "Kawiarnie, muzea, bary, widoki. Dodawaj to co Cię kręci: sam albo ze znajomymi.", img: "/landing/step-browse-swipe.png", ar: "608 / 1340" },
-    { num: "03", kicker: "Krok trzeci", title: "Trasa gotowa w minutę", desc: "Trasa układa gotowy plan dnia z kolejnością, mapą i godzinami. Ty tylko ruszasz w miasto.", img: "/landing/step-route.png", ar: "430 / 872" },
-  ];
 
   const links = [
     { label: "Jak to działa", id: "how" },
@@ -249,34 +312,8 @@ const LandingV2 = () => {
         </div>
       </section>
 
-      {/* ── Jak to działa (Z-axis cascade) ── */}
-      <section id="how" className="relative px-5 py-28 sm:py-36">
-        <div className="mx-auto max-w-6xl">
-          <Reveal className="text-center mb-20 flex flex-col items-center gap-4">
-            <Eyebrow>Jak to działa</Eyebrow>
-            <h2 className="font-display font-extrabold text-foreground text-[clamp(2rem,5vw,3.25rem)] tracking-[-0.02em] leading-tight max-w-[16ch]">Od pomysłu do trasy w&nbsp;trzech krokach</h2>
-          </Reveal>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {STEPS.map((s, i) => (
-              <Reveal key={i} delay={i * 110}>
-                <div className="group h-full rounded-[2rem] bg-white/50 p-1.5 ring-1 ring-black/5 backdrop-blur-sm transition-transform duration-500 hover:-translate-y-1.5" style={{ transitionTimingFunction: EASE, boxShadow: "0 34px 64px -34px rgba(120,50,10,0.28)" }}>
-                  <div className="h-full rounded-[calc(2rem-0.375rem)] bg-white/80 px-6 pt-9 pb-9 flex flex-col items-center text-center">
-                    <Phone width={188} ar={s.ar} float rotate={i === 0 ? -2.5 : i === 2 ? 2.5 : 0}>
-                      <img src={s.img} alt="" className="absolute inset-0 w-full h-full object-cover object-top" draggable={false} />
-                    </Phone>
-                    <span className="mt-9 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-orange-500">
-                      <span className="font-display text-xl font-extrabold text-transparent bg-gradient-to-br from-[#F4A259] to-[#F9662B] bg-clip-text">{s.num}</span>
-                      {s.kicker}
-                    </span>
-                    <h3 className="mt-2.5 font-display font-extrabold text-foreground text-[clamp(1.4rem,2.4vw,1.8rem)] tracking-[-0.02em] leading-tight">{s.title}</h3>
-                    <p className="mt-3 text-[15px] text-muted-foreground leading-relaxed max-w-[32ch]">{s.desc}</p>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* ── Jak to działa (animowane) ── */}
+      <HowItWorks />
 
       {/* ── Dla kogo (asymmetric bento, double-bezel) ── */}
       <section id="who" className="relative px-5 py-28 sm:py-36">
