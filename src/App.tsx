@@ -61,6 +61,7 @@ function MaintenanceGate({ children }: { children: React.ReactNode }) {
     location.pathname === "/auth" ||
     location.pathname === "/waitlist" ||
     location.pathname === "/landing" ||
+    location.pathname === "/landing-v2" ||
     location.pathname.startsWith("/set-password") ||
     location.pathname.startsWith("/biznes/") ||
     location.pathname.startsWith("/dla-firm/");
@@ -78,7 +79,7 @@ function WebWaitlistGate({ children }: { children: React.ReactNode }) {
   const hasAuthParams = /[?&#](code|token_hash|error|access_token)=/.test(window.location.href);
   const p = location.pathname;
   const allowed =
-    p === "/waitlist" || p === "/landing" || p === "/auth" ||
+    p === "/waitlist" || p === "/landing" || p === "/landing-v2" || p === "/auth" ||
     p === "/terms" || p === "/privacy" ||
     p.startsWith("/set-password") || p.startsWith("/biznes") ||
     p.startsWith("/dla-firm") || p.startsWith("/route/") ||
@@ -578,6 +579,7 @@ import { isHardcodedAdmin } from "@/lib/admins";
 // Lazy-loaded public pages - one chunk each, fetched on demand
 const WaitlistPage = lazy(() => import("./pages/WaitlistPage"));
 const LandingPage = lazy(() => import("./pages/LandingPage"));
+const LandingV2 = lazy(() => import("./pages/LandingV2"));
 const DemoSession = lazy(() => import("./pages/DemoSession"));
 import ForBusinessPage from "./pages/ForBusinessPage";
 import Auth from "./pages/Auth";
@@ -667,6 +669,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/waitlist" element={<WaitlistPage />} />
           <Route path="/landing" element={<LandingPage />} />
+          <Route path="/landing-v2" element={<LandingV2 />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/" element={<RootPage />} />
