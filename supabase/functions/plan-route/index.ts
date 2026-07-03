@@ -79,7 +79,7 @@ function buildRouteExamplesContext(examples: any[]): string {
   return `## 🏆 WZORCOWE TRASY (zatwierdzone przez redakcję TRASA)\nPoniższe trasy zostały ocenione jako idealne dla Krakowa. Planuj w podobnym rytmie, logice geograficznej i strukturze dnia:\n\n${lines.join("\n\n")}`;
 }
 
-function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, _userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string, superLikedPlaces?: string[], previousDayPlaces?: string[], previousDayCategoryCounts?: Record<string, number>, restrictToLiked?: boolean, extendMode?: boolean, likedPlacesGeo?: string): string {
+function buildSystemPrompt(preferences: TripPreferences, currentPlan?: any, _userProfile?: UserProfile, previousDaysContext?: string, memoryContext?: string, likedPlaces?: string[], currentTime?: string, scrapedPlacesContext?: string, idealDay?: string, skippedPlaces?: string[], routeExamplesContext?: string, superLikedPlaces?: string[], previousDayPlaces?: string[], previousDayCategoryCounts?: Record<string, number>, restrictToLiked?: boolean, extendMode?: boolean, likedPlacesGeo?: string, likedPlacesHours?: string): string {
   const timeInfo = currentTime ? `- Aktualna godzina: ${currentTime} — planuj miejsca dostępne od tej pory, nie zaczynaj od miejsc które są już zamknięte lub których opening hours zaczyna się wcześniej` : "";
   const dateInfo = preferences.startDate ? `- Data podróży: ${preferences.startDate}${currentTime ? " (dziś)" : ""}` : "";
   const cityInfo = preferences.city?.trim() ? `- Destynacja: ${preferences.city.trim()}` : "";
@@ -223,7 +223,7 @@ WAŻNE: dzień foodie może mieć 3 knajpy zamiast 1 landmarka; dzień muzealny 
 
 ### H5. GODZINY OTWARCIA
 - Muzea: zwykle 10:00–18:00; nie planuj wizyty po 16:00 jeśli trwa 2h+
-- Poniedziałki: wiele muzeów zamkniętych — sprawdź przed wstawieniem
+- Poniedziałki: wiele muzeów zamkniętych — sprawdź przed wstawieniem${likedPlacesHours ? `\n\n**REALNE godziny otwarcia miejsc (z bazy). To TWARDE ograniczenie:**\n- Sprawdź dzień tygodnia daty wyjazdu i NIE planuj wizyty gdy miejsce jest zamknięte.\n- Dobierz suggested_time tak, by mieściło się w godzinach otwarcia (z zapasem na duration_minutes).\n- Jeśli miejsce jest zamknięte danego dnia - przesuń je na inny dzień (multi-day) albo pomiń w komentarzu.\n${likedPlacesHours}` : ""}
 ${preferences.numDays > 1 ? `### H8. MULTI-DAY — ZASADY CAŁEJ PODRÓŻY (OBOWIĄZKOWE)
 
 **Koniec dnia blisko noclegu/transportu:**
@@ -720,7 +720,13 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
       .filter((p: { place_name?: string; latitude?: number; longitude?: number }) => p?.place_name && p.latitude != null && p.longitude != null)
       .map((p: { place_name: string; latitude: number; longitude: number; address?: string }) => `- ${p.place_name}: [${Number(p.latitude).toFixed(4)}, ${Number(p.longitude).toFixed(4)}]${p.address ? ` (${p.address})` : ""}`)
       .join("\n");
-    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined, super_liked_places ?? undefined, previousDayPlaces.length > 0 ? previousDayPlaces : undefined, Object.keys(previousDayCategoryCounts).length > 0 ? previousDayCategoryCounts : undefined, restrict_to_liked ?? false, extend_mode ?? false, likedGeoStr || undefined);
+    // Godziny otwarcia polubionych miejsc (weekday_text z bazy) - do heurystyki H5, zeby model
+    // nie planowal wizyt gdy zamkniete i dobieral suggested_time w godzinach otwarcia.
+    const likedHoursStr = (liked_places_data ?? [])
+      .filter((p: { place_name?: string; opening_hours?: string[] | null }) => p?.place_name && Array.isArray(p.opening_hours) && p.opening_hours.length > 0)
+      .map((p: { place_name: string; opening_hours: string[] }) => `- ${p.place_name}: ${p.opening_hours.join("; ")}`)
+      .join("\n");
+    const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined, super_liked_places ?? undefined, previousDayPlaces.length > 0 ? previousDayPlaces : undefined, Object.keys(previousDayCategoryCounts).length > 0 ? previousDayCategoryCounts : undefined, restrict_to_liked ?? false, extend_mode ?? false, likedGeoStr || undefined, likedHoursStr || undefined);
 
     // Call AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

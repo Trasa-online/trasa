@@ -55,7 +55,9 @@ export function fromMockPlace(
     priceLevel: detail?.price_level ?? place.price_level,
 
     ownerOpeningHours: place.businessOpeningHours,
-    googleWeekdayText: detail?.opening_hours?.weekday_text,
+    // Godziny: najpierw live Google detail, w fallbacku weekday_text z bazy (backfill) -
+    // dzieki temu wizytowka pokazuje godziny od razu, bez czekania na fetch Google.
+    googleWeekdayText: detail?.opening_hours?.weekday_text ?? place.opening_hours?.weekday_text ?? undefined,
     googleOpenNow: detail?.opening_hours?.open_now,
 
     eventTitle: place.businessEventTitle,

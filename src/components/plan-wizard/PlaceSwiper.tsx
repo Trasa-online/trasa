@@ -34,6 +34,9 @@ export interface MockPlace {
   photo_url: string;
   vibe_tags: string[];
   description: string;
+  // Godziny otwarcia z bazy (places.opening_hours, backfill z Google). weekday_text = 7 linii PL.
+  // Uzywane w wizytowce (bez live-fetchu) i przekazywane do planera (heurystyka H5).
+  opening_hours?: { weekday_text?: string[] | null; periods?: unknown[] | null } | null;
   // Business profile fields (optional)
   businessPlan?: 'zero' | 'basic' | 'premium';
   businessLogoUrl?: string;
@@ -1527,7 +1530,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
       startingLocation: startingLocation || undefined,
       likedPlaceNames: allLiked.map((p) => p.place_name),
       skippedPlaceNames: skippedPlaces.map((p) => p.place_name),
-      likedPlacesData: allLiked.map((p) => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude })),
+      likedPlacesData: allLiked.map((p) => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude, opening_hours: p.opening_hours?.weekday_text ?? null })),
       superLikedPlaceNames: superLikedPlaces.map((p) => p.place_name),
     };
     if (!user || isAnonymous) {
@@ -1632,7 +1635,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
         selectedRouteIndex: selectedIndex,
         likedPlaceNames: allLiked.map(p => p.place_name),
         skippedPlaceNames: skippedPlaces.map(p => p.place_name),
-        likedPlacesData: allLiked.map(p => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude })),
+        likedPlacesData: allLiked.map(p => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude, opening_hours: p.opening_hours?.weekday_text ?? null })),
         superLikedPlaceNames: superLikedPlaces.map(p => p.place_name),
       },
     });
@@ -1706,7 +1709,7 @@ const PlaceSwiper = ({ city, date, numDays = 1, startingLocation = "", categoryF
                   startingLocation: startingLocation || undefined,
                   likedPlaceNames: allLiked.map(p => p.place_name),
                   skippedPlaceNames: skippedPlaces.map(p => p.place_name),
-                  likedPlacesData: allLiked.map((p) => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude })),
+                  likedPlacesData: allLiked.map((p) => ({ place_name: p.place_name, category: p.category as string, description: p.description, latitude: p.latitude, longitude: p.longitude, opening_hours: p.opening_hours?.weekday_text ?? null })),
                   superLikedPlaceNames: superLikedPlaces.map(p => p.place_name),
                 }));
                 navigate("/auth?return=plan");
