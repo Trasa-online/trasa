@@ -66,21 +66,34 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─── Phone mockup (double-bezel, soft ambient shadow, float) ──────────────────
+// ─── Phone mockup (czysty realistyczny iPhone: cienki rowny bezel + status bar + wyspa) ─
 
 function Phone({ width = 260, ar = "430 / 872", float = false, rotate = 0, children }: { width?: number; ar?: string; float?: boolean; rotate?: number; children: React.ReactNode }) {
-  const side = Math.round(width * 0.05), forehead = Math.round(width * 0.11);
+  const b = Math.round(width * 0.032);
+  const dark = "#0E0E0E";
   return (
     <div className="relative mx-auto" style={{ width, animation: float ? "floatY 7s ease-in-out infinite" : undefined, transform: `rotate(${rotate}deg)` }}>
-      {/* ambient glow under device */}
-      <div className="absolute -inset-6 -z-10 rounded-[3rem] opacity-70" style={{ background: "radial-gradient(60% 50% at 50% 60%, rgba(249,102,43,0.22), transparent 75%)", filter: "blur(24px)" }} aria-hidden />
-      {/* outer shell (doppelrand) */}
-      <div className="rounded-[2.6rem] bg-white/50 p-1.5 ring-1 ring-black/5 backdrop-blur-sm" style={{ boxShadow: "0 40px 90px -30px rgba(120,50,10,0.35), 0 12px 30px -12px rgba(120,50,10,0.20)" }}>
-        <div className="relative rounded-[2.2rem] bg-[#0E0E0E]" style={{ paddingLeft: side, paddingRight: side, paddingBottom: side, paddingTop: forehead }}>
-          <div className="absolute left-1/2 -translate-x-1/2 rounded-full bg-black" style={{ top: Math.round(forehead * 0.32), width: Math.round(width * 0.3), height: Math.round(width * 0.07), zIndex: 2 }} />
-          <div className="relative overflow-hidden bg-[#F4F4F5]" style={{ aspectRatio: ar, borderRadius: Math.round(width * 0.12) }}>
-            {children}
+      <div aria-hidden className="absolute -inset-6 -z-10 rounded-[3rem] opacity-70" style={{ background: "radial-gradient(60% 50% at 50% 60%, rgba(249,102,43,0.20), transparent 75%)", filter: "blur(24px)" }} />
+      <div className="relative bg-[#0E0E0E]" style={{ padding: b, borderRadius: Math.round(width * 0.155), boxShadow: "0 40px 90px -30px rgba(120,50,10,0.35), 0 12px 30px -12px rgba(120,50,10,0.18)" }}>
+        <div className="relative flex flex-col overflow-hidden bg-[#F4F4F5]" style={{ aspectRatio: ar, borderRadius: Math.round(width * 0.125) }}>
+          {/* status bar */}
+          <div className="relative z-10 flex shrink-0 items-center justify-between" style={{ paddingLeft: width * 0.075, paddingRight: width * 0.06, paddingTop: width * 0.042, paddingBottom: width * 0.012 }}>
+            <span className="font-semibold" style={{ color: dark, fontSize: width * 0.05, lineHeight: 1 }}>9:41</span>
+            <div className="flex items-center" style={{ gap: width * 0.018 }}>
+              <svg width={width * 0.075} viewBox="0 0 20 13" fill={dark}><rect x="0" y="9" width="3.2" height="4" rx="1" /><rect x="5.6" y="6" width="3.2" height="7" rx="1" /><rect x="11.2" y="3" width="3.2" height="10" rx="1" /><rect x="16.8" y="0" width="3.2" height="13" rx="1" /></svg>
+              <svg width={width * 0.07} viewBox="0 0 18 13" fill={dark}><path d="M9 2.2c2.9 0 5.6 1.1 7.6 3l-1.5 1.5A8.6 8.6 0 0 0 9 5.2 8.6 8.6 0 0 0 2.9 6.7L1.4 5.2A10.8 10.8 0 0 1 9 2.2Z" /><path d="M9 6.7c1.7 0 3.3.7 4.5 1.8l-1.6 1.6A4 4 0 0 0 9 9a4 4 0 0 0-2.9 1.1L4.5 8.5A6.4 6.4 0 0 1 9 6.7Z" /><circle cx="9" cy="11.3" r="1.4" /></svg>
+              <div className="flex items-center" style={{ gap: width * 0.004 }}>
+                <div className="flex items-center rounded-[3px]" style={{ width: width * 0.11, height: width * 0.055, padding: width * 0.008, border: `1.3px solid ${dark}80` }}>
+                  <div className="h-full rounded-[1.5px]" style={{ width: "65%", background: dark }} />
+                </div>
+                <div className="rounded-full" style={{ width: width * 0.008, height: width * 0.022, background: `${dark}66` }} />
+              </div>
+            </div>
           </div>
+          {/* app content */}
+          <div className="relative flex-1">{children}</div>
+          {/* dynamic island */}
+          <div className="absolute left-1/2 -translate-x-1/2 z-20 rounded-full bg-black" style={{ top: width * 0.02, width: width * 0.28, height: width * 0.062 }} />
         </div>
       </div>
     </div>
@@ -179,7 +192,7 @@ function HowItWorks() {
           <Reveal className="flex justify-center md:order-1">
             <Phone width={278} float>
               <video ref={vidRef} src="/demo.mp4" poster="/landing/hero-poster.png" autoPlay muted loop playsInline preload="metadata"
-                className="absolute left-0 w-full object-cover" style={{ top: "-5.5%", height: "105.5%" }} />
+                className="absolute left-0 w-full object-cover" style={{ top: "-12%", height: "112%" }} />
             </Phone>
           </Reveal>
           <Reveal delay={140} className="md:order-2">
