@@ -294,9 +294,10 @@ const LandingV2 = () => {
       {/* ── Hero ── */}
       <section className="relative min-h-[100dvh] flex items-center px-5">
         <div className="mx-auto max-w-6xl w-full pt-32 pb-20">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-14 md:gap-8 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-8 items-center">
+            {/* TEXT (mobile: tylko H1 + opis; desktop: + eyebrow, badge'y, social) */}
             <div className="text-center md:text-left">
-              <Reveal><div className="mb-7 flex justify-center md:justify-start"><Eyebrow>Odkrywaj lokalne miejsca</Eyebrow></div></Reveal>
+              <Reveal className="hidden md:block"><div className="mb-7 flex md:justify-start"><Eyebrow>Odkrywaj lokalne miejsca</Eyebrow></div></Reveal>
               <Reveal delay={80}>
                 <h1 className="font-display font-extrabold text-foreground leading-[1.0] tracking-[-0.03em] text-[clamp(3rem,8vw,5.5rem)]">
                   Speed dating<br />
@@ -308,14 +309,15 @@ const LandingV2 = () => {
                   Odkrywaj najlepsze miejsca w&nbsp;swoim mieście i&nbsp;układaj trasy zwiedzania - solo albo ze&nbsp;znajomymi. Kawiarnie, muzea, bary, widoki: wszystko w&nbsp;jednej aplikacji.
                 </p>
               </Reveal>
-              <Reveal delay={240}><div className="mt-10"><StoreBadges /></div></Reveal>
-              <Reveal delay={320}>
-                <div className="mt-8 flex items-center gap-3 justify-center md:justify-start">
+              <Reveal delay={240} className="hidden md:block"><div className="mt-10"><StoreBadges /></div></Reveal>
+              <Reveal delay={320} className="hidden md:block">
+                <div className="mt-8 flex items-center gap-3 md:justify-start">
                   <CircleStack srcs={["Marta", "Kuba", "Piotr"].map(n => `/landing/avatars/${n}.png`)} extra="+2k" />
                   <p className="text-sm text-muted-foreground max-w-[18ch] text-left">Dołącz do&nbsp;odkrywców swojego miasta</p>
                 </div>
               </Reveal>
             </div>
+            {/* PHONE (animacja) */}
             <Reveal delay={200} className="flex justify-center md:justify-end">
               {/* Ta sama animacja co na /dla-firm/landing: wideo z mixBlendMode multiply (biale tlo znika, animacja "plywa" bez sztywnej ramki) */}
               <div className="relative select-none" style={{ animation: "floatY 7s ease-in-out infinite" }}>
@@ -328,6 +330,10 @@ const LandingV2 = () => {
                   style={{ width: "clamp(270px,40vw,320px)", mixBlendMode: "multiply", transform: "translateZ(0)" }}
                 />
               </div>
+            </Reveal>
+            {/* BADGE'Y - tylko mobile, pod telefonem (jak Figma) */}
+            <Reveal delay={120} className="md:hidden flex justify-center">
+              <StoreBadges center />
             </Reveal>
           </div>
         </div>
