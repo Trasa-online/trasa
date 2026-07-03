@@ -259,7 +259,6 @@ Napisz JEDNO krótkie zdanie komentarza (opcjonalnie), a PO NIM blok planu:
 <route_plan>
 {
   "city": "Nazwa miasta",
-  "route_reasoning": "2-4 zdania cytujące KONKRETY tego planu: nazwy miejsc, ich kolejność i DLACZEGO (godziny, dystanse, energia dnia)",
   "days": [
     {
       "day_number": 1,
@@ -295,12 +294,13 @@ Napisz JEDNO krótkie zdanie komentarza (opcjonalnie), a PO NIM blok planu:
         }
       ]
     }
-  ]
+  ],
+  "route_reasoning": "POLE WYPEŁNIANE NA SAMYM KOŃCU - dopiero gdy wszystkie 'days'/'pins' powyżej są już ułożone (żeby cytować REALNE piny, nie te które dopiero planujesz). 2-4 zdania z KONKRETAMI z pinów które WŁAŚNIE zapisałaś: prawdziwe place_name, ich kolejność, suggested_time, walking_time_from_prev/distance_from_prev, day_metrics. DLACZEGO tak (godziny, dystanse, łuk energii dnia)"
 }
 </route_plan>
 
 ZASADY FORMATU:
-- route_reasoning: 2-4 zdania wyjaśniające DLACZEGO ułożyłaś trasę WŁAŚNIE tak, CYTUJĄC KONKRETY z tego planu. OBOWIĄZKOWO odnieś się do:
+- route_reasoning (OSTATNIE pole JSON - wypełnij DOPIERO po ułożeniu wszystkich pinów, czytając ich realne place_name/suggested_time/distance_from_prev): 2-4 zdania wyjaśniające DLACZEGO ułożyłaś trasę WŁAŚNIE tak, CYTUJĄC KONKRETY z tego planu. OBOWIĄZKOWO odnieś się do:
   * konkretnych NAZW 2-3 miejsc z tego planu i ich KOLEJNOŚCI (dlaczego dane miejsce jest pierwsze/ostatnie),
   * REALNYCH sygnałów planu: godziny (suggested_time / godziny otwarcia), bliskość i klaster (walking_time_from_prev, distance_from_prev), łuk dnia (day_metrics: total_walking_km, crowd_level, energy_cost), kolacja/ostatni punkt blisko końca lub noclegu.
   Przykład DOBREGO tonu: "Zaczynasz od Muzeum X - otwiera o 10:00 i leży w centrum, więc masz tylko 8 min pieszo do Kawiarni Y. Dzień domykasz Restauracją Z wieczorem, tuż obok poprzedniego punktu, żeby nie wracać przez pół miasta (łącznie ~4 km pieszo)."
@@ -714,9 +714,9 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     const isToday = current_date && preferences.startDate && preferences.startDate === current_date;
     const systemPrompt = buildSystemPrompt(preferences, current_plan, profileData ?? undefined, previousDaysContext || undefined, memoryContext || undefined, liked_places ?? undefined, isToday ? (current_time ?? undefined) : undefined, scrapedPlacesContext || undefined, ideal_day ?? undefined, skipped_places ?? undefined, routeExamplesContext || undefined, super_liked_places ?? undefined, previousDayPlaces.length > 0 ? previousDayPlaces : undefined, Object.keys(previousDayCategoryCounts).length > 0 ? previousDayCategoryCounts : undefined, restrict_to_liked ?? false, extend_mode ?? false);
 
-    // Call AI - Claude (Anthropic). Klucz w sekretach edge function (ANTHROPIC_API_KEY).
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) {
+    // Call AI
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
       return new Response(
         JSON.stringify({ error: "AI API key not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -728,31 +728,25 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     const finishInstruction = forceFinish
       ? "\n\nUWAGA: Osiągnięto limit wiadomości. Wygeneruj TERAZ plan w bloku <route_plan>...</route_plan>. Nie zadawaj więcej pytań."
       : force_plan
-      ? "\n\nWYGENERUJ TERAZ PLAN w bloku <route_plan>...</route_plan>. Napisz 1 krótkie zdanie komentarza i natychmiast wygeneruj plan zgodnie ze wszystkimi heurystykami H1–H13. WAŻNE: Dobierz miejsca ściśle pod PROFIL UŻYTKOWNIKA i jego priorytety — każdy plan powinien być inny, unikaj powtarzania tych samych zestawów atrakcji."
+      ? "\n\nWYGENERUJ TERAZ PLAN w bloku <route_plan>...</route_plan>. Napisz 1 krótkie zdanie komentarza i natychmiast wygeneruj plan zgodnie ze wszystkimi heurystykami z sekcji HEURYSTYKI PLANOWANIA. WAŻNE: Dobierz miejsca ściśle pod PROFIL UŻYTKOWNIKA i jego priorytety — każdy plan powinien być inny, unikaj powtarzania tych samych zestawów atrakcji."
       : "";
 
-    // Anthropic rozdziela system od wiadomosci: system osobno, reszta jako messages (user/assistant).
-    const claudeSystem = systemPrompt + finishInstruction;
-    const claudeMessages = userMessages;
+    const aiMessages = [
+      { role: "system", content: systemPrompt + finishInstruction },
+      ...userMessages,
+    ];
 
     // Flash = PRIMARY (znacznie szybsze generowanie planu, ~3-5x; jakosc ukladania
     // wybranych miejsc w dzien jest w pelni wystarczajaca). Pro = fallback na wypadek
     // bledu Flash (rzadka sciezka). Wczesniej Pro bylo primary -> dlugie ladowanie planu.
-    // Opus 4.8 = najmadrzejszy model Claude (wyrazny skok jakosci route_reasoning "Dlaczego taka
-    // trasa" vs Gemini Flash). Sonnet 4.6 jako fallback. UWAGA: Opus 4.8/Sonnet 4.6 ODRZUCAJA
-    // temperature/top_p (400) - nie wysylamy ich.
-    const PRIMARY_MODEL = "claude-opus-4-8";
-    const FALLBACK_MODEL = "claude-sonnet-4-6";
+    const PRIMARY_MODEL = "google/gemini-2.5-flash";
+    const FALLBACK_MODEL = "google/gemini-2.5-pro-preview-06-05";
 
     const callAI = async (model: string) =>
-      fetch("https://api.anthropic.com/v1/messages", {
+      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({ model, max_tokens: 8000, system: claudeSystem, messages: claudeMessages }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
+        body: JSON.stringify({ model, messages: aiMessages, max_tokens: 8000, temperature: 0.7 }),
       });
 
     let aiResponse = await callAI(PRIMARY_MODEL);
@@ -771,10 +765,7 @@ Pisz naturalnie i konkretnie — nie ogólnikowo. Max 1 emoji. NIE generuj planu
     }
 
     const aiData = await aiResponse.json();
-    // Anthropic Messages API: content to tablica blokow - bierzemy pierwszy blok tekstowy.
-    const assistantText = Array.isArray(aiData.content)
-      ? ((aiData.content.find((b: { type?: string }) => b.type === "text") as { text?: string } | undefined)?.text ?? "")
-      : "";
+    const assistantText = aiData.choices?.[0]?.message?.content ?? "";
 
     if (!assistantText) {
       return new Response(
