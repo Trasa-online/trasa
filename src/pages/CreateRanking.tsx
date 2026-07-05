@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, ChevronUp, ChevronDown, Star, MapPin, Database, Globe } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin, Database, Globe } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { expandCity } from "@/lib/cities";
 import { getHistoryByCity } from "@/lib/exploreLikes";
 import { forwardGeocode, reverseGeocode } from "@/lib/googleMaps";
 import { getPhotoUrl } from "@/lib/placePhotos";
+import { COLLECTION_THEMES, getTheme } from "@/lib/collectionThemes";
 
 // Item rankingu. place_id != null = miejsce z bazy (tap -> wizytowka). null = custom (Google).
 interface RankingItem {
@@ -73,9 +74,11 @@ const CreateRanking = () => {
   const navigate = useNavigate();
   const { id: editId } = useParams();
   const [params] = useSearchParams();
-  const { user, isAnonymous } = useAuth();
+  const { user } = useAuth();
 
+  const [category, setCategory] = useState<string | null>(null);
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [city, setCity] = useState(params.get("city") || "Warszawa");
   const [items, setItems] = useState<RankingItem[]>([]);
   const [publishing, setPublishing] = useState(false);
@@ -83,14 +86,9 @@ const CreateRanking = () => {
   const [addMode, setAddMode] = useState<null | "search" | "custom">(null);
   const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: "Użytkownik", avatar: null });
 
-  // TYMCZASOWO: tworzenie NOWYCH zestawien zablokowane (deep-link guard; edycja istniejacych dziala).
-  // Wejscia w UI sa wyszarzone (Explore), to chroni bezposrednie wejscie na /zestawienie/nowe.
-  useEffect(() => {
-    if (!editId) {
-      toast("Tworzenie zestawień będzie dostępne wkrótce 🙌");
-      navigate("/eksploruj", { replace: true });
-    }
-  }, [editId, navigate]);
+  // Krok 1 = wybor motywu (tylko nowe zestawienie, bez wybranego motywu). Edycja i
+  // zestawienia z juz wybranym motywem od razu w formularzu.
+  const showThemePicker = !editId && !category;
 
   // ── Author + edit/liked prefill ───────────────────────────────────────────
   useEffect(() => {
@@ -102,8 +100,8 @@ const CreateRanking = () => {
   useEffect(() => {
     if (editId) {
       (async () => {
-        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city").eq("id", editId).maybeSingle();
-        if (col) { setTitle(col.title ?? ""); if (col.city) setCity(col.city); }
+        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, description, category").eq("id", editId).maybeSingle();
+        if (col) { setTitle(col.title ?? ""); if (col.city) setCity(col.city); setDescription(col.description ?? ""); setCategory(col.category ?? null); }
         const { data: its } = await (supabase as any).from("discovery_items").select("*").eq("collection_id", editId).order("order_index", { ascending: true });
         if (its) setItems(its.map((i: any, idx: number) => ({
           key: `e${idx}`, place_id: i.place_id ?? null, place_name: i.place_name, category: i.category ?? null,
@@ -142,29 +140,25 @@ const CreateRanking = () => {
     setAddMode(null);
   };
   const removeItem = (key: string) => setItems((prev) => prev.filter((x) => x.key !== key));
-  const move = (idx: number, dir: -1 | 1) => setItems((prev) => {
-    const next = [...prev]; const j = idx + dir;
-    if (j < 0 || j >= next.length) return prev;
-    [next[idx], next[j]] = [next[j], next[idx]]; return next;
-  });
   const setNote = (key: string, v: string) => setItems((prev) => prev.map((x) => x.key === key ? { ...x, short_desc: v } : x));
 
-  const canPublish = title.trim().length >= 3 && city && items.length >= 2 && !publishing;
+  const canPublish = !!category && title.trim().length >= 3 && !!city && items.length >= 2 && !publishing;
 
   const publish = async () => {
     if (!user || !canPublish) return;
     setPublishing(true);
     try {
       let collectionId = editId;
-      // Anonimowi userzy -> tresc czeka na akceptacje admina (App Store Guideline 1.2).
-      // Konta z emailem publikuja od razu.
-      const moderationStatus = isAnonymous ? "pending" : "approved";
+      // Wszystkie nowe zestawienia czekaja na akceptacje admina (App Store Guideline
+      // 1.2 UGC + decyzja: moderacja na starcie dla wszystkich, nie tylko anonimow).
+      const moderationStatus = "pending";
       if (editId) {
-        await (supabase as any).from("discovery_collections").update({ title: title.trim(), city, updated_at: new Date().toISOString() }).eq("id", editId);
+        await (supabase as any).from("discovery_collections").update({ title: title.trim(), city, description: description.trim() || null, category, updated_at: new Date().toISOString() }).eq("id", editId);
         await (supabase as any).from("discovery_items").delete().eq("collection_id", editId);
       } else {
         const { data: col, error } = await (supabase as any).from("discovery_collections").insert({
-          user_id: user.id, author_name: author.name, author_avatar: author.avatar, title: title.trim(), city, kind: "ranking", is_public: true,
+          user_id: user.id, author_name: author.name, author_avatar: author.avatar, title: title.trim(),
+          description: description.trim() || null, category, city, kind: "ranking", is_public: true,
           moderation_status: moderationStatus,
         }).select("id").single();
         if (error || !col) throw new Error(error?.message ?? "insert failed");
@@ -177,17 +171,15 @@ const CreateRanking = () => {
       }));
       const { error: itemsErr } = await (supabase as any).from("discovery_items").insert(rows);
       if (itemsErr) throw new Error(itemsErr.message);
-      // Tresc od anona -> powiadom admina mailem (best-effort, nie blokuj flow).
-      if (!editId && moderationStatus === "pending") {
+      // Kazda nowa publikacja -> powiadom admina mailem do moderacji (best-effort, nie blokuj flow).
+      if (!editId) {
         supabase.functions.invoke("notify-admin-content", {
           body: { type: "ranking", title: title.trim(), city, collection_id: collectionId, author: author.name },
         }).catch((e) => console.warn("[CreateRanking] notify-admin-content failed:", e));
       }
       toast.success(
         editId ? "Zestawienie zaktualizowane!"
-          : moderationStatus === "pending"
-            ? "Wysłane! Zestawienie pojawi się po akceptacji moderatora."
-            : "Zestawienie opublikowane!"
+          : "Wysłane! Zestawienie pojawi się po akceptacji moderatora."
       );
       navigate("/eksploruj");
     } catch (e: any) {
@@ -196,6 +188,39 @@ const CreateRanking = () => {
       setPublishing(false);
     }
   };
+
+  // ── Krok 1: wybor motywu zestawienia (tylko z zamknietej listy) ──────────────
+  if (showThemePicker) {
+    return (
+      <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
+        <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
+          <button onClick={() => navigate(-1)} aria-label="Wstecz" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <span className="font-bold text-base">Nowe zestawienie</span>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-5">
+          <h1 className="text-2xl font-display font-extrabold tracking-tight leading-tight">Jaki to motyw?</h1>
+          <p className="text-sm text-muted-foreground mt-1.5">Wybierz temat swojej kolekcji miejsc. To pomaga innym ją&nbsp;znaleźć.</p>
+          <div className="grid grid-cols-2 gap-3 mt-5">
+            {COLLECTION_THEMES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => { setCategory(t.id); if (!title) setTitle(t.id === "perfect-day" ? `Mój perfekcyjny dzień w ${city}` : ""); }}
+                className="flex flex-col items-start gap-1 rounded-3xl border border-border/60 bg-card p-4 text-left active:scale-[0.97] transition-transform"
+              >
+                <span className="text-3xl leading-none">{t.emoji}</span>
+                <span className="font-bold text-sm mt-1.5 leading-tight">{t.label}</span>
+                <span className="text-[11px] text-muted-foreground leading-snug">{t.hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const activeTheme = getTheme(category);
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
@@ -208,7 +233,20 @@ const CreateRanking = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-        {/* Miasto + tytuł */}
+        {/* Motyw (chip, zmiana tylko przy nowym zestawieniu) */}
+        <div>
+          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Motyw</label>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 border border-orange-200 px-3 py-1.5 text-sm font-semibold text-orange-700">
+              {activeTheme ? <>{activeTheme.emoji} {activeTheme.label}</> : "Bez motywu"}
+            </span>
+            {!editId && (
+              <button onClick={() => setCategory(null)} className="text-xs font-semibold text-muted-foreground underline underline-offset-2">zmień</button>
+            )}
+          </div>
+        </div>
+
+        {/* Miasto + tytuł + opis */}
         <div className="space-y-3">
           <div>
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Miasto</label>
@@ -220,23 +258,28 @@ const CreateRanking = () => {
           <div>
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Tytuł</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={70}
-              placeholder={`np. Top miejsc w ${city}`}
+              placeholder={`np. Mój perfekcyjny dzień w ${city}`}
               className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50" />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Od autora <span className="text-muted-foreground/50 normal-case font-medium">(opcjonalnie)</span></label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={280} rows={3}
+              placeholder="Napisz kilka słów o tej kolekcji: dla kogo, kiedy, dlaczego właśnie te miejsca…"
+              className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50 resize-none" />
           </div>
         </div>
 
-        {/* Lista miejsc (ranking) */}
+        {/* Lista miejsc (bez numeracji - zwykla kolekcja, nie ranking) */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Miejsca ({items.length})</p>
           </div>
           {items.length === 0 && (
-            <p className="text-sm text-muted-foreground py-4 text-center">Dodaj min. 2 miejsca i ustaw kolejność = ranking.</p>
+            <p className="text-sm text-muted-foreground py-4 text-center">Dodaj min. 2&nbsp;miejsca do swojej kolekcji.</p>
           )}
           <div className="space-y-2">
-            {items.map((it, idx) => (
+            {items.map((it) => (
               <div key={it.key} className="flex items-start gap-2.5 bg-card border border-border/40 rounded-2xl p-2.5">
-                <div className="h-7 w-7 rounded-full bg-orange-600 text-white text-sm font-bold flex items-center justify-center shrink-0 mt-0.5">{idx + 1}</div>
                 {it.photo_url
                   ? <img src={it.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover shrink-0" />
                   : <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center text-muted-foreground shrink-0"><MapPin className="h-5 w-5" /></div>}
@@ -251,11 +294,7 @@ const CreateRanking = () => {
                     placeholder="Notka (opcjonalnie)…"
                     className="mt-1.5 w-full rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-1 focus:ring-orange-300 placeholder:text-muted-foreground/50" />
                 </div>
-                <div className="flex flex-col items-center gap-0.5 shrink-0">
-                  <button onClick={() => move(idx, -1)} disabled={idx === 0} className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground disabled:opacity-30 active:bg-muted"><ChevronUp className="h-4 w-4" /></button>
-                  <button onClick={() => move(idx, 1)} disabled={idx === items.length - 1} className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground disabled:opacity-30 active:bg-muted"><ChevronDown className="h-4 w-4" /></button>
-                  <button onClick={() => removeItem(it.key)} className="h-6 w-6 flex items-center justify-center rounded-md text-destructive active:bg-destructive/10"><X className="h-4 w-4" /></button>
-                </div>
+                <button onClick={() => removeItem(it.key)} className="h-6 w-6 flex items-center justify-center rounded-md text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
               </div>
             ))}
           </div>

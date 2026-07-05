@@ -1,16 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { avatarSrc } from "@/lib/avatar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight } from "lucide-react";
+import { MapPin, X, Globe, Sparkles, Star, Pencil, Trash2, ChevronRight, ArrowRight, Heart, Check, Eye } from "lucide-react";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import RouteMap from "@/components/RouteMap";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
+import { themeBadgeLabel } from "@/lib/collectionThemes";
+import { addLike, getHistoryByCity } from "@/lib/exploreLikes";
+import { toast } from "sonner";
 
 type DiscoveryItem = {
   id: string;
@@ -26,16 +29,20 @@ type DiscoveryItem = {
   rating?: number | null;       // gwiazdki Google (dla miejsca spoza bazy)
 };
 
-type DiscoveryCollection = {
+export type DiscoveryCollection = {
   id: string;
   title: string;
   city: string | null;
   description: string | null;
+  category?: string | null;          // motyw zestawienia (collectionThemes)
   author_name: string;
   author_avatar: string | null;
   items: DiscoveryItem[];
   user_id?: string | null;
   author_home_city?: string | null;  // do badge "lokals poleca!"
+  views_count?: number | null;
+  saves_count?: number | null;
+  plan_adds_count?: number | null;
 };
 
 type PolecaneRoute = {
@@ -125,7 +132,7 @@ function PlacePhoto({
 
 // ── Detail sheet ───────────────────────────────────────────────────────────────
 
-function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose: () => void }) {
+export function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose: () => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -133,6 +140,58 @@ function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose:
   const [deleting, setDeleting] = useState(false);
   const isOwner = !!user && user.id === col.user_id;
   const isLocal = !!col.author_home_city && !!col.city && col.author_home_city.trim().toLowerCase() === col.city.trim().toLowerCase();
+  const themeLabel = themeBadgeLabel(col.category);
+
+  // Ktore miejsca sa juz polubione (localStorage per miasto) -> badge "juz polubione".
+  // Set nazw miejsc; refresh po dodaniu polubienia w tym widoku.
+  const likedInCity = () => new Set(
+    (getHistoryByCity().find((g) => col.city && g.city.toLowerCase() === col.city!.toLowerCase())?.places ?? [])
+      .map((p) => p.place_name.toLowerCase())
+  );
+  const [likedNames, setLikedNames] = useState<Set<string>>(likedInCity);
+
+  // Licznik wyswietlen: dedup per-widz w localStorage (wzor increment_route_views).
+  useEffect(() => {
+    const key = "trasa_seen_collections";
+    try {
+      const seen = new Set<string>(JSON.parse(localStorage.getItem(key) || "[]"));
+      if (!seen.has(col.id)) {
+        seen.add(col.id);
+        localStorage.setItem(key, JSON.stringify([...seen]));
+        (supabase as any).rpc("increment_collection_views", { p_collection_id: col.id })
+          .then(({ error }: any) => { if (error) console.warn("[DiscoveryFeed] increment_collection_views:", error.message); });
+      }
+    } catch (e) {
+      console.warn("[DiscoveryFeed] view dedup failed:", e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [col.id]);
+
+  // Dodaj miejsce do polubien (localStorage + user_place_reactions dla zalogowanych).
+  const likePlace = async (item: DiscoveryItem) => {
+    if (!col.city) return;
+    if (likedNames.has(item.place_name.toLowerCase())) return;
+    addLike(col.city, {
+      place_name: item.place_name,
+      category: item.category ?? "other",
+      address: item.address ?? null,
+      latitude: item.latitude ?? null,
+      longitude: item.longitude ?? null,
+      rating: item.rating ?? null,
+      photo_url: item.photo_url ?? null,
+    });
+    setLikedNames((prev) => new Set(prev).add(item.place_name.toLowerCase()));
+    toast.success("Dodano do polubionych");
+    if (user?.id && item.place_id) {
+      (supabase as any).from("user_place_reactions").upsert({
+        user_id: user.id, place_id: item.place_id, place_name: item.place_name, city: col.city,
+        category: item.category ?? null, photo_url: item.photo_url ?? null, reaction: "liked",
+      }, { onConflict: "user_id,place_id" }).then(({ error }: any) => { if (error) console.warn("[DiscoveryFeed] reaction upsert:", error.message); });
+    }
+    // Statystyka zestawienia: polubienie miejsca z kolekcji.
+    (supabase as any).rpc("increment_collection_saves", { p_collection_id: col.id })
+      .then(({ error }: any) => { if (error) console.warn("[DiscoveryFeed] increment_collection_saves:", error.message); });
+  };
 
   // Miejsce z bazy (place_id) -> otworz pelna wizytowke. Custom (place_id null) = nieklikalne.
   const openPlace = async (item: DiscoveryItem) => {
@@ -164,6 +223,9 @@ function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose:
   // "Uzyj tej trasy" - przejmij miejsca zestawienia do nowej trasy (swiper -> Dopasowania).
   const adoptRoute = () => {
     const names = col.items.map((i) => i.place_name).filter(Boolean);
+    // Statystyka: dodanie zestawienia do wlasnego planu.
+    (supabase as any).rpc("increment_collection_plan_adds", { p_collection_id: col.id })
+      .then(({ error }: any) => { if (error) console.warn("[DiscoveryFeed] increment_collection_plan_adds:", error.message); });
     onClose();
     navigate("/plan", { state: { step: 4, city: col.city, date: new Date().toISOString(), likedPlaceNames: names } });
   };
@@ -174,6 +236,9 @@ function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose:
       {/* Header */}
       <div className="flex items-start gap-3 px-4 pt-4 pb-3 shrink-0">
         <div className="flex-1 min-w-0">
+          {themeLabel && (
+            <span className="inline-flex items-center rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-[11px] font-bold text-orange-700 mb-1.5">{themeLabel}</span>
+          )}
           <h2 className="font-display font-extrabold text-xl leading-tight line-clamp-2">{col.title}</h2>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <AuthorChip name={col.author_name} avatar={col.author_avatar} />
@@ -182,6 +247,13 @@ function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose:
               <><span className="text-muted-foreground/40 text-xs">·</span><span className="text-xs text-muted-foreground">{col.city}</span></>
             )}
           </div>
+          {((col.views_count ?? 0) > 0 || (col.saves_count ?? 0) > 0 || (col.plan_adds_count ?? 0) > 0) && (
+            <div className="flex items-center gap-3 mt-1.5 text-[11px] text-muted-foreground">
+              {(col.views_count ?? 0) > 0 && <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{col.views_count}</span>}
+              {(col.saves_count ?? 0) > 0 && <span className="flex items-center gap-1"><Heart className="h-3 w-3" />{col.saves_count}</span>}
+              {(col.plan_adds_count ?? 0) > 0 && <span className="flex items-center gap-1"><ArrowRight className="h-3 w-3" />{col.plan_adds_count}</span>}
+            </div>
+          )}
           {isOwner && (
             <div className="flex gap-3 mt-2">
               <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} className="text-xs font-semibold text-orange-600 flex items-center gap-1"><Pencil className="h-3 w-3" /> Edytuj</button>
@@ -213,47 +285,65 @@ function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; onClose:
             const tappable = !!item.place_id;
             const Tag: any = tappable ? "button" : "div";
             const isLast = idx === col.items.length - 1;
+            const alreadyLiked = likedNames.has(item.place_name.toLowerCase());
             return (
               <div key={item.id} className="flex gap-3">
-                {/* Szyna: numerowana kropka + przerywana linia laczaca */}
+                {/* Szyna: kropka bez numeru (kolekcja, nie ranking) + przerywana linia */}
                 <div className="flex flex-col items-center shrink-0 w-7">
                   <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#F4A259] to-[#F9662B] flex items-center justify-center shadow-sm ring-4 ring-background z-10">
-                    <span className="text-white text-xs font-black">{idx + 1}</span>
+                    <MapPin className="h-3.5 w-3.5 text-white" />
                   </div>
                   {!isLast && <div className="flex-1 w-0 my-1 border-l-2 border-dotted border-orange-300/70" />}
                 </div>
                 {/* Okladka z nazwa + ocena bezposrednio na zdjeciu */}
-                <Tag
-                  {...(tappable ? { onClick: () => openPlace(item) } : {})}
-                  className={`flex-1 min-w-0 mb-4 text-left block ${tappable ? "active:scale-[0.99] transition-transform" : ""}`}
-                >
-                  <div className="relative rounded-2xl overflow-hidden aspect-[16/10]">
-                    <PlacePhoto item={item} placeholderIdx={idx} className="w-full h-full" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                    {item.rating != null && (
-                      <div className="absolute top-2.5 right-2.5 flex items-center gap-0.5 px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <span className="text-[11px] font-bold text-foreground">{item.rating}</span>
+                <div className="flex-1 min-w-0 mb-4">
+                  <Tag
+                    {...(tappable ? { onClick: () => openPlace(item) } : {})}
+                    className={`w-full min-w-0 text-left block ${tappable ? "active:scale-[0.99] transition-transform" : ""}`}
+                  >
+                    <div className="relative rounded-2xl overflow-hidden aspect-[16/10]">
+                      <PlacePhoto item={item} placeholderIdx={idx} className="w-full h-full" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                      {item.rating != null && (
+                        <div className="absolute top-2.5 right-2.5 flex items-center gap-0.5 px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
+                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-[11px] font-bold text-foreground">{item.rating}</span>
+                        </div>
+                      )}
+                      {tappable ? (
+                        <div className="absolute top-2.5 left-2.5 h-7 pl-2.5 pr-1.5 rounded-full bg-white/90 backdrop-blur-sm flex items-center gap-0.5 shadow-sm">
+                          <span className="text-[10px] font-bold text-foreground">Zobacz</span>
+                          <ChevronRight className="h-3.5 w-3.5 text-foreground" />
+                        </div>
+                      ) : (
+                        <div className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2 py-1 rounded-full bg-foreground/55 backdrop-blur-sm">
+                          <Globe className="h-3 w-3 text-white/90 shrink-0" />
+                          <span className="text-[9px] font-semibold text-white leading-tight">jeszcze nie&nbsp;ma w&nbsp;Trasie</span>
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <p className="text-white font-display font-extrabold text-lg leading-tight drop-shadow-sm">{item.place_name}</p>
+                        {item.address && <p className="text-white/80 text-[11px] mt-0.5 line-clamp-1">{item.address}</p>}
                       </div>
-                    )}
-                    {tappable ? (
-                      <div className="absolute top-2.5 left-2.5 h-7 pl-2.5 pr-1.5 rounded-full bg-white/90 backdrop-blur-sm flex items-center gap-0.5 shadow-sm">
-                        <span className="text-[10px] font-bold text-foreground">Zobacz</span>
-                        <ChevronRight className="h-3.5 w-3.5 text-foreground" />
-                      </div>
-                    ) : (
-                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2 py-1 rounded-full bg-foreground/55 backdrop-blur-sm">
-                        <Globe className="h-3 w-3 text-white/90 shrink-0" />
-                        <span className="text-[9px] font-semibold text-white leading-tight">jeszcze nie&nbsp;ma w&nbsp;Trasie</span>
-                      </div>
-                    )}
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <p className="text-white font-display font-extrabold text-lg leading-tight drop-shadow-sm">{item.place_name}</p>
-                      {item.address && <p className="text-white/80 text-[11px] mt-0.5 line-clamp-1">{item.address}</p>}
                     </div>
-                  </div>
+                  </Tag>
                   {item.short_desc && <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed px-0.5">{item.short_desc}</p>}
-                </Tag>
+                  {/* Dodaj do polubien / juz polubione (miejsca z bazy - maja nazwe + miasto) */}
+                  {col.city && (
+                    alreadyLiked ? (
+                      <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                        <Check className="h-3.5 w-3.5" /> Już polubione
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => likePlace(item)}
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-secondary text-secondary-foreground px-3 py-1.5 text-[11px] font-bold active:scale-[0.97] transition-transform"
+                      >
+                        <Heart className="h-3.5 w-3.5" /> Dodaj do polubionych
+                      </button>
+                    )
+                  )}
+                </div>
               </div>
             );
           })}
@@ -453,6 +543,9 @@ function UserPolecajkiRow({
                 )}
               </div>
               <div className="px-3.5 py-2.5 space-y-1">
+                {themeBadgeLabel(col.category) && (
+                  <span className="inline-flex items-center rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-[10px] font-bold text-orange-700">{themeBadgeLabel(col.category)}</span>
+                )}
                 <p className="font-bold text-sm leading-snug line-clamp-2">{col.title}</p>
                 {col.city && (
                   <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
@@ -675,9 +768,8 @@ function RouteCardV({ route, onClick }: { route: PolecaneRoute; onClick: () => v
 
 // ── Main export ────────────────────────────────────────────────────────────────
 
-// Sekcja "Zestawienia miejsc" w Eksploruj - WYLACZONA (feature na TODO, nie w MVP).
-// Flip na true gdy zestawienia wracaja do aplikacji.
-const SHOW_ZESTAWIENIA = false;
+// Sekcja "Zestawienia miejsc" w Eksploruj - AKTYWNA (launch feature).
+const SHOW_ZESTAWIENIA = true;
 
 export default function DiscoveryFeed() {
   const [activeCol, setActiveCol] = useState<DiscoveryCollection | null>(null);
@@ -879,7 +971,7 @@ export default function DiscoveryFeed() {
     queryFn: async () => {
       const { data: cols, error } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, description, author_name, author_avatar, user_id")
+        .select("id, title, city, description, category, author_name, author_avatar, user_id, views_count, saves_count, plan_adds_count")
         .eq("is_public", true)
         .eq("kind", "ranking")
         .eq("hidden_by_admin", false)

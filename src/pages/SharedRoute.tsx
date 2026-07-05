@@ -87,6 +87,23 @@ export default function SharedRoute() {
     },
   });
 
+  // Podpis autora + oznaczeni czlonkowie (#11). Best-effort (kolumny z migracji
+  // 20260705) - gdy jeszcze nie zaaplikowana, po prostu brak wartosci.
+  const { data: shareMeta } = useQuery({
+    queryKey: ["shared-route-meta", id],
+    enabled: !!id,
+    queryFn: async () => {
+      try {
+        const { data, error } = await (supabase as any)
+          .from("routes").select("share_caption, tagged_members").eq("id", id as string).maybeSingle();
+        if (error) return null;
+        return data as { share_caption: string | null; tagged_members: string[] | null } | null;
+      } catch {
+        return null;
+      }
+    },
+  });
+
   // Inkrementacja licznika wyswietlen (nagroda dla autora). Dedup per-urzadzenie
   // (localStorage), zeby refresh/powroty nie zawyzaly "X osob obejrzalo".
   useEffect(() => {
@@ -408,6 +425,23 @@ export default function SharedRoute() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto pb-44">
+
+        {/* Podpis autora + z kim (oznaczeni czlonkowie) */}
+        {(shareMeta?.share_caption || (shareMeta?.tagged_members?.length ?? 0) > 0) && (
+          <div className="px-5 pt-5 pb-4 border-b border-border/30 space-y-2">
+            {shareMeta?.share_caption && (
+              <p className="text-sm text-foreground/80 leading-relaxed">{shareMeta.share_caption}</p>
+            )}
+            {(shareMeta?.tagged_members?.length ?? 0) > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">Z:</span>
+                {shareMeta!.tagged_members!.map((m) => (
+                  <span key={m} className="inline-flex items-center rounded-full bg-secondary text-secondary-foreground px-2.5 py-1 text-xs font-semibold">{m}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {route.ai_highlight && (
           <div className="px-5 pt-6 pb-5 border-b border-border/30">

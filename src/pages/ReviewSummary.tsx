@@ -96,6 +96,11 @@ const ReviewSummary = () => {
   const noteTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Udostepnianie historycznej trasy: podpis + oznaczeni czlonkowie (#11).
+  const [shareCaption, setShareCaption] = useState("");
+  const [taggedMembers, setTaggedMembers] = useState<string[]>([]);
+  const [memberInput, setMemberInput] = useState("");
+
   const { data: route, isLoading: routeLoading } = useQuery({
     queryKey: ["review-summary-route", routeId],
     queryFn: async () => {
@@ -261,6 +266,48 @@ const ReviewSummary = () => {
     if (route?.review_photos?.length) setPhotos(route.review_photos);
     if (route?.is_shared != null) setIsPublic(route.is_shared);
   }, [route?.review_photos, route?.is_shared]);
+
+  // Podpis + oznaczeni czlonkowie: osobny best-effort load (kolumny z migracji
+  // 20260705). Gdy migracja jeszcze nie zaaplikowana -> po prostu brak wartosci,
+  // nie wywalamy calego ekranu podsumowania.
+  useEffect(() => {
+    if (!routeId) return;
+    (async () => {
+      try {
+        const { data, error } = await (supabase as any)
+          .from("routes").select("share_caption, tagged_members").eq("id", routeId).maybeSingle();
+        if (error) return;
+        if (data?.share_caption) setShareCaption(data.share_caption);
+        if (Array.isArray(data?.tagged_members)) setTaggedMembers(data.tagged_members);
+      } catch (e) {
+        console.warn("[ReviewSummary] share-meta load skipped:", e);
+      }
+    })();
+  }, [routeId]);
+
+  const saveShareMeta = async (caption: string, members: string[]) => {
+    if (!routeId) return;
+    try {
+      await (supabase as any).from("routes").update({ share_caption: caption.trim() || null, tagged_members: members }).eq("id", routeId);
+    } catch (e) {
+      console.warn("[ReviewSummary] saveShareMeta failed:", e);
+    }
+  };
+
+  const addMember = () => {
+    const v = memberInput.trim().replace(/^@/, "");
+    if (!v) return;
+    if (taggedMembers.some((m) => m.toLowerCase() === v.toLowerCase())) { setMemberInput(""); return; }
+    const next = [...taggedMembers, v];
+    setTaggedMembers(next);
+    setMemberInput("");
+    void saveShareMeta(shareCaption, next);
+  };
+  const removeMember = (name: string) => {
+    const next = taggedMembers.filter((m) => m !== name);
+    setTaggedMembers(next);
+    void saveShareMeta(shareCaption, next);
+  };
 
   useEffect(() => {
     if (existingRatings.length) {
@@ -899,12 +946,52 @@ const ReviewSummary = () => {
           <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${isPublic ? "translate-x-5" : "translate-x-0"}`} />
         </button>
       </div>
-      {isPublic && (
+      {isPublic && (<>
+        {/* Podpis autora (#11) */}
+        <div className="mt-4">
+          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Podpis <span className="normal-case font-medium text-muted-foreground/50">(opcjonalnie)</span></label>
+          <textarea
+            value={shareCaption}
+            onChange={(e) => setShareCaption(e.target.value)}
+            onBlur={() => void saveShareMeta(shareCaption, taggedMembers)}
+            maxLength={200}
+            rows={2}
+            placeholder="Napisz coś o tej podróży…"
+            className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50 resize-none"
+          />
+        </div>
+
+        {/* Oznaczeni czlonkowie podrozy (#11) */}
+        <div className="mt-4">
+          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Z kim byłeś/aś <span className="normal-case font-medium text-muted-foreground/50">(opcjonalnie)</span></label>
+          {taggedMembers.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {taggedMembers.map((m) => (
+                <span key={m} className="inline-flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-2.5 py-1 text-xs font-semibold">
+                  {m}
+                  <button onClick={() => removeMember(m)} aria-label={`Usuń ${m}`} className="active:scale-90"><X className="h-3 w-3" /></button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <input
+              value={memberInput}
+              onChange={(e) => setMemberInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addMember(); } }}
+              maxLength={40}
+              placeholder="Imię lub @nick"
+              className="flex-1 rounded-2xl border border-border bg-card px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50"
+            />
+            <button onClick={addMember} disabled={!memberInput.trim()} className="shrink-0 px-4 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.97] transition-transform disabled:opacity-40">Dodaj</button>
+          </div>
+        </div>
+
         <button onClick={shareLink}
-          className="mt-3 w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+          className="mt-4 w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
           <Share2 className="h-4 w-4" /> Udostępnij link do trasy
         </button>
-      )}
+      </>)}
     </div>
   );
 

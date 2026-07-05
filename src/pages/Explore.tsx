@@ -13,14 +13,10 @@ import { useAuthDrawer } from "@/hooks/useAuthDrawer";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import posthog from "posthog-js";
-import { toast } from "sonner";
 
-// TYMCZASOWO: tworzenie zestawien zablokowane (wyszarzone przyciski). Klik nadal
-// rejestrujemy w PostHog (intent), zeby zmierzyc zainteresowanie przed odblokowaniem.
-const COLLECTIONS_CREATE_ENABLED = false;
-const blockCollectionCreate = (source: string) => {
-  posthog.capture("collection_create_clicked_blocked", { source });
-  toast("Tworzenie zestawień będzie dostępne wkrótce 🙌");
+// Tworzenie zestawien odblokowane. Klik rejestrujemy w PostHog (funnel intent -> publikacja).
+const trackCollectionCreate = (source: string) => {
+  posthog.capture("collection_create_clicked", { source });
 };
 
 // Usuwa reactions z DB dla zalogowanego usera zeby miejsca wrocily do swipera
@@ -216,12 +212,10 @@ export const LikedTab = () => {
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
               <button
-                onClick={() => COLLECTIONS_CREATE_ENABLED
-                  ? navigate(`/zestawienie/nowe?from=liked&city=${encodeURIComponent(group.city)}`)
-                  : blockCollectionCreate("liked_group")}
-                className="w-full py-2.5 rounded-full border border-border/60 bg-muted/40 text-muted-foreground/70 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
+                onClick={() => { trackCollectionCreate("liked_group"); navigate(`/zestawienie/nowe?from=liked&city=${encodeURIComponent(group.city)}`); }}
+                className="w-full py-2.5 rounded-full bg-secondary text-secondary-foreground font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
               >
-                Stwórz zestawienie z tych miejsc <span className="text-[10px] font-semibold opacity-70">(wkrótce)</span>
+                Stwórz zestawienie z tych miejsc
               </button>
             </div>
           )}
@@ -246,7 +240,7 @@ const MyCollections = () => {
     queryFn: async () => {
       const { data: cols } = await (supabase as any)
         .from("discovery_collections")
-        .select("id, title, city, description, is_public")
+        .select("id, title, city, description, is_public, moderation_status")
         .eq("user_id", user!.id)
         .eq("kind", "ranking")
         .order("updated_at", { ascending: false });
@@ -281,10 +275,10 @@ const MyCollections = () => {
             </p>
           </div>
           <button
-            onClick={() => COLLECTIONS_CREATE_ENABLED ? navigate("/zestawienie/nowe") : blockCollectionCreate("my_collections_empty")}
-            className="mt-1 px-5 py-3 rounded-full bg-muted text-muted-foreground text-sm font-bold active:scale-[0.99] transition-transform"
+            onClick={() => { trackCollectionCreate("my_collections_empty"); navigate("/zestawienie/nowe"); }}
+            className="mt-1 px-5 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
           >
-            Stwórz zestawienie <span className="text-xs font-semibold opacity-70">(wkrótce)</span>
+            Stwórz zestawienie
           </button>
         </div>
       ) : (
@@ -307,6 +301,16 @@ const MyCollections = () => {
                 {[col.city, `${col.count} ${col.count === 1 ? "miejsce" : col.count < 5 ? "miejsca" : "miejsc"}`].filter(Boolean).join(" · ")}
                 {col.is_public === false ? " · prywatne" : ""}
               </p>
+              {col.moderation_status === "pending" && (
+                <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
+                  ⏳ czeka na akceptację
+                </span>
+              )}
+              {col.moderation_status === "rejected" && (
+                <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-destructive bg-destructive/10 rounded-full px-2 py-0.5">
+                  odrzucone
+                </span>
+              )}
             </div>
             <Pencil className="h-4 w-4 text-muted-foreground/50 shrink-0" />
           </button>
@@ -352,8 +356,8 @@ const Explore = () => {
           </div>
         )}
         <button
-          onClick={() => COLLECTIONS_CREATE_ENABLED ? navigate("/zestawienie/nowe") : blockCollectionCreate("explore_header")}
-          className="shrink-0 mt-2 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-muted text-muted-foreground text-xs font-bold active:scale-[0.99] transition-transform"
+          onClick={() => { trackCollectionCreate("explore_header"); navigate("/zestawienie/nowe"); }}
+          className="shrink-0 mt-2 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-white text-xs font-bold active:scale-[0.97] transition-transform shadow-sm shadow-orange-500/20"
         >
           <Plus className="h-3.5 w-3.5" /> Zestawienie
         </button>
