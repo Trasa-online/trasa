@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -10,6 +10,9 @@ import { getHistoryByCity } from "@/lib/exploreLikes";
 import { forwardGeocode, reverseGeocode } from "@/lib/googleMaps";
 import { getPhotoUrl } from "@/lib/placePhotos";
 import { COLLECTION_THEMES, getTheme } from "@/lib/collectionThemes";
+import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
+import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
+import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 
 // Item rankingu. place_id != null = miejsce z bazy (tap -> wizytowka). null = custom (Google).
 interface RankingItem {
@@ -27,6 +30,14 @@ interface RankingItem {
 }
 
 const PL_CITIES = ORIGIN_COUNTRIES.find((c) => c.name === "Polska")?.cities ?? ["Warszawa"];
+
+// Kategoria (moze byc alias DB) -> emoji + etykieta, jak w dzienniku/home.
+const CAT_META: Record<string, { emoji: string; label: string }> = {};
+MAIN_CATEGORIES.forEach((m) => m.subcategories.forEach((s) => {
+  CAT_META[s.id] = { emoji: s.emoji, label: s.label };
+  for (const alias of getDbCategoriesFor(s.id)) if (!CAT_META[alias]) CAT_META[alias] = { emoji: s.emoji, label: s.label };
+}));
+const categoryBadge = (cat: string | null): { emoji: string; label: string } | null => (cat ? CAT_META[cat] ?? null : null);
 
 // Wzbogaca miejsce spoza bazy danymi z Google (rating + okladka + adres + coords).
 // Jeden pipeline dla wszystkich 3 trybow: nazwa | adres | koordynaty.
@@ -79,7 +90,6 @@ const CreateRanking = () => {
   // Tytul = etykieta motywu (usuniete pole tytulu). `legacyTitle` tylko dla starych
   // zestawien bez motywu (edycja) - zeby edycja nie kasowala istniejacego tytulu.
   const [legacyTitle, setLegacyTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [city, setCity] = useState(params.get("city") || "Warszawa");
   const [items, setItems] = useState<RankingItem[]>([]);
   const [publishing, setPublishing] = useState(false);
@@ -92,6 +102,9 @@ const CreateRanking = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [addingCustom, setAddingCustom] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const searchRef = useRef<HTMLDivElement>(null);
+  // Wizytowka miejsca (tap w pozycje na liscie).
+  const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: "Użytkownik", avatar: null });
 
   // Krok 1 = wybor motywu (tylko nowe zestawienie, bez wybranego motywu). Edycja i
@@ -108,9 +121,9 @@ const CreateRanking = () => {
   useEffect(() => {
     if (editId) {
       (async () => {
-        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, description, category, is_public, author_name, author_avatar").eq("id", editId).maybeSingle();
+        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, is_public, author_name, author_avatar").eq("id", editId).maybeSingle();
         if (col) {
-          setLegacyTitle(col.title ?? ""); if (col.city) setCity(col.city); setDescription(col.description ?? ""); setCategory(col.category ?? null);
+          setLegacyTitle(col.title ?? ""); if (col.city) setCity(col.city); setCategory(col.category ?? null);
           setVisibility(col.is_public === false ? "private" : (col.author_name === "Anonim" && !col.author_avatar ? "anon" : "profile"));
         }
         const { data: its } = await (supabase as any).from("discovery_items").select("*").eq("collection_id", editId).order("order_index", { ascending: true });
@@ -150,6 +163,16 @@ const CreateRanking = () => {
   };
   const removeItem = (key: string) => setItems((prev) => prev.filter((x) => x.key !== key));
   const setNote = (key: string, v: string) => setItems((prev) => prev.map((x) => x.key === key ? { ...x, short_desc: v } : x));
+
+  // Otworz wizytowke miejsca (te same dane co w feedzie; Google dociaga reszte).
+  const openDetail = (it: RankingItem) => {
+    setDetailPlace({
+      id: it.place_id ?? it.google_place_id ?? it.place_name,
+      place_name: it.place_name, category: it.category || "other",
+      city, address: it.address ?? "", latitude: it.latitude ?? 0, longitude: it.longitude ?? 0,
+      rating: it.rating ?? 0, photo_url: it.photo_url ?? "", vibe_tags: [], description: "",
+    } as MockPlace);
+  };
 
   const addedNames = new Set(items.map((x) => x.place_name.toLowerCase()));
 
@@ -215,12 +238,12 @@ const CreateRanking = () => {
       const authorName = visibility === "anon" ? "Anonim" : author.name;
       const authorAvatar = visibility === "anon" ? null : author.avatar;
       if (editId) {
-        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city, description: description.trim() || null, category, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, updated_at: new Date().toISOString() }).eq("id", editId);
+        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city, category, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, updated_at: new Date().toISOString() }).eq("id", editId);
         await (supabase as any).from("discovery_items").delete().eq("collection_id", editId);
       } else {
         const { data: col, error } = await (supabase as any).from("discovery_collections").insert({
           user_id: user.id, author_name: authorName, author_avatar: authorAvatar, title: collectionTitle,
-          description: description.trim() || null, category, city, kind: "ranking", is_public: isPublic,
+          category, city, kind: "ranking", is_public: isPublic,
           moderation_status: moderationStatus,
         }).select("id").single();
         if (error || !col) throw new Error(error?.message ?? "insert failed");
@@ -309,32 +332,26 @@ const CreateRanking = () => {
           </div>
         </div>
 
-        {/* Miasto + tytuł + opis */}
+        {/* Miasto + widocznosc */}
         <div className="space-y-3">
           <div>
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Miasto</label>
             <select value={city} onChange={(e) => setCity(e.target.value)}
-              className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/60">
+              className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
               {PL_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Od autora <span className="text-muted-foreground/50 normal-case font-medium">(opcjonalnie)</span></label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={280} rows={3}
-              placeholder="Napisz kilka słów o tej kolekcji: dla kogo, kiedy, dlaczego właśnie te miejsca…"
-              className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50 resize-none" />
           </div>
           {/* Kto to zobaczy: profil | anonimowo | prywatne */}
           <div>
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Kto to zobaczy</label>
-            <div className="flex gap-1.5 rounded-2xl bg-muted p-1">
+            <div className="flex gap-1.5 rounded-2xl bg-secondary p-1">
               {([
                 { id: "profile", label: "Z profilem" },
                 { id: "anon", label: "Anonimowo" },
                 { id: "private", label: "Prywatnie" },
               ] as const).map((o) => (
                 <button key={o.id} type="button" onClick={() => setVisibility(o.id)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${visibility === o.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${visibility === o.id ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
                   {o.label}
                 </button>
               ))}
@@ -345,7 +362,7 @@ const CreateRanking = () => {
           </div>
         </div>
 
-        {/* Lista miejsc (bez numeracji - zwykla kolekcja, nie ranking) */}
+        {/* Lista miejsc: karty jak w dzienniku (tap = wizytowka) + notka autora pod spodem */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Miejsca ({items.length})</p>
@@ -353,43 +370,56 @@ const CreateRanking = () => {
           {items.length === 0 && (
             <p className="text-sm text-muted-foreground py-4 text-center">Dodaj min. 2&nbsp;miejsca do swojej kolekcji.</p>
           )}
-          <div className="space-y-2">
-            {items.map((it) => (
-              <div key={it.key} className="flex items-start gap-2.5 bg-card border border-border/40 rounded-2xl p-2.5">
-                {it.photo_url
-                  ? <img src={it.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover shrink-0" />
-                  : <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center text-muted-foreground shrink-0"><MapPin className="h-5 w-5" /></div>}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-bold truncate">{it.place_name}</p>
-                    {it.rating != null && <span className="text-[11px] text-muted-foreground flex items-center gap-0.5 shrink-0"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{it.rating}</span>}
+          <div className="space-y-2.5">
+            {items.map((it) => {
+              const cat = categoryBadge(it.category);
+              return (
+                <div key={it.key} className="rounded-2xl bg-secondary p-3">
+                  <div className="flex items-start gap-3">
+                    <button onClick={() => openDetail(it)} className="flex items-start gap-3 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
+                      {it.photo_url
+                        ? <img src={it.photo_url} alt="" className="h-14 w-14 rounded-xl object-cover shrink-0" />
+                        : <div className="h-14 w-14 rounded-xl bg-background flex items-center justify-center text-muted-foreground shrink-0"><MapPin className="h-5 w-5" /></div>}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-bold truncate">{it.place_name}</p>
+                          {it.rating != null && <span className="text-[11px] text-muted-foreground flex items-center gap-0.5 shrink-0"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{it.rating}</span>}
+                        </div>
+                        {cat && <span className="inline-flex items-center gap-1 mt-1 rounded-full bg-background px-2 py-0.5 text-[11px] font-semibold">{cat.emoji} {cat.label}</span>}
+                        {it.address && <p className="text-[11px] text-muted-foreground truncate mt-1">{it.address}</p>}
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
+                    </button>
+                    <button onClick={() => removeItem(it.key)} aria-label="Usuń miejsce" className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
                   </div>
-                  {it.address && <p className="text-[11px] text-muted-foreground truncate">{it.address}</p>}
-                  <input value={it.short_desc} onChange={(e) => setNote(it.key, e.target.value)} maxLength={120}
-                    placeholder="Notka (opcjonalnie)…"
-                    className="mt-1.5 w-full rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-1 focus:ring-orange-300 placeholder:text-muted-foreground/50" />
+                  <div className="mt-2.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-1">Notka</p>
+                    <input value={it.short_desc} onChange={(e) => setNote(it.key, e.target.value)} maxLength={120}
+                      placeholder="Twoja notka o tym miejscu (opcjonalnie)…"
+                      className="w-full rounded-xl bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
+                  </div>
                 </div>
-                <button onClick={() => removeItem(it.key)} className="h-6 w-6 flex items-center justify-center rounded-md text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          {/* Wyszukiwarka miejsc */}
-          <div className="relative mt-3">
-            <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+          {/* Wyszukiwarka miejsc (focus -> przewin na gore, zeby wyniki byly widoczne) */}
+          <div ref={searchRef} className="relative mt-4 scroll-mt-3">
+            <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 z-10" />
             <input value={search} onChange={(e) => setSearch(e.target.value)}
+              onFocus={() => setTimeout(() => searchRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150)}
               placeholder={`Szukaj miejsca w ${city}…`}
-              className="w-full rounded-2xl border border-border bg-card pl-9 pr-3 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50" />
+              className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 pl-9 pr-3 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
           </div>
 
           {/* Wyniki wyszukiwania (gdy wpisano fraze) */}
           {search.trim().length >= 2 ? (
-            <div className="mt-2 space-y-1.5">
+            <div className="mt-2 rounded-2xl bg-secondary overflow-hidden divide-y divide-background/60">
               {searchLoading && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}
               {searchResults.filter((r) => !addedNames.has(r.place_name.toLowerCase())).map((r) => (
                 <button key={r.id} onClick={() => addDbPlace(r)}
-                  className="w-full flex items-center gap-3 p-2 rounded-xl active:bg-muted/50 text-left">
-                  {r.photo_url ? <img src={r.photo_url} alt="" className="h-11 w-11 rounded-xl object-cover shrink-0" /> : <div className="h-11 w-11 rounded-xl bg-muted flex items-center justify-center shrink-0"><MapPin className="h-4 w-4 text-muted-foreground" /></div>}
+                  className="w-full flex items-center gap-3 p-2.5 active:bg-background/50 text-left">
+                  {r.photo_url ? <img src={r.photo_url} alt="" className="h-11 w-11 rounded-xl object-cover shrink-0" /> : <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center shrink-0"><MapPin className="h-4 w-4 text-muted-foreground" /></div>}
                   <div className="flex-1 min-w-0"><p className="text-sm font-semibold truncate">{r.place_name}</p>{r.address && <p className="text-[11px] text-muted-foreground truncate">{r.address}</p>}</div>
                   <Plus className="h-4 w-4 text-orange-600 shrink-0" />
                 </button>
@@ -397,7 +427,7 @@ const CreateRanking = () => {
               {/* Brak w bazie -> dodaj recznie po nazwie (Google, bez zargonu) */}
               {!searchLoading && (
                 <button onClick={() => addCustomByName(search)} disabled={addingCustom}
-                  className="w-full flex items-center gap-2 p-3 rounded-xl border border-dashed border-border text-left active:bg-muted/40 disabled:opacity-50">
+                  className="w-full flex items-center gap-2 p-3 text-left active:bg-background/50 disabled:opacity-50">
                   {addingCustom ? <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0" /> : <Plus className="h-4 w-4 text-orange-600 shrink-0" />}
                   <span className="text-sm font-semibold">Dodaj „{search.trim()}"</span>
                 </button>
@@ -411,8 +441,8 @@ const CreateRanking = () => {
                 <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mx-4 px-4 pb-1">
                   {suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).map((s) => (
                     <button key={s.id} onClick={() => addDbPlace(s)}
-                      className="shrink-0 w-[40%] snap-start rounded-2xl border border-border/50 bg-card overflow-hidden text-left active:scale-[0.97] transition-transform">
-                      <div className="relative aspect-[4/3] bg-muted">
+                      className="shrink-0 w-[40%] snap-start rounded-2xl bg-secondary overflow-hidden text-left active:scale-[0.97] transition-transform">
+                      <div className="relative aspect-[4/3] bg-background">
                         {s.photo_url ? <img src={s.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-5 w-5" /></div>}
                         <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm"><Plus className="h-3.5 w-3.5" /></div>
                         {s.rating != null && (
@@ -440,6 +470,9 @@ const CreateRanking = () => {
         </button>
       </div>
 
+      {detailPlace && (
+        <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={city} skipGoogleFetch={false} />
+      )}
     </div>
   );
 };
