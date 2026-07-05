@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Copy, Check, Loader2, ArrowLeft, Trash2, Eye, EyeOff, Star, MapPin, Store, X } from "lucide-react";
 import { format } from "date-fns";
 import { forwardGeocode } from "@/lib/googleMaps";
+import { isHardcodedAdmin } from "@/lib/admins";
 
 interface WaitlistEntry {
   id: string;
@@ -177,6 +178,26 @@ const Admin = () => {
     if (loading) return;
     if (!user) { navigate("/auth"); return; }
 
+    // Wszystkie zakladki (w tym Zestawienia) laduja sie po potwierdzeniu admina.
+    const loadAll = () => {
+      setIsAdmin(true);
+      loadWaitlist();
+      loadAllUsers();
+      loadCityRequests();
+      loadClaims();
+      loadBugReports();
+      loadPendingReviews();
+      loadPendingSubcats();
+      loadAllBusinesses();
+      loadRankings();
+      loadCustomLeads();
+    };
+
+    // Admin = hardcoded email (jak w App.tsx/TopBar) LUB rola w user_roles. Wczesniej
+    // Admin.tsx sprawdzal TYLKO user_roles, wiec admin-po-mailu bez wiersza roli byl
+    // wyrzucany na "/" i nie widzial panelu (w tym sekcji Zestawienia).
+    if (isHardcodedAdmin(user.email)) { loadAll(); return; }
+
     supabase
       .from("user_roles")
       .select("role")
@@ -185,17 +206,7 @@ const Admin = () => {
       .maybeSingle()
       .then(({ data }) => {
         if (!data) { navigate("/"); return; }
-        setIsAdmin(true);
-        loadWaitlist();
-        loadAllUsers();
-        loadCityRequests();
-        loadClaims();
-        loadBugReports();
-        loadPendingReviews();
-        loadPendingSubcats();
-        loadAllBusinesses();
-        loadRankings();
-        loadCustomLeads();
+        loadAll();
       });
   }, [user, loading, navigate]);
 
