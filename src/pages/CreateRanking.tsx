@@ -83,6 +83,8 @@ const CreateRanking = () => {
   const [city, setCity] = useState(params.get("city") || "Warszawa");
   const [items, setItems] = useState<RankingItem[]>([]);
   const [publishing, setPublishing] = useState(false);
+  // Widocznosc + tozsamosc autora: profil | anonimowo | prywatne.
+  const [visibility, setVisibility] = useState<"profile" | "anon" | "private">("profile");
 
   // Wyszukiwarka + propozycje miejsc (bez zargonu "baza/spoza bazy").
   const [search, setSearch] = useState("");
@@ -106,8 +108,11 @@ const CreateRanking = () => {
   useEffect(() => {
     if (editId) {
       (async () => {
-        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, description, category").eq("id", editId).maybeSingle();
-        if (col) { setLegacyTitle(col.title ?? ""); if (col.city) setCity(col.city); setDescription(col.description ?? ""); setCategory(col.category ?? null); }
+        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, description, category, is_public, author_name, author_avatar").eq("id", editId).maybeSingle();
+        if (col) {
+          setLegacyTitle(col.title ?? ""); if (col.city) setCity(col.city); setDescription(col.description ?? ""); setCategory(col.category ?? null);
+          setVisibility(col.is_public === false ? "private" : (col.author_name === "Anonim" && !col.author_avatar ? "anon" : "profile"));
+        }
         const { data: its } = await (supabase as any).from("discovery_items").select("*").eq("collection_id", editId).order("order_index", { ascending: true });
         if (its) setItems(its.map((i: any, idx: number) => ({
           key: `e${idx}`, place_id: i.place_id ?? null, place_name: i.place_name, category: i.category ?? null,
@@ -205,13 +210,17 @@ const CreateRanking = () => {
       // Wszystkie nowe zestawienia czekaja na akceptacje admina (App Store Guideline
       // 1.2 UGC + decyzja: moderacja na starcie dla wszystkich, nie tylko anonimow).
       const moderationStatus = "pending";
+      // Tozsamosc autora wg wyboru widocznosci.
+      const isPublic = visibility !== "private";
+      const authorName = visibility === "anon" ? "Anonim" : author.name;
+      const authorAvatar = visibility === "anon" ? null : author.avatar;
       if (editId) {
-        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city, description: description.trim() || null, category, updated_at: new Date().toISOString() }).eq("id", editId);
+        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city, description: description.trim() || null, category, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, updated_at: new Date().toISOString() }).eq("id", editId);
         await (supabase as any).from("discovery_items").delete().eq("collection_id", editId);
       } else {
         const { data: col, error } = await (supabase as any).from("discovery_collections").insert({
-          user_id: user.id, author_name: author.name, author_avatar: author.avatar, title: collectionTitle,
-          description: description.trim() || null, category, city, kind: "ranking", is_public: true,
+          user_id: user.id, author_name: authorName, author_avatar: authorAvatar, title: collectionTitle,
+          description: description.trim() || null, category, city, kind: "ranking", is_public: isPublic,
           moderation_status: moderationStatus,
         }).select("id").single();
         if (error || !col) throw new Error(error?.message ?? "insert failed");
@@ -232,6 +241,7 @@ const CreateRanking = () => {
       }
       toast.success(
         editId ? "Zestawienie zaktualizowane!"
+          : visibility === "private" ? "Zapisane. Zestawienie jest prywatne (tylko dla Ciebie)."
           : "Wysłane! Zestawienie pojawi się po akceptacji moderatora."
       );
       navigate("/eksploruj");
@@ -313,6 +323,25 @@ const CreateRanking = () => {
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={280} rows={3}
               placeholder="Napisz kilka słów o tej kolekcji: dla kogo, kiedy, dlaczego właśnie te miejsca…"
               className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50 resize-none" />
+          </div>
+          {/* Kto to zobaczy: profil | anonimowo | prywatne */}
+          <div>
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Kto to zobaczy</label>
+            <div className="flex gap-1.5 rounded-2xl bg-muted p-1">
+              {([
+                { id: "profile", label: "Z profilem" },
+                { id: "anon", label: "Anonimowo" },
+                { id: "private", label: "Prywatnie" },
+              ] as const).map((o) => (
+                <button key={o.id} type="button" onClick={() => setVisibility(o.id)}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${visibility === o.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              {visibility === "private" ? "Tylko dla Ciebie, nie trafi do Eksploruj." : visibility === "anon" ? "Widoczne w Eksploruj, ale bez Twojego profilu." : "Widoczne w Eksploruj z Twoim profilem i awatarem."}
+            </p>
           </div>
         </div>
 
@@ -407,7 +436,7 @@ const CreateRanking = () => {
       <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-border/20">
         <button onClick={publish} disabled={!canPublish}
           className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50">
-          {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? "Zapisz zmiany" : "Opublikuj zestawienie")}
+          {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? "Zapisz zmiany" : visibility === "private" ? "Zapisz zestawienie" : "Opublikuj zestawienie")}
         </button>
       </div>
 

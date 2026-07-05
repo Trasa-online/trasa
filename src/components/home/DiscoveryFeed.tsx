@@ -696,14 +696,15 @@ async function enrichRouteRows(routes: any[]): Promise<PolecaneRoute[]> {
 
   return routes.map((r): PolecaneRoute => {
     const prof = profileMap.get(r.user_id);
+    const anon = r.share_anonymous === true;
     return {
       kind: "route", id: r.id, title: r.title, city: r.city,
       photo: photoMap.get(r.id) ?? null,
       ai_highlight: r.ai_highlight ?? null,
       summary: r.ai_summary ?? null,
       categories: catMap.get(r.id) ?? [],
-      author_name: prof?.first_name || prof?.username || "Użytkownik",
-      author_avatar: prof?.avatar_url ?? null,
+      author_name: anon ? "Anonim" : (prof?.first_name || prof?.username || "Użytkownik"),
+      author_avatar: anon ? null : (prof?.avatar_url ?? null),
       placeCount: countMap.get(r.id) ?? 0,
     };
   });
@@ -782,7 +783,7 @@ export default function DiscoveryFeed() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, ai_highlight, user_id, created_at")
+        .select("id, title, city, ai_highlight, user_id, created_at, share_anonymous")
         .eq("is_shared", true).not("title", "is", null)
         .order("created_at", { ascending: false })
         .limit(10);
@@ -797,7 +798,7 @@ export default function DiscoveryFeed() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("routes")
-        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views")
+        .select("id, title, city, ai_highlight, ai_summary, user_id, created_at, views, share_anonymous")
         .eq("is_shared", true).not("title", "is", null).ilike("city", "warszawa%")
         .order("views", { ascending: false, nullsFirst: false })
         .limit(30);

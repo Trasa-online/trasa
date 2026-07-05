@@ -88,6 +88,7 @@ const ReviewSummary = () => {
 
   const [photos, setPhotos] = useState<string[]>([]);
   const [isPublic, setIsPublic] = useState(true);
+  const [shareAnonymous, setShareAnonymous] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pinRatings, setPinRatings] = useState<Record<string, number>>({});
@@ -100,6 +101,7 @@ const ReviewSummary = () => {
   const [shareCaption, setShareCaption] = useState("");
   const [taggedMembers, setTaggedMembers] = useState<string[]>([]);
   const [memberInput, setMemberInput] = useState("");
+  const [memberResults, setMemberResults] = useState<Array<{ username: string; first_name: string | null; avatar_url: string | null }>>([]);
 
   const { data: route, isLoading: routeLoading } = useQuery({
     queryKey: ["review-summary-route", routeId],
@@ -275,10 +277,11 @@ const ReviewSummary = () => {
     (async () => {
       try {
         const { data, error } = await (supabase as any)
-          .from("routes").select("share_caption, tagged_members").eq("id", routeId).maybeSingle();
+          .from("routes").select("share_caption, tagged_members, share_anonymous").eq("id", routeId).maybeSingle();
         if (error) return;
         if (data?.share_caption) setShareCaption(data.share_caption);
         if (Array.isArray(data?.tagged_members)) setTaggedMembers(data.tagged_members);
+        if (typeof data?.share_anonymous === "boolean") setShareAnonymous(data.share_anonymous);
       } catch (e) {
         console.warn("[ReviewSummary] share-meta load skipped:", e);
       }
@@ -294,13 +297,28 @@ const ReviewSummary = () => {
     }
   };
 
-  const addMember = () => {
-    const v = memberInput.trim().replace(/^@/, "");
-    if (!v) return;
-    if (taggedMembers.some((m) => m.toLowerCase() === v.toLowerCase())) { setMemberInput(""); return; }
+  // Oznaczanie tylko realnych userow po username (wybor z listy). Szukamy w profiles.
+  useEffect(() => {
+    const q = memberInput.trim().replace(/^@/, "");
+    if (q.length < 2) { setMemberResults([]); return; }
+    const t = setTimeout(async () => {
+      const { data } = await (supabase as any).from("profiles")
+        .select("username, first_name, avatar_url")
+        .ilike("username", `%${q}%`)
+        .not("username", "is", null)
+        .limit(8);
+      setMemberResults((data ?? []).filter((p: any) => p.username && !taggedMembers.some((m) => m.toLowerCase() === p.username.toLowerCase())));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [memberInput, taggedMembers]);
+
+  const addMember = (username: string) => {
+    const v = username.trim().replace(/^@/, "");
+    if (!v || taggedMembers.some((m) => m.toLowerCase() === v.toLowerCase())) { setMemberInput(""); setMemberResults([]); return; }
     const next = [...taggedMembers, v];
     setTaggedMembers(next);
     setMemberInput("");
+    setMemberResults([]);
     void saveShareMeta(shareCaption, next);
   };
   const removeMember = (name: string) => {
@@ -331,14 +349,21 @@ const ReviewSummary = () => {
     if (res.ok && res.method === "clipboard") notify.success("Link skopiowany");
   };
 
-  const togglePublic = async (val: boolean) => {
-    setIsPublic(val);
+  // Widocznosc trasy: profil (publicznie z profilem) | anon (publicznie anonimowo) | private.
+  const visibility: "profile" | "anon" | "private" = !isPublic ? "private" : shareAnonymous ? "anon" : "profile";
+  const setVisibility = async (mode: "profile" | "anon" | "private") => {
+    const pub = mode !== "private";
+    const anon = mode === "anon";
+    setIsPublic(pub);
+    setShareAnonymous(anon);
     if (routeId) {
-      await supabase.from("routes").update({ is_shared: val } as any).eq("id", routeId);
+      await supabase.from("routes").update({ is_shared: pub, share_anonymous: anon } as any).eq("id", routeId);
       queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
       queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
     }
   };
+  // Kompat: showSharePrompt uzywa togglePublic(true/false).
+  const togglePublic = (val: boolean) => setVisibility(val ? "profile" : "private");
 
   const processFiles = async (files: File[]) => {
     if (!files.length || !routeId || !user) return;
@@ -932,19 +957,28 @@ const ReviewSummary = () => {
     </div>
   );
 
-  // ── Udostępnianie wpisu (toggle public + link). ──
+  // ── Udostępnianie wpisu: profil | anonimowo | prywatnie + podpis + osoby. ──
+  const VIS_OPTIONS: { id: "profile" | "anon" | "private"; label: string; hint: string }[] = [
+    { id: "profile", label: "Z profilem", hint: "Widoczne w Eksploruj z Twoim profilem" },
+    { id: "anon",    label: "Anonimowo", hint: "Widoczne w Eksploruj, ale bez Twojego profilu" },
+    { id: "private", label: "Prywatnie", hint: "Tylko dla Ciebie" },
+  ];
   const renderSharing = () => (
     <div className="px-5">
-      <div className="mt-6 pt-5 border-t border-border/30 flex items-center gap-3">
-        {isPublic ? <Globe className="h-4 w-4 text-orange-600 flex-shrink-0" /> : <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold">{isPublic ? "Udostępnione" : "Prywatne"}</p>
-          <p className="text-xs text-muted-foreground">{isPublic ? "Widoczne w zakładce Eksploruj" : "Tylko dla Ciebie"}</p>
+      <div className="mt-6 pt-5 border-t border-border/30">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Kto to zobaczy</p>
+        <div className="flex gap-1.5 rounded-2xl bg-muted p-1">
+          {VIS_OPTIONS.map((o) => (
+            <button key={o.id} onClick={() => setVisibility(o.id)}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${visibility === o.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
+              {o.label}
+            </button>
+          ))}
         </div>
-        <button onClick={() => togglePublic(!isPublic)}
-          className={`flex-shrink-0 relative w-11 h-6 rounded-full transition-colors duration-200 ${isPublic ? "bg-primary" : "bg-muted-foreground/30"}`}>
-          <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${isPublic ? "translate-x-5" : "translate-x-0"}`} />
-        </button>
+        <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1.5">
+          {visibility === "private" ? <Lock className="h-3 w-3 shrink-0" /> : <Globe className="h-3 w-3 shrink-0 text-orange-600" />}
+          {VIS_OPTIONS.find((o) => o.id === visibility)?.hint}
+        </p>
       </div>
       {isPublic && (<>
         {/* Podpis autora (#11) */}
@@ -961,36 +995,45 @@ const ReviewSummary = () => {
           />
         </div>
 
-        {/* Oznaczeni czlonkowie podrozy (#11) */}
+        {/* Oznaczeni czlonkowie - TYLKO realni userzy po username (wybor z listy) (#11) */}
         <div className="mt-4">
           <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Z kim byłeś/aś <span className="normal-case font-medium text-muted-foreground/50">(opcjonalnie)</span></label>
           {taggedMembers.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {taggedMembers.map((m) => (
                 <span key={m} className="inline-flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-2.5 py-1 text-xs font-semibold">
-                  {m}
+                  @{m}
                   <button onClick={() => removeMember(m)} aria-label={`Usuń ${m}`} className="active:scale-90"><X className="h-3 w-3" /></button>
                 </span>
               ))}
             </div>
           )}
-          <div className="flex gap-2">
+          <div className="relative">
             <input
               value={memberInput}
               onChange={(e) => setMemberInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addMember(); } }}
               maxLength={40}
-              placeholder="Imię lub @nick"
-              className="flex-1 rounded-2xl border border-border bg-card px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50"
+              placeholder="Szukaj po @username…"
+              className="w-full rounded-2xl border border-border bg-card px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50"
             />
-            <button onClick={addMember} disabled={!memberInput.trim()} className="shrink-0 px-4 rounded-2xl bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.97] transition-transform disabled:opacity-40">Dodaj</button>
+            {memberInput.trim().length >= 2 && (
+              <div className="mt-1.5 rounded-2xl border border-border/60 bg-card overflow-hidden divide-y divide-border/30">
+                {memberResults.length === 0 ? (
+                  <p className="px-3 py-2.5 text-xs text-muted-foreground">Brak użytkownika „{memberInput.trim().replace(/^@/, "")}"</p>
+                ) : memberResults.map((p) => (
+                  <button key={p.username} onClick={() => addMember(p.username)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left active:bg-muted/50">
+                    <img src={avatarSrc(p.avatar_url)} alt="" className="h-7 w-7 rounded-full object-cover bg-orange-100 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate">@{p.username}</p>
+                      {p.first_name && <p className="text-[11px] text-muted-foreground truncate">{p.first_name}</p>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-
-        <button onClick={shareLink}
-          className="mt-4 w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-          <Share2 className="h-4 w-4" /> Udostępnij link do trasy
-        </button>
       </>)}
     </div>
   );
@@ -1081,9 +1124,16 @@ const ReviewSummary = () => {
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
           ) : <span />}
-          {saving && (
-            <span className="text-xs text-white/70 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5">Zapisywanie...</span>
-          )}
+          <div className="flex items-center gap-2">
+            {saving && (
+              <span className="text-xs text-white/70 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5">Zapisywanie...</span>
+            )}
+            {isOwner && isPublic && (
+              <button onClick={shareLink} aria-label="Udostępnij trasę" className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform">
+                <Share2 className="h-5 w-5 text-white" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 px-5 pb-6">

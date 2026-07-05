@@ -95,9 +95,9 @@ export default function SharedRoute() {
     queryFn: async () => {
       try {
         const { data, error } = await (supabase as any)
-          .from("routes").select("share_caption, tagged_members").eq("id", id as string).maybeSingle();
+          .from("routes").select("share_caption, tagged_members, share_anonymous").eq("id", id as string).maybeSingle();
         if (error) return null;
-        return data as { share_caption: string | null; tagged_members: string[] | null } | null;
+        return data as { share_caption: string | null; tagged_members: string[] | null; share_anonymous: boolean | null } | null;
       } catch {
         return null;
       }
@@ -264,9 +264,11 @@ export default function SharedRoute() {
   const heroPhoto = cover ?? getRandomPinPlaceholder(route.id);
   const dateLabel = route.start_date ? format(new Date(route.start_date), "d MMMM yyyy", { locale: pl }) : "";
   const cityLabel = route.city || "Podróż";
+  // Tryb anonimowy: autor ukryty (bez profilu/awatara/lokalsa).
+  const isAnon = shareMeta?.share_anonymous === true;
   // "lokals poleca!" - autor pochodzi z miasta tej trasy.
-  const authorName = author?.first_name || author?.username || "Użytkownik";
-  const isLocal = !!author?.home_city && !!route.city &&
+  const authorName = isAnon ? "Anonim" : (author?.first_name || author?.username || "Użytkownik");
+  const isLocal = !isAnon && !!author?.home_city && !!route.city &&
     author.home_city.trim().toLowerCase() === route.city.trim().toLowerCase();
 
   const openDetail = (pin: any) => setDetailPin({
