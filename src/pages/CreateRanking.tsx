@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin, Database, Globe } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -27,7 +27,6 @@ interface RankingItem {
 }
 
 const PL_CITIES = ORIGIN_COUNTRIES.find((c) => c.name === "Polska")?.cities ?? ["Warszawa"];
-type CustomTab = "nazwa" | "adres" | "koordynaty";
 
 // Wzbogaca miejsce spoza bazy danymi z Google (rating + okladka + adres + coords).
 // Jeden pipeline dla wszystkich 3 trybow: nazwa | adres | koordynaty.
@@ -77,13 +76,20 @@ const CreateRanking = () => {
   const { user } = useAuth();
 
   const [category, setCategory] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
+  // Tytul = etykieta motywu (usuniete pole tytulu). `legacyTitle` tylko dla starych
+  // zestawien bez motywu (edycja) - zeby edycja nie kasowala istniejacego tytulu.
+  const [legacyTitle, setLegacyTitle] = useState("");
   const [description, setDescription] = useState("");
   const [city, setCity] = useState(params.get("city") || "Warszawa");
   const [items, setItems] = useState<RankingItem[]>([]);
   const [publishing, setPublishing] = useState(false);
 
-  const [addMode, setAddMode] = useState<null | "search" | "custom">(null);
+  // Wyszukiwarka + propozycje miejsc (bez zargonu "baza/spoza bazy").
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [addingCustom, setAddingCustom] = useState(false);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: "Użytkownik", avatar: null });
 
   // Krok 1 = wybor motywu (tylko nowe zestawienie, bez wybranego motywu). Edycja i
@@ -101,7 +107,7 @@ const CreateRanking = () => {
     if (editId) {
       (async () => {
         const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, description, category").eq("id", editId).maybeSingle();
-        if (col) { setTitle(col.title ?? ""); if (col.city) setCity(col.city); setDescription(col.description ?? ""); setCategory(col.category ?? null); }
+        if (col) { setLegacyTitle(col.title ?? ""); if (col.city) setCity(col.city); setDescription(col.description ?? ""); setCategory(col.category ?? null); }
         const { data: its } = await (supabase as any).from("discovery_items").select("*").eq("collection_id", editId).order("order_index", { ascending: true });
         if (its) setItems(its.map((i: any, idx: number) => ({
           key: `e${idx}`, place_id: i.place_id ?? null, place_name: i.place_name, category: i.category ?? null,
@@ -115,7 +121,6 @@ const CreateRanking = () => {
     if (params.get("from") === "liked") {
       const liked = getHistoryByCity().find((g) => g.city === city)?.places ?? [];
       if (liked.length) {
-        setTitle((t) => t || `Moje miejsca w ${city}`);
         (async () => {
           const names = liked.map((p) => p.place_name);
           const { data: rows } = await (supabase as any).from("places").select("id, place_name, category, address, latitude, longitude, rating, photo_url").in("city", expandCity(city)).in("place_name", names);
@@ -137,12 +142,60 @@ const CreateRanking = () => {
   const addItem = (it: Omit<RankingItem, "key" | "short_desc">) => {
     if (items.some((x) => x.place_name.toLowerCase() === it.place_name.toLowerCase())) { toast("To miejsce już jest na liście"); return; }
     setItems((prev) => [...prev, { ...it, key: `k${Date.now()}`, short_desc: "" }]);
-    setAddMode(null);
   };
   const removeItem = (key: string) => setItems((prev) => prev.filter((x) => x.key !== key));
   const setNote = (key: string, v: string) => setItems((prev) => prev.map((x) => x.key === key ? { ...x, short_desc: v } : x));
 
-  const canPublish = !!category && title.trim().length >= 3 && !!city && items.length >= 2 && !publishing;
+  const addedNames = new Set(items.map((x) => x.place_name.toLowerCase()));
+
+  // Dodaj miejsce z bazy (wynik wyszukiwarki lub propozycji).
+  const addDbPlace = (r: any) => {
+    addItem({ place_id: r.id, place_name: r.place_name, category: r.category ?? null, address: r.address ?? null, latitude: r.latitude ?? null, longitude: r.longitude ?? null, rating: r.rating ?? null, google_place_id: null, photo_url: r.photo_url ?? null });
+    setSuggestions((prev) => prev.filter((s) => s.id !== r.id));
+  };
+
+  // Dodaj miejsce spoza bazy po nazwie (Google proxy). Uzywane gdy brak wyniku w bazie.
+  const addCustomByName = async (name: string) => {
+    if (!name.trim() || addingCustom) return;
+    setAddingCustom(true);
+    const res = await fetchGooglePlace({ name: name.trim(), city });
+    setAddingCustom(false);
+    if (!res || !res.place_name) { toast.error("Nie znaleziono miejsca - sprawdź nazwę"); return; }
+    addItem(res);
+    setSearch("");
+    setSearchResults([]);
+  };
+
+  // Wyszukiwarka miejsc w bazie (debounce). Puste query -> brak wynikow (pokazujemy propozycje).
+  useEffect(() => {
+    const q = search.trim();
+    if (q.length < 2) { setSearchResults([]); setSearchLoading(false); return; }
+    setSearchLoading(true);
+    const t = setTimeout(async () => {
+      const { data } = await (supabase as any).from("places")
+        .select("id, place_name, category, address, latitude, longitude, rating, photo_url")
+        .in("city", expandCity(city)).ilike("place_name", `%${q}%`).eq("is_active", true).limit(15);
+      setSearchResults(data ?? []); setSearchLoading(false);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search, city]);
+
+  // Propozycje: losowe miejsca z bazy dla miasta (swiper pod wyszukiwarka).
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data } = await (supabase as any).from("places")
+        .select("id, place_name, category, address, latitude, longitude, rating, photo_url")
+        .in("city", expandCity(city)).eq("is_active", true).limit(40);
+      if (!alive) return;
+      const shuffled = [...(data ?? [])].sort(() => Math.random() - 0.5).slice(0, 15);
+      setSuggestions(shuffled);
+    })();
+    return () => { alive = false; };
+  }, [city]);
+
+  const collectionTitle = getTheme(category)?.label || legacyTitle.trim() || "Zestawienie";
+  const canPublish = !!category && !!city && items.length >= 2 && !publishing;
 
   const publish = async () => {
     if (!user || !canPublish) return;
@@ -153,11 +206,11 @@ const CreateRanking = () => {
       // 1.2 UGC + decyzja: moderacja na starcie dla wszystkich, nie tylko anonimow).
       const moderationStatus = "pending";
       if (editId) {
-        await (supabase as any).from("discovery_collections").update({ title: title.trim(), city, description: description.trim() || null, category, updated_at: new Date().toISOString() }).eq("id", editId);
+        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city, description: description.trim() || null, category, updated_at: new Date().toISOString() }).eq("id", editId);
         await (supabase as any).from("discovery_items").delete().eq("collection_id", editId);
       } else {
         const { data: col, error } = await (supabase as any).from("discovery_collections").insert({
-          user_id: user.id, author_name: author.name, author_avatar: author.avatar, title: title.trim(),
+          user_id: user.id, author_name: author.name, author_avatar: author.avatar, title: collectionTitle,
           description: description.trim() || null, category, city, kind: "ranking", is_public: true,
           moderation_status: moderationStatus,
         }).select("id").single();
@@ -174,7 +227,7 @@ const CreateRanking = () => {
       // Kazda nowa publikacja -> powiadom admina mailem do moderacji (best-effort, nie blokuj flow).
       if (!editId) {
         supabase.functions.invoke("notify-admin-content", {
-          body: { type: "ranking", title: title.trim(), city, collection_id: collectionId, author: author.name },
+          body: { type: "ranking", title: collectionTitle, city, collection_id: collectionId, author: author.name },
         }).catch((e) => console.warn("[CreateRanking] notify-admin-content failed:", e));
       }
       toast.success(
@@ -206,7 +259,7 @@ const CreateRanking = () => {
             {COLLECTION_THEMES.map((t) => (
               <button
                 key={t.id}
-                onClick={() => { setCategory(t.id); if (!title) setTitle(t.id === "perfect-day" ? `Mój perfekcyjny dzień w ${city}` : ""); }}
+                onClick={() => setCategory(t.id)}
                 className="flex flex-col items-start gap-1 rounded-3xl border border-border/60 bg-card p-4 text-left active:scale-[0.97] transition-transform"
               >
                 <span className="text-3xl leading-none">{t.emoji}</span>
@@ -256,12 +309,6 @@ const CreateRanking = () => {
             </select>
           </div>
           <div>
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Tytuł</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={70}
-              placeholder={`np. Mój perfekcyjny dzień w ${city}`}
-              className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50" />
-          </div>
-          <div>
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Od autora <span className="text-muted-foreground/50 normal-case font-medium">(opcjonalnie)</span></label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={280} rows={3}
               placeholder="Napisz kilka słów o tej kolekcji: dla kogo, kiedy, dlaczego właśnie te miejsca…"
@@ -287,7 +334,6 @@ const CreateRanking = () => {
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-bold truncate">{it.place_name}</p>
                     {it.rating != null && <span className="text-[11px] text-muted-foreground flex items-center gap-0.5 shrink-0"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{it.rating}</span>}
-                    {it.place_id == null && <span className="text-[9px] font-bold text-orange-600 bg-orange-50 rounded-full px-1.5 py-0.5 shrink-0">spoza bazy</span>}
                   </div>
                   {it.address && <p className="text-[11px] text-muted-foreground truncate">{it.address}</p>}
                   <input value={it.short_desc} onChange={(e) => setNote(it.key, e.target.value)} maxLength={120}
@@ -299,15 +345,61 @@ const CreateRanking = () => {
             ))}
           </div>
 
-          {/* Dodawanie */}
-          <div className="grid grid-cols-2 gap-2 mt-3">
-            <button onClick={() => setAddMode("search")} className="flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-border text-sm font-semibold text-foreground active:bg-muted/40">
-              <Database className="h-4 w-4 text-orange-600" /> Z bazy Trasy
-            </button>
-            <button onClick={() => setAddMode("custom")} className="flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-border text-sm font-semibold text-foreground active:bg-muted/40">
-              <Globe className="h-4 w-4 text-orange-600" /> Spoza bazy
-            </button>
+          {/* Wyszukiwarka miejsc */}
+          <div className="relative mt-3">
+            <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder={`Szukaj miejsca w ${city}…`}
+              className="w-full rounded-2xl border border-border bg-card pl-9 pr-3 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/60 placeholder:text-muted-foreground/50" />
           </div>
+
+          {/* Wyniki wyszukiwania (gdy wpisano fraze) */}
+          {search.trim().length >= 2 ? (
+            <div className="mt-2 space-y-1.5">
+              {searchLoading && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}
+              {searchResults.filter((r) => !addedNames.has(r.place_name.toLowerCase())).map((r) => (
+                <button key={r.id} onClick={() => addDbPlace(r)}
+                  className="w-full flex items-center gap-3 p-2 rounded-xl active:bg-muted/50 text-left">
+                  {r.photo_url ? <img src={r.photo_url} alt="" className="h-11 w-11 rounded-xl object-cover shrink-0" /> : <div className="h-11 w-11 rounded-xl bg-muted flex items-center justify-center shrink-0"><MapPin className="h-4 w-4 text-muted-foreground" /></div>}
+                  <div className="flex-1 min-w-0"><p className="text-sm font-semibold truncate">{r.place_name}</p>{r.address && <p className="text-[11px] text-muted-foreground truncate">{r.address}</p>}</div>
+                  <Plus className="h-4 w-4 text-orange-600 shrink-0" />
+                </button>
+              ))}
+              {/* Brak w bazie -> dodaj recznie po nazwie (Google, bez zargonu) */}
+              {!searchLoading && (
+                <button onClick={() => addCustomByName(search)} disabled={addingCustom}
+                  className="w-full flex items-center gap-2 p-3 rounded-xl border border-dashed border-border text-left active:bg-muted/40 disabled:opacity-50">
+                  {addingCustom ? <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0" /> : <Plus className="h-4 w-4 text-orange-600 shrink-0" />}
+                  <span className="text-sm font-semibold">Dodaj „{search.trim()}"</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            /* Propozycje: losowe miejsca (swiper, ~2,5 karty widoczne) */
+            suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).length > 0 && (
+              <div className="mt-4">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">Propozycje w {city}</p>
+                <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mx-4 px-4 pb-1">
+                  {suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).map((s) => (
+                    <button key={s.id} onClick={() => addDbPlace(s)}
+                      className="shrink-0 w-[40%] snap-start rounded-2xl border border-border/50 bg-card overflow-hidden text-left active:scale-[0.97] transition-transform">
+                      <div className="relative aspect-[4/3] bg-muted">
+                        {s.photo_url ? <img src={s.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-5 w-5" /></div>}
+                        <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm"><Plus className="h-3.5 w-3.5" /></div>
+                        {s.rating != null && (
+                          <div className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-white/90 backdrop-blur-sm">
+                            <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" /><span className="text-[9px] font-bold">{s.rating}</span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs font-bold leading-tight truncate px-2 py-2">{s.place_name}</p>
+                    </button>
+                  ))}
+                  <div className="shrink-0 w-1" />
+                </div>
+              </div>
+            )
+          )}
         </div>
       </div>
 
@@ -319,142 +411,8 @@ const CreateRanking = () => {
         </button>
       </div>
 
-      {addMode === "search" && <SearchSheet city={city} onClose={() => setAddMode(null)} onAdd={addItem} />}
-      {addMode === "custom" && <CustomSheet city={city} onClose={() => setAddMode(null)} onAdd={addItem} />}
     </div>
   );
 };
-
-// ── Search w bazie places ─────────────────────────────────────────────────────
-function SearchSheet({ city, onClose, onAdd }: { city: string; onClose: () => void; onAdd: (it: Omit<RankingItem, "key" | "short_desc">) => void }) {
-  const [q, setQ] = useState("");
-  const [results, setResults] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(async () => {
-      if (q.trim().length < 2) { setResults([]); return; }
-      setLoading(true);
-      const { data } = await (supabase as any).from("places").select("id, place_name, category, address, latitude, longitude, rating, photo_url")
-        .in("city", expandCity(city)).ilike("place_name", `%${q.trim()}%`).eq("is_active", true).limit(15);
-      setResults(data ?? []); setLoading(false);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [q, city]);
-  return (
-    <Overlay title={`Szukaj w ${city}`} onClose={onClose}>
-      <div className="relative mb-3">
-        <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nazwa miejsca…"
-          className="w-full rounded-2xl border border-border bg-background pl-9 pr-3 py-3 text-base outline-none focus:ring-2 focus:ring-orange-300" />
-      </div>
-      {loading && <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}
-      <div className="space-y-1.5">
-        {results.map((r) => (
-          <button key={r.id} onClick={() => onAdd({ place_id: r.id, place_name: r.place_name, category: r.category, address: r.address, latitude: r.latitude, longitude: r.longitude, rating: r.rating ?? null, google_place_id: null, photo_url: r.photo_url ?? null })}
-            className="w-full flex items-center gap-3 p-2 rounded-xl active:bg-muted/50 text-left">
-            {r.photo_url ? <img src={r.photo_url} alt="" className="h-11 w-11 rounded-xl object-cover shrink-0" /> : <div className="h-11 w-11 rounded-xl bg-muted flex items-center justify-center shrink-0"><MapPin className="h-4 w-4 text-muted-foreground" /></div>}
-            <div className="flex-1 min-w-0"><p className="text-sm font-semibold truncate">{r.place_name}</p>{r.address && <p className="text-[11px] text-muted-foreground truncate">{r.address}</p>}</div>
-            <Plus className="h-4 w-4 text-orange-600 shrink-0" />
-          </button>
-        ))}
-        {!loading && q.trim().length >= 2 && results.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Brak w bazie. Dodaj „Spoza bazy".</p>}
-      </div>
-    </Overlay>
-  );
-}
-
-// ── Custom: nazwa / adres / koordynaty + podgląd ──────────────────────────────
-function CustomSheet({ city, onClose, onAdd }: { city: string; onClose: () => void; onAdd: (it: Omit<RankingItem, "key" | "short_desc">) => void }) {
-  const [tab, setTab] = useState<CustomTab>("nazwa");
-  const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
-  const [lat, setLat] = useState("");
-  const [lng, setLng] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState<Omit<RankingItem, "key" | "short_desc"> | null>(null);
-
-  const search = async () => {
-    setLoading(true); setPreview(null);
-    const opts = tab === "nazwa" ? { name, city }
-      : tab === "adres" ? { name: name || undefined, address, city }
-      : { name: name || undefined, lat: parseFloat(lat), lng: parseFloat(lng), city };
-    const res = await fetchGooglePlace(opts);
-    setLoading(false);
-    if (!res || !res.place_name) { toast.error("Nie znaleziono miejsca - sprawdź dane"); return; }
-    setPreview(res);
-  };
-
-  const tabs: { id: CustomTab; label: string }[] = [{ id: "nazwa", label: "Nazwa" }, { id: "adres", label: "Adres" }, { id: "koordynaty", label: "Koordynaty" }];
-  const canSearch = tab === "nazwa" ? name.trim().length >= 2 : tab === "adres" ? address.trim().length >= 3 : (!!lat && !!lng);
-
-  return (
-    <Overlay title="Dodaj miejsce spoza bazy" onClose={onClose}>
-      <div className="flex rounded-2xl bg-muted p-1 mb-3">
-        {tabs.map((t) => (
-          <button key={t.id} onClick={() => { setTab(t.id); setPreview(null); }}
-            className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-colors ${tab === t.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>{t.label}</button>
-        ))}
-      </div>
-      <div className="space-y-2.5">
-        {tab === "nazwa" && (
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Nazwa miejsca (np. Bar Mleczny X)"
-            className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-300" />
-        )}
-        {tab === "adres" && (<>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nazwa (opcjonalnie)"
-            className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-300" />
-          <input autoFocus value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Adres (ulica, miasto)"
-            className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-300" />
-        </>)}
-        {tab === "koordynaty" && (<>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nazwa (opcjonalnie)"
-            className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-300" />
-          <div className="flex gap-2">
-            <input value={lat} onChange={(e) => setLat(e.target.value)} inputMode="decimal" placeholder="Szer. (lat)"
-              className="flex-1 rounded-2xl border border-border bg-background px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-300" />
-            <input value={lng} onChange={(e) => setLng(e.target.value)} inputMode="decimal" placeholder="Dł. (lng)"
-              className="flex-1 rounded-2xl border border-border bg-background px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-300" />
-          </div>
-        </>)}
-        <button onClick={search} disabled={!canSearch || loading}
-          className="w-full py-3 rounded-2xl bg-foreground text-background font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-40">
-          {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : "Znajdź miejsce"}
-        </button>
-      </div>
-
-      {/* Podgląd-karta (okładka + nazwa + gwiazdki + adres) z Odrzuć / Dodaj */}
-      {preview && (
-        <div className="mt-4 rounded-2xl border border-border overflow-hidden bg-card">
-          <div className="relative w-full aspect-[16/10] bg-muted">
-            {preview.photo_url ? <img src={preview.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-8 w-8" /></div>}
-          </div>
-          <div className="p-3">
-            <p className="text-base font-black leading-tight">{preview.place_name}</p>
-            {preview.rating != null && <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"><Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />{preview.rating}</p>}
-            {preview.address && <p className="text-xs text-muted-foreground mt-0.5">{preview.address}</p>}
-            <div className="flex gap-2 mt-3">
-              <button onClick={() => setPreview(null)} className="flex-1 py-2.5 rounded-full bg-secondary text-secondary-foreground text-sm font-semibold active:scale-[0.97]">Odrzuć</button>
-              <button onClick={() => onAdd(preview)} className="flex-1 py-2.5 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97]">Dodaj</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </Overlay>
-  );
-}
-
-function Overlay({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/40" onClick={onClose}>
-      <div className="bg-background rounded-t-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 shrink-0">
-          <p className="text-lg font-black">{title}</p>
-          <button onClick={onClose} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
-        </div>
-        <div className="flex-1 overflow-y-auto px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]">{children}</div>
-      </div>
-    </div>
-  );
-}
 
 export default CreateRanking;
