@@ -168,6 +168,12 @@ const Admin = () => {
   }>>([]);
   const [fetchingRankings, setFetchingRankings] = useState(false);
   const [moderatingId, setModeratingId] = useState<string | null>(null);
+  // Podzakladki w "Zestawienia": moderacja kolekcji vs leady spoza bazy.
+  const [rankingsSub, setRankingsSub] = useState<"moderacja" | "leady">("moderacja");
+  // Podglad zestawienia (klik w karte) -> lista miejsc do moderacji.
+  const [previewCol, setPreviewCol] = useState<{ id: string; title: string } | null>(null);
+  const [previewItems, setPreviewItems] = useState<any[]>([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   // Custom miejsca spoza bazy (leady do promocji na claimowalna wizytowke)
   const [customLeads, setCustomLeads] = useState<CustomLead[]>([]);
@@ -684,6 +690,20 @@ const Admin = () => {
         .sort((a: any, b: any) => rank(a.moderation_status) - rank(b.moderation_status))
     );
     setFetchingRankings(false);
+  };
+
+  // Podglad zestawienia: pobierz jego miejsca (do wgladu przed moderacja).
+  const openPreview = async (id: string, title: string) => {
+    setPreviewCol({ id, title });
+    setPreviewItems([]);
+    setPreviewLoading(true);
+    const { data } = await (supabase as any)
+      .from("discovery_items")
+      .select("id, place_name, address, rating, photo_url, short_desc, place_id, order_index")
+      .eq("collection_id", id)
+      .order("order_index", { ascending: true });
+    setPreviewItems(data ?? []);
+    setPreviewLoading(false);
   };
 
   const toggleRankingHidden = async (id: string, hidden: boolean) => {
@@ -1324,8 +1344,23 @@ const Admin = () => {
         })()}
         {/* ── Bug Reports Tab ── */}
         {tab === "rankings" && (
-          <div className="space-y-7">
-            {/* SEKCJA 1: Moderacja zestawien uzytkownikow */}
+          <div className="space-y-4">
+            {/* Podzakladki: moderacja kolekcji | leady spoza bazy */}
+            <div className="flex gap-1.5 rounded-2xl bg-muted p-1">
+              <button onClick={() => setRankingsSub("moderacja")}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${rankingsSub === "moderacja" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
+                Do moderacji
+                {pendingRankings > 0 && <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold">{pendingRankings}</span>}
+              </button>
+              <button onClick={() => setRankingsSub("leady")}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${rankingsSub === "leady" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
+                Miejsca spoza bazy
+                {customLeads.length > 0 && <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold">{customLeads.length}</span>}
+              </button>
+            </div>
+
+            {/* SEKCJA 1: Moderacja zestawien uzytkownikow (klik w karte = podglad) */}
+            {rankingsSub === "moderacja" && (
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <h2 className="text-sm font-bold">Zestawienia użytkowników</h2>
@@ -1346,15 +1381,15 @@ const Admin = () => {
                     return (
                     <div key={r.id} className={`rounded-2xl border p-3.5 ${pending ? "border-amber-300 bg-amber-50/60" : (rejected || r.hidden_by_admin) ? "opacity-60 border-destructive/30 bg-destructive/5" : "border-border/60 bg-card"}`}>
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold leading-tight truncate">{r.title}</p>
+                        <button onClick={() => openPreview(r.id, r.title)} className="flex-1 min-w-0 text-left active:opacity-70 transition-opacity">
+                          <p className="text-sm font-semibold leading-tight truncate flex items-center gap-1">{r.title} <Eye className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" /></p>
                           <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
                             <span className="inline-flex items-center gap-0.5"><MapPin className="h-3 w-3" />{r.city ?? "?"}</span>
                             <span>·</span>
                             <span>{r.item_count} {r.item_count === 1 ? "miejsce" : "miejsc"}</span>
                             {r.author && (<><span>·</span><span>{r.author}</span></>)}
                           </p>
-                        </div>
+                        </button>
                         {pending ? (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">Oczekuje</span>
                         ) : rejected ? (
@@ -1391,8 +1426,10 @@ const Admin = () => {
                 </div>
               )}
             </div>
+            )}
 
             {/* SEKCJA 2: Custom miejsca spoza bazy -> leady */}
+            {rankingsSub === "leady" && (
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Store className="h-4 w-4 text-orange-600" />
@@ -1441,6 +1478,43 @@ const Admin = () => {
                 </div>
               )}
             </div>
+            )}
+
+            {/* Podglad zestawienia (klik w karte) - lista miejsc do wgladu */}
+            {previewCol && (
+              <div className="fixed inset-0 z-[90] flex flex-col justify-end bg-black/40" onClick={() => setPreviewCol(null)}>
+                <div className="bg-background rounded-t-3xl max-h-[85dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between px-5 pt-4 pb-3 shrink-0 border-b border-border/30">
+                    <p className="text-base font-black truncate pr-3">{previewCol.title}</p>
+                    <button onClick={() => setPreviewCol(null)} className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70 shrink-0"><X className="h-4 w-4" /></button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2.5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]">
+                    {previewLoading ? (
+                      <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                    ) : previewItems.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">Brak miejsc w tym zestawieniu.</p>
+                    ) : previewItems.map((it) => (
+                      <div key={it.id} className="flex items-start gap-3 rounded-2xl border border-border/50 bg-card p-2.5">
+                        {it.photo_url ? (
+                          <img src={it.photo_url} alt="" className="h-14 w-14 rounded-xl object-cover shrink-0" loading="lazy" />
+                        ) : (
+                          <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center shrink-0"><MapPin className="h-5 w-5 text-muted-foreground" /></div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-bold truncate">{it.place_name}</p>
+                            {it.rating != null && <span className="text-[11px] text-muted-foreground flex items-center gap-0.5 shrink-0"><Star className="h-3 w-3 fill-amber-400 text-amber-400" />{it.rating}</span>}
+                            {!it.place_id && <span className="text-[9px] font-bold text-orange-600 bg-orange-50 rounded-full px-1.5 py-0.5 shrink-0">spoza bazy</span>}
+                          </div>
+                          {it.address && <p className="text-[11px] text-muted-foreground truncate mt-0.5">{it.address}</p>}
+                          {it.short_desc && <p className="text-xs text-foreground/70 mt-1 leading-snug">„{it.short_desc}"</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

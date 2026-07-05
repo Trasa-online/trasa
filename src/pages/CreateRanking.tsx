@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin, ChevronRight } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin, ChevronRight, List, GalleryHorizontalEnd } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -105,6 +105,10 @@ const CreateRanking = () => {
   const searchRef = useRef<HTMLDivElement>(null);
   // Wizytowka miejsca (tap w pozycje na liscie).
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
+  // Widok miejsc: szczegolowy (karty) | lista (kompakt) - jak toggle na home/dzienniku.
+  const [placeView, setPlaceView] = useState<"detail" | "list">("detail");
+  // Podglad wizytowki miejsca spoza bazy PRZED dodaniem (user zatwierdza).
+  const [customPreview, setCustomPreview] = useState<{ place: MockPlace; item: Omit<RankingItem, "key" | "short_desc"> } | null>(null);
   const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: "Użytkownik", avatar: null });
 
   // Krok 1 = wybor motywu (tylko nowe zestawienie, bez wybranego motywu). Edycja i
@@ -182,14 +186,27 @@ const CreateRanking = () => {
     setSuggestions((prev) => prev.filter((s) => s.id !== r.id));
   };
 
-  // Dodaj miejsce spoza bazy po nazwie (Google proxy). Uzywane gdy brak wyniku w bazie.
-  const addCustomByName = async (name: string) => {
+  // Miejsce spoza bazy: najpierw POKAZ wizytowke do zatwierdzenia (Google proxy),
+  // dopiero po "Dodaj" trafia na liste. User widzi co dodaje.
+  const previewCustomByName = async (name: string) => {
     if (!name.trim() || addingCustom) return;
     setAddingCustom(true);
     const res = await fetchGooglePlace({ name: name.trim(), city });
     setAddingCustom(false);
     if (!res || !res.place_name) { toast.error("Nie znaleziono miejsca - sprawdź nazwę"); return; }
-    addItem(res);
+    setCustomPreview({
+      item: res,
+      place: {
+        id: res.google_place_id ?? res.place_name, place_name: res.place_name, category: res.category || "other",
+        city, address: res.address ?? "", latitude: res.latitude ?? 0, longitude: res.longitude ?? 0,
+        rating: res.rating ?? 0, photo_url: res.photo_url ?? "", vibe_tags: [], description: "",
+      } as MockPlace,
+    });
+  };
+  const confirmCustom = () => {
+    if (!customPreview) return;
+    addItem(customPreview.item);
+    setCustomPreview(null);
     setSearch("");
     setSearchResults([]);
   };
@@ -366,6 +383,16 @@ const CreateRanking = () => {
         <div>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Miejsca ({items.length})</p>
+            {items.length > 0 && (
+              <div className="flex rounded-full bg-secondary p-0.5">
+                <button type="button" onClick={() => setPlaceView("list")} aria-label="Widok listy" className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "list" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  <List className="h-4 w-4" />
+                </button>
+                <button type="button" onClick={() => setPlaceView("detail")} aria-label="Widok szczegółowy" className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "detail" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                  <GalleryHorizontalEnd className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
           {items.length === 0 && (
             <p className="text-sm text-muted-foreground py-4 text-center">Dodaj min. 2&nbsp;miejsca do swojej kolekcji.</p>
@@ -373,6 +400,33 @@ const CreateRanking = () => {
           <div className="space-y-2.5">
             {items.map((it) => {
               const cat = categoryBadge(it.category);
+              // Widok LISTA: kompaktowy wiersz + cienka notka pod spodem.
+              if (placeView === "list") {
+                return (
+                  <div key={it.key} className="rounded-2xl bg-secondary p-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <button onClick={() => openDetail(it)} className="flex items-center gap-2.5 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
+                        {it.photo_url
+                          ? <img src={it.photo_url} alt="" className="h-11 w-11 rounded-lg object-cover shrink-0" />
+                          : <div className="h-11 w-11 rounded-lg bg-background flex items-center justify-center text-muted-foreground shrink-0"><MapPin className="h-4 w-4" /></div>}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-bold truncate">{it.place_name}</p>
+                            {it.rating != null && <span className="text-[11px] text-muted-foreground flex items-center gap-0.5 shrink-0"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{it.rating}</span>}
+                          </div>
+                          {cat && <p className="text-[11px] text-muted-foreground truncate">{cat.emoji} {cat.label}</p>}
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                      </button>
+                      <button onClick={() => removeItem(it.key)} aria-label="Usuń miejsce" className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
+                    </div>
+                    <input value={it.short_desc} onChange={(e) => setNote(it.key, e.target.value)} maxLength={120}
+                      placeholder="Notka (opcjonalnie)…"
+                      className="mt-2 w-full rounded-lg bg-background px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
+                  </div>
+                );
+              }
+              // Widok SZCZEGOLOWY: karta jak w dzienniku.
               return (
                 <div key={it.key} className="rounded-2xl bg-secondary p-3">
                   <div className="flex items-start gap-3">
@@ -426,10 +480,10 @@ const CreateRanking = () => {
               ))}
               {/* Brak w bazie -> dodaj recznie po nazwie (Google, bez zargonu) */}
               {!searchLoading && (
-                <button onClick={() => addCustomByName(search)} disabled={addingCustom}
+                <button onClick={() => previewCustomByName(search)} disabled={addingCustom}
                   className="w-full flex items-center gap-2 p-3 text-left active:bg-background/50 disabled:opacity-50">
-                  {addingCustom ? <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0" /> : <Plus className="h-4 w-4 text-orange-600 shrink-0" />}
-                  <span className="text-sm font-semibold">Dodaj „{search.trim()}"</span>
+                  {addingCustom ? <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0" /> : <Search className="h-4 w-4 text-orange-600 shrink-0" />}
+                  <span className="text-sm font-semibold">Zobacz „{search.trim()}" i&nbsp;dodaj</span>
                 </button>
               )}
             </div>
@@ -472,6 +526,11 @@ const CreateRanking = () => {
 
       {detailPlace && (
         <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={city} skipGoogleFetch={false} />
+      )}
+      {customPreview && (
+        <PlaceSwiperDetail open={!!customPreview} onOpenChange={(o) => { if (!o) setCustomPreview(null); }}
+          place={customPreview.place} city={city} skipGoogleFetch={false}
+          onLike={confirmCustom} onSkip={() => setCustomPreview(null)} />
       )}
     </div>
   );

@@ -11,7 +11,7 @@ import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
-import { themeBadgeLabel } from "@/lib/collectionThemes";
+import { themeBadgeLabel, COLLECTION_THEMES } from "@/lib/collectionThemes";
 import { addLike, getHistoryByCity } from "@/lib/exploreLikes";
 import { toast } from "sonner";
 
@@ -512,11 +512,35 @@ function UserPolecajkiRow({
   collections: DiscoveryCollection[];
   onOpen: (col: DiscoveryCollection) => void;
 }) {
+  const [themeFilter, setThemeFilter] = useState<string | null>(null);
+  // Tylko motywy faktycznie obecne w zestawieniach (nie pokazujemy pustych filtrow).
+  const presentThemes = COLLECTION_THEMES.filter((t) => collections.some((c) => c.category === t.id));
+  const filtered = themeFilter ? collections.filter((c) => c.category === themeFilter) : collections;
+
   return (
     <div>
       <p className="text-sm font-bold mb-2 px-1">Zestawienia miejsc</p>
+      {presentThemes.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-2 -mx-1 px-1">
+          <button
+            onClick={() => setThemeFilter(null)}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${themeFilter === null ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}
+          >
+            Wszystkie
+          </button>
+          {presentThemes.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setThemeFilter((prev) => (prev === t.id ? null : t.id))}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${themeFilter === t.id ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}
+            >
+              {t.emoji} {t.label}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
-        {collections.map((col, idx) => {
+        {filtered.map((col, idx) => {
           const photoItem = col.items.find((i) => i.photo_url) ?? col.items[0];
           const photoUrl = resolveStored(photoItem?.photo_url);
           const gradient = PLACEHOLDER_GRADIENTS[idx % PLACEHOLDER_GRADIENTS.length];
