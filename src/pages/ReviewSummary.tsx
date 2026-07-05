@@ -1115,7 +1115,7 @@ const ReviewSummary = () => {
         {/* Ciemny gradient overlay - dla placeholdera mocniejszy (kontrast tekstu, WCAG) */}
         <div className={`absolute inset-0 bg-gradient-to-b ${hasRealPhoto ? "from-black/40 via-transparent to-black/75" : "from-black/35 via-black/25 to-black/80"}`} />
 
-        <div className="absolute left-0 right-0 flex items-center justify-between px-4"
+        <div className="absolute left-0 right-0 z-20 flex items-center justify-between px-4"
           style={{ top: "calc(max(16px, env(safe-area-inset-top, 16px)) + 6px)" }}>
           {/* Strzałkę cofania chowamy TYLKO w stepperze właściciela (tam nawigacja to
               "Gotowe"/"Wstecz"). W podsumowaniu, u gościa i w aktywnym widoku - pokazujemy. */}
@@ -1136,9 +1136,9 @@ const ReviewSummary = () => {
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 px-5 pb-6">
-          {dateLabel && <p className="text-white/70 text-sm mb-1">{dateLabel}</p>}
-          <h1 className="text-white text-3xl font-black leading-tight drop-shadow-sm">{cityLabel}</h1>
+        <div className="absolute bottom-0 left-0 right-0 z-10 px-5 pb-6">
+          {dateLabel && <p className="text-white/70 text-sm mb-1 w-fit">{dateLabel}</p>}
+          <h1 className="text-white text-3xl font-black leading-tight drop-shadow-sm w-fit">{cityLabel}</h1>
 
           {editingName ? (
             <div className="flex items-center gap-2 mt-1.5">
