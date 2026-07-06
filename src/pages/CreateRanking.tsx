@@ -112,8 +112,8 @@ const CreateRanking = () => {
   const [city, setCity] = useState(params.get("city") || "Warszawa");
   const [items, setItems] = useState<RankingItem[]>([]);
   const [publishing, setPublishing] = useState(false);
-  // Widocznosc + tozsamosc autora: profil | anonimowo | prywatne.
-  const [visibility, setVisibility] = useState<"profile" | "anon" | "private">("profile");
+  // Tozsamosc autora: profil (z awatarem) | anonimowo. Zestawienia sa zawsze publiczne.
+  const [visibility, setVisibility] = useState<"profile" | "anon">("profile");
 
   // Wyszukiwarka + propozycje miejsc (bez zargonu "baza/spoza bazy").
   const [search, setSearch] = useState("");
@@ -122,12 +122,13 @@ const CreateRanking = () => {
   const [addingCustom, setAddingCustom] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
-  // Wizytowka miejsca (tap w pozycje na liscie).
+  // Wizytowka miejsca (tap w pozycje na liscie). detailSkip = custom (bez fetch Google).
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
+  const [detailSkip, setDetailSkip] = useState(false);
   // Widok miejsc: szczegolowy (karty) | lista (kompakt) - jak toggle na home/dzienniku.
   const [placeView, setPlaceView] = useState<"detail" | "list">("detail");
-  // Podglad wizytowki miejsca spoza bazy PRZED dodaniem (user zatwierdza).
-  const [customPreview, setCustomPreview] = useState<{ place: MockPlace; item: Omit<RankingItem, "key" | "short_desc"> } | null>(null);
+  // Podglad miejsca spoza bazy PRZED dodaniem (TYLKO okladka - min. kosztow Google).
+  const [customPreview, setCustomPreview] = useState<Omit<RankingItem, "key" | "short_desc"> | null>(null);
   const [author, setAuthor] = useState<{ name: string; avatar: string | null }>({ name: "Użytkownik", avatar: null });
 
   // Krok 1 = wybor motywu (tylko nowe zestawienie, bez wybranego motywu). Edycja i
@@ -147,7 +148,7 @@ const CreateRanking = () => {
         const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, is_public, author_name, author_avatar").eq("id", editId).maybeSingle();
         if (col) {
           setLegacyTitle(col.title ?? ""); if (col.city) setCity(col.city); setCategory(col.category ?? null);
-          setVisibility(col.is_public === false ? "private" : (col.author_name === "Anonim" && !col.author_avatar ? "anon" : "profile"));
+          setVisibility(col.author_name === "Anonim" && !col.author_avatar ? "anon" : "profile");
         }
         const { data: its } = await (supabase as any).from("discovery_items").select("*").eq("collection_id", editId).order("order_index", { ascending: true });
         if (its) setItems(its.map((i: any, idx: number) => ({
@@ -187,8 +188,11 @@ const CreateRanking = () => {
   const removeItem = (key: string) => setItems((prev) => prev.filter((x) => x.key !== key));
   const setNote = (key: string, v: string) => setItems((prev) => prev.map((x) => x.key === key ? { ...x, short_desc: v } : x));
 
-  // Otworz wizytowke miejsca (te same dane co w feedzie; Google dociaga reszte).
+  // Otworz wizytowke miejsca. Miejsca z bazy (place_id) dociagaja galerie/recenzje
+  // z Google. Miejsca spoza bazy (custom) NIE dociagaja niczego (min. kosztow) -
+  // pokazujemy tylko to co mamy (okladka + nazwa + adres).
   const openDetail = (it: RankingItem) => {
+    setDetailSkip(!it.place_id);
     setDetailPlace({
       id: it.place_id ?? it.google_place_id ?? it.place_name,
       place_name: it.place_name, category: it.category || "other",
@@ -213,18 +217,11 @@ const CreateRanking = () => {
     const res = await fetchGooglePlace({ name: name.trim(), city });
     setAddingCustom(false);
     if (!res || !res.place_name) { toast.error("Nie znaleziono miejsca - sprawdź nazwę"); return; }
-    setCustomPreview({
-      item: res,
-      place: {
-        id: res.google_place_id ?? res.place_name, place_name: res.place_name, category: res.category || "other",
-        city, address: res.address ?? "", latitude: res.latitude ?? 0, longitude: res.longitude ?? 0,
-        rating: res.rating ?? 0, photo_url: res.photo_url ?? "", vibe_tags: [], description: "",
-      } as MockPlace,
-    });
+    setCustomPreview(res);
   };
   const confirmCustom = () => {
     if (!customPreview) return;
-    addItem(customPreview.item);
+    addItem(customPreview);
     setCustomPreview(null);
     setSearch("");
     setSearchResults([]);
@@ -273,8 +270,8 @@ const CreateRanking = () => {
       // Wszystkie nowe zestawienia czekaja na akceptacje admina (App Store Guideline
       // 1.2 UGC + decyzja: moderacja na starcie dla wszystkich, nie tylko anonimow).
       const moderationStatus = "pending";
-      // Tozsamosc autora wg wyboru widocznosci.
-      const isPublic = visibility !== "private";
+      // Zestawienia zawsze publiczne; tozsamosc wg wyboru (profil vs anonim).
+      const isPublic = true;
       const authorName = visibility === "anon" ? "Anonim" : author.name;
       const authorAvatar = visibility === "anon" ? null : author.avatar;
       if (editId) {
@@ -304,7 +301,6 @@ const CreateRanking = () => {
       }
       toast.success(
         editId ? "Zestawienie zaktualizowane!"
-          : visibility === "private" ? "Zapisane. Zestawienie jest prywatne (tylko dla Ciebie)."
           : "Wysłane! Zestawienie pojawi się po akceptacji moderatora."
       );
       navigate("/eksploruj");
@@ -376,7 +372,6 @@ const CreateRanking = () => {
             {([
               { id: "profile", label: "Z profilem" },
               { id: "anon", label: "Anonimowo" },
-              { id: "private", label: "Prywatnie" },
             ] as const).map((o) => (
               <button key={o.id} type="button" onClick={() => setVisibility(o.id)}
                 className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${visibility === o.id ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
@@ -385,7 +380,7 @@ const CreateRanking = () => {
             ))}
           </div>
           <p className="text-[11px] text-muted-foreground mt-1.5">
-            {visibility === "private" ? "Tylko dla Ciebie, nie trafi do Eksploruj." : visibility === "anon" ? "Widoczne w Eksploruj, ale bez Twojego profilu." : "Widoczne w Eksploruj z Twoim profilem i awatarem."}
+            {visibility === "anon" ? "Widoczne w Eksploruj, ale bez Twojego profilu." : "Widoczne w Eksploruj z Twoim profilem i awatarem."}
           </p>
         </div>
 
@@ -539,17 +534,43 @@ const CreateRanking = () => {
       <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-border/20">
         <button onClick={publish} disabled={!canPublish}
           className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50">
-          {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? "Zapisz zmiany" : visibility === "private" ? "Zapisz zestawienie" : "Opublikuj zestawienie")}
+          {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? "Zapisz zmiany" : "Opublikuj zestawienie")}
         </button>
       </div>
 
       {detailPlace && (
-        <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={city} skipGoogleFetch={false} />
+        <PlaceSwiperDetail open={!!detailPlace} onOpenChange={(o) => { if (!o) setDetailPlace(null); }} place={detailPlace} city={city} skipGoogleFetch={detailSkip} />
       )}
+      {/* Podglad miejsca spoza bazy - TYLKO okladka (bez godzin/recenzji, min. kosztow Google) */}
       {customPreview && (
-        <PlaceSwiperDetail open={!!customPreview} onOpenChange={(o) => { if (!o) setCustomPreview(null); }}
-          place={customPreview.place} city={city} skipGoogleFetch={false}
-          onLike={confirmCustom} onSkip={() => setCustomPreview(null)} />
+        <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/40" onClick={() => setCustomPreview(null)}>
+          <div className="bg-background rounded-t-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
+              <p className="text-lg font-black">Dodać to miejsce?</p>
+              <button onClick={() => setCustomPreview(null)} aria-label="Zamknij" className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]">
+              <div className="rounded-2xl overflow-hidden bg-secondary">
+                <div className="relative w-full aspect-[4/3] bg-muted">
+                  {customPreview.photo_url
+                    ? <img src={customPreview.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                    : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-8 w-8" /></div>}
+                </div>
+                <div className="p-3.5">
+                  <div className="flex items-center gap-2">
+                    <p className="text-base font-black leading-tight flex-1 min-w-0">{customPreview.place_name}</p>
+                    {customPreview.rating != null && <span className="text-xs text-muted-foreground flex items-center gap-0.5 shrink-0"><Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />{customPreview.rating}</span>}
+                  </div>
+                  {customPreview.address && <p className="text-xs text-muted-foreground mt-1">{customPreview.address}</p>}
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <button onClick={() => setCustomPreview(null)} className="flex-1 py-3 rounded-full bg-secondary text-secondary-foreground text-sm font-bold active:scale-[0.97] transition-transform">Odrzuć</button>
+                <button onClick={confirmCustom} className="flex-1 py-3 rounded-full bg-primary text-white text-sm font-bold active:scale-[0.97] transition-transform">Dodaj</button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

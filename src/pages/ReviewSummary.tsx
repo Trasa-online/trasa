@@ -1125,7 +1125,12 @@ const ReviewSummary = () => {
           style={{ top: "calc(max(16px, env(safe-area-inset-top, 16px)) + 6px)" }}>
           {/* Strzałkę cofania chowamy TYLKO w stepperze właściciela (tam nawigacja to
               "Gotowe"/"Wstecz"). W podsumowaniu, u gościa i w aktywnym widoku - pokazujemy. */}
-          {!(isMemory && isOwner && (!reviewed || editingStepper)) ? (
+          {editingStepper ? (
+            /* Tryb edycji: cofanie wraca do podsumowania wpisu (nie wychodzi z dziennika). */
+            <button onClick={() => { setEditingStepper(false); setSummaryTab("plan"); }} aria-label="Zakończ edycję" className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform">
+              <ArrowLeft className="h-5 w-5 text-white" />
+            </button>
+          ) : !(isMemory && isOwner && !reviewed) ? (
             <button onClick={() => navigate("/dziennik")} aria-label="Wróć do dziennika" className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
