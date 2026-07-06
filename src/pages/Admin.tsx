@@ -1158,20 +1158,22 @@ const Admin = () => {
 
           return (
             <>
-              {/* Sub-tabs bar */}
-              <div className="flex gap-1 px-4 pt-4 pb-2 border-b border-border/30">
-                {([
-                  { id: "action",  label: "Do działania",    badge: actionCount },
-                  { id: "claims",  label: "Zgłoszenia",      badge: sortedClaims.length },
-                  { id: "all",     label: "Wszystkie",        badge: allBusinesses.length },
-                  { id: "support", label: "Problemy",         badge: bugReports.filter(r => r.description?.startsWith("[Panel biznesowy") && r.status === "new").length },
-                ] as const).map(t => (
-                  <button key={t.id} onClick={() => setBizTab(t.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${bizTab === t.id ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
-                    {t.label}
-                    {t.badge > 0 && <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${bizTab === t.id ? "bg-background/20" : "bg-muted"}`}>{t.badge}</span>}
-                  </button>
-                ))}
+              {/* Sub-tabs bar (styl segmentowy jak w Zestawieniach) */}
+              <div className="px-4 pt-4 pb-1">
+                <div className="flex gap-1.5 rounded-2xl bg-muted p-1">
+                  {([
+                    { id: "action",  label: "Akcje",     badge: actionCount },
+                    { id: "claims",  label: "Zgłoszenia", badge: sortedClaims.length },
+                    { id: "all",     label: "Wszystkie",  badge: allBusinesses.length },
+                    { id: "support", label: "Problemy",   badge: bugReports.filter(r => r.description?.startsWith("[Panel biznesowy") && r.status === "new").length },
+                  ] as const).map(t => (
+                    <button key={t.id} onClick={() => setBizTab(t.id)}
+                      className={`flex-1 min-w-0 min-h-[34px] py-1.5 px-1 rounded-xl text-[11px] font-bold leading-tight transition-colors flex items-center justify-center gap-1 ${bizTab === t.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
+                      <span className="truncate">{t.label}</span>
+                      {t.badge > 0 && <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold shrink-0">{t.badge}</span>}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* ── Do działania ── */}
