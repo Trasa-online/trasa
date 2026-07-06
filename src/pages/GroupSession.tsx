@@ -17,17 +17,23 @@ import { cn } from "@/lib/utils";
 import { SHARE_BASE_URL } from "@/lib/shareUrl";
 import { useShare } from "@/hooks/useShare";
 import { sendGroupInvitePush, getCurrentHostName } from "@/lib/sendGroupInvitePush";
+import { getDbCategoriesFor } from "@/lib/categories";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// dbValues reuzywaja kanonicznego mapowania z categories.ts (getDbCategoriesFor),
+// zeby grupowy widzial WSZYSTKIE warianty kategorii w bazie (gallery/church/
+// tourist_attraction/walk/club/nightlife/...) - tak jak tryb solo. Wczesniej waska
+// lista powodowala, ze wiekszosc kategorii wypadala jako "pusta" i zostawaly ~2.
+const expandCats = (...subs: string[]) => [...new Set(subs.flatMap(getDbCategoriesFor))];
 const AVAILABLE_CATEGORIES = [
-  { id: "Kawiarnia",   label: "Kawiarnia",   emoji: "☕",  dbValues: ["cafe"] },
-  { id: "Restauracja", label: "Restauracja", emoji: "🍽️", dbValues: ["restaurant"] },
-  { id: "Bar",         label: "Bar",         emoji: "🍺",  dbValues: ["bar"] },
-  { id: "Kultura",     label: "Kultura",     emoji: "🏛️", dbValues: ["museum", "monument"] },
-  { id: "Natura",      label: "Natura",      emoji: "🌿",  dbValues: ["park", "viewpoint"] },
-  { id: "Rozrywka",    label: "Rozrywka",    emoji: "🎪",  dbValues: ["experience"] },
-  { id: "Zakupy",      label: "Zakupy",      emoji: "🛍️", dbValues: ["shopping", "market"] },
+  { id: "Kawiarnia",   label: "Kawiarnia",   emoji: "☕",  dbValues: expandCats("cafe") },
+  { id: "Restauracja", label: "Restauracja", emoji: "🍽️", dbValues: expandCats("restaurant") },
+  { id: "Bar",         label: "Bar",         emoji: "🍺",  dbValues: expandCats("bar", "club") },
+  { id: "Kultura",     label: "Kultura",     emoji: "🏛️", dbValues: expandCats("museum", "monument", "gallery") },
+  { id: "Natura",      label: "Natura",      emoji: "🌿",  dbValues: expandCats("park", "viewpoint") },
+  { id: "Rozrywka",    label: "Rozrywka",    emoji: "🎪",  dbValues: expandCats("experience") },
+  { id: "Zakupy",      label: "Zakupy",      emoji: "🛍️", dbValues: expandCats("shopping", "market") },
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
