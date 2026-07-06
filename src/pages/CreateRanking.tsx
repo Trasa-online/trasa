@@ -335,7 +335,26 @@ const CreateRanking = () => {
         <span className="font-bold text-base">{editId ? "Edytuj zestawienie" : "Nowe zestawienie"}</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-8">
+        {/* Widocznosc: profil | anonimowo | prywatne (na gorze, bez naglowka) */}
+        <div>
+          <div className="flex gap-1.5 rounded-2xl bg-secondary p-1">
+            {([
+              { id: "profile", label: "Z profilem" },
+              { id: "anon", label: "Anonimowo" },
+              { id: "private", label: "Prywatnie" },
+            ] as const).map((o) => (
+              <button key={o.id} type="button" onClick={() => setVisibility(o.id)}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${visibility === o.id ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-1.5">
+            {visibility === "private" ? "Tylko dla Ciebie, nie trafi do Eksploruj." : visibility === "anon" ? "Widoczne w Eksploruj, ale bez Twojego profilu." : "Widoczne w Eksploruj z Twoim profilem i awatarem."}
+          </p>
+        </div>
+
         {/* Motyw (chip, zmiana tylko przy nowym zestawieniu) */}
         <div>
           <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Motyw</label>
@@ -349,34 +368,13 @@ const CreateRanking = () => {
           </div>
         </div>
 
-        {/* Miasto + widocznosc */}
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Miasto</label>
-            <select value={city} onChange={(e) => setCity(e.target.value)}
-              className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
-              {PL_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          {/* Kto to zobaczy: profil | anonimowo | prywatne */}
-          <div>
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Kto to zobaczy</label>
-            <div className="flex gap-1.5 rounded-2xl bg-secondary p-1">
-              {([
-                { id: "profile", label: "Z profilem" },
-                { id: "anon", label: "Anonimowo" },
-                { id: "private", label: "Prywatnie" },
-              ] as const).map((o) => (
-                <button key={o.id} type="button" onClick={() => setVisibility(o.id)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${visibility === o.id ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
-                  {o.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1.5">
-              {visibility === "private" ? "Tylko dla Ciebie, nie trafi do Eksploruj." : visibility === "anon" ? "Widoczne w Eksploruj, ale bez Twojego profilu." : "Widoczne w Eksploruj z Twoim profilem i awatarem."}
-            </p>
-          </div>
+        {/* Miasto */}
+        <div>
+          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Miasto</label>
+          <select value={city} onChange={(e) => setCity(e.target.value)}
+            className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
+            {PL_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
         </div>
 
         {/* Lista miejsc: karty jak w dzienniku (tap = wizytowka) + notka autora pod spodem */}
@@ -492,7 +490,7 @@ const CreateRanking = () => {
             suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).length > 0 && (
               <div className="mt-4">
                 <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">Propozycje w {city}</p>
-                <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mx-4 px-4 pb-1">
+                <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
                   {suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).map((s) => (
                     <button key={s.id} onClick={() => addDbPlace(s)}
                       className="shrink-0 w-[40%] snap-start rounded-2xl bg-secondary overflow-hidden text-left active:scale-[0.97] transition-transform">
