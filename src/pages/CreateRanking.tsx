@@ -9,7 +9,7 @@ import { expandCity } from "@/lib/cities";
 import { getHistoryByCity } from "@/lib/exploreLikes";
 import { forwardGeocode, reverseGeocode } from "@/lib/googleMaps";
 import { getPhotoUrl } from "@/lib/placePhotos";
-import { COLLECTION_THEMES, getTheme } from "@/lib/collectionThemes";
+import { COLLECTION_THEMES, getTheme, isRouteCollection } from "@/lib/collectionThemes";
 import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
@@ -340,6 +340,10 @@ const CreateRanking = () => {
               >
                 {/* Delikatny błysk w rogu dla głębi */}
                 <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-white/30 blur-xl" />
+                {/* Typ zestawienia: trasa (plan dnia) vs lista miejsc */}
+                <span className="absolute top-2.5 right-2.5 inline-flex items-center rounded-full bg-white/70 backdrop-blur-sm px-2 py-0.5 text-[9px] font-bold text-foreground/70">
+                  {t.kind === "route" ? "🗺️ Trasa" : "📍 Lista"}
+                </span>
                 <div className="h-12 w-12 rounded-2xl bg-white/70 backdrop-blur-sm flex items-center justify-center text-2xl shadow-sm shrink-0">{t.emoji}</div>
                 <div className="relative">
                   <span className="font-black text-sm leading-tight block text-foreground">{t.label}</span>
@@ -548,7 +552,7 @@ const CreateRanking = () => {
           {/* Mapa z miejscami */}
           {mapPins.length > 0 && (
             <div>
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">Na mapie</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">{isRouteCollection(category) ? "Trasa na mapie" : "Miejsca na mapie"}</label>
               <div className="relative h-52 rounded-2xl overflow-hidden border border-border/40">
                 <RouteMap pins={mapPins as any} className="w-full h-full" />
               </div>

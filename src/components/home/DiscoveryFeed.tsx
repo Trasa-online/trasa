@@ -11,7 +11,7 @@ import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
-import { COLLECTION_THEMES, getTheme } from "@/lib/collectionThemes";
+import { COLLECTION_THEMES, getTheme, collectionKind } from "@/lib/collectionThemes";
 import { addLike, getHistoryByCity } from "@/lib/exploreLikes";
 import { toast } from "sonner";
 
@@ -141,6 +141,7 @@ export function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; o
   const isOwner = !!user && user.id === col.user_id;
   const isLocal = !!col.author_home_city && !!col.city && col.author_home_city.trim().toLowerCase() === col.city.trim().toLowerCase();
   const theme = getTheme(col.category);
+  const isRoute = collectionKind(col.category) === "route";
 
   // Ktore miejsca sa juz polubione (localStorage per miasto) -> badge "juz polubione".
   // Set nazw miejsc; refresh po dodaniu polubienia w tym widoku.
@@ -260,11 +261,14 @@ export function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; o
             </SheetClose>
           </div>
         </div>
-        {/* Rzad 2: badge motywu + statystyki (wyswietlenia/polubienia/dodania) */}
+        {/* Rzad 2: badge motywu + typ (trasa/lista) + statystyki */}
         <div className="flex items-center gap-2.5 mt-2.5 flex-wrap">
           {theme && (
             <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${theme.badge}`}>{theme.emoji} {theme.label}</span>
           )}
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+            {isRoute ? "🗺️ Trasa" : "📍 Lista"}
+          </span>
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
             {(col.views_count ?? 0) > 0 && <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{col.views_count}</span>}
             {(col.saves_count ?? 0) > 0 && <span className="flex items-center gap-1"><Heart className="h-3 w-3" />{col.saves_count}</span>}
@@ -349,7 +353,7 @@ export function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; o
           onClick={adoptRoute}
           className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-transform shadow-md shadow-orange-500/20"
         >
-          Użyj tej trasy <ArrowRight className="h-4 w-4" />
+          {isRoute ? "Użyj tej trasy" : "Zaplanuj z tych miejsc"} <ArrowRight className="h-4 w-4" />
         </button>
         {col.city && (
           <button onClick={planOwn} className="w-full mt-1.5 py-2 text-sm font-semibold text-muted-foreground active:scale-[0.97] transition-transform">
@@ -532,7 +536,7 @@ function UserPolecajkiRow({
           ))}
         </div>
       )}
-      <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1">
+      <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1 -mr-4">
         {filtered.map((col, idx) => {
           const photoItem = col.items.find((i) => i.photo_url) ?? col.items[0];
           const photoUrl = resolveStored(photoItem?.photo_url);
