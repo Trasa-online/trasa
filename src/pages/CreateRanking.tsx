@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, Check } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin, ChevronRight, ChevronDown, ChevronUp, List, GalleryHorizontalEnd, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -192,6 +192,14 @@ const CreateRanking = () => {
   };
   const removeItem = (key: string) => setItems((prev) => prev.filter((x) => x.key !== key));
   const setNote = (key: string, v: string) => setItems((prev) => prev.map((x) => x.key === key ? { ...x, short_desc: v } : x));
+  // Zmiana kolejnosci (tylko trasa/plan). order_index zapisuje sie z pozycji w tablicy.
+  const move = (idx: number, dir: -1 | 1) => setItems((prev) => {
+    const j = idx + dir;
+    if (j < 0 || j >= prev.length) return prev;
+    const next = [...prev];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    return next;
+  });
 
   // Otworz wizytowke miejsca. Miejsca z bazy (place_id) dociagaja galerie/recenzje
   // z Google. Miejsca spoza bazy (custom) NIE dociagaja niczego (min. kosztow) -
@@ -265,6 +273,7 @@ const CreateRanking = () => {
   }, [city, category]);
 
   const collectionTitle = getTheme(category)?.label || legacyTitle.trim() || "Zestawienie";
+  const isRoute = isRouteCollection(category); // trasa/plan -> mozna ustawiac kolejnosc
   const canGoNext = !!category && !!city && items.length >= 2; // krok 1 -> 2
   const canPublish = canGoNext && !publishing;
 
@@ -471,11 +480,21 @@ const CreateRanking = () => {
               <p className="text-sm text-muted-foreground py-4 text-center">Dodaj min. 2&nbsp;miejsca z&nbsp;wyszukiwarki lub propozycji.</p>
             )}
             <div className="space-y-2.5">
-              {items.map((it) => {
+              {items.map((it, idx) => {
                 const cat = categoryBadge(it.category);
+                // Kontrolki kolejnosci (tylko trasa/plan): strzalki gora/dol.
+                const reorder = isRoute && (
+                  <div className="flex flex-col shrink-0">
+                    <button onClick={() => move(idx, -1)} disabled={idx === 0} aria-label="W górę" className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground disabled:opacity-25 active:bg-background"><ChevronUp className="h-4 w-4" /></button>
+                    <button onClick={() => move(idx, 1)} disabled={idx === items.length - 1} aria-label="W dół" className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground disabled:opacity-25 active:bg-background"><ChevronDown className="h-4 w-4" /></button>
+                  </div>
+                );
+                // Numer kroku (tylko trasa - kolejnosc zwiedzania, nie ranking).
+                const stepNo = isRoute && <span className="h-6 w-6 rounded-full bg-orange-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">{idx + 1}</span>;
                 if (placeView === "list") {
                   return (
-                    <div key={it.key} className="rounded-2xl bg-secondary p-2.5 flex items-center gap-2.5">
+                    <div key={it.key} className="rounded-2xl bg-secondary p-2.5 flex items-center gap-2">
+                      {stepNo}
                       <button onClick={() => openDetail(it)} className="flex items-center gap-2.5 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
                         {it.photo_url
                           ? <img src={it.photo_url} alt="" className="h-11 w-11 rounded-lg object-cover shrink-0" />
@@ -487,14 +506,15 @@ const CreateRanking = () => {
                           </div>
                           {cat && <p className="text-[11px] text-muted-foreground truncate">{cat.emoji} {cat.label}</p>}
                         </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                       </button>
+                      {reorder}
                       <button onClick={() => removeItem(it.key)} aria-label="Usuń miejsce" className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
                     </div>
                   );
                 }
                 return (
-                  <div key={it.key} className="rounded-2xl bg-secondary p-3 flex items-start gap-3">
+                  <div key={it.key} className="rounded-2xl bg-secondary p-3 flex items-start gap-2.5">
+                    {stepNo}
                     <button onClick={() => openDetail(it)} className="flex items-start gap-3 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
                       {it.photo_url
                         ? <img src={it.photo_url} alt="" className="h-14 w-14 rounded-xl object-cover shrink-0" />
@@ -507,8 +527,8 @@ const CreateRanking = () => {
                         {cat && <span className="inline-flex items-center gap-1 mt-1 rounded-full bg-background px-2 py-0.5 text-[11px] font-semibold">{cat.emoji} {cat.label}</span>}
                         {it.address && <p className="text-[11px] text-muted-foreground truncate mt-1">{it.address}</p>}
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
                     </button>
+                    {reorder}
                     <button onClick={() => removeItem(it.key)} aria-label="Usuń miejsce" className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
                   </div>
                 );
