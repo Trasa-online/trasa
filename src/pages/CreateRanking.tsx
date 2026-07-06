@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin, ChevronRight, List, GalleryHorizontalEnd } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin, ChevronRight, ChevronDown, List, GalleryHorizontalEnd } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -38,6 +38,25 @@ MAIN_CATEGORIES.forEach((m) => m.subcategories.forEach((s) => {
   for (const alias of getDbCategoriesFor(s.id)) if (!CAT_META[alias]) CAT_META[alias] = { emoji: s.emoji, label: s.label };
 }));
 const categoryBadge = (cat: string | null): { emoji: string; label: string } | null => (cat ? CAT_META[cat] ?? null : null);
+
+// Inteligentne propozycje: motyw -> pasujace podkategorie miejsc. Brak wpisu
+// (np. perfect-day) = bez filtra (rozny dzien = mix wszystkiego).
+const THEME_SUBCATS: Record<string, string[]> = {
+  date:      ["restaurant", "cafe", "bar", "viewpoint", "gallery"],
+  friends:   ["bar", "club", "restaurant", "cafe", "experience"],
+  family:    ["park", "museum", "experience", "viewpoint", "restaurant", "cafe"],
+  budget:    ["cafe", "park", "market", "viewpoint", "monument"],
+  foodie:    ["restaurant", "cafe", "bar", "market"],
+  nightlife: ["bar", "club"],
+  culture:   ["museum", "monument", "gallery", "viewpoint"],
+  outdoor:   ["park", "viewpoint", "experience"],
+  rainy:     ["museum", "cafe", "gallery", "restaurant", "shopping"],
+};
+// Rozwija podkategorie do wszystkich wartosci DB (aliasy) do filtra .in("category", ...).
+const themeDbCategories = (themeId: string | null): string[] | null => {
+  if (!themeId || !THEME_SUBCATS[themeId]) return null;
+  return [...new Set(THEME_SUBCATS[themeId].flatMap((s) => getDbCategoriesFor(s)))];
+};
 
 // Wzbogaca miejsce spoza bazy danymi z Google (rating + okladka + adres + coords).
 // Jeden pipeline dla wszystkich 3 trybow: nazwa | adres | koordynaty.
@@ -225,19 +244,23 @@ const CreateRanking = () => {
     return () => clearTimeout(t);
   }, [search, city]);
 
-  // Propozycje: losowe miejsca z bazy dla miasta (swiper pod wyszukiwarka).
+  // Propozycje: losowe miejsca z bazy dla miasta, dopasowane do motywu (inteligentne
+  // rekomendacje - np. "lokalne smaki" -> restauracje/kawiarnie/bary).
   useEffect(() => {
     let alive = true;
     (async () => {
-      const { data } = await (supabase as any).from("places")
+      const cats = themeDbCategories(category);
+      let q = (supabase as any).from("places")
         .select("id, place_name, category, address, latitude, longitude, rating, photo_url")
-        .in("city", expandCity(city)).eq("is_active", true).limit(40);
+        .in("city", expandCity(city)).eq("is_active", true);
+      if (cats) q = q.in("category", cats);
+      const { data } = await q.limit(40);
       if (!alive) return;
       const shuffled = [...(data ?? [])].sort(() => Math.random() - 0.5).slice(0, 15);
       setSuggestions(shuffled);
     })();
     return () => { alive = false; };
-  }, [city]);
+  }, [city, category]);
 
   const collectionTitle = getTheme(category)?.label || legacyTitle.trim() || "Zestawienie";
   const canPublish = !!category && !!city && items.length >= 2 && !publishing;
@@ -310,7 +333,7 @@ const CreateRanking = () => {
               <button
                 key={t.id}
                 onClick={() => setCategory(t.id)}
-                className="flex flex-col items-start gap-1 rounded-3xl border border-border/60 bg-card p-4 text-left active:scale-[0.97] transition-transform"
+                className="flex flex-col items-start gap-1 rounded-3xl bg-secondary p-4 text-left active:scale-[0.97] transition-transform"
               >
                 <span className="text-3xl leading-none">{t.emoji}</span>
                 <span className="font-bold text-sm mt-1.5 leading-tight">{t.label}</span>
@@ -327,12 +350,23 @@ const CreateRanking = () => {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
-      {/* Header */}
+      {/* Header - motyw jako chip po prawej (tap = powrot do wyboru motywu) */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
         <button onClick={() => navigate(-1)} aria-label="Wstecz" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <span className="font-bold text-base">{editId ? "Edytuj zestawienie" : "Nowe zestawienie"}</span>
+        <span className="flex-1 font-bold text-base truncate">{editId ? "Edytuj zestawienie" : "Nowe zestawienie"}</span>
+        {activeTheme && (
+          <button
+            onClick={() => { if (!editId) setCategory(null); }}
+            disabled={!!editId}
+            aria-label="Zmień motyw"
+            className="inline-flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-3 py-1.5 text-xs font-bold shrink-0 active:scale-95 transition-transform disabled:active:scale-100"
+          >
+            <span className="max-w-[110px] truncate">{activeTheme.emoji} {activeTheme.label}</span>
+            {!editId && <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-8">
@@ -353,19 +387,6 @@ const CreateRanking = () => {
           <p className="text-[11px] text-muted-foreground mt-1.5">
             {visibility === "private" ? "Tylko dla Ciebie, nie trafi do Eksploruj." : visibility === "anon" ? "Widoczne w Eksploruj, ale bez Twojego profilu." : "Widoczne w Eksploruj z Twoim profilem i awatarem."}
           </p>
-        </div>
-
-        {/* Motyw (chip, zmiana tylko przy nowym zestawieniu) */}
-        <div>
-          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Motyw</label>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 border border-orange-200 px-3 py-1.5 text-sm font-semibold text-orange-700">
-              {activeTheme ? <>{activeTheme.emoji} {activeTheme.label}</> : "Bez motywu"}
-            </span>
-            {!editId && (
-              <button onClick={() => setCategory(null)} className="text-xs font-semibold text-muted-foreground underline underline-offset-2">zmień</button>
-            )}
-          </div>
         </div>
 
         {/* Miasto */}
