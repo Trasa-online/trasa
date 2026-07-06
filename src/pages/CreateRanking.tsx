@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin, ChevronRight, ChevronDown, List, GalleryHorizontalEnd } from "lucide-react";
+import { ArrowLeft, Search, Plus, X, Loader2, Star, MapPin, ChevronRight, ChevronDown, List, GalleryHorizontalEnd, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ import { COLLECTION_THEMES, getTheme } from "@/lib/collectionThemes";
 import { MAIN_CATEGORIES, getDbCategoriesFor } from "@/lib/categories";
 import PlaceSwiperDetail from "@/components/plan-wizard/PlaceSwiperDetail";
 import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
+import RouteMap from "@/components/RouteMap";
 
 // Item rankingu. place_id != null = miejsce z bazy (tap -> wizytowka). null = custom (Google).
 interface RankingItem {
@@ -112,8 +113,12 @@ const CreateRanking = () => {
   const [city, setCity] = useState(params.get("city") || "Warszawa");
   const [items, setItems] = useState<RankingItem[]>([]);
   const [publishing, setPublishing] = useState(false);
-  // Tozsamosc autora: profil (z awatarem) | anonimowo. Zestawienia sa zawsze publiczne.
-  const [visibility, setVisibility] = useState<"profile" | "anon">("profile");
+  // Krok formularza po wyborze motywu: 1 = miasto + miejsca, 2 = notki + mapa + publikacja.
+  const [step, setStep] = useState<1 | 2>(1);
+  // Glowna notka do calego zestawienia (krok 2).
+  const [description, setDescription] = useState("");
+  // Tozsamosc autora: domyslnie z profilem; checkbox "anonimowo" na koncu (krok 2).
+  const [asAnon, setAsAnon] = useState(false);
 
   // Wyszukiwarka + propozycje miejsc (bez zargonu "baza/spoza bazy").
   const [search, setSearch] = useState("");
@@ -121,7 +126,6 @@ const CreateRanking = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [addingCustom, setAddingCustom] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
-  const searchRef = useRef<HTMLDivElement>(null);
   // Wizytowka miejsca (tap w pozycje na liscie). detailSkip = custom (bez fetch Google).
   const [detailPlace, setDetailPlace] = useState<MockPlace | null>(null);
   const [detailSkip, setDetailSkip] = useState(false);
@@ -145,10 +149,11 @@ const CreateRanking = () => {
   useEffect(() => {
     if (editId) {
       (async () => {
-        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, is_public, author_name, author_avatar").eq("id", editId).maybeSingle();
+        const { data: col } = await (supabase as any).from("discovery_collections").select("title, city, category, description, author_name, author_avatar").eq("id", editId).maybeSingle();
         if (col) {
           setLegacyTitle(col.title ?? ""); if (col.city) setCity(col.city); setCategory(col.category ?? null);
-          setVisibility(col.author_name === "Anonim" && !col.author_avatar ? "anon" : "profile");
+          setDescription(col.description ?? "");
+          setAsAnon(col.author_name === "Anonim" && !col.author_avatar);
         }
         const { data: its } = await (supabase as any).from("discovery_items").select("*").eq("collection_id", editId).order("order_index", { ascending: true });
         if (its) setItems(its.map((i: any, idx: number) => ({
@@ -260,7 +265,8 @@ const CreateRanking = () => {
   }, [city, category]);
 
   const collectionTitle = getTheme(category)?.label || legacyTitle.trim() || "Zestawienie";
-  const canPublish = !!category && !!city && items.length >= 2 && !publishing;
+  const canGoNext = !!category && !!city && items.length >= 2; // krok 1 -> 2
+  const canPublish = canGoNext && !publishing;
 
   const publish = async () => {
     if (!user || !canPublish) return;
@@ -272,15 +278,16 @@ const CreateRanking = () => {
       const moderationStatus = "pending";
       // Zestawienia zawsze publiczne; tozsamosc wg wyboru (profil vs anonim).
       const isPublic = true;
-      const authorName = visibility === "anon" ? "Anonim" : author.name;
-      const authorAvatar = visibility === "anon" ? null : author.avatar;
+      const authorName = asAnon ? "Anonim" : author.name;
+      const authorAvatar = asAnon ? null : author.avatar;
+      const desc = description.trim() || null;
       if (editId) {
-        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city, category, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, updated_at: new Date().toISOString() }).eq("id", editId);
+        await (supabase as any).from("discovery_collections").update({ title: collectionTitle, city, category, description: desc, is_public: isPublic, author_name: authorName, author_avatar: authorAvatar, updated_at: new Date().toISOString() }).eq("id", editId);
         await (supabase as any).from("discovery_items").delete().eq("collection_id", editId);
       } else {
         const { data: col, error } = await (supabase as any).from("discovery_collections").insert({
           user_id: user.id, author_name: authorName, author_avatar: authorAvatar, title: collectionTitle,
-          category, city, kind: "ranking", is_public: isPublic,
+          category, city, description: desc, kind: "ranking", is_public: isPublic,
           moderation_status: moderationStatus,
         }).select("id").single();
         if (error || !col) throw new Error(error?.message ?? "insert failed");
@@ -347,82 +354,124 @@ const CreateRanking = () => {
   }
 
   const activeTheme = getTheme(category);
+  const mapPins = items.filter((i) => i.latitude != null && i.longitude != null)
+    .map((i) => ({ latitude: i.latitude!, longitude: i.longitude!, place_name: i.place_name }));
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background max-w-lg mx-auto">
       {/* Header - motyw jako chip po prawej (tap = powrot do wyboru motywu) */}
       <div className="flex items-center gap-2 px-4 pt-safe-4 pb-3 border-b border-border/20 shrink-0">
-        <button onClick={() => navigate(-1)} aria-label="Wstecz" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
+        <button onClick={() => (step === 2 ? setStep(1) : navigate(-1))} aria-label="Wstecz" className="h-9 w-9 flex items-center justify-center -ml-1 shrink-0 text-foreground">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <span className="flex-1 font-bold text-base truncate">{editId ? "Edytuj zestawienie" : "Nowe zestawienie"}</span>
+        <span className="flex-1 font-bold text-base truncate">{step === 2 ? "Notki i mapa" : editId ? "Edytuj zestawienie" : "Nowe zestawienie"}</span>
         {activeTheme && (
           <button
-            onClick={() => { if (!editId) setCategory(null); }}
-            disabled={!!editId}
+            onClick={() => { if (!editId && step === 1) setCategory(null); }}
+            disabled={!!editId || step === 2}
             aria-label="Zmień motyw"
             className="inline-flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-3 py-1.5 text-xs font-bold shrink-0 active:scale-95 transition-transform disabled:active:scale-100"
           >
             <span className="max-w-[110px] truncate">{activeTheme.emoji} {activeTheme.label}</span>
-            {!editId && <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+            {!editId && step === 1 && <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
           </button>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-8">
-        {/* Widocznosc: profil | anonimowo | prywatne (na gorze, bez naglowka) */}
-        <div>
-          <div className="flex gap-1.5 rounded-2xl bg-secondary p-1">
-            {([
-              { id: "profile", label: "Z profilem" },
-              { id: "anon", label: "Anonimowo" },
-            ] as const).map((o) => (
-              <button key={o.id} type="button" onClick={() => setVisibility(o.id)}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${visibility === o.id ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
-                {o.label}
-              </button>
-            ))}
+      {/* ══ KROK 1: miasto + wyszukiwarka (sticky) + propozycje + wybrane miejsca ══ */}
+      {step === 1 && (
+        <div className="flex-1 overflow-y-auto">
+          {/* Miasto */}
+          <div className="px-4 pt-4">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Miasto</label>
+            <select value={city} onChange={(e) => setCity(e.target.value)}
+              className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
+              {PL_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1.5">
-            {visibility === "anon" ? "Widoczne w Eksploruj, ale bez Twojego profilu." : "Widoczne w Eksploruj z Twoim profilem i awatarem."}
-          </p>
-        </div>
 
-        {/* Miasto */}
-        <div>
-          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Miasto</label>
-          <select value={city} onChange={(e) => setCity(e.target.value)}
-            className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40">
-            {PL_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
+          {/* Wyszukiwarka - STICKY na gorze (najwazniejsza) */}
+          <div className="sticky top-0 z-20 bg-background px-4 pt-3 pb-2">
+            <div className="relative">
+              <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 z-10" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder={`Szukaj miejsca w ${city}…`}
+                className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 pl-9 pr-3 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
+            </div>
+          </div>
 
-        {/* Lista miejsc: karty jak w dzienniku (tap = wizytowka) + notka autora pod spodem */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Miejsca ({items.length})</p>
-            {items.length > 0 && (
-              <div className="flex rounded-full bg-secondary p-0.5">
-                <button type="button" onClick={() => setPlaceView("list")} aria-label="Widok listy" className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "list" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                  <List className="h-4 w-4" />
-                </button>
-                <button type="button" onClick={() => setPlaceView("detail")} aria-label="Widok szczegółowy" className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "detail" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
-                  <GalleryHorizontalEnd className="h-4 w-4" />
-                </button>
+          {/* Wyniki / propozycje - tuz pod wyszukiwarka */}
+          <div className="px-4">
+            {search.trim().length >= 2 ? (
+              <div className="rounded-2xl bg-secondary overflow-hidden divide-y divide-background/60">
+                {searchLoading && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}
+                {searchResults.filter((r) => !addedNames.has(r.place_name.toLowerCase())).map((r) => (
+                  <button key={r.id} onClick={() => addDbPlace(r)}
+                    className="w-full flex items-center gap-3 p-2.5 active:bg-background/50 text-left">
+                    {r.photo_url ? <img src={r.photo_url} alt="" className="h-11 w-11 rounded-xl object-cover shrink-0" /> : <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center shrink-0"><MapPin className="h-4 w-4 text-muted-foreground" /></div>}
+                    <div className="flex-1 min-w-0"><p className="text-sm font-semibold truncate">{r.place_name}</p>{r.address && <p className="text-[11px] text-muted-foreground truncate">{r.address}</p>}</div>
+                    <Plus className="h-4 w-4 text-orange-600 shrink-0" />
+                  </button>
+                ))}
+                {!searchLoading && (
+                  <button onClick={() => previewCustomByName(search)} disabled={addingCustom}
+                    className="w-full flex items-center gap-2 p-3 text-left active:bg-background/50 disabled:opacity-50">
+                    {addingCustom ? <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0" /> : <Search className="h-4 w-4 text-orange-600 shrink-0" />}
+                    <span className="text-sm font-semibold">Zobacz „{search.trim()}" i&nbsp;dodaj</span>
+                  </button>
+                )}
               </div>
+            ) : (
+              suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).length > 0 && (
+                <div>
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">Propozycje w {city}</p>
+                  <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
+                    {suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).map((s) => (
+                      <button key={s.id} onClick={() => addDbPlace(s)}
+                        className="shrink-0 w-[40%] snap-start rounded-2xl bg-secondary overflow-hidden text-left active:scale-[0.97] transition-transform">
+                        <div className="relative aspect-[4/3] bg-background">
+                          {s.photo_url ? <img src={s.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-5 w-5" /></div>}
+                          <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm"><Plus className="h-3.5 w-3.5" /></div>
+                          {s.rating != null && (
+                            <div className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-white/90 backdrop-blur-sm">
+                              <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" /><span className="text-[9px] font-bold">{s.rating}</span>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs font-bold leading-tight truncate px-2 py-2">{s.place_name}</p>
+                      </button>
+                    ))}
+                    <div className="shrink-0 w-1" />
+                  </div>
+                </div>
+              )
             )}
           </div>
-          {items.length === 0 && (
-            <p className="text-sm text-muted-foreground py-4 text-center">Dodaj min. 2&nbsp;miejsca do swojej kolekcji.</p>
-          )}
-          <div className="space-y-2.5">
-            {items.map((it) => {
-              const cat = categoryBadge(it.category);
-              // Widok LISTA: kompaktowy wiersz + cienka notka pod spodem.
-              if (placeView === "list") {
-                return (
-                  <div key={it.key} className="rounded-2xl bg-secondary p-2.5">
-                    <div className="flex items-center gap-2.5">
+
+          {/* Wybrane miejsca (bez notek - notki na kroku 2) */}
+          <div className="px-4 pt-5 pb-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Wybrane miejsca ({items.length})</p>
+              {items.length > 0 && (
+                <div className="flex rounded-full bg-secondary p-0.5">
+                  <button type="button" onClick={() => setPlaceView("list")} aria-label="Widok listy" className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "list" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                    <List className="h-4 w-4" />
+                  </button>
+                  <button type="button" onClick={() => setPlaceView("detail")} aria-label="Widok szczegółowy" className={`px-2.5 py-1 rounded-full transition-colors ${placeView === "detail" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}>
+                    <GalleryHorizontalEnd className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+            {items.length === 0 && (
+              <p className="text-sm text-muted-foreground py-4 text-center">Dodaj min. 2&nbsp;miejsca z&nbsp;wyszukiwarki lub propozycji.</p>
+            )}
+            <div className="space-y-2.5">
+              {items.map((it) => {
+                const cat = categoryBadge(it.category);
+                if (placeView === "list") {
+                  return (
+                    <div key={it.key} className="rounded-2xl bg-secondary p-2.5 flex items-center gap-2.5">
                       <button onClick={() => openDetail(it)} className="flex items-center gap-2.5 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
                         {it.photo_url
                           ? <img src={it.photo_url} alt="" className="h-11 w-11 rounded-lg object-cover shrink-0" />
@@ -438,16 +487,10 @@ const CreateRanking = () => {
                       </button>
                       <button onClick={() => removeItem(it.key)} aria-label="Usuń miejsce" className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
                     </div>
-                    <input value={it.short_desc} onChange={(e) => setNote(it.key, e.target.value)} maxLength={120}
-                      placeholder="Notka (opcjonalnie)…"
-                      className="mt-2 w-full rounded-lg bg-background px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
-                  </div>
-                );
-              }
-              // Widok SZCZEGOLOWY: karta jak w dzienniku.
-              return (
-                <div key={it.key} className="rounded-2xl bg-secondary p-3">
-                  <div className="flex items-start gap-3">
+                  );
+                }
+                return (
+                  <div key={it.key} className="rounded-2xl bg-secondary p-3 flex items-start gap-3">
                     <button onClick={() => openDetail(it)} className="flex items-start gap-3 flex-1 min-w-0 text-left active:opacity-80 transition-opacity">
                       {it.photo_url
                         ? <img src={it.photo_url} alt="" className="h-14 w-14 rounded-xl object-cover shrink-0" />
@@ -464,82 +507,80 @@ const CreateRanking = () => {
                     </button>
                     <button onClick={() => removeItem(it.key)} aria-label="Usuń miejsce" className="h-7 w-7 flex items-center justify-center rounded-full text-destructive active:bg-destructive/10 shrink-0"><X className="h-4 w-4" /></button>
                   </div>
-                  <div className="mt-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-1">Notka</p>
-                    <input value={it.short_desc} onChange={(e) => setNote(it.key, e.target.value)} maxLength={120}
-                      placeholder="Twoja notka o tym miejscu (opcjonalnie)…"
-                      className="w-full rounded-xl bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Wyszukiwarka miejsc (focus -> przewin na gore, zeby wyniki byly widoczne) */}
-          <div ref={searchRef} className="relative mt-4 scroll-mt-3">
-            <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 z-10" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)}
-              onFocus={() => setTimeout(() => searchRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150)}
-              placeholder={`Szukaj miejsca w ${city}…`}
-              className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 pl-9 pr-3 py-3 text-base outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
-          </div>
-
-          {/* Wyniki wyszukiwania (gdy wpisano fraze) */}
-          {search.trim().length >= 2 ? (
-            <div className="mt-2 rounded-2xl bg-secondary overflow-hidden divide-y divide-background/60">
-              {searchLoading && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}
-              {searchResults.filter((r) => !addedNames.has(r.place_name.toLowerCase())).map((r) => (
-                <button key={r.id} onClick={() => addDbPlace(r)}
-                  className="w-full flex items-center gap-3 p-2.5 active:bg-background/50 text-left">
-                  {r.photo_url ? <img src={r.photo_url} alt="" className="h-11 w-11 rounded-xl object-cover shrink-0" /> : <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center shrink-0"><MapPin className="h-4 w-4 text-muted-foreground" /></div>}
-                  <div className="flex-1 min-w-0"><p className="text-sm font-semibold truncate">{r.place_name}</p>{r.address && <p className="text-[11px] text-muted-foreground truncate">{r.address}</p>}</div>
-                  <Plus className="h-4 w-4 text-orange-600 shrink-0" />
-                </button>
-              ))}
-              {/* Brak w bazie -> dodaj recznie po nazwie (Google, bez zargonu) */}
-              {!searchLoading && (
-                <button onClick={() => previewCustomByName(search)} disabled={addingCustom}
-                  className="w-full flex items-center gap-2 p-3 text-left active:bg-background/50 disabled:opacity-50">
-                  {addingCustom ? <Loader2 className="h-4 w-4 animate-spin text-orange-600 shrink-0" /> : <Search className="h-4 w-4 text-orange-600 shrink-0" />}
-                  <span className="text-sm font-semibold">Zobacz „{search.trim()}" i&nbsp;dodaj</span>
-                </button>
-              )}
+                );
+              })}
             </div>
-          ) : (
-            /* Propozycje: losowe miejsca (swiper, ~2,5 karty widoczne) */
-            suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).length > 0 && (
-              <div className="mt-4">
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2">Propozycje w {city}</p>
-                <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory -mr-4 pr-4 pb-1">
-                  {suggestions.filter((s) => !addedNames.has(s.place_name.toLowerCase())).map((s) => (
-                    <button key={s.id} onClick={() => addDbPlace(s)}
-                      className="shrink-0 w-[40%] snap-start rounded-2xl bg-secondary overflow-hidden text-left active:scale-[0.97] transition-transform">
-                      <div className="relative aspect-[4/3] bg-background">
-                        {s.photo_url ? <img src={s.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><MapPin className="h-5 w-5" /></div>}
-                        <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center shadow-sm"><Plus className="h-3.5 w-3.5" /></div>
-                        {s.rating != null && (
-                          <div className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-white/90 backdrop-blur-sm">
-                            <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" /><span className="text-[9px] font-bold">{s.rating}</span>
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-xs font-bold leading-tight truncate px-2 py-2">{s.place_name}</p>
-                    </button>
-                  ))}
-                  <div className="shrink-0 w-1" />
-                </div>
-              </div>
-            )
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* CTA */}
+      {/* ══ KROK 2: glowna notka + notki do miejsc + mapa + anonimowo ══ */}
+      {step === 2 && (
+        <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
+          {/* Glowna notka do calego zestawienia */}
+          <div>
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Notka do zestawienia <span className="normal-case font-medium text-muted-foreground/50">(opcjonalnie)</span></label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={280} rows={3}
+              placeholder="Napisz kilka słów o tej kolekcji: dla kogo, kiedy, dlaczego właśnie te miejsca…"
+              className="w-full rounded-2xl bg-secondary text-secondary-foreground border-0 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50 resize-none" />
+          </div>
+
+          {/* Notki do poszczegolnych miejsc */}
+          <div>
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">Notki do miejsc</label>
+            <div className="space-y-2.5">
+              {items.map((it) => (
+                <div key={it.key} className="rounded-2xl bg-secondary p-2.5">
+                  <div className="flex items-center gap-2.5">
+                    {it.photo_url
+                      ? <img src={it.photo_url} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
+                      : <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center text-muted-foreground shrink-0"><MapPin className="h-4 w-4" /></div>}
+                    <p className="text-sm font-bold truncate flex-1 min-w-0">{it.place_name}</p>
+                  </div>
+                  <input value={it.short_desc} onChange={(e) => setNote(it.key, e.target.value)} maxLength={120}
+                    placeholder="Twoja notka o tym miejscu (opcjonalnie)…"
+                    className="mt-2 w-full rounded-lg bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500/40 placeholder:text-muted-foreground/50" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mapa z miejscami */}
+          {mapPins.length > 0 && (
+            <div>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">Na mapie</label>
+              <div className="relative h-52 rounded-2xl overflow-hidden border border-border/40">
+                <RouteMap pins={mapPins as any} className="w-full h-full" />
+              </div>
+            </div>
+          )}
+
+          {/* Anonimowo - checkbox na koncu (domyslnie z profilem) */}
+          <button type="button" onClick={() => setAsAnon((v) => !v)} className="w-full flex items-start gap-3 rounded-2xl bg-secondary p-3.5 text-left active:scale-[0.99] transition-transform">
+            <span className={`h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${asAnon ? "bg-primary border-orange-600" : "border-border bg-background"}`}>
+              {asAnon && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+            </span>
+            <span className="min-w-0">
+              <span className="text-sm font-bold block">Dodaj anonimowo</span>
+              <span className="text-[11px] text-muted-foreground block mt-0.5">{asAnon ? "Bez Twojego profilu i awatara." : "Domyślnie: z Twoim profilem i awatarem."}</span>
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* CTA - Dalej (krok 1) / Opublikuj (krok 2) */}
       <div className="shrink-0 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-border/20">
-        <button onClick={publish} disabled={!canPublish}
-          className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50">
-          {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? "Zapisz zmiany" : "Opublikuj zestawienie")}
-        </button>
+        {step === 1 ? (
+          <button onClick={() => setStep(2)} disabled={!canGoNext}
+            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2">
+            Dalej: notki i mapa <ChevronRight className="h-4 w-4" />
+          </button>
+        ) : (
+          <button onClick={publish} disabled={!canPublish}
+            className="w-full py-3.5 rounded-full bg-primary text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-[0.98] transition-transform disabled:opacity-50">
+            {publishing ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (editId ? "Zapisz zmiany" : "Opublikuj zestawienie")}
+          </button>
+        )}
       </div>
 
       {detailPlace && (
