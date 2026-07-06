@@ -61,8 +61,10 @@ const Admin = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"waitlist" | "cities" | "businesses" | "bugs" | "rankings">("businesses");
-  const [bizTab, setBizTab] = useState<"action" | "claims" | "all" | "support">("action");
+  const [tab, setTab] = useState<"waitlist" | "other" | "businesses" | "bugs" | "rankings">("businesses");
+  // Podzakladki "Inne": miasta | bledy.
+  const [otherTab, setOtherTab] = useState<"cities" | "bugs">("cities");
+  const [bizTab, setBizTab] = useState<"claims" | "all" | "support">("claims");
   const [userTab, setUserTab] = useState<"pending" | "created" | "all">("pending");
 
   // Waitlist state
@@ -819,7 +821,7 @@ const Admin = () => {
 
   const tabLabels: Record<string, string> = {
     waitlist: "Użytkownicy",
-    cities: "Miasta",
+    other: "Inne",
     businesses: "Biznesy",
     rankings: "Zestawienia",
     bugs: "Błędy",
@@ -842,9 +844,9 @@ const Admin = () => {
 
       {/* Tabs */}
       <div className="flex border-b border-border/40">
-        {(["cities", "businesses", "rankings", "bugs"] as const).map(t => {
+        {(["other", "businesses", "rankings"] as const).map(t => {
           const newBugs = bugReports.filter(r => r.status === "new").length;
-          const badge = t === "businesses" ? pendingClaims : t === "waitlist" ? pendingWaitlist : t === "bugs" ? newBugs : t === "rankings" ? (pendingRankings + customLeads.length) : 0;
+          const badge = t === "businesses" ? pendingClaims : t === "other" ? newBugs : t === "rankings" ? (pendingRankings + customLeads.length) : 0;
           return (
             <button
               key={t}
@@ -1005,8 +1007,23 @@ const Admin = () => {
         })()}
 
 
-        {/* ── Cities Tab ── */}
-        {tab === "cities" && (
+        {/* ── Inne: podzakladki Miasta | Bledy ── */}
+        {tab === "other" && (
+          <div className="flex gap-1.5 rounded-2xl bg-muted p-1 mb-4">
+            <button onClick={() => setOtherTab("cities")}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${otherTab === "cities" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
+              Miasta
+            </button>
+            <button onClick={() => setOtherTab("bugs")}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${otherTab === "bugs" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
+              Błędy
+              {bugReports.filter(r => r.status === "new").length > 0 && <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold">{bugReports.filter(r => r.status === "new").length}</span>}
+            </button>
+          </div>
+        )}
+
+        {/* ── Cities (w zakladce Inne) ── */}
+        {tab === "other" && otherTab === "cities" && (
           fetchingCities ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -1029,12 +1046,6 @@ const Admin = () => {
 
         {/* ── Businesses Tab ── */}
         {tab === "businesses" && (() => {
-          // Lokale do aktywacji: maja konto, ale brak place_id (niewidoczne w apce)
-          const pendingActivation = allBusinesses.filter(b => !b.place_id && b.business_name);
-          const actionCount = pendingSubcats.length
-            + pendingReviews.filter(r => !r.is_verified).length
-            + sortedClaims.filter(c => c.status === "pending").length
-            + pendingActivation.length;
           const filteredAll = allBusinesses.filter(b =>
             !bizSearch
             || b.business_name.toLowerCase().includes(bizSearch.toLowerCase())
@@ -1162,7 +1173,6 @@ const Admin = () => {
               <div className="px-4 pt-4 pb-1">
                 <div className="flex gap-1.5 rounded-2xl bg-muted p-1">
                   {([
-                    { id: "action",  label: "Akcje",     badge: actionCount },
                     { id: "claims",  label: "Zgłoszenia", badge: sortedClaims.length },
                     { id: "all",     label: "Wszystkie",  badge: allBusinesses.length },
                     { id: "support", label: "Problemy",   badge: bugReports.filter(r => r.description?.startsWith("[Panel biznesowy") && r.status === "new").length },
@@ -1175,76 +1185,6 @@ const Admin = () => {
                   ))}
                 </div>
               </div>
-
-              {/* ── Do działania ── */}
-              {bizTab === "action" && (
-                <div className="p-4 space-y-6">
-                  {actionCount === 0 && <p className="text-sm text-muted-foreground text-center py-8">Nic do zrobienia 🎉</p>}
-                  {sortedClaims.filter(c => c.status === "pending").length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nowe zgłoszenia ({sortedClaims.filter(c => c.status === "pending").length})</p>
-                      {sortedClaims.filter(c => c.status === "pending").map(renderClaimCard)}
-                    </div>
-                  )}
-                  {pendingReviews.filter(r => !r.is_verified).length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Do weryfikacji ({pendingReviews.filter(r => !r.is_verified).length})</p>
-                      {pendingReviews.filter(r => !r.is_verified).map(renderReviewCard)}
-                    </div>
-                  )}
-                  {pendingActivation.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Lokale do aktywacji ({pendingActivation.length})</p>
-                      {pendingActivation.map(biz => (
-                        <div key={biz.id} className="p-4 rounded-2xl border border-orange-200 bg-orange-50 space-y-3">
-                          <div className="min-w-0">
-                            <p className="text-base font-bold truncate">{biz.business_name}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {biz.city ?? "?"} · {biz.main_category ?? "brak kategorii"}
-                              {!biz.main_category && <span className="text-orange-700 font-semibold"> · uwaga: defaultem 'restaurant'</span>}
-                            </p>
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <Button
-                              disabled={activatingPlaceId === biz.id}
-                              onClick={() => handleActivatePlace(biz.id)}
-                              className="w-full h-12 text-sm font-bold rounded-2xl bg-orange-600 hover:bg-orange-700 text-white border-0 active:scale-[0.98] transition-transform"
-                            >
-                              {activatingPlaceId === biz.id ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Aktywuję…</> : "Aktywuj lokal"}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              disabled={deletingBizId === biz.id}
-                              onClick={() => handleDeleteBusiness(biz.id)}
-                              className="w-full h-11 text-sm font-semibold rounded-2xl text-red-600 border-red-200 hover:bg-red-50 active:scale-[0.98] transition-transform"
-                            >
-                              {deletingBizId === biz.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Usuń"}
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {pendingSubcats.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Propozycje podkategorii ({pendingSubcats.length})</p>
-                      {pendingSubcats.map(s => (
-                        <div key={s.id} className="flex items-center gap-3 p-3 rounded-2xl border border-amber-200 bg-amber-50">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold truncate">{s.business_name}</p>
-                            <p className="text-sm font-bold text-amber-700 mt-0.5">„{s.custom_subcategory}"</p>
-                            {s.main_category && <p className="text-[11px] text-muted-foreground mt-0.5">{s.main_category}</p>}
-                          </div>
-                          <div className="flex gap-2 shrink-0">
-                            <Button size="sm" disabled={subcatActionId === s.id} onClick={() => handleApproveSubcat(s.id, s.custom_subcategory, s.main_category)} className="h-7 px-3 text-xs rounded-xl bg-green-600 hover:bg-green-700 text-white border-0">Zatwierdź</Button>
-                            <Button size="sm" variant="outline" disabled={subcatActionId === s.id} onClick={() => handleRejectSubcat(s.id)} className="h-7 px-3 text-xs rounded-xl text-red-600 border-red-200 hover:bg-red-50">Odrzuć</Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* ── Zgłoszenia ── */}
               {bizTab === "claims" && (
@@ -1468,13 +1408,6 @@ const Admin = () => {
                           </p>
                         </div>
                       </div>
-                      <button
-                        onClick={() => promoteLead(lead)}
-                        disabled={promotingKey === lead.key}
-                        className="mt-2.5 w-full py-2 rounded-xl bg-primary text-white text-xs font-bold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50"
-                      >
-                        {promotingKey === lead.key ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Store className="h-3.5 w-3.5" /> Promuj do wizytówki</>}
-                      </button>
                     </div>
                   ))}
                 </div>
@@ -1520,7 +1453,7 @@ const Admin = () => {
           </div>
         )}
 
-        {tab === "bugs" && (
+        {tab === "other" && otherTab === "bugs" && (
           fetchingBugs ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
