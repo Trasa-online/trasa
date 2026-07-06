@@ -77,6 +77,8 @@ const ReviewSummary = () => {
   const [addingPlace, setAddingPlace] = useState(false);
   // Popup po finalizacji planu: udostepnic w Eksploruj czy zostawic prywatna.
   const [showSharePrompt, setShowSharePrompt] = useState(false);
+  // Arkusz udostepniania (skrot obok ikony edycji): widocznosc + podpis + osoby.
+  const [shareSheetOpen, setShareSheetOpen] = useState(false);
 
   // Badge "Nowa trasa!" w JournalTab znika po wejsciu w wpis.
   useEffect(() => {
@@ -360,6 +362,10 @@ const ReviewSummary = () => {
       await supabase.from("routes").update({ is_shared: pub, share_anonymous: anon } as any).eq("id", routeId);
       queryClient.invalidateQueries({ queryKey: ["review-summary-route", routeId] });
       queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+      // Feed Eksploruj (Anonim vs profil na kartach tras) - wymus odswiezenie.
+      queryClient.invalidateQueries({ queryKey: ["discovery-newest-routes"] });
+      queryClient.invalidateQueries({ queryKey: ["discovery-warszawa-routes"] });
+      queryClient.invalidateQueries({ queryKey: ["shared-route-meta", routeId] });
     }
   };
   // Kompat: showSharePrompt uzywa togglePublic(true/false).
@@ -1258,6 +1264,10 @@ const ReviewSummary = () => {
                     <ImageIcon className="h-4 w-4" /> Zdjęcia
                   </button>
                 </div>
+                <button onClick={() => setShareSheetOpen(true)} aria-label="Udostępnianie"
+                  className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 active:scale-95 transition-transform">
+                  <Share2 className="h-4 w-4 text-foreground" />
+                </button>
                 <button onClick={() => { setEditingStepper(true); setStep(1); }} aria-label="Edytuj wpis"
                   className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 active:scale-95 transition-transform">
                   <Pencil className="h-4 w-4 text-foreground" />
@@ -1369,6 +1379,29 @@ const ReviewSummary = () => {
               >
                 Zostaw prywatną
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Arkusz udostepniania (skrot obok edycji): widocznosc + podpis + osoby ── */}
+      {shareSheetOpen && (
+        <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/40" onClick={() => setShareSheetOpen(false)}>
+          <div className="bg-background rounded-t-3xl max-h-[88dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
+              <p className="text-lg font-black">Udostępnianie</p>
+              <button onClick={() => setShareSheetOpen(false)} aria-label="Zamknij" className="h-9 w-9 rounded-full bg-muted flex items-center justify-center active:bg-muted/70"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]">
+              {renderSharing()}
+              {isPublic && (
+                <div className="px-5 mt-5">
+                  <button onClick={shareLink}
+                    className="w-full py-3 rounded-full bg-secondary text-secondary-foreground font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+                    <Share2 className="h-4 w-4" /> Udostępnij link do trasy
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
