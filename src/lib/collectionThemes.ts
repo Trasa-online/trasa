@@ -7,20 +7,21 @@ export interface CollectionTheme {
   label: string;
   emoji: string;
   hint: string;      // krotka podpowiedz pod kaflem
-  gradient: string;  // tailwind gradient (from-... to-...) dla kafla motywu
+  gradient: string;  // tailwind gradient (from-... to-...) dla kafla motywu - stonowany
+  badge: string;     // klasy badge'a motywu (tlo + tekst) dopasowane do koloru motywu
 }
 
 export const COLLECTION_THEMES: CollectionTheme[] = [
-  { id: "perfect-day", label: "Perfekcyjny dzień",     emoji: "🌟", hint: "Twój idealny plan na cały dzień",             gradient: "from-amber-100 to-orange-200" },
-  { id: "date",        label: "Randka",                emoji: "💕", hint: "Miejsca na romantyczne wyjście",              gradient: "from-rose-100 to-pink-200" },
-  { id: "friends",     label: "Ze znajomymi",          emoji: "🎉", hint: "Wspólne wyjścia z ekipą",                     gradient: "from-violet-100 to-purple-200" },
-  { id: "family",      label: "Z dzieckiem",           emoji: "👨‍👩‍👧", hint: "Rodzinnie, przyjaźnie dzieciom",              gradient: "from-sky-100 to-blue-200" },
-  { id: "budget",      label: "Budżetowo",             emoji: "💸", hint: "Fajnie i tanio",                              gradient: "from-emerald-100 to-green-200" },
-  { id: "foodie",      label: "Lokalne smaki",         emoji: "🍜", hint: "Gdzie zjeść jak lokals",                      gradient: "from-orange-100 to-amber-200" },
-  { id: "nightlife",   label: "Nocne życie",           emoji: "🌙", hint: "Bary, kluby, po zmroku",                      gradient: "from-indigo-100 to-violet-200" },
-  { id: "culture",     label: "Kultura i sztuka",      emoji: "🎭", hint: "Muzea, galerie, zabytki",                     gradient: "from-fuchsia-100 to-purple-200" },
-  { id: "outdoor",     label: "Aktywnie",              emoji: "🌳", hint: "Na świeżym powietrzu",                        gradient: "from-teal-100 to-emerald-200" },
-  { id: "rainy",       label: "Na deszczowy dzień",    emoji: "🌧️", hint: "Gdy pada, a nie chcesz siedzieć w domu",     gradient: "from-slate-100 to-sky-200" },
+  { id: "perfect-day", label: "Perfekcyjny dzień",     emoji: "🌟", hint: "Twój idealny plan na cały dzień",             gradient: "from-amber-50 to-orange-100",   badge: "bg-amber-100 text-amber-800" },
+  { id: "date",        label: "Randka",                emoji: "💕", hint: "Miejsca na romantyczne wyjście",              gradient: "from-rose-50 to-pink-100",      badge: "bg-rose-100 text-rose-700" },
+  { id: "friends",     label: "Ze znajomymi",          emoji: "🎉", hint: "Wspólne wyjścia z ekipą",                     gradient: "from-violet-50 to-purple-100",  badge: "bg-violet-100 text-violet-700" },
+  { id: "family",      label: "Z dzieckiem",           emoji: "👨‍👩‍👧", hint: "Rodzinnie, przyjaźnie dzieciom",              gradient: "from-sky-50 to-blue-100",       badge: "bg-sky-100 text-sky-700" },
+  { id: "budget",      label: "Budżetowo",             emoji: "💸", hint: "Fajnie i tanio",                              gradient: "from-emerald-50 to-green-100",  badge: "bg-emerald-100 text-emerald-700" },
+  { id: "foodie",      label: "Lokalne smaki",         emoji: "🍜", hint: "Gdzie zjeść jak lokals",                      gradient: "from-orange-50 to-amber-100",   badge: "bg-orange-100 text-orange-700" },
+  { id: "nightlife",   label: "Nocne życie",           emoji: "🌙", hint: "Bary, kluby, po zmroku",                      gradient: "from-indigo-50 to-violet-100",  badge: "bg-indigo-100 text-indigo-700" },
+  { id: "culture",     label: "Kultura i sztuka",      emoji: "🎭", hint: "Muzea, galerie, zabytki",                     gradient: "from-fuchsia-50 to-purple-100", badge: "bg-fuchsia-100 text-fuchsia-700" },
+  { id: "outdoor",     label: "Aktywnie",              emoji: "🌳", hint: "Na świeżym powietrzu",                        gradient: "from-teal-50 to-emerald-100",   badge: "bg-teal-100 text-teal-700" },
+  { id: "rainy",       label: "Na deszczowy dzień",    emoji: "🌧️", hint: "Gdy pada, a nie chcesz siedzieć w domu",     gradient: "from-slate-50 to-sky-100",      badge: "bg-slate-200 text-slate-700" },
 ];
 
 const THEME_MAP = new Map(COLLECTION_THEMES.map((t) => [t.id, t]));
