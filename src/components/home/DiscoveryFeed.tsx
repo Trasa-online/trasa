@@ -11,7 +11,7 @@ import { type MockPlace } from "@/components/plan-wizard/PlaceSwiper";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { getRandomPinPlaceholder } from "@/lib/pinPlaceholders";
 import { resolveStored } from "@/components/PlacePhoto";
-import { themeBadgeLabel, COLLECTION_THEMES } from "@/lib/collectionThemes";
+import { themeBadgeLabel, COLLECTION_THEMES, getTheme } from "@/lib/collectionThemes";
 import { addLike, getHistoryByCity } from "@/lib/exploreLikes";
 import { toast } from "sonner";
 
@@ -140,7 +140,7 @@ export function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; o
   const [deleting, setDeleting] = useState(false);
   const isOwner = !!user && user.id === col.user_id;
   const isLocal = !!col.author_home_city && !!col.city && col.author_home_city.trim().toLowerCase() === col.city.trim().toLowerCase();
-  const themeLabel = themeBadgeLabel(col.category);
+  const theme = getTheme(col.category);
 
   // Ktore miejsca sa juz polubione (localStorage per miasto) -> badge "juz polubione".
   // Set nazw miejsc; refresh po dodaniu polubienia w tym widoku.
@@ -233,37 +233,40 @@ export function CollectionDetail({ col, onClose }: { col: DiscoveryCollection; o
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex items-start gap-3 px-4 pt-4 pb-3 shrink-0">
-        <div className="flex-1 min-w-0">
-          {themeLabel && (
-            <span className="inline-flex items-center rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-[11px] font-bold text-orange-700 mb-1.5">{themeLabel}</span>
-          )}
-          <h2 className="font-display font-extrabold text-xl leading-tight line-clamp-2">{col.title}</h2>
-          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-            <AuthorChip name={col.author_name} avatar={col.author_avatar} />
-            {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-orange-100 rounded-full px-1.5 py-0.5">lokals poleca!</span>}
-            {col.city && (
-              <><span className="text-muted-foreground/40 text-xs">·</span><span className="text-xs text-muted-foreground">{col.city}</span></>
+      {/* Themed cover header - gradient wg motywu zestawienia */}
+      <div className={`relative shrink-0 overflow-hidden bg-gradient-to-br ${theme?.gradient ?? "from-orange-100 to-amber-200"} px-4 pt-4 pb-4`}>
+        <div className="absolute -top-10 -right-8 h-28 w-28 rounded-full bg-white/25 blur-2xl" />
+        <div className="relative flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            {theme && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/75 backdrop-blur-sm px-2.5 py-0.5 text-[11px] font-bold text-foreground mb-2 shadow-sm">{theme.emoji} {theme.label}</span>
+            )}
+            <h2 className="font-display font-extrabold text-2xl leading-tight line-clamp-2 text-foreground">{col.title}</h2>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <AuthorChip name={col.author_name} avatar={col.author_avatar} />
+              {isLocal && <span className="text-[9px] font-bold text-orange-700 bg-white/70 rounded-full px-1.5 py-0.5">lokals poleca!</span>}
+              {col.city && (
+                <><span className="text-foreground/30 text-xs">·</span><span className="text-xs text-foreground/70 font-medium">{col.city}</span></>
+              )}
+            </div>
+            {((col.views_count ?? 0) > 0 || (col.saves_count ?? 0) > 0 || (col.plan_adds_count ?? 0) > 0) && (
+              <div className="flex items-center gap-3 mt-2 text-[11px] text-foreground/60">
+                {(col.views_count ?? 0) > 0 && <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{col.views_count}</span>}
+                {(col.saves_count ?? 0) > 0 && <span className="flex items-center gap-1"><Heart className="h-3 w-3" />{col.saves_count}</span>}
+                {(col.plan_adds_count ?? 0) > 0 && <span className="flex items-center gap-1"><ArrowRight className="h-3 w-3" />{col.plan_adds_count}</span>}
+              </div>
+            )}
+            {isOwner && (
+              <div className="flex gap-3 mt-2.5">
+                <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} className="text-xs font-bold text-orange-700 flex items-center gap-1"><Pencil className="h-3 w-3" /> Edytuj</button>
+                <button onClick={handleDelete} disabled={deleting} className="text-xs font-bold text-destructive flex items-center gap-1 disabled:opacity-50"><Trash2 className="h-3 w-3" /> Usuń</button>
+              </div>
             )}
           </div>
-          {((col.views_count ?? 0) > 0 || (col.saves_count ?? 0) > 0 || (col.plan_adds_count ?? 0) > 0) && (
-            <div className="flex items-center gap-3 mt-1.5 text-[11px] text-muted-foreground">
-              {(col.views_count ?? 0) > 0 && <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{col.views_count}</span>}
-              {(col.saves_count ?? 0) > 0 && <span className="flex items-center gap-1"><Heart className="h-3 w-3" />{col.saves_count}</span>}
-              {(col.plan_adds_count ?? 0) > 0 && <span className="flex items-center gap-1"><ArrowRight className="h-3 w-3" />{col.plan_adds_count}</span>}
-            </div>
-          )}
-          {isOwner && (
-            <div className="flex gap-3 mt-2">
-              <button onClick={() => navigate(`/zestawienie/${col.id}/edytuj`)} className="text-xs font-semibold text-orange-600 flex items-center gap-1"><Pencil className="h-3 w-3" /> Edytuj</button>
-              <button onClick={handleDelete} disabled={deleting} className="text-xs font-semibold text-destructive flex items-center gap-1 disabled:opacity-50"><Trash2 className="h-3 w-3" /> Usuń</button>
-            </div>
-          )}
+          <SheetClose className="h-8 w-8 flex items-center justify-center rounded-full bg-white/70 backdrop-blur-sm text-foreground active:scale-90 transition-transform shrink-0 mt-0.5 shadow-sm">
+            <X className="h-4 w-4" />
+          </SheetClose>
         </div>
-        <SheetClose className="h-8 w-8 flex items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-90 transition-transform shrink-0 mt-0.5">
-          <X className="h-4 w-4" />
-        </SheetClose>
       </div>
 
       <div className="flex-1 overflow-y-auto">

@@ -329,11 +329,15 @@ const CreateRanking = () => {
               <button
                 key={t.id}
                 onClick={() => setCategory(t.id)}
-                className="flex flex-col items-start gap-1 rounded-3xl bg-secondary p-4 text-left active:scale-[0.97] transition-transform"
+                className={`relative flex flex-col items-start gap-2.5 rounded-3xl bg-gradient-to-br ${t.gradient} p-4 pb-3.5 text-left overflow-hidden active:scale-[0.97] transition-transform shadow-sm`}
               >
-                <span className="text-3xl leading-none">{t.emoji}</span>
-                <span className="font-bold text-sm mt-1.5 leading-tight">{t.label}</span>
-                <span className="text-[11px] text-muted-foreground leading-snug">{t.hint}</span>
+                {/* Delikatny błysk w rogu dla głębi */}
+                <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-white/30 blur-xl" />
+                <div className="h-12 w-12 rounded-2xl bg-white/70 backdrop-blur-sm flex items-center justify-center text-2xl shadow-sm shrink-0">{t.emoji}</div>
+                <div className="relative">
+                  <span className="font-black text-sm leading-tight block text-foreground">{t.label}</span>
+                  <span className="text-[11px] text-foreground/55 leading-snug block mt-0.5">{t.hint}</span>
+                </div>
               </button>
             ))}
           </div>
